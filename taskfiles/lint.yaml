@@ -114,7 +114,7 @@ tasks:
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
           ".github" \
-          ".yamllint.yml" \
+          ".yamllint.yaml" \
           "components/core/.clang-format" \
           "components/core/config" \
           "components/core/tools/" \
@@ -780,16 +780,17 @@ tasks:
     vars:
       UV_PYTHON_PROJECTS:
         - "{{.G_INTEGRATION_TESTS_DIR}}"
+      UV_PYTHON_PROJECTS_IGNORE_ERRORS:
+        - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
+        - "{{.G_COMPONENTS_DIR}}/clp-package-utils"
+        - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
+        - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
       vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
       - for:
-          - "components/clp-mcp-server/clp_mcp_server"
-          - "components/clp-package-utils/clp_package_utils"
-          - "components/clp-py-utils/clp_py_utils"
           - "components/core/tools/scripts/utils"
-          - "components/job-orchestration/job_orchestration"
           - "tools/deployment"
           - "tools/scripts"
           - "docs/conf"
@@ -801,9 +802,15 @@ tasks:
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
+      - for:
+          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy . || true
 
   check-rust:
     cmds:

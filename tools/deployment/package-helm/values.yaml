@@ -5,16 +5,12 @@ fullnameOverride: ""
 allowSbinScripts: true
 
 securityContext:
-  # UID/GID for first-party CLP services
   firstParty:
     uid: 1000
     gid: 1000
-  # UID/GID for third-party services
   thirdParty:
-    uid: 999
-    gid: 999
-
-workerConcurrency: 1
+    uid: 1000
+    gid: 1000
 
 image:
   clpPackage:

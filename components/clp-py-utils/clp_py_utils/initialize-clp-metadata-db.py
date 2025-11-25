@@ -58,9 +58,10 @@ def main(argv):
         sql_adapter = SqlAdapter(clp_config.database)
         clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
-        with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
-            metadata_db.cursor(dictionary=True)
-        ) as metadata_db_cursor:
+        with (
+            closing(sql_adapter.create_connection(True)) as metadata_db,
+            closing(metadata_db.cursor(dictionary=True)) as metadata_db_cursor,
+        ):
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
             else:

@@ -61,16 +61,20 @@ spec:
               mountPath: "/etc/mysql/conf.d/logging.cnf"
               subPath: "mysql-logging.cnf"
               readOnly: true
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            exec: &database-health-check
-              command: [
-                "mysqladmin", "ping",
-                "--silent",
-                "-h", "127.0.0.1"
-              ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec: &database-health-check
+              command:
+                - "sh"
+                - "-c"
+                - >-
+                  mysqladmin ping
+                  --host=127.0.0.1
+                  --port=3306
+                  --user=${MYSQL_USER}
+                  --password=${MYSQL_PASSWORD}
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec:
               <<: *database-health-check
       volumes:

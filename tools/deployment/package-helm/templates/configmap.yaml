@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "clp.labels" . | nindent 4 }}
 data:
-  clp-config.yml: |
+  clp-config.yaml: |
     api_server:
       default_max_num_query_results: {{ .Values.clpConfig.api_server.default_max_num_query_results }}
       host: {{ .Values.clpConfig.api_server.host | quote }}

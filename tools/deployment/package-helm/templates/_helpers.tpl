@@ -62,19 +62,19 @@ Image reference for CLP Package
 Creates timings for readiness probes (faster checks for quicker startup).
 */}}
 {{- define "clp.readinessProbeTimings" -}}
-initialDelaySeconds: 1
-periodSeconds: 1
-timeoutSeconds: 1
-failureThreshold: 3
+initialDelaySeconds: 6
+periodSeconds: 2
+timeoutSeconds: 2
+failureThreshold: 10
 {{- end }}
 
 {{/*
 Creates timings for liveness probes.
 */}}
 {{- define "clp.livenessProbeTimings" -}}
-initialDelaySeconds: 30
-periodSeconds: 10
-timeoutSeconds: 5
+initialDelaySeconds: 60
+periodSeconds: 30
+timeoutSeconds: 4
 failureThreshold: 3
 {{- end }}
 
@@ -139,5 +139,3 @@ spec:
     requests:
       storage: {{ .capacity }}
 {{- end }}
-
-

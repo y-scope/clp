@@ -29,6 +29,9 @@ set(
         ../clp/ffi/encoding_methods.cpp
         ../clp/ffi/encoding_methods.hpp
         ../clp/ffi/encoding_methods.inc
+        ../clp/ffi/EncodedTextAst.hpp
+        ../clp/ffi/EncodedTextAstError.cpp
+        ../clp/ffi/EncodedTextAstError.hpp
         ../clp/ffi/ir_stream/byteswap.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
         ../clp/ffi/ir_stream/decoding_methods.hpp
@@ -57,6 +60,7 @@ set(
         ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
         ../clp/ffi/SchemaTree.hpp
+        ../clp/ffi/StringBlob.hpp
         ../clp/ffi/Value.hpp
         ../clp/FileDescriptor.cpp
         ../clp/FileDescriptor.hpp
@@ -67,8 +71,6 @@ set(
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
         ../clp/ir/constants.hpp
-        ../clp/ir/EncodedTextAst.cpp
-        ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp

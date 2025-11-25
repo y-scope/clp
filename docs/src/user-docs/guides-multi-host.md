@@ -48,12 +48,12 @@ To configure CLP for multi-host deployment, you'll need to:
 
 2. Configure credentials:
 
-   * Copy `etc/credentials.template.yml` to `etc/credentials.yml`.
-   * Edit `etc/credentials.yml` to set usernames and passwords.
+   * Copy `etc/credentials.template.yaml` to `etc/credentials.yaml`.
+   * Edit `etc/credentials.yaml` to set usernames and passwords.
 
 3. Edit CLP's configuration file:
 
-   * Open `etc/clp-config.yml`.
+   * Open `etc/clp-config.yaml`.
    * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
      plan to run the specific service.
    * When using local filesystem storage (i.e., not S3), set `logs_input.storage.directory`,
@@ -71,7 +71,7 @@ To configure CLP for multi-host deployment, you'll need to:
    * Validate your configuration
    * Create any necessary directories
    * Generate an `.env` file with all necessary environment variables
-   * Create `var/log/.clp-config.yml` (the container-specific configuration file)
+   * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
    * Create `var/www/webui/server/dist/settings.json` (the `webui` server's configuration file)
 
 ### Updating CLP's generated configuration
@@ -86,10 +86,10 @@ As mentioned at the beginning of this guide, this setup will be made simpler in 
 
 To update the generated configuration files for use across multiple hosts:
 
-1. Edit `var/log/.clp-config.yml`:
+1. Edit `var/log/.clp-config.yaml`:
 
     * Update all `host` fields to use the actual hostname or IP address where each service will run
-      (matching what you configured in `etc/clp-config.yml`).
+      (matching what you configured in `etc/clp-config.yaml`).
     * Similarly, update any `port` fields.
     * For example, if your database runs on `192.168.1.10:3306`, ensure `database.host` is set to
       `192.168.1.10` and `database.port` is `3306`.
