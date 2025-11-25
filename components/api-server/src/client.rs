@@ -235,6 +235,30 @@ impl Client {
         stream
     }
 
+    /// Asynchronously fetches results of a completed search job from MongoDB.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// A parsed JSON value representing a search result on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
+    ///   or if the "message" field is not a BSON string.
+    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
+    /// * Forwards [`serde_json::from_str`]'s return values on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
     async fn fetch_results_from_mongo(
         &self,
         search_job_id: u64,
