@@ -43,8 +43,8 @@ spec:
               mountPath: "/etc/mongo/mongod.conf"
               subPath: "mongod.conf"
               readOnly: true
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &results-cache-health-check
               command:
                 - "mongosh"
@@ -52,10 +52,9 @@ spec:
                 - "--quiet"
                 - "--eval"
                 - "db.runCommand('ping').ok"
-          readinessProbe:
-            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            exec:
-              <<: *results-cache-health-check
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            exec: *results-cache-health-check
       volumes:
         - name: "config"
           configMap:

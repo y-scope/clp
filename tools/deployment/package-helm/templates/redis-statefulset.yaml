@@ -48,20 +48,20 @@ spec:
               mountPath: "/etc/redis/redis.conf"
               subPath: "redis.conf"
               readOnly: true
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            exec: &redis-health-check
-              command:
-                - "redis-cli"
-                - "-h"
-                - "127.0.0.1"
-                - "-p"
-                - "6379"
-                - "-a"
-                - "$(REDIS_PASSWORD)"
-                - "PING"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec: &redis-health-check
+              command:
+                - "sh"
+                - "-c"
+                - >-
+                  redis-cli
+                  -h 127.0.0.1
+                  -p 6379
+                  -a "${REDIS_PASSWORD}"
+                  ping
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec:
               <<: *redis-health-check
       volumes:

@@ -70,16 +70,14 @@ spec:
             "--port", "3001",
             "--config", "/etc/clp-config.yaml"
           ]
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            httpGet:
-              path: "/health"
-              port: 3001
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            httpGet:
+            httpGet: &api-server-health-check
               path: "/health"
               port: 3001
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *api-server-health-check
       volumes:
         - name: "config"
           configMap:

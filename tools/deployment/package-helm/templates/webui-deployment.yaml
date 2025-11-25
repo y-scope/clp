@@ -78,14 +78,13 @@ spec:
             "/opt/clp/bin/node-22",
             "/opt/clp/var/www/webui/server/dist/src/main.js"
           ]
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            tcpSocket:
-              port: 4000
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            tcpSocket:
+            tcpSocket: &webui-health-check
               port: 4000
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            tcpSocket: *webui-health-check
       volumes:
         - name: "client-settings"
           configMap:

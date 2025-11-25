@@ -74,16 +74,14 @@ spec:
             "--port", "8000",
             "--config-path", "/etc/clp-config.yaml"
           ]
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            httpGet:
-              path: "/health"
-              port: 8000
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            httpGet:
+            httpGet: &mcp-server-health-check
               path: "/health"
               port: 8000
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *mcp-server-health-check
       volumes:
         - name: "config"
           configMap:

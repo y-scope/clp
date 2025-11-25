@@ -75,8 +75,7 @@ spec:
                   --password=${MYSQL_PASSWORD}
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            exec:
-              <<: *database-health-check
+            exec: *database-health-check
       volumes:
         - name: "config"
           configMap:
