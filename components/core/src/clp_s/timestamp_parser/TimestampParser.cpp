@@ -230,7 +230,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
         -> ystdlib::error_handling::Result<std::pair<std::string_view, int>>;
 
 /**
- * Extracts the absolute value of the subsecond fractional component of a timestamp.
+ * @return The absolute value of the subsecond fractional component of a timestamp.
  */
 [[nodiscard]] auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t;
 
@@ -488,7 +488,7 @@ auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_
             cPowersOfTen
                     [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
     };
-    auto subsecond_nanoseconds = timestamp % cFactor;
+    auto const subsecond_nanoseconds{timestamp % cFactor};
     return subsecond_nanoseconds < 0 ? -subsecond_nanoseconds : subsecond_nanoseconds;
 }
 
@@ -707,7 +707,7 @@ auto marshal_numeric_timestamp(
                 constexpr auto cFactor{cPowersOfTen
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumSecondPrecisionSubsecondDigits]};
-                int64_t epoch_second_timestamp{timestamp / cFactor};
+                int64_t const epoch_second_timestamp{timestamp / cFactor};
                 buffer.append(fmt::format("{}", epoch_second_timestamp));
                 break;
             }
@@ -715,7 +715,7 @@ auto marshal_numeric_timestamp(
                 constexpr auto cFactor{cPowersOfTen
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumMillisecondPrecisionSubsecondDigits]};
-                int64_t epoch_millisecond_timestamp{timestamp / cFactor};
+                int64_t const epoch_millisecond_timestamp{timestamp / cFactor};
                 buffer.append(fmt::format("{}", epoch_millisecond_timestamp));
                 break;
             }
@@ -723,7 +723,7 @@ auto marshal_numeric_timestamp(
                 constexpr auto cFactor{cPowersOfTen
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumMicrosecondPrecisionSubsecondDigits]};
-                int64_t epoch_microsecond_timestamp{timestamp / cFactor};
+                int64_t const epoch_microsecond_timestamp{timestamp / cFactor};
                 buffer.append(fmt::format("{}", epoch_microsecond_timestamp));
                 break;
             }
