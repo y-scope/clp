@@ -176,7 +176,7 @@ class Database(BaseModel):
     username: NonEmptyStr | None = None
     password: NonEmptyStr | None = None
 
-    root_password: Optional[NonEmptyStr] = None
+    root_password: NonEmptyStr | None = None
 
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
