@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--concurrency", type=int, default=1, help="Number of concurrent spider workers."
+        "--concurrency", type=int, default=1, help="Number of concurrent Spider workers."
     )
     parser.add_argument("--storage-url", type=str, required=True, help="Spider storage URL.")
     parser.add_argument("--host", type=str, required=False, default=None, help="The worker host.")
@@ -67,14 +67,14 @@ def main() -> None:
             process.terminate()
         exit(1)
 
-    failed = False
+    exit_code = 0
     for process in processes:
-        exit_code = process.wait()
-        if exit_code != 0:
-            logger.error(f"Spider worker exited with code {exit_code}")
-            failed = True
-    if failed:
-        exit(1)
+        worker_proc_exit_code = process.wait()
+        if worker_proc_exit_code != 0:
+            logger.error(f"Spider worker exited with code {worker_proc_exit_code}")
+            exit_code = 1
+
+    exit(exit_code)
 
 
 if __name__ == "__main__":
