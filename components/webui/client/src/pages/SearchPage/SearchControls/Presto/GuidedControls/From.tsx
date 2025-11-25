@@ -11,7 +11,7 @@ import {LABEL_WIDTH} from "./typings";
  */
 const From = () => {
     return (
-        <div className={guidedGrid["from"]}>
+        <div className={guidedGrid["gridItem"]}>
             <InputLabel width={LABEL_WIDTH}>FROM</InputLabel>
             <DatasetSelect
                 className={
