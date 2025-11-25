@@ -73,15 +73,15 @@ spec:
               containerPort: 7000
           volumeMounts:
             - name: "config"
-              mountPath: "/etc/clp-config.yml"
-              subPath: "clp-config.yml"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
             - name: "query-scheduler-logs"
               mountPath: "/var/log/query_scheduler"
           command: [
             "python3", "-u",
             "-m", "job_orchestration.scheduler.query.query_scheduler",
-            "--config", "/etc/clp-config.yml"
+            "--config", "/etc/clp-config.yaml"
           ]
       volumes:
         - name: "config"

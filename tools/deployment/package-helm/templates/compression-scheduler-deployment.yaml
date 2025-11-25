@@ -68,8 +68,8 @@ spec:
               value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.compression_backend_database }}"
           volumeMounts:
             - name: "config"
-              mountPath: "/etc/clp-config.yml"
-              subPath: "clp-config.yml"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
             - name: "compression-scheduler-logs"
               mountPath: "/var/log/compression_scheduler"
@@ -81,7 +81,7 @@ spec:
           command: [
             "python3", "-u",
             "-m", "job_orchestration.scheduler.compress.compression_scheduler",
-            "--config", "/etc/clp-config.yml"
+            "--config", "/etc/clp-config.yaml"
           ]
       volumes:
         - name: "config"

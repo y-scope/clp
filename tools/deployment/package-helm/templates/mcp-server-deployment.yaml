@@ -62,8 +62,8 @@ spec:
               containerPort: 8000
           volumeMounts:
             - name: "config"
-              mountPath: "/etc/clp-config.yml"
-              subPath: "clp-config.yml"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
             - name: "mcp-server-logs"
               mountPath: "/var/log/mcp_server"
@@ -72,7 +72,7 @@ spec:
             "-m", "clp_mcp_server.clp_mcp_server",
             "--host", "0.0.0.0",
             "--port", "8000",
-            "--config-path", "/etc/clp-config.yml"
+            "--config-path", "/etc/clp-config.yaml"
           ]
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}

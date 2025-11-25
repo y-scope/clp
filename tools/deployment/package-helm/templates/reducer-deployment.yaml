@@ -52,15 +52,15 @@ spec:
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
             - name: "config"
-              mountPath: "/etc/clp-config.yml"
-              subPath: "clp-config.yml"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
             - name: "reducer-logs"
               mountPath: "/var/log/reducer"
           command: [
             "python3", "-u",
             "-m", "job_orchestration.reducer.reducer",
-            "--config", "/etc/clp-config.yml",
+            "--config", "/etc/clp-config.yaml",
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
           ]

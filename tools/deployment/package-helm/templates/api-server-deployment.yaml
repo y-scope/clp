@@ -59,8 +59,8 @@ spec:
               containerPort: 3001
           volumeMounts:
             - name: "config"
-              mountPath: "/etc/clp-config.yml"
-              subPath: "clp-config.yml"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
             - name: "api-server-logs"
               mountPath: "/var/log/api_server"
@@ -68,7 +68,7 @@ spec:
             "/opt/clp/bin/api_server",
             "--host", "0.0.0.0",
             "--port", "3001",
-            "--config", "/etc/clp-config.yml"
+            "--config", "/etc/clp-config.yaml"
           ]
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}

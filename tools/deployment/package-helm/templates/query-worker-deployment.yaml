@@ -43,7 +43,7 @@ spec:
             - name: "BROKER_URL"
               value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
             - name: "CLP_CONFIG_PATH"
-              value: "/etc/clp-config.yml"
+              value: "/etc/clp-config.yaml"
             - name: "CLP_HOME"
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
@@ -58,8 +58,8 @@ spec:
               value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.query_backend_database }}"
           volumeMounts:
             - name: "config"
-              mountPath: "/etc/clp-config.yml"
-              subPath: "clp-config.yml"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
             - name: "query-worker-logs"
               mountPath: "/var/log/query_worker"
