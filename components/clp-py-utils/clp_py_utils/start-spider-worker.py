@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Main function to start multiple spider workers."""
+    """Main function to start multiple Spider workers."""
     # Parse arguments
     args = parse_args()
     num_workers = args.num_workers
@@ -62,7 +62,7 @@ def main() -> None:
             )
             processes.append(process)
     except OSError as e:
-        logger.error(f"Failed to start spider worker: {e}")
+        logger.error(f"Failed to start Spider worker: {e}")
         for process in processes:
             process.terminate()
         exit(1)
