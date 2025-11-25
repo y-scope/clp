@@ -123,13 +123,18 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[derive(utoipa::OpenApi)]
-#[openapi(info(
-    title = "API Server",
-    description = "API Server for CLP",
-    contact(name = "YScope")
-))]
-struct ApiDoc;
+// `utoipa::OpenApi` triggers `clippy::needless_for_each`
+#[allow(clippy::needless_for_each)]
+mod api_doc {
+    #[derive(utoipa::OpenApi)]
+    #[openapi(info(
+        title = "API Server",
+        description = "API Server for CLP",
+        contact(name = "YScope")
+    ))]
+    pub struct ApiDoc;
+}
+use api_doc::ApiDoc;
 
 #[utoipa::path(
     get,
