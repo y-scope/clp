@@ -520,6 +520,7 @@ def main(argv):
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SqlAdapter(clp_config.database)
 
+    task_manager: CeleryTaskManager | SpiderTaskManager
     if clp_config.compression_scheduler.type == OrchestrationType.celery:
         task_manager = CeleryTaskManager()
     elif clp_config.compression_scheduler.type == OrchestrationType.spider:
