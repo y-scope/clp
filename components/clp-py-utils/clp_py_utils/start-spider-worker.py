@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--concurrency", type=int, default=1, help="Number of concurrent Spider workers."
+        "--num-workers", type=int, default=1, help="Number of concurrent Spider workers."
     )
     parser.add_argument("--storage-url", type=str, required=True, help="Spider storage URL.")
     parser.add_argument("--host", type=str, required=False, default=None, help="The worker host.")
@@ -34,9 +34,9 @@ def main() -> None:
     """Main function to start multiple spider workers."""
     # Parse arguments
     args = parse_args()
-    concurrency = args.concurrency
-    if concurrency < 1:
-        logger.error("Concurrency must be at least 1.")
+    num_workers = args.num_workers
+    if num_workers < 1:
+        logger.error("Number of concurrent workers must be at least 1.")
         exit(1)
     storage_url = args.storage_url
     host = args.host
@@ -56,7 +56,7 @@ def main() -> None:
     # Start multiple spider workers
     processes = []
     try:
-        for _ in range(concurrency):
+        for _ in range(num_workers):
             process = subprocess.Popen(
                 [spider_worker_path, "--storage_url", storage_url, "--host", host]
             )
