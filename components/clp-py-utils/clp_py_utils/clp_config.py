@@ -12,7 +12,6 @@ from pydantic import (
     model_validator,
     PlainSerializer,
     PrivateAttr,
-    SecretStr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
