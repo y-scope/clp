@@ -779,8 +779,8 @@ tasks:
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
-          black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_CHECK_FLAGS}} .
+          ruff format {{.RUFF_FORMAT_FLAGS}} .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
