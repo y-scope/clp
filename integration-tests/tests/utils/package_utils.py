@@ -12,6 +12,10 @@ from tests.utils.config import (
     PackageConfig,
     PackageInstance,
 )
+from tests.utils.utils import (
+    is_dir_tree_content_equal,
+    unlink,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,4 +122,40 @@ def compress_with_clp_package(
     # Run compression command for this job.
     run_and_assert(compress_cmd)
 
-    # TODO: Assert that the compression job was successful with package decompression.
+    # Assert that the compression job was successful with package decompression.
+    if compress_job.mode == "clp-json":
+        # TODO: Waiting for PR 1299 to be merged.
+        assert True
+    elif compress_job.mode == "clp-text":
+        # Decompress logs to the package decompression directory.
+        decompress_script_path = package_config.path_config.decompress_script_path
+        decompression_dir = package_config.path_config.package_decompression_dir
+        decompress_cmd = [
+            str(decompress_script_path),
+            "--config",
+            str(temp_config_file_path),
+            "x",
+            "--extraction-dir",
+            str(decompression_dir),
+        ]
+
+        run_and_assert(decompress_cmd)
+
+        # Assert that the decompressed logs match the originals.
+        if compress_job.subpath is not None:
+            input_path = integration_test_logs.extraction_dir / compress_job.subpath
+        else:
+            input_path = integration_test_logs.extraction_dir
+
+        # output_path needs input_path attached to the end because the output of clp-text
+        # decompression has a directory structure that is equivalent to input_path, but stored at
+        # decompression_dir. e.g. if input_path was /a/b/c, and decompression_dir was /d/e/f, the
+        # decompressed files would be stored at /d/e/f/a/b/c.
+        output_path = decompression_dir / input_path
+
+        assert is_dir_tree_content_equal(
+            input_path,
+            output_path,
+        ), f"Mismatch between clp input {input_path} and output {output_path}."
+
+        unlink(decompression_dir)
