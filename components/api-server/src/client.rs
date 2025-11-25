@@ -275,21 +275,27 @@ impl Client {
 }
 
 pin_project! {
+    /// Enum for search result streams from different storage backends.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `FileStream`: Streaming from file system storage.
+    /// * `MongoStream`: Streaming from MongoDB storage.
     #[project = SearchResultStreamProj]
-    pub enum SearchResultStream<S1, S2>
+    pub enum SearchResultStream<FileStream, MongoStream>
     where
-        S1: Stream<Item = Result<String, ClientError>>,
-        S2: Stream<Item = Result<String, ClientError>>
+        FileStream: Stream<Item = Result<String, ClientError>>,
+        MongoStream: Stream<Item = Result<String, ClientError>>
     {
-        File{#[pin] inner: S1},
-        Mongo{#[pin] inner: S2},
+        File{#[pin] inner: FileStream},
+        Mongo{#[pin] inner: MongoStream},
     }
 }
 
-impl<S1, S2> Stream for SearchResultStream<S1, S2>
+impl<FileStream, MongoStream> Stream for SearchResultStream<FileStream, MongoStream>
 where
-    S1: Stream<Item = Result<String, ClientError>>,
-    S2: Stream<Item = Result<String, ClientError>>,
+    FileStream: Stream<Item = Result<String, ClientError>>,
+    MongoStream: Stream<Item = Result<String, ClientError>>,
 {
     type Item = Result<String, ClientError>;
 
