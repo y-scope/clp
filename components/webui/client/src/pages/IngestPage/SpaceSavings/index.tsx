@@ -1,12 +1,10 @@
 import {useQuery} from "@tanstack/react-query";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {theme} from "antd";
 
 import {DashboardCard} from "../../../components/DashboardCard";
 import Stat from "../../../components/Stat";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
