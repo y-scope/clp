@@ -253,10 +253,9 @@ impl Client {
                 let search_result_path = entry.path();
                 let reader = std::fs::File::open(search_result_path)?;
                 let mut deserializer = rmp_serde::Deserializer::new(reader);
-                while let Ok(event_tuple) = Deserialize::deserialize(&mut deserializer) {
-                    let event_tuple: EventTuple = event_tuple;
-                    let event: Event = event_tuple.into();
-                    yield Ok(event.message);
+                while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
+                    let event: (i64, String, String, String, i64) = event;
+                    yield Ok(event.1);
                 }
             }
         };
@@ -349,29 +348,5 @@ where
             tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
-    }
-}
-
-type EventTuple = (i64, String, String, String, i64);
-
-#[allow(dead_code)]
-#[derive(Deserialize)]
-struct Event {
-    timestamp_milli: i64,
-    message: String,
-    original_file_path: String,
-    original_file_id: String,
-    log_event_index: i64,
-}
-
-impl From<EventTuple> for Event {
-    fn from(value: EventTuple) -> Self {
-        Self {
-            timestamp_milli: value.0,
-            message: value.1,
-            original_file_path: value.2,
-            original_file_id: value.3,
-            log_event_index: value.4,
-        }
     }
 }
