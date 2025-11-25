@@ -2,13 +2,11 @@
 
 import contextlib
 import logging
-import shutil
 from collections.abc import Iterator
 
 import pytest
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATA_DIRECTORY_PATH,
-    CLP_DEFAULT_LOG_DIRECTORY_PATH,
     CLP_DEFAULT_TMP_DIRECTORY_PATH,
 )
 
@@ -24,6 +22,7 @@ from tests.utils.config import (
     PackagePathConfig,
 )
 from tests.utils.port_utils import assign_ports_from_base
+from tests.utils.utils import unlink
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +84,5 @@ def fixt_package_config(
         # Clear data, tmp, and log from the package directory.
         data_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
         tmp_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_TMP_DIRECTORY_PATH
-        log_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_LOG_DIRECTORY_PATH
-        for directory_path in (data_dir, tmp_dir, log_dir):
-            shutil.rmtree(directory_path, ignore_errors=True)
+        for directory_path in (data_dir, tmp_dir):
+            unlink(directory_path)

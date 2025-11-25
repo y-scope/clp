@@ -4,6 +4,10 @@ import logging
 from pathlib import Path
 
 import pytest
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATA_DIRECTORY_PATH,
+    CLP_DEFAULT_TMP_DIRECTORY_PATH,
+)
 
 from tests.utils.config import (
     PackageCompressJob,
@@ -12,6 +16,7 @@ from tests.utils.config import (
     PackageSearchJob,
 )
 from tests.utils.package_utils import compress_with_clp_package, search_with_clp_package
+from tests.utils.utils import unlink
 
 logger = logging.getLogger(__name__)
 
@@ -172,58 +177,35 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
     )
 
 
-def _run_package_compress_jobs(
-    request: pytest.FixtureRequest,
-    package_instance: PackageInstance,
-) -> None:
-    """
-    Run all the package compress jobs for this test run.
-
-    :param package_instance:
-    :param request:
-    """
-    package_job_list = package_instance.package_config.package_job_list
-    if package_job_list is None:
-        err_msg = "Package job list is not configured for this package instance."
-        raise RuntimeError(err_msg)
-
-    compress_jobs = package_job_list.package_compress_jobs
-    for compress_job in compress_jobs:
-        compress_with_clp_package(request, compress_job, package_instance)
-
-
-def _run_package_search_jobs(
-    package_instance: PackageInstance,
-) -> None:
-    """
-    Run all the package search jobs for this test run.
-
-    :param request:
-    :param package_instance:
-    """
-    package_job_list = package_instance.package_config.package_job_list
-    if package_job_list is None:
-        err_msg = "Package job list is not configured for this package instance."
-        raise RuntimeError(err_msg)
-
-    search_jobs = package_job_list.package_search_jobs
-    for search_job in search_jobs:
-        search_with_clp_package(search_job, package_instance)
-
-
 def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
     """
-    Dispatches all the package jobs in `job_list` for this package test run.
+    Dispatches all the package jobs in `job_list` for this package test run. Each compression job is
+    followed immediately by the search jobs that depend on it.
 
-    :param jobs_list:
+    :param request:
+    :param package_instance:
     """
-    logger.debug("Dispatching test jobs.")
+    package_job_list = package_instance.package_config.package_job_list
+    if package_job_list is None:
+        err_msg = "Package job list is not configured for this package instance."
+        raise RuntimeError(err_msg)
 
-    jobs_list = package_instance.package_config.package_job_list
-    if jobs_list is None:
-        return
+    package_compress_jobs = package_job_list.package_compress_jobs
+    package_search_jobs = package_job_list.package_search_jobs
+    clp_package_dir = package_instance.package_config.path_config.clp_package_dir
 
-    if jobs_list.package_compress_jobs:
-        _run_package_compress_jobs(request, package_instance)
-    if jobs_list.package_search_jobs:
-        _run_package_search_jobs(package_instance)
+    # For each compression job, run it, then its dependent search jobs, then cleanup.
+    for package_compress_job in package_compress_jobs:
+        # Run the compression job.
+        compress_with_clp_package(request, package_compress_job, package_instance)
+
+        # Run the search jobs from the list that depend on the compression job.
+        for package_search_job in package_search_jobs:
+            if package_search_job.package_compress_job is package_compress_job:
+                search_with_clp_package(package_search_job, package_instance)
+
+        # Cleanup this compress job to prevent multiple compression jobs stored in archives.
+        data_dir = clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
+        tmp_dir = clp_package_dir / CLP_DEFAULT_TMP_DIRECTORY_PATH
+        for directory_path in (data_dir, tmp_dir):
+            unlink(directory_path)
