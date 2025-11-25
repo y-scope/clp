@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "components/api-server",
+    "components/clp-credential-manager",
     "components/clp-rust-utils",
-    "components/log-ingestor"
+    "components/log-ingestor",
 ]
 resolver = "3"
