@@ -26,6 +26,11 @@ struct Args {
 }
 
 /// Binary entry point that configures logging, loads config, and starts Axum.
+///
+/// # Errors:
+///
+/// Returns [`anyhow::Error`] when configuration parsing, database connections, TCP binding,
+/// or Axum startup fail.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -49,6 +54,9 @@ async fn main() -> anyhow::Result<()> {
 }
 
 /// Sets up JSON-formatted tracing using environment filters.
+///
+/// The subscriber honors the `RUST_LOG` environment variable when present and otherwise
+/// defaults to the `info` level so local development remains verbose enough.
 fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 

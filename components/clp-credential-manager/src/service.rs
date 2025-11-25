@@ -11,14 +11,18 @@ use crate::{
 /// Reference-counted handle that Axum stores as application state.
 pub type SharedService = Arc<CredentialManagerService>;
 
-/// High-level façade that wires together persistence, auditing, and JWT handling.
+/// High-level facade that wires together persistence, auditing, and JWT handling.
 #[allow(dead_code)]
 pub struct CredentialManagerService {
     db_pool: MySqlPool,
 }
 
 impl CredentialManagerService {
-    /// Establishes the database connection pool and prepares JWT helpers.
+    /// Establishes the database connection pool used by all route handlers.
+    ///
+    /// # Parameters:
+    ///
+    /// * `config`: Fully parsed application configuration that contains database settings.
     ///
     /// # Returns:
     ///
@@ -26,8 +30,7 @@ impl CredentialManagerService {
     ///
     /// # Errors:
     ///
-    /// * Propagates errors from [`sqlx::mysql::MySqlPoolOptions::connect_with`].
-    /// * Propagates errors from [`JwtManager::new`].
+    /// * Propagates errors from [`MySqlPoolOptions::connect_with`] when the pool cannot be created.
     pub async fn new(config: &AppConfig) -> ServiceResult<Self> {
         let db_config = &config.database;
         let options = sqlx::mysql::MySqlConnectOptions::new()
@@ -46,6 +49,10 @@ impl CredentialManagerService {
     }
 
     /// Wraps `self` in an [`Arc`] so it can be cloned into Axum handlers.
+    ///
+    /// # Returns:
+    ///
+    /// A [`SharedService`] reference-counted pointer that implements [`Clone`].
     pub fn clone_shared(self) -> SharedService {
         Arc::new(self)
     }

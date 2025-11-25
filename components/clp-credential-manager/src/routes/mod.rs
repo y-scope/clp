@@ -9,6 +9,10 @@ use crate::service::SharedService;
 pub type AppState = SharedService;
 
 /// Composes the service's HTTP surface, layering tracing instrumentation globally.
+///
+/// # Returns:
+///
+/// An [`axum::Router`] wired with all route trees and middleware layers.
 pub fn build_router() -> Router<AppState> {
     Router::new()
         .merge(health::router())

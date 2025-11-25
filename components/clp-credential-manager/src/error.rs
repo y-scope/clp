@@ -43,6 +43,11 @@ pub enum ServiceError {
 }
 
 impl From<sqlx::Error> for ServiceError {
+    /// Maps raw [`sqlx::Error`] values into domain-specific variants so callers can react precisely.
+    ///
+    /// # Parameters:
+    ///
+    /// * `err`: The database error surfaced by `sqlx`.
     fn from(err: sqlx::Error) -> Self {
         if matches!(err, sqlx::Error::RowNotFound) {
             return Self::NotFound("requested record was not found".to_owned());
@@ -68,6 +73,15 @@ pub struct ApiError {
 
 impl ApiError {
     /// Creates a new API error with the supplied HTTP status code.
+    ///
+    /// # Parameters:
+    ///
+    /// * `status`: HTTP status code that best represents the failure.
+    /// * `message`: Human-readable diagnostic message.
+    ///
+    /// # Returns:
+    ///
+    /// A new [`ApiError`] ready to be converted into an HTTP response.
     pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
         Self {
             status,
@@ -76,6 +90,14 @@ impl ApiError {
     }
 
     /// Convenience constructor for 500-class responses.
+    ///
+    /// # Parameters:
+    ///
+    /// * `message`: Human-readable error string for the response body.
+    ///
+    /// # Returns:
+    ///
+    /// A new [`ApiError`] that always maps to [`StatusCode::INTERNAL_SERVER_ERROR`].
     pub fn internal(message: impl Into<String>) -> Self {
         Self::new(StatusCode::INTERNAL_SERVER_ERROR, message)
     }
@@ -104,13 +126,18 @@ impl From<ServiceError> for ApiError {
     }
 }
 
+/// JSON payload emitted by error responses.
 #[derive(Debug, Serialize)]
 struct ErrorBody {
     error: String,
 }
 
-/// Converts API errors into JSON bodies that align with other CLP services.
 impl IntoResponse for ApiError {
+    /// Serializes the error payload into JSON schema so clients receive consistent bodies.
+    ///
+    /// # Returns:
+    ///
+    /// An [`axum::response::Response`] containing the status code plus `{"error": "..."}` body.
     fn into_response(self) -> Response {
         let status = self.status;
         let body = Json(ErrorBody {
@@ -122,6 +149,11 @@ impl IntoResponse for ApiError {
 }
 
 impl fmt::Display for ApiError {
+    /// Formats only the message so higher layers can log without leaking sensitive details.
+    ///
+    /// # Returns:
+    ///
+    /// [`fmt::Result`] signaling whether writing to the formatter succeeded.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
