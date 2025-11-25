@@ -78,7 +78,7 @@ const Compress = () => {
     };
 
     return (
-        <DashboardCard title={"Start Ingestion"}>
+        <DashboardCard title={"Submit Compression Job"}>
             <Form
                 form={form}
                 layout={"vertical"}
