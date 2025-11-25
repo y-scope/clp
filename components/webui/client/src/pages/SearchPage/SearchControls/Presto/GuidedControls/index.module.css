@@ -5,28 +5,13 @@
     gap: 5px;
 }
 
-.select {
-    grid-column: span 1;
-    display: flex;
-}
-
-.from {
+.gridItem {
     grid-column: span 1;
     display: flex;
 }
 
 .timestampKey {
     width: 300px;
-    display: flex;
-}
-
-.where {
-    grid-column: span 1;
-    display: flex;
-}
-
-.order {
-    grid-column: span 1;
     display: flex;
 }
 
