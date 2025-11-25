@@ -16,7 +16,7 @@ import {
     QUERY_LOADING_STATE,
     QUERY_LOADING_STATE_DESCRIPTIONS,
     QUERY_LOADING_STATE_VALUES,
-} from "../typings/query";
+} from "../../typings/query";
 
 import "./Loading.css";
 

@@ -10,7 +10,7 @@ import guidedGrid from "./index.module.css";
  */
 const From = () => {
     return (
-        <div className={guidedGrid["from"]}>
+        <div className={guidedGrid["gridItem"]}>
             <InputLabel>FROM</InputLabel>
             <DatasetSelect
                 className={
