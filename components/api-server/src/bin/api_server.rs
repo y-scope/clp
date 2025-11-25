@@ -1,22 +1,23 @@
 use anyhow::Context;
 use axum::{
     Json,
-    Router,
     extract::{Path, State},
     http::StatusCode,
     response::{
-        IntoResponse,
-        Sse,
+        IntoResponse, Sse,
         sse::{Event, KeepAlive},
     },
-    routing::{get, post},
+    routing::get,
 };
 use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
 use futures::{Stream, StreamExt};
 use thiserror::Error;
+use tower_http::cors::{Any, CorsLayer};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
+use utoipa::OpenApi;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
@@ -99,24 +100,68 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Cannot connect to CLP")?;
 
-    let app = Router::new()
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
-        .route("/health", get(health))
-        .route("/query", post(query))
-        .route("/query_results/{search_job_id}", get(query_results))
-        .with_state(client);
+        .routes(routes!(health))
+        .routes(routes!(query))
+        .routes(routes!(query_results))
+        .with_state(client)
+        .split_for_parts();
+    let api_json = api.to_json()?;
+    let router = router
+        .route(
+            "/openapi.json",
+            get(|| async { (StatusCode::OK, api_json) }),
+        )
+        .layer(CorsLayer::new().allow_origin(Any).allow_headers(Any));
 
     tracing::info!("Server started at {addr}");
-    axum::serve(listener, app)
+    axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
 }
 
+#[derive(utoipa::OpenApi)]
+#[openapi(info(
+    title = "API Server",
+    description = "API Server for CLP",
+    contact(name = "YScope")
+))]
+struct ApiDoc;
+
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses((status = OK, body = String, example = "API server is running"))
+)]
 async fn health() -> String {
     "API server is running".to_owned()
 }
 
+#[utoipa::path(
+    post,
+    path = "/query",
+    request_body(
+        content= clp_client::QueryConfig,
+        example = r#"{
+  "query_string": "*",
+  "dataset": "default",
+  "begin_timestamp": 0,
+  "end_timestamp": 1735689600000000,
+  "ignore_case": true,
+  "max_num_results": 0,
+  "write_to_file": false
+}"#),
+    responses(
+        (
+            status = OK,
+            body = serde_json::Value,
+            example = json!({"query_results_uri":"/query_results/1"})
+        ),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
 async fn query(
     State(client): State<clp_client::Client>,
     Json(query_config): Json<clp_client::QueryConfig>,
@@ -126,6 +171,20 @@ async fn query(
     Ok(Json(serde_json::json!({"query_results_uri": uri})))
 }
 
+#[utoipa::path(
+    get,
+    path = "/query_results/{search_job_id}",
+    responses(
+        (
+            status = OK,
+            body = String,
+            content_type = "text/event-stream",
+            example = "data: {\"timestamp\":\"2023-03-27 00:26:37.134\",\"pid\":7821,\
+\"line_num\":7,\"message\":\"CommitTransaction\"}\n"
+        ),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
 async fn query_results(
     State(client): State<clp_client::Client>,
     Path(search_job_id): Path<u64>,

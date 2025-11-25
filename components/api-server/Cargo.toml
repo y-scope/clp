@@ -29,6 +29,9 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-stream = { version = "0.1.17", features = ["fs"] }
+tower-http = { version = "0.6.7", features = ["cors"] }
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.20", features = ["json", "env-filter", "fmt", "std"] }
+utoipa = { version = "5.4.0", features = ["axum_extras"] }
+utoipa-axum = "0.2.0"
