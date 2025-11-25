@@ -516,7 +516,6 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
             REQUIRE(expected_result.pattern == result.value().second);
-            auto const volatile is_test{R"(\b \d, \Y \I:\M:\S \p)" == expected_result.pattern};
             auto const searched_result{search_known_timestamp_patterns(
                     expected_result.timestamp,
                     default_patterns,
