@@ -13,7 +13,7 @@ const {Text} = Typography;
  *
  * @param props
  * @param props.children The label text to display.
- * @param props.width Optional width for the label (e.g., '100px', '10rem', '50%').
+ * @param props.width Optional width for the label.
  * @return
  */
 const InputLabel = ({children, width}: {children: React.ReactNode; width?: string | number}) => {
