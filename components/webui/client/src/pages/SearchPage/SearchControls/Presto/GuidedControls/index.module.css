@@ -15,11 +15,6 @@
     display: flex;
 }
 
-.timestampKey {
-    width: 300px;
-    display: flex;
-}
-
 .where {
     grid-column: span 2;
     display: flex;
