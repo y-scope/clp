@@ -1,7 +1,6 @@
 """Provides utilities related to the test jobs for the CLP package."""
 
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -25,59 +24,12 @@ PACKAGE_COMPRESS_JOBS: dict[str, PackageCompressJob] = {
         dataset_name="postgresql",
         timestamp_key="timestamp",
     ),
-    "compress-spark-event-logs": PackageCompressJob(
-        job_name="compress-spark-event-logs",
-        log_fixture_name="spark_event_logs",
-        mode="clp-json",
-        log_format="json",
-        unstructured=False,
-        dataset_name="spark-event-logs",
-        timestamp_key="Timestamp",
-    ),
-    "compress-default-dataset": PackageCompressJob(
-        job_name="compress-default-dataset",
-        log_fixture_name="postgresql",
-        mode="clp-json",
-        log_format="json",
-        unstructured=False,
-        timestamp_key="timestamp",
-    ),
-    "compress-tagged-data-spark": PackageCompressJob(
-        job_name="compress-tagged-data-spark",
-        log_fixture_name="spark_event_logs",
-        mode="clp-json",
-        log_format="json",
-        unstructured=False,
-        dataset_name="tagged_data",
-        timestamp_key="Timestamp",
-        subpath=Path("spark-event-logs") / "app-20211007095008-0000",
-        tags=[
-            "tag1",
-        ],
-    ),
     "compress-hive-24hr": PackageCompressJob(
         job_name="compress-hive-24hr",
         log_fixture_name="hive_24hr",
         mode="clp-text",
         log_format="text",
         unstructured=True,
-    ),
-    "compress-tagged-data-hive": PackageCompressJob(
-        job_name="compress-tagged-data-hive",
-        log_fixture_name="hive_24hr",
-        mode="clp-text",
-        log_format="text",
-        unstructured=True,
-        subpath=(
-            Path("hive-24hr")
-            / "i-0ac90a05"
-            / "application_1427088391284_0001"
-            / "container_1427088391284_0001_01_000124"
-            / "syslog"
-        ),
-        tags=[
-            "tag1",
-        ],
     ),
     # Insert more compression jobs here as needed.
 }

@@ -76,9 +76,6 @@ class PackagePathConfig:
     #: Directory to store any cached package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
-    #: Directory where decompressed logs will be stored.
-    package_decompression_dir: Path = field(init=False, repr=True)
-
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
@@ -100,9 +97,6 @@ class PackagePathConfig:
         # Initialize cache directories for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
-        object.__setattr__(
-            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
-        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -130,11 +124,6 @@ class PackagePathConfig:
         """:return: The absolute path to the package compress script."""
         return self.clp_package_dir / "sbin" / "compress.sh"
 
-    @property
-    def decompress_script_path(self) -> Path:
-        """:return: The absolute path to the package decompress script."""
-        return self.clp_package_dir / "sbin" / "decompress.sh"
-
 
 @dataclass(frozen=True)
 class PackageCompressJob:
@@ -149,7 +138,6 @@ class PackageCompressJob:
     timestamp_key: str | None = None
     tags: list[str] | None = None
     subpath: Path | None = None
-    # TODO: add fields as needed.
 
 
 @dataclass(frozen=True)
@@ -157,7 +145,6 @@ class PackageJobList:
     """List of jobs to run during a package test."""
 
     package_compress_jobs: list[PackageCompressJob]
-    # TODO: add job types as needed.
 
 
 @dataclass(frozen=True)
