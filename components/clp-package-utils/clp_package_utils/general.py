@@ -456,8 +456,8 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         DB_COMPONENT_NAME: {
             "username": "clp-user",
             "password": secrets.token_urlsafe(8),
-            "privileged_username": "clp-credential-admin",
-            "privileged_password": secrets.token_urlsafe(16),
+            "admin_username": "clp-admin",
+            "admin_password": secrets.token_urlsafe(8),
             "root_password": secrets.token_urlsafe(16),
         },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},

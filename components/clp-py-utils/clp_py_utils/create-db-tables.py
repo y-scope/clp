@@ -53,7 +53,7 @@ def main(argv):
 
     # fmt: off
     cmd = [
-        "python3", str(script_dir / "initialize-privileged-db-user.py"),
+        "python3", str(script_dir / "initialize-admin-db-user.py"),
         "--config", str(config_file_path),
     ]
     # fmt: on
