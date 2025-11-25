@@ -446,6 +446,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"150201  1:02:03", R"(\y\m\d \k:\M:\S)", 1'422'752'523'000'000'000},
                 {"01 Feb 2015 01:02:03,004", R"(\d \b \Y \H:\M:\S,\3)", 1'422'752'523'004'000'000},
                 {"Feb 01, 2015  1:02:03 AM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'752'523'000'000'000},
+                {"Feb 01, 2015 01:02:03 AM", R"(\b \d, \Y \I:\M:\S \p)", 1'422'752'523'000'000'000},
                 {"Feb 01, 2015 12:02:03 AM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'748'923'000'000'000},
                 {"Feb 01, 2015 12:02:03 PM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'792'123'000'000'000},
                 {"February 01, 2015 01:02", R"(\B \d, \Y \H:\M)", 1'422'752'520'000'000'000},
@@ -515,7 +516,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
             REQUIRE(expected_result.pattern == result.value().second);
-
+            auto const volatile is_test{R"(\b \d, \Y \I:\M:\S \p)" == expected_result.pattern};
             auto const searched_result{search_known_timestamp_patterns(
                     expected_result.timestamp,
                     default_patterns,

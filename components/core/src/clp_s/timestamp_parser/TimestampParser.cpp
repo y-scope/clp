@@ -126,6 +126,7 @@ constexpr std::array cDefaultDateTimePatterns{
         std::string_view{R"(\y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
         std::string_view{R"(\y\m\d\O{T }\k:\M:\S)"},
         std::string_view{R"(\b \d, \Y \l:\M:\S \p)"},
+        std::string_view{R"(\b \d, \Y \I:\M:\S \p)"},
         std::string_view{R"(\B \d, \Y \H:\M)"},
         std::string_view{R"([\d\O{-/}\b\O{-/}\Y:\H:\M:\S)"},
         std::string_view{R"(\a \b \e \H:\M:\S \Y)"},
@@ -290,8 +291,15 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
     size_t i{};
     for (; i < (str.size() - 1) && padding_character == str.at(i); ++i) {}
 
+    // Check if the string is zero-padded after stripping `padding_character`, since
+    // `convert_string_to_int` allows zero-padding.
+    auto const stripped_str{str.substr(i)};
+    if (stripped_str.size() > 1ULL && '0' == stripped_str.front()) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
     int value{};
-    if (clp::string_utils::convert_string_to_int(str.substr(i), value)) {
+    if (clp::string_utils::convert_string_to_int(stripped_str, value)) {
         return value;
     }
     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
