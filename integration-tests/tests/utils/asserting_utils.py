@@ -4,9 +4,15 @@ import subprocess
 from typing import Any
 
 import pytest
+from clp_py_utils.clp_config import ClpConfig
+from pydantic import ValidationError
 
+from tests.utils.clp_mode_utils import (
+    compute_mode_signature,
+)
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_containers_with_prefix
+from tests.utils.utils import load_yaml_to_dict
 
 
 def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
@@ -44,3 +50,26 @@ def validate_package_running(package_instance: PackageInstance) -> None:
                 f"No running container found for component '{component}' "
                 f"(expected name prefix '{prefix}')."
             )
+
+
+def validate_running_mode_correct(package_instance: PackageInstance) -> None:
+    """
+    Validate that the mode described in the shared config of the instance matches the intended mode
+    defined by the instance configuration. Calls pytest.fail if the shared config fails validation
+    or if the running mode does not match the intended mode.
+
+    :param package_instance:
+    """
+    shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
+    try:
+        running_config = ClpConfig.model_validate(shared_config_dict)
+    except ValidationError as err:
+        pytest.fail(f"Shared config failed validation: {err}")
+
+    intended_config = package_instance.package_config.clp_config
+
+    running_signature = compute_mode_signature(running_config)
+    intended_signature = compute_mode_signature(intended_config)
+
+    if running_signature != intended_signature:
+        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")

@@ -1,6 +1,7 @@
 """Provides utilities related to the user-level configurations of CLP's operating modes."""
 
 from collections.abc import Callable
+from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -70,6 +71,26 @@ CLP_QUERY_COMPONENTS = [
 CLP_GARBAGE_COLLECTOR_COMPONENT = _to_docker_compose_service_name(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
 CLP_MCP_SERVER_COMPONENT = _to_docker_compose_service_name(MCP_SERVER_COMPONENT_NAME)
+
+
+def compute_mode_signature(config: ClpConfig) -> tuple[Any, ...]:
+    """
+    Constructs a signature that captures the mode-defining aspects of a ClpConfig object.
+
+    :param config:
+    :return: Tuple that encodes fields used to determine an operating mode.
+    """
+    return (
+        config.logs_input.type,
+        config.package.storage_engine.value,
+        config.package.query_engine.value,
+        config.mcp_server is not None,
+        config.presto is not None,
+        config.archive_output.storage.type,
+        config.stream_output.storage.type,
+        config.aws_config_directory is not None,
+        config.get_deployment_type(),
+    )
 
 
 def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
