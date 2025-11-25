@@ -18,6 +18,7 @@ pub use crate::error::ClientError;
 
 /// Defines the request configuration for submitting a search query.
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct QueryConfig {
     pub query_string: String,
     #[serde(default)]
@@ -129,27 +130,19 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    /// A stream of the job's results on success. The stream variant indicates where the results
+    /// are stored:
     ///
-    /// ## Returns
-    ///
-    /// A parsed JSON value representing a search result on success.
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
-    ///   or if the "message" field is not a BSON string.
-    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
-    /// * Forwards [`serde_json::from_str`]'s return values on failure.
+    /// * [`SearchResultStream::File`] if the job's results are stored in files.
+    /// * [`SearchResultStream::Mongo`] if the job's results are stored in `MongoDB`.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Client::get_status`]'s return values on failure.
-    /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
+    /// * Forwards [`Client::get_job_config`]'s return values on failure.
+    /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
@@ -186,6 +179,41 @@ impl Client {
         self.fetch_results_from_mongo(search_job_id)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
+    }
+
+    /// Retrieves the status of a previously submitted search job.
+    ///
+    /// # Returns
+    ///
+    /// The current status of the job on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    /// * Forwards [`QueryJobStatus::try_from`]'s return values on failure.
+    pub async fn get_status(&self, search_job_id: u64) -> Result<QueryJobStatus, ClientError> {
+        let row = sqlx::query(&format!(
+            "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
+        ))
+        .bind(search_job_id)
+        .fetch_one(&self.sql_pool)
+        .await?;
+        let status: i32 = row.try_get("status")?;
+        Ok(QueryJobStatus::try_from(status)?)
+    }
+
+    async fn get_job_config(&self, search_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+        let row = sqlx::query(&format!(
+            "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
+        ))
+        .bind(search_job_id)
+        .fetch_one(&self.sql_pool)
+        .await?;
+        let msgpack: &[u8] = row.try_get("job_config")?;
+        Ok(rmp_serde::from_slice(msgpack)?)
     }
 
     /// Asynchronously fetches results of a completed search job from files.
@@ -225,17 +253,17 @@ impl Client {
                 let search_result_path = entry.path();
                 let reader = std::fs::File::open(search_result_path)?;
                 let mut deserializer = rmp_serde::Deserializer::new(reader);
-                while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
-                    let event: (i64, String, String, String, i64) = event;
-                    let message = event.1;
-                    yield Ok(message);
+                while let Ok(event_tuple) = Deserialize::deserialize(&mut deserializer) {
+                    let event_tuple: EventTuple = event_tuple;
+                    let event: Event = event_tuple.into();
+                    yield Ok(event.message);
                 }
             }
         };
         stream
     }
 
-    /// Asynchronously fetches results of a completed search job from MongoDB.
+    /// Asynchronously fetches results of a completed search job from `MongoDB`.
     ///
     /// # Returns
     ///
@@ -282,41 +310,6 @@ impl Client {
         });
         Ok(mapped)
     }
-
-    /// Retrieves the status of a previously submitted search job.
-    ///
-    /// # Returns
-    ///
-    /// The current status of the job on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
-    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
-    /// * Forwards [`QueryJobStatus::try_from`]'s return values on failure.
-    pub async fn get_status(&self, search_job_id: u64) -> Result<QueryJobStatus, ClientError> {
-        let row = sqlx::query(&format!(
-            "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
-        ))
-        .bind(search_job_id)
-        .fetch_one(&self.sql_pool)
-        .await?;
-        let status: i32 = row.try_get("status")?;
-        Ok(QueryJobStatus::try_from(status)?)
-    }
-
-    async fn get_job_config(&self, search_job_id: u64) -> Result<SearchJobConfig, ClientError> {
-        let row = sqlx::query(&format!(
-            "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
-        ))
-        .bind(search_job_id)
-        .fetch_one(&self.sql_pool)
-        .await?;
-        let msgpack: &[u8] = row.try_get("job_config")?;
-        Ok(rmp_serde::from_slice(msgpack)?)
-    }
 }
 
 pin_project! {
@@ -356,5 +349,29 @@ where
             tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
+    }
+}
+
+type EventTuple = (i64, String, String, String, i64);
+
+#[allow(dead_code)]
+#[derive(Deserialize)]
+struct Event {
+    timestamp_milli: i64,
+    message: String,
+    original_file_path: String,
+    original_file_id: String,
+    log_event_index: i64,
+}
+
+impl From<EventTuple> for Event {
+    fn from(value: EventTuple) -> Self {
+        Self {
+            timestamp_milli: value.0,
+            message: value.1,
+            original_file_path: value.2,
+            original_file_id: value.3,
+            log_event_index: value.4,
+        }
     }
 }
