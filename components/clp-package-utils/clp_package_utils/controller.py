@@ -158,6 +158,10 @@ class BaseController(ABC):
             ),
         }
 
+        # Disable
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            env_vars |= {"CLP_DATABASE_ENABLED": "0"}
+
         return env_vars
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
@@ -194,6 +198,10 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
         }
+
+        # Disable
+        if BundledService.QUEUE not in self._clp_config.bundled:
+            env_vars |= {"CLP_QUEUE_ENABLED": "0"}
 
         return env_vars
 
@@ -246,6 +254,10 @@ class BaseController(ABC):
             "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
         }
 
+        # Disable
+        if BundledService.REDIS not in self._clp_config.bundled:
+            env_vars |= {"CLP_REDIS_ENABLED": "0"}
+
         return env_vars
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
@@ -291,6 +303,10 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
             "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
         }
+
+        # Disable
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            env_vars |= {"CLP_RESULTS_CACHE_ENABLED": "0"}
 
         return env_vars
 
@@ -765,16 +781,6 @@ class DockerComposeController(BaseController):
         if self._clp_config.stream_output.storage.type == StorageType.S3:
             env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
 
-        # Bundled config
-        bundled = self._clp_config.bundled
-        if BundledService.DATABASE not in bundled:
-            env_vars |= {"CLP_DATABASE_ENABLED": "0"}
-        if BundledService.QUEUE not in bundled:
-            env_vars |= {"CLP_QUEUE_ENABLED": "0"}
-        if BundledService.REDIS not in bundled:
-            env_vars |= {"CLP_REDIS_ENABLED": "0"}
-        if BundledService.RESULTS_CACHE not in bundled:
-            env_vars |= {"CLP_RESULTS_CACHE_ENABLED": "0"}
 
         # Component-specific config
         env_vars |= self._set_up_env_for_database()
