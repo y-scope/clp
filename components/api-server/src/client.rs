@@ -179,14 +179,13 @@ impl Client {
 
         let job_config = self.get_job_config(search_job_id).await?;
         if job_config.write_to_file {
-            Ok(SearchResultStream::File {
+            return Ok(SearchResultStream::File {
                 inner: self.fetch_results_from_file(search_job_id),
-            })
-        } else {
-            self.fetch_results_from_mongo(search_job_id)
-                .await
-                .map(|s| SearchResultStream::Mongo { inner: s })
+            });
         }
+        self.fetch_results_from_mongo(search_job_id)
+            .await
+            .map(|s| SearchResultStream::Mongo { inner: s })
     }
 
     fn fetch_results_from_file(
