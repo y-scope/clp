@@ -69,9 +69,9 @@ CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
+CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
-CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
@@ -227,7 +227,9 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        d = self.model_dump(exclude={"username", "password"})
+        d = self.model_dump(
+            exclude={"root_password", "username", "password"}
+        )
         return d
 
     def has_root_password(self) -> bool:
