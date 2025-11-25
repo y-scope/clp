@@ -188,6 +188,27 @@ impl Client {
             .map(|s| SearchResultStream::Mongo { inner: s })
     }
 
+    /// Asynchronously fetches results of a completed search job from files.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// The log message in string representation on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`std::fs::File::open`]'s return values on failure.
+    /// * Forwards [`tokio::fs::read_dir`]'s return values on failure.
+    /// * Forwards [`tokio::fs::ReadDir::next_entry`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stream output storage is not file system.
     fn fetch_results_from_file(
         &self,
         search_job_id: u64,
