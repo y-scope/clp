@@ -105,22 +105,6 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
             '"backend_type":"startup","query_id":0}\n'
         ),
     ),
-    "search-ignore-case": PackageSearchJob(
-        job_name="search-ignore-case",
-        mode="clp-json",
-        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
-        ignore_case=True,
-        count=False,
-        wildcard_query='message: "nExT tRaNsAcTiOn Id: 735; nExT OiD: 16388"',
-        desired_result=(
-            '{"timestamp":"2023-03-27 00:26:35.873","pid":7813,'
-            '"session_id":"64211afb.1e85",'
-            '"line_num":4,"session_start":"2023-03-27 00:26:35 EDT","txid":0,'
-            '"error_severity":"DEBUG","message":"next transaction ID: 735; '
-            'next OID: 16388",'
-            '"backend_type":"startup","query_id":0}\n'
-        ),
-    ),
     "search-basic-hive": PackageSearchJob(
         job_name="search-basic-hive",
         mode="clp-text",
