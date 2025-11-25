@@ -18,6 +18,8 @@ image:
     pullPolicy: "IfNotPresent"
     tag: "nightly"
 
+workerConcurrency: 8
+
 clpConfig:
   package:
     storage_engine: "clp-s"
