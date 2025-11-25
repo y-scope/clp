@@ -4,7 +4,8 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{
-        IntoResponse, Sse,
+        IntoResponse,
+        Sse,
         sse::{Event, KeepAlive},
     },
     routing::get,
@@ -113,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
             "/openapi.json",
             get(|| async { (StatusCode::OK, api_json) }),
         )
-        .layer(CorsLayer::new().allow_origin(Any).allow_headers(Any));
+        .layer(CorsLayer::new().allow_origin(Any));
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, router)
