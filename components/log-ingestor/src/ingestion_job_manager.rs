@@ -1,0 +1,157 @@
+use std::{collections::HashMap, sync::Arc, time::Duration};
+
+use async_trait::async_trait;
+use clp_rust_utils::s3::ObjectMetadata;
+use thiserror::Error;
+use tokio::sync::{Mutex, mpsc};
+use uuid::Uuid;
+
+use crate::{
+    aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
+    compression::{Buffer, BufferSubmitter, Listener},
+    ingestion_job::{IngestionJob, S3Scanner, S3ScannerConfig, SqsListenerConfig},
+};
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Log ingestor internal error: {0}")]
+    InternalError(#[from] anyhow::Error),
+
+    #[error("Ingestion job not found: {0}")]
+    JobNotFound(Uuid),
+
+    #[error("Prefix conflict: {0}")]
+    PrefixConflict(String),
+}
+
+pub struct IngestionJobManager {
+    job_table: Arc<Mutex<HashMap<Uuid, IngestionJobTableEntry>>>,
+    buffer_timeout: Duration,
+    buffer_size_threshold: u64,
+    channel_capacity: usize,
+}
+
+impl IngestionJobManager {
+    pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
+        let prefix = config.prefix.clone();
+        let s3_client_manager = self.create_s3_client_manager();
+        self.create(prefix, move |job_id, sender| {
+            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
+            IngestionJob::S3Scanner(scanner)
+        })
+        .await
+    }
+
+    pub async fn create_sqs_listener(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
+        let prefix = config.prefix.clone();
+        let sqs_client_manager = self.create_sqs_client_manager();
+        self.create(prefix, move |job_id, sender| {
+            let listener = crate::ingestion_job::SqsListener::spawn(
+                job_id,
+                sqs_client_manager,
+                config,
+                sender,
+            );
+            IngestionJob::SqsListener(listener)
+        })
+        .await
+    }
+
+    pub async fn shutdown_and_remove_job(&self, job_id: Uuid) -> Result<(), Error> {
+        let mut job_table = self.job_table.lock().await;
+        let job_to_remove = job_table.remove(&job_id);
+        drop(job_table);
+
+        match job_to_remove {
+            Some(entry) => {
+                entry.ingestion_job.shutdown_and_join().await?;
+                entry.listener.shutdown_and_join().await?;
+                Ok(())
+            }
+            None => Err(Error::JobNotFound(job_id)),
+        }
+    }
+
+    async fn create<JobCreationCallback>(
+        &self,
+        prefix: String,
+        create_ingestion_job: JobCreationCallback,
+    ) -> Result<Uuid, Error>
+    where
+        JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
+        let mut job_table = self.job_table.lock().await;
+        for table_entry in job_table.values() {
+            if is_mutually_prefix_free(table_entry.prefix.as_str(), prefix.as_str()) {
+                continue;
+            }
+            return Err(Error::PrefixConflict(format!(
+                "Cannot create ingestion job with prefix '{}' as it conflicts with existing job \
+                 with prefix '{}'",
+                prefix, table_entry.prefix
+            )));
+        }
+
+        let job_id = {
+            loop {
+                let candidate_job_id = Uuid::new_v4();
+                if !job_table.contains_key(&candidate_job_id) {
+                    break candidate_job_id;
+                }
+            }
+        };
+
+        // At this point, we use one listener per ingestion job. However, the listener itself is
+        // designed to be shared among multiple ingestion jobs in the future.
+        let job_listener = self.create_listener();
+        let sender = job_listener.get_new_sender();
+        job_table.insert(
+            job_id,
+            IngestionJobTableEntry {
+                ingestion_job: create_ingestion_job(job_id, sender),
+                listener: job_listener,
+                prefix,
+            },
+        );
+        drop(job_table);
+
+        Ok(job_id)
+    }
+
+    fn create_listener(&self) -> Listener {
+        let buffer = Buffer::new(CompressionJobSubmitter {}, self.buffer_size_threshold);
+        Listener::spawn(buffer, self.buffer_timeout, self.channel_capacity)
+    }
+
+    fn create_s3_client_manager(&self) -> S3ClientWrapper {
+        todo!("Not implemented yet")
+    }
+
+    fn create_sqs_client_manager(&self) -> SqsClientWrapper {
+        todo!("Not implemented yet")
+    }
+}
+
+/// Represents an entry in the ingestion job table.
+struct IngestionJobTableEntry {
+    ingestion_job: IngestionJob,
+    listener: Listener,
+    prefix: String,
+}
+
+/// Submitter implementation for creating CLP compression jobs.
+struct CompressionJobSubmitter {}
+
+#[async_trait]
+impl BufferSubmitter for CompressionJobSubmitter {
+    async fn submit(&self, _buffer: &[ObjectMetadata]) -> anyhow::Result<()> {
+        todo!("Not implemented yet")
+    }
+}
+
+/// # Returns:
+///
+/// Whether the two strings are mutually prefix-free, meaning that `a` is not a prefix of `b`
+/// and vice versa.
+fn is_mutually_prefix_free(a: &str, b: &str) -> bool {
+    !a.starts_with(b) && !b.starts_with(a)
+}
