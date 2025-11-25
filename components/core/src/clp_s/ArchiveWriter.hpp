@@ -36,7 +36,7 @@ struct ArchiveWriterOption {
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
 
-    bool experimental;
+    bool experimental{false};
 };
 
 class ArchiveWriter {
@@ -232,7 +232,7 @@ private:
      * if the result is an error.
      * @return The size of the compressed statistics metadata in bytes.
      */
-    [[nodiscard]] auto close_stats() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_experimenal_stats() -> ystdlib::error_handling::Result<size_t>;
 
     /**
      * Writes the archive to a single file
@@ -306,8 +306,7 @@ private:
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
 
-    std::shared_ptr<LogTypeStats> m_logtype_stats;
-    std::shared_ptr<VariableStats> m_var_stats;
+    std::optional<ExperimentalStats> m_experimental_stats;
 };
 }  // namespace clp_s
 

@@ -2,6 +2,7 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <map>
+#include <optional>
 #include <set>
 #include <span>
 #include <string_view>
@@ -31,15 +32,26 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    struct Options {
+        Options() = default;
+
+        Options(NetworkAuthOption network_auth, bool experimental)
+                : m_network_auth{network_auth},
+                  m_experimental{experimental} {}
+
+        NetworkAuthOption m_network_auth{};
+        bool m_experimental{false};
+    };
+
     // Constructor
     ArchiveReader() : m_is_open(false) {}
 
     /**
      * Opens an archive for reading.
      * @param archive_path
-     * @param network_auth
+     * @param options
      */
-    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+    void open(Path const& archive_path, Options const& options);
 
     /**
      * Reads the dictionaries and metadata.
@@ -151,9 +163,9 @@ public:
      */
     bool has_log_order() { return m_log_event_idx_column_id >= 0; }
 
-    auto get_logtype_stats() -> LogTypeStats const& { return m_logtype_stats; }
-
-    auto get_variable_stats() -> VariableStats const& { return m_var_stats; }
+    auto get_experimental_stats() -> ExperimentalStats const& {
+        return m_experimental_stats.value();
+    }
 
 private:
     /**
@@ -208,7 +220,7 @@ private:
     /**
      * Reads the experimental statistics from the archive.
      */
-    auto read_stats() -> ystdlib::error_handling::Result<void>;
+    auto read_experimental_stats() -> ystdlib::error_handling::Result<void>;
 
     bool m_is_open;
     std::string m_archive_id;
@@ -233,8 +245,7 @@ private:
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
 
-    LogTypeStats m_logtype_stats;
-    VariableStats m_var_stats;
+    std::optional<ExperimentalStats> m_experimental_stats;
 };
 }  // namespace clp_s
 

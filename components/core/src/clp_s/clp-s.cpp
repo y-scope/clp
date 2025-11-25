@@ -264,7 +264,13 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
     for (auto const& input_path : cli_args.get_input_paths()) {
         try {
-            archive_reader->open(input_path, cli_args.get_network_auth());
+            archive_reader->open(
+                    input_path,
+                    clp_s::ArchiveReader::Options{
+                            cli_args.get_network_auth(),
+                            cli_args.experimental()
+                    }
+            );
         } catch (std::exception const& e) {
             SPDLOG_ERROR("Failed to open archive - {}", e.what());
             return 2;
@@ -272,7 +278,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         archive_reader->read_dictionaries_and_metadata();
         if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery == query) {
             auto logtype_dict{archive_reader->get_log_type_dictionary()};
-            auto logtype_stats{archive_reader->get_logtype_stats()};
+            auto logtype_stats{archive_reader->get_experimental_stats().m_logtype_stats};
             for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats.size(); ++i) {
                 auto stat{logtype_stats.at(i)};
                 auto message{fmt::format(
@@ -285,7 +291,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             }
         } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery == query) {
             auto var_dict{archive_reader->get_variable_dictionary()};
-            auto var_stats{archive_reader->get_variable_stats()};
+            auto var_stats{archive_reader->get_experimental_stats().m_var_stats};
             for (clp::variable_dictionary_id_t i{0}; i < var_stats.size(); ++i) {
                 auto stat{var_stats.at(i)};
                 auto message{fmt::format(
@@ -430,7 +436,13 @@ int main(int argc, char const* argv[]) {
             }
 
             try {
-                archive_reader->open(input_path, command_line_arguments.get_network_auth());
+                archive_reader->open(
+                        input_path,
+                        clp_s::ArchiveReader::Options{
+                                command_line_arguments.get_network_auth(),
+                                command_line_arguments.experimental()
+                        }
+                );
             } catch (std::exception const& e) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
                 return 1;

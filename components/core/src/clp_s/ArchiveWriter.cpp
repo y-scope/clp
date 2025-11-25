@@ -66,8 +66,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
     if (option.experimental) {
-        m_logtype_stats = std::make_shared<LogTypeStats>();
-        m_var_stats = std::make_shared<VariableStats>();
+        m_experimental_stats = ExperimentalStats();
     }
 }
 
@@ -83,10 +82,6 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
     auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
     auto [table_metadata_compressed_size, table_compressed_size] = store_tables();
-    auto stats_compressed_size{close_stats()};
-    if (stats_compressed_size.has_error()) {
-        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
 
     std::vector<ArchiveFileInfo> files{
             {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
@@ -95,9 +90,20 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveVarDictFile, var_dict_compressed_size},
             {constants::cArchiveLogDictFile, log_dict_compressed_size},
             {constants::cArchiveArrayDictFile, array_dict_compressed_size},
-            {constants::cArchiveTablesFile, table_compressed_size},
-            {std::string(constants::cArchiveStatsFile), stats_compressed_size.value()}
+            {constants::cArchiveTablesFile, table_compressed_size}
     };
+
+    if (m_experimental_stats) {
+        auto stats_compressed_size{close_experimenal_stats()};
+        if (stats_compressed_size.has_error()) {
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        files.emplace_back(
+                std::string(constants::cArchiveStatsFile),
+                stats_compressed_size.value()
+        );
+    }
+
     uint64_t offset = 0;
     for (auto& file : files) {
         uint64_t original_size = file.o;
@@ -345,10 +351,18 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
             case NodeType::LogType:
-                writer->append_column(new LogTypeColumnWriter(id, m_log_dict, m_logtype_stats));
+                writer->append_column(new LogTypeColumnWriter(
+                        id,
+                        m_log_dict,
+                        &m_experimental_stats->m_logtype_stats
+                ));
                 break;
             case NodeType::TypedVar:
-                writer->append_column(new TypedVariableColumnWriter(id, m_var_dict, m_var_stats));
+                writer->append_column(new TypedVariableColumnWriter(
+                        id,
+                        m_var_dict,
+                        &m_experimental_stats->m_var_stats
+                ));
                 break;
             case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
@@ -496,13 +510,7 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto ArchiveWriter::close_stats() -> ystdlib::error_handling::Result<size_t> {
-    if (nullptr == m_logtype_stats && nullptr == m_var_stats) {
-        return 0;
-    } else if (nullptr == m_logtype_stats || nullptr == m_var_stats) {
-        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
-    }
-
+auto ArchiveWriter::close_experimenal_stats() -> ystdlib::error_handling::Result<size_t> {
     FileWriter writer{};
     writer.open(
             m_archive_path + std::string{constants::cArchiveStatsFile},
@@ -511,15 +519,15 @@ auto ArchiveWriter::close_stats() -> ystdlib::error_handling::Result<size_t> {
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats->compress(compressor));
-    YSTDLIB_ERROR_HANDLING_TRYX(m_var_stats->compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.compress(compressor));
 
     compressor.close();
     auto compressed_size{writer.get_pos()};
     writer.close();
 
-    m_logtype_stats->clear();
-    m_var_stats->clear();
+    m_experimental_stats->m_logtype_stats.clear();
+    m_experimental_stats->m_var_stats.clear();
     return compressed_size;
 }
 }  // namespace clp_s

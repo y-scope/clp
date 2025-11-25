@@ -68,7 +68,7 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::NetworkAuthOption{}
+                clp_s::ArchiveReader::Options{}
         ));
         auto const schema_tree{archive_reader.get_schema_tree()};
         REQUIRE(nullptr != schema_tree);

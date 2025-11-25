@@ -19,7 +19,7 @@
 using std::string_view;
 
 namespace clp_s {
-void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
+void ArchiveReader::open(Path const& archive_path, Options const& options) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
@@ -29,7 +29,8 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+    m_archive_reader_adaptor
+            = std::make_shared<ArchiveReaderAdaptor>(archive_path, options.m_network_auth);
 
     if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
@@ -43,6 +44,10 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
+
+    if (options.m_experimental) {
+        m_experimental_stats = ExperimentalStats();
+    }
 }
 
 void ArchiveReader::read_metadata() {
@@ -142,7 +147,7 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     m_var_dict->read_entries();
     m_log_dict->read_entries();
     m_array_dict->read_entries();
-    read_stats();
+    std::ignore = read_experimental_stats();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -409,8 +414,10 @@ void ArchiveReader::close() {
     m_var_dict->close();
     m_log_dict->close();
     m_array_dict->close();
-    m_logtype_stats.clear();
-    m_var_stats.clear();
+    if (m_experimental_stats) {
+        m_experimental_stats->m_logtype_stats.clear();
+        m_experimental_stats->m_var_stats.clear();
+    }
 
     m_stream_reader.close();
     m_archive_reader_adaptor.reset();
@@ -438,7 +445,10 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     return m_stream_buffer;
 }
 
-auto ArchiveReader::read_stats() -> ystdlib::error_handling::Result<void> {
+auto ArchiveReader::read_experimental_stats() -> ystdlib::error_handling::Result<void> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+    }
     constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
     auto reader{
             m_archive_reader_adaptor->checkout_reader_for_section(constants::cArchiveStatsFile)
@@ -446,8 +456,8 @@ auto ArchiveReader::read_stats() -> ystdlib::error_handling::Result<void> {
     ZstdDecompressor decompressor{};
     decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
 
-    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats.decompress(decompressor));
-    YSTDLIB_ERROR_HANDLING_TRYX(m_var_stats.decompress(decompressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.decompress(decompressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.decompress(decompressor));
 
     decompressor.close();
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveStatsFile);

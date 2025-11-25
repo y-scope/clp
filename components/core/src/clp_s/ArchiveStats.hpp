@@ -132,6 +132,11 @@ private:
 };
 
 using VariableStats = Array<VariableStat, clp::variable_dictionary_id_t>;
+
+struct ExperimentalStats {
+    LogTypeStats m_logtype_stats;
+    VariableStats m_var_stats;
+};
 }  // namespace clp_s
 
 #endif  // CLP_S_ARCHIVEWRITER_HPP

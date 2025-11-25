@@ -46,7 +46,7 @@ void IndexManager::update_metadata(std::string const& dataset_name, Path const& 
     m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
     ArchiveReader archive_reader;
-    archive_reader.open(archive_path, NetworkAuthOption{});
+    archive_reader.open(archive_path, ArchiveReader::Options{});
 
     traverse_schema_tree_and_update_metadata(
             archive_reader.get_schema_tree(),

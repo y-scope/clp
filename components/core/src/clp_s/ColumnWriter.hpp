@@ -230,11 +230,11 @@ public:
     LogTypeColumnWriter(
             int32_t id,
             std::shared_ptr<LogTypeDictionaryWriter> log_dict,
-            std::shared_ptr<LogTypeStats> logtype_stats
+            LogTypeStats* logtype_stats
     )
             : BaseColumnWriter(id),
-              m_log_dict(std::move(log_dict)),
-              m_logtype_stats(std::move(logtype_stats)) {}
+              m_log_dict{std::move(log_dict)},
+              m_logtype_stats{logtype_stats} {}
 
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
@@ -257,7 +257,7 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
 
     std::vector<encoded_log_dict_id_t> m_logtypes;
-    std::shared_ptr<LogTypeStats> m_logtype_stats;
+    LogTypeStats* m_logtype_stats{nullptr};
 };
 
 class TypedVariableColumnWriter : public BaseColumnWriter {
@@ -266,11 +266,11 @@ public:
     TypedVariableColumnWriter(
             int32_t id,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
-            std::shared_ptr<VariableStats> var_stats
+            VariableStats* var_stats
     )
             : BaseColumnWriter(id),
-              m_var_dict(std::move(var_dict)),
-              m_var_stats(std::move(var_stats)) {}
+              m_var_dict{std::move(var_dict)},
+              m_var_stats{var_stats} {}
 
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
@@ -279,7 +279,7 @@ public:
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
-    std::shared_ptr<VariableStats> m_var_stats;
+    VariableStats* m_var_stats{nullptr};
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {
