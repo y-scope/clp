@@ -83,7 +83,7 @@ tasks:
     cmds:
       - |-
         curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
-          | sh -s -- --default-toolchain none -y
+          | sh -s -- --default-toolchain none --no-modify-path -y
 
       # Create an environment file to configure the custom Rust toolchain location.
       # Source this file before using cargo/rustup commands to ensure they use the toolchain
