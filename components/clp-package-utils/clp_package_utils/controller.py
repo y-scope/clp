@@ -857,7 +857,7 @@ class DockerComposeController(BaseController):
         """
         deployment_type = self._clp_config.get_deployment_type()
         if deployment_type == DeploymentType.BASE:
-            return "docker-compose-base.yaml"
+            return "etc/docker-compose/docker-compose-base.yaml"
         return "docker-compose.yaml"
 
 
