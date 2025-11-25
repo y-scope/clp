@@ -32,11 +32,26 @@ const useTimestampKeyInit = () => {
         enabled: null !== dataset,
     });
 
-    if (isSuccess) {
-        if ("undefined" !== typeof timestampKeys[0] && null === timestampKey) {
-            updateTimestampKey(timestampKeys[0]);
+    // Reset timestamp key when dataset changes.
+    useEffect(() => {
+        updateTimestampKey(null);
+    }, [
+        dataset,
+        updateTimestampKey,
+    ]);
+
+    useEffect(() => {
+        if (isSuccess) {
+            if ("undefined" !== typeof timestampKeys[0] && null === timestampKey) {
+                updateTimestampKey(timestampKeys[0]);
+            }
         }
-    }
+    }, [
+        isSuccess,
+        timestampKeys,
+        timestampKey,
+        updateTimestampKey,
+    ]);
 
     // Show error message if fetch fails
     useEffect(() => {
@@ -65,14 +80,6 @@ const useTimestampKeyInit = () => {
         timestampKeys,
         isSuccess,
         messageApi,
-        updateTimestampKey,
-    ]);
-
-    // Reset timestamp key when dataset changes.
-    useEffect(() => {
-        updateTimestampKey(null);
-    }, [
-        dataset,
         updateTimestampKey,
     ]);
 

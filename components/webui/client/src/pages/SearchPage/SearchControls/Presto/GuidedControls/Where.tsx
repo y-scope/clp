@@ -21,7 +21,7 @@ const Where = () => {
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     return (
-        <div className={guidedGrid["where"]}>
+        <div className={guidedGrid["gridItem"]}>
             <InputLabel width={LABEL_WIDTH}>WHERE</InputLabel>
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}

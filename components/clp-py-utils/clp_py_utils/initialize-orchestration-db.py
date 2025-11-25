@@ -55,9 +55,10 @@ def main(argv):
 
     try:
         sql_adapter = SqlAdapter(clp_config.database)
-        with closing(sql_adapter.create_connection(True)) as scheduling_db, closing(
-            scheduling_db.cursor(dictionary=True)
-        ) as scheduling_db_cursor:
+        with (
+            closing(sql_adapter.create_connection(True)) as scheduling_db,
+            closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor,
+        ):
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
