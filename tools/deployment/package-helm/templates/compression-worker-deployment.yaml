@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "compression-worker"
 spec:
-  replicas: {{ .Values.workerConcurrency }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
