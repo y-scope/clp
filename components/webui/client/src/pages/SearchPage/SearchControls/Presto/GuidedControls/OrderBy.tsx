@@ -20,7 +20,7 @@ const OrderBy = () => {
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     return (
-        <div className={guidedGrid["order"]}>
+        <div className={guidedGrid["gridItem"]}>
             <InputLabel>ORDER BY</InputLabel>
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}
