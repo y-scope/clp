@@ -34,5 +34,5 @@ pub struct Bucket {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Object {
     pub key: String,
-    pub size: usize,
+    pub size: u64,
 }

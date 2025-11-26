@@ -1,12 +1,16 @@
+use std::pin::Pin;
+
+use async_stream::stream;
 use clp_rust_utils::{
     clp_config::package::{
-        config::{Config, StorageEngine},
+        config::{Config, StorageEngine, StreamOutputStorage},
         credentials::Credentials,
     },
     database::mysql::create_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
 };
 use futures::{Stream, StreamExt};
+use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 
@@ -14,6 +18,7 @@ pub use crate::error::ClientError;
 
 /// Defines the request configuration for submitting a search query.
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct QueryConfig {
     pub query_string: String,
     #[serde(default)]
@@ -26,6 +31,8 @@ pub struct QueryConfig {
     pub end_timestamp: Option<i64>,
     #[serde(default)]
     pub ignore_case: bool,
+    #[serde(default)]
+    pub write_to_file: bool,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -37,6 +44,7 @@ impl From<QueryConfig> for SearchJobConfig {
             begin_timestamp: value.begin_timestamp,
             end_timestamp: value.end_timestamp,
             ignore_case: value.ignore_case,
+            write_to_file: value.write_to_file,
             ..Default::default()
         }
     }
@@ -122,31 +130,29 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    /// A stream of the job's results on success. The stream variant indicates where the results
+    /// are stored:
     ///
-    /// ## Returns
-    ///
-    /// A parsed JSON value representing a search result on success.
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
-    ///   or if the "message" field is not a BSON string.
-    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
-    /// * Forwards [`serde_json::from_str`]'s return values on failure.
+    /// * [`SearchResultStream::File`] if the job's results are stored in files.
+    /// * [`SearchResultStream::Mongo`] if the job's results are stored in `MongoDB`.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Client::get_status`]'s return values on failure.
-    /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
+    /// * Forwards [`Client::get_job_config`]'s return values on failure.
+    /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
-    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
+    ) -> Result<
+        SearchResultStream<
+            impl Stream<Item = Result<String, ClientError>> + use<>,
+            impl Stream<Item = Result<String, ClientError>> + use<>,
+        >,
+        ClientError,
+    > {
         let mut delay_ms = self.config.api_server.query_job_polling.initial_backoff_ms;
         let max_delay_ms = self.config.api_server.query_job_polling.max_backoff_ms;
         loop {
@@ -164,25 +170,15 @@ impl Client {
             }
         }
 
-        let database = self
-            .mongodb_client
-            .database(&self.config.results_cache.db_name);
-        let collection: mongodb::Collection<mongodb::bson::Document> =
-            database.collection(&search_job_id.to_string());
-        let cursor = collection.find(mongodb::bson::doc! {}).await?;
-
-        let mapped = cursor.map(|res| {
-            let doc = res?;
-            let Some(msg) = doc.get("message") else {
-                return Err(ClientError::MalformedData);
-            };
-            let mongodb::bson::Bson::String(message) = msg else {
-                return Err(ClientError::MalformedData);
-            };
-            Ok(message.clone())
-        });
-
-        Ok(mapped)
+        let job_config = self.get_job_config(search_job_id).await?;
+        if job_config.write_to_file {
+            return Ok(SearchResultStream::File {
+                inner: self.fetch_results_from_file(search_job_id),
+            });
+        }
+        self.fetch_results_from_mongo(search_job_id)
+            .await
+            .map(|s| SearchResultStream::Mongo { inner: s })
     }
 
     /// Retrieves the status of a previously submitted search job.
@@ -207,5 +203,150 @@ impl Client {
         .await?;
         let status: i32 = row.try_get("status")?;
         Ok(QueryJobStatus::try_from(status)?)
+    }
+
+    async fn get_job_config(&self, search_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+        let row = sqlx::query(&format!(
+            "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
+        ))
+        .bind(search_job_id)
+        .fetch_one(&self.sql_pool)
+        .await?;
+        let msgpack: &[u8] = row.try_get("job_config")?;
+        Ok(rmp_serde::from_slice(msgpack)?)
+    }
+
+    /// Asynchronously fetches results of a completed search job from files.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// The log message in string representation on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`std::fs::File::open`]'s return values on failure.
+    /// * Forwards [`tokio::fs::read_dir`]'s return values on failure.
+    /// * Forwards [`tokio::fs::ReadDir::next_entry`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stream output storage is not file system.
+    fn fetch_results_from_file(
+        &self,
+        search_job_id: u64,
+    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
+        let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
+            todo!("Outputting query results to S3 is not supported for now.");
+        };
+        let search_job_output_dir = std::path::Path::new("/")
+            .join(directory)
+            .join(search_job_id.to_string());
+        let stream = stream! {
+            let mut entries = tokio::fs::read_dir(search_job_output_dir).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                let search_result_path = entry.path();
+                let reader = std::fs::File::open(search_result_path)?;
+                let mut deserializer = rmp_serde::Deserializer::new(reader);
+                while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
+                    let event: (i64, String, String, String, i64) = event;
+                    yield Ok(event.1);
+                }
+            }
+        };
+        stream
+    }
+
+    /// Asynchronously fetches results of a completed search job from `MongoDB`.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// A parsed JSON value representing a search result on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
+    ///   or if the "message" field is not a BSON string.
+    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
+    /// * Forwards [`serde_json::from_str`]'s return values on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
+    async fn fetch_results_from_mongo(
+        &self,
+        search_job_id: u64,
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
+        let database = self
+            .mongodb_client
+            .database(&self.config.results_cache.db_name);
+        let collection: mongodb::Collection<mongodb::bson::Document> =
+            database.collection(&search_job_id.to_string());
+        let cursor = collection.find(mongodb::bson::doc! {}).await?;
+
+        let mapped = cursor.map(|res| {
+            let doc = res?;
+            let Some(msg) = doc.get("message") else {
+                return Err(ClientError::MalformedData);
+            };
+            let mongodb::bson::Bson::String(message) = msg else {
+                return Err(ClientError::MalformedData);
+            };
+            Ok(message.clone())
+        });
+        Ok(mapped)
+    }
+}
+
+pin_project! {
+    /// Enum for search result streams from different storage backends.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `FileStream`: Streaming from file system storage.
+    /// * `MongoStream`: Streaming from MongoDB storage.
+    #[project = SearchResultStreamProj]
+    pub enum SearchResultStream<FileStream, MongoStream>
+    where
+        FileStream: Stream<Item = Result<String, ClientError>>,
+        MongoStream: Stream<Item = Result<String, ClientError>>
+    {
+        File{#[pin] inner: FileStream},
+        Mongo{#[pin] inner: MongoStream},
+    }
+}
+
+impl<FileStream, MongoStream> Stream for SearchResultStream<FileStream, MongoStream>
+where
+    FileStream: Stream<Item = Result<String, ClientError>>,
+    MongoStream: Stream<Item = Result<String, ClientError>>,
+{
+    type Item = Result<String, ClientError>;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let poll = match self.project() {
+            SearchResultStreamProj::File { inner } => inner.poll_next(cx),
+            SearchResultStreamProj::Mongo { inner } => inner.poll_next(cx),
+        };
+        if let std::task::Poll::Ready(Some(Err(err))) = &poll {
+            tracing::error!("An error occurred when streaming results: {}", err);
+        }
+        poll
     }
 }

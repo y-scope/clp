@@ -32,7 +32,7 @@ struct Task<SqsClientManager: AwsClientManagerType<Client>> {
     sender: mpsc::Sender<ObjectMetadata>,
 }
 
-impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientManager> {
+impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
     /// extracted metadata is sent to the provided channel sender.
     ///
@@ -184,7 +184,7 @@ impl SqsListener {
     ///
     /// A newly created instance of [`SqsListener`].
     #[must_use]
-    pub fn spawn<SqsClientManager: AwsClientManagerType<Client> + 'static>(
+    pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
         id: Uuid,
         sqs_client_manager: SqsClientManager,
         config: SqsListenerConfig,
