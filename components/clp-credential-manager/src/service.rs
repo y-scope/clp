@@ -1,12 +1,9 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use secrecy::ExposeSecret;
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 
-use crate::{
-    config::{AppConfig},
-    error::{ServiceResult},
-};
+use crate::{config::AppConfig, error::ServiceResult};
 
 /// Reference-counted handle that Axum stores as application state.
 pub type SharedService = Arc<CredentialManagerService>;
@@ -45,7 +42,7 @@ impl CredentialManagerService {
             .connect_with(options)
             .await?;
 
-        Ok(Self { db_pool: pool})
+        Ok(Self { db_pool: pool })
     }
 
     /// Wraps `self` in an [`Arc`] so it can be cloned into Axum handlers.

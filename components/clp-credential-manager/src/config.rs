@@ -1,8 +1,4 @@
-use std::{
-    fs,
-    net::SocketAddr,
-    path::{Path},
-};
+use std::{fs, net::SocketAddr, path::Path};
 
 use secrecy::SecretString;
 use serde::Deserialize;
@@ -106,12 +102,12 @@ pub struct DatabaseConfig {
     pub max_connections: u32,
 }
 
-/// Supplies the default MySQL server port (`3306`).
+/// Supplies the default `MySQL` server port (`3306`).
 const fn default_mysql_port() -> u16 {
     3306
 }
 
-/// Supplies the default maximum connection count for the MySQL pool.
+/// Supplies the default maximum connection count for the `MySQL` pool.
 const fn default_max_connections() -> u32 {
     DEFAULT_MAX_CONNECTIONS
 }

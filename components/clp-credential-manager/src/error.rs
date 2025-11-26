@@ -43,7 +43,8 @@ pub enum ServiceError {
 }
 
 impl From<sqlx::Error> for ServiceError {
-    /// Maps raw [`sqlx::Error`] values into domain-specific variants so callers can react precisely.
+    /// Maps raw [`sqlx::Error`] values into domain-specific variants so callers can react
+    /// precisely.
     ///
     /// # Parameters:
     ///
