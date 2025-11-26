@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-name = "clp_client"
+name = "api_server"
 path = "src/lib.rs"
 
 [[bin]]
