@@ -310,7 +310,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_results_cache_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for bundling the queue component.
+        Sets up environment variables and directories for bundling the results cache component.
 
         :return: Dictionary of environment variables necessary to bundle the component.
         """
