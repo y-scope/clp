@@ -53,7 +53,6 @@ tasks:
         #!/bin/sh
         export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
         EOF
-        chmod +x "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
 
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
