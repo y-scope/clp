@@ -59,6 +59,7 @@ async fn health() -> String {
         (
             status = OK,
             body = QueryResultsUri,
+            description = "The URI to fetch the results of the submitted query.",
             example = json!({"query_results_uri":"/query_results/1"})
         ),
         (status = INTERNAL_SERVER_ERROR)
