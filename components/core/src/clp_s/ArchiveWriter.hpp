@@ -12,7 +12,9 @@
 #include <nlohmann/json.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/Defs.h>
 #include <clp_s/ArchiveStats.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 
 #include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
@@ -210,6 +212,25 @@ public:
         }
         return rc;
     }
+
+    /**
+     * Update the stats for the given log type, adding it to the log type dictionary if necessary.
+     * @param logtype
+     * @return The log type ID on success.
+     * @return ClpsErrorCodeEnum::Unsupported if experimental stats are not enabled.
+     */
+    auto update_logtype_stats(clp_s::LogTypeDictionaryEntry logtype)
+            -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t>;
+
+    /**
+     * Update the stats for the given variable, adding it to the variable dictionary if necessary.
+     * @param value The variable value.
+     * @param type The variable type.
+     * @return The variable ID on success.
+     * @return ClpsErrorCodeEnum::Unsupported if experimental stats are not enabled.
+     */
+    auto update_var_stats(std::string_view value, std::string_view type)
+            -> ystdlib::error_handling::Result<clp::variable_dictionary_id_t>;
 
 private:
     /**

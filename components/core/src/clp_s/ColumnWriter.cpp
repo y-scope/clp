@@ -8,8 +8,6 @@
 
 #include <fmt/format.h>
 
-#include <clp_s/ArchiveStats.hpp>
-
 #include "../clp/Defs.h"
 #include "../clp/EncodedVariableInterpreter.hpp"
 #include "../clp/ErrorCode.hpp"
@@ -162,14 +160,6 @@ auto LogTypeColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t 
     clp::logtype_dictionary_id_t id{};
     auto new_entry{m_log_dict->add_entry(logtype_dict_entry, id)};
     m_logtypes.push_back(static_cast<encoded_log_dict_id_t>(id));
-
-    if (nullptr != m_logtype_stats) {
-        if (new_entry) {
-            m_logtype_stats->at_or_create(id);
-        }
-        m_logtype_stats->at(id).increment_count();
-    }
-
     return sizeof(encoded_log_dict_id_t);
 }
 
@@ -178,33 +168,6 @@ auto LogTypeColumnWriter::store(ZstdCompressor& compressor) -> void {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             reinterpret_cast<char const*>(m_logtypes.data()),
             m_logtypes.size() * sizeof(encoded_log_dict_id_t)
-    );
-}
-
-// TODO clpsls: Because the variable dictionary is shared between unstructured and structured
-// logs, but the variable stats are only for unstructured logs it is possible to have "holes" in the
-// variable stats array.
-auto TypedVariableColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
-    auto const var{std::get<ParsedMessage::TypedVar>(value)};
-    clp::variable_dictionary_id_t id{};
-    auto new_entry{m_var_dict->add_entry(var.m_value, id)};
-    m_var_dict_ids.push_back(id);
-
-    if (nullptr != m_var_stats) {
-        if (new_entry) {
-            m_var_stats->at_or_create(id).set_type(var.m_type);
-        }
-        m_var_stats->at(id).increment_count();
-    }
-
-    return sizeof(clp::variable_dictionary_id_t);
-}
-
-auto TypedVariableColumnWriter::store(ZstdCompressor& compressor) -> void {
-    compressor.write(
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            reinterpret_cast<char const*>(m_var_dict_ids.data()),
-            m_var_dict_ids.size() * sizeof(clp::variable_dictionary_id_t)
     );
 }
 

@@ -227,14 +227,9 @@ class LogTypeColumnWriter : public BaseColumnWriter {
 public:
     using encoded_log_dict_id_t = uint64_t;
 
-    LogTypeColumnWriter(
-            int32_t id,
-            std::shared_ptr<LogTypeDictionaryWriter> log_dict,
-            LogTypeStats* logtype_stats
-    )
+    LogTypeColumnWriter(int32_t id, std::shared_ptr<LogTypeDictionaryWriter> log_dict)
             : BaseColumnWriter(id),
-              m_log_dict{std::move(log_dict)},
-              m_logtype_stats{logtype_stats} {}
+              m_log_dict{std::move(log_dict)} {}
 
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
@@ -257,29 +252,6 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
 
     std::vector<encoded_log_dict_id_t> m_logtypes;
-    LogTypeStats* m_logtype_stats{nullptr};
-};
-
-class TypedVariableColumnWriter : public BaseColumnWriter {
-public:
-    // Constructor
-    TypedVariableColumnWriter(
-            int32_t id,
-            std::shared_ptr<VariableDictionaryWriter> var_dict,
-            VariableStats* var_stats
-    )
-            : BaseColumnWriter(id),
-              m_var_dict{std::move(var_dict)},
-              m_var_stats{var_stats} {}
-
-    auto add_value(ParsedMessage::variable_t& value) -> size_t override;
-
-    void store(ZstdCompressor& compressor) override;
-
-private:
-    std::shared_ptr<VariableDictionaryWriter> m_var_dict;
-    std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
-    VariableStats* m_var_stats{nullptr};
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {

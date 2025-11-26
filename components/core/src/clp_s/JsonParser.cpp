@@ -1507,6 +1507,10 @@ bool JsonParser::check_and_log_curl_error(
 // the full match node improves compression ration, but slows down search in certain cases as you
 // maybe need to rebuild the full match's value.
 
+// Because the variable dictionary is shared between unstructured and structured logs, but the
+// variable stats are only for unstructured logs it is possible to have "holes" in the variable
+// stats array.
+
 // TODO clpsls: probably want string view API to ls
 auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
         -> ystdlib::error_handling::Result<void> {
@@ -1617,12 +1621,14 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
                 if (false == capture_ids.has_value()) {
                     logtype_dict_entry.add_schema_var();
-                    m_current_parsed_message.add_unordered_value(
-                            ParsedMessage::TypedVar{token_name, token_view.to_string()}
-                    );
+                    m_current_parsed_message.add_unordered_value(token_view.to_string());
                     m_current_schema.insert_unordered(m_archive_writer->add_node(
                             parent_node_id,
-                            NodeType::TypedVar,
+                            NodeType::VarString,
+                            token_name
+                    ));
+                    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                            token_view.to_string_view(),
                             token_name
                     ));
                     break;
@@ -1634,11 +1640,13 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 auto capture_start{m_current_schema.start_unordered_object(NodeType::CaptureVar)};
 
                 logtype_dict_entry.add_schema_var();
-                m_current_parsed_message.add_unordered_value(
-                        ParsedMessage::TypedVar{std::string{cFullMatch}, token_view.to_string()}
-                );
+                // clpsls TODO: remove full match completely? rebuild on demand?
+                m_current_parsed_message.add_unordered_value(token_view.to_string());
                 m_current_schema.insert_unordered(
-                        m_archive_writer->add_node(capture_node_id, NodeType::TypedVar, cFullMatch)
+                        m_archive_writer->add_node(capture_node_id, NodeType::VarString, cFullMatch)
+                );
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        m_archive_writer->update_var_stats(token_view.to_string_view(), cFullMatch)
                 );
 
                 for (auto const capture_id : capture_ids.value()) {
@@ -1661,13 +1669,14 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                         capture_view.set_end_pos(end_positions[0]);
 
                         logtype_dict_entry.add_schema_var();
-                        m_current_parsed_message.add_unordered_value(
-                                ParsedMessage::TypedVar{capture_name, capture_view.to_string()}
-                        );
+                        m_current_parsed_message.add_unordered_value(capture_view.to_string());
                         m_current_schema.insert_unordered(m_archive_writer->add_node(
                                 capture_node_id,
-                                NodeType::TypedVar,
-                                // fmt::format("{}.{}", capture_name, i)
+                                NodeType::VarString,
+                                capture_name
+                        ));
+                        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                                token_view.to_string_view(),
                                 capture_name
                         ));
                         SPDLOG_INFO(
@@ -1693,6 +1702,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
     m_current_schema.insert_unordered(
             m_archive_writer->add_node(parent_node_id, NodeType::LogType, cLogType)
     );
+    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(logtype_dict_entry));
     m_current_schema.end_unordered_object(msg_start);
     return ystdlib::error_handling::success();
 }

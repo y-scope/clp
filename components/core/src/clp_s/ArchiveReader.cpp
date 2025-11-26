@@ -220,7 +220,6 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::LogType:
             column_reader = new LogTypeColumnReader(column_id, m_log_dict);
             break;
-        case NodeType::TypedVar:
         case NodeType::VarString:
             column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
             break;
@@ -300,7 +299,6 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::LogType:
                 column_reader = new LogTypeColumnReader(column_id, m_log_dict);
                 break;
-            case NodeType::TypedVar:
             case NodeType::VarString:
                 column_reader
                         = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());

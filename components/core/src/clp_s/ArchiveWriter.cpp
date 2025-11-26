@@ -10,15 +10,14 @@
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/Defs.h>
+#include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveStats.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/FileWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
-
-#include "archive_constants.hpp"
-#include "Defs.hpp"
-#include "SchemaTree.hpp"
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -351,18 +350,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
             case NodeType::LogType:
-                writer->append_column(new LogTypeColumnWriter(
-                        id,
-                        m_log_dict,
-                        &m_experimental_stats->m_logtype_stats
-                ));
-                break;
-            case NodeType::TypedVar:
-                writer->append_column(new TypedVariableColumnWriter(
-                        id,
-                        m_var_dict,
-                        &m_experimental_stats->m_var_stats
-                ));
+                writer->append_column(new LogTypeColumnWriter(id, m_log_dict));
                 break;
             case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
@@ -508,6 +496,38 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     m_tables_file_writer.close();
 
     return {table_metadata_compressed_size, table_compressed_size};
+}
+
+auto ArchiveWriter::update_logtype_stats(clp_s::LogTypeDictionaryEntry logtype)
+        -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+    }
+
+    clp::logtype_dictionary_id_t id{};
+    auto new_entry{m_log_dict->add_entry(logtype, id)};
+    auto& logtype_stats{m_experimental_stats.value().m_logtype_stats};
+    if (new_entry) {
+        logtype_stats.at_or_create(id);
+    }
+    logtype_stats.at(id).increment_count();
+    return id;
+}
+
+auto ArchiveWriter::update_var_stats(std::string_view value, std::string_view type)
+        -> ystdlib::error_handling::Result<clp::variable_dictionary_id_t> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+    }
+
+    clp::variable_dictionary_id_t id{};
+    auto new_entry{m_var_dict->add_entry(value, id)};
+    auto& var_stats{m_experimental_stats.value().m_var_stats};
+    if (new_entry) {
+        var_stats.at_or_create(id).set_type(type);
+    }
+    var_stats.at(id).increment_count();
+    return id;
 }
 
 auto ArchiveWriter::close_experimenal_stats() -> ystdlib::error_handling::Result<size_t> {
