@@ -67,7 +67,7 @@ def main(argv: list[str]) -> int:
             logger.error("Unsupported source URL scheme '%s'.", parsed_url.scheme)
             return -1
 
-        urllib.request.urlretrieve(source_url, file_path) # noqa: S310 URL scheme is checked above
+        urllib.request.urlretrieve(source_url, file_path)  # noqa: S310 URL scheme is checked above
         if extract_source:
             # NOTE: We need to convert `file_path` to a str since `unpack_archive` only accepts a
             # path-like object on Python versions >= 3.7
