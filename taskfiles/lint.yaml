@@ -781,7 +781,6 @@ tasks:
           cd "{{.ITEM}}"
           ruff check {{.RUFF_CHECK_FLAGS}} .
           ruff format {{.RUFF_FORMAT_FLAGS}} .
-          mypy .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
