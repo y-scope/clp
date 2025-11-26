@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+"""Initializes Presto worker configuration based on CLP package settings."""
+
 import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import psutil
 import yaml
@@ -34,7 +37,8 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Initializes Presto worker configuration based on CLP package settings."""
     if argv is None:
         argv = sys.argv
 
@@ -63,10 +67,10 @@ def main(argv=None) -> int:
         )
         return 1
 
-    with open(clp_config_file_path, "r") as clp_config_file:
+    with clp_config_file_path.open("r") as clp_config_file:
         clp_config = yaml.load(clp_config_file, Loader=yaml.CSafeLoader)
 
-    env_vars: Dict[str, str] = {}
+    env_vars: dict[str, str] = {}
     if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
         return 1
 
@@ -82,18 +86,17 @@ def main(argv=None) -> int:
     ):
         return 1
 
-    with open(output_file, "w") as output_file_handle:
-        for key, value in env_vars.items():
-            output_file_handle.write(f"{key}={value}\n")
+    with output_file.open("w") as output_file_handle:
+        output_file_handle.writelines(f"{key}={value}\n" for key, value in env_vars.items())
 
     return 0
 
 
 def _add_clp_env_vars(
-    clp_config: Dict[str, Any],
+    clp_config: dict[str, Any],
     clp_config_file_path: Path,
     clp_package_dir: Path,
-    env_vars: Dict[str, str],
+    env_vars: dict[str, str],
 ) -> bool:
     """
     Adds environment variables for CLP config values to `env_vars`.
@@ -107,7 +110,7 @@ def _add_clp_env_vars(
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_TABLE_PREFIX"] = "clp_"
 
     database_type = _get_config_value(clp_config, "database.type", "mariadb")
-    if "mariadb" != database_type and "mysql" != database_type:
+    if database_type not in {"mariadb", "mysql"}:
         logger.error(
             "CLP's database.type must be either mariadb or mysql but found '%s'. Presto"
             " currently only supports reading metadata from a mariadb or mysql database.",
@@ -160,7 +163,7 @@ def _add_clp_env_vars(
         logger.error("'%s' doesn't exist. Did you start CLP?", credentials_file_path)
         return False
 
-    with open(credentials_file_path, "r") as credentials_file:
+    with credentials_file_path.open("r") as credentials_file:
         credentials = yaml.load(credentials_file, Loader=yaml.CSafeLoader)
 
     try:
@@ -176,15 +179,14 @@ def _add_clp_env_vars(
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
 
     instance_id = _get_clp_package_instance_id(clp_config, clp_package_dir)
-    if instance_id is None:
-        return False
-    env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
+    if instance_id is not None:
+        env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
 
-    return True
+    return instance_id is not None
 
 
 def _add_clp_s3_env_vars(
-    clp_config: Dict[str, Any], clp_config_file_path: Path, env_vars: Dict[str, str]
+    clp_config: dict[str, Any], clp_config_file_path: Path, env_vars: dict[str, str]
 ) -> bool:
     """
     Adds environment variables for CLP S3 config values to `env_vars`.
@@ -195,7 +197,7 @@ def _add_clp_s3_env_vars(
     :return: Whether the environment variables were successfully added.
     """
     try:
-        s3_config_key = f"archive_output.storage.s3_config"
+        s3_config_key = "archive_output.storage.s3_config"
         s3_bucket = _get_required_config_value(
             clp_config, f"{s3_config_key}.bucket", clp_config_file_path
         )
@@ -232,7 +234,7 @@ def _add_clp_s3_env_vars(
     return True
 
 
-def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
+def _add_memory_env_vars(env_vars: dict[str, str]) -> bool:
     """
     Adds memory-related environment variables based on Presto guidelines.
 
@@ -258,7 +260,7 @@ def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
     return True
 
 
-def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:
+def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: dict[str, str]) -> bool:
     """
     Adds environment variables for worker config values to `env_vars`.
 
@@ -270,14 +272,12 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[
 
     try:
         env_vars["PRESTO_COORDINATOR_CONFIGPROPERTIES_DISCOVERY_URI"] = (
-            f'http://{config["PRESTO_COORDINATOR_SERVICENAME"]}'
-            f':{config["PRESTO_COORDINATOR_HTTPPORT"]}'
+            f"http://{config['PRESTO_COORDINATOR_SERVICENAME']}"
+            f":{config['PRESTO_COORDINATOR_HTTPPORT']}"
         )
     except KeyError as e:
-        logger.error(
-            "Missing required key %s in '%s'",
-            e,
-            coordinator_common_env_file_path,
+        logger.exception(
+            "Missing required key in '%s'", coordinator_common_env_file_path, exec_info=e
         )
         return False
 
@@ -285,7 +285,7 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[
 
 
 def _generate_worker_clp_properties(
-    worker_config_template_path: Path, env_vars: Dict[str, str]
+    worker_config_template_path: Path, env_vars: dict[str, str]
 ) -> bool:
     """
     Generates a clp.properties file for the worker.
@@ -311,15 +311,13 @@ def _generate_worker_clp_properties(
                 return False
             properties.append(f"{property_name}={env_var_value}")
 
-    with open(worker_config_template_path / "clp.properties", "w", encoding="utf-8") as f:
+    with (worker_config_template_path / "clp.properties").open("w", encoding="utf-8") as f:
         f.write("\n".join(properties) + "\n")
 
     return True
 
 
-def _get_clp_package_instance_id(
-    clp_config: Dict[str, Any], clp_package_dir: Path
-) -> Optional[str]:
+def _get_clp_package_instance_id(clp_config: dict[str, Any], clp_package_dir: Path) -> str | None:
     """
     Retrieves the CLP package instance ID from the logs directory.
 
@@ -327,7 +325,6 @@ def _get_clp_package_instance_id(
     :param clp_package_dir:
     :return: The instance ID if it could be read, otherwise `None`.
     """
-
     logs_directory = _get_path_clp_config_value(
         clp_config, "logs_directory", Path("var") / "log", clp_package_dir
     )
@@ -358,7 +355,7 @@ def _get_clp_package_instance_id(
 
 
 def _get_path_clp_config_value(
-    clp_config: Dict[str, Any], key: str, default_value: Path, clp_package_dir: Path
+    clp_config: dict[str, Any], key: str, default_value: Path, clp_package_dir: Path
 ) -> Path:
     """
     Gets the value corresponding to `key` from `clp_config` as a `Path`.
@@ -373,11 +370,10 @@ def _get_path_clp_config_value(
     value_as_path = Path(value)
     if value_as_path.is_absolute():
         return value_as_path
-    else:
-        return clp_package_dir / value_as_path
+    return clp_package_dir / value_as_path
 
 
-def _get_required_config_value(config: Dict[str, Any], key: str, config_file_path: Path) -> str:
+def _get_required_config_value(config: dict[str, Any], key: str, config_file_path: Path) -> str:
     """
     Gets the value corresponding to `key` from `config`. Logs an error on failure.
 
@@ -395,8 +391,8 @@ def _get_required_config_value(config: Dict[str, Any], key: str, config_file_pat
 
 
 def _get_config_value(
-    config: Dict[str, Any], key: str, default_value: Optional[Any] = None
-) -> Optional[Any]:
+    config: dict[str, Any], key: str, default_value: Any | None = None
+) -> Any | None:
     """
     Gets the value corresponding to `key` from `config` if it exists.
 
@@ -405,7 +401,6 @@ def _get_config_value(
     :param default_value: The value to return if `key` doesn't exist in `config`.
     :return: The value corresponding to `key` if it exists, otherwise `default_value`.
     """
-
     keys = key.split(".")
     value = config
     for k in keys:
