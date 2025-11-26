@@ -18,6 +18,35 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::client::{Client, ClientError, QueryConfig};
 
+/// Factory method to create an Axum router configured with all API routes.
+///
+/// # Returns
+///
+/// A newly created [`axum::Router`] instance configured with all application routes.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`OpenApi::to_json`]'s return values on failure.
+pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .route("/", get(health))
+        .routes(routes!(health))
+        .routes(routes!(query))
+        .routes(routes!(query_results))
+        .with_state(client)
+        .split_for_parts();
+    let api_json = api.to_json()?;
+    let router = router
+        .route(
+            "/openapi.json",
+            get(|| async { (StatusCode::OK, api_json) }),
+        )
+        .layer(CorsLayer::new().allow_origin(Any));
+    Ok(router)
+}
+
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
 #[allow(clippy::needless_for_each)]
 mod api_doc {
@@ -140,33 +169,4 @@ impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
-}
-
-/// Factory method to create an Axum router configured with all API routes.
-///
-/// # Returns
-///
-/// A newly created [`axum::Router`] instance configured with all application routes.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`OpenApi::to_json`]'s return values on failure.
-pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .route("/", get(health))
-        .routes(routes!(health))
-        .routes(routes!(query))
-        .routes(routes!(query_results))
-        .with_state(client)
-        .split_for_parts();
-    let api_json = api.to_json()?;
-    let router = router
-        .route(
-            "/openapi.json",
-            get(|| async { (StatusCode::OK, api_json) }),
-        )
-        .layer(CorsLayer::new().allow_origin(Any));
-    Ok(router)
 }
