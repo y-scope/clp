@@ -139,7 +139,7 @@ use api_doc::ApiDoc;
 #[utoipa::path(
     get,
     path = "/health",
-    responses((status = OK, body = String, example = "API server is running"))
+    responses((status = OK, body = String))
 )]
 async fn health() -> String {
     "API server is running".to_owned()
