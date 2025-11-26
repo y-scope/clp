@@ -32,6 +32,8 @@ tasks:
           FILE_SHA256: >-
             {{- if and (eq OS "linux") (eq ARCH "amd64") -}}
               d16f0583616885423826241164ce1f6589c6fe5332fa74f374ebd2bd3cb3fe1f
+            {{- else if and (eq OS "linux") (eq ARCH "arm64") -}}
+              7b035bbbd0768fba33983e81c15445e33e9c8281d329100852a342ecfd0b16b7
             {{- else if and (eq OS "darwin") (eq ARCH "arm64") -}}
               db10dbbb42b110c7a5da5a3202908f32ad2ca6ad600d423426dc7886d09aad07
             {{- else -}}
