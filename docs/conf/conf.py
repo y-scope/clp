@@ -1,7 +1,7 @@
 # ruff: noqa: INP001 Configuration file for the Sphinx documentation builder.
 """Sphinx configuration file for CLP documentation."""
 
-from datetime import date
+from datetime import datetime, timezone
 
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -9,8 +9,7 @@ from datetime import date
 project = "CLP"
 # NOTE: We don't include a period after "Inc" since the theme adds one already.
 # Ignore A001: Shadowing built-in name 'copyright' for Sphinx config.
-# Ignore DTZ011: Ignore timezone problems where not relevant.
-copyright = f"2021-{date.today().year} YScope Inc"  # noqa: A001, DTZ011
+copyright = f"2021-{datetime.now(tz=timezone.utc).year} YScope Inc"  # noqa: A001
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
