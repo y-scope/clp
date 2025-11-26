@@ -768,7 +768,7 @@ tasks:
         - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
         - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
-      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
+      vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
       - for:
@@ -781,6 +781,7 @@ tasks:
           cd "{{.ITEM}}"
           ruff check {{.RUFF_CHECK_FLAGS}} .
           ruff format {{.RUFF_FORMAT_FLAGS}} .
+          mypy .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
