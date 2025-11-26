@@ -148,6 +148,7 @@ async fn health() -> String {
 #[utoipa::path(
     post,
     path = "/query",
+    description = "Submits a new query job.",
     request_body(
         content= clp_client::QueryConfig,
         example = r#"{
