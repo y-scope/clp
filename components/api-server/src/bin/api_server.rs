@@ -181,6 +181,8 @@ async fn query(
 #[utoipa::path(
     get,
     path = "/query_results/{search_job_id}",
+    description = "Streams the results of a previously submitted query as Server-Sent Events \
+        (SSE).",
     responses(
         (
             status = OK,
