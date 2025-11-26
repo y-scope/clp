@@ -25,7 +25,7 @@ from clp_package_utils.general import (
     load_config_file,
 )
 
-from .utils import (
+from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
     validate_dataset_exists,

@@ -29,7 +29,7 @@ from clp_package_utils.scripts.archive_manager import (
     FIND_COMMAND,
 )
 
-from .utils import validate_dataset_exists
+from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
 logger: logging.Logger = logging.getLogger(__file__)
 
