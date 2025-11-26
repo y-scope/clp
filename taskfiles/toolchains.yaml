@@ -39,7 +39,7 @@ tasks:
             {{- else -}}
               unsupported
             {{- end }}
-          INCLUDE_PATTERNS: ["ct"]
+          INCLUDE_PATTERNS: ["ct", "etc/chart_schema.yaml"]
           NUM_COMPONENTS_TO_STRIP: "0"
       - |-
         export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
