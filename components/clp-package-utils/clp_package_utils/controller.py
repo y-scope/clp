@@ -209,18 +209,6 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection config
-        env_vars |= {
-            "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
-            "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
-        }
-
-        # Credentials
-        env_vars |= {
-            "CLP_QUEUE_PASS": self._clp_config.queue.password,
-            "CLP_QUEUE_USER": self._clp_config.queue.username,
-        }
-
         return env_vars
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
@@ -232,6 +220,12 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
+            "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
+        }
 
         # Credentials
         env_vars |= {
@@ -853,6 +847,10 @@ class DockerComposeController(BaseController):
             env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
 
         # Component-specific config
+        env_vars |= self._set_up_env_for_database_bundling()
+        env_vars |= self._set_up_env_for_queue_bundling()
+        env_vars |= self._set_up_env_for_redis_bundling()
+        env_vars |= self._set_up_env_for_results_cache_bundling()
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
