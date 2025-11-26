@@ -122,10 +122,36 @@ const isValidDateRange = (
     return null !== dates && null !== dates[0] && null !== dates[1];
 };
 
+/**
+ * Map of time range options to their display text
+ */
+const TIME_RANGE_DISPLAY_TEXT_MAP: Record<TIME_RANGE_OPTION, {start: string; end: string}> = {
+    [TIME_RANGE_OPTION.LAST_15_MINUTES]: {start: "15 minutes ago", end: "Now"},
+    [TIME_RANGE_OPTION.LAST_HOUR]: {start: "1 hour ago", end: "Now"},
+    [TIME_RANGE_OPTION.TODAY]: {start: "Start of today", end: "End of today"},
+    [TIME_RANGE_OPTION.YESTERDAY]: {start: "Start of yesterday", end: "End of yesterday"},
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: {start: "7 days ago", end: "Now"},
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: {start: "30 days ago", end: "Now"},
+    [TIME_RANGE_OPTION.LAST_12_MONTHS]: {start: "12 months ago", end: "Now"},
+    [TIME_RANGE_OPTION.MONTH_TO_DATE]: {start: "Start of month", end: "Now"},
+    [TIME_RANGE_OPTION.YEAR_TO_DATE]: {start: "Start of year", end: "Now"},
+    [TIME_RANGE_OPTION.ALL_TIME]: {start: "Earliest", end: "Latest"},
+    [TIME_RANGE_OPTION.CUSTOM]: {start: "Start date", end: "End date"},
+};
+
+/**
+ * Gets display text for time range option
+ */
+const getTimeRangeDisplayText = (option: TIME_RANGE_OPTION, isStart: boolean): string => {
+    const displayText = TIME_RANGE_DISPLAY_TEXT_MAP[option];
+    return isStart ? displayText.start : displayText.end;
+};
+
 
 export {
     DEFAULT_TIME_RANGE,
     DEFAULT_TIME_RANGE_OPTION,
+    getTimeRangeDisplayText,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,

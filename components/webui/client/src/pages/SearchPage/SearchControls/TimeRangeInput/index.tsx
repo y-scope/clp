@@ -12,6 +12,7 @@ import useSearchStore from "../../SearchState/index";
 import usePrestoSearchState from "../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import TimeDateInput from "./TimeDateInput";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
 import {
@@ -19,63 +20,6 @@ import {
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
-
-interface CustomDateInputProps {
-    value: string;
-    'date-range': 'start' | 'end';
-}
-
-/**
- * Gets display text for time range option
- */
-const getTimeRangeDisplayText = (option: TIME_RANGE_OPTION, isStart: boolean): string => {
-    switch (option) {
-        case TIME_RANGE_OPTION.LAST_15_MINUTES:
-            return isStart ? "15 minutes ago" : "Now";
-        case TIME_RANGE_OPTION.LAST_HOUR:
-            return isStart ? "1 hour ago" : "Now";
-        case TIME_RANGE_OPTION.TODAY:
-            return isStart ? "Start of today" : "End of today";
-        case TIME_RANGE_OPTION.YESTERDAY:
-            return isStart ? "Start of yesterday" : "End of yesterday";
-        case TIME_RANGE_OPTION.LAST_7_DAYS:
-            return isStart ? "7 days ago" : "Now";
-        case TIME_RANGE_OPTION.LAST_30_DAYS:
-            return isStart ? "30 days ago" : "Now";
-        case TIME_RANGE_OPTION.LAST_12_MONTHS:
-            return isStart ? "12 months ago" : "Now";
-        case TIME_RANGE_OPTION.MONTH_TO_DATE:
-            return isStart ? "Start of month" : "Now";
-        case TIME_RANGE_OPTION.YEAR_TO_DATE:
-            return isStart ? "Start of year" : "Now";
-        case TIME_RANGE_OPTION.ALL_TIME:
-            return isStart ? "Earliest" : "Latest";
-        case TIME_RANGE_OPTION.CUSTOM:
-        default:
-            return isStart ? "Start date" : "End date";
-    }
-};
-
-/**
- * Custom input component for DatePicker that displays custom text
- */
-const CustomDateInput = (props: CustomDateInputProps) => {
-    const {value, 'date-range': dateRange} = props;
-    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
-
-    const isStartInput = dateRange === 'start';
-    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM
-        ? (value || (isStartInput ? 'Start date' : 'End date'))
-        : getTimeRangeDisplayText(timeRangeOption, isStartInput);
-
-    return (
-        <input
-            {...props}
-            value={displayText}
-            readOnly
-        />
-    );
-};
 
 /**
  * Renders controls for selecting a time range for queries. By default, the component is
@@ -146,7 +90,7 @@ const TimeRangeInput = () => {
                 renderExtraFooter={renderFooter}
                 showTime={true}
                 components={{
-                    input: CustomDateInput,
+                    input: TimeDateInput,
                 }}
                 size={"middle"}
                 value={timeRange}
