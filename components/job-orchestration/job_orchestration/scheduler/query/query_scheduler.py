@@ -507,7 +507,7 @@ def get_task_group_for_job(
     archive_ids: list[str],
     task_ids: list[int],
     job: QueryJob,
-    clp_metadata_db_conn_params: dict[str, Any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ):
     job_config = job.get_config().model_dump()
@@ -545,7 +545,7 @@ def dispatch_query_job(
     db_conn,
     job: QueryJob,
     archive_ids: list[str],
-    clp_metadata_db_conn_params: dict[str, Any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ) -> None:
     global active_jobs
@@ -613,7 +613,7 @@ def dispatch_job_and_update_db(
     db_conn,
     new_job: QueryJob,
     target_archives: list[str],
-    clp_metadata_db_conn_params: dict[str, Any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     num_tasks: int,
 ) -> None:
@@ -635,7 +635,7 @@ def dispatch_job_and_update_db(
 
 def handle_pending_query_jobs(
     db_conn_pool,
-    clp_metadata_db_conn_params: dict[str, Any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
@@ -998,7 +998,7 @@ async def handle_finished_stream_extraction_job(
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
-        if not QueryTaskStatus.SUCCEEDED == task_result.status:
+        if not QueryJobStatus.SUCCEEDED == task_result.status:
             logger.error(
                 f"Extraction task job-{job_id}-task-{task_id} failed. "
                 f"Check {task_result.error_log_path} for details."
@@ -1100,7 +1100,7 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 
 async def handle_jobs(
     db_conn_pool,
-    clp_metadata_db_conn_params: dict[str, Any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     stream_collection_name: str,
     jobs_poll_delay: float,
