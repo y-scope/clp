@@ -119,7 +119,6 @@ tasks:
           "components/core/config" \
           "components/core/tools/" \
           "components/package-template/src/etc" \
-          "chart_schema.yaml" \
           "ct.yaml" \
           "docs" \
           "taskfile.yaml" \
