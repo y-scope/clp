@@ -7,6 +7,6 @@
     gap: 20px;
 }
 
-.jobsGrid {
+.fullRow {
     grid-column: 1 / -1;
 }
