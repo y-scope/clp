@@ -213,7 +213,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the message queue component.
+        Sets up environment variables for the message queue component.
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
@@ -286,7 +286,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_redis(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the Redis component.
+        Sets up environment variables for the Redis component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
@@ -357,7 +357,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the results cache (MongoDB) component.
+        Sets up environment variables for the results cache (MongoDB) component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
