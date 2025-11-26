@@ -46,12 +46,6 @@ public:
      */
     virtual size_t get_total_header_size() const { return 0; }
 
-    /**
-     *
-     * @return the total size of header data that will be written to the compressor in bytes
-     */
-    virtual auto get_stats() const -> size_t { return 0; }
-
 protected:
     int32_t m_id;
 };
