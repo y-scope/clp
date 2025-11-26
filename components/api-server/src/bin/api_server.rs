@@ -151,15 +151,15 @@ async fn health() -> String {
     description = "Submits a new query job.",
     request_body(
         content= clp_client::QueryConfig,
-        example = r#"{
-  "query_string": "*",
-  "dataset": "default",
-  "begin_timestamp": 0,
-  "end_timestamp": 1735689600000000,
-  "ignore_case": true,
-  "max_num_results": 0,
-  "write_to_file": false
-}"#),
+        example = json!({
+            "query_string": "*",
+            "dataset": "default",
+            "begin_timestamp": 0,
+            "end_timestamp": 17356896,
+            "ignore_case": true,
+            "max_num_results": 0,
+            "write_to_file": false
+        }),
     responses(
         (
             status = OK,
