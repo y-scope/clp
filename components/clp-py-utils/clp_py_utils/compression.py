@@ -2,7 +2,7 @@ import pathlib
 
 import Levenshtein
 
-from .core import FileMetadata
+from clp_py_utils.core import FileMetadata
 
 # Constants
 FILE_GROUPING_MIN_LEVENSHTEIN_RATIO = 0.6

@@ -9,7 +9,7 @@ import botocore
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from .clp_config import (
+from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
     AwsAuthentication,
     AwsAuthType,
@@ -26,7 +26,7 @@ from .clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from .core import FileMetadata
+from clp_py_utils.core import FileMetadata
 
 # Constants
 AWS_ENDPOINT: Final[str] = "amazonaws.com"

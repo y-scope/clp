@@ -8,7 +8,7 @@ from mysql.connector import errorcode
 from sqlalchemy import pool
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
-from .clp_config import Database
+from clp_py_utils.clp_config import Database
 
 
 class DummyCloseableObject:

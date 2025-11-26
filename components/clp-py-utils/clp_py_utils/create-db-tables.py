@@ -4,7 +4,7 @@ import pathlib
 import subprocess
 import sys
 
-from .clp_config import StorageEngine
+from clp_py_utils.clp_config import StorageEngine
 
 # Setup logging
 # Create logger
