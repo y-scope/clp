@@ -780,7 +780,7 @@ def _update_tasks_status_to_running(
         db_context.cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-            SET status='{CompressionTaskStatus.RUNNING}' WHERE id IN ({', '.join(task_ids)})
+            SET status='{CompressionTaskStatus.RUNNING}' WHERE id IN ({", ".join(task_ids)})
             """
         )
         db_context.connection.commit()
