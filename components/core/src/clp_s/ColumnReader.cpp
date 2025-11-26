@@ -234,10 +234,6 @@ auto LogTypeColumnReader::extract_escaped_string_value_into_buffer(
     StringUtils::escape_json_string(buffer, tmp);
 }
 
-auto LogTypeColumnReader::get_encoded_id(uint64_t cur_message) -> int64_t {
-    return LogTypeColumnWriter::get_encoded_log_dict_id(m_logtypes[cur_message]);
-}
-
 void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_variables = reader.read_unaligned_span<uint64_t>(num_messages);
 }

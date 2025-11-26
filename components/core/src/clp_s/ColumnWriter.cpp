@@ -158,16 +158,16 @@ void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
 auto LogTypeColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
     auto logtype_dict_entry{std::get<clp_s::LogTypeDictionaryEntry>(value)};
     clp::logtype_dictionary_id_t id{};
-    auto new_entry{m_log_dict->add_entry(logtype_dict_entry, id)};
-    m_logtypes.push_back(static_cast<encoded_log_dict_id_t>(id));
-    return sizeof(encoded_log_dict_id_t);
+    m_log_dict->add_entry(logtype_dict_entry, id);
+    m_logtypes.push_back(id);
+    return sizeof(clp::logtype_dictionary_id_t);
 }
 
 auto LogTypeColumnWriter::store(ZstdCompressor& compressor) -> void {
     compressor.write(
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             reinterpret_cast<char const*>(m_logtypes.data()),
-            m_logtypes.size() * sizeof(encoded_log_dict_id_t)
+            m_logtypes.size() * sizeof(clp::logtype_dictionary_id_t)
     );
 }
 

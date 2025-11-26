@@ -309,16 +309,8 @@ public:
     auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
             -> void override;
 
-    /**
-     * Gets the encoded id of the variable
-     * @param cur_message
-     * @return The encoded logtype id
-     */
-    auto get_encoded_id(uint64_t cur_message) -> int64_t;
-
 private:
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
-
     UnalignedMemSpan<uint64_t> m_logtypes;
 };
 

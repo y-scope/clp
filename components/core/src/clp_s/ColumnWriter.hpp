@@ -219,8 +219,6 @@ private:
 
 class LogTypeColumnWriter : public BaseColumnWriter {
 public:
-    using encoded_log_dict_id_t = uint64_t;
-
     LogTypeColumnWriter(int32_t id, std::shared_ptr<LogTypeDictionaryWriter> log_dict)
             : BaseColumnWriter(id),
               m_log_dict{std::move(log_dict)} {}
@@ -229,23 +227,9 @@ public:
 
     auto store(ZstdCompressor& compressor) -> void override;
 
-    /**
-     * @param encoded_id
-     * @return the encoded log dict id
-     */
-    static auto get_encoded_log_dict_id(encoded_log_dict_id_t encoded_id)
-            -> clp::logtype_dictionary_id_t {
-        return static_cast<clp::logtype_dictionary_id_t>(encoded_id & cLogDictIdMask);
-    }
-
 private:
-    static constexpr int cOffsetBitPosition = 24;
-    static constexpr uint64_t cLogDictIdMask = (1ULL << cOffsetBitPosition) - 1;
-    static constexpr uint64_t cOffsetMask = ~cLogDictIdMask;
-
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
-
-    std::vector<encoded_log_dict_id_t> m_logtypes;
+    std::vector<clp::logtype_dictionary_id_t> m_logtypes;
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {
