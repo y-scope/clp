@@ -108,14 +108,23 @@ class BaseController(ABC):
         Stops the components.
         """
 
-    def _set_up_env_for_database(self) -> EnvVarsDict:
+    def _set_up_env_for_database_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the database component.
+        Sets up environment variables and directories for bundling the database component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
         component_name = DB_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_DATABASE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         conf_logging_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self._clp_config.data_directory / component_name
@@ -128,6 +137,33 @@ class BaseController(ABC):
         resolved_data_dir.mkdir(exist_ok=True, parents=True)
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(resolved_data_dir, resolved_logs_dir)
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= {
+            "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
+            "CLP_DB_DATA_DIR_HOST": str(data_dir),
+            "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        # Runtime config
+        env_vars |= {
+            "CLP_DB_CONTAINER_IMAGE_REF": (
+                "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_database(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the database component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = DB_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
 
@@ -144,34 +180,25 @@ class BaseController(ABC):
             "CLP_DB_USER": self._clp_config.database.username,
         }
 
-        # Paths
-        env_vars |= {
-            "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
-            "CLP_DB_DATA_DIR_HOST": str(data_dir),
-            "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
-        }
-
-        # Runtime config
-        env_vars |= {
-            "CLP_DB_CONTAINER_IMAGE_REF": (
-                "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
-            ),
-        }
-
-        # Disable
-        if BundledService.DATABASE not in self._clp_config.bundled:
-            env_vars |= {"CLP_DATABASE_ENABLED": "0"}
-
         return env_vars
 
-    def _set_up_env_for_queue(self) -> EnvVarsDict:
+    def _set_up_env_for_queue_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the message queue component.
+        Sets up environment variables and directories for bundling the queue component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
         component_name = QUEUE_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+
+        if BundledService.QUEUE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_QUEUE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_queue_config(self._clp_config, logs_dir)
@@ -194,25 +221,43 @@ class BaseController(ABC):
             "CLP_QUEUE_USER": self._clp_config.queue.username,
         }
 
-        # Paths
-        env_vars |= {
-            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
-        }
+        return env_vars
 
-        # Disable
-        if BundledService.QUEUE not in self._clp_config.bundled:
-            env_vars |= {"CLP_QUEUE_ENABLED": "0"}
+    def _set_up_env_for_queue(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the message queue component.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUEUE_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Credentials
+        env_vars |= {
+            "CLP_QUEUE_PASS": self._clp_config.queue.password,
+            "CLP_QUEUE_USER": self._clp_config.queue.username,
+        }
 
         return env_vars
 
-    def _set_up_env_for_redis(self) -> EnvVarsDict:
+    def _set_up_env_for_redis_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the Redis component.
+        Sets up environment variables and directories for bundling the redis component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
         component_name = REDIS_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+
+        if BundledService.REDIS not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_REDIS_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
         data_dir = self._clp_config.data_directory / component_name
@@ -236,6 +281,26 @@ class BaseController(ABC):
             "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
 
+        # Paths
+        env_vars |= {
+            "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
+            "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
+            "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_redis(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the Redis component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = REDIS_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
         # Connection config
         env_vars |= {
             "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
@@ -247,27 +312,25 @@ class BaseController(ABC):
             "CLP_REDIS_PASS": self._clp_config.redis.password,
         }
 
-        # Paths
-        env_vars |= {
-            "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
-            "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
-            "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
-        }
-
-        # Disable
-        if BundledService.REDIS not in self._clp_config.bundled:
-            env_vars |= {"CLP_REDIS_ENABLED": "0"}
-
         return env_vars
 
-    def _set_up_env_for_results_cache(self) -> EnvVarsDict:
+    def _set_up_env_for_results_cache_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the results cache (MongoDB) component.
+        Sets up environment variables and directories for bundling the queue component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_RESULTS_CACHE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         conf_file = self._conf_dir / "mongo" / "mongod.conf"
         data_dir = self._clp_config.data_directory / component_name
@@ -289,14 +352,6 @@ class BaseController(ABC):
                 self._clp_config.results_cache.stream_collection_name
             ),
         }
-
-        # Connection config
-        env_vars |= {
-            "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
-            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
-            "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
-        }
-
         # Paths
         env_vars |= {
             "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
@@ -304,9 +359,25 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
         }
 
-        # Disable
-        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
-            env_vars |= {"CLP_RESULTS_CACHE_ENABLED": "0"}
+        return env_vars
+
+    def _set_up_env_for_results_cache(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the results cache (MongoDB) component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = RESULTS_CACHE_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
+            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
+            "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+        }
 
         return env_vars
 
@@ -780,7 +851,6 @@ class DockerComposeController(BaseController):
             env_vars["CLP_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
         if self._clp_config.stream_output.storage.type == StorageType.S3:
             env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
-
 
         # Component-specific config
         env_vars |= self._set_up_env_for_database()
