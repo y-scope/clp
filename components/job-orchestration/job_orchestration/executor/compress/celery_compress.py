@@ -2,8 +2,8 @@ from celery import signals
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 
-from .celery import app
-from .compression_task import compression_entry_point
+from job_orchestration.executor.compress.celery import app
+from job_orchestration.executor.compress.compression_task import compression_entry_point
 
 # Setup logging
 logger = get_task_logger(__name__)

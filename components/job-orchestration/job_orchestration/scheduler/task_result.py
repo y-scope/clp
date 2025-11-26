@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 
-from .constants import CompressionTaskStatus
+from job_orchestration.scheduler.constants import CompressionTaskStatus
 
 
 class CompressionTaskResult(BaseModel):
