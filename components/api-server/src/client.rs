@@ -23,21 +23,27 @@ pub use crate::error::ClientError;
 pub struct QueryConfig {
     /// The search query as a KQL string.
     pub query_string: String,
-    /// The dataset to search within. If not provided, defaults to all.
+
+    /// The dataset to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
     pub dataset: Option<String>,
+
     /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
     pub max_num_results: u32,
+
     /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
     pub begin_timestamp: Option<i64>,
+
     /// The ending timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
     pub end_timestamp: Option<i64>,
+
     /// Whether the string match should be case-insensitive.
     #[serde(default)]
     pub ignore_case: bool,
+
     /// Whether to write the search results to files. If `false`, results will be stored in
     /// `MongoDB`.
     #[serde(default)]
