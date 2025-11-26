@@ -108,6 +108,6 @@ def setup(app) -> None:  # noqa: ANN001 Ignore type annotation for Sphinx setup 
     """
     Sets up Sphinx app with custom CSS.
 
-    app: Sphinx application object
+    :param app: Sphinx application object
     """
     app.add_css_file("custom.css")
