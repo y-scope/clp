@@ -1,6 +1,6 @@
-import {querySql} from "../../../../../../api/sql";
-import {SqlTableSuffix} from "../../../../../../config/sql-table-suffix";
-import {settings} from "../../../../../../settings";
+import {querySql} from "../../../../../api/sql";
+import {SqlTableSuffix} from "../../../../../config/sql-table-suffix";
+import {settings} from "../../../../../settings";
 
 
 /**

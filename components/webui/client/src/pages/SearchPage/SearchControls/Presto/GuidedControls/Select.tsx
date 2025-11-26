@@ -20,7 +20,7 @@ const Select = () => {
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     return (
-        <div className={guidedGrid["select"]}>
+        <div className={guidedGrid["gridItem"]}>
             <InputLabel>SELECT</InputLabel>
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}
