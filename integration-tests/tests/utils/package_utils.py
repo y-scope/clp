@@ -32,20 +32,25 @@ def start_clp_package(package_config: PackageConfig) -> None:
 
 def stop_clp_package(package_config: PackageConfig) -> None:
     """
-    Stops an instance of the CLP package.
+    Stops the running instance of the CLP package.
 
-    :param instance:
+    :param package_config:
     :raise RuntimeError: If the package fails to stop.
     """
     path_config = package_config.path_config
     stop_script_path = path_config.stop_script_path
+    temp_config_file_path = package_config.temp_config_file_path
     try:
         # fmt: off
         stop_cmd = [
-            str(stop_script_path)
+            str(stop_script_path),
+            "--config", str(temp_config_file_path),
         ]
         # fmt: on
         subprocess.run(stop_cmd, check=True)
     except Exception as err:
-        err_msg = f"Failed to stop an instance of the {package_config.mode_name} package."
+        err_msg = (
+            f"Failed to stop the running {package_config.mode_name} package instance. Manual"
+            " container cleanup may be required."
+        )
         raise RuntimeError(err_msg) from err
