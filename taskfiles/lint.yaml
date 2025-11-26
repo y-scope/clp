@@ -780,17 +780,17 @@ tasks:
           ruff check {{.RUFF_CHECK_FLAGS}} .
           ruff format {{.RUFF_FORMAT_FLAGS}} .
       - for:
-          var: "UV_PYTHON_PROJECTS"
-        cmd: |-
-          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
-          uv run --directory "{{.ITEM}}" mypy .
-      - for:
           var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
         cmd: |-
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy . || true
+      - for:
+          var: "UV_PYTHON_PROJECTS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy .
 
   check-rust:
     cmds:
