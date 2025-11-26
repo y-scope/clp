@@ -62,7 +62,7 @@ enum class NodeType : uint8_t {
     DeltaInteger,
     FormattedFloat,
     DictionaryFloat,
-    LogMessage,
+    LogMessage = 100,
     LogType,
     CaptureVar,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
