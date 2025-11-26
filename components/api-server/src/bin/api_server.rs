@@ -185,8 +185,8 @@ async fn query(
             status = OK,
             body = String,
             content_type = "text/event-stream",
-            example = "data: {\"timestamp\":\"2023-03-27 00:26:37.134\",\"pid\":7821,\
-\"line_num\":7,\"message\":\"CommitTransaction\"}\n"
+            description = "Server-Sent Events stream of query results. Each event contains a \
+                single line of the query result in JSON format.",
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
