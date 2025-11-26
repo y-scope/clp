@@ -277,7 +277,7 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: dict[
         )
     except KeyError as e:
         logger.exception(
-            "Missing required key in '%s'", coordinator_common_env_file_path, exec_info=e
+            "Missing required key in '%s'.", coordinator_common_env_file_path, exc_info=e
         )
         return False
 

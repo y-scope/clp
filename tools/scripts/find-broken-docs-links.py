@@ -112,7 +112,7 @@ def _parse_and_print_match(match: str, error_msg: str) -> None:
     if os.getenv("GITHUB_ACTIONS") == "true":
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
-        logger.error("file=%s,line=%s: %s", file, line, error_msg)
+        logger.error("::error file=%s,line=%s::%s", file, line, error_msg)
     else:
         logger.error(error_msg)
         logger.error(match)
