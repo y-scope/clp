@@ -1,3 +1,6 @@
+# ruff: noqa: INP001 Configuration file for the Sphinx documentation builder.
+"""Sphinx configuration file for CLP documentation."""
+
 from datetime import date
 
 # -- Project information -------------------------------------------------------
@@ -5,7 +8,9 @@ from datetime import date
 
 project = "CLP"
 # NOTE: We don't include a period after "Inc" since the theme adds one already.
-copyright = f"2021-{date.today().year} YScope Inc"
+# Ignore A001: Shadowing built-in name 'copyright' for Sphinx config.
+# Ignore DTZ011: Ignore timezone problems where not relevant.
+copyright = f"2021-{date.today().year} YScope Inc"  # noqa: A001, DTZ011
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -99,5 +104,10 @@ html_context = {
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/static_assets.html
 
 
-def setup(app):
+def setup(app) -> None:  # noqa: ANN001 Ignore type annotation for Sphinx setup function.
+    """
+    Sets up Sphinx app with custom CSS.
+
+    app: Sphinx application object
+    """
     app.add_css_file("custom.css")
