@@ -234,7 +234,7 @@ tasks:
     cmds:
       - |-
         rm -rf "{{.OUTPUT_DIR}}"
-        mkdir "{{.OUTPUT_DIR}}"
+        mkdir -p "{{.OUTPUT_DIR}}"
         ./tools/scripts/generate-config-schemas.py "{{.OUTPUT_DIR}}"
 
   job-orchestration:
