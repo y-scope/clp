@@ -114,10 +114,10 @@ class PackageConfig:
     #: Path configuration for this package.
     path_config: PackagePathConfig
 
-    #: Name of the mode of operation represented in this config.
+    #: Name of the package operation mode.
     mode_name: str
 
-    #: The ClpConfig instance that describes this package configuration.
+    #: The Pydantic representation of a CLP package configuration.
     clp_config: ClpConfig
 
     def __post_init__(self) -> None:
@@ -145,7 +145,7 @@ class PackageConfig:
 class PackageInstance:
     """Metadata for a running instance of the CLP package."""
 
-    #: Config describing this package instance.
+    #: The configuration for this package instance.
     package_config: PackageConfig
 
     def __post_init__(self) -> None:

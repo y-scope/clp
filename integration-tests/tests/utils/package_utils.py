@@ -4,7 +4,6 @@ import subprocess
 
 from tests.utils.config import (
     PackageConfig,
-    PackageInstance,
 )
 
 
@@ -31,14 +30,13 @@ def start_clp_package(package_config: PackageConfig) -> None:
         raise RuntimeError(err_msg) from err
 
 
-def stop_clp_package(instance: PackageInstance) -> None:
+def stop_clp_package(package_config: PackageConfig) -> None:
     """
     Stops an instance of the CLP package.
 
     :param instance:
     :raise RuntimeError: If the package fails to stop.
     """
-    package_config = instance.package_config
     path_config = package_config.path_config
     stop_script_path = path_config.stop_script_path
     try:
