@@ -146,13 +146,13 @@ impl IntoResponse for HandlerError {
 ///
 /// # Returns
 ///
-/// A newly created [`Router`] instance configured with all application routes.
+/// A newly created [`axum::Router`] instance configured with all application routes.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`serde_json::Error`] if serializing the `OpenAPI` documentation fails.
+/// * Forwards [`OpenApi::to_json`]'s return values on failure.
 pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
