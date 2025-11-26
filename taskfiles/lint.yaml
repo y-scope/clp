@@ -77,7 +77,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: "--check --diff"
           RUFF_CHECK_FLAGS: ""
           RUFF_FORMAT_FLAGS: "--diff"
 
@@ -85,7 +84,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: ""
           RUFF_CHECK_FLAGS: "--fix"
           RUFF_FORMAT_FLAGS: ""
 
