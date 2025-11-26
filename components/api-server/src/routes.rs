@@ -95,6 +95,7 @@ struct QueryResultsUri {
             content_type = "text/event-stream",
             description = "Server-Sent Events stream of query results. Each event contains a \
                 single line of the query result in JSON format.",
+            example = r#"data: {"timestamp": 1633036800, "message": "Example log message"}\n"#
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
