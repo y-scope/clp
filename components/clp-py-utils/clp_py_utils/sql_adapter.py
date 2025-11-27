@@ -109,10 +109,9 @@ class SqlAdapter:
     ):
         if "mysql" == self.database_config.type:
             return self.create_mysql_connection(disable_localhost_socket_connection, user_type)
-        elif "mariadb" == self.database_config.type:
+        if "mariadb" == self.database_config.type:
             return self.create_mariadb_connection(disable_localhost_socket_connection, user_type)
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
 
     def create_connection_pool(
         self,

@@ -37,9 +37,10 @@ def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> list[int]
     else:
         raise ValueError(f"Unexpected scheduler type {scheduler_type}")
 
-    with closing(sql_adapter.create_connection()) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection()) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         db_cursor.execute(
             f"""
             SELECT id
