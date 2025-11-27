@@ -29,9 +29,8 @@ const TimeDateInput = (props: TimeDateInputProps) => {
     return (
         <input
             {...props}
-            value={displayText}
             readOnly={true}
-        />
+            value={displayText}/>
     );
 };
 
