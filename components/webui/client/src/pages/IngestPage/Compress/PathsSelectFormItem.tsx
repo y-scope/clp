@@ -48,8 +48,29 @@ const PathsSelectFormItem = () => {
         handleLoadData,
         handleSearch,
         handleTreeExpand,
+        handleTitleClick,
         treeData,
     } = useFileSystemTree();
+
+    const treeDataWithClickHandlers = treeData.map((node) => ({
+        ...node,
+        title: (
+            <span
+                style={{
+                    display: "inline-block",
+                    width: "100%",
+                }}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    const key = node["value"] as string;
+                    const expanded = expandedKeys.includes(key);
+                    handleTitleClick(key, expanded);
+                }}
+            >
+                {node["title"]}
+            </span>
+        ),
+    }));
 
     return (
         <Form.Item
@@ -67,9 +88,8 @@ const PathsSelectFormItem = () => {
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={true}
                 treeCheckable={true}
-                treeData={treeData}
+                treeData={treeDataWithClickHandlers}
                 treeDataSimpleMode={true}
-                treeExpandAction={"click"}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}

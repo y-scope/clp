@@ -82,6 +82,7 @@ interface FileSystemTree {
     handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
     handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
     handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
+    handleTitleClick: (key: string, expanded: boolean) => void;
     isLoading: boolean;
     treeData: TreeNode[];
 }
@@ -213,6 +214,15 @@ export const useFileSystemTree = (): FileSystemTree => {
         []
     );
 
+    const handleTitleClick = useCallback((key: string, expanded: boolean) => {
+        if (expanded) {
+            setExpandedKeys((prev) => prev.filter((k) => k !== key));
+        } else {
+            setExpandedKeys((prev) => [...prev,
+                key]);
+        }
+    }, []);
+
     useEffect(() => {
         fetchAndAppendTreeNodes("/").catch((e: unknown) => {
             console.error("Failed to load root directory", e);
@@ -223,6 +233,7 @@ export const useFileSystemTree = (): FileSystemTree => {
         expandedKeys,
         handleLoadData,
         handleSearch,
+        handleTitleClick,
         handleTreeExpand,
         isLoading,
         treeData,
