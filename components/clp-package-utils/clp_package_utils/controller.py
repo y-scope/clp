@@ -13,7 +13,12 @@ from typing import Any
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_USER_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     ClpConfig,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
@@ -138,15 +143,13 @@ class BaseController(ABC):
         }
 
         # Credentials
+        credentials = self._clp_config.database.credentials
         env_vars |= {
-            "CLP_DB_PASS": self._clp_config.database.password,
-            "CLP_DB_USER": self._clp_config.database.username,
+            CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
+            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+            CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
         }
-
-        if self._clp_config.database.has_root_password():
-            env_vars |= {
-                "CLP_DB_ROOT_PASS": self._clp_config.database.root_password,
-            }
 
         # Paths
         env_vars |= {

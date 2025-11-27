@@ -69,6 +69,7 @@ CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
+CLP_DB_ROOT_USER_ENV_VAR_NAME = "CLP_DB_ROOT_USER"
 CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
@@ -162,6 +163,16 @@ class Package(BaseModel):
         return self
 
 
+class ClpDbUserType(KebabCaseStrEnum):
+    CLP = auto()
+    ROOT = auto()
+
+
+class DbUserCredentials(BaseModel):
+    username: NonEmptyStr | None = None
+    password: NonEmptyStr | None = None
+
+
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
@@ -173,17 +184,24 @@ class Database(BaseModel):
     auto_commit: bool = False
     compress: bool = True
 
-    username: NonEmptyStr | None = None
-    password: NonEmptyStr | None = None
+    credentials: dict[ClpDbUserType, DbUserCredentials] = {
+        ClpDbUserType.CLP: DbUserCredentials(),
+        ClpDbUserType.ROOT: DbUserCredentials(),
+    }
 
-    root_password: NonEmptyStr | None = None
-
-    def ensure_credentials_loaded(self):
-        if self.username is None or self.password is None:
+    def ensure_credentials_loaded(self, user_type: ClpDbUserType):
+        if (
+            self.credentials[user_type].username is None
+            or self.credentials[user_type].password is None
+        ):
             raise ValueError("Credentials not loaded.")
 
-    def get_mysql_connection_params(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+    def get_mysql_connection_params(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ):
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
@@ -193,8 +211,8 @@ class Database(BaseModel):
         connection_params = {
             "host": host,
             "port": self.port,
-            "user": self.username,
-            "password": self.password,
+            "user": self.credentials[user_type].username,
+            "password": self.credentials[user_type].password,
             "database": self.name,
             "compress": self.compress,
             "autocommit": self.auto_commit,
@@ -203,71 +221,74 @@ class Database(BaseModel):
             connection_params["ssl_cert"] = self.ssl_cert
         return connection_params
 
-    def get_clp_connection_params_and_type(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+    def get_clp_connection_params_and_type(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ):
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
             host = "127.0.0.1"
 
-        connection_params_and_type = {
+        return {
             # NOTE: clp-core does not distinguish between mysql and mariadb
-            "type": DatabaseEngine.MYSQL.value,
             "host": host,
             "port": self.port,
-            "username": self.username,
-            "password": self.password,
-            "name": self.name,
-            "table_prefix": CLP_METADATA_TABLE_PREFIX,
+            "credentials": {user_type: self.credentials[user_type].model_dump()},
+            "database": self.name,
             "compress": self.compress,
             "autocommit": self.auto_commit,
+            "name": self.name,
+            "type": DatabaseEngine.MYSQL.value,
+            "table_prefix": CLP_METADATA_TABLE_PREFIX,
         }
-        if self.ssl_cert:
-            connection_params_and_type["ssl_cert"] = self.ssl_cert
-        return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        d = self.model_dump(
-            exclude={"root_password", "username", "password"}
-        )
+        d = self.model_dump(exclude={"credentials"})
         return d
-
-    def has_root_password(self) -> bool:
-        """
-        Checks if root password is configured.
-
-        :return: True if root password is set.
-        """
-        return self.root_password is not None
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.username")
-            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+            self.credentials[ClpDbUserType.CLP].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.username"
+            )
+            self.credentials[ClpDbUserType.CLP].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.password"
+            )
+            self.credentials[ClpDbUserType.ROOT].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.root_username"
+            )
+            self.credentials[ClpDbUserType.ROOT].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.root_password"
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
-        try:
-            self.root_password = get_config_value(config, f"{DB_COMPONENT_NAME}.root_password")
-        except KeyError:
-            pass
-
-    def load_credentials_from_env(self):
+    def load_credentials_from_env(self, user_type: ClpDbUserType = ClpDbUserType.CLP):
         """
-        :raise ValueError: if any expected environment variable is not set.
-        """
-        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
-        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+        Loads database credentials from environment variables.
 
-        try:
-            self.root_password = _get_env_var(CLP_DB_ROOT_PASS_ENV_VAR_NAME)
-        except ValueError:
-            pass
+        :param user_type: User type whose credentials are to be loaded.
+
+        :raise ValueError: If any expected environment variable is not set.
+        """
+        match user_type:
+            case ClpDbUserType.CLP:
+                user_env_var = CLP_DB_USER_ENV_VAR_NAME
+                pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
+            case ClpDbUserType.ROOT:
+                user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
+                pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+
+        self.credentials[user_type].username = _get_env_var(user_env_var)
+        self.credentials[user_type].password = _get_env_var(pass_env_var)
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME

@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     ClpConfig,
+    ClpDbUserType,
     Database,
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
@@ -245,10 +246,11 @@ def handle_extract_file_cmd(
         "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
+    credentials = clp_db_connection_params["credentials"]
     extract_env = {
         **os.environ,
-        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
-        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
     }
 
     files_to_extract_list_path = None

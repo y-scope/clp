@@ -83,6 +83,7 @@ services:
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
+      CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
@@ -459,8 +460,8 @@ services:
     environment:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
-      CLP_DB_USER: "${CLP_DB_USER}"
-      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
       - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
