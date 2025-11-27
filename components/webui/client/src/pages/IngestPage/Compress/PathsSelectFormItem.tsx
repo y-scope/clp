@@ -59,6 +59,7 @@ const PathsSelectFormItem = () => {
         >
             <TreeSelect
                 allowClear={true}
+                filterTreeNode={false}
                 listHeight={512}
                 loadData={handleLoadData}
                 multiple={true}

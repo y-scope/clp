@@ -187,13 +187,8 @@ export const useFileSystemTree = (): FileSystemTree => {
             (async () => {
                 try {
                     const basePath = extractBasePath(value);
-
-                    if (expandedKeys.includes(basePath)) {
-                        return;
-                    }
-
                     const parentsLoaded = await loadMissingParents(basePath);
-                    if (parentsLoaded) {
+                    if (parentsLoaded && false === expandedKeys.includes(basePath)) {
                         await fetchAndAppendTreeNodes(basePath);
                     }
                 } finally {
