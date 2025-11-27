@@ -8,9 +8,9 @@ Expands the name of the chart.
 {{- end }}
 
 {{/*
-Creates a default fully qualified app name. We truncate at 63 chars because
-some Kubernetes name fields are limited to this (by the DNS naming spec). If
-release name contains chart name it will be used as a full name.
+Creates a default fully qualified app name. We truncate at 63 chars because some Kubernetes name
+fields are limited to this (by the DNS naming spec). If release name contains chart name it will be
+used as a full name.
 
 @return {string} The fully qualified app name (truncated to 63 characters)
 */}}
@@ -61,7 +61,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Creates image reference for CLP Package.
+Creates image reference for the CLP Package.
 
 @return {string} Full image reference (repository:tag)
 */}}
