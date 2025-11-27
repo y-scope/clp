@@ -26,7 +26,4 @@ export {
     FileEntrySchema,
     FileListingSchema,
 };
-export type {
-    FileEntry,
-    FileListing,
-};
+export type {FileListing};
