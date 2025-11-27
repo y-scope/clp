@@ -14,9 +14,9 @@ import useSearchStore from "../../SearchState/index";
 import usePrestoSearchState from "../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import TimeDateInput from "./TimeDateInput";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
+import TimeDateInput from "./TimeDateInput";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
@@ -102,11 +102,11 @@ const TimeRangeInput = () => {
                     className={styles["rangePicker"] || ""}
                     renderExtraFooter={renderFooter}
                     showTime={true}
+                    size={"middle"}
+                    value={timeRange}
                     components={{
                         input: TimeDateInput,
                     }}
-                    size={"middle"}
-                    value={timeRange}
                     disabled={timeRangeOption !== TIME_RANGE_OPTION.CUSTOM ||
                                 searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}

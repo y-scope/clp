@@ -182,6 +182,7 @@ const TIME_RANGE_DISPLAY_TEXT_MAP: Record<
         [DATE_RANGE_POSITION.START]: "First timestamp",
         [DATE_RANGE_POSITION.END]: "Last timestamp",
     },
+
     // Custom option is just a placeholder for typing purposes, its values should not
     // be used.
     [TIME_RANGE_OPTION.CUSTOM]: {

@@ -22,16 +22,15 @@ const TimeDateInput = (props: TimeDateInputProps) => {
     const {value, [DATE_RANGE_PROP_KEY]: dateRange} = props;
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
 
-    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM
-        ? value
-        : TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
+    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
+        value :
+        TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
 
     return (
         <input
             {...props}
-            value={displayText}
-            readOnly
-        />
+            readOnly={true}
+            value={displayText}/>
     );
 };
 
