@@ -1,5 +1,6 @@
 import {
     useCallback,
+    useEffect,
     useState,
 } from "react";
 
@@ -211,6 +212,12 @@ export const useFileSystemTree = (): FileSystemTree => {
         },
         []
     );
+
+    useEffect(() => {
+        fetchAndAppendTreeNodes("/").catch((e: unknown) => {
+            console.error("Failed to load root directory", e);
+        });
+    }, [fetchAndAppendTreeNodes]);
 
     return {
         expandedKeys,
