@@ -1,0 +1,9 @@
+/*
+ * Make the tree node title span take the full width of its parent container. This ensures that
+ * clicking anywhere on the item background (not just the text) triggers the onClick handler for
+ * expansion.
+ */
+.treeNodeTitle {
+    display: inline-block;
+    width: 100%;
+}

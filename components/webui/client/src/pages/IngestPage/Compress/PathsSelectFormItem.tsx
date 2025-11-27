@@ -9,6 +9,7 @@ import {
     TreeSelect,
 } from "antd";
 
+import styles from "./PathsSelectFormItem.module.css";
 import {useFileSystemTree} from "./useFileSystemTree";
 
 
@@ -56,10 +57,7 @@ const PathsSelectFormItem = () => {
         ...node,
         title: (
             <span
-                style={{
-                    display: "inline-block",
-                    width: "100%",
-                }}
+                className={styles["treeNodeTitle"]}
                 onClick={(e) => {
                     e.stopPropagation();
                     const key = node["value"] as string;
