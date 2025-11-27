@@ -31,7 +31,6 @@ from clp_package_utils.general import (
     EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
-    validate_dataset_name,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -210,6 +209,10 @@ def handle_clp_extract_file_cmd(
     :param default_config_file_path:
     :return: 0 on success, -1 otherwise.
     """
+    if parsed_args.dataset is not None:
+        logger.error("The --dataset flag is invalid when using the CLP storage engine.")
+        return -1
+
     # Validate paths were specified using only one method
     if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
         logger.error("Paths cannot be specified both on the command line and through a file.")
@@ -307,18 +310,19 @@ def handle_clp_s_extract_file_cmd(
     target_dataset: str = parsed_args.dataset
     if target_dataset is None:
         logger.error(
-            f"The --dataset flag must be specified when using the {storage_engine} storage engine."
+            f"Dataset unspecified; must be specified or 'default' when using the {storage_engine}"
+            " storage engine."
         )
         return -1
-    # Validate dataset name
-    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+
+    # Validate that dataset exists in the database.
     try:
-        validate_dataset_name(clp_db_connection_params["table_prefix"], target_dataset)
+        validate_dataset_exists(clp_config.database, target_dataset)
     except Exception as e:
         logger.error(e)
         return -1
 
-    # Construct dataset_dir path and validate
+    # Construct dataset_dir path and validate that it exists.
     archives_dir = clp_config.archive_output.get_directory()
     dataset_dir = archives_dir / target_dataset
     if not dataset_dir.exists():
@@ -421,11 +425,10 @@ def main(argv):
         storage_engine = clp_config.package.storage_engine
         if StorageEngine.CLP == storage_engine:
             return handle_clp_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-        elif StorageEngine.CLP_S == storage_engine:
+        if StorageEngine.CLP_S == storage_engine:
             return handle_clp_s_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-        else:
-            logger.error(f"Unsupported storage engine: {storage_engine}")
-            return -1
+        logger.error(f"Unsupported storage engine: {storage_engine}")
+        return -1
     if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
     logger.exception(f"Unexpected command: {command}")
