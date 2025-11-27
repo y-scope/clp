@@ -10,7 +10,7 @@ import {
 } from "antd";
 
 import styles from "./PathsSelectFormItem.module.css";
-import {useFileSystemTree} from "./useFileSystemTree";
+import useFileSystemTree from "./useFileSystemTree";
 
 
 /**

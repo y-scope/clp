@@ -5,99 +5,62 @@ import {
 } from "react";
 
 import {
-    GetProp,
     message,
     TreeSelectProps,
 } from "antd";
 
 import {listFiles} from "../../../api/os";
+import {
+    extractBasePath,
+    FileItem,
+    mapFileToTreeNode,
+    TreeNode,
+} from "./utils";
 
 
-type TreeNode = Omit<GetProp<TreeSelectProps, "treeData">[number], "label">;
-
-interface FileItem {
-    isExpandable: boolean;
-    name: string;
-    parentPath: string;
+interface TreeDataReturn {
+    expandedKeys: string[];
+    fetchAndAppendTreeNodes: (path: string) => Promise<boolean>;
+    loadMissingParents: (path: string) => Promise<boolean>;
+    setExpandedKeys: (keys: string[] | ((prev: string[]) => string[])) => void;
+    treeData: TreeNode[];
 }
 
-/**
- * Maps file system item to Antd TreeSelect flat tree node format.
- *
- * @param props
- * @param props.isExpandable
- * @param props.name
- * @param props.parentPath
- * @return the mapped Antd TreeSelect flat tree node.
- */
-const mapFileToTreeNode = ({
-    isExpandable,
-    name,
-    parentPath,
-}: {
-    isExpandable: boolean;
-    name: string;
-    parentPath: string;
-}): TreeNode => {
-    const normalizedParentPath = 0 === parentPath.length ?
-        "/" :
-        parentPath;
-    const pathPrefix = normalizedParentPath.endsWith("/") ?
-        normalizedParentPath :
-        `${normalizedParentPath}/`;
-    const fullPath = pathPrefix + name;
+interface TreeHandlersParams {
+    expandedKeys: string[];
+    fetchAndAppendTreeNodes: (path: string) => Promise<boolean>;
+    loadMissingParents: (path: string) => Promise<boolean>;
+    setExpandedKeys: (keys: string[] | ((prev: string[]) => string[])) => void;
+    setIsLoading: (loading: boolean) => void;
+}
 
-    return {
-        id: fullPath,
-        isLeaf: !isExpandable,
-        pId: normalizedParentPath,
-        title: name,
-        value: fullPath,
-    };
-};
-
-/**
- * Extracts the base directory path from a search string.
- *
- * @param value
- * @return the base directory path.
- */
-const extractBasePath = (value: string): string => {
-    if (value.endsWith("/")) {
-        return "/" === value ?
-            "/" :
-            value.slice(0, -1);
-    }
-
-    const lastSlashIndex = value.lastIndexOf("/");
-    if (-1 === lastSlashIndex || 0 === lastSlashIndex) {
-        return "/";
-    }
-
-    return value.substring(0, lastSlashIndex);
-};
+interface TreeHandlersReturn {
+    handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
+    handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
+    handleTitleClick: (key: string, expanded: boolean) => void;
+    handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
+}
 
 interface FileSystemTree {
     expandedKeys: string[];
     handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
     handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
-    handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
     handleTitleClick: (key: string, expanded: boolean) => void;
+    handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
     isLoading: boolean;
     treeData: TreeNode[];
 }
 
 /**
- * Provides a tree of file system items for inputting paths for compression job submission.
+ * Manages tree data loading and expansion.
  *
- * @return
+ * @return tree data and operations
  */
-export const useFileSystemTree = (): FileSystemTree => {
-    const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+const useTreeData = (): TreeDataReturn => {
     const [treeData, setTreeData] = useState<TreeNode[]>([
         {id: "/", value: "/", title: "/", isLeaf: false},
     ]);
+    const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 
     const fetchAndAppendTreeNodes = useCallback(async (path: string): Promise<boolean> => {
         try {
@@ -134,7 +97,7 @@ export const useFileSystemTree = (): FileSystemTree => {
     const loadMissingParents = useCallback(async (path: string): Promise<boolean> => {
         const pathSegments = path.split("/").filter((segment) => 0 < segment.length);
 
-        if (false === treeData.some((node) => "/" === node["id"])) {
+        if (!treeData.some((node) => "/" === node["id"])) {
             const success = await fetchAndAppendTreeNodes("/");
             if (!success) {
                 return false;
@@ -147,9 +110,9 @@ export const useFileSystemTree = (): FileSystemTree => {
                 `/${segment}` :
                 `${currentPath}/${segment}`;
 
-            if (!treeData.some((node) => node["id"] === nextPath)) {
+            if (false === treeData.some((node) => node["id"] === nextPath)) {
                 const success = await fetchAndAppendTreeNodes(currentPath);
-                if (!success) {
+                if (false === success) {
                     return false;
                 }
             }
@@ -162,6 +125,35 @@ export const useFileSystemTree = (): FileSystemTree => {
         treeData,
         fetchAndAppendTreeNodes,
     ]);
+
+    return {
+        expandedKeys,
+        fetchAndAppendTreeNodes,
+        loadMissingParents,
+        setExpandedKeys,
+        treeData,
+    };
+};
+
+/**
+ * Custom hook for tree event handlers.
+ *
+ * @param params
+ * @param params.expandedKeys
+ * @param params.setExpandedKeys
+ * @param params.fetchAndAppendTreeNodes
+ * @param params.loadMissingParents
+ * @param params.setIsLoading
+ * @return event handlers
+ */
+const useTreeHandlers = (params: TreeHandlersParams): TreeHandlersReturn => {
+    const {
+        expandedKeys,
+        setExpandedKeys,
+        fetchAndAppendTreeNodes,
+        loadMissingParents,
+        setIsLoading,
+    } = params;
 
     const handleLoadData = useCallback<NonNullable<TreeSelectProps["loadData"]>>(
         async (node) => {
@@ -176,12 +168,13 @@ export const useFileSystemTree = (): FileSystemTree => {
                 setIsLoading(false);
             }
         },
-        [fetchAndAppendTreeNodes]
+        [fetchAndAppendTreeNodes,
+            setIsLoading]
     );
 
     const handleSearch = useCallback<NonNullable<TreeSelectProps["onSearch"]>>(
         (value) => {
-            if (!value.trim()) {
+            if (0 === value.trim().length) {
                 return;
             }
 
@@ -204,6 +197,7 @@ export const useFileSystemTree = (): FileSystemTree => {
             fetchAndAppendTreeNodes,
             loadMissingParents,
             expandedKeys,
+            setIsLoading,
         ]
     );
 
@@ -211,7 +205,7 @@ export const useFileSystemTree = (): FileSystemTree => {
         (keys) => {
             setExpandedKeys(keys as string[]);
         },
-        []
+        [setExpandedKeys]
     );
 
     const handleTitleClick = useCallback((key: string, expanded: boolean) => {
@@ -221,7 +215,43 @@ export const useFileSystemTree = (): FileSystemTree => {
             setExpandedKeys((prev) => [...prev,
                 key]);
         }
-    }, []);
+    }, [setExpandedKeys]);
+
+    return {
+        handleLoadData,
+        handleSearch,
+        handleTitleClick,
+        handleTreeExpand,
+    };
+};
+
+/**
+ * Provides a tree of file system items for inputting paths for compression job submission.
+ *
+ * @return
+ */
+const useFileSystemTree = (): FileSystemTree => {
+    const [isLoading, setIsLoading] = useState(false);
+    const {
+        treeData,
+        expandedKeys,
+        setExpandedKeys,
+        fetchAndAppendTreeNodes,
+        loadMissingParents,
+    } = useTreeData();
+
+    const {
+        handleLoadData,
+        handleSearch,
+        handleTitleClick,
+        handleTreeExpand,
+    } = useTreeHandlers({
+        expandedKeys,
+        fetchAndAppendTreeNodes,
+        loadMissingParents,
+        setExpandedKeys,
+        setIsLoading,
+    });
 
     useEffect(() => {
         fetchAndAppendTreeNodes("/").catch((e: unknown) => {
@@ -239,3 +269,5 @@ export const useFileSystemTree = (): FileSystemTree => {
         treeData,
     };
 };
+
+export default useFileSystemTree;
