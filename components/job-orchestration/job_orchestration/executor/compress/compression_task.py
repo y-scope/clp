@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -208,9 +209,10 @@ def _get_db_connection_env_vars_for_clp_cmd(
     :param clp_metadata_db_connection_config:
     :return: Dictionary of database connection environment variables for the clp command.
     """
+    credentials = Database.model_validate(clp_metadata_db_connection_config).credentials
     return {
-        CLP_DB_USER_ENV_VAR_NAME: clp_metadata_db_connection_config["username"],
-        CLP_DB_PASS_ENV_VAR_NAME: clp_metadata_db_connection_config["password"],
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
     }
 
 

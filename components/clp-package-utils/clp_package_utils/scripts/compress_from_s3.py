@@ -11,6 +11,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
@@ -308,9 +309,10 @@ def main(argv):
         logger.error("No S3 URLs given for compression.")
         return -1
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
