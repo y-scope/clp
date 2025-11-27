@@ -254,7 +254,7 @@ class Database(BaseModel):
 
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
-    max_concurrent_tasks_per_job: NonNegativeInt = 0
+    max_concurrent_tasks_per_job: NonNegativeInt = 0 # set to 0 to remove the limit
     logging_level: LoggingLevel = "INFO"
 
 
