@@ -11,7 +11,7 @@ import settings from "../../../../settings.json" with {type: "json"};
 /**
  * Resolves a requested path against the LsRoot setting.
  *
- * @param requestedPath The path requested by the client
+ * @param requestedPath
  * @return The resolved absolute path
  */
 const resolveLsPath = (requestedPath: string): string => {
@@ -28,7 +28,7 @@ const resolveLsPath = (requestedPath: string): string => {
 /**
  * Normalizes a path for client display by removing the LsRoot prefix.
  *
- * @param fullPath The full path to normalize
+ * @param fullPath
  * @return The normalized path relative to LsRoot
  */
 const normalizeLsPath = (fullPath: string): string => {
@@ -97,8 +97,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     return Promise.resolve();
                 }
 
-                const errMsg = "Unable to list files";
-                request.log.error(e, errMsg);
+                request.log.error(e, "Unable to list files");
 
                 return reply.internalServerError(errMsg);
             }
