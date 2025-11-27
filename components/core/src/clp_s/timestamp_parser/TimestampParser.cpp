@@ -55,6 +55,8 @@ constexpr size_t cNumMillisecondPrecisionSubsecondDigits{3ULL};
 constexpr size_t cNumSecondPrecisionSubsecondDigits{0ULL};
 
 constexpr int cMinutesInHour{60};
+constexpr size_t cDaysInWeek{7};
+constexpr size_t cMonthsInYear{12};
 
 constexpr int cDefaultYear{1970};
 constexpr int cDefaultMonth{1};
@@ -63,43 +65,6 @@ constexpr int cDefaultDay{1};
 constexpr int64_t cEpochMilliseconds1971{31'536'000'000};
 constexpr int64_t cEpochMicroseconds1971{31'536'000'000'000};
 constexpr int64_t cEpochNanoseconds1971{31'536'000'000'000'000};
-
-constexpr std::array cAbbreviatedDaysOfWeek
-        = {std::string_view{"Sun"},
-           std::string_view{"Mon"},
-           std::string_view{"Tue"},
-           std::string_view{"Wed"},
-           std::string_view{"Thu"},
-           std::string_view{"Fri"},
-           std::string_view{"Sat"}};
-
-constexpr std::array cMonthNames
-        = {std::string_view{"January"},
-           std::string_view{"February"},
-           std::string_view{"March"},
-           std::string_view{"April"},
-           std::string_view{"May"},
-           std::string_view{"June"},
-           std::string_view{"July"},
-           std::string_view{"August"},
-           std::string_view{"September"},
-           std::string_view{"October"},
-           std::string_view{"November"},
-           std::string_view{"December"}};
-
-constexpr std::array cAbbreviatedMonthNames
-        = {std::string_view{"Jan"},
-           std::string_view{"Feb"},
-           std::string_view{"Mar"},
-           std::string_view{"Apr"},
-           std::string_view{"May"},
-           std::string_view{"Jun"},
-           std::string_view{"Jul"},
-           std::string_view{"Aug"},
-           std::string_view{"Sep"},
-           std::string_view{"Oct"},
-           std::string_view{"Nov"},
-           std::string_view{"Dec"}};
 
 constexpr std::array cPartsOfDay = {std::string_view{"AM"}, std::string_view{"PM"}};
 
@@ -122,17 +87,29 @@ constexpr std::array cDefaultDateTimePatterns{
         std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s])"},
         std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s)"},
         std::string_view{R"(<<<\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s:\?)"},
-        std::string_view{R"(\d \b \Y \H:\M:\s\O{,.}\?)"},
+        std::string_view{
+                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\O{,.}\?)"
+        },
         std::string_view{R"([\Y\m\d-\H:\M:\s])"},
         std::string_view{R"(\y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s)"},
         std::string_view{R"(\y\m\d\O{T }\k:\M:\s)"},
-        std::string_view{R"(\b \d, \Y \l:\M:\s \p)"},
-        std::string_view{R"(\b \d, \Y \I:\M:\s \p)"},
-        std::string_view{R"(\B \d, \Y \H:\M)"},
-        std::string_view{R"([\d\O{-/}\b\O{-/}\Y:\H:\M:\s)"},
-        std::string_view{R"(\a \b \e \H:\M:\s \Y)"},
-        std::string_view{R"(\b \d \H:\M:\s)"},
-        std::string_view{R"(\b \d \H:\M:\s\Z)"},
+        std::string_view{
+                R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d, \Y \l:\M:\s \p)"
+        },
+        std::string_view{
+                R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d, \Y \I:\M:\s \p)"
+        },
+        std::string_view{
+                R"(\B{January,February,March,April,May,June,July,August,September,October,November,December} \d, \Y \H:\M)"
+        },
+        std::string_view{
+                R"([\d\O{-/}\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec}\O{-/}\Y:\H:\M:\s)"
+        },
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat} \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \e \H:\M:\s \Y)"
+        },
+        std::string_view{R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\s)"},
+        std::string_view{R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\s\Z)"},
         std::string_view{R"(\m\O{- }\d \H:\M:\s\O{,.}\?)"}
 };
 
@@ -175,6 +152,21 @@ public:
 [[nodiscard]] auto
 find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
         -> ystdlib::error_handling::Result<size_t>;
+
+/**
+ * Finds the first matching prefix from a list of candidates.
+ * @param str Substring with a prefix potentially matching one of the candidates.
+ * @param candidates Candidate prefixes, as a comma-separated list.
+ * @param candidate_substrings Offsets and lengths describing candidate strings in `candidates`.
+ * @return A result containing the index of the matching prefix in the candidates array, or an error
+ * code indicating the failure:
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if no candidates match the prefix of `str`.
+ */
+[[nodiscard]] auto find_first_matching_prefix(
+        std::string_view str,
+        std::string_view candidates,
+        std::vector<std::pair<uint16_t, uint16_t>> candidate_substrings
+) -> ystdlib::error_handling::Result<size_t>;
 
 /**
  * Converts the prefix of a string to a positive number up to a maximum number of digits.
@@ -230,6 +222,19 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  */
 [[nodiscard]] auto extract_timezone_offset_in_minutes(std::string_view str)
         -> ystdlib::error_handling::Result<std::pair<std::string_view, int>>;
+
+/**
+ * Extracts the elements of a comma separated list from a bracket pattern.
+ * @param str The content between the brackets of the bracket pattern.
+ * @return A results containing the offets and lengths of every element in the list, or an error
+ * code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if:
+ *     - Any element of the list contains the character '\\' or ' '.
+ *     - Any element of the list has length zero.
+ *     - The total length of the content can not be represented by a `uint16_t`.
+ */
+[[nodiscard]] auto extract_bracket_pattern_list(std::string_view str)
+        -> ystdlib::error_handling::Result<std::vector<std::pair<uint16_t, uint16_t>>>;
 
 /**
  * @return The absolute value of the subsecond fractional component of a timestamp.
@@ -311,6 +316,20 @@ auto find_first_matching_prefix(std::string_view str, std::span<std::string_view
     for (size_t candidate_idx{0ULL}; candidate_idx < candidates.size(); ++candidate_idx) {
         auto const& candidate{candidates[candidate_idx]};
         if (str.starts_with(candidate)) {
+            return candidate_idx;
+        }
+    }
+    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+}
+
+auto find_first_matching_prefix(
+        std::string_view str,
+        std::string_view candidates,
+        std::vector<std::pair<uint16_t, uint16_t>> candidate_substrings
+) -> ystdlib::error_handling::Result<size_t> {
+    for (size_t candidate_idx{0ULL}; candidate_idx < candidate_substrings.size(); ++candidate_idx) {
+        auto const [substring_offset, substring_length] = candidate_substrings[candidate_idx];
+        if (str.starts_with(candidates.substr(substring_offset, substring_length))) {
             return candidate_idx;
         }
     }
@@ -468,6 +487,38 @@ auto extract_timezone_offset_in_minutes(std::string_view str)
     return std::make_pair(str.substr(0ULL, num_timezone_bytes), sign_factor * offset);
 }
 
+auto extract_bracket_pattern_list(std::string_view str)
+        -> ystdlib::error_handling::Result<std::vector<std::pair<uint16_t, uint16_t>>> {
+    if (std::numeric_limits<uint16_t>::max() < str.size()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    size_t last_offset{};
+    std::vector<std::pair<uint16_t, uint16_t>> entry_offsets_and_sizes;
+    for (size_t i{}; i < str.size(); ++i) {
+        switch (str.at(i)) {
+            case ' ':
+            case '\\':
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+            case ',': {
+                if (i <= last_offset) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                entry_offsets_and_sizes.emplace_back(last_offset, i - last_offset);
+                last_offset = i + 1;
+            }
+            default:
+                continue;
+        }
+    }
+
+    if (last_offset >= str.size()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+    entry_offsets_and_sizes.emplace_back(last_offset, str.size() - last_offset);
+    return entry_offsets_and_sizes;
+}
+
 auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char> {
     auto const abs_timestamp = timestamp < 0 ? -timestamp : timestamp;
     if (abs_timestamp > cEpochNanoseconds1971) {
@@ -550,14 +601,12 @@ auto marshal_date_time_timestamp(
                 buffer.append(fmt::format("{:0>4d}", year));
                 break;
             }
-            case 'B': {  // Full month name.
+            case 'B': {  // Month name.
                 auto const month_idx{year_month_day.month().operator unsigned int() - 1};
-                buffer.append(cMonthNames.at(month_idx));
-                break;
-            }
-            case 'b': {  // Abbreviated month name.
-                auto const month_idx{year_month_day.month().operator unsigned int() - 1};
-                buffer.append(cAbbreviatedMonthNames.at(month_idx));
+                auto const [month_offset, month_length]
+                        = pattern.get_month_name_offsets_and_lengths().at(month_idx);
+                buffer.append(raw_pattern.substr(pattern_idx + 2ULL + month_offset, month_length));
+                pattern_idx += pattern.get_month_name_bracket_pattern_length() + 2ULL;
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -575,13 +624,19 @@ auto marshal_date_time_timestamp(
                 buffer.append(fmt::format("{: >2d}", day));
                 break;
             }
-            case 'a': {  // Abbreviated day in week.
+            case 'A': {  // Day in week.
                 auto const day_in_week_idx{
                         (date::year_month_weekday(timestamp_date).weekday_indexed().weekday()
                          - date::Sunday)
                                 .count()
                 };
-                buffer.append(cAbbreviatedDaysOfWeek.at(day_in_week_idx));
+                auto const [day_in_week_offset, day_in_week_length]
+                        = pattern.get_weekday_name_offsets_and_lengths().at(day_in_week_idx);
+                buffer.append(raw_pattern.substr(
+                        pattern_idx + 2ULL + day_in_week_offset,
+                        day_in_week_length
+                ));
+                pattern_idx += pattern.get_weekday_name_bracket_pattern_length() + 2ULL;
                 break;
             }
             case 'p': {  // Part of day (AM/PM).
@@ -803,6 +858,10 @@ auto TimestampPattern::create(std::string_view pattern)
     bool has_part_of_day{false};
     bool uses_twelve_hour_clock{false};
     std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset{std::nullopt};
+    std::vector<std::pair<uint16_t, uint16_t>> month_name_offsets_and_lengths;
+    std::vector<std::pair<uint16_t, uint16_t>> weekday_name_offsets_and_lengths;
+    uint16_t month_name_bracket_pattern_length{};
+    uint16_t weekday_name_bracket_pattern_length{};
 
     bool escaped{false};
     for (size_t pattern_idx{0ULL}; pattern_idx < pattern.size(); ++pattern_idx) {
@@ -824,14 +883,51 @@ auto TimestampPattern::create(std::string_view pattern)
         switch (cur_format_specifier) {
             case 'y':  // Zero-padded 2-digit year in century.
             case 'Y':  // Zero-padded 4-digit year.
-            case 'B':  // Full month name.
-            case 'b':  // Abbreviated month name.
+                uses_date_type_representation = true;
+                break;
+            case 'B': {  // Month name.
+                auto const month_name_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                auto const month_names_str{month_name_bracket_pattern.substr(
+                        1ULL,
+                        month_name_bracket_pattern.size() - 2ULL
+                )};
+                month_name_offsets_and_lengths = YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern_list(month_names_str)
+                );
+                if (cMonthsInYear != month_name_offsets_and_lengths.size()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                month_name_bracket_pattern_length = month_names_str.size();
+                pattern_idx += month_name_bracket_pattern.size();
+                uses_date_type_representation = true;
+                break;
+            }
             case 'm':  // Zero-padded month.
             case 'd':  // Zero-padded day in month.
             case 'e':  // Space-padded day in month.
-            case 'a':  // Abbreviated day in week.
                 uses_date_type_representation = true;
                 break;
+            case 'A': {  // Day in week.
+                auto const weekday_name_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                auto const weekday_names_str{weekday_name_bracket_pattern.substr(
+                        1ULL,
+                        weekday_name_bracket_pattern.size() - 2ULL
+                )};
+                weekday_name_offsets_and_lengths = YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern_list(weekday_names_str)
+                );
+                if (cDaysInWeek != weekday_name_offsets_and_lengths.size()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                weekday_name_bracket_pattern_length = weekday_names_str.size();
+                pattern_idx += weekday_name_bracket_pattern.size();
+                uses_date_type_representation = true;
+                break;
+            }
             case 'p':  // Part of day (AM/PM).
                 uses_date_type_representation = true;
                 has_part_of_day = true;
@@ -927,6 +1023,10 @@ auto TimestampPattern::create(std::string_view pattern)
     return TimestampPattern{
             std::string{pattern},
             optional_timezone_size_and_offset,
+            month_name_offsets_and_lengths,
+            weekday_name_offsets_and_lengths,
+            month_name_bracket_pattern_length,
+            weekday_name_bracket_pattern_length,
             uses_date_type_representation,
             uses_twelve_hour_clock
     };
@@ -1012,21 +1112,19 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case 'B': {  // Full month name.
-                auto const month_idx{YSTDLIB_ERROR_HANDLING_TRYX(
-                        find_first_matching_prefix(timestamp.substr(timestamp_idx), cMonthNames)
+            case 'B': {  // Month name.
+                auto const month_names{raw_pattern.substr(
+                        pattern_idx + 2ULL,
+                        pattern.get_month_name_bracket_pattern_length()
                 )};
-                parsed_month = static_cast<int>(month_idx) + 1;
-                timestamp_idx += cMonthNames.at(month_idx).length();
-                break;
-            }
-            case 'b': {  // Abbreviated month name.
                 auto const month_idx{YSTDLIB_ERROR_HANDLING_TRYX(find_first_matching_prefix(
                         timestamp.substr(timestamp_idx),
-                        cAbbreviatedMonthNames
+                        month_names,
+                        pattern.get_month_name_offsets_and_lengths()
                 ))};
                 parsed_month = static_cast<int>(month_idx) + 1;
-                timestamp_idx += cAbbreviatedMonthNames.at(month_idx).length();
+                pattern_idx += month_names.size() + 2ULL;
+                timestamp_idx += pattern.get_month_name_offsets_and_lengths().at(month_idx).second;
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -1083,12 +1181,18 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case 'a': {  // Abbreviated day in week.
+            case 'A': {  // Day in week.
+                auto const weekday_names{raw_pattern.substr(
+                        pattern_idx + 2ULL,
+                        pattern.get_weekday_name_bracket_pattern_length()
+                )};
                 auto const day_idx{YSTDLIB_ERROR_HANDLING_TRYX(find_first_matching_prefix(
                         timestamp.substr(timestamp_idx),
-                        cAbbreviatedDaysOfWeek
+                        weekday_names,
+                        pattern.get_weekday_name_offsets_and_lengths()
                 ))};
-                timestamp_idx += cAbbreviatedDaysOfWeek.at(day_idx).length();
+                pattern_idx += weekday_names.size() + 2ULL;
+                timestamp_idx += pattern.get_weekday_name_offsets_and_lengths().at(day_idx).second;
                 optional_day_of_week_idx = static_cast<int>(day_idx);
                 break;
             }

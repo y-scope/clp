@@ -2,6 +2,7 @@
 #define CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -52,22 +53,52 @@ public:
 
     [[nodiscard]] auto uses_twelve_hour_clock() const -> bool { return m_uses_twelve_hour_clock; }
 
+    [[nodiscard]] auto get_month_name_offsets_and_lengths() const
+            -> std::vector<std::pair<uint16_t, uint16_t>> const& {
+        return m_month_name_offsets_and_lengths;
+    }
+
+    [[nodiscard]] auto get_weekday_name_offsets_and_lengths() const
+            -> std::vector<std::pair<uint16_t, uint16_t>> const& {
+        return m_weekday_name_offsets_and_lengths;
+    }
+
+    [[nodiscard]] auto get_month_name_bracket_pattern_length() const -> uint16_t {
+        return m_month_name_bracket_pattern_length;
+    }
+
+    [[nodiscard]] auto get_weekday_name_bracket_pattern_length() const -> uint16_t {
+        return m_weekday_name_bracket_pattern_length;
+    }
+
 private:
     // Constructor
     TimestampPattern(
             std::string_view pattern,
             std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset,
+            std::vector<std::pair<uint16_t, uint16_t>> month_name_offsets_and_lengths,
+            std::vector<std::pair<uint16_t, uint16_t>> weekday_name_offsets_and_lengths,
+            uint16_t month_name_bracket_pattern_length,
+            uint16_t weekday_name_bracket_pattern_length,
             bool uses_date_type_representation,
             bool uses_twelve_hour_clock
     )
             : m_pattern{pattern},
               m_optional_timezone_size_and_offset{std::move(optional_timezone_size_and_offset)},
+              m_month_name_offsets_and_lengths{std::move(month_name_offsets_and_lengths)},
+              m_weekday_name_offsets_and_lengths{std::move(weekday_name_offsets_and_lengths)},
+              m_month_name_bracket_pattern_length{month_name_bracket_pattern_length},
+              m_weekday_name_bracket_pattern_length{weekday_name_bracket_pattern_length},
               m_uses_date_type_representation{uses_date_type_representation},
               m_uses_twelve_hour_clock{uses_twelve_hour_clock} {}
 
     // Variables
     std::string m_pattern;
     std::optional<std::pair<size_t, int>> m_optional_timezone_size_and_offset;
+    std::vector<std::pair<uint16_t, uint16_t>> m_month_name_offsets_and_lengths;
+    std::vector<std::pair<uint16_t, uint16_t>> m_weekday_name_offsets_and_lengths;
+    uint16_t m_month_name_bracket_pattern_length{};
+    uint16_t m_weekday_name_bracket_pattern_length{};
     bool m_uses_date_type_representation{false};
     bool m_uses_twelve_hour_clock{false};
 };
@@ -94,12 +125,11 @@ private:
  *
  * - \y Zero-padded year in century (69-99 -> 1969-1999, 00-68 -> 2000-2068).
  * - \Y Zero-padded year (0000-9999).
- * - \B Full month name (e.g., January).
- * - \b Abbreviated month name (e.g., Jan).
+ * - \B{January,...,December} Month name, one of twelve in the list between {}.
  * - \m Zero-padded month (01-12).
  * - \d Zero-padded day in month (01-31).
  * - \e Space-padded day in month( 1-31).
- * - \a Abbreviated day in week (e.g., Mon).
+ * - \A{Sunday,...,Saturday} Day in week, one of seven in the list between {}.
  * - \p Part of day (AM/PM).
  * - \H 24-hour clock, zero-padded hour (00-23).
  * - \k 24-hour clock, space-padded hour ( 0-23).
