@@ -1,3 +1,3 @@
-mod client;
+pub mod client;
 mod error;
-pub use client::*;
+pub mod routes;
