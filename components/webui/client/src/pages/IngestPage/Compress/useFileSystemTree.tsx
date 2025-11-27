@@ -99,8 +99,8 @@ export const useFileSystemTree = (): FileSystemTree => {
 
     const fetchAndAppendTreeNodes = useCallback(async (path: string): Promise<boolean> => {
         try {
-            const {data} = await listFiles(path);
-            const newNodes = (data as FileItem[]).map(mapFileToTreeNode);
+            const fileItems = await listFiles(path);
+            const newNodes = (fileItems as FileItem[]).map(mapFileToTreeNode);
 
             setTreeData((prev) => {
                 const existingNodeIds = new Set(prev.map((node) => node["id"] as string));
@@ -132,7 +132,7 @@ export const useFileSystemTree = (): FileSystemTree => {
     const loadMissingParents = useCallback(async (path: string): Promise<boolean> => {
         const pathSegments = path.split("/").filter((segment) => 0 < segment.length);
 
-        if (!treeData.some((node) => "/" === node["id"])) {
+        if (false === treeData.some((node) => "/" === node["id"])) {
             const success = await fetchAndAppendTreeNodes("/");
             if (!success) {
                 return false;

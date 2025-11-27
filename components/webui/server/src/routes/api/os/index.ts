@@ -1,6 +1,6 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
-import {StringSchema} from "@webui/common/schemas/common";
+import {FileListingSchema} from "@webui/common/schemas/os";
 import fs from "fs/promises";
 import {constants} from "http2";
 import path from "path";
@@ -43,15 +43,6 @@ const FileListRequestSchema = Type.Object({
 });
 
 
-const FileListResponseSchema = Type.Array(
-    Type.Object({
-        isExpandable: Type.Boolean(),
-        name: StringSchema,
-        parentPath: StringSchema,
-    })
-);
-
-
 /**
  * File listing API routes.
  *
@@ -67,7 +58,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 querystring: FileListRequestSchema,
                 response: {
-                    [constants.HTTP_STATUS_OK]: FileListResponseSchema,
+                    [constants.HTTP_STATUS_OK]: FileListingSchema,
                 },
             },
         },
