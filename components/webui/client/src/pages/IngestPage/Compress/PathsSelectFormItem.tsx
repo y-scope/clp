@@ -1,3 +1,5 @@
+import React, {useEffect} from "react";
+
 import {
     MinusOutlined,
     PlusOutlined,
@@ -9,8 +11,15 @@ import {
     TreeSelect,
 } from "antd";
 
+import useFileSystemTreeStore from "./fileSystemTreeStore";
 import styles from "./PathsSelectFormItem.module.css";
-import useFileSystemTree from "./useFileSystemTree";
+import {
+    createTitleClickHandler,
+    handleLoadData,
+    handleSearch,
+    handleTreeExpand,
+    initializeTree,
+} from "./treeEventHandlers";
 
 
 /**
@@ -31,10 +40,8 @@ const PathNotFoundEmpty = () => (
  */
 const PathLoadingEmpty = () => (
     <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={<Spin
-            size={"default"}
-            spinning={true}/>}/>
+        description={<Spin size={"default"} spinning={true}/>}
+        image={Empty.PRESENTED_IMAGE_SIMPLE}/>
 );
 
 /**
@@ -43,28 +50,20 @@ const PathLoadingEmpty = () => (
  * @return
  */
 const PathsSelectFormItem = () => {
-    const {
-        expandedKeys,
-        handleLoadData,
-        handleSearch,
-        handleTreeExpand,
-        isLoading,
-        toggleNodeExpansion,
-        treeData,
-    } = useFileSystemTree();
+    const expandedKeys = useFileSystemTreeStore((state) => state.expandedKeys);
+    const isLoading = useFileSystemTreeStore((state) => state.isLoading);
+    const treeData = useFileSystemTreeStore((state) => state.treeData);
 
-    const handleTitleClick = (nodeValue: string) => (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const expanded = expandedKeys.includes(nodeValue);
-        toggleNodeExpansion(nodeValue, expanded);
-    };
+    useEffect(() => {
+        initializeTree();
+    }, []);
 
     const treeDataWithClickHandlers = treeData.map((node) => ({
         ...node,
         title: (
             <span
                 className={styles["treeNodeTitle"]}
-                onClick={handleTitleClick(node["value"] as string)}
+                onClick={createTitleClickHandler(node["value"] as string, expandedKeys)}
             >
                 {node["title"]}
             </span>
@@ -83,23 +82,23 @@ const PathsSelectFormItem = () => {
                 listHeight={512}
                 loadData={handleLoadData}
                 multiple={true}
+                notFoundContent={isLoading ?
+                    <PathLoadingEmpty/> :
+                    <PathNotFoundEmpty/>}
                 placeholder={"Please select paths to compress"}
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={true}
+                switcherIcon={(props: {expanded?: boolean}) => (
+                    props.expanded ?
+                        <MinusOutlined style={{color: "grey"}}/> :
+                        <PlusOutlined style={{color: "grey"}}/>
+                )}
                 treeCheckable={true}
                 treeData={treeDataWithClickHandlers}
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
-                notFoundContent={isLoading ?
-                    <PathLoadingEmpty/> :
-                    <PathNotFoundEmpty/>}
-                switcherIcon={(props: {expanded?: boolean}) => (
-                    props.expanded ?
-                        <MinusOutlined style={{color: "grey"}}/> :
-                        <PlusOutlined style={{color: "grey"}}/>
-                )}
                 onSearch={handleSearch}
                 onTreeExpand={handleTreeExpand}/>
         </Form.Item>
