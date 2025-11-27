@@ -2,10 +2,12 @@ import asyncio
 import datetime
 from abc import ABC, abstractmethod
 from enum import auto, Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
-    CompressionTaskStatus,
     QueryJobType,
     QueryTaskStatus,
 )
@@ -16,27 +18,15 @@ from job_orchestration.scheduler.job_config import (
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
-from pydantic import BaseModel, validator
 
 
 class CompressionJob(BaseModel):
+    # Allow the use of `TaskManager.ResultHandle`
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: int
     start_time: datetime.datetime
-    async_task_result: Any
-
-
-class CompressionTaskResult(BaseModel):
-    task_id: int
-    status: int
-    duration: float
-    error_message: Optional[str]
-
-    @validator("status")
-    def valid_status(cls, field):
-        supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
-        if field not in supported_status:
-            raise ValueError(f'must be one of the following {"|".join(supported_status)}')
-        return field
+    result_handle: TaskManager.ResultHandle
 
 
 class InternalJobState(Enum):
@@ -48,8 +38,8 @@ class InternalJobState(Enum):
 class QueryJob(BaseModel, ABC):
     id: str
     state: InternalJobState
-    start_time: Optional[datetime.datetime]
-    current_sub_job_async_task_result: Optional[Any]
+    start_time: datetime.datetime | None = None
+    current_sub_job_async_task_result: Any | None = None
 
     @abstractmethod
     def get_type(self) -> QueryJobType: ...
@@ -79,12 +69,15 @@ class ExtractJsonJob(QueryJob):
 
 
 class SearchJob(QueryJob):
+    # To allow asyncio.Task and asyncio.Queue
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     search_config: SearchJobConfig
     num_archives_to_search: int
     num_archives_searched: int
-    remaining_archives_for_search: List[Dict[str, Any]]
-    reducer_acquisition_task: Optional[asyncio.Task]
-    reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
+    remaining_archives_for_search: list[dict[str, Any]]
+    reducer_acquisition_task: asyncio.Task | None = None
+    reducer_handler_msg_queues: ReducerHandlerMessageQueues | None = None
 
     def get_type(self) -> QueryJobType:
         return QueryJobType.SEARCH_OR_AGGREGATION
@@ -92,12 +85,9 @@ class SearchJob(QueryJob):
     def get_config(self) -> QueryJobConfig:
         return self.search_config
 
-    class Config:  # To allow asyncio.Task and asyncio.Queue
-        arbitrary_types_allowed = True
-
 
 class QueryTaskResult(BaseModel):
     status: QueryTaskStatus
-    task_id: str
+    task_id: int
     duration: float
-    error_log_path: Optional[str]
+    error_log_path: str | None = None

@@ -1,8 +1,8 @@
 set(
         CLP_SOURCES
         ../ArrayBackedPosIntSet.hpp
-        ../BufferedFileReader.cpp
-        ../BufferedFileReader.hpp
+        ../BufferedReader.cpp
+        ../BufferedReader.hpp
         ../BufferReader.cpp
         ../BufferReader.hpp
         ../database_utils.cpp
@@ -19,6 +19,9 @@ set(
         ../ffi/encoding_methods.cpp
         ../ffi/encoding_methods.hpp
         ../ffi/encoding_methods.inc
+        ../ffi/EncodedTextAst.hpp
+        ../ffi/EncodedTextAstError.cpp
+        ../ffi/EncodedTextAstError.hpp
         ../ffi/ir_stream/byteswap.hpp
         ../ffi/ir_stream/decoding_methods.cpp
         ../ffi/ir_stream/decoding_methods.hpp
@@ -27,6 +30,7 @@ set(
         ../ffi/ir_stream/encoding_methods.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
+        ../ffi/StringBlob.hpp
         ../FileDescriptor.cpp
         ../FileDescriptor.hpp
         ../FileReader.cpp
@@ -64,6 +68,7 @@ set(
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
@@ -143,9 +148,12 @@ set(
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryEntryReq.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp

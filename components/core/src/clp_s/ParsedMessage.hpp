@@ -8,14 +8,23 @@
 #include <utility>
 #include <variant>
 
+#include "../clp/ffi/EncodedTextAst.hpp"
 #include "Defs.hpp"
+#include "FloatFormatEncoding.hpp"
 
 namespace clp_s {
 class ParsedMessage {
 public:
     // Types
-    using variable_t
-            = std::variant<int64_t, double, std::string, bool, std::pair<uint64_t, epochtime_t>>;
+    using variable_t = std::
+            variant<int64_t,
+                    double,
+                    std::string,
+                    clp::ffi::EightByteEncodedTextAst,
+                    clp::ffi::FourByteEncodedTextAst,
+                    bool,
+                    std::pair<uint64_t, epochtime_t>,
+                    std::pair<double, float_format_t>>;
 
     // Constructor
     ParsedMessage() : m_schema_id(-1) {}
@@ -51,6 +60,16 @@ public:
     }
 
     /**
+     * Adds a float and its format to the message for a given MST node ID.
+     * @param node_id
+     * @param value
+     * @param format
+     */
+    inline void add_value(int32_t node_id, double value, float_format_t format) {
+        m_message.emplace(node_id, std::make_pair(value, format));
+    }
+
+    /**
      * Adds a value to the unordered region of the message. The order in which unordered values are
      * added to the message must match the order in which the corresponding MST node IDs are added
      * to the unordered region of the schema.
@@ -63,6 +82,16 @@ public:
 
     inline void add_unordered_value(std::string_view value) {
         m_unordered_message.emplace_back(std::string{value});
+    }
+
+    /**
+     * Adds a float and its format to the unordered region of the message.
+     * @param node_id
+     * @param value
+     * @param format
+     */
+    inline void add_unordered_value(double value, float_format_t format) {
+        m_unordered_message.emplace_back(std::make_pair(value, format));
     }
 
     /**

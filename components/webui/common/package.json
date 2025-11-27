@@ -2,9 +2,9 @@
   "name": "@webui/common",
   "version": "0.1.0",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
     }
   },
   "scripts": {
@@ -17,10 +17,10 @@
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
-    "@sinclair/typebox": "^0.34.38"
+    "@sinclair/typebox": "^0.34.41"
   },
   "devDependencies": {
-    "eslint-config-yscope": "1.1.1",
-    "typescript": "^5.7.3"
+    "eslint-config-yscope": "1.1.2",
+    "typescript": "^5.9.3"
   }
 }

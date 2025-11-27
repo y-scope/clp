@@ -8,23 +8,8 @@ import {ResultSetHeader} from "mysql2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../../../typings/compression.js";
+import {CompressionJobConfig} from "./typings.js";
 
-
-export interface CompressionJobConfig {
-    input: {
-        paths_to_compress: string[];
-        path_prefix_to_remove: string;
-        dataset?: string;
-        timestamp_key?: string;
-    };
-    output: {
-        target_archive_size: number;
-        target_dictionaries_size: number;
-        target_segment_size: number;
-        target_encoded_file_size: number;
-        compression_level: number;
-    };
-}
 
 /**
  * Class for managing compression jobs in the CLP package compression scheduler database.

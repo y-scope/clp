@@ -4,6 +4,10 @@ set(
         ../../clp/aws/AwsAuthenticationSigner.hpp
         ../../clp/BoundedReader.cpp
         ../../clp/BoundedReader.hpp
+        ../../clp/BufferedReader.cpp
+        ../../clp/BufferedReader.hpp
+        ../../clp/BufferReader.cpp
+        ../../clp/BufferReader.hpp
         ../../clp/CurlDownloadHandler.cpp
         ../../clp/CurlDownloadHandler.hpp
         ../../clp/CurlEasyHandle.hpp
@@ -17,6 +21,9 @@ set(
         ../../clp/EncodedVariableInterpreter.cpp
         ../../clp/EncodedVariableInterpreter.hpp
         ../../clp/ErrorCode.hpp
+        ../../clp/ffi/EncodedTextAst.hpp
+        ../../clp/ffi/EncodedTextAstError.cpp
+        ../../clp/ffi/EncodedTextAstError.hpp
         ../../clp/ffi/encoding_methods.cpp
         ../../clp/ffi/encoding_methods.hpp
         ../../clp/ffi/encoding_methods.inc
@@ -29,6 +36,7 @@ set(
         ../../clp/ffi/ir_stream/utils.hpp
         ../../clp/ffi/SchemaTree.cpp
         ../../clp/ffi/SchemaTree.hpp
+        ../../clp/ffi/StringBlob.hpp
         ../../clp/FileReader.cpp
         ../../clp/FileReader.hpp
         ../../clp/GlobalMetadataDBConfig.cpp
@@ -43,6 +51,7 @@ set(
         ../../clp/ir/parsing.hpp
         ../../clp/ir/parsing.inc
         ../../clp/ir/types.hpp
+        ../../clp/LogTypeDictionaryEntryReq.hpp
         ../../clp/MySQLDB.cpp
         ../../clp/MySQLDB.hpp
         ../../clp/MySQLParamBindings.cpp
@@ -55,11 +64,18 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/streaming_compression/Constants.hpp
+        ../../clp/streaming_compression/Decompressor.hpp
+        ../../clp/streaming_compression/zstd/Decompressor.cpp
+        ../../clp/streaming_compression/zstd/Decompressor.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
         ../../clp/time_types.hpp
         ../../clp/TraceableException.hpp
         ../../clp/type_utils.hpp
+        ../../clp/VariableDictionaryEntryReq.hpp
+        ../../clp/VariableDictionaryReaderReq.hpp
+        ../../clp/VariableDictionaryWriterReq.hpp
         ../archive_constants.hpp
         ../ArchiveReader.cpp
         ../ArchiveReader.hpp
@@ -124,6 +140,7 @@ if(CLP_BUILD_EXECUTABLES)
                 simdjson::simdjson
                 spdlog::spdlog
                 ystdlib::containers
+                ystdlib::error_handling
                 ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory

@@ -13,7 +13,6 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ErrorCode.hpp"
-#include "../../ir/EncodedTextAst.hpp"
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
@@ -145,11 +144,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @return Forwards `deserialize_tag`'s return values on failure.
  * @return Forwards `deserialize_encoded_text_ast`'s return values on failure.
  */
-template <typename encoded_variable_t>
-requires(
-        std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
-        || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>
-)
+template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         SchemaTree::Node::id_t node_id,
@@ -217,7 +212,8 @@ auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
     return deserialize_and_decode_schema_tree_node_id<
             cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
             cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
-            cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(tag, reader);
+            cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt
+    >(tag, reader);
 }
 
 auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
@@ -314,7 +310,8 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+        >(tag, reader)};
         if (schema_tree_node_id_result.has_error()) {
             return schema_tree_node_id_result.error();
         }
@@ -358,7 +355,8 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+        >(tag, reader)};
         if (schema_tree_node_id_result.has_error()) {
             return schema_tree_node_id_result.error();
         }
@@ -424,7 +422,8 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
         }
         case cProtocol::Payload::ValueEightByteEncodingClpStr:
             if (auto const err{deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs<
-                        ir::eight_byte_encoded_variable_t>(reader, node_id, node_id_value_pairs)};
+                        ir::eight_byte_encoded_variable_t
+                >(reader, node_id, node_id_value_pairs)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
@@ -432,7 +431,8 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
             break;
         case cProtocol::Payload::ValueFourByteEncodingClpStr:
             if (auto const err{deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs<
-                        ir::four_byte_encoded_variable_t>(reader, node_id, node_id_value_pairs)};
+                        ir::four_byte_encoded_variable_t
+                >(reader, node_id, node_id_value_pairs)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
@@ -450,11 +450,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
     return IRErrorCode::IRErrorCode_Success;
 }
 
-template <typename encoded_variable_t>
-requires(
-        std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
-        || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>
-)
+template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         SchemaTree::Node::id_t node_id,
@@ -465,19 +461,12 @@ requires(
         return err;
     }
 
-    std::string logtype;
-    std::vector<encoded_variable_t> encoded_vars;
-    std::vector<std::string> dict_vars;
-    if (auto const err{deserialize_encoded_text_ast(reader, tag, logtype, encoded_vars, dict_vars)};
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return err;
+    auto encoded_text_ast_result{deserialize_encoded_text_ast<encoded_variable_t>(reader, tag)};
+    if (encoded_text_ast_result.has_error()) {
+        return encoded_text_ast_result.error();
     }
 
-    node_id_value_pairs.emplace(
-            node_id,
-            Value{ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars}}
-    );
+    node_id_value_pairs.emplace(node_id, Value{std::move(encoded_text_ast_result.value())});
     return IRErrorCode::IRErrorCode_Success;
 }
 

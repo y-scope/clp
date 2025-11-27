@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import typing
 from enum import auto
+from typing import Literal
 
 from clp_py_utils.clp_config import S3Config
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from strenum import LowercaseStrEnum
 
 
@@ -14,28 +14,38 @@ class InputType(LowercaseStrEnum):
 
 
 class PathsToCompress(BaseModel):
-    file_paths: typing.List[str]
-    group_ids: typing.List[int]
-    st_sizes: typing.List[int]
-    empty_directories: typing.List[str] = None
+    file_paths: list[str]
+    group_ids: list[int]
+    st_sizes: list[int]
+    empty_directories: list[str] | None = None
 
 
 class FsInputConfig(BaseModel):
-    type: typing.Literal[InputType.FS.value] = InputType.FS.value
-    dataset: typing.Optional[str] = None
-    paths_to_compress: typing.List[str]
+    type: Literal[InputType.FS.value] = InputType.FS.value
+    dataset: str | None = None
+    paths_to_compress: list[str]
     path_prefix_to_remove: str = None
-    timestamp_key: typing.Optional[str] = None
+    timestamp_key: str | None = None
+    unstructured: bool = False
 
 
 class S3InputConfig(S3Config):
-    type: typing.Literal[InputType.S3.value] = InputType.S3.value
-    dataset: typing.Optional[str] = None
-    timestamp_key: typing.Optional[str] = None
+    type: Literal[InputType.S3.value] = InputType.S3.value
+    keys: list[str] | None = None
+    dataset: str | None = None
+    timestamp_key: str | None = None
+    unstructured: bool = False
+
+    @field_validator("keys")
+    @classmethod
+    def validate_keys(cls, value):
+        if value is not None and len(value) == 0:
+            raise ValueError("Keys cannot be an empty list")
+        return value
 
 
 class OutputConfig(BaseModel):
-    tags: typing.Optional[typing.List[str]] = None
+    tags: list[str] | None = None
     target_archive_size: int
     target_dictionaries_size: int
     target_segment_size: int
@@ -44,49 +54,51 @@ class OutputConfig(BaseModel):
 
 
 class ClpIoConfig(BaseModel):
-    input: typing.Union[FsInputConfig, S3InputConfig]
+    input: FsInputConfig | S3InputConfig
     output: OutputConfig
 
 
 class AggregationConfig(BaseModel):
-    job_id: typing.Optional[int] = None
-    reducer_host: typing.Optional[str] = None
-    reducer_port: typing.Optional[int] = None
-    do_count_aggregation: typing.Optional[bool] = None
-    count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
+    job_id: int | None = None
+    reducer_host: str | None = None
+    reducer_port: int | None = None
+    do_count_aggregation: bool | None = None
+    count_by_time_bucket_size: int | None = None  # Milliseconds
 
 
 class QueryJobConfig(BaseModel):
-    dataset: typing.Optional[str] = None
+    dataset: str | None = None
 
 
 class ExtractIrJobConfig(QueryJobConfig):
     orig_file_id: str
     msg_ix: int
-    file_split_id: typing.Optional[str] = None
-    target_uncompressed_size: typing.Optional[int] = None
+    file_split_id: str | None = None
+    target_uncompressed_size: int | None = None
 
 
 class ExtractJsonJobConfig(QueryJobConfig):
     archive_id: str
-    target_chunk_size: typing.Optional[int] = None
+    target_chunk_size: int | None = None
 
 
 class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int
-    tags: typing.Optional[typing.List[str]] = None
-    begin_timestamp: typing.Optional[int] = None
-    end_timestamp: typing.Optional[int] = None
+    tags: list[str] | None = None
+    begin_timestamp: int | None = None
+    end_timestamp: int | None = None
     ignore_case: bool = False
-    path_filter: typing.Optional[str] = None
+    path_filter: str | None = None
     # Tuple of (host, port)
-    network_address: typing.Optional[typing.Tuple[str, int]] = None
-    aggregation_config: typing.Optional[AggregationConfig] = None
+    network_address: tuple[str, int] | None = None
+    aggregation_config: AggregationConfig | None = None
+    write_to_file: bool = False
 
-    @validator("network_address")
-    def validate_network_address(cls, field):
-        if field is not None and (field[1] < 1 or field[1] > 65535):
+    @field_validator("network_address")
+    @classmethod
+    def validate_network_address(cls, value):
+        if value is not None and (value[1] < 1 or value[1] > 65535):
             raise ValueError("Port must be in the range [1, 65535]")
 
-        return field
+        return value

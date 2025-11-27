@@ -43,7 +43,8 @@ namespace clp::ffi::ir_stream {
  */
 template <
         IrUnitHandlerReq IrUnitHandlerType,
-        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler>
+        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler
+>
 class Deserializer {
 public:
     // Factory function
@@ -193,8 +194,8 @@ private:
             nlohmann::json metadata,
             QueryHandlerType query_handler
     )
-            : m_ir_unit_handler{std::move(ir_unit_handler)},
-              m_metadata(std::move(metadata)),
+            : m_metadata(std::move(metadata)),
+              m_ir_unit_handler{std::move(ir_unit_handler)},
               m_query_handler{std::move(query_handler)} {}
 
     // Variables

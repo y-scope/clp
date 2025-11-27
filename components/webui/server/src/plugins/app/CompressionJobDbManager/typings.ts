@@ -1,6 +1,18 @@
-/**
- * Interval (in milliseconds) for polling a job's completion status.
- */
-const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 1000;
+interface CompressionJobConfig {
+    input: {
+        paths_to_compress: string[];
+        path_prefix_to_remove: string;
+        dataset?: string;
+        timestamp_key?: string;
+    };
+    output: {
+        target_archive_size: number;
+        target_dictionaries_size: number;
+        target_segment_size: number;
+        target_encoded_file_size: number;
+        compression_level: number;
+    };
+}
 
-export {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS};
+
+export type {CompressionJobConfig};

@@ -32,7 +32,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli"
+        run: "npm install -g @go-task/cli@3.44.0"
 
       - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
@@ -40,7 +40,7 @@ jobs:
 
       - name: "Generate parsers"
         shell: "bash"
-        run: "task clp-s-generate-parsers"
+        run: "task codegen:clp-s-generate-parsers"
 
       - name: "Check if the generated parsers are the latest"
         shell: "bash"

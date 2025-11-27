@@ -13,7 +13,7 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
-} from "@webui/common";
+} from "@webui/common/socket";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -233,8 +233,7 @@ class MongoSocketIoServer {
      */
     #getOrCreateWatcherCollection (
         collectionName: string
-    )
-        : MongoWatcherCollection {
+    ): MongoWatcherCollection {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(

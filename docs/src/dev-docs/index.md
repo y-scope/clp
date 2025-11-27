@@ -16,6 +16,13 @@ Docs about building CLP.
 :::
 
 :::{grid-item-card}
+:link: testing/index
+Testing
+^^^
+Docs about testing CLP.
+:::
+
+:::{grid-item-card}
 :link: contributing-getting-started
 Contributing
 ^^^
@@ -51,6 +58,15 @@ building-package
 :::
 
 :::{toctree}
+:caption: Testing
+:hidden:
+
+testing/index
+testing/unit-tests
+testing/integration-tests
+:::
+
+:::{toctree}
 :caption: Contributing
 :hidden:
 
@@ -79,6 +95,7 @@ tooling-gh-workflows
 :hidden:
 
 design-project-structure
+design-deployment-orchestration
 
 design-kv-ir-streams/index
 design-metadata-db

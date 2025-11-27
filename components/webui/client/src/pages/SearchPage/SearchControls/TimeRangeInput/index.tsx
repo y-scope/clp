@@ -1,16 +1,22 @@
+import {useCallback} from "react";
+
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
     DatePicker,
     Select,
 } from "antd";
 import dayjs from "dayjs";
 
+import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
+import usePrestoSearchState from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
+import TimeRangeFooter from "./Presto/TimeRangeFooter";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
-    TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
 
@@ -31,12 +37,12 @@ const TimeRangeInput = () => {
         searchUiState,
     } = useSearchStore();
 
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
+    const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
+                           sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
+
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(newTimeRangeOption);
-        if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption]();
-            updateTimeRange(dayJsRange);
-        }
     };
 
     const handleRangePickerChange = (
@@ -53,6 +59,14 @@ const TimeRangeInput = () => {
         ]);
     };
 
+    const renderFooter = useCallback(() => {
+        if (false === isPrestoGuided) {
+            return null;
+        }
+
+        return <TimeRangeFooter/>;
+    }, [isPrestoGuided]);
+
     return (
         <div
             className={styles["timeRangeInputContainer"]}
@@ -61,7 +75,7 @@ const TimeRangeInput = () => {
                 listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                size={"large"}
+                size={"middle"}
                 value={timeRangeOption}
                 variant={"filled"}
                 className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
@@ -74,8 +88,9 @@ const TimeRangeInput = () => {
                 <DatePicker.RangePicker
                     allowClear={true}
                     className={styles["rangePicker"] || ""}
+                    renderExtraFooter={renderFooter}
                     showTime={true}
-                    size={"large"}
+                    size={"middle"}
                     value={timeRange}
                     disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}

@@ -1,3 +1,5 @@
+import {QUERY_JOB_TYPE} from "@webui/common/query";
+import {Nullable} from "@webui/common/utility-types";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -5,8 +7,6 @@ import {
 import fp from "fastify-plugin";
 
 import settings from "../../../settings.json" with {type: "json"};
-import {Nullable} from "../../typings/common.js";
-import {QUERY_JOB_TYPE} from "../../typings/query.js";
 import {
     StreamFileMetadata,
     StreamFilesCollection,
@@ -110,8 +110,10 @@ class StreamFileManager {
      * @param logEventIdx
      * @return A promise that resolves to the extracted stream's metadata.
      */
-    async getExtractedStreamFileMetadata (streamId: string, logEventIdx: number)
-        : Promise<Nullable<StreamFileMetadata>> {
+    async getExtractedStreamFileMetadata (
+        streamId: string,
+        logEventIdx: number
+    ): Promise<Nullable<StreamFileMetadata>> {
         return await this.#streamFilesCollection.findOne({
             stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},

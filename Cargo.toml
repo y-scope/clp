@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "components/api-server",
+    "components/clp-rust-utils",
+    "components/log-ingestor"
+]
+resolver = "3"

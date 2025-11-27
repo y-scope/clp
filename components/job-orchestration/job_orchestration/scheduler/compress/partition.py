@@ -1,6 +1,6 @@
 import copy
 import pathlib
-import typing
+from typing import Any
 
 import brotli
 import msgpack
@@ -9,6 +9,7 @@ from clp_py_utils.compression import (
     group_files_by_similar_filenames,
 )
 from clp_py_utils.core import FileMetadata
+
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 
 
@@ -21,14 +22,14 @@ class PathsToCompressBuffer:
         clp_io_config: ClpIoConfig,
         clp_metadata_db_connection_config: dict,
     ):
-        self.__files: typing.List[FileMetadata] = []
-        self.__tasks: typing.List[typing.Dict[str, typing.Any]] = []
-        self.__partition_info: typing.List[typing.Dict[str, typing.Any]] = []
+        self.__files: list[FileMetadata] = []
+        self.__tasks: list[dict[str, Any]] = []
+        self.__partition_info: list[dict[str, Any]] = []
         self.__maintain_file_ordering: bool = maintain_file_ordering
         if empty_directories_allowed:
-            self.__empty_directories: typing.Optional[typing.List[str]] = []
+            self.__empty_directories: list[str] | None = []
         else:
-            self.__empty_directories: typing.Optional[typing.List[str]] = None
+            self.__empty_directories: list[str] | None = None
         self.__total_file_size: int = 0
         self.__target_archive_size: int = clp_io_config.output.target_archive_size
         self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
@@ -38,7 +39,7 @@ class PathsToCompressBuffer:
             "job_id": scheduling_job_id,
             "tag_ids": None,
             "task_id": -1,
-            "clp_io_config_json": clp_io_config.json(exclude_none=True),
+            "clp_io_config_json": clp_io_config.model_dump_json(exclude_none=True),
             "paths_to_compress_json": None,
             "clp_metadata_db_connection_config": clp_metadata_db_connection_config,
         }
@@ -83,13 +84,15 @@ class PathsToCompressBuffer:
             {
                 "partition_original_size": str(sum(st_sizes)),
                 "clp_paths_to_compress": brotli.compress(
-                    msgpack.packb(paths_to_compress.dict(exclude_none=True)), quality=4
+                    msgpack.packb(paths_to_compress.model_dump(exclude_none=True)), quality=4
                 ),
             }
         )
 
         task_arguments = self.__task_arguments.copy()
-        task_arguments["paths_to_compress_json"] = paths_to_compress.json(exclude_none=True)
+        task_arguments["paths_to_compress_json"] = paths_to_compress.model_dump_json(
+            exclude_none=True
+        )
         self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1
 
