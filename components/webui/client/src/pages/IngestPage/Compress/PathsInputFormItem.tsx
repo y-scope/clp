@@ -199,8 +199,7 @@ const PathsInputFormItem = () => {
             }
 
             setIsLoading(true);
-            // eslint-disable-next-line no-void
-            void (async () => {
+            (async () => {
                 try {
                     const basePath = extractBasePath(value);
 
@@ -215,11 +214,15 @@ const PathsInputFormItem = () => {
                 } finally {
                     setIsLoading(false);
                 }
-            })();
+            })().catch((e: unknown) => {
+                console.error("Failed to load missing parents", e);
+            });
         },
-        [fetchAndAppendTreeNodes,
+        [
+            fetchAndAppendTreeNodes,
             loadMissingParents,
-            expandedKeys]
+            expandedKeys,
+        ]
     );
 
     const handleTreeExpand = useCallback<NonNullable<TreeSelectProps["onTreeExpand"]>>(
