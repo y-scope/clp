@@ -26,7 +26,7 @@ spec:
             - "-c"
             - >-
               until nc -z {{ include "clp.fullname" . }}-database 3306;
-                do echo waiting for database;
+                do echo Waiting for database to be ready...;
                 sleep 2;
               done
       containers:
