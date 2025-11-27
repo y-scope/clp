@@ -97,7 +97,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     return Promise.resolve();
                 }
 
-                request.log.error(e, "Unable to list files");
+                const errMsg = "Unable to list files";
+                request.log.error(e, errMsg);
 
                 return reply.internalServerError(errMsg);
             }
