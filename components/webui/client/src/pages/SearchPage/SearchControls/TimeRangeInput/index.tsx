@@ -2,8 +2,10 @@ import {useCallback} from "react";
 
 import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
+    ConfigProvider,
     DatePicker,
     Select,
+    theme,
 } from "antd";
 import dayjs from "dayjs";
 
@@ -36,6 +38,8 @@ const TimeRangeInput = () => {
         updateTimeRangeOption,
         searchUiState,
     } = useSearchStore();
+
+    const {token} = theme.useToken();
 
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
     const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
@@ -84,22 +88,31 @@ const TimeRangeInput = () => {
                 disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                             searchUiState === SEARCH_UI_STATE.QUERYING}
                 onChange={handleSelectChange}/>
-            <DatePicker.RangePicker
-                allowClear={true}
-                className={styles["rangePicker"] || ""}
-                renderExtraFooter={renderFooter}
-                showTime={true}
-                components={{
-                    input: TimeDateInput,
+            <ConfigProvider
+                theme={{
+                    token: {
+                        colorBgContainerDisabled: token.colorBgLayout,
+                        colorTextDisabled: token.colorTextSecondary,
+                    },
                 }}
-                size={"middle"}
-                value={timeRange}
-                disabled={timeRangeOption !== TIME_RANGE_OPTION.CUSTOM ||
-                            searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                            searchUiState === SEARCH_UI_STATE.QUERYING}
-                onCalendarChange={(dates) => {
-                    handleRangePickerChange(dates);
-                }}/>
+            >
+                <DatePicker.RangePicker
+                    allowClear={true}
+                    className={styles["rangePicker"] || ""}
+                    renderExtraFooter={renderFooter}
+                    showTime={true}
+                    components={{
+                        input: TimeDateInput,
+                    }}
+                    size={"middle"}
+                    value={timeRange}
+                    disabled={timeRangeOption !== TIME_RANGE_OPTION.CUSTOM ||
+                                searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                                searchUiState === SEARCH_UI_STATE.QUERYING}
+                    onCalendarChange={(dates) => {
+                        handleRangePickerChange(dates);
+                    }}/>
+            </ConfigProvider>
         </div>
     );
 };

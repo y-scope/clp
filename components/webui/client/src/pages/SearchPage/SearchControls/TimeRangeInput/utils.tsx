@@ -32,6 +32,8 @@ enum TIME_RANGE_OPTION {
     CUSTOM = "Custom",
 }
 
+
+
 const DEFAULT_TIME_RANGE_OPTION = TIME_RANGE_OPTION.ALL_TIME;
 
 /* eslint-disable no-magic-numbers, @typescript-eslint/require-await */
@@ -123,36 +125,75 @@ const isValidDateRange = (
 };
 
 /**
- * Map of time range options to their display text
+ * AntD date range position.
  */
-const TIME_RANGE_DISPLAY_TEXT_MAP: Record<TIME_RANGE_OPTION, {start: string; end: string}> = {
-    [TIME_RANGE_OPTION.LAST_15_MINUTES]: {start: "15 minutes ago", end: "Now"},
-    [TIME_RANGE_OPTION.LAST_HOUR]: {start: "1 hour ago", end: "Now"},
-    [TIME_RANGE_OPTION.TODAY]: {start: "Start of today", end: "End of today"},
-    [TIME_RANGE_OPTION.YESTERDAY]: {start: "Start of yesterday", end: "End of yesterday"},
-    [TIME_RANGE_OPTION.LAST_7_DAYS]: {start: "7 days ago", end: "Now"},
-    [TIME_RANGE_OPTION.LAST_30_DAYS]: {start: "30 days ago", end: "Now"},
-    [TIME_RANGE_OPTION.LAST_12_MONTHS]: {start: "12 months ago", end: "Now"},
-    [TIME_RANGE_OPTION.MONTH_TO_DATE]: {start: "Start of month", end: "Now"},
-    [TIME_RANGE_OPTION.YEAR_TO_DATE]: {start: "Start of year", end: "Now"},
-    [TIME_RANGE_OPTION.ALL_TIME]: {start: "Earliest", end: "Latest"},
-    [TIME_RANGE_OPTION.CUSTOM]: {start: "Start date", end: "End date"},
-};
+enum DATE_RANGE_POSITION {
+    START = "start",
+    END = "end",
+}
 
 /**
- * Gets display text for time range option
+ * Map of time range options to their display text
  */
-const getTimeRangeDisplayText = (option: TIME_RANGE_OPTION, isStart: boolean): string => {
-    const displayText = TIME_RANGE_DISPLAY_TEXT_MAP[option];
-    return isStart ? displayText.start : displayText.end;
+const TIME_RANGE_DISPLAY_TEXT_MAP: Record<
+    TIME_RANGE_OPTION,
+    Record<DATE_RANGE_POSITION, string>
+> = {
+    [TIME_RANGE_OPTION.LAST_15_MINUTES]: {
+        [DATE_RANGE_POSITION.START]: "15 minutes ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.LAST_HOUR]: {
+        [DATE_RANGE_POSITION.START]: "1 hour ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.TODAY]: {
+        [DATE_RANGE_POSITION.START]: "Start of today",
+        [DATE_RANGE_POSITION.END]: "End of today",
+    },
+    [TIME_RANGE_OPTION.YESTERDAY]: {
+        [DATE_RANGE_POSITION.START]: "Start of yesterday",
+        [DATE_RANGE_POSITION.END]: "End of yesterday",
+    },
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: {
+        [DATE_RANGE_POSITION.START]: "7 days ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: {
+        [DATE_RANGE_POSITION.START]: "30 days ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.LAST_12_MONTHS]: {
+        [DATE_RANGE_POSITION.START]: "12 months ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.MONTH_TO_DATE]: {
+        [DATE_RANGE_POSITION.START]: "Start of month",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.YEAR_TO_DATE]: {
+        [DATE_RANGE_POSITION.START]: "Start of year",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.ALL_TIME]: {
+        [DATE_RANGE_POSITION.START]: "First timestamp",
+        [DATE_RANGE_POSITION.END]: "Last timestamp",
+    },
+    // Custom option is just a placeholder for typing purposes, its values should not
+    // be used.
+    [TIME_RANGE_OPTION.CUSTOM]: {
+        [DATE_RANGE_POSITION.START]: "Start date",
+        [DATE_RANGE_POSITION.END]: "End date",
+    },
 };
 
 
 export {
+    DATE_RANGE_POSITION,
     DEFAULT_TIME_RANGE,
     DEFAULT_TIME_RANGE_OPTION,
-    getTimeRangeDisplayText,
     isValidDateRange,
+    TIME_RANGE_DISPLAY_TEXT_MAP,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,

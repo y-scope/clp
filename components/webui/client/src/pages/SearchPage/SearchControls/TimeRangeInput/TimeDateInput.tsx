@@ -1,43 +1,35 @@
-import {theme} from "antd";
-
 import useSearchStore from "../../SearchState/index";
 import {
-    getTimeRangeDisplayText,
+    DATE_RANGE_POSITION,
+    TIME_RANGE_DISPLAY_TEXT_MAP,
     TIME_RANGE_OPTION,
 } from "./utils";
 
 
 interface TimeDateInputProps {
     value: string;
-    'date-range': 'start' | 'end';
-    disabled?: boolean;
+    'date-range': DATE_RANGE_POSITION;
 }
 
 /**
- * Custom input component for DatePicker that displays custom text
+ * Input component for DatePicker that displays custom text for preset time ranges.
+ *
+ * @param props
+ * @return
  */
 const TimeDateInput = (props: TimeDateInputProps) => {
-    const {value, 'date-range': dateRange, disabled} = props;
+    const {value, 'date-range': dateRange} = props;
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
-    const {token} = theme.useToken();
 
-    const isStartInput = dateRange === 'start';
     const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM
-        ? (value || (isStartInput ? 'Start date' : 'End date'))
-        : getTimeRangeDisplayText(timeRangeOption, isStartInput);
+        ? value
+        : TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
 
     return (
         <input
             {...props}
             value={displayText}
             readOnly
-            style={{
-                ...(disabled && {
-                    backgroundColor: token.colorBgContainerDisabled,
-                    color: token.colorTextDisabled,
-                    cursor: "not-allowed",
-                }),
-            }}
         />
     );
 };
