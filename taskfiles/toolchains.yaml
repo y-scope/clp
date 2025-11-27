@@ -26,7 +26,7 @@ tasks:
       - "mkdir -p '{{.G_HELM_TOOLCHAIN_DIR}}'"
       - task: "remote:download-and-extract-tar"
         vars:
-          OUTPUT_DIR: "{{.G_BUILD_DIR}}/toolchains/helm"
+          OUTPUT_DIR: "{{.G_HELM_TOOLCHAIN_DIR}}"
           URL: "https://github.com/helm/chart-testing/releases/download/v{{.CHART_TESTING_VERSION}}\
           /chart-testing_{{.CHART_TESTING_VERSION}}_{{OS}}_{{ARCH}}.tar.gz"
           FILE_SHA256: >-
