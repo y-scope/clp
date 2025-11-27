@@ -8,7 +8,6 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
 from clp_mcp_server.clp_connector import ClpConnector
-
 from clp_mcp_server.server import constants
 from clp_mcp_server.server.session_manager import SessionManager
 from clp_mcp_server.server.utils import (

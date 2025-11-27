@@ -28,7 +28,6 @@ from clp_package_utils.scripts.archive_manager import (
     END_TS_ARG,
     FIND_COMMAND,
 )
-
 from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
 logger: logging.Logger = logging.getLogger(__file__)

@@ -18,8 +18,6 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.sql_adapter import SqlAdapter
 
-from job_orchestration.scheduler.constants import QueryJobStatus
-
 from job_orchestration.garbage_collector.constants import (
     ARCHIVE_GARBAGE_COLLECTOR_NAME,
     MIN_TO_SECONDS,
@@ -31,6 +29,7 @@ from job_orchestration.garbage_collector.utils import (
     execute_deletion,
     validate_storage_type,
 )
+from job_orchestration.scheduler.constants import QueryJobStatus
 
 logger = get_logger(ARCHIVE_GARBAGE_COLLECTOR_NAME)
 
