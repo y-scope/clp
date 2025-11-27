@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "database"
 spec:
-  {{- if .Values.allowSbinScripts }}
+  {{- if .Values.allowHostAccessForSbinScripts }}
   type: "NodePort"
   {{- else }}
   clusterIP: "None"
@@ -17,6 +17,6 @@ spec:
   ports:
     - port: 3306
       targetPort: "database"
-      {{- if .Values.allowSbinScripts }}
+      {{- if .Values.allowHostAccessForSbinScripts }}
       nodePort: {{ .Values.clpConfig.database.port }}
       {{- end }}

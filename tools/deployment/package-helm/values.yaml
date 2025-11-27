@@ -2,7 +2,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 # Whether to allow scripts in `sbin` access to services on the host.
-allowSbinScripts: true
+allowHostAccessForSbinScripts: true
 
 securityContext:
   firstParty:
