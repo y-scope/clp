@@ -1,7 +1,7 @@
 nameOverride: ""
 fullnameOverride: ""
 
-# Whether to allow sbin script accesses to services on the node host.
+# Whether to allow scripts in `sbin` access to services on the host.
 allowSbinScripts: true
 
 securityContext:
