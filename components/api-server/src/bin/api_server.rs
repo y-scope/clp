@@ -1,20 +1,6 @@
 use anyhow::Context;
-use axum::{
-    Json,
-    Router,
-    extract::{Path, State},
-    http::StatusCode,
-    response::{
-        IntoResponse,
-        Sse,
-        sse::{Event, KeepAlive},
-    },
-    routing::{get, post},
-};
 use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
-use futures::{Stream, StreamExt};
-use thiserror::Error;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
@@ -95,75 +81,15 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let client = clp_client::Client::connect(&config, &credentials)
+    let client = api_server::client::Client::connect(&config, &credentials)
         .await
         .context("Cannot connect to CLP")?;
 
-    let app = Router::new()
-        .route("/", get(health))
-        .route("/health", get(health))
-        .route("/query", post(query))
-        .route("/query_results/{search_job_id}", get(query_results))
-        .with_state(client);
+    let router = api_server::routes::from_client(client)?;
 
     tracing::info!("Server started at {addr}");
-    axum::serve(listener, app)
+    axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
-}
-
-async fn health() -> String {
-    "API server is running".to_owned()
-}
-
-async fn query(
-    State(client): State<clp_client::Client>,
-    Json(query_config): Json<clp_client::QueryConfig>,
-) -> Result<Json<serde_json::Value>, HandlerError> {
-    let search_job_id = client.submit_query(query_config).await?;
-    let uri = format!("/query_results/{search_job_id}");
-    Ok(Json(serde_json::json!({"query_results_uri": uri})))
-}
-
-async fn query_results(
-    State(client): State<clp_client::Client>,
-    Path(search_job_id): Path<u64>,
-) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
-    let results_stream = client.fetch_results(search_job_id).await?;
-    let event_stream = results_stream.map(|res| {
-        let message = res?;
-        let trimmed_message = message.trim();
-        if trimmed_message.lines().count() != 1 {
-            return Err(HandlerError::InternalServer);
-        }
-        Ok(Event::default().data(trimmed_message))
-    });
-    Ok(Sse::new(event_stream).keep_alive(KeepAlive::default()))
-}
-
-/// Generic errors for request handlers.
-#[derive(Error, Debug)]
-enum HandlerError {
-    #[error("Internal server error")]
-    InternalServer,
-}
-
-trait IntoHandlerError {}
-
-impl IntoHandlerError for axum::Error {}
-
-impl IntoHandlerError for clp_client::ClientError {}
-
-impl<T: IntoHandlerError> From<T> for HandlerError {
-    fn from(_: T) -> Self {
-        Self::InternalServer
-    }
-}
-
-/// Converts [`HandlerError`] into an HTTP response.
-impl IntoResponse for HandlerError {
-    fn into_response(self) -> axum::response::Response {
-        StatusCode::INTERNAL_SERVER_ERROR.into_response()
-    }
 }

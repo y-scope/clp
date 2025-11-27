@@ -45,6 +45,9 @@ services:
     <<: *service_defaults
     image: "${CLP_DB_CONTAINER_IMAGE_REF:-mariadb:10-jammy}"
     hostname: "database"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the database.
+      replicas: "${CLP_DATABASE_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
@@ -103,6 +106,9 @@ services:
     <<: *service_defaults
     image: "rabbitmq:3.9.8"
     hostname: "queue"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the queue.
+      replicas: "${CLP_QUEUE_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS:?Please set a value.}"
@@ -127,6 +133,9 @@ services:
     <<: *service_defaults
     image: "redis:7.2.4"
     hostname: "redis"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the redis.
+      replicas: "${CLP_REDIS_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
@@ -163,6 +172,9 @@ services:
     <<: *service_defaults
     image: "mongo:7.0.1"
     hostname: "results_cache"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the results cache.
+      replicas: "${CLP_RESULTS_CACHE_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}"
@@ -506,6 +518,8 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
