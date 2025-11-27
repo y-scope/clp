@@ -1,14 +1,18 @@
 {{/*
-Expand the name of the chart.
+Expands the name of the chart.
+
+@return {string} The chart name (truncated to 63 characters)
 */}}
 {{- define "clp.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
+Creates a default fully qualified app name. We truncate at 63 chars because
+some Kubernetes name fields are limited to this (by the DNS naming spec). If
+release name contains chart name it will be used as a full name.
+
+@return {string} The fully qualified app name (truncated to 63 characters)
 */}}
 {{- define "clp.fullname" -}}
 {{- if .Values.fullnameOverride }}
@@ -24,14 +28,18 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart name and version as used by the chart label.
+Creates chart name and version as used by the chart label.
+
+@return {string} Chart name and version (truncated to 63 characters)
 */}}
 {{- define "clp.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Common labels
+Creates common labels for all resources.
+
+@return {string} YAML-formatted common labels
 */}}
 {{- define "clp.labels" -}}
 helm.sh/chart: {{ include "clp.chart" . }}
@@ -43,7 +51,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels
+Creates selector labels for matching resources.
+
+@return {string} YAML-formatted selector labels
 */}}
 {{- define "clp.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "clp.name" . }}
@@ -51,7 +61,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Image reference for CLP Package
+Creates image reference for CLP Package.
+
+@return {string} Full image reference (repository:tag)
 */}}
 {{- define "clp.image.ref" -}}
 {{- $tag := .Values.image.clpPackage.tag | default .Chart.AppVersion }}
@@ -60,6 +72,8 @@ Image reference for CLP Package
 
 {{/*
 Creates timings for readiness probes (faster checks for quicker startup).
+
+@return {string} YAML-formatted readiness probe timing configuration
 */}}
 {{- define "clp.readinessProbeTimings" -}}
 initialDelaySeconds: 6
@@ -70,6 +84,8 @@ failureThreshold: 10
 
 {{/*
 Creates timings for liveness probes.
+
+@return {string} YAML-formatted liveness probe timing configuration
 */}}
 {{- define "clp.livenessProbeTimings" -}}
 initialDelaySeconds: 60
@@ -80,16 +96,17 @@ failureThreshold: 3
 
 {{/*
 Creates a local PersistentVolume.
-Parameters (dict):
-  root: Root template context
-  name: PV name (full)
-  component: Component label
-  capacity: Storage capacity
-  accessModes: Access modes (list)
-  hostPath: Absolute path on host
-  nodeRole: Node role for affinity
-            Targets nodes with label "node-role.kubernetes.io/<nodeRole>"
-            Always falls back to "node-role.kubernetes.io/control-plane"
+
+@param {object} root Root template context
+@param {string} name PV name
+@param {string} component Component label
+@param {string} capacity Storage capacity
+@param {string[]} accessModes Access modes (list)
+@param {string} hostPath Absolute path on host
+@param {string} nodeRole Node role for affinity. Targets nodes with label
+  "node-role.kubernetes.io/<nodeRole>". Always falls back to
+  "node-role.kubernetes.io/control-plane"
+@return {string} YAML-formatted PersistentVolume resource
 */}}
 {{- define "clp.createLocalPv" -}}
 apiVersion: "v1"
@@ -120,11 +137,12 @@ spec:
 
 {{/*
 Creates a PersistentVolumeClaim.
-Parameters (dict):
-  root: Root template context
-  component: Component label (used in name, labels, and selectors)
-  capacity: Storage capacity
-  accessModes: Access modes (list)
+
+@param {object} root Root template context
+@param {string} component Component label
+@param {string} capacity Storage capacity
+@param {string[]} accessModes
+@return {string} YAML-formatted PersistentVolumeClaim resource
 */}}
 {{- define "clp.createPvc" -}}
 apiVersion: "v1"
