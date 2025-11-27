@@ -84,14 +84,6 @@ public:
     }
 
     /**
-     * Adds a clps schema node variable placeholder to the given logtype.
-     * @param logtype
-     */
-    static void add_schema_var(std::string& logtype) {
-        logtype.push_back(enum_to_underlying_type(ir::VariablePlaceholder::Schema));
-    }
-
-    /**
      * Adds an escape character to the given logtype
      * @param logtype
      */

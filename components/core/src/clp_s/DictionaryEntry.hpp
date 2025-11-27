@@ -99,10 +99,6 @@ public:
      */
     void add_float_var();
     /**
-     * Adds a schema node variable placeholder.
-     */
-    auto add_schema_var() -> void;
-    /**
      * Adds a dictionary variable placeholder
      */
     void add_dictionary_var();

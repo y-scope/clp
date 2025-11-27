@@ -66,11 +66,6 @@ void LogTypeDictionaryEntry::add_float_var() {
     EncodedVariableInterpreter::add_float_var(m_value);
 }
 
-auto LogTypeDictionaryEntry::add_schema_var() -> void {
-    m_placeholder_positions.push_back(m_value.length());
-    EncodedVariableInterpreter::add_schema_var(m_value);
-}
-
 void LogTypeDictionaryEntry::add_escape() {
     m_placeholder_positions.push_back(m_value.length());
     EncodedVariableInterpreter::add_escape(m_value);
@@ -160,7 +155,7 @@ void LogTypeDictionaryEntry::read_from_file(
 void LogTypeDictionaryEntry::decode_log_type(string& escaped_value) {
     bool is_escaped = false;
     string constant;
-    for (auto const c : escaped_value) {
+    for (char c : escaped_value) {
         if (is_escaped) {
             constant += c;
             is_escaped = false;
@@ -182,10 +177,6 @@ void LogTypeDictionaryEntry::decode_log_type(string& escaped_value) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_dictionary_var();
-            } else if (enum_to_underlying_type(VariablePlaceholder::Schema) == c) {
-                add_constant(constant, 0, constant.length());
-                constant.clear();
-                add_schema_var();
             } else {
                 constant += c;
             }
