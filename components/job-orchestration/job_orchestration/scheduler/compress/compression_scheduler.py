@@ -755,12 +755,14 @@ def _insert_tasks_to_db(
     """
     for task_idx, task in enumerate(tasks_to_submit):
         db_context.cursor.execute(
-            f"""
-            INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
-            (job_id, partition_original_size, clp_paths_to_compress)
-            VALUES({job_id!s}, {partition_info_to_submit[task_idx]["partition_original_size"]}, %s)
-            """,
-            (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
+            f"INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}"  # noqa: S608
+            " (job_id, partition_original_size, clp_paths_to_compress)"
+            " VALUES (%s, %s, %s)",
+            (
+                job_id,
+                partition_info_to_submit[task_idx]["partition_original_size"],
+                partition_info_to_submit[task_idx]["clp_paths_to_compress"],
+            ),
         )
         db_context.connection.commit()
         task["task_id"] = db_context.cursor.lastrowid
@@ -776,12 +778,12 @@ def _update_tasks_status_to_running(
     :param tasks_to_submit:
     """
     if len(tasks_to_submit) > 0:
-        task_ids = [str(task["task_id"]) for task in tasks_to_submit]
+        task_ids = [task["task_id"] for task in tasks_to_submit]
+        task_id_placeholder = ", ".join(["%s"] * len(task_ids))
         db_context.cursor.execute(
-            f"""
-            UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-            SET status='{CompressionTaskStatus.RUNNING}' WHERE id IN ({", ".join(task_ids)})
-            """
+            f"UPDATE {COMPRESSION_TASKS_TABLE_NAME}"  # noqa: S608
+            f" SET status = %s WHERE id IN ({task_id_placeholder})",
+            (CompressionTaskStatus.RUNNING, *task_ids),
         )
         db_context.connection.commit()
 
