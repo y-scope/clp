@@ -16,7 +16,7 @@ import {submitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import ClpSFormItems from "./ClpSFormItems";
-import PathsInputFormItem from "./PathsInputFormItem";
+import PathsSelectFormItem from "./PathsSelectFormItem";
 import SubmitFormItem from "./SubmitFormItem";
 
 
@@ -76,7 +76,7 @@ const Compress = () => {
                 layout={"vertical"}
                 onFinish={handleSubmit}
             >
-                <PathsInputFormItem/>
+                <PathsSelectFormItem/>
                 {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <ClpSFormItems/>}
                 <SubmitFormItem isSubmitting={isSubmitting}/>
 

@@ -37,11 +37,11 @@ const PathLoadingEmpty = () => (
 );
 
 /**
- * Renders a form item for inputting file paths for compression job submission.
+ * Renders a form item for selecting file paths for compression job submission.
  *
  * @return
  */
-const PathsInputFormItem = () => {
+const PathsSelectFormItem = () => {
     const {
         expandedKeys,
         isLoading,
@@ -87,4 +87,4 @@ const PathsInputFormItem = () => {
 };
 
 
-export default PathsInputFormItem;
+export default PathsSelectFormItem;
