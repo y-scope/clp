@@ -85,7 +85,7 @@ def fetch_new_jobs(db_cursor):
     return db_cursor.fetchall()
 
 
-def update_compression_job_metadata(db_context: DbContext, job_id, kv) -> None:
+def update_compression_job_metadata(db_context: DbContext, job_id: int, kv: dict[str, str]) -> None:
     """
     Updates compression job metadata in the database.
 
@@ -187,7 +187,7 @@ def _write_user_failure_log(
     title: str,
     content: list[str],
     logs_directory: Path,
-    job_id: Any,
+    job_id: int,
     filename_suffix: str,
 ) -> Path | None:
     """
