@@ -8,16 +8,13 @@ import msgpack
 from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME
 from pymongo import AsyncMongoClient
 
-from .constants import (
+from clp_mcp_server.constants import (
     POLLING_INTERVAL_SECONDS,
     QueryJobStatus,
     QueryJobType,
     SEARCH_MAX_NUM_RESULTS,
 )
-from .settings import (
-    CLP_DB_PASS,
-    CLP_DB_USER,
-)
+from clp_mcp_server.settings import CLP_DB_PASS, CLP_DB_USER
 
 
 class ClpConnector:
