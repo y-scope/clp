@@ -3,37 +3,6 @@ import {Type} from "@sinclair/typebox";
 import {FileListingSchema} from "@webui/common/schemas/os";
 import fs from "fs/promises";
 import {constants} from "http2";
-import path from "path";
-
-import settings from "../../../../settings.json" with {type: "json"};
-
-
-/**
- * Resolves a requested path against the LsRoot setting.
- *
- * @param requestedPath
- * @return The resolved absolute path
- */
-const resolveLsPath = (requestedPath: string): string => {
-    let cleanPath = requestedPath;
-
-    // Remove leading slashes for non-root LsRoot settings
-    if ("/" !== settings.LsRoot) {
-        cleanPath = cleanPath.replace(/^\/+/, "");
-    }
-
-    return path.resolve(settings.LsRoot, cleanPath);
-};
-
-/**
- * Normalizes a path for client display by removing the LsRoot prefix.
- *
- * @param fullPath
- * @return The normalized path relative to LsRoot
- */
-const normalizeLsPath = (fullPath: string): string => {
-    return fullPath.replace(new RegExp(`^${settings.LsRoot}/*`), "/");
-};
 
 
 const FileListRequestSchema = Type.Object({
@@ -66,21 +35,19 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             const {path: requestedPath} = request.query;
 
             try {
-                const resolvedPath = resolveLsPath(requestedPath);
+                await fs.access(requestedPath);
+            } catch {
+                return await reply.notFound(`Path not found: ${requestedPath}`);
+            }
 
-                try {
-                    await fs.access(resolvedPath);
-                } catch {
-                    return await reply.notFound(`Path not found: ${resolvedPath}`);
-                }
-
-                const direntList = await fs.readdir(resolvedPath, {withFileTypes: true});
+            try {
+                const direntList = await fs.readdir(requestedPath, {withFileTypes: true});
                 return direntList.map((dirent) => {
                     const isExpandable = dirent.isDirectory() || dirent.isSymbolicLink();
                     return {
                         isExpandable: isExpandable,
                         name: dirent.name,
-                        parentPath: normalizeLsPath(dirent.parentPath),
+                        parentPath: dirent.parentPath,
                     };
                 });
             } catch (e: unknown) {

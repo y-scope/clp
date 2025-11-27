@@ -3,6 +3,8 @@ import {
     TreeSelectProps,
 } from "antd";
 
+import {settings} from "../../../settings";
+
 
 type TreeNode = Omit<GetProp<TreeSelectProps, "treeData">[number], "label">;
 
@@ -11,6 +13,19 @@ interface FileItem {
     name: string;
     parentPath: string;
 }
+
+
+/**
+ * Normalizes a path for client display by removing the LsPathPrefixToRemove prefix in a container
+ * environment.
+ *
+ * @param fullPath
+ * @return The normalized path relative to LsRoot
+ */
+const removeLsPathPrefix = (fullPath: string): string => {
+    return fullPath.replace(new RegExp(`^${settings.LsPathPrefixToRemove}/*`), "/");
+};
+
 
 /**
  * Maps file system item to Antd TreeSelect flat tree node format.
@@ -22,7 +37,7 @@ const mapFileToTreeNode = (fileItem: FileItem): TreeNode => {
     const {isExpandable, name, parentPath} = fileItem;
     const normalizedParentPath = 0 === parentPath.length ?
         "/" :
-        parentPath;
+        removeLsPathPrefix(parentPath);
     const pathPrefix = normalizedParentPath.endsWith("/") ?
         normalizedParentPath :
         `${normalizedParentPath}/`;
@@ -65,4 +80,5 @@ export type {
 export {
     extractBasePath,
     mapFileToTreeNode,
+    removeLsPathPrefix,
 };

@@ -61,7 +61,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             const jobConfig: CompressionJobConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
             jobConfig.input.paths_to_compress = paths.map(
-                (path) => CONTAINER_INPUT_LOGS_ROOT_DIR + path
+                (path) => settings.LsPathPrefixToRemove + path
             );
 
             if (CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine as CLP_STORAGE_ENGINES) {

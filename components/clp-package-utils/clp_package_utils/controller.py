@@ -31,7 +31,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME, CONTAINER_INPUT_LOGS_ROOT_DIR,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -498,14 +498,6 @@ class BaseController(ABC):
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         }
-        resolved_client_settings_json_path = resolve_host_path_in_container(
-            client_settings_json_path
-        )
-        client_settings_json = self._read_and_update_settings_json(
-            resolved_client_settings_json_path, client_settings_json_updates
-        )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
-            client_settings_json_file.write(json.dumps(client_settings_json))
 
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
@@ -557,9 +549,19 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoPort"] = None
 
         if StorageType.FS == self._clp_config.logs_input.type:
+            client_settings_json_updates["LsRoot"] = str(container_clp_config.logs_input.directory)
             server_settings_json_updates["LsRoot"] = str(container_clp_config.logs_input.directory)
-        else:
-            server_settings_json_updates["LsRoot"] = None
+            client_settings_json_updates["LsPathPrefixToRemove"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LsPathPrefixToRemove"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+
+        resolved_client_settings_json_path = resolve_host_path_in_container(
+            client_settings_json_path
+        )
+        client_settings_json = self._read_and_update_settings_json(
+            resolved_client_settings_json_path, client_settings_json_updates
+        )
+        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
+            client_settings_json_file.write(json.dumps(client_settings_json))
 
         resolved_server_settings_json_path = resolve_host_path_in_container(
             server_settings_json_path

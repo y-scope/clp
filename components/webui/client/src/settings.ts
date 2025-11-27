@@ -2,9 +2,11 @@ import axios from "axios";
 
 
 type Settings = {
-    ClpStorageEngine: string;
     ClpQueryEngine: string;
+    ClpStorageEngine: string;
     LogsInputType: string;
+    LsPathPrefixToRemove: string;
+    LsRoot: string;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
     SqlDbClpDatasetsTableName: string;

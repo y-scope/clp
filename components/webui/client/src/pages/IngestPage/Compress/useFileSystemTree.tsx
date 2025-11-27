@@ -10,6 +10,7 @@ import {
 } from "antd";
 
 import {listFiles} from "../../../api/os";
+import {settings} from "../../../settings";
 import {
     extractBasePath,
     FileItem,
@@ -64,7 +65,8 @@ const useTreeData = (): TreeDataReturn => {
 
     const fetchAndAppendTreeNodes = useCallback(async (path: string): Promise<boolean> => {
         try {
-            const fileItems = await listFiles(path);
+            const fullResolvedPath = settings.LsPathPrefixToRemove + path;
+            const fileItems = await listFiles(fullResolvedPath);
             const newNodes = (fileItems as FileItem[]).map(mapFileToTreeNode);
 
             setTreeData((prev) => {
@@ -96,13 +98,6 @@ const useTreeData = (): TreeDataReturn => {
 
     const loadMissingParents = useCallback(async (path: string): Promise<boolean> => {
         const pathSegments = path.split("/").filter((segment) => 0 < segment.length);
-
-        if (!treeData.some((node) => "/" === node["id"])) {
-            const success = await fetchAndAppendTreeNodes("/");
-            if (!success) {
-                return false;
-            }
-        }
 
         let currentPath = "/";
         for (const segment of pathSegments) {
