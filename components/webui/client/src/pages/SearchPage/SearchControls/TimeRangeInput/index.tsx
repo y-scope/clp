@@ -89,6 +89,7 @@ const TimeRangeInput = () => {
                 disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                             searchUiState === SEARCH_UI_STATE.QUERYING}
                 onChange={handleSelectChange}/>
+            {/* Customize disabled styling to make date strings easier to read */}
             <ConfigProvider
                 theme={{
                     token: {
