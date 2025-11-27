@@ -1,23 +1,23 @@
-import {useState} from "react";
-
 import {
-    MinusOutlined,
-    PlusOutlined,
-} from "@ant-design/icons";
+    useMutation,
+    useQueryClient,
+} from "@tanstack/react-query";
 import {
-    Button,
-    Empty,
+    CLP_DEFAULT_DATASET_NAME,
+    CLP_STORAGE_ENGINES,
+} from "@webui/common/config";
+import {CompressionJobCreation} from "@webui/common/schemas/compression";
+import {
     Form,
-    Input,
-    Spin,
-    TreeSelect,
     Typography,
 } from "antd";
 
 import {submitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
-import {settings} from "../../../settings";
-import useFileTree from "./useFileTree";
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
+import ClpSFormItems from "./ClpSFormItems";
+import PathsInputFormItem from "./PathsInputFormItem";
+import SubmitFormItem from "./SubmitFormItem";
 
 
 type FormValues = {
@@ -27,174 +27,78 @@ type FormValues = {
 };
 
 /**
- * Renders an empty state display when a path is not found.
- *
- * @return
- */
-const PathNotFoundEmpty = () => (
-    <Empty
-        description={"Path not found"}
-        image={Empty.PRESENTED_IMAGE_SIMPLE}/>
-);
-
-/**
- * Renders an empty state with a loading spinner.
- *
- * @return
- */
-const PathLoadingEmpty = () => (
-    <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={<Spin
-            size={"default"}
-            spinning={true}/>}/>
-);
-
-/**
  * Renders a compression job submission form.
  *
  * @return
  */
-// eslint-disable-next-line max-lines-per-function
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitResult, setSubmitResult] = useState<{
-        success: boolean;
-        message: string;
-    } | null>(null);
 
+    const queryClient = useQueryClient();
     const {
-        treeData,
-        expandedKeys,
-        isLoading,
-        handleLoadData,
-        handleSearch,
-        handleTreeExpand,
-    } = useFileTree();
+        mutate,
+        isPending: isSubmitting,
+        isSuccess,
+        isError,
+        data,
+        error,
+    } = useMutation({
+        mutationFn: submitCompressionJob,
+        onSettled: async () => {
+            // Invalidate queries that are affected by a new compression job.
+            await queryClient.invalidateQueries({queryKey: ["jobs"]});
+        },
+        onSuccess: () => {
+            form.resetFields();
+        },
+    });
 
-    const handleSubmit = async (values: FormValues) => {
-        setIsSubmitting(true);
-        setSubmitResult(null);
-        try {
-            const payload: {paths: string[]; dataset?: string; timestampKey?: string} = {
-                paths: values.paths,
-            };
+    const handleSubmit = (values: FormValues) => {
+        const payload: CompressionJobCreation = {paths: values.paths};
 
-            if (values.dataset) {
-                payload.dataset = values.dataset;
-            }
-            if (values.timestampKey) {
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+            payload.dataset = ("undefined" === typeof values.dataset) ?
+                CLP_DEFAULT_DATASET_NAME :
+                values.dataset;
+            if ("undefined" !== typeof values.timestampKey) {
                 payload.timestampKey = values.timestampKey;
             }
-            const result = await submitCompressionJob(payload);
-
-            setSubmitResult({
-                success: true,
-                message: `Compression job submitted successfully with ID: ${result.jobId}`,
-            });
-            form.resetFields();
-        } catch (error) {
-            setSubmitResult({
-                success: false,
-                message: `Failed to submit compression job: ${error instanceof Error ?
-                    error.message :
-                    "Unknown error"}`,
-            });
-        } finally {
-            setIsSubmitting(false);
         }
-    };
 
-    const isClpS = "clp-s" === settings.ClpStorageEngine;
+        mutate(payload);
+    };
 
     return (
         <DashboardCard title={"Submit Compression Job"}>
             <Form
                 form={form}
                 layout={"vertical"}
-                onFinish={(values) => {
-                    // eslint-disable-next-line no-void
-                    void handleSubmit(values);
-                }}
+                onFinish={handleSubmit}
             >
-                <Form.Item
-                    label={"Paths"}
-                    name={"paths"}
-                    rules={[{required: true, message: "Please select at least one path"}]}
-                >
-                    <TreeSelect
-                        allowClear={true}
-                        listHeight={512}
-                        loadData={handleLoadData}
-                        multiple={true}
-                        placeholder={"Please select paths to compress"}
-                        showCheckedStrategy={TreeSelect.SHOW_PARENT}
-                        showSearch={true}
-                        treeCheckable={true}
-                        treeData={treeData}
-                        treeDataSimpleMode={true}
-                        treeExpandAction={"click"}
-                        treeExpandedKeys={expandedKeys}
-                        treeLine={true}
-                        treeNodeLabelProp={"value"}
-                        notFoundContent={isLoading ?
-                            <PathLoadingEmpty/> :
-                            <PathNotFoundEmpty/>}
-                        switcherIcon={(props: {expanded?: boolean}) => (
-                            props.expanded ?
-                                <MinusOutlined style={{color: "grey"}}/> :
-                                <PlusOutlined style={{color: "grey"}}/>
-                        )}
-                        onSearch={handleSearch}
-                        onTreeExpand={handleTreeExpand}/>
-                </Form.Item>
-                {isClpS && (
-                    <>
-                        <Form.Item
-                            label={"Dataset"}
-                            name={"dataset"}
-                        >
-                            <Input
-                                placeholder={"The dataset that the archives belong to (optional)"}/>
-                        </Form.Item>
-                        <Form.Item
-                            label={"Timestamp Key"}
-                            name={"timestampKey"}
-                        >
-                            <Input
-                                placeholder={
-                                    "The path for the field containing the log event's timestamp " +
-                                    "(optional)"
-                                }/>
-                        </Form.Item>
-                    </>
+                <PathsInputFormItem/>
+                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <ClpSFormItems/>}
+                <SubmitFormItem isSubmitting={isSubmitting}/>
+
+                {isSuccess && (
+                    <Typography.Text type={"success"}>
+                        Compression job submitted successfully with ID:
+                        {" "}
+                        {data.jobId}
+                    </Typography.Text>
                 )}
-
-                <Form.Item>
-                    <Button
-                        htmlType={"submit"}
-                        loading={isSubmitting}
-                        type={"primary"}
-                    >
-                        {isSubmitting ?
-                            "Submitting..." :
-                            "Submit"}
-                    </Button>
-                </Form.Item>
-
-                {submitResult && (
-                    <Typography.Text
-                        type={submitResult.success ?
-                            "success" :
-                            "danger"}
-                    >
-                        {submitResult.message}
+                {isError && (
+                    <Typography.Text type={"danger"}>
+                        Failed to submit compression job:
+                        {" "}
+                        {error instanceof Error ?
+                            error.message :
+                            "Unknown error"}
                     </Typography.Text>
                 )}
             </Form>
         </DashboardCard>
     );
 };
+
 
 export default Compress;

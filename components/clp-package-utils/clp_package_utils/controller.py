@@ -556,6 +556,12 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
 
+        # Set LsRoot for file browser if logs_input is filesystem type
+        if StorageType.FS == self._clp_config.logs_input.type:
+            server_settings_json_updates["LsRoot"] = str(container_clp_config.logs_input.directory)
+        else:
+            server_settings_json_updates["LsRoot"] = None
+
         resolved_server_settings_json_path = resolve_host_path_in_container(
             server_settings_json_path
         )
