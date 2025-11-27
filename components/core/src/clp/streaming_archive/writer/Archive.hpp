@@ -149,7 +149,7 @@ public:
      * @param log_event_view
      * @throw FileWriter::OperationFailed if any write fails
      */
-    void write_msg_using_schema(log_surgeon::LogEventView const& log_view);
+    auto write_msg_using_schema(log_surgeon::LogEventView const& log_view) -> void;
 
     /**
      * Writes an IR log event to the current encoded file

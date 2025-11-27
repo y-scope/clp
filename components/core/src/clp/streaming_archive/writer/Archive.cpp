@@ -320,7 +320,11 @@ auto Archive::add_token_to_dicts(
         log_surgeon::LogEventView const& log_view,
         log_surgeon::Token token_view
 ) -> void {
-    switch (token_view.get_type_ids()->at(0)) {
+    auto const* type_ids{token_view.get_type_ids()};
+    if (nullptr == type_ids || type_ids->empty()) {
+        throw std::runtime_error("Token has no type IDs: " + token_view.to_string());
+    }
+    switch (type_ids->at(0)) {
         case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
         case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
             m_logtype_dict_entry.add_constant(token_view.to_string(), 0, token_view.get_length());
@@ -475,7 +479,11 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
     }
     for (auto token_idx{1}; token_idx < log_buf->pos(); token_idx++) {
         auto token_view{log_buf->get_token(token_idx)};
-        auto const token_type{token_view.get_type_ids()->at(0)};
+        auto const* type_ids{token_view.get_type_ids()};
+        if (nullptr == type_ids || type_ids->empty()) {
+            throw std::runtime_error("Token has no type IDs: " + token_view.to_string());
+        }
+        auto const token_type{type_ids->at(0)};
         if (log_buf->has_delimiters() && (timestamp_pattern != nullptr || token_idx > 1)
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
