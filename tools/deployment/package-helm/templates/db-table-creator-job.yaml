@@ -32,7 +32,7 @@ spec:
       containers:
         - name: "db-table-creator"
           image: "{{ include "clp.image.ref" . }}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_USER"
               valueFrom:
