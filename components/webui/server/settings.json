@@ -30,6 +30,5 @@
     "PrestoHost": "localhost",
     "PrestoPort": 8889,
 
-    "LsPathPrefixToRemove": "/mnt/logs",
-    "LsRoot": "/mnt/logs"
+    "LsPathPrefixToRemove": "/mnt/logs"
 }
