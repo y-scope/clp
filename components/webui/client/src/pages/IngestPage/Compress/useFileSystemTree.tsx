@@ -39,7 +39,7 @@ interface TreeHandlersReturn {
     handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
     handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
     handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
-    toggleNodeExpansion: (key: string, expanded: boolean) => void;
+    toggleNodeExpansion: (key: string, expanded: boolean) => Promise<void>;
 }
 
 interface FileSystemTree {
@@ -49,7 +49,7 @@ interface FileSystemTree {
     handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
     handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
     handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
-    toggleNodeExpansion: (key: string, expanded: boolean) => void;
+    toggleNodeExpansion: (key: string, expanded: boolean) => Promise<void>;
 }
 
 /**
@@ -150,22 +150,25 @@ const useTreeHandlers = (params: TreeHandlersParams): TreeHandlersReturn => {
         setIsLoading,
     } = params;
 
-    const handleLoadData = useCallback<NonNullable<TreeSelectProps["loadData"]>>(
-        async (node) => {
-            const path = node.value;
-            if ("string" !== typeof path) {
-                return;
-            }
-            setIsLoading(true);
-            try {
-                await fetchAndAppendTreeNodes(path);
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        [fetchAndAppendTreeNodes,
-            setIsLoading]
-    );
+    const loadPath = useCallback(async (path: string) => {
+        setIsLoading(true);
+        try {
+            await fetchAndAppendTreeNodes(path);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [
+        fetchAndAppendTreeNodes,
+        setIsLoading,
+    ]);
+
+    const handleLoadData = useCallback<NonNullable<TreeSelectProps["loadData"]>>(async (node) => {
+        const path = node.value;
+        if ("string" !== typeof path) {
+            return;
+        }
+        await loadPath(path);
+    }, [loadPath]);
 
     const handleSearch = useCallback<NonNullable<TreeSelectProps["onSearch"]>>(
         (value) => {
@@ -199,18 +202,30 @@ const useTreeHandlers = (params: TreeHandlersParams): TreeHandlersReturn => {
     const handleTreeExpand = useCallback<NonNullable<TreeSelectProps["onTreeExpand"]>>(
         (keys) => {
             setExpandedKeys(keys as string[]);
+            loadPath(keys[keys.length - 1] as string).catch((e: unknown) => {
+                console.error("Failed to load expanded path", e);
+            });
         },
-        [setExpandedKeys]
+        [
+            loadPath,
+            setExpandedKeys,
+        ]
     );
 
-    const toggleNodeExpansion = useCallback((key: string, expanded: boolean) => {
+    const toggleNodeExpansion = useCallback(async (key: string, expanded: boolean) => {
         if (expanded) {
             setExpandedKeys((prev) => prev.filter((k) => k !== key));
         } else {
-            setExpandedKeys((prev) => [...prev,
-                key]);
+            setExpandedKeys((prev) => [
+                ...prev,
+                key,
+            ]);
+            await loadPath(key);
         }
-    }, [setExpandedKeys]);
+    }, [
+        loadPath,
+        setExpandedKeys,
+    ]);
 
     return {
         handleLoadData,
