@@ -1,6 +1,7 @@
 import useSearchStore from "../../SearchState/index";
 import {
     DATE_RANGE_POSITION,
+    DATE_RANGE_PROP_KEY,
     TIME_RANGE_DISPLAY_TEXT_MAP,
     TIME_RANGE_OPTION,
 } from "./utils";
@@ -8,7 +9,7 @@ import {
 
 interface TimeDateInputProps {
     value: string;
-    'date-range': DATE_RANGE_POSITION;
+    [DATE_RANGE_PROP_KEY]: DATE_RANGE_POSITION;
 }
 
 /**
@@ -18,7 +19,7 @@ interface TimeDateInputProps {
  * @return
  */
 const TimeDateInput = (props: TimeDateInputProps) => {
-    const {value, 'date-range': dateRange} = props;
+    const {value, [DATE_RANGE_PROP_KEY]: dateRange} = props;
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
 
     const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM

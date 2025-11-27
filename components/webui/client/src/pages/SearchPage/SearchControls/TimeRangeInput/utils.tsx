@@ -32,8 +32,6 @@ enum TIME_RANGE_OPTION {
     CUSTOM = "Custom",
 }
 
-
-
 const DEFAULT_TIME_RANGE_OPTION = TIME_RANGE_OPTION.ALL_TIME;
 
 /* eslint-disable no-magic-numbers, @typescript-eslint/require-await */
@@ -133,6 +131,11 @@ enum DATE_RANGE_POSITION {
 }
 
 /**
+ * AntD RangePicker prop key for date range position.
+ */
+const DATE_RANGE_PROP_KEY = "date-range";
+
+/**
  * Map of time range options to their display text
  */
 const TIME_RANGE_DISPLAY_TEXT_MAP: Record<
@@ -190,6 +193,7 @@ const TIME_RANGE_DISPLAY_TEXT_MAP: Record<
 
 export {
     DATE_RANGE_POSITION,
+    DATE_RANGE_PROP_KEY,
     DEFAULT_TIME_RANGE,
     DEFAULT_TIME_RANGE_OPTION,
     isValidDateRange,
