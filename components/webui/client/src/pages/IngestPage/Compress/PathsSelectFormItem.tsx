@@ -1,4 +1,4 @@
-import React, {useEffect} from "react";
+import {useEffect} from "react";
 
 import {
     MinusOutlined,
@@ -40,8 +40,10 @@ const PathNotFoundEmpty = () => (
  */
 const PathLoadingEmpty = () => (
     <Empty
-        description={<Spin size={"default"} spinning={true}/>}
-        image={Empty.PRESENTED_IMAGE_SIMPLE}/>
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={<Spin
+            size={"default"}
+            spinning={true}/>}/>
 );
 
 /**
@@ -82,23 +84,23 @@ const PathsSelectFormItem = () => {
                 listHeight={512}
                 loadData={handleLoadData}
                 multiple={true}
-                notFoundContent={isLoading ?
-                    <PathLoadingEmpty/> :
-                    <PathNotFoundEmpty/>}
                 placeholder={"Please select paths to compress"}
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={true}
-                switcherIcon={(props: {expanded?: boolean}) => (
-                    props.expanded ?
-                        <MinusOutlined style={{color: "grey"}}/> :
-                        <PlusOutlined style={{color: "grey"}}/>
-                )}
                 treeCheckable={true}
                 treeData={treeDataWithClickHandlers}
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
+                notFoundContent={isLoading ?
+                    <PathLoadingEmpty/> :
+                    <PathNotFoundEmpty/>}
+                switcherIcon={(props: {expanded?: boolean}) => (
+                    props.expanded ?
+                        <MinusOutlined style={{color: "grey"}}/> :
+                        <PlusOutlined style={{color: "grey"}}/>
+                )}
                 onSearch={handleSearch}
                 onTreeExpand={handleTreeExpand}/>
         </Form.Item>
