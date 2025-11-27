@@ -14,15 +14,15 @@ from pydantic import (
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from .clp_logging import LoggingLevel
-from .core import (
+from clp_py_utils.clp_logging import LoggingLevel
+from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
     resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
-from .serialization_utils import serialize_path, serialize_str_enum
+from clp_py_utils.serialization_utils import serialize_path, serialize_str_enum
 
 # Constants
 # Component names
