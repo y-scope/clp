@@ -12,7 +12,6 @@ from job_orchestration.scheduler.constants import (
     QueryTaskStatus,
 )
 from pydantic import ValidationError
-from sql_adapter import SqlAdapter
 
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -22,6 +21,7 @@ from clp_py_utils.clp_config import (
     QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.sql_adapter import SqlAdapter
 
 # Setup logging
 # Create logger
