@@ -87,6 +87,9 @@ Parameters (dict):
   capacity: Storage capacity
   accessModes: Access modes (list)
   hostPath: Absolute path on host
+  nodeRole: Node role for affinity
+            Targets nodes with label "node-role.kubernetes.io/<nodeRole>"
+            Always falls back to "node-role.kubernetes.io/control-plane"
 */}}
 {{- define "clp.createLocalPv" -}}
 apiVersion: "v1"
@@ -108,7 +111,10 @@ spec:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: "kubernetes.io/hostname"
+            - key: {{ printf "node-role.kubernetes.io/%s" .nodeRole | quote }}
+              operator: "Exists"
+        - matchExpressions:
+            - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
 {{- end }}
 
