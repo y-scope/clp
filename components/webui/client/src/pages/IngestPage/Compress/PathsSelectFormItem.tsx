@@ -45,25 +45,26 @@ const PathLoadingEmpty = () => (
 const PathsSelectFormItem = () => {
     const {
         expandedKeys,
-        isLoading,
         handleLoadData,
         handleSearch,
         handleTreeExpand,
-        handleTitleClick,
+        isLoading,
+        toggleNodeExpansion,
         treeData,
     } = useFileSystemTree();
+
+    const handleTitleClick = (nodeValue: string) => (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const expanded = expandedKeys.includes(nodeValue);
+        toggleNodeExpansion(nodeValue, expanded);
+    };
 
     const treeDataWithClickHandlers = treeData.map((node) => ({
         ...node,
         title: (
             <span
                 className={styles["treeNodeTitle"]}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    const key = node["value"] as string;
-                    const expanded = expandedKeys.includes(key);
-                    handleTitleClick(key, expanded);
-                }}
+                onClick={handleTitleClick(node["value"] as string)}
             >
                 {node["title"]}
             </span>

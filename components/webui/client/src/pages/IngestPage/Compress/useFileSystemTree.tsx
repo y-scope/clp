@@ -20,10 +20,10 @@ import {
 
 interface TreeDataReturn {
     expandedKeys: string[];
+    treeData: TreeNode[];
     fetchAndAppendTreeNodes: (path: string) => Promise<boolean>;
     loadMissingParents: (path: string) => Promise<boolean>;
     setExpandedKeys: (keys: string[] | ((prev: string[]) => string[])) => void;
-    treeData: TreeNode[];
 }
 
 interface TreeHandlersParams {
@@ -37,18 +37,18 @@ interface TreeHandlersParams {
 interface TreeHandlersReturn {
     handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
     handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
-    handleTitleClick: (key: string, expanded: boolean) => void;
     handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
+    toggleNodeExpansion: (key: string, expanded: boolean) => void;
 }
 
 interface FileSystemTree {
+    isLoading: boolean;
     expandedKeys: string[];
+    treeData: TreeNode[];
     handleLoadData: NonNullable<TreeSelectProps["loadData"]>;
     handleSearch: NonNullable<TreeSelectProps["onSearch"]>;
-    handleTitleClick: (key: string, expanded: boolean) => void;
     handleTreeExpand: NonNullable<TreeSelectProps["onTreeExpand"]>;
-    isLoading: boolean;
-    treeData: TreeNode[];
+    toggleNodeExpansion: (key: string, expanded: boolean) => void;
 }
 
 /**
@@ -208,7 +208,7 @@ const useTreeHandlers = (params: TreeHandlersParams): TreeHandlersReturn => {
         [setExpandedKeys]
     );
 
-    const handleTitleClick = useCallback((key: string, expanded: boolean) => {
+    const toggleNodeExpansion = useCallback((key: string, expanded: boolean) => {
         if (expanded) {
             setExpandedKeys((prev) => prev.filter((k) => k !== key));
         } else {
@@ -220,8 +220,8 @@ const useTreeHandlers = (params: TreeHandlersParams): TreeHandlersReturn => {
     return {
         handleLoadData,
         handleSearch,
-        handleTitleClick,
         handleTreeExpand,
+        toggleNodeExpansion,
     };
 };
 
@@ -243,8 +243,8 @@ const useFileSystemTree = (): FileSystemTree => {
     const {
         handleLoadData,
         handleSearch,
-        handleTitleClick,
         handleTreeExpand,
+        toggleNodeExpansion,
     } = useTreeHandlers({
         expandedKeys,
         fetchAndAppendTreeNodes,
@@ -263,9 +263,9 @@ const useFileSystemTree = (): FileSystemTree => {
         expandedKeys,
         handleLoadData,
         handleSearch,
-        handleTitleClick,
         handleTreeExpand,
         isLoading,
+        toggleNodeExpansion,
         treeData,
     };
 };
