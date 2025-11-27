@@ -34,6 +34,13 @@ How to deploy CLP across multiple hosts.
 :::
 
 :::{grid-item-card}
+:link: guides-api-server
+API Server
+^^^
+How to use the API Server to query compressed logs in CLP.
+:::
+
+:::{grid-item-card}
 :link: guides-using-presto
 Using Presto with CLP
 ^^^
