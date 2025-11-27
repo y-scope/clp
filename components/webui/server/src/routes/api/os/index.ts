@@ -1,11 +1,11 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
+import {StringSchema} from "@webui/common/schemas/common";
 import fs from "fs/promises";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 import path from "path";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {StringSchema} from "../../../schemas/common.js";
 
 
 /**
@@ -67,7 +67,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 querystring: FileListRequestSchema,
                 response: {
-                    [StatusCodes.OK]: FileListResponseSchema,
+                    [constants.HTTP_STATUS_OK]: FileListResponseSchema,
                 },
             },
         },
