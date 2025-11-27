@@ -29,7 +29,7 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
-  G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust"
+  G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
   G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
@@ -211,7 +211,7 @@ tasks:
     dir: "{{.ROOT_DIR}}"
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-      cargo build --release --bins --target-dir {{.G_RUST_BUILD_DIR}}
+      cargo build --release --bins
 
   clp-mcp-server:
     - task: "uv-component"
