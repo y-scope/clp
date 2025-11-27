@@ -324,7 +324,8 @@ auto Archive::add_token_to_dicts(
     if (nullptr == type_ids || type_ids->empty()) {
         throw std::runtime_error("Token has no type IDs: " + token_view.to_string());
     }
-    switch (type_ids->at(0)) {
+    auto const token_type{type_ids->at(0)};
+    switch (token_type) {
         case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
         case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
             m_logtype_dict_entry.add_constant(token_view.to_string(), 0, token_view.get_length());
@@ -332,7 +333,8 @@ auto Archive::add_token_to_dicts(
         }
         case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
             encoded_variable_t encoded_var{};
-            if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+            if (false
+                == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                         token_view.to_string(),
                         encoded_var
                 ))
@@ -349,7 +351,8 @@ auto Archive::add_token_to_dicts(
         }
         case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
             encoded_variable_t encoded_var{};
-            if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
+            if (false
+                == EncodedVariableInterpreter::convert_string_to_representable_float_var(
                         token_view.to_string(),
                         encoded_var
                 ))
@@ -371,7 +374,6 @@ auto Archive::add_token_to_dicts(
             // the logtype. Capture repetition currently does not work so we explicitly only
             // store the first capture.
 
-            auto const token_type{token_view.get_type_ids()->at(0)};
             auto const& lexer{log_view.get_log_parser().m_lexer};
             auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
             if (false == capture_ids.has_value()) {
