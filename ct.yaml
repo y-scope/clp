@@ -1,4 +1,0 @@
-chart-dirs:
-  - "tools/deployment"
-chart-yaml-schema: "build/toolchains/helm/etc/chart_schema.yaml"
-lint-conf: ".yamllint.yaml"

@@ -67,7 +67,10 @@ tasks:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
-        ct lint
+        ct lint \
+          --chart-dirs="tools/deployment" \
+          --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
+          --lint-conf=".yamllint.yaml"
 
   check-js:
     sources: &js_source_files
@@ -119,7 +122,6 @@ tasks:
           "components/core/config" \
           "components/core/tools/" \
           "components/package-template/src/etc" \
-          "ct.yaml" \
           "docs" \
           "taskfile.yaml" \
           "taskfiles" \
