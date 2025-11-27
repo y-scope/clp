@@ -1513,7 +1513,9 @@ auto parse_timestamp(
                                 '0'
                         ))
                 };
-                if (parsed_generic_second < cMinParsedSecond || parsed_second > cParsedLeapSecond) {
+                if (parsed_generic_second < cMinParsedSecond
+                    || parsed_generic_second > cParsedLeapSecond)
+                {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
