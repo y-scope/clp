@@ -91,6 +91,7 @@ interface FileSystemTreeActions {
 type FileSystemTreeState = FileSystemTreeValues & FileSystemTreeActions;
 
 
+// eslint-disable-next-line max-lines-per-function
 const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
     ...FILE_SYSTEM_TREE_STATE_DEFAULT,
 
