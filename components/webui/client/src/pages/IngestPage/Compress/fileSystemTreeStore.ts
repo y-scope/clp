@@ -5,6 +5,7 @@ import {listFiles} from "../../../api/os";
 import {settings} from "../../../settings";
 import {
     FileItem,
+    joinPath,
     mapFileToTreeNode,
     TreeNode,
 } from "./utils";
@@ -125,7 +126,7 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
         set({loadedKeys: loadedKeys});
 
         try {
-            const fullResolvedPath = settings.LogsInputRootDir + path;
+            const fullResolvedPath = joinPath(settings.LogsInputRootDir, path);
             const fileItems = await listFiles(fullResolvedPath);
             const newNodes = (fileItems as FileItem[]).map(mapFileToTreeNode);
 

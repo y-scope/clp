@@ -16,6 +16,38 @@ interface FileItem {
 
 
 /**
+ * Extracts the base directory path from a search string.
+ *
+ * @param value
+ * @return the base directory path.
+ */
+const extractBasePath = (value: string): string => {
+    if (value.endsWith("/")) {
+        return "/" === value ?
+            "/" :
+            value.slice(0, -1);
+    }
+
+    const lastSlashIndex = value.lastIndexOf("/");
+    if (-1 === lastSlashIndex || 0 === lastSlashIndex) {
+        return "/";
+    }
+
+    return value.substring(0, lastSlashIndex);
+};
+
+/**
+ * Joins multiple path segments into a single normalized POSIX file system path.
+ *
+ * @param parts
+ * @return The normalized path.
+ */
+const joinPath = (...parts: string[]): string => parts
+    .filter(Boolean)
+    .join("/")
+    .replace(/\/{2,}/g, "/");
+
+/**
  * Normalizes a path for client display by removing the LogsInputRootDir prefix in a container
  * environment.
  *
@@ -25,7 +57,6 @@ interface FileItem {
 const removeLsPathPrefix = (fullPath: string): string => {
     return fullPath.replace(new RegExp(`^${settings.LogsInputRootDir}/*`), "/");
 };
-
 
 /**
  * Maps file system item to Antd TreeSelect flat tree node format.
@@ -52,26 +83,6 @@ const mapFileToTreeNode = (fileItem: FileItem): TreeNode => {
     };
 };
 
-/**
- * Extracts the base directory path from a search string.
- *
- * @param value
- * @return the base directory path.
- */
-const extractBasePath = (value: string): string => {
-    if (value.endsWith("/")) {
-        return "/" === value ?
-            "/" :
-            value.slice(0, -1);
-    }
-
-    const lastSlashIndex = value.lastIndexOf("/");
-    if (-1 === lastSlashIndex || 0 === lastSlashIndex) {
-        return "/";
-    }
-
-    return value.substring(0, lastSlashIndex);
-};
 
 export type {
     FileItem,
@@ -79,6 +90,7 @@ export type {
 };
 export {
     extractBasePath,
+    joinPath,
     mapFileToTreeNode,
     removeLsPathPrefix,
 };
