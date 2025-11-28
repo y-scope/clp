@@ -60,7 +60,7 @@ class ConnectionPoolWrapper:
 
 
 class SqlAdapter:
-    """SQL adapter for connecting to a MySQL-compatible database."""  
+    """SQL adapter for connecting to a MySQL-compatible database."""
 
     def __init__(self, database_config: Database):
         """Initializes the SqlAdapter with the CLP database config model."""
@@ -99,6 +99,7 @@ class SqlAdapter:
         :param user_type: User type whose credentials should be used to connect.
         :return: The connection pool.
         """
+
         def _create_connection():
             return self.create_connection(disable_localhost_socket_connection)
 
@@ -159,4 +160,3 @@ class SqlAdapter:
             raise err
         else:
             return connection
-
