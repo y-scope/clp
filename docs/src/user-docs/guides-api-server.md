@@ -29,21 +29,21 @@ following commands to submit a query to clp-json and stream the results.
 
    ```shell
    curl -X POST http://localhost:3001/query \
-    -H "Content-Type: application/json" \
-    -d '{
-      "query_string": "*log*",
-      "dataset": "default",
-      "ignore_case": false,
-      "max_num_results": 100,
-      "write_to_file": false
-    }'
+       -H "Content-Type: application/json" \
+       -d '{
+          "query_string": "*log*",
+          "dataset": "default",
+          "ignore_case": false,
+          "max_num_results": 100,
+          "write_to_file": false
+       }'
    ```
 
    On success, the server responds with:
 
     ```json
     {
-      "query_results_uri": "/query_results/100"
+        "query_results_uri": "/query_results/100"
     }
     ```
 
