@@ -101,7 +101,7 @@ Creates a local PersistentVolume.
 @param {string} name PV name
 @param {string} component Component label
 @param {string} capacity Storage capacity
-@param {string[]} accessModes Access modes (list)
+@param {string[]} accessModes Access modes
 @param {string} hostPath Absolute path on host
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
@@ -133,4 +133,33 @@ spec:
         - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
+{{- end }}
+
+{{/*
+Creates a PersistentVolumeClaim for the given component.
+
+@param {object} root Root template context
+@param {string} component Component label
+@param {string} capacity Storage capacity
+@param {string[]} accessModes Access modes
+@return {string} YAML-formatted PersistentVolumeClaim resource
+*/}}
+{{- define "clp.createPvc" -}}
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp.fullname" .root }}-{{ .component }}
+  labels:
+    {{- include "clp.labels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component | quote }}
+spec:
+  accessModes: {{ .accessModes }}
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" .root | nindent 6 }}
+      app.kubernetes.io/component: {{ .component | quote }}
+  resources:
+    requests:
+      storage: {{ .capacity }}
 {{- end }}
