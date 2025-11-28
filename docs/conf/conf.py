@@ -1,7 +1,9 @@
-# ruff: noqa: INP001 Configuration file for the Sphinx documentation builder.
+# ruff: noqa: INP001 The Sphinx config file is a standalone scripts rather than an importable module.
 """Sphinx configuration file for CLP documentation."""
 
 from datetime import datetime, timezone
+
+from sphinx.application import Sphinx
 
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -103,10 +105,10 @@ html_context = {
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/static_assets.html
 
 
-def setup(app) -> None:  # noqa: ANN001 Ignore type annotation for Sphinx setup function.
+def setup(app: Sphinx) -> None:
     """
     Sets up Sphinx app with custom CSS.
 
-    :param app: Sphinx application object
+    :param app:
     """
     app.add_css_file("custom.css")

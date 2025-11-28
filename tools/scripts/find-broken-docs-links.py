@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-
-# ruff: noqa: S607 This scripts runs in a controlled environment.
 """Finds broken docs links in the docs."""
 
 import logging
@@ -21,7 +19,7 @@ logger.addHandler(logging_console_handler)
 
 
 def main() -> int:
-    """Finds broken docs links in the docs."""
+    """Main."""
     repo_root = _get_repo_root()
 
     found_violation = False

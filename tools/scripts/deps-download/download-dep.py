@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Downloads GitHub artifacts."""
+"""Downloads dependency artifacts."""
 
 import argparse
 import logging
@@ -24,7 +24,7 @@ logger.addHandler(logging_console_handler)
 
 
 def main(argv: list[str]) -> int:
-    """Downloads GitHub artifacts."""
+    """Main."""
     args_parser = argparse.ArgumentParser(description="Download dependency.")
     args_parser.add_argument("source_url", help="URL of the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
