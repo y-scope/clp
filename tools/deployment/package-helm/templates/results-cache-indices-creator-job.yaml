@@ -21,10 +21,14 @@ spec:
       initContainers:
         - name: "wait-for-results-cache"
           image: "busybox:latest"
-          command: [
-            "sh", "-c",
-            "until nc -z {{ include "clp.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
-          ]
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-results-cache 27017;
+                do echo Waiting for results-cache to be ready...;
+                sleep 2;
+              done
       containers:
         - name: "results-cache-indices-creator"
           image: "{{ include "clp.image.ref" . }}"

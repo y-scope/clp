@@ -25,22 +25,34 @@ spec:
       initContainers:
         - name: "wait-for-database"
           image: "busybox:latest"
-          command: [
-            "sh", "-c",
-            "until nc -z {{ include "clp.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
-          ]
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-database 3306;
+                do echo Waiting for database to be ready...;
+                sleep 2;
+              done
         - name: "wait-for-queue"
           image: "busybox:latest"
-          command: [
-            "sh", "-c",
-            "until nc -z {{ include "clp.fullname" . }}-queue 5672; do echo waiting for queue; sleep 2; done"
-          ]
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-queue 5672;
+                do echo Waiting for queue to be ready...;
+                sleep 2;
+              done
         - name: "wait-for-redis"
           image: "busybox:latest"
-          command: [
-            "sh", "-c",
-            "until nc -z {{ include "clp.fullname" . }}-redis 6379; do echo waiting for redis; sleep 2; done"
-          ]
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-redis 6379;
+                do echo Waiting for redis to be ready...;
+                sleep 2;
+              done
       containers:
         - name: "compression-scheduler"
           image: "{{ include "clp.image.ref" . }}"
