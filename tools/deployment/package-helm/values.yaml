@@ -34,10 +34,12 @@ clpConfig:
     # this directory will be ignored.
     directory: "/"
 
+  bundled: ["database", "queue", "redis", "results_cache"]
+
   database:
     type: "mariadb"  # "mariadb" or "mysql"
     host: "localhost"
-    port: 30306
+    port: 3306
     name: "clp-db"
 
   compression_scheduler:
