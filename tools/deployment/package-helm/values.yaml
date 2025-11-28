@@ -39,7 +39,7 @@ clpConfig:
   database:
     type: "mariadb"  # "mariadb" or "mysql"
     host: "localhost"
-    port: 3306
+    port: 30306
     name: "clp-db"
 
   compression_scheduler:
