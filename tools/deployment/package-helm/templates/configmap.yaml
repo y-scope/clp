@@ -51,6 +51,7 @@ data:
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+
     presto: {{ .Values.clpConfig.presto }}
     query_scheduler:
       host: {{ include "clp.fullname" . }}-query-scheduler
@@ -90,6 +91,7 @@ data:
       port: 4000
       rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
+
   mysql-logging.cnf: |
     [mysqld]
     # https://dev.mysql.com/doc/refman/8.0/en/log-destinations.html
@@ -101,12 +103,14 @@ data:
     # https://dev.mysql.com/doc/refman/8.0/en/error-log-destination-configuration.html
     # Send error logs to file
     log_error=/var/log/mysql/mysql-error.log
+
   redis.conf: |
     # For full reference of configuration options see
     # https://raw.githubusercontent.com/redis/redis/7.2/redis.conf
 
     databases 2
     logfile "/var/log/redis/redis.log"
+
   mongod.conf: |
     replication:
       replSetName: "rs0"
@@ -115,6 +119,7 @@ data:
       path: /var/log/mongodb/mongod.log
       logAppend: true
       timeStampFormat: iso8601-local
+
   webui-client-settings.json: |
     {
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
@@ -126,6 +131,7 @@ data:
       "SqlDbClpTablePrefix": "clp_",
       "SqlDbCompressionJobsTableName": "compression_jobs"
     }
+
   webui-server-settings.json: |
     {
       "SqlDbHost": "{{ include "clp.fullname" . }}-database",

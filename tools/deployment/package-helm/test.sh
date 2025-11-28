@@ -7,7 +7,7 @@ set -o nounset
 set -o pipefail
 
 kind delete cluster --name clp-test
-sudo rm -rf /tmp/clp
+rm -rf /tmp/clp
 mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache,compression-scheduler,compression-worker,query-scheduler,query-worker,reducer,garbage-collector,api-server,mcp-server}
 mkdir -p /tmp/clp/var/data/{archives,staged-archives,staged-streams,streams}
 mkdir -p /tmp/clp/var/log/user
