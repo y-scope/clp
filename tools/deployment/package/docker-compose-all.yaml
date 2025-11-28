@@ -492,6 +492,9 @@ services:
   api-server:
     <<: *service_defaults
     hostname: "api_server"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the garbage collector.
+      replicas: "${CLP_API_SERVER_ENABLED:-1}"
     environment:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"

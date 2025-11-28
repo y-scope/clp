@@ -70,6 +70,7 @@ def main(argv):
         clp_config.validate_data_dir(True)
         clp_config.validate_logs_dir(True)
         clp_config.validate_tmp_dir(True)
+        clp_config.validate_api_server()
     except:
         logger.exception("Failed to load config.")
         return -1

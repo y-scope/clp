@@ -53,7 +53,7 @@ tasks:
           --keep-going \
           --builder html \
           src "{{.OUTPUT_DIR}}"
-      - task: "openapi-json"
+      - task: "api-server-openapi-json"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
@@ -113,7 +113,7 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  openapi-json:
+  api-server-openapi-json:
     vars:
       OUTPUT_FILE: "{{.G_DOCS_BUILD_DIR}}/_static/openapi.json"
     sources:

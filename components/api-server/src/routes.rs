@@ -50,8 +50,8 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
 #[allow(clippy::needless_for_each)]
 mod api_doc {
-    // Referencing handlers with `super::health` adds an undesired "super" tag to the
-    // `openapi.json`. Import them here to avoid that.
+    // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
+    // documentation. Importing the paths directly prevents this issue.
     use super::{__path_health, __path_query, __path_query_results};
 
     #[derive(utoipa::OpenApi)]

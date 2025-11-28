@@ -794,6 +794,15 @@ class ClpConfig(BaseModel):
                 "aws_config_directory should not be set when profile authentication is not used"
             )
 
+    def validate_api_server(self):
+        is_default = self.api_server == ApiServer()
+        is_clp_text = self.package.storage_engine == StorageEngine.CLP
+        if not is_default and is_clp_text:
+            raise ValueError(
+                "The API server is only supported with package.storage_engine"
+                f" = '{StorageEngine.CLP_S}'"
+            )
+
     def load_container_image_ref(self):
         if self.container_image_ref is not None:
             # Accept configured value for debug purposes

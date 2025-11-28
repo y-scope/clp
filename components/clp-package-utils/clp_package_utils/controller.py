@@ -12,6 +12,7 @@ from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
+    ApiServer,
     AwsAuthType,
     ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
@@ -447,6 +448,10 @@ class BaseController(ABC):
             "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
+
+        # Disable for CLP
+        if self._clp_config.package.storage_engine == StorageEngine.CLP:
+            env_vars |= {"CLP_API_SERVER_ENABLED": "0"}
 
         return env_vars
 
