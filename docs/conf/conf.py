@@ -10,7 +10,7 @@ from sphinx.application import Sphinx
 
 project = "CLP"
 # NOTE: We don't include a period after "Inc" since the theme adds one already.
-# Ignore A001: Shadowing built-in name 'copyright' for Sphinx config.
+# Ignore A001: Shadows built-in name 'copyright' for Sphinx config.
 copyright = f"2021-{datetime.now(tz=timezone.utc).year} YScope Inc"  # noqa: A001
 
 # -- General configuration -----------------------------------------------------
