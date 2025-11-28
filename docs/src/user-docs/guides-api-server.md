@@ -12,6 +12,11 @@ added in a future release.
 CLP starts the API Server based on the `api_server` section in `etc/clp-config.yaml`, which includes
 a default configuration. You can uncomment and modify this section to override the defaults.
 
+## API Reference
+
+All available API endpoints are defined in the [OpenAPI] Specification. You can explore the API
+using [Swagger UI][swagger-ui].
+
 ## Example: Submitting Search Queries and Receiving Results
 
 API server exposes endpoints to submit search queries, and returns search results as a continuous
@@ -58,11 +63,6 @@ following commands to submit a query to clp-json and stream the results.
 
    data: {"timestamp": 1633036820, "message": "No logs found" }
    ```
-
-## API Reference
-
-All available API endpoints are defined in the [OpenAPI] Specification. You can explore the API
-using [Swagger UI][swagger-ui].
 
 [OpenAPI]: https://swagger.io/specification/
 [release-choices]: ./quick-start/index.md#choosing-a-flavor
