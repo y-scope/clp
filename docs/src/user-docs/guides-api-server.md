@@ -16,6 +16,7 @@ Assuming the server is running on the default host and port (`localhost:3001`), 
 following commands to submit a query to clp-json and stream the results.
 
 1. Submit a search query:
+
    ```shell
    curl -X POST http://localhost:3001/query \
     -H "Content-Type: application/json" \
@@ -27,18 +28,24 @@ following commands to submit a query to clp-json and stream the results.
       "write_to_file": false
     }'
    ```
+
    On success, the server responds with:
+
     ```json
     {
       "query_results_uri": "/query_results/100"
     }
     ```
+
 2. Retrieve search results:
    Use the returned `query_results_uri` to receive search results as an SSE stream:
+
    ```bash
    curl -N http://localhost:3001/query_results/100
    ```
+
    Example streamed output:
+
    ```text
    data: {"timestamp": 1633036800, "message": "Example log message"}
 
