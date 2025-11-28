@@ -16,6 +16,7 @@ import {
 const FILE_SYSTEM_TREE_STATE_DEFAULT = Object.freeze({
     expandedKeys: [] as string[],
     isLoading: false,
+    loadedKeys: new Set(),
     treeData: [{id: "/", value: "/", title: "/", isLeaf: false}] as TreeNode[],
 });
 
@@ -29,6 +30,11 @@ interface FileSystemTreeValues {
      * Whether the tree is currently loading data.
      */
     isLoading: boolean;
+
+    /**
+     * Keys of nodes that have been loaded.
+     */
+    loadedKeys: Set<string>;
 
     /**
      * Tree node data in flat format for TreeSelect.
@@ -80,19 +86,11 @@ interface FileSystemTreeActions {
      * @param loading
      */
     setIsLoading: (loading: boolean) => void;
-
-    /**
-     * Toggles the expansion state of a node.
-     *
-     * @param key
-     * @param expanded
-     */
-    toggleNodeExpansion: (key: string, expanded: boolean) => Promise<void>;
 }
 
 type FileSystemTreeState = FileSystemTreeValues & FileSystemTreeActions;
 
-// eslint-disable-next-line max-lines-per-function
+
 const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
     ...FILE_SYSTEM_TREE_STATE_DEFAULT,
 
@@ -110,12 +108,20 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
     expandNode: (key) => {
         const {expandedKeys} = get();
         if (!expandedKeys.includes(key)) {
-            set({expandedKeys: [...expandedKeys,
-                key]});
+            set({expandedKeys: [
+                ...expandedKeys,
+                key,
+            ]});
         }
     },
 
     fetchAndAppendTreeNodes: async (path) => {
+        const {loadedKeys} = get();
+        if (loadedKeys.has(path)) {
+            return false;
+        }
+        loadedKeys.add(path);
+
         try {
             const fullResolvedPath = settings.LsPathPrefixToRemove + path;
             const fileItems = await listFiles(fullResolvedPath);
@@ -163,23 +169,6 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
 
     setIsLoading: (loading) => {
         set({isLoading: loading});
-    },
-
-    toggleNodeExpansion: async (key, expanded) => {
-        const {expandedKeys, fetchAndAppendTreeNodes, setExpandedKeys, setIsLoading} = get();
-
-        if (expanded) {
-            setExpandedKeys(expandedKeys.filter((k) => k !== key));
-        } else {
-            setExpandedKeys([...expandedKeys,
-                key]);
-            setIsLoading(true);
-            try {
-                await fetchAndAppendTreeNodes(key);
-            } finally {
-                setIsLoading(false);
-            }
-        }
     },
 }));
 

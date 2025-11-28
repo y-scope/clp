@@ -1,4 +1,7 @@
-import {useEffect} from "react";
+import {
+    useCallback,
+    useEffect,
+} from "react";
 
 import {
     MinusOutlined,
@@ -10,14 +13,13 @@ import {
     Spin,
     TreeSelect,
 } from "antd";
+import {DataNode} from "antd/es/tree";
 
 import useFileSystemTreeStore from "./fileSystemTreeStore";
 import styles from "./PathsSelectFormItem.module.css";
 import {
-    createTitleClickHandler,
     handleLoadData,
     handleSearch,
-    handleTreeExpand,
     initializeTree,
 } from "./treeEventHandlers";
 
@@ -60,17 +62,31 @@ const PathsSelectFormItem = () => {
         initializeTree();
     }, []);
 
-    const treeDataWithClickHandlers = treeData.map((node) => ({
-        ...node,
-        title: (
-            <span
-                className={styles["treeNodeTitle"]}
-                onClick={createTitleClickHandler(node["value"] as string, expandedKeys)}
-            >
-                {node["title"]}
-            </span>
-        ),
-    }));
+    const handleTitleClick = useCallback((e: React.MouseEvent, node: DataNode) => {
+        e.stopPropagation();
+        const nodeKey = node.key as string;
+        const {setExpandedKeys} = useFileSystemTreeStore.getState();
+        const currentExpandedKeys = useFileSystemTreeStore.getState().expandedKeys;
+        const isExpanded = currentExpandedKeys.includes(nodeKey);
+
+        if (isExpanded) {
+            setExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey));
+        } else {
+            setExpandedKeys([...currentExpandedKeys,
+                nodeKey]);
+        }
+    }, []);
+
+    const treeTitleRender = useCallback((node: DataNode) => (
+        <span
+            className={styles["treeNodeTitle"]}
+            onClick={(e) => {
+                handleTitleClick(e, node);
+            }}
+        >
+            {node.title as string}
+        </span>
+    ), [handleTitleClick]);
 
     return (
         <Form.Item
@@ -88,11 +104,12 @@ const PathsSelectFormItem = () => {
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={true}
                 treeCheckable={true}
-                treeData={treeDataWithClickHandlers}
+                treeData={treeData}
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
+                treeTitleRender={treeTitleRender}
                 notFoundContent={isLoading ?
                     <PathLoadingEmpty/> :
                     <PathNotFoundEmpty/>}
@@ -102,7 +119,9 @@ const PathsSelectFormItem = () => {
                         <PlusOutlined style={{color: "grey"}}/>
                 )}
                 onSearch={handleSearch}
-                onTreeExpand={handleTreeExpand}/>
+                onTreeExpand={(keys) => {
+                    useFileSystemTreeStore.getState().setExpandedKeys(keys as string[]);
+                }}/>
         </Form.Item>
     );
 };

@@ -4,6 +4,5 @@
      * clicking anywhere on the item background (not just the text) triggers the onClick handler for
      * expansion.
      */
-    display: inline-block;
-    width: 100%;
+    display: flex;
 }
