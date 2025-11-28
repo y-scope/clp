@@ -90,7 +90,7 @@ class SqlAdapter:
         pool_size: int,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ):
+    ) -> ConnectionPoolWrapper:
         """
         Creates a connection pool to the database.
 
@@ -109,7 +109,9 @@ class SqlAdapter:
         elif self.database_config.type == DatabaseEngine.MARIADB:
             dialect = mariadbconnector.dialect()
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                f"Database type '{self.database_config.type}' is not supported."
+            )
         return ConnectionPoolWrapper(
             pool.QueuePool(
                 _create_connection,
