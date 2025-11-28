@@ -109,6 +109,26 @@ def _add_clp_env_vars(
     """
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_TABLE_PREFIX"] = "clp_"
 
+    if not _add_db_env_vars(clp_config, env_vars):
+        return False
+
+    if not _add_archive_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
+        return False
+
+    if not _add_credentials_env_vars(clp_package_dir, env_vars):
+        return False
+
+    return _add_instance_id_env_var(clp_config, clp_package_dir, env_vars)
+
+
+def _add_db_env_vars(clp_config: dict[str, Any], env_vars: dict[str, str]) -> bool:
+    """
+    Adds environment variables for CLP database config values to `env_vars`.
+
+    :param clp_config:
+    :param env_vars:
+    :return: Whether the environment variables were successfully added.
+    """
     database_type = _get_config_value(clp_config, "database.type", "mariadb")
     if database_type not in {"mariadb", "mysql"}:
         logger.error(
@@ -124,6 +144,24 @@ def _add_clp_env_vars(
     )
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
+    return True
+
+
+def _add_archive_env_vars(
+    clp_config: dict[str, Any],
+    clp_config_file_path: Path,
+    clp_package_dir: Path,
+    env_vars: dict[str, str],
+) -> bool:
+    """
+    Adds environment variables for CLP archive storage config values to `env_vars`.
+
+    :param clp_config:
+    :param clp_config_file_path: Path to the file containing `clp_config`, for logging.
+    :param clp_package_dir:
+    :param env_vars:
+    :return: Whether the environment variables were successfully added.
+    """
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
     )
@@ -138,7 +176,8 @@ def _add_clp_env_vars(
                 clp_package_dir,
             )
         )
-    elif "s3" == clp_archive_output_storage_type:
+        return True
+    if "s3" == clp_archive_output_storage_type:
         env_vars["CLP_STAGED_ARCHIVES_DIR"] = str(
             _get_path_clp_config_value(
                 clp_config,
@@ -147,17 +186,24 @@ def _add_clp_env_vars(
                 clp_package_dir,
             )
         )
+        return _add_clp_s3_env_vars(clp_config, clp_config_file_path, env_vars)
 
-        if not _add_clp_s3_env_vars(clp_config, clp_config_file_path, env_vars):
-            return False
-    else:
-        logger.error(
-            "'%s' for %s is unsupported.",
-            clp_archive_output_storage_type,
-            archive_output_storage_key,
-        )
-        return False
+    logger.error(
+        "'%s' for %s is unsupported.",
+        clp_archive_output_storage_type,
+        archive_output_storage_key,
+    )
+    return False
 
+
+def _add_credentials_env_vars(clp_package_dir: Path, env_vars: dict[str, str]) -> bool:
+    """
+    Adds environment variables for CLP database credentials to `env_vars`.
+
+    :param clp_package_dir:
+    :param env_vars:
+    :return: Whether the environment variables were successfully added.
+    """
     credentials_file_path = clp_package_dir / "etc" / "credentials.yaml"
     if not credentials_file_path.exists():
         logger.error("'%s' doesn't exist. Did you start CLP?", credentials_file_path)
@@ -177,12 +223,25 @@ def _add_clp_env_vars(
         return False
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_username
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
+    return True
 
+
+def _add_instance_id_env_var(
+    clp_config: dict[str, Any], clp_package_dir: Path, env_vars: dict[str, str]
+) -> bool:
+    """
+    Adds environment variable for CLP package instance ID to `env_vars`.
+
+    :param clp_config:
+    :param clp_package_dir:
+    :param env_vars:
+    :return: Whether the environment variable was successfully added.
+    """
     instance_id = _get_clp_package_instance_id(clp_config, clp_package_dir)
-    if instance_id is not None:
-        env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
-
-    return instance_id is not None
+    if instance_id is None:
+        return False
+    env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
+    return True
 
 
 def _add_clp_s3_env_vars(
