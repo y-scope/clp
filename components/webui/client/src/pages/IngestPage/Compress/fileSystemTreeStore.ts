@@ -68,6 +68,13 @@ interface FileSystemTreeActions {
     fetchAndAppendTreeNodes: (path: string) => Promise<boolean>;
 
     /**
+     * Handles tree expansion events by updating the expanded keys and fetching missing nodes.
+     *
+     * @param newKeys
+     */
+    handleTreeExpansion: (expandedPaths: string[]) => void;
+
+    /**
      * Loads missing parent nodes for a given path.
      *
      * @param path
@@ -76,19 +83,11 @@ interface FileSystemTreeActions {
     loadMissingParents: (path: string) => Promise<boolean>;
 
     /**
-     * Handles tree expansion events by updating the expanded keys and fetching missing nodes.
-     *
-     * @param newKeys
-     */
-    handleTreeExpansion: (expandedPaths: string[]) => void;
-
-    /**
      * Toggles the state of a node identified by the given key.
      *
      * @param {string} key
      */
     toggleNode: (key: string) => void;
-
 
     setExpandedKeys: (keys: string[]) => void;
     setIsLoading: (loading: boolean) => void;
@@ -148,6 +147,22 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
         }
     },
 
+    handleTreeExpansion: (expandedPaths) => {
+        const {expandedKeys, fetchAndAppendTreeNodes, setExpandedKeys} = get();
+        const newlyExpandedKeys = expandedPaths.filter((key) => !expandedKeys.includes(key));
+
+        newlyExpandedKeys.forEach((key) => {
+            fetchAndAppendTreeNodes(key).catch((e: unknown) => {
+                console.error(e);
+                if (e instanceof Error) {
+                    message.error(`Failed to load directory: ${e.message}`);
+                }
+            });
+        });
+
+        setExpandedKeys(expandedPaths);
+    },
+
     loadMissingParents: async (path) => {
         const {treeData, fetchAndAppendTreeNodes} = get();
         const pathSegments = path.split("/").filter((segment) => 0 < segment.length);
@@ -171,14 +186,6 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
         return true;
     },
 
-    setExpandedKeys: (keys) => {
-        set({expandedKeys: keys});
-    },
-
-    setIsLoading: (loading) => {
-        set({isLoading: loading});
-    },
-
     toggleNode: (key) => {
         const {expandedKeys, fetchAndAppendTreeNodes, setExpandedKeys} = get();
         const isExpanded = expandedKeys.includes(key);
@@ -197,20 +204,12 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
         }
     },
 
-    handleTreeExpansion: (expandedPaths) => {
-        const {expandedKeys, fetchAndAppendTreeNodes, setExpandedKeys} = get();
-        const newlyExpandedKeys = expandedPaths.filter((key) => !expandedKeys.includes(key));
+    setExpandedKeys: (keys) => {
+        set({expandedKeys: keys});
+    },
 
-        newlyExpandedKeys.forEach((key) => {
-            fetchAndAppendTreeNodes(key).catch((e: unknown) => {
-                console.error(e);
-                if (e instanceof Error) {
-                    message.error(`Failed to load directory: ${e.message}`);
-                }
-            });
-        });
-
-        setExpandedKeys(expandedPaths);
+    setIsLoading: (loading) => {
+        set({isLoading: loading});
     },
 }));
 
