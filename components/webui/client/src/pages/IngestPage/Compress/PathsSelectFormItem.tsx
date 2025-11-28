@@ -1,4 +1,4 @@
-import {
+import React, {
     useCallback,
     useEffect,
 } from "react";
@@ -72,8 +72,12 @@ const PathsSelectFormItem = () => {
         if (isExpanded) {
             setExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey));
         } else {
-            setExpandedKeys([...currentExpandedKeys,
-                nodeKey]);
+            const {fetchAndAppendTreeNodes} = useFileSystemTreeStore.getState();
+            fetchAndAppendTreeNodes(nodeKey).catch(console.error);
+            setExpandedKeys([
+                ...currentExpandedKeys,
+                nodeKey,
+            ]);
         }
     }, []);
 
@@ -104,7 +108,7 @@ const PathsSelectFormItem = () => {
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={true}
                 treeCheckable={true}
-                treeData={treeData}
+                treeData={treeData as DataNode[]}
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}

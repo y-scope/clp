@@ -14,9 +14,9 @@ import {
  * Default values for the file system tree state.
  */
 const FILE_SYSTEM_TREE_STATE_DEFAULT = Object.freeze({
-    expandedKeys: [] as string[],
+    expandedKeys: [],
     isLoading: false,
-    loadedKeys: new Set(),
+    loadedKeys: new Set<string>(),
     treeData: [{id: "/", value: "/", title: "/", isLeaf: false}] as TreeNode[],
 });
 
