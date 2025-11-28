@@ -25,6 +25,8 @@ import {
 } from "./treeEventHandlers";
 
 
+const TREE_SELECT_LIST_HEIGHT = 512;
+
 /**
  * Renders an empty state display when a path is not found.
  *
@@ -106,7 +108,7 @@ const PathsSelectFormItem = () => {
             <TreeSelect
                 allowClear={true}
                 filterTreeNode={false}
-                listHeight={512}
+                listHeight={TREE_SELECT_LIST_HEIGHT}
                 loadData={handleLoadData}
                 multiple={true}
                 placeholder={"Please select paths to compress"}
