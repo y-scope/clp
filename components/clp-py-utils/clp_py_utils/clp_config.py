@@ -81,6 +81,7 @@ CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
+NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 # Specific types
@@ -338,7 +339,10 @@ class Database(BaseModel):
 
 
 class CompressionScheduler(BaseModel):
+    UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
+
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
 
 
