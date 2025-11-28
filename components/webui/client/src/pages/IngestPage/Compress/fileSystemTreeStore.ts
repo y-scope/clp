@@ -124,7 +124,7 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
         loadedKeys.add(path);
 
         try {
-            const fullResolvedPath = settings.LsPathPrefixToRemove + path;
+            const fullResolvedPath = settings.LogsInputRootDir + path;
             const fileItems = await listFiles(fullResolvedPath);
             const newNodes = (fileItems as FileItem[]).map(mapFileToTreeNode);
 

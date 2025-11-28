@@ -5,8 +5,8 @@ type Settings = {
     ClpQueryEngine: string;
     ClpStorageEngine: string;
     LogsInputType: string;
-    LsPathPrefixToRemove: string;
-    LsRoot: string;
+    LogsInputDir: string;
+    LogsInputRootDir: string;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
     SqlDbClpDatasetsTableName: string;

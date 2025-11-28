@@ -549,9 +549,9 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoPort"] = None
 
         if StorageType.FS == self._clp_config.logs_input.type:
-            client_settings_json_updates["LsRoot"] = str(container_clp_config.logs_input.directory)
-            client_settings_json_updates["LsPathPrefixToRemove"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
-            server_settings_json_updates["LsPathPrefixToRemove"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            client_settings_json_updates["LogsInputDir"] = str(container_clp_config.logs_input.directory)
+            client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
 
         resolved_client_settings_json_path = resolve_host_path_in_container(
             client_settings_json_path

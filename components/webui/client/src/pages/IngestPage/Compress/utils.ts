@@ -16,14 +16,14 @@ interface FileItem {
 
 
 /**
- * Normalizes a path for client display by removing the LsPathPrefixToRemove prefix in a container
+ * Normalizes a path for client display by removing the LogsInputRootDir prefix in a container
  * environment.
  *
  * @param fullPath
- * @return The normalized path relative to LsRoot
+ * @return The normalized path relative to LogsInputRootDir.
  */
 const removeLsPathPrefix = (fullPath: string): string => {
-    return fullPath.replace(new RegExp(`^${settings.LsPathPrefixToRemove}/*`), "/");
+    return fullPath.replace(new RegExp(`^${settings.LogsInputRootDir}/*`), "/");
 };
 
 
