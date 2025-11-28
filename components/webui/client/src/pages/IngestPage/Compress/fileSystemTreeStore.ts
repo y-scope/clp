@@ -61,7 +61,7 @@ interface FileSystemTreeActions {
      * Fetches and appends tree nodes for a given path.
      *
      * @param path
-     * @return Whether the operation succeeded.
+     * @return Whether the tree was updated.
      */
     fetchAndAppendTreeNodes: (path: string) => Promise<boolean>;
 
@@ -69,7 +69,7 @@ interface FileSystemTreeActions {
      * Loads missing parent nodes for a given path.
      *
      * @param path
-     * @return Whether the operation succeeded.
+     * @return Whether the tree was updated.
      */
     loadMissingParents: (path: string) => Promise<boolean>;
 
@@ -122,6 +122,7 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
             return false;
         }
         loadedKeys.add(path);
+        set({loadedKeys: loadedKeys});
 
         try {
             const fullResolvedPath = settings.LogsInputRootDir + path;
