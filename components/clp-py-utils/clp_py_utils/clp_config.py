@@ -263,8 +263,10 @@ class Database(BaseModel):
 
 
 class CompressionScheduler(BaseModel):
+    UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
+
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
-    max_concurrent_tasks_per_job: NonNegativeInt = 0  # A value of 0 disables the limit
+    max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
 
 
