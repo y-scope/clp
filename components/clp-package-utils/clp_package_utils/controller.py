@@ -182,9 +182,9 @@ class BaseController(ABC):
         # Credentials
         credentials = self._clp_config.database.credentials
         env_vars |= {
+            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
             CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
             CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
-            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
             CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
         }
 

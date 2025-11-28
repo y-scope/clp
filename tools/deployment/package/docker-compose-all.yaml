@@ -86,7 +86,7 @@ services:
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
-      CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:?Please set a value.}"
+      CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:

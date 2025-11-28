@@ -174,11 +174,15 @@ class Package(BaseModel):
 
 
 class ClpDbUserType(KebabCaseStrEnum):
+    """Database user types used by CLP components."""
+
     CLP = auto()
     ROOT = auto()
 
 
 class DbUserCredentials(BaseModel):
+    """Credentials for a database user."""
+
     username: NonEmptyStr | None = None
     password: NonEmptyStr | None = None
 
@@ -199,18 +203,33 @@ class Database(BaseModel):
         ClpDbUserType.ROOT: DbUserCredentials(),
     }
 
-    def ensure_credentials_loaded(self, user_type: ClpDbUserType):
+    def ensure_credentials_loaded(self, user_type: ClpDbUserType) -> None:
+        """
+        Ensures that credentials for the given `user_type` are loaded.
+
+        :param user_type:
+        :raise ValueError: If credentials for the given `user_type` are not loaded.
+        """
         if (
             self.credentials[user_type].username is None
             or self.credentials[user_type].password is None
         ):
-            raise ValueError("Credentials not loaded.")
+            err_msg = f"Credentials for user type '{user_type}' are not loaded."
+            raise ValueError(err_msg)
 
     def get_mysql_connection_params(
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ):
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by mysql's or mariadb's `connect()`
+        method, ensuring only credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of MySQL connection parameters.
+        """
         self.ensure_credentials_loaded(user_type)
 
         host = self.host
@@ -235,7 +254,15 @@ class Database(BaseModel):
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ):
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by CLP components and ensures only
+        credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of CLP connection parameters.
+        """
         self.ensure_credentials_loaded(user_type)
 
         host = self.host
@@ -246,7 +273,7 @@ class Database(BaseModel):
             # NOTE: clp-core does not distinguish between mysql and mariadb
             "host": host,
             "port": self.port,
-            "credentials": {user_type: self.credentials[user_type].model_dump()},
+            "credentials": {user_type.value: self.credentials[user_type].model_dump()},
             "database": self.name,
             "compress": self.compress,
             "autocommit": self.auto_commit,
@@ -255,11 +282,17 @@ class Database(BaseModel):
             "table_prefix": CLP_METADATA_TABLE_PREFIX,
         }
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump(exclude={"credentials"})
-        return d
+    def dump_to_primitive_dict(self) -> dict[str, Any]:
+        """:return: A dictionary representation of this model, excluding credentials."""
+        return self.model_dump(exclude={"credentials"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        """
+        Loads database credentials from a YAML file.
+
+        :param credentials_file_path:
+        :raise ValueError: If the file is empty or does not contain the expected keys.
+        """
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
@@ -283,11 +316,11 @@ class Database(BaseModel):
 
     def load_credentials_from_env(self, user_type: ClpDbUserType = ClpDbUserType.CLP):
         """
-        Loads database credentials from environment variables.
+        Loads database credentials from environment variables for the given user type.
 
-        :param user_type: User type whose credentials are to be loaded.
-
-        :raise ValueError: If any expected environment variable is not set.
+        :param user_type:
+        :raise ValueError: If the user type is not supported.
+        :raise ValueError: Propagates `_get_env_var`'s exceptions.
         """
         match user_type:
             case ClpDbUserType.CLP:

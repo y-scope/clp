@@ -65,7 +65,7 @@ class SqlAdapter:
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ) -> mysql.connector.MySQLConnection:
+    ) -> mysql.connector.abstracts.MySQLConnectionAbstract:
         try:
             connection = mysql.connector.connect(
                 **self.database_config.get_mysql_connection_params(
@@ -106,7 +106,14 @@ class SqlAdapter:
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ):
+    ) -> mysql.connector.abstracts.MySQLConnectionAbstract | mariadb.connection:
+        """
+        Creates a connection to the database.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be used to connect.
+        :return: The connection.
+        """
         if "mysql" == self.database_config.type:
             return self.create_mysql_connection(disable_localhost_socket_connection, user_type)
         if "mariadb" == self.database_config.type:
