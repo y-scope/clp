@@ -26,13 +26,13 @@ spec:
             - "-c"
             - >-
               until nc -z {{ include "clp.fullname" . }}-database 3306;
-                do echo waiting for database;
+                do echo Waiting for database to be ready...;
                 sleep 2;
               done
       containers:
         - name: "db-table-creator"
           image: "{{ include "clp.image.ref" . }}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_USER"
               valueFrom:

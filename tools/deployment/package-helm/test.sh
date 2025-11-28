@@ -1,6 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# TODO: to be deleted / migrated to integration tests
+# TODO: Migrate into integration test
+
+set -o errexit
+set -o nounset
+set -o pipefail
 
 kind delete cluster --name clp-test
 sudo rm -rf /tmp/clp

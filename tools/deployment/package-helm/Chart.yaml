@@ -1,7 +1,7 @@
 apiVersion: "v2"
 name: "clp"
 version: "0.1.0"
-description: "A Helm chart for CLP (Compressed Log Processor) package deployment"
+description: "A Helm chart for CLP's (Compressed Log Processor) package deployment"
 type: "application"
 appVersion: "0.6.1-dev"
 home: "https://github.com/y-scope/clp"
