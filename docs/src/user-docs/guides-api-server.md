@@ -1,26 +1,26 @@
-# API Server
+# Using the API server
 
-API Server provides a RESTful interface for interacting with CLP.
+`clp-json` includes an API server that provides a RESTful interface for interacting with CLP.
 
 :::{note}
-Currently, API Server only supports [clp-json][release-choices]. Support for `clp-text` will be
+Currently, the API server only supports [clp-json][release-choices]. Support for `clp-text` will be
 added in a future release.
 :::
 
-## Starting the API Server
+## Starting the API server
 
-CLP starts the API Server based on the `api_server` section in `etc/clp-config.yaml`, which includes
+CLP starts the API server based on the `api_server` section in `etc/clp-config.yaml`, which includes
 a default configuration. You can uncomment and modify this section to override the defaults.
 
-## API Reference
+## API reference
 
 All available API endpoints are defined in the [OpenAPI] Specification. You can explore the API
 using [Swagger UI][swagger-ui].
 
-## Example: Submitting Search Queries and Receiving Results
+## Example: Submitting search queries and receiving results
 
-API server exposes endpoints to submit search queries, and returns search results as a continuous
-stream using [Server-sent Events][server-sent-events].
+The API server exposes endpoints to submit search queries, and returns search results as a
+continuous stream using [Server-sent Events][server-sent-events].
 
 Assuming the server is running on the default host and port (`localhost:3001`), you can use the
 following commands to submit a query to clp-json and stream the results.
