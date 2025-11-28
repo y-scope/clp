@@ -16,7 +16,7 @@ import {
 import {SafeKey} from "antd/es/table/interface";
 import {DataNode} from "antd/es/tree";
 
-import useFileSystemTreeStore from "./fileSystemTreeStore";
+import useFsTreeStore from "./fsTreeStore";
 import styles from "./PathsSelectFormItem.module.css";
 import {
     handleLoadData,
@@ -57,9 +57,9 @@ const PathLoadingEmpty = () => (
  * @return
  */
 const PathsSelectFormItem = () => {
-    const expandedKeys = useFileSystemTreeStore((state) => state.expandedKeys);
-    const isLoading = useFileSystemTreeStore((state) => state.isLoading);
-    const treeData = useFileSystemTreeStore((state) => state.treeData);
+    const expandedKeys = useFsTreeStore((state) => state.expandedKeys);
+    const isLoading = useFsTreeStore((state) => state.isLoading);
+    const treeData = useFsTreeStore((state) => state.treeData);
 
     useEffect(() => {
         initializeTree();
@@ -67,12 +67,12 @@ const PathsSelectFormItem = () => {
 
     const handleTitleClick = useCallback((ev: React.MouseEvent, node: DataNode) => {
         ev.stopPropagation();
-        const {toggleNode} = useFileSystemTreeStore.getState();
+        const {toggleNode} = useFsTreeStore.getState();
         toggleNode(node.key as string);
     }, []);
 
     const handleTreeExpand = useCallback((newExpandedKeys: SafeKey[]) => {
-        const {handleTreeExpansion} = useFileSystemTreeStore.getState();
+        const {handleTreeExpansion} = useFsTreeStore.getState();
         handleTreeExpansion(newExpandedKeys as string[]);
     }, []);
 

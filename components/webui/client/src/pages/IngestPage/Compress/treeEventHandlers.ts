@@ -1,6 +1,6 @@
 import {TreeSelectProps} from "antd";
 
-import useFileSystemTreeStore from "./fileSystemTreeStore";
+import useFsTreeStore from "./fsTreeStore";
 import {extractBasePath} from "./utils";
 
 
@@ -10,7 +10,7 @@ import {extractBasePath} from "./utils";
  * @param node
  */
 const handleLoadData: NonNullable<TreeSelectProps["loadData"]> = async (node) => {
-    const {fetchAndAppendTreeNodes, setIsLoading} = useFileSystemTreeStore.getState();
+    const {fetchAndAppendTreeNodes, setIsLoading} = useFsTreeStore.getState();
     const path = node.value;
     if ("string" !== typeof path) {
         return;
@@ -39,7 +39,7 @@ const handleSearch: NonNullable<TreeSelectProps["onSearch"]> = (value) => {
         fetchAndAppendTreeNodes,
         loadMissingParents,
         setIsLoading,
-    } = useFileSystemTreeStore.getState();
+    } = useFsTreeStore.getState();
 
     setIsLoading(true);
     (async () => {
@@ -61,7 +61,7 @@ const handleSearch: NonNullable<TreeSelectProps["onSearch"]> = (value) => {
  * Initializes the file system tree by loading the root directory.
  */
 const initializeTree = () => {
-    const {fetchAndAppendTreeNodes} = useFileSystemTreeStore.getState();
+    const {fetchAndAppendTreeNodes} = useFsTreeStore.getState();
     fetchAndAppendTreeNodes("/").catch((e: unknown) => {
         console.error("Failed to load root directory", e);
     });

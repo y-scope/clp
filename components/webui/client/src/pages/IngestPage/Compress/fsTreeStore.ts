@@ -14,14 +14,14 @@ import {
 /**
  * Default values for the file system tree state.
  */
-const FILE_SYSTEM_TREE_STATE_DEFAULT = Object.freeze({
+const FS_TREE_STATE_DEFAULT = Object.freeze({
     expandedKeys: [],
     isLoading: false,
     loadedKeys: new Set<string>(),
     treeData: [{id: "/", value: "/", title: "/", isLeaf: false}] as TreeNode[],
 });
 
-interface FileSystemTreeValues {
+interface FsTreeValues {
     /**
      * Keys of expanded tree nodes.
      */
@@ -44,7 +44,7 @@ interface FileSystemTreeValues {
     treeData: TreeNode[];
 }
 
-interface FileSystemTreeActions {
+interface FsTreeActions {
     /**
      * Adds new tree nodes to the tree data.
      *
@@ -93,12 +93,12 @@ interface FileSystemTreeActions {
     setIsLoading: (loading: boolean) => void;
 }
 
-type FileSystemTreeState = FileSystemTreeValues & FileSystemTreeActions;
+type FsTreeState = FsTreeValues & FsTreeActions;
 
 
 // eslint-disable-next-line max-lines-per-function
-const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
-    ...FILE_SYSTEM_TREE_STATE_DEFAULT,
+const useFsTreeStore = create<FsTreeState>((set, get) => ({
+    ...FS_TREE_STATE_DEFAULT,
 
     addTreeNodes: (nodes) => {
         const {treeData} = get();
@@ -214,6 +214,6 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
 }));
 
 
-export type {FileSystemTreeState};
-export {FILE_SYSTEM_TREE_STATE_DEFAULT};
-export default useFileSystemTreeStore;
+export type {FsTreeState};
+export {FS_TREE_STATE_DEFAULT};
+export default useFsTreeStore;
