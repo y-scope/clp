@@ -234,7 +234,7 @@ services:
       - *volume_clp_config_readonly
       - *volume_clp_logs
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -268,7 +268,7 @@ services:
       - *volume_clp_logs
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
       - type: "bind"
         source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
@@ -305,7 +305,7 @@ services:
         target: 4000
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams:ro"
       - type: "bind"
         source: "./var/www/webui/client/settings.json"
         target: "/opt/clp/var/www/webui/client/settings.json"
