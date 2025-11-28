@@ -50,7 +50,9 @@ def main() -> int:
 
 def _get_repo_root() -> Path:
     path_str = subprocess.check_output(
-        ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, text=True
+        ["/usr/bin/env", "git", "rev-parse", "--show-toplevel"],
+        cwd=Path(__file__).parent,
+        text=True,
     )
     return Path(path_str.strip())
 
@@ -71,6 +73,7 @@ def _check_tracked_files(
     # NOTE: "-z" ensures the paths won't be quoted (while delimiting them using '\0')
     for path_str in subprocess.check_output(
         [
+            "/usr/bin/env",
             "git",
             "ls-files",
             "--cached",
@@ -89,7 +92,15 @@ def _check_tracked_files(
 
         try:
             for match in subprocess.check_output(
-                ["grep", "--extended-regexp", "--line-number", "--with-filename", pattern, path],
+                [
+                    "/usr/bin/env",
+                    "grep",
+                    "--extended-regexp",
+                    "--line-number",
+                    "--with-filename",
+                    pattern,
+                    path,
+                ],
                 cwd=repo_root,
                 text=True,
             ).splitlines():
