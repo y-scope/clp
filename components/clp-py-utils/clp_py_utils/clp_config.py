@@ -269,18 +269,15 @@ class Database(BaseModel):
         if disable_localhost_socket_connection and "localhost" == self.host:
             host = "127.0.0.1"
 
-        return {
-            # NOTE: clp-core does not distinguish between mysql and mariadb
-            "host": host,
-            "port": self.port,
-            "credentials": {user_type.value: self.credentials[user_type].model_dump()},
-            "database": self.name,
-            "compress": self.compress,
-            "autocommit": self.auto_commit,
-            "name": self.name,
-            "type": DatabaseEngine.MYSQL.value,
-            "table_prefix": CLP_METADATA_TABLE_PREFIX,
-        }
+        d = self.dump_to_primitive_dict()
+
+        d["credentials"] = {user_type: self.credentials[user_type].model_dump()}
+        d["host"] = host
+        d["table_prefix"] = CLP_METADATA_TABLE_PREFIX
+        # NOTE: clp-core does not distinguish between mysql and mariadb
+        d["type"] = DatabaseEngine.MYSQL.value
+
+        return d
 
     def dump_to_primitive_dict(self) -> dict[str, Any]:
         """:return: A dictionary representation of this model, excluding credentials."""
@@ -322,13 +319,15 @@ class Database(BaseModel):
         :raise ValueError: If the user type is not supported.
         :raise ValueError: Propagates `_get_env_var`'s exceptions.
         """
-        match user_type:
-            case ClpDbUserType.CLP:
-                user_env_var = CLP_DB_USER_ENV_VAR_NAME
-                pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
-            case ClpDbUserType.ROOT:
-                user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
-                pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        if user_type == ClpDbUserType.CLP:
+            user_env_var = CLP_DB_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.ROOT:
+            user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        else:
+            err_msg = f"Unsupported user type '{user_type}'."
+            raise ValueError(err_msg)
 
         self.credentials[user_type].username = _get_env_var(user_env_var)
         self.credentials[user_type].password = _get_env_var(pass_env_var)
