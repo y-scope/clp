@@ -17,6 +17,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
@@ -31,7 +32,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME, CONTAINER_INPUT_LOGS_ROOT_DIR,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -549,7 +550,9 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoPort"] = None
 
         if StorageType.FS == self._clp_config.logs_input.type:
-            client_settings_json_updates["LogsInputDir"] = str(container_clp_config.logs_input.directory)
+            client_settings_json_updates["LogsInputDir"] = str(
+                container_clp_config.logs_input.directory
+            )
             client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
             server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
 
