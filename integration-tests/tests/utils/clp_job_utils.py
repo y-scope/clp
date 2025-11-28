@@ -4,10 +4,7 @@ import logging
 from pathlib import Path
 
 import pytest
-from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATA_DIRECTORY_PATH,
-    CLP_DEFAULT_TMP_DIRECTORY_PATH,
-)
+from clp_py_utils.clp_config import CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
 
 from tests.utils.config import (
     PackageCompressJob,
@@ -105,6 +102,23 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
             '"backend_type":"startup","query_id":0}\n'
         ),
     ),
+    "search-by-file-path": PackageSearchJob(
+        job_name="search-by-file-path",
+        mode="clp-json",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
+        ignore_case=False,
+        count=False,
+        wildcard_query='message: "next transaction ID: 735; next OID: 16388"',
+        desired_result=(
+            '{"timestamp":"2023-03-27 00:26:35.873","pid":7813,'
+            '"session_id":"64211afb.1e85",'
+            '"line_num":4,"session_start":"2023-03-27 00:26:35 EDT","txid":0,'
+            '"error_severity":"DEBUG","message":"next transaction ID: 735; '
+            'next OID: 16388",'
+            '"backend_type":"startup","query_id":0}\n'
+        ),
+        file_subpath=Path("postgresql") / "postgresql.log",
+    ),
     "search-ignore-case": PackageSearchJob(
         job_name="search-ignore-case",
         mode="clp-json",
@@ -121,6 +135,55 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
             '"backend_type":"startup","query_id":0}\n'
         ),
     ),
+    "search-count-results": PackageSearchJob(
+        job_name="search-count-results",
+        mode="clp-json",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
+        ignore_case=False,
+        count=True,
+        wildcard_query='message: "next transaction ID: 735; next OID: 16388"',
+        desired_result="tags: [] count: 1\n",
+    ),
+    "search-count-by-time": PackageSearchJob(
+        job_name="search-count-by-time",
+        mode="clp-json",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
+        ignore_case=False,
+        count=False,
+        count_by_time=10,
+        wildcard_query='message: "next transaction ID: 735; next OID: 16388"',
+        desired_result="timestamp: 1679876795870 count: 1\n",
+    ),
+    "search-tagged-data": PackageSearchJob(
+        job_name="search-tagged-data",
+        mode="clp-json",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        ignore_case=False,
+        count=False,
+        wildcard_query='"Block Manager ID": {"Port": 38647}',
+        desired_result=(
+            '{"Event":"SparkListenerBlockManagerAdded","Block Manager ID":{"Executor ID":"1",'
+            '"Host":"10.1.0.17","Port":38647},"Maximum Memory":2101975449,'
+            '"Timestamp":1633614610933,"Maximum Onheap Memory":2101975449,'
+            '"Maximum Offheap Memory":0}\n'
+        ),
+    ),
+    "search-time-range": PackageSearchJob(
+        job_name="search-time-range",
+        mode="clp-json",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        ignore_case=False,
+        count=False,
+        wildcard_query='"Block Manager ID": {"Port": 38647}',
+        desired_result=(
+            '{"Event":"SparkListenerBlockManagerAdded","Block Manager ID":{"Executor ID":"1",'
+            '"Host":"10.1.0.17","Port":38647},"Maximum Memory":2101975449,'
+            '"Timestamp":1633614610933,"Maximum Onheap Memory":2101975449,'
+            '"Maximum Offheap Memory":0}\n'
+        ),
+        begin_time=1633614610931,
+        end_time=1633614610950,
+    ),
     "search-basic-hive": PackageSearchJob(
         job_name="search-basic-hive",
         mode="clp-text",
@@ -135,7 +198,90 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
             "org.apache.hadoop.mapreduce.task.reduce.Shuffle@79ec394e\n"
         ),
     ),
-    # Insert more search jobs here as needed.
+    "search-by-file-path-text": PackageSearchJob(
+        job_name="search-by-file-path-text",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        ignore_case=False,
+        count=False,
+        wildcard_query="Shuffle@79ec394e",
+        desired_result=(
+            "2015-03-23 05:40:08,988 INFO [main] "
+            "org.apache.hadoop.mapred.ReduceTask: "
+            "Using ShuffleConsumerPlugin: "
+            "org.apache.hadoop.mapreduce.task.reduce.Shuffle@79ec394e\n"
+        ),
+        file_subpath=(
+            Path("hive-24hr")
+            / "i-0ac90a05"
+            / "application_1427088391284_0001"
+            / "container_1427088391284_0001_01_000124"
+            / "syslog"
+        ),
+    ),
+    "search-ignore-case-text": PackageSearchJob(
+        job_name="search-ignore-case-text",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        ignore_case=True,
+        count=False,
+        wildcard_query="Shuffle@79ec394e",
+        desired_result=(
+            "2015-03-23 05:40:08,988 INFO [main] "
+            "org.apache.hadoop.mapred.ReduceTask: "
+            "Using ShuffleConsumerPlugin: "
+            "org.apache.hadoop.mapreduce.task.reduce.Shuffle@79ec394e\n"
+        ),
+    ),
+    "search-count-results-text": PackageSearchJob(
+        job_name="search-count-results-text",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        ignore_case=False,
+        count=True,
+        wildcard_query="Shuffle@79ec394e",
+        desired_result="tags: [] count: 1\n",
+    ),
+    "search-count-by-time-text": PackageSearchJob(
+        job_name="search-count-by-time-text",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        ignore_case=False,
+        count=False,
+        wildcard_query="Shuffle@79ec394e",
+        desired_result="timestamp: 1427089208900 count: 1\n",
+        count_by_time=100,
+    ),
+    "search-tagged-data-text": PackageSearchJob(
+        job_name="search-tagged-data-text",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-hive"],
+        ignore_case=False,
+        count=False,
+        wildcard_query="Shuffle@79ec394e",
+        desired_result=(
+            "2015-03-23 05:40:08,988 INFO [main] "
+            "org.apache.hadoop.mapred.ReduceTask: "
+            "Using ShuffleConsumerPlugin: "
+            "org.apache.hadoop.mapreduce.task.reduce.Shuffle@79ec394e\n"
+        ),
+    ),
+    "search-time-range-text": PackageSearchJob(
+        job_name="search-tagged-data-text",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        ignore_case=False,
+        count=False,
+        wildcard_query="Shuffle@79ec394e",
+        desired_result=(
+            "2015-03-23 05:40:08,988 INFO [main] "
+            "org.apache.hadoop.mapred.ReduceTask: "
+            "Using ShuffleConsumerPlugin: "
+            "org.apache.hadoop.mapreduce.task.reduce.Shuffle@79ec394e\n"
+        ),
+        begin_time=0,
+        end_time=1761165583429,
+    ),
 }
 
 
@@ -194,6 +340,12 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
     package_search_jobs = package_job_list.package_search_jobs
     clp_package_dir = package_instance.package_config.path_config.clp_package_dir
 
+    # Perform initial cleanup just in case there are any logs currently in archives.
+    archives_dir = clp_package_dir / CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
+    if archives_dir.exists():
+        for child in archives_dir.iterdir():
+            unlink(child)
+
     # For each compression job, run it, then its dependent search jobs, then cleanup.
     for package_compress_job in package_compress_jobs:
         # Run the compression job.
@@ -202,10 +354,9 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
         # Run the search jobs from the list that depend on the compression job.
         for package_search_job in package_search_jobs:
             if package_search_job.package_compress_job is package_compress_job:
-                search_with_clp_package(package_search_job, package_instance)
+                search_with_clp_package(request, package_search_job, package_instance)
 
         # Cleanup this compress job to prevent multiple compression jobs stored in archives.
-        data_dir = clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
-        tmp_dir = clp_package_dir / CLP_DEFAULT_TMP_DIRECTORY_PATH
-        for directory_path in (data_dir, tmp_dir):
-            unlink(directory_path)
+        if archives_dir.exists():
+            for child in archives_dir.iterdir():
+                unlink(child)

@@ -1,6 +1,5 @@
 """Provides utility functions for interacting with the CLP package."""
 
-import logging
 import subprocess
 
 import pytest
@@ -13,8 +12,6 @@ from tests.utils.config import (
     PackageInstance,
     PackageSearchJob,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def start_clp_package(package_config: PackageConfig) -> None:
@@ -126,6 +123,7 @@ def compress_with_clp_package(
 
 
 def search_with_clp_package(
+    request: pytest.FixtureRequest,
     search_job: PackageSearchJob,
     package_instance: PackageInstance,
 ) -> None:
@@ -176,11 +174,19 @@ def search_with_clp_package(
         )
     if search_job.ignore_case:
         search_cmd.append("--ignore-case")
-    if search_job.file_path is not None:
+    if search_job.file_subpath is not None:
+        # Resolve the original logs root using the same fixture as the compress job.
+        integration_test_logs: IntegrationTestLogs = request.getfixturevalue(
+            search_job.package_compress_job.log_fixture_name
+        )
+
+        # file_subpath is interpreted as relative to the extraction_dir of this dataset.
+        file_subpath = integration_test_logs.extraction_dir / search_job.file_subpath
+
         search_cmd.extend(
             [
                 "--file-path",
-                str(search_job.file_path),
+                str(file_subpath),
             ]
         )
     if search_job.count:

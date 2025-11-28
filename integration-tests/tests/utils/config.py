@@ -158,8 +158,8 @@ class PackageSearchJob:
     desired_result: str
     begin_time: int | None = None
     end_time: int | None = None
-    file_path: Path | None = None
     count_by_time: int | None = None
+    file_subpath: Path | None = None
 
 
 @dataclass(frozen=True)
