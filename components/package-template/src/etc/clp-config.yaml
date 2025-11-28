@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 #package:
 #  storage_engine: "clp-s"
 #  query_engine: "clp-s"
@@ -13,6 +14,8 @@
 #
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yaml"
+#
+#bundled: ["database", "queue", "redis", "results_cache"]
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"

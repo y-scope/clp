@@ -8,7 +8,7 @@ from contextlib import closing
 
 from pydantic import ValidationError
 
-from .clp_config import ClpConfig
+from .clp_config import ClpConfig, ClpDbUserType
 from .core import read_yaml_config_file
 from .sql_adapter import SqlAdapter
 
@@ -245,7 +245,7 @@ def main(argv):
     try:
         sql_adapter = SqlAdapter(clp_config.database)
         with (
-            closing(sql_adapter.create_root_mariadb_connection()) as db_conn,
+            closing(sql_adapter.create_connection(user_type=ClpDbUserType.ROOT)) as db_conn,
             closing(db_conn.cursor()) as db_cursor,
         ):
             clp_db_user = clp_config.database.username
