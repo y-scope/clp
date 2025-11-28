@@ -33,7 +33,8 @@ interface FileSystemTreeValues {
     isLoading: boolean;
 
     /**
-     * Keys of nodes that have been loaded.
+     * Keys of directory nodes whose children have been fetched from the server. Used to prevent
+     * redundant API calls when expanding/collapsing nodes.
      */
     loadedKeys: Set<string>;
 
