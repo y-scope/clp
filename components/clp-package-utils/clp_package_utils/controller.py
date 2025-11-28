@@ -14,10 +14,16 @@ from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
     BundledService,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_USER_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     ClpConfig,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
@@ -150,7 +156,9 @@ class BaseController(ABC):
         # Runtime config
         env_vars |= {
             "CLP_DB_CONTAINER_IMAGE_REF": (
-                "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
+                "mysql:8.0.23"
+                if self._clp_config.database.type == DatabaseEngine.MYSQL
+                else "mariadb:10-jammy"
             ),
         }
 
@@ -175,9 +183,12 @@ class BaseController(ABC):
         }
 
         # Credentials
+        credentials = self._clp_config.database.credentials
         env_vars |= {
-            "CLP_DB_PASS": self._clp_config.database.password,
-            "CLP_DB_USER": self._clp_config.database.username,
+            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+            CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
+            CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
         }
 
         return env_vars
