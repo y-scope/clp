@@ -48,7 +48,7 @@ spec:
       containers:
         - name: "reducer"
           image: "{{ include "clp.image.ref" . }}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_HOME"
               value: "/opt/clp"

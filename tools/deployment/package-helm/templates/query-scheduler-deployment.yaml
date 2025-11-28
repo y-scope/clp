@@ -58,7 +58,7 @@ spec:
       containers:
         - name: "query-scheduler"
           image: "{{ include "clp.image.ref" . }}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "BROKER_URL"
               value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"

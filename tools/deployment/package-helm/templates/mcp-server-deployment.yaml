@@ -47,7 +47,7 @@ spec:
       containers:
         - name: "mcp-server"
           image: "{{ include "clp.image.ref" . }}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_USER"
               valueFrom:

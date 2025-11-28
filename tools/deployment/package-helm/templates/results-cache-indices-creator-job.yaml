@@ -32,7 +32,7 @@ spec:
       containers:
         - name: "results-cache-indices-creator"
           image: "{{ include "clp.image.ref" . }}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
