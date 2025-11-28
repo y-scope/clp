@@ -2,6 +2,11 @@
 
 API Server provides a RESTful interface for interacting with CLP.
 
+:::{note}
+Currently, API Server only supports [clp-json][release-choices]. Support for `clp-text` will be
+added in a future release.
+:::
+
 ## Starting the API Server
 
 CLP starts the API Server based on the `api_server` section in `etc/clp-config.yaml`, which includes
@@ -60,5 +65,6 @@ All available API endpoints are defined in the [OpenAPI] Specification. You can 
 using [Swagger UI][swagger-ui].
 
 [OpenAPI]: https://swagger.io/specification/
+[release-choices]: ./quick-start/index.md#choosing-a-flavor
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
 [swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/main/_static/openapi.json
