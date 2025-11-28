@@ -10,6 +10,7 @@ import {
 import {
     Empty,
     Form,
+    message,
     Spin,
     TreeSelect,
 } from "antd";
@@ -62,8 +63,8 @@ const PathsSelectFormItem = () => {
         initializeTree();
     }, []);
 
-    const handleTitleClick = useCallback((e: React.MouseEvent, node: DataNode) => {
-        e.stopPropagation();
+    const handleTitleClick = useCallback((ev: React.MouseEvent, node: DataNode) => {
+        ev.stopPropagation();
         const nodeKey = node.key as string;
         const {setExpandedKeys} = useFileSystemTreeStore.getState();
         const currentExpandedKeys = useFileSystemTreeStore.getState().expandedKeys;
@@ -73,7 +74,12 @@ const PathsSelectFormItem = () => {
             setExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey));
         } else {
             const {fetchAndAppendTreeNodes} = useFileSystemTreeStore.getState();
-            fetchAndAppendTreeNodes(nodeKey).catch(console.error);
+            fetchAndAppendTreeNodes(nodeKey).catch((e: unknown) => {
+                console.error(e);
+                if (e instanceof Error) {
+                    message.error(`Failed to load directory: ${e.message}`);
+                }
+            });
             setExpandedKeys([
                 ...currentExpandedKeys,
                 nodeKey,
