@@ -51,10 +51,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     };
                 });
             } catch (e: unknown) {
-                if (reply.sent) {
-                    return Promise.resolve();
-                }
-
                 const errMsg = "Unable to list files";
                 request.log.error(e, errMsg);
 
