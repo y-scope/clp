@@ -10,10 +10,10 @@ import {
 import {
     Empty,
     Form,
-    message,
     Spin,
     TreeSelect,
 } from "antd";
+import {SafeKey} from "antd/es/table/interface";
 import {DataNode} from "antd/es/tree";
 
 import useFileSystemTreeStore from "./fileSystemTreeStore";
@@ -67,25 +67,13 @@ const PathsSelectFormItem = () => {
 
     const handleTitleClick = useCallback((ev: React.MouseEvent, node: DataNode) => {
         ev.stopPropagation();
-        const nodeKey = node.key as string;
-        const currentExpandedKeys = useFileSystemTreeStore.getState().expandedKeys;
-        const isExpanded = currentExpandedKeys.includes(nodeKey);
+        const {toggleNode} = useFileSystemTreeStore.getState();
+        toggleNode(node.key as string);
+    }, []);
 
-        const {setExpandedKeys, fetchAndAppendTreeNodes} = useFileSystemTreeStore.getState();
-        if (isExpanded) {
-            setExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey));
-        } else {
-            fetchAndAppendTreeNodes(nodeKey).catch((e: unknown) => {
-                console.error(e);
-                if (e instanceof Error) {
-                    message.error(`Failed to load directory: ${e.message}`);
-                }
-            });
-            setExpandedKeys([
-                ...currentExpandedKeys,
-                nodeKey,
-            ]);
-        }
+    const handleTreeExpand = useCallback((newExpandedKeys: SafeKey[]) => {
+        const {handleTreeExpansion} = useFileSystemTreeStore.getState();
+        handleTreeExpansion(newExpandedKeys as string[]);
     }, []);
 
     const treeTitleRender = useCallback((node: DataNode) => (
@@ -130,9 +118,7 @@ const PathsSelectFormItem = () => {
                         <PlusOutlined style={{color: "grey"}}/>
                 )}
                 onSearch={handleSearch}
-                onTreeExpand={(keys) => {
-                    useFileSystemTreeStore.getState().setExpandedKeys(keys as string[]);
-                }}/>
+                onTreeExpand={handleTreeExpand}/>
         </Form.Item>
     );
 };

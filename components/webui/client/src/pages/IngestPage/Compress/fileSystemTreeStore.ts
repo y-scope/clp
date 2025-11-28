@@ -76,17 +76,21 @@ interface FileSystemTreeActions {
     loadMissingParents: (path: string) => Promise<boolean>;
 
     /**
-     * Sets the expanded keys for the tree.
+     * Handles tree expansion events by updating the expanded keys and fetching missing nodes.
      *
-     * @param keys
+     * @param newKeys
      */
-    setExpandedKeys: (keys: string[]) => void;
+    handleTreeExpansion: (expandedPaths: string[]) => void;
 
     /**
-     * Sets the loading state.
+     * Toggles the state of a node identified by the given key.
      *
-     * @param loading
+     * @param {string} key
      */
+    toggleNode: (key: string) => void;
+
+
+    setExpandedKeys: (keys: string[]) => void;
     setIsLoading: (loading: boolean) => void;
 }
 
@@ -173,6 +177,40 @@ const useFileSystemTreeStore = create<FileSystemTreeState>((set, get) => ({
 
     setIsLoading: (loading) => {
         set({isLoading: loading});
+    },
+
+    toggleNode: (key) => {
+        const {expandedKeys, fetchAndAppendTreeNodes, setExpandedKeys} = get();
+        const isExpanded = expandedKeys.includes(key);
+
+        if (isExpanded) {
+            setExpandedKeys(expandedKeys.filter((k) => k !== key));
+        } else {
+            fetchAndAppendTreeNodes(key).catch((e: unknown) => {
+                console.error(e);
+                if (e instanceof Error) {
+                    message.error(`Failed to load directory: ${e.message}`);
+                }
+            });
+            setExpandedKeys([...expandedKeys,
+                key]);
+        }
+    },
+
+    handleTreeExpansion: (expandedPaths) => {
+        const {expandedKeys, fetchAndAppendTreeNodes, setExpandedKeys} = get();
+        const newlyExpandedKeys = expandedPaths.filter((key) => !expandedKeys.includes(key));
+
+        newlyExpandedKeys.forEach((key) => {
+            fetchAndAppendTreeNodes(key).catch((e: unknown) => {
+                console.error(e);
+                if (e instanceof Error) {
+                    message.error(`Failed to load directory: ${e.message}`);
+                }
+            });
+        });
+
+        setExpandedKeys(expandedPaths);
     },
 }));
 
