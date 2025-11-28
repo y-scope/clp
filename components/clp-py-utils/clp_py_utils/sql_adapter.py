@@ -89,6 +89,7 @@ class SqlAdapter:
         logger: logging.Logger,
         pool_size: int,
         disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
     ):
         """
         Creates a connection pool to the database.
@@ -101,7 +102,7 @@ class SqlAdapter:
         """
 
         def _create_connection():
-            return self.create_connection(disable_localhost_socket_connection)
+            return self.create_connection(disable_localhost_socket_connection, user_type)
 
         if self.database_config.type == DatabaseEngine.MYSQL:
             dialect = mysqlconnector.dialect()
