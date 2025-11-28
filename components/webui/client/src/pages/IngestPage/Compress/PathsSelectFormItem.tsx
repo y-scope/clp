@@ -66,14 +66,13 @@ const PathsSelectFormItem = () => {
     const handleTitleClick = useCallback((ev: React.MouseEvent, node: DataNode) => {
         ev.stopPropagation();
         const nodeKey = node.key as string;
-        const {setExpandedKeys} = useFileSystemTreeStore.getState();
         const currentExpandedKeys = useFileSystemTreeStore.getState().expandedKeys;
         const isExpanded = currentExpandedKeys.includes(nodeKey);
 
+        const {setExpandedKeys, fetchAndAppendTreeNodes} = useFileSystemTreeStore.getState();
         if (isExpanded) {
             setExpandedKeys(currentExpandedKeys.filter((key) => key !== nodeKey));
         } else {
-            const {fetchAndAppendTreeNodes} = useFileSystemTreeStore.getState();
             fetchAndAppendTreeNodes(nodeKey).catch((e: unknown) => {
                 console.error(e);
                 if (e instanceof Error) {
