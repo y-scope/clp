@@ -446,6 +446,9 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"150201  1:02:03", R"(\y\m\d \k:\M:\S)", 1'422'752'523'000'000'000},
                 {"01 Feb 2015 01:02:03,004", R"(\d \b \Y \H:\M:\S,\3)", 1'422'752'523'004'000'000},
                 {"Feb 01, 2015  1:02:03 AM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'752'523'000'000'000},
+                {"Feb 01, 2015 01:02:03 AM", R"(\b \d, \Y \I:\M:\S \p)", 1'422'752'523'000'000'000},
+                {"Feb 01, 2015 12:02:03 AM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'748'923'000'000'000},
+                {"Feb 01, 2015 12:02:03 PM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'792'123'000'000'000},
                 {"February 01, 2015 01:02", R"(\B \d, \Y \H:\M)", 1'422'752'520'000'000'000},
                 {"[01/Feb/2015:01:02:03", R"([\d/\b/\Y:\H:\M:\S)", 1'422'752'523'000'000'000},
                 {"Sun Feb  1 01:02:03 2015", R"(\a \b \e \H:\M:\S \Y)", 1'422'752'523'000'000'000},
@@ -494,7 +497,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                  1'765'602'000'000'000},
                 {"Jan 21 11:56:42 UTC+0130",
                  R"(\b \d \H:\M:\S UTC\z{+0130})",
-                 1'765'602'000'000'000}
+                 1'765'602'000'000'000},
+                {"1895-11-20T21:55:46,010", R"(\Y-\m-\dT\H:\M:\S,\3)", -2'338'769'053'990'000'000}
         };
 
         auto default_patterns_result{get_all_default_timestamp_patterns()};
@@ -512,7 +516,6 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
             REQUIRE(expected_result.pattern == result.value().second);
-
             auto const searched_result{search_known_timestamp_patterns(
                     expected_result.timestamp,
                     default_patterns,
@@ -523,6 +526,15 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);
             REQUIRE(expected_result.pattern == searched_result.value().second);
             // NOLINTEND(bugprone-unchecked-optional-access)
+
+            std::string marshalled_timestamp;
+            auto const marshal_result{marshal_timestamp(
+                    expected_result.epoch_timestamp,
+                    timestamp_pattern_result.value(),
+                    marshalled_timestamp
+            )};
+            REQUIRE_FALSE(marshal_result.has_error());
+            REQUIRE(expected_result.timestamp == marshalled_timestamp);
         }
     }
 }
