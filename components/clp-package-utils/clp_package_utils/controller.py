@@ -343,8 +343,8 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            SPIDER_DB_PASS_ENV_VAR_NAME: self._clp_config.spider_db.password,
-            SPIDER_DB_USER_ENV_VAR_NAME: self._clp_config.spider_db.username,
+            SPIDER_DB_PASS_ENV_VAR_NAME: self._clp_config.spider_db.credentials.password,
+            SPIDER_DB_USER_ENV_VAR_NAME: self._clp_config.spider_db.credentials.username,
         }
 
         return env_vars

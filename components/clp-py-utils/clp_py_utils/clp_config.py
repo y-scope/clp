@@ -352,6 +352,9 @@ class Database(BaseModel):
 class SpiderDb(Database):
     name: str = "spider-db"
 
+    # Override credentials for spider db user
+    credentials: DbUserCredentials = DbUserCredentials()
+
     @field_validator("type")
     @classmethod
     def validate_type(cls, value):
@@ -361,22 +364,29 @@ class SpiderDb(Database):
 
     def get_container_url(self):
         self.ensure_credentials_loaded()
-        return f"jdbc:mariadb://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/{self.name}?user={self.username}&password={self.password}"
+        return (
+            f"jdbc:mariadb://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
+            f"{self.name}?user={self.credentials.username}&password={self.credentials.password}"
+        )
 
     def load_credentials_from_env(self):
         """
         :raise ValueError: if any expected environment variable is not set.
         """
-        self.username = _get_env_var(SPIDER_DB_USER_ENV_VAR_NAME)
-        self.password = _get_env_var(SPIDER_DB_PASS_ENV_VAR_NAME)
+        self.credentials.username = _get_env_var(SPIDER_DB_USER_ENV_VAR_NAME)
+        self.credentials.password = _get_env_var(SPIDER_DB_PASS_ENV_VAR_NAME)
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.username")
-            self.password = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.password")
+            self.credentials.username = get_config_value(
+                config, f"{SPIDER_DB_COMPONENT_NAME}.username"
+            )
+            self.credentials.password = get_config_value(
+                config, f"{SPIDER_DB_COMPONENT_NAME}.password"
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
