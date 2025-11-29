@@ -419,7 +419,7 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives:ro"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
