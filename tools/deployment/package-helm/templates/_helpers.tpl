@@ -101,7 +101,7 @@ Creates a local PersistentVolume.
 @param {string} name PV name
 @param {string} component Component label
 @param {string} capacity Storage capacity
-@param {string[]} accessModes Access modes (list)
+@param {string[]} accessModes Access modes
 @param {string} hostPath Absolute path on host
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
