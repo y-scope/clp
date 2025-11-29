@@ -38,7 +38,6 @@ clpConfig:
 
   database:
     type: "mariadb"  # "mariadb" or "mysql"
-    host: "localhost"
     port: 30306
     name: "clp-db"
 
@@ -47,30 +46,25 @@ clpConfig:
     logging_level: "INFO"
 
   query_scheduler:
-    host: "localhost"
     port: 7000
     jobs_poll_delay: 0.1  # seconds
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
 
   queue:
-    host: "localhost"
     port: 5672
 
   redis:
-    host: "localhost"
     port: 6379
     query_backend_database: 0
     compression_backend_database: 1
 
   reducer:
-    host: "localhost"
     base_port: 14009
     logging_level: "INFO"
     upsert_interval: 100  # milliseconds
 
   results_cache:
-    host: "localhost"
     port: 30017
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"
@@ -85,13 +79,11 @@ clpConfig:
     logging_level: "INFO"
 
   webui:
-    host: "localhost"
     port: 30400
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
   mcp_server: null
-  #   host: "localhost"
   #   port: 30800
   #   logging_level: "INFO"
 
@@ -145,7 +137,6 @@ clpConfig:
 
   # API server config
   api_server:
-    host: "localhost"
     port: 30301
     default_max_num_query_results: 1000
     query_job_polling:
@@ -154,7 +145,6 @@ clpConfig:
 
   # Presto client config
   presto: null
-  #   host: "localhost"
   #   port: 30889
 
   # Location where other data (besides archives) are stored. It will be created if
