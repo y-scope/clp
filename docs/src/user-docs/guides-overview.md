@@ -34,10 +34,10 @@ How to deploy CLP across multiple hosts.
 :::
 
 :::{grid-item-card}
-:link: guides-api-server
-API Server
+:link: guides-using-the-api-server
+Using the API server
 ^^^
-How to use the API Server to query compressed logs in CLP.
+How to use the API server to interact with CLP.
 :::
 
 :::{grid-item-card}
