@@ -51,11 +51,7 @@ clpConfig:
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
 
-  queue:
-    port: 5672
-
   redis:
-    port: 6379
     query_backend_database: 0
     compression_backend_database: 1
 
