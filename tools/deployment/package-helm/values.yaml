@@ -15,8 +15,8 @@ securityContext:
 image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
-    pullPolicy: "IfNotPresent"
-    tag: "nightly"
+    pullPolicy: "Always"
+    tag: "main"
 
 workerConcurrency: 8
 
