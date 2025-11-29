@@ -62,8 +62,7 @@ spec:
                   ping
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            exec:
-              <<: *redis-health-check
+            exec: *redis-health-check
       volumes:
         - name: "config"
           configMap:
