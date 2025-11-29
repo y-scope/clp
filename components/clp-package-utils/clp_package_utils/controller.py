@@ -220,6 +220,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
+        # Paths
+        env_vars |= {
+            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
         return env_vars
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
