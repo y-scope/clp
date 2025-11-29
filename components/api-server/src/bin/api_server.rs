@@ -53,6 +53,7 @@ fn set_up_logging() -> anyhow::Result<WorkerGuard> {
         .event_format(
             tracing_subscriber::fmt::format()
                 .with_level(true)
+                .with_target(false)
                 .with_file(true)
                 .with_line_number(true)
                 .json(),
