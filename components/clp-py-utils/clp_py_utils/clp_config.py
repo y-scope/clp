@@ -362,6 +362,15 @@ class SpiderDb(Database):
             raise ValueError("Spider only supports MariaDB for the metadata database.")
         return value
 
+    def ensure_credentials_loaded(self, **kwargs) -> None:
+        """
+        Ensures that credentials are loaded.
+
+        :raise ValueError: If credentials are not loaded.
+        """
+        if self.credentials.username is None or self.credentials.password is None:
+            raise ValueError("Credentials for spider_db are not loaded.")
+
     def get_container_url(self):
         self.ensure_credentials_loaded()
         return (
@@ -369,7 +378,7 @@ class SpiderDb(Database):
             f"{self.name}?user={self.credentials.username}&password={self.credentials.password}"
         )
 
-    def load_credentials_from_env(self):
+    def load_credentials_from_env(self, **kwargs) -> None:
         """
         :raise ValueError: if any expected environment variable is not set.
         """
