@@ -229,8 +229,8 @@ def main(argv):
     try:
         clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
-        clp_config.database.load_credentials_from_config(user_type=ClpDbUserType.CLP)
-        clp_config.database.load_credentials_from_config(user_type=ClpDbUserType.ROOT)
+        clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.CLP)
+        clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.ROOT)
         if clp_config.spider_db is None:
             logger.error("Spider database configuration not found in CLP configuration.")
             return -1
@@ -251,9 +251,9 @@ def main(argv):
             closing(db_conn.cursor()) as db_cursor,
         ):
             clp_db_user = clp_config.database.credentials[ClpDbUserType.CLP].username
-            spider_db_name = spider_db_config.credentials.name
+            spider_db_name = spider_db_config.name
             spider_db_user = spider_db_config.credentials.username
-            spider_db_password = spider_db_config.password
+            spider_db_password = spider_db_config.credentials.password
             if not _validate_name(spider_db_name):
                 logger.error(f"Invalid database name: {spider_db_name}")
                 return -1
