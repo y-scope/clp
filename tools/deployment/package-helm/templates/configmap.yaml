@@ -51,7 +51,6 @@ data:
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
-
     presto: {{ .Values.clpConfig.presto }}
     query_scheduler:
       host: {{ include "clp.fullname" . }}-query-scheduler
