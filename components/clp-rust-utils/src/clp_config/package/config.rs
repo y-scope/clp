@@ -15,6 +15,7 @@ pub struct Config {
     pub results_cache: ResultsCache,
     pub api_server: ApiServer,
     pub logs_directory: String,
+    pub stream_output: StreamOutput,
 }
 
 impl Default for Config {
@@ -25,6 +26,7 @@ impl Default for Config {
             results_cache: ResultsCache::default(),
             api_server: ApiServer::default(),
             logs_directory: "var/log".to_owned(),
+            stream_output: StreamOutput::default(),
         }
     }
 }
@@ -144,6 +146,35 @@ impl Default for ResultsCache {
             host: "localhost".to_owned(),
             port: 27017,
             db_name: "clp-query-results".to_owned(),
+        }
+    }
+}
+
+/// Mirror of `clp_py_utils.clp_config.StreamOutput`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Default, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct StreamOutput {
+    pub storage: StreamOutputStorage,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(tag = "type")]
+pub enum StreamOutputStorage {
+    #[serde(rename = "fs")]
+    Fs { directory: String },
+
+    #[serde(rename = "s3")]
+    S3 { staging_directory: String },
+}
+
+impl Default for StreamOutputStorage {
+    fn default() -> Self {
+        Self::Fs {
+            directory: "var/data/streams".to_owned(),
         }
     }
 }
