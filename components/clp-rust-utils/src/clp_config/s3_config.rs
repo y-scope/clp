@@ -1,4 +1,3 @@
-use secrecy::SecretString;
 use serde::Serialize;
 
 /// Represents the configuration for connecting to an S3 bucket.

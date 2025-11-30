@@ -1,8 +1,11 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use clp_rust_utils::s3::ObjectMetadata;
-use thiserror::Error;
+use clp_rust_utils::{
+    s3::{ObjectMetadata, create_new_client as create_s3_client},
+    sqs::create_new_client as create_sqs_client,
+};
+use secrecy::SecretString;
 use tokio::sync::{Mutex, mpsc};
 use uuid::Uuid;
 
@@ -12,7 +15,8 @@ use crate::{
     ingestion_job::{IngestionJob, S3Scanner, S3ScannerConfig, SqsListenerConfig},
 };
 
-#[derive(Error, Debug)]
+/// Errors for ingestion job manager operations.
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Log ingestor internal error: {0}")]
     InternalError(#[from] anyhow::Error),
@@ -24,28 +28,57 @@ pub enum Error {
     PrefixConflict(String),
 }
 
+/// An async-safe manager for creating and managing ingestion jobs.
 pub struct IngestionJobManager {
     job_table: Arc<Mutex<HashMap<Uuid, IngestionJobTableEntry>>>,
     buffer_timeout: Duration,
     buffer_size_threshold: u64,
     channel_capacity: usize,
+    aws_access_key_id: String,
+    aws_secret_access_key: SecretString,
 }
 
 impl IngestionJobManager {
+    /// Creates a new S3 scanner ingestion job.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Uuid)` containing the job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::create`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
-        let prefix = config.prefix.clone();
-        let s3_client_manager = self.create_s3_client_manager();
-        self.create(prefix, move |job_id, sender| {
+        let key_prefix = config.base.key_prefix.clone();
+        let s3_client_manager = self
+            .create_s3_client_manager(config.base.region.as_str())
+            .await;
+        self.create(key_prefix, move |job_id, sender| {
             let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
             IngestionJob::S3Scanner(scanner)
         })
         .await
     }
 
+    /// Creates a new SQS listener ingestion job.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Uuid)` containing the job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::create`]'s return values on failure.
     pub async fn create_sqs_listener(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
-        let prefix = config.prefix.clone();
-        let sqs_client_manager = self.create_sqs_client_manager();
-        self.create(prefix, move |job_id, sender| {
+        let key_prefix = config.base.key_prefix.clone();
+        let sqs_client_manager = self
+            .create_sqs_client_manager(config.base.region.as_str())
+            .await;
+        self.create(key_prefix, move |job_id, sender| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
                 sqs_client_manager,
@@ -57,6 +90,19 @@ impl IngestionJobManager {
         .await
     }
 
+    /// Shuts down and removes an ingestion job by its ID.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::JobNotFound`] if the given job ID does not exist.
+    /// * Forwards [`IngestionJob::shutdown_and_join`]'s return value on failure.
+    /// * Forwards [`Listener::shutdown_and_join`]'s return value on failure.
     pub async fn shutdown_and_remove_job(&self, job_id: Uuid) -> Result<(), Error> {
         let mut job_table = self.job_table.lock().await;
         let job_to_remove = job_table.remove(&job_id);
@@ -74,20 +120,20 @@ impl IngestionJobManager {
 
     async fn create<JobCreationCallback>(
         &self,
-        prefix: String,
+        key_prefix: String,
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
         JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
         let mut job_table = self.job_table.lock().await;
         for table_entry in job_table.values() {
-            if is_mutually_prefix_free(table_entry.prefix.as_str(), prefix.as_str()) {
+            if is_mutually_prefix_free(table_entry.prefix.as_str(), key_prefix.as_str()) {
                 continue;
             }
             return Err(Error::PrefixConflict(format!(
                 "Cannot create ingestion job with prefix '{}' as it conflicts with existing job \
                  with prefix '{}'",
-                prefix, table_entry.prefix
+                key_prefix, table_entry.prefix
             )));
         }
 
@@ -109,7 +155,7 @@ impl IngestionJobManager {
             IngestionJobTableEntry {
                 ingestion_job: create_ingestion_job(job_id, sender),
                 listener: job_listener,
-                prefix,
+                prefix: key_prefix,
             },
         );
         drop(job_table);
@@ -117,17 +163,42 @@ impl IngestionJobManager {
         Ok(job_id)
     }
 
+    /// # Returns
+    ///
+    /// A new S3 client (wrapped by [`S3ClientWrapper`]) for the specified region.
+    async fn create_s3_client_manager(&self, region: &str) -> S3ClientWrapper {
+        let s3_endpoint = format!("https://s3.{region}.amazonaws.com");
+        let s3_client = create_s3_client(
+            s3_endpoint.as_str(),
+            region,
+            self.aws_access_key_id.as_str(),
+            &self.aws_secret_access_key,
+        )
+        .await;
+        S3ClientWrapper::from(s3_client)
+    }
+
+    /// # Returns
+    ///
+    /// A new SQS client (wrapped by [`SqsClientWrapper`]) for the specified region.
+    async fn create_sqs_client_manager(&self, region: &str) -> SqsClientWrapper {
+        let sqs_endpoint = format!("https://sqs.{region}.amazonaws.com");
+        let sqs_client = create_sqs_client(
+            sqs_endpoint.as_str(),
+            region,
+            self.aws_access_key_id.as_str(),
+            &self.aws_secret_access_key,
+        )
+        .await;
+        SqsClientWrapper::from(sqs_client)
+    }
+
+    /// # Returns
+    ///
+    /// A new listener for receiving object metadata to ingest.
     fn create_listener(&self) -> Listener {
         let buffer = Buffer::new(CompressionJobSubmitter {}, self.buffer_size_threshold);
         Listener::spawn(buffer, self.buffer_timeout, self.channel_capacity)
-    }
-
-    fn create_s3_client_manager(&self) -> S3ClientWrapper {
-        todo!("Not implemented yet")
-    }
-
-    fn create_sqs_client_manager(&self) -> SqsClientWrapper {
-        todo!("Not implemented yet")
     }
 }
 
@@ -150,8 +221,8 @@ impl BufferSubmitter for CompressionJobSubmitter {
 
 /// # Returns:
 ///
-/// Whether the two strings are mutually prefix-free, meaning that `a` is not a prefix of `b`
-/// and vice versa.
+/// Whether the two strings are mutually prefix-free, meaning that `a` is not a prefix of `b` and
+/// vice versa.
 fn is_mutually_prefix_free(a: &str, b: &str) -> bool {
     !a.starts_with(b) && !b.starts_with(a)
 }
