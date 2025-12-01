@@ -240,7 +240,7 @@ services:
       "/opt/clp/bin/spider_scheduler",
       "--host", "${SPIDER_SCHEDULER_HOST}",
       "--port", "${SPIDER_SCHEDULER_PORT}",
-      "--storage_url", "jdbc:mariadb://database:${CLP_DB_PORT:-3306}/\
+      "--storage_url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
         user=${SPIDER_DB_USER:?Please set a value.}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
@@ -341,7 +341,7 @@ services:
       "-u",
       "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
       "--num-workers", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--storage-url", "jdbc:mariadb://database:${CLP_DB_PORT:-3306}/\
+      "--storage-url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
         user=${SPIDER_DB_USER:?Please set a value.}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",

@@ -3,6 +3,7 @@ import pathlib
 from enum import auto
 from typing import Annotated, Any, ClassVar, Literal
 
+import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -29,7 +30,6 @@ from clp_py_utils.serialization_utils import serialize_path, serialize_str_enum
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
-SPIDER_DB_COMPONENT_NAME = "spider_db"
 SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
@@ -99,6 +99,8 @@ ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 class DeploymentType(KebabCaseStrEnum):
     BASE = auto()
     FULL = auto()
+    SPIDER_BASE = auto()
+    SPIDER_FULL = auto()
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -191,6 +193,20 @@ class ClpDbUserType(KebabCaseStrEnum):
 
     CLP = auto()
     ROOT = auto()
+    SPIDER = auto()
+
+
+class ClpDbNameType(KebabCaseStrEnum):
+    """Database name types used by CLP components."""
+
+    CLP = auto()
+    SPIDER = auto()
+
+
+yaml.SafeDumper.add_multi_representer(
+    KebabCaseStrEnum,
+    yaml.representer.SafeRepresenter.represent_str,
+)
 
 
 class DbUserCredentials(BaseModel):
@@ -200,13 +216,33 @@ class DbUserCredentials(BaseModel):
     password: NonEmptyStr | None = None
 
 
+def _get_db_name_for_user_type(user_type: ClpDbUserType) -> ClpDbNameType:
+    """
+    Returns the database name type corresponding to the given user type.
+    :param user_type:
+    :return: Database name type corresponding to the user type.
+    """
+    match user_type:
+        case ClpDbUserType.CLP:
+            return ClpDbNameType.CLP
+        case ClpDbUserType.ROOT:
+            return ClpDbNameType.CLP
+        case ClpDbUserType.SPIDER:
+            return ClpDbNameType.SPIDER
+        case _:
+            raise ValueError(f"Unsupported user type '{user_type}'.")
+
+
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
     type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
-    name: NonEmptyStr = "clp-db"
+    name: dict[ClpDbNameType, NonEmptyStr] = {
+        ClpDbNameType.CLP: "clp-db",
+        ClpDbNameType.SPIDER: "spider-db",
+    }
     ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
     compress: bool = True
@@ -214,6 +250,7 @@ class Database(BaseModel):
     credentials: dict[ClpDbUserType, DbUserCredentials] = {
         ClpDbUserType.CLP: DbUserCredentials(),
         ClpDbUserType.ROOT: DbUserCredentials(),
+        ClpDbUserType.SPIDER: DbUserCredentials(),
     }
 
     def ensure_credentials_loaded(self, user_type: ClpDbUserType) -> None:
@@ -255,7 +292,7 @@ class Database(BaseModel):
             "port": self.port,
             "user": self.credentials[user_type].username,
             "password": self.credentials[user_type].password,
-            "database": self.name,
+            "database": self.name[_get_db_name_for_user_type(user_type)],
             "compress": self.compress,
             "autocommit": self.auto_commit,
         }
@@ -292,6 +329,30 @@ class Database(BaseModel):
 
         return d
 
+    def get_url(self, user_type: ClpDbUserType = ClpDbUserType.CLP) -> str:
+        """
+        Returns a JDBC URL for connecting to the database using the given user type.
+        """
+        self.ensure_credentials_loaded(user_type)
+        return (
+            f"jdbc:{self.type.value}://{self.host}:{self.port}/"
+            f"{self.name[_get_db_name_for_user_type(user_type)]}?"
+            f"user={self.credentials[user_type].username}"
+            f"&password={self.credentials[user_type].password}"
+        )
+
+    def get_container_url(self, user_type: ClpDbUserType = ClpDbUserType.CLP) -> str:
+        """
+        Returns a JDBC URL for connecting to the database from within a container.
+        """
+        self.ensure_credentials_loaded(user_type)
+        return (
+            f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
+            f"{self.name[_get_db_name_for_user_type(user_type)]}"
+            f"?user={self.credentials[user_type].username}"
+            f"&password={self.credentials[user_type].password}"
+        )
+
     def dump_to_primitive_dict(self) -> dict[str, Any]:
         """:return: A dictionary representation of this model, excluding credentials."""
         return self.model_dump(exclude={"credentials"})
@@ -319,6 +380,12 @@ class Database(BaseModel):
             self.credentials[ClpDbUserType.ROOT].password = get_config_value(
                 config, f"{DB_COMPONENT_NAME}.root_password"
             )
+            self.credentials[ClpDbUserType.SPIDER].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.spider_username"
+            )
+            self.credentials[ClpDbUserType.SPIDER].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.spider_password"
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
@@ -338,6 +405,9 @@ class Database(BaseModel):
         elif user_type == ClpDbUserType.ROOT:
             user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
             pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.SPIDER:
+            user_env_var = SPIDER_DB_USER_ENV_VAR_NAME
+            pass_env_var = SPIDER_DB_PASS_ENV_VAR_NAME
         else:
             err_msg = f"Unsupported user type '{user_type}'."
             raise ValueError(err_msg)
@@ -348,59 +418,6 @@ class Database(BaseModel):
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
-
-
-class SpiderDb(Database):
-    name: str = "spider-db"
-
-    # Override credentials for spider db user
-    credentials: DbUserCredentials = DbUserCredentials()
-
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, value):
-        if value != DatabaseEngine.MARIADB:
-            raise ValueError("Spider only supports MariaDB for the metadata database.")
-        return value
-
-    def ensure_credentials_loaded(self, **kwargs) -> None:
-        """
-        Ensures that credentials are loaded.
-
-        :raise ValueError: If credentials are not loaded.
-        """
-        if self.credentials.username is None or self.credentials.password is None:
-            raise ValueError("Credentials for spider_db are not loaded.")
-
-    def get_container_url(self):
-        self.ensure_credentials_loaded()
-        return (
-            f"jdbc:mariadb://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
-            f"{self.name}?user={self.credentials.username}&password={self.credentials.password}"
-        )
-
-    def load_credentials_from_env(self, **kwargs) -> None:
-        """
-        :raise ValueError: if any expected environment variable is not set.
-        """
-        self.credentials.username = _get_env_var(SPIDER_DB_USER_ENV_VAR_NAME)
-        self.credentials.password = _get_env_var(SPIDER_DB_PASS_ENV_VAR_NAME)
-
-    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
-        config = read_yaml_config_file(credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
-        try:
-            self.credentials.username = get_config_value(
-                config, f"{SPIDER_DB_COMPONENT_NAME}.username"
-            )
-            self.credentials.password = get_config_value(
-                config, f"{SPIDER_DB_COMPONENT_NAME}.password"
-            )
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
-            )
 
 
 class SpiderScheduler(BaseModel):
@@ -803,7 +820,6 @@ class ClpConfig(BaseModel):
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
-    spider_db: SpiderDb | None = None
     spider_scheduler: SpiderScheduler | None = None
     query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
@@ -984,12 +1000,16 @@ class ClpConfig(BaseModel):
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
     def get_deployment_type(self) -> DeploymentType:
+        if OrchestrationType.spider == self.compression_scheduler.type:
+            if QueryEngine.PRESTO == self.package.query_engine:
+                return DeploymentType.SPIDER_BASE
+            return DeploymentType.SPIDER_FULL
         if QueryEngine.PRESTO == self.package.query_engine:
             return DeploymentType.BASE
         return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = {"database", "queue", "redis", "spider_db"}
+        custom_serialized_fields = {"database", "queue", "redis"}
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             value = getattr(self, key)
@@ -1012,8 +1032,6 @@ class ClpConfig(BaseModel):
         orchestration_type = self.compression_scheduler.type
         if orchestration_type != OrchestrationType.spider:
             return self
-        if self.spider_db is None:
-            raise ValueError("`spider_db` must be configured when using Spider orchestration.")
         if self.spider_scheduler is None:
             raise ValueError(
                 "`spider_scheduler` must be configured when using Spider orchestration."
@@ -1052,8 +1070,6 @@ class ClpConfig(BaseModel):
             self.queue.transform_for_container()
         if self.redis is not None:
             self.redis.transform_for_container()
-        if self.spider_db is not None:
-            self.spider_db.transform_for_container()
         if self.spider_scheduler is not None:
             self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container()

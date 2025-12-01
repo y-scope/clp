@@ -22,6 +22,7 @@ from clp_py_utils.clp_config import (
     CLP_QUEUE_USER_ENV_VAR_NAME,
     CLP_REDIS_PASS_ENV_VAR_NAME,
     ClpConfig,
+    ClpDbNameType,
     ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -40,7 +41,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SPIDER_DB_COMPONENT_NAME,
     SPIDER_DB_PASS_ENV_VAR_NAME,
     SPIDER_DB_USER_ENV_VAR_NAME,
     SPIDER_SCHEDULER_COMPONENT_NAME,
@@ -186,8 +186,9 @@ class BaseController(ABC):
         # Connection config
         env_vars |= {
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
-            "CLP_DB_NAME": self._clp_config.database.name,
+            "CLP_DB_NAME": self._clp_config.database.name[ClpDbNameType.CLP],
             "CLP_DB_PORT": str(self._clp_config.database.port),
+            "SPIDER_DB_NAME": self._clp_config.database.name[ClpDbNameType.SPIDER],
         }
 
         # Credentials
@@ -195,8 +196,10 @@ class BaseController(ABC):
         env_vars |= {
             CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
             CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            SPIDER_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].password,
             CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
             CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+            SPIDER_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].username,
         }
 
         return env_vars
@@ -328,28 +331,6 @@ class BaseController(ABC):
         # Credentials
         env_vars |= {
             CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
-        }
-
-        return env_vars
-
-    def _set_up_env_for_spider_db(self) -> EnvVarsDict:
-        """
-        Sets up environment variables for the Spider database component.
-
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = SPIDER_DB_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
-
-        env_vars = EnvVarsDict()
-
-        # Database
-        env_vars |= {"SPIDER_DB_NAME": self._clp_config.spider_db.name}
-
-        # Credentials
-        env_vars |= {
-            SPIDER_DB_PASS_ENV_VAR_NAME: self._clp_config.spider_db.credentials.password,
-            SPIDER_DB_USER_ENV_VAR_NAME: self._clp_config.spider_db.credentials.username,
         }
 
         return env_vars
@@ -657,7 +638,7 @@ class BaseController(ABC):
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
-            "SqlDbName": self._clp_config.database.name,
+            "SqlDbName": self._clp_config.database.name[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
@@ -923,7 +904,6 @@ class DockerComposeController(BaseController):
         if self._clp_config.redis is not None:
             env_vars |= self._set_up_env_for_redis()
         if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
-            env_vars |= self._set_up_env_for_spider_db()
             env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
@@ -1012,14 +992,17 @@ class DockerComposeController(BaseController):
         :return: The Docker Compose file name to use based on the config.
         """
         deployment_type = self._clp_config.get_deployment_type()
-        compression_scheduler_type = self._clp_config.compression_scheduler.type
-        if deployment_type == DeploymentType.BASE:
-            if compression_scheduler_type == OrchestrationType.spider:
+        match self._clp_config.get_deployment_type():
+            case DeploymentType.BASE:
+                return "docker-compose-base.yaml"
+            case DeploymentType.FULL:
+                return "docker-compose.yaml"
+            case DeploymentType.SPIDER_BASE:
                 return "docker-compose-spider-base.yaml"
-            return "docker-compose.base.yaml"
-        if compression_scheduler_type == OrchestrationType.spider:
-            return "docker-compose-spider.yaml"
-        return "docker-compose.yaml"
+            case DeploymentType.SPIDER_FULL:
+                return "docker-compose-spider.yaml"
+            case _:
+                raise ValueError("Unsupported deployment type: %s", deployment_type)
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:

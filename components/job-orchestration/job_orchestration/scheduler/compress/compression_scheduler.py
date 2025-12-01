@@ -15,6 +15,7 @@ import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     ClpConfig,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -457,8 +458,10 @@ def main(argv) -> int | None:
     if clp_config.compression_scheduler.type == OrchestrationType.celery:
         task_manager = CeleryTaskManager()
     elif clp_config.compression_scheduler.type == OrchestrationType.spider:
-        clp_config.spider_db.load_credentials_from_env()
-        task_manager = SpiderTaskManager(clp_config.spider_db.get_container_url())
+        clp_config.database.load_credentials_from_env(ClpDbUserType.SPIDER)
+        task_manager = SpiderTaskManager(
+            clp_config.database.get_container_url(ClpDbUserType.SPIDER)
+        )
     else:
         logger.error(
             f"Unsupported compression scheduler type: {clp_config.compression_scheduler.type}"

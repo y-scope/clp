@@ -8,6 +8,8 @@ from contextlib import closing
 
 from pydantic import ValidationError
 
+from clp_py_utils.clp_config import ClpDbNameType
+
 from .clp_config import ClpConfig, ClpDbUserType
 from .core import read_yaml_config_file
 from .sql_adapter import SqlAdapter
@@ -231,18 +233,13 @@ def main(argv):
         clp_config.database.load_credentials_from_env()
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.CLP)
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.ROOT)
-        if clp_config.spider_db is None:
-            logger.error("Spider database configuration not found in CLP configuration.")
-            return -1
-        clp_config.spider_db.load_credentials_from_env()
+        clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.SPIDER)
     except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
     except Exception:
         logger.exception("Failed to load CLP configuration.")
         return -1
-
-    spider_db_config = clp_config.spider_db
 
     try:
         sql_adapter = SqlAdapter(clp_config.database)
@@ -251,9 +248,9 @@ def main(argv):
             closing(db_conn.cursor()) as db_cursor,
         ):
             clp_db_user = clp_config.database.credentials[ClpDbUserType.CLP].username
-            spider_db_name = spider_db_config.name
-            spider_db_user = spider_db_config.credentials.username
-            spider_db_password = spider_db_config.credentials.password
+            spider_db_name = clp_config.database.name[ClpDbNameType.SPIDER]
+            spider_db_user = clp_config.database.credentials[ClpDbUserType.SPIDER].username
+            spider_db_password = clp_config.database.credentials[ClpDbUserType.SPIDER].password
             if not _validate_name(spider_db_name):
                 logger.error(f"Invalid database name: {spider_db_name}")
                 return -1
