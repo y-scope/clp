@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use std::fmt;
-
 use axum::{
     Json,
     http::StatusCode,
@@ -65,97 +63,37 @@ impl From<sqlx::Error> for ServiceError {
     }
 }
 
-/// HTTP-friendly representation of service failures.
-#[derive(Debug)]
-pub struct ApiError {
-    status: StatusCode,
-    message: String,
-}
-
-impl ApiError {
-    /// Creates a new API error with the supplied HTTP status code.
-    ///
-    /// # Parameters:
-    ///
-    /// * `status`: HTTP status code that best represents the failure.
-    /// * `message`: Human-readable diagnostic message.
-    ///
-    /// # Returns:
-    ///
-    /// A new [`ApiError`] ready to be converted into an HTTP response.
-    pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
-        Self {
-            status,
-            message: message.into(),
-        }
-    }
-
-    /// Convenience constructor for 500-class responses.
-    ///
-    /// # Parameters:
-    ///
-    /// * `message`: Human-readable error string for the response body.
-    ///
-    /// # Returns:
-    ///
-    /// A new [`ApiError`] that always maps to [`StatusCode::INTERNAL_SERVER_ERROR`].
-    pub fn internal(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::INTERNAL_SERVER_ERROR, message)
-    }
-}
-
-impl From<ServiceError> for ApiError {
-    fn from(err: ServiceError) -> Self {
-        match err {
-            ServiceError::Validation(msg) => Self::new(StatusCode::BAD_REQUEST, msg),
-            ServiceError::Conflict(msg) => Self::new(StatusCode::CONFLICT, msg),
-            ServiceError::NotFound(msg) => Self::new(StatusCode::NOT_FOUND, msg),
-            ServiceError::Config(msg) => Self::new(StatusCode::INTERNAL_SERVER_ERROR, msg),
-            ServiceError::Database(source) => {
-                Self::new(StatusCode::INTERNAL_SERVER_ERROR, source.to_string())
-            }
-            ServiceError::Jwt(source) => {
-                Self::new(StatusCode::INTERNAL_SERVER_ERROR, source.to_string())
-            }
-            ServiceError::Io(source) => {
-                Self::new(StatusCode::INTERNAL_SERVER_ERROR, source.to_string())
-            }
-            ServiceError::Yaml(source) => {
-                Self::new(StatusCode::INTERNAL_SERVER_ERROR, source.to_string())
-            }
-        }
-    }
-}
-
 /// JSON payload emitted by error responses.
 #[derive(Debug, Serialize)]
 struct ErrorBody {
     error: String,
 }
 
-impl IntoResponse for ApiError {
+impl ServiceError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::Validation(_) => StatusCode::BAD_REQUEST,
+            Self::Conflict(_) => StatusCode::CONFLICT,
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
+            Self::Config(_) | Self::Database(_) | Self::Jwt(_) | Self::Io(_) | Self::Yaml(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+    }
+}
+
+impl IntoResponse for ServiceError {
     /// Serializes the error payload into JSON schema so clients receive consistent bodies.
     ///
     /// # Returns:
     ///
     /// An [`axum::response::Response`] containing the status code plus `{"error": "..."}` body.
     fn into_response(self) -> Response {
-        let status = self.status;
+        let status = self.status_code();
         let body = Json(ErrorBody {
-            error: self.message,
+            error: self.to_string(),
         });
 
         (status, body).into_response()
-    }
-}
-
-impl fmt::Display for ApiError {
-    /// Formats only the message so higher layers can log without leaking sensitive details.
-    ///
-    /// # Returns:
-    ///
-    /// [`fmt::Result`] signaling whether writing to the formatter succeeded.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
     }
 }
