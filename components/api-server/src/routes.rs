@@ -98,7 +98,17 @@ async fn query(
     State(client): State<Client>,
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
-    let search_job_id = client.submit_query(query_config).await?;
+    tracing::info!("Submitting query: {:?}", query_config);
+    let search_job_id = match client.submit_query(query_config).await {
+        Ok(id) => {
+            tracing::info!("Submitted query with search job ID: {}", id);
+            id
+        }
+        Err(err) => {
+            tracing::error!("Failed to submit query: {:?}", err);
+            return Err(err.into());
+        }
+    };
     let uri = format!("/query_results/{search_job_id}");
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
@@ -133,11 +143,29 @@ async fn query_results(
     State(client): State<Client>,
     Path(search_job_id): Path<u64>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
-    let results_stream = client.fetch_results(search_job_id).await?;
+    tracing::info!("Fetching results for search job ID: {}", search_job_id);
+    let results_stream = match client.fetch_results(search_job_id).await {
+        Ok(stream) => {
+            tracing::info!(
+                "Successfully initiated result stream for search job ID {}",
+                search_job_id
+            );
+            stream
+        }
+        Err(err) => {
+            tracing::error!(
+                "Failed to fetch results for search job ID {}: {:?}",
+                search_job_id,
+                err
+            );
+            return Err(err.into());
+        }
+    };
     let event_stream = results_stream.map(|res| {
         let message = res?;
         let trimmed_message = message.trim();
         if trimmed_message.lines().count() != 1 {
+            tracing::error!("Received malformed log line:\n{}", trimmed_message);
             return Err(HandlerError::InternalServer);
         }
         Ok(Event::default().data(trimmed_message))
