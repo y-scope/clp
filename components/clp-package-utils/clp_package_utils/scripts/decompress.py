@@ -1,11 +1,9 @@
 import argparse
 import logging
-import os
 import pathlib
 import shlex
 import subprocess
 import sys
-from typing import Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -13,6 +11,7 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     ClpConfig,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
@@ -44,7 +43,7 @@ def validate_and_load_config(
     clp_home: pathlib.Path,
     config_file_path: pathlib.Path,
     default_config_file_path: pathlib.Path,
-) -> Optional[ClpConfig]:
+) -> ClpConfig | None:
     """
     Validates and loads the config file.
     :param clp_home:
@@ -134,9 +133,10 @@ def handle_extract_file_cmd(
             )
         )
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -161,7 +161,7 @@ def handle_extract_file_cmd(
 
     cmd = container_start_cmd + extract_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("file extraction failed.")
@@ -216,9 +216,10 @@ def handle_extract_stream_cmd(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
     necessary_mounts = [mounts.logs_dir]
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -269,7 +270,7 @@ def handle_extract_stream_cmd(
 
     cmd = container_start_cmd + extract_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("stream extraction failed.")
@@ -354,11 +355,10 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
+    if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
-    else:
-        logger.exception(f"Unexpected command: {command}")
-        return -1
+    logger.exception(f"Unexpected command: {command}")
+    return -1
 
 
 if "__main__" == __name__:

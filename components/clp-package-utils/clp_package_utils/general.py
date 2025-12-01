@@ -9,7 +9,6 @@ import socket
 import subprocess
 import uuid
 from enum import auto
-from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -131,16 +130,16 @@ class DockerMount:
 
 class ClpDockerMounts:
     def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
-        self.input_logs_dir: Optional[DockerMount] = None
-        self.clp_home: Optional[DockerMount] = DockerMount(
+        self.input_logs_dir: DockerMount | None = None
+        self.clp_home: DockerMount | None = DockerMount(
             DockerMountType.BIND, clp_home, docker_clp_home
         )
-        self.data_dir: Optional[DockerMount] = None
-        self.logs_dir: Optional[DockerMount] = None
-        self.archives_output_dir: Optional[DockerMount] = None
-        self.stream_output_dir: Optional[DockerMount] = None
-        self.aws_config_dir: Optional[DockerMount] = None
-        self.generated_config_file: Optional[DockerMount] = None
+        self.data_dir: DockerMount | None = None
+        self.logs_dir: DockerMount | None = None
+        self.archives_output_dir: DockerMount | None = None
+        self.stream_output_dir: DockerMount | None = None
+        self.aws_config_dir: DockerMount | None = None
+        self.generated_config_file: DockerMount | None = None
 
 
 def get_clp_home():
@@ -156,7 +155,7 @@ def get_clp_home():
 
     if clp_home is None:
         raise ValueError("CLP_HOME is not set and could not be determined automatically.")
-    elif not clp_home.exists():
+    if not clp_home.exists():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
@@ -207,8 +206,7 @@ def validate_port(port_name: str, hostname: str, port: int):
             raise ValueError(
                 f"{port_name} {hostname}:{port} is already in use. Please choose a different port."
             )
-        else:
-            raise ValueError(f"{port_name} {hostname}:{port} is invalid: {e.strerror}.")
+        raise ValueError(f"{port_name} {hostname}:{port} is invalid: {e.strerror}.")
 
 
 def is_path_already_mounted(
@@ -232,7 +230,7 @@ def is_path_already_mounted(
 
 def generate_container_config(
     clp_config: ClpConfig, clp_home: pathlib.Path
-) -> Tuple[ClpConfig, ClpDockerMounts]:
+) -> tuple[ClpConfig, ClpDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
@@ -340,7 +338,7 @@ def generate_worker_config(clp_config: ClpConfig) -> WorkerConfig:
 
 
 def get_container_config_filename(container_name: str) -> str:
-    return f".{container_name}-config.yml"
+    return f".{container_name}-config.yaml"
 
 
 def dump_container_config(
@@ -377,10 +375,10 @@ def dump_shared_container_config(container_clp_config: ClpConfig, clp_config: Cl
 
 def generate_container_start_cmd(
     container_name: str,
-    container_mounts: List[Optional[DockerMount]],
+    container_mounts: list[DockerMount | None],
     container_image: str,
-    extra_env_vars: Optional[Dict[str, str]] = None,
-) -> List[str]:
+    extra_env_vars: dict[str, str] | None = None,
+) -> list[str]:
     """
     Generates the command to start a container with the given mounts, environment variables, and
     name.
@@ -453,8 +451,13 @@ def load_config_file(
 
 def generate_credentials_file(credentials_file_path: pathlib.Path):
     credentials = {
-        DB_COMPONENT_NAME: {"user": "clp-user", "password": secrets.token_urlsafe(8)},
-        QUEUE_COMPONENT_NAME: {"user": "clp-user", "password": secrets.token_urlsafe(8)},
+        DB_COMPONENT_NAME: {
+            "username": "clp-user",
+            "password": secrets.token_urlsafe(8),
+            "root_username": "root",
+            "root_password": secrets.token_urlsafe(8),
+        },
+        QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
     }
 
@@ -542,7 +545,7 @@ def validate_redis_config(
 def validate_reducer_config(clp_config: ClpConfig, logs_dir: pathlib.Path, num_workers: int):
     _validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
-    for i in range(0, num_workers):
+    for i in range(num_workers):
         validate_port(
             f"{REDUCER_COMPONENT_NAME}.port",
             clp_config.reducer.host,
@@ -601,7 +604,7 @@ def validate_mcp_server_config(clp_config: ClpConfig, logs_dir: pathlib.Path):
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
-    RESTRICTED_PREFIXES: List[pathlib.Path] = [
+    RESTRICTED_PREFIXES: list[pathlib.Path] = [
         CONTAINER_AWS_CONFIG_DIRECTORY,
         CONTAINER_CLP_HOME,
         CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -683,7 +686,7 @@ def is_retention_period_configured(clp_config: ClpConfig) -> bool:
 
 def get_common_env_vars_list(
     include_clp_home_env_var=True,
-) -> List[str]:
+) -> list[str]:
     """
     :param include_clp_home_env_var:
     :return: A list of common environment variables for Docker containers, in the format
@@ -703,7 +706,7 @@ def get_credential_env_vars_list(
     include_db_credentials=False,
     include_queue_credentials=False,
     include_redis_credentials=False,
-) -> List[str]:
+) -> list[str]:
     """
     :param container_clp_config:
     :param include_db_credentials:
@@ -728,7 +731,7 @@ def get_credential_env_vars_list(
     return env_vars
 
 
-def get_celery_connection_env_vars_list(container_clp_config: ClpConfig) -> List[str]:
+def get_celery_connection_env_vars_list(container_clp_config: ClpConfig) -> list[str]:
     """
     :param container_clp_config:
     :return: A list of Celery connection environment variables for Docker containers, in the format

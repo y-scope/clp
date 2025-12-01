@@ -1,11 +1,9 @@
 """Unit tests for the SessionManager."""
 
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
-
 import asyncio
 import time
+from unittest.mock import patch
+
 import pytest
 
 from clp_mcp_server.server import constants
@@ -72,8 +70,7 @@ class TestPaginatedQueryResult:
         """Validates pagination functionality."""
         results = TestConstants.create_log_messages(TestConstants.EXPECTED_NUM_LOG_ENTRIES)
         query_result = PaginatedQueryResult(
-            log_entries=results,
-            num_items_per_page=TestConstants.ITEMS_PER_PAGE
+            log_entries=results, num_items_per_page=TestConstants.ITEMS_PER_PAGE
         )
 
         # Test first page
@@ -100,7 +97,7 @@ class TestPaginatedQueryResult:
         # Test invalid page
         page4 = query_result.get_page(3)
         assert page4 is None
-    
+
     def test_query_result_initialization(self) -> None:
         """
         Validates `PaginatedQueryResult` raises `ValueError` when the number of results exceed
@@ -109,8 +106,7 @@ class TestPaginatedQueryResult:
         large_results = TestConstants.create_log_messages(constants.MAX_CACHED_RESULTS + 1)
         with pytest.raises(ValueError, match=TestConstants.EXCEEDS_MAX_CACHED_RESULTS_ERR):
             PaginatedQueryResult(
-                log_entries=large_results,
-                num_items_per_page=TestConstants.ITEMS_PER_PAGE
+                log_entries=large_results, num_items_per_page=TestConstants.ITEMS_PER_PAGE
             )
 
 
@@ -122,7 +118,7 @@ class TestSessionState:
         session = SessionState(
             _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             _session_id=TestConstants.TEST_SESSION_ID,
-            _session_ttl_seconds=TestConstants.SESSION_TTL_SECONDS
+            _session_ttl_seconds=TestConstants.SESSION_TTL_SECONDS,
         )
 
         first_page = session.cache_query_result_and_get_first_page(
@@ -144,7 +140,7 @@ class TestSessionState:
         session = SessionState(
             _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             _session_id=TestConstants.TEST_SESSION_ID,
-            _session_ttl_seconds=TestConstants.SESSION_TTL_SECONDS
+            _session_ttl_seconds=TestConstants.SESSION_TTL_SECONDS,
         )
         _ = session.get_instructions()
         results = TestConstants.create_log_messages(TestConstants.EXPECTED_NUM_LOG_ENTRIES)
@@ -191,13 +187,13 @@ class TestSessionState:
         session = SessionState(
             _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             _session_id=TestConstants.TEST_SESSION_ID,
-            _session_ttl_seconds=TestConstants.FAST_SESSION_TTL_SECONDS
+            _session_ttl_seconds=TestConstants.FAST_SESSION_TTL_SECONDS,
         )
 
         assert session.is_expired() is False
 
         time.sleep(TestConstants.FAST_SESSION_TTL_SECONDS)
-        
+
         assert session.is_expired() is True
 
 
@@ -229,7 +225,9 @@ class TestSessionManager:
             session_id=TestConstants.TEST_SESSION_ID, query_results=results
         )
 
-        assert first_page["items"] == TestConstants.create_log_messages(TestConstants.ITEMS_PER_PAGE)
+        assert first_page["items"] == TestConstants.create_log_messages(
+            TestConstants.ITEMS_PER_PAGE
+        )
         assert first_page["num_total_items"] == TestConstants.EXPECTED_NUM_LOG_ENTRIES
 
     def test_get_nth_page(self, active_session_manager: SessionManager) -> None:
@@ -254,10 +252,11 @@ class TestSessionManager:
         # Test non-existent session - this will create a new session, but no cached query
         active_session_manager.get_or_create_session(TestConstants.NON_EXISTENT_SESSION_ID)
         # Simulate get_instructions was run
-        _ = active_session_manager.sessions[TestConstants.NON_EXISTENT_SESSION_ID].get_instructions()
+        _ = active_session_manager.sessions[
+            TestConstants.NON_EXISTENT_SESSION_ID
+        ].get_instructions()
         page_data = active_session_manager.get_nth_page(TestConstants.NON_EXISTENT_SESSION_ID, 0)
         assert TestConstants.NO_PREVIOUS_PAGINATED_RESPONSE_ERR in page_data["Error"]
-
 
     @pytest.mark.asyncio
     async def test_async_expiration_for_cleanup_loop(self) -> None:
@@ -270,23 +269,23 @@ class TestSessionManager:
             expired_session_ids = [f"{TestConstants.EXPIRED_SESSION_PREFIX}{i}" for i in range(20)]
             for sid in expired_session_ids:
                 _ = manager.get_or_create_session(sid)
-            
+
             # Ensure created sessions expire
             time.sleep(1)
-            
+
             # Create active sessions that we WILL keep accessing
             active_session_ids = [f"{TestConstants.ACTIVE_SESSION_PREFIX}{i}" for i in range(20)]
             for _ in range(100):
                 for sid in active_session_ids:
                     manager.get_or_create_session(sid)
-            
+
             # Wait for at least one cleanup cycle
             await asyncio.sleep(0.1)
-            
+
             # Verify: expired sessions deleted by cleanup asynchronously
             for sid in expired_session_ids:
                 assert sid not in manager.sessions
-            
+
             # Verify: active sessions still exist
             for sid in active_session_ids:
                 assert sid in manager.sessions

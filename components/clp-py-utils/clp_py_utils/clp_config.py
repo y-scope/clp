@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Annotated, Any, ClassVar, Literal, Optional, Union
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import (
     BaseModel,
@@ -14,15 +14,15 @@ from pydantic import (
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from .clp_logging import LoggingLevel
-from .core import (
+from clp_py_utils.clp_logging import LoggingLevel
+from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
     resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
-from .serialization_utils import serialize_path, serialize_str_enum
+from clp_py_utils.serialization_utils import serialize_path, serialize_str_enum
 
 # Constants
 # Component names
@@ -53,8 +53,8 @@ COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_AWS_CONFIG_DIRECTORY = CONTAINER_CLP_HOME / ".aws"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
-CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yaml"
+CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yaml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
 CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
@@ -65,10 +65,12 @@ CLP_DEFAULT_TMP_DIRECTORY_PATH = pathlib.Path("var") / "tmp"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
-CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
+CLP_DB_ROOT_USER_ENV_VAR_NAME = "CLP_DB_ROOT_USER"
+CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
@@ -79,6 +81,7 @@ CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
+NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 # Specific types
@@ -100,6 +103,16 @@ class StorageEngine(KebabCaseStrEnum):
 
 
 StorageEngineStr = Annotated[StorageEngine, StrEnumSerializer]
+
+
+class BundledService(LowercaseStrEnum):
+    DATABASE = auto()
+    QUEUE = auto()
+    REDIS = auto()
+    RESULTS_CACHE = auto()
+
+
+BundledServiceStr = Annotated[BundledService, StrEnumSerializer]
 
 
 class DatabaseEngine(KebabCaseStrEnum):
@@ -161,6 +174,20 @@ class Package(BaseModel):
         return self
 
 
+class ClpDbUserType(KebabCaseStrEnum):
+    """Database user types used by CLP components."""
+
+    CLP = auto()
+    ROOT = auto()
+
+
+class DbUserCredentials(BaseModel):
+    """Credentials for a database user."""
+
+    username: NonEmptyStr | None = None
+    password: NonEmptyStr | None = None
+
+
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
@@ -168,19 +195,43 @@ class Database(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     name: NonEmptyStr = "clp-db"
-    ssl_cert: Optional[NonEmptyStr] = None
+    ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
     compress: bool = True
 
-    username: Optional[NonEmptyStr] = None
-    password: Optional[NonEmptyStr] = None
+    credentials: dict[ClpDbUserType, DbUserCredentials] = {
+        ClpDbUserType.CLP: DbUserCredentials(),
+        ClpDbUserType.ROOT: DbUserCredentials(),
+    }
 
-    def ensure_credentials_loaded(self):
-        if self.username is None or self.password is None:
-            raise ValueError("Credentials not loaded.")
+    def ensure_credentials_loaded(self, user_type: ClpDbUserType) -> None:
+        """
+        Ensures that credentials for the given `user_type` are loaded.
 
-    def get_mysql_connection_params(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+        :param user_type:
+        :raise ValueError: If credentials for the given `user_type` are not loaded.
+        """
+        if (
+            self.credentials[user_type].username is None
+            or self.credentials[user_type].password is None
+        ):
+            err_msg = f"Credentials for user type '{user_type}' are not loaded."
+            raise ValueError(err_msg)
+
+    def get_mysql_connection_params(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by mysql's or mariadb's `connect()`
+        method, ensuring only credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of MySQL connection parameters.
+        """
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
@@ -190,8 +241,8 @@ class Database(BaseModel):
         connection_params = {
             "host": host,
             "port": self.port,
-            "user": self.username,
-            "password": self.password,
+            "user": self.credentials[user_type].username,
+            "password": self.credentials[user_type].password,
             "database": self.name,
             "compress": self.compress,
             "autocommit": self.auto_commit,
@@ -200,51 +251,87 @@ class Database(BaseModel):
             connection_params["ssl_cert"] = self.ssl_cert
         return connection_params
 
-    def get_clp_connection_params_and_type(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+    def get_clp_connection_params_and_type(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by CLP components and ensures only
+        credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of CLP connection parameters.
+        """
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
             host = "127.0.0.1"
 
-        connection_params_and_type = {
-            # NOTE: clp-core does not distinguish between mysql and mariadb
-            "type": DatabaseEngine.MYSQL.value,
-            "host": host,
-            "port": self.port,
-            "username": self.username,
-            "password": self.password,
-            "name": self.name,
-            "table_prefix": CLP_METADATA_TABLE_PREFIX,
-            "compress": self.compress,
-            "autocommit": self.auto_commit,
-        }
-        if self.ssl_cert:
-            connection_params_and_type["ssl_cert"] = self.ssl_cert
-        return connection_params_and_type
+        d = self.dump_to_primitive_dict()
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump(exclude={"username", "password"})
+        d["credentials"] = {user_type: self.credentials[user_type].model_dump()}
+        d["host"] = host
+        d["table_prefix"] = CLP_METADATA_TABLE_PREFIX
+        # NOTE: clp-core does not distinguish between mysql and mariadb
+        d["type"] = DatabaseEngine.MYSQL.value
+
         return d
 
+    def dump_to_primitive_dict(self) -> dict[str, Any]:
+        """:return: A dictionary representation of this model, excluding credentials."""
+        return self.model_dump(exclude={"credentials"})
+
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        """
+        Loads database credentials from a YAML file.
+
+        :param credentials_file_path:
+        :raise ValueError: If the file is empty or does not contain the expected keys.
+        """
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
-            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+            self.credentials[ClpDbUserType.CLP].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.username"
+            )
+            self.credentials[ClpDbUserType.CLP].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.password"
+            )
+            self.credentials[ClpDbUserType.ROOT].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.root_username"
+            )
+            self.credentials[ClpDbUserType.ROOT].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.root_password"
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
-    def load_credentials_from_env(self):
+    def load_credentials_from_env(self, user_type: ClpDbUserType = ClpDbUserType.CLP):
         """
-        :raise ValueError: if any expected environment variable is not set.
+        Loads database credentials from environment variables for the given user type.
+
+        :param user_type:
+        :raise ValueError: If the user type is not supported.
+        :raise ValueError: Propagates `_get_env_var`'s exceptions.
         """
-        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
-        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+        if user_type == ClpDbUserType.CLP:
+            user_env_var = CLP_DB_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.ROOT:
+            user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        else:
+            err_msg = f"Unsupported user type '{user_type}'."
+            raise ValueError(err_msg)
+
+        self.credentials[user_type].username = _get_env_var(user_env_var)
+        self.credentials[user_type].password = _get_env_var(pass_env_var)
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
@@ -252,7 +339,10 @@ class Database(BaseModel):
 
 
 class CompressionScheduler(BaseModel):
+    UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
+
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
 
 
@@ -286,7 +376,7 @@ class Redis(BaseModel):
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: Optional[str] = None
+    password: str | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"password"})
@@ -333,7 +423,7 @@ class ResultsCache(BaseModel):
     port: Port = DEFAULT_PORT
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
-    retention_period: Optional[PositiveInt] = 60
+    retention_period: PositiveInt | None = 60
 
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
@@ -349,8 +439,8 @@ class Queue(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
 
-    username: Optional[NonEmptyStr] = None
-    password: Optional[str] = None
+    username: NonEmptyStr | None = None
+    password: str | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"username", "password"})
@@ -360,7 +450,7 @@ class Queue(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.username")
             self.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
@@ -382,13 +472,13 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: NonEmptyStr
     secret_access_key: NonEmptyStr
-    session_token: Optional[NonEmptyStr] = None
+    session_token: NonEmptyStr | None = None
 
 
 class AwsAuthentication(BaseModel):
     type: AwsAuthTypeStr
-    profile: Optional[NonEmptyStr] = None
-    credentials: Optional[S3Credentials] = None
+    profile: NonEmptyStr | None = None
+    credentials: S3Credentials | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -514,20 +604,17 @@ class StreamS3Storage(S3Storage):
 
 
 def _get_directory_from_storage_config(
-    storage_config: Union[FsStorage, S3Storage],
+    storage_config: FsStorage | S3Storage,
 ) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
-    elif StorageType.S3 == storage_type:
+    if StorageType.S3 == storage_type:
         return storage_config.staging_directory
-    else:
-        raise NotImplementedError(f"storage.type {storage_type} is not supported")
+    raise NotImplementedError(f"storage.type {storage_type} is not supported")
 
 
-def _set_directory_for_storage_config(
-    storage_config: Union[FsStorage, S3Storage], directory
-) -> None:
+def _set_directory_for_storage_config(storage_config: FsStorage | S3Storage, directory) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         storage_config.directory = directory
@@ -538,13 +625,13 @@ def _set_directory_for_storage_config(
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
+    storage: ArchiveFsStorage | ArchiveS3Storage = ArchiveFsStorage()
     target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     compression_level: ZstdCompressionLevel = 3
-    retention_period: Optional[PositiveInt] = None
+    retention_period: PositiveInt | None = None
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
@@ -554,7 +641,7 @@ class ArchiveOutput(BaseModel):
 
 
 class StreamOutput(BaseModel):
-    storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
+    storage: StreamFsStorage | StreamS3Storage = StreamFsStorage()
     target_uncompressed_size: PositiveInt = 128 * 1024 * 1024
 
     def set_directory(self, directory: pathlib.Path):
@@ -624,9 +711,15 @@ def _get_env_var(name: str) -> str:
 
 
 class ClpConfig(BaseModel):
-    container_image_ref: Optional[NonEmptyStr] = None
+    container_image_ref: NonEmptyStr | None = None
 
-    logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
+    logs_input: FsIngestionConfig | S3IngestionConfig = FsIngestionConfig()
+    bundled: list[BundledServiceStr] = [
+        BundledService.DATABASE,
+        BundledService.QUEUE,
+        BundledService.REDIS,
+        BundledService.RESULTS_CACHE,
+    ]
 
     package: Package = Package()
     database: Database = Database()
@@ -643,15 +736,15 @@ class ClpConfig(BaseModel):
     api_server: ApiServer = ApiServer()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
-    mcp_server: Optional[McpServer] = None
-    presto: Optional[Presto] = None
+    mcp_server: McpServer | None = None
+    presto: Presto | None = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
     data_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH
     logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
     tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
-    aws_config_directory: Optional[SerializablePath] = None
+    aws_config_directory: SerializablePath | None = None
 
     _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
@@ -660,9 +753,7 @@ class ClpConfig(BaseModel):
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(
-        cls, value: Optional[SerializablePath]
-    ) -> Optional[SerializablePath]:
+    def expand_profile_user_home(cls, value: SerializablePath | None) -> SerializablePath | None:
         if value is not None:
             value = value.expanduser()
         return value
@@ -818,8 +909,7 @@ class ClpConfig(BaseModel):
     def get_deployment_type(self) -> DeploymentType:
         if QueryEngine.PRESTO == self.package.query_engine:
             return DeploymentType.BASE
-        else:
-            return DeploymentType.FULL
+        return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {

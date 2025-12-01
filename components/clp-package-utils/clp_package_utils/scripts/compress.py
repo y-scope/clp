@@ -5,13 +5,13 @@ import shlex
 import subprocess
 import sys
 import uuid
-from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
@@ -77,11 +77,10 @@ def _generate_logs_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
-    dataset: Optional[str],
+    dataset: str | None,
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
-) -> List[str]:
-
+) -> list[str]:
     # fmt: off
     compress_cmd = [
         "python3",
@@ -254,9 +253,10 @@ def main(argv):
         logger.error("No filesystem paths given for compression.")
         return -1
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -267,7 +267,7 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")

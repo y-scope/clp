@@ -7,7 +7,7 @@ from typing import Any, ClassVar
 
 from paginate import Page
 
-from . import constants
+from clp_mcp_server.server import constants
 
 
 class PaginatedQueryResult:

@@ -1,7 +1,8 @@
 import os
 import re
+from collections.abc import Generator
 from pathlib import Path
-from typing import Dict, Final, Generator, List, Optional, Set, Tuple, Union
+from typing import Final
 
 import boto3
 import botocore
@@ -36,13 +37,13 @@ AWS_ENV_VAR_SESSION_TOKEN: Final[str] = "AWS_SESSION_TOKEN"
 S3_OBJECT_DELETION_BATCH_SIZE_MAX: Final[int] = 1000
 
 
-def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
+def _get_session_credentials(aws_profile: str | None = None) -> S3Credentials | None:
     """
     Generates AWS credentials created by boto3 when starting a session with given profile.
     :param aws_profile: Name of profile configured in ~/.aws directory
     :return: An S3Credentials object with access key pair and session token if applicable.
     """
-    aws_session: Optional[boto3.Session]
+    aws_session: boto3.Session | None
     if aws_profile is not None:
         aws_session = boto3.Session(profile_name=aws_profile)
     else:
@@ -58,7 +59,7 @@ def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Cr
     )
 
 
-def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
+def get_credential_env_vars(auth: AwsAuthentication) -> dict[str, str]:
     """
     Generates AWS credential environment variables for tasks.
     :param auth: AwsAuthentication
@@ -67,14 +68,14 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
     :raise: ValueError if `auth.type` is not a supported type or fails to authenticate with the
     given `auth`.
     """
-    env_vars: Optional[Dict[str, str]]
-    aws_credentials: Optional[S3Credentials]
+    env_vars: dict[str, str] | None
+    aws_credentials: S3Credentials | None
 
     if AwsAuthType.env_vars == auth.type:
         # Environmental variables are already set
         return {}
 
-    elif AwsAuthType.credentials == auth.type:
+    if AwsAuthType.credentials == auth.type:
         aws_credentials = auth.credentials
 
     elif AwsAuthType.profile == auth.type:
@@ -85,7 +86,7 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
     elif AwsAuthType.ec2 == auth.type:
         aws_credentials = _get_session_credentials()
         if aws_credentials is None:
-            raise ValueError(f"Failed to authenticate with EC2 metadata.")
+            raise ValueError("Failed to authenticate with EC2 metadata.")
     else:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
@@ -101,7 +102,7 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
 
 def generate_container_auth_options(
     clp_config: ClpConfig, container_type: str
-) -> Tuple[bool, List[str]]:
+) -> tuple[bool, list[str]]:
     """
     Generates Docker container authentication options for AWS S3 access based on the given type.
     Handles authentication methods that require extra configuration (profile, env_vars).
@@ -111,7 +112,7 @@ def generate_container_auth_options(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    output_storages_by_component_type: List[Union[S3Storage, FsStorage]]
+    output_storages_by_component_type: list[S3Storage | FsStorage]
     input_storage_needed = False
 
     if container_type in (
@@ -179,9 +180,9 @@ def generate_container_auth_options(
 
 
 def _create_s3_client(
-    region_code: str, s3_auth: AwsAuthentication, boto3_config: Optional[Config] = None
+    region_code: str, s3_auth: AwsAuthentication, boto3_config: Config | None = None
 ) -> boto3.client:
-    aws_session: Optional[boto3.Session]
+    aws_session: boto3.Session | None
     if AwsAuthType.profile == s3_auth.type:
         aws_session = boto3.Session(
             profile_name=s3_auth.profile,
@@ -205,14 +206,13 @@ def _create_s3_client(
     return s3_client
 
 
-def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
+def parse_s3_url(s3_url: str) -> tuple[str, str, str]:
     """
     Parses the region_code, bucket, and key_prefix from the given S3 URL.
     :param s3_url: A host-style URL or path-style URL.
     :return: A tuple of (region_code, bucket, key_prefix).
     :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
     """
-
     host_style_url_regex = re.compile(
         r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))"
         r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
@@ -253,7 +253,7 @@ def generate_s3_virtual_hosted_style_url(
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
 
-def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]:
+def s3_get_object_metadata(s3_input_config: S3InputConfig) -> list[FileMetadata]:
     """
     Gets the metadata of all objects specified by the given input config.
 
@@ -322,7 +322,6 @@ def s3_delete_by_key_prefix(
     :raises: ValueError if any parameter is invalid.
     :raises: Propagates `boto3.client.delete_objects`'s exceptions.
     """
-
     if not bool(region_code):
         raise ValueError("Region code is not specified")
     if not bool(bucket_name):
@@ -347,7 +346,7 @@ def s3_delete_by_key_prefix(
         s3_client.delete_objects(Bucket=bucket_name, Delete=deletion_config)
 
 
-def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
+def s3_delete_objects(s3_config: S3Config, object_keys: set[str]) -> None:
     """
     Deletes objects from an S3 bucket. The objects are identified by keys relative to
     `s3_config.key_prefix`.
@@ -364,10 +363,10 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     s3_client = _create_s3_client(s3_config.region_code, s3_config.aws_authentication, boto3_config)
 
-    def _gen_deletion_config(objects_list: List[str]):
+    def _gen_deletion_config(objects_list: list[str]):
         return {"Objects": [{"Key": object_to_delete} for object_to_delete in objects_list]}
 
-    objects_to_delete: List[str] = []
+    objects_to_delete: list[str] = []
     for relative_obj_key in object_keys:
         objects_to_delete.append(s3_config.key_prefix + relative_obj_key)
         if len(objects_to_delete) < S3_OBJECT_DELETION_BATCH_SIZE_MAX:
@@ -388,7 +387,7 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
 
 def _s3_get_object_metadata_from_single_prefix(
     s3_client: boto3.client, bucket: str, key_prefix: str
-) -> List[FileMetadata]:
+) -> list[FileMetadata]:
     """
     Gets the metadata of all objects under the <`bucket`>/<`key_prefix`>.
 
@@ -398,7 +397,7 @@ def _s3_get_object_metadata_from_single_prefix(
     :return: A list of `FileMetadata` containing the object's metadata on success.
     :raise: Propagates `_iter_s3_objects`'s exceptions.
     """
-    file_metadata_list: List[FileMetadata] = list()
+    file_metadata_list: list[FileMetadata] = list()
     for object_key, object_size in _iter_s3_objects(s3_client, bucket, key_prefix):
         file_metadata_list.append(FileMetadata(Path(object_key), object_size))
 
@@ -406,8 +405,8 @@ def _s3_get_object_metadata_from_single_prefix(
 
 
 def _s3_get_object_metadata_from_keys(
-    s3_client: boto3.client, bucket: str, key_prefix: str, keys: List[str]
-) -> List[FileMetadata]:
+    s3_client: boto3.client, bucket: str, key_prefix: str, keys: list[str]
+) -> list[FileMetadata]:
     """
     Gets the metadata of all objects specified in `keys` under the <`bucket`>.
 
@@ -439,7 +438,7 @@ def _s3_get_object_metadata_from_keys(
 
     key_iterator = iter(keys)
     first_key = next(key_iterator)
-    file_metadata_list: List[FileMetadata] = []
+    file_metadata_list: list[FileMetadata] = []
     file_metadata_list.append(_s3_get_object_metadata_from_key(s3_client, bucket, first_key))
 
     next_key = next(key_iterator, None)
@@ -497,7 +496,7 @@ def _s3_get_object_metadata_from_key(
 
 def _iter_s3_objects(
     s3_client: boto3.client, bucket: str, key_prefix: str, start_from: str | None = None
-) -> Generator[Tuple[str, int], None, None]:
+) -> Generator[tuple[str, int], None, None]:
     """
     Iterates over objects in an S3 bucket under the specified prefix, optionally starting after a
     given key.
