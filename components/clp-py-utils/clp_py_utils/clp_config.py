@@ -891,7 +891,7 @@ class ClpConfig(BaseModel):
             )
 
     def validate_api_server(self):
-        if self.package.storage_engine == StorageEngine.CLP and self.api_server != None:
+        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
             raise ValueError(
                 f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )

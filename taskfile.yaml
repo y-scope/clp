@@ -136,8 +136,8 @@ tasks:
         "{{.OUTPUT_DIR}}"
       - >-
         rsync --archive
-        {{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml
-        {{.OUTPUT_DIR}}/etc/clp-config.yaml
+        "{{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml"
+        "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
       - >-
         rsync --archive --mkpath
         "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/"
