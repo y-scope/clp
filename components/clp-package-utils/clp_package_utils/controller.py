@@ -546,6 +546,10 @@ class BaseController(ABC):
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
 
+        # Disable for CLP
+        if self._clp_config.package.storage_engine == StorageEngine.CLP:
+            env_vars |= {"CLP_API_SERVER_ENABLED": "0"}
+
         return env_vars
 
     def _set_up_env_for_webui(self, container_clp_config: ClpConfig) -> EnvVarsDict:
