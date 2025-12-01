@@ -2,6 +2,7 @@ import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
 import {
     Form,
     Input,
+    Typography,
 } from "antd";
 
 import {validateDatasetName} from "./validation";
@@ -9,8 +10,21 @@ import {validateDatasetName} from "./validation";
 
 const DATASET_HELPER_TEXT = `If left empty, dataset "${CLP_DEFAULT_DATASET_NAME}" will be used.`;
 const DATASET_PLACEHOLDER_TEXT = "The dataset for new archives";
-const TIMESTAMP_KEY_HELPER_TEXT = "If not provided, events will not have assigned" +
-    " timestamps and can only be searched from the command line without a timestamp filter.";
+const TIMESTAMP_KEY_HELPER_TEXT = (
+    <>
+        If not provided, events will not have assigned timestamps and can only be searched from
+        the command line without a timestamp filter. Certain characters require escaping -
+        {" "}
+        <Typography.Link
+            href={"https://docs.yscope.com/clp/main/user-docs/reference-json-search-syntax.html#characters-that-require-escaping"}
+            rel={"noopener"}
+            target={"_blank"}
+        >
+            see documentation
+        </Typography.Link>
+        .
+    </>
+);
 const TIMESTAMP_KEY_PLACEHOLDER_TEXT =
     "The path (e.g. x.y) for the field containing the log event's timestamp";
 
