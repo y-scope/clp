@@ -11,7 +11,7 @@ def start_clp_package(package_config: PackageConfig) -> None:
     Starts an instance of the CLP package.
 
     :param package_config:
-    :raise RuntimeError: If the package fails to start.
+    :raise: Propagates `run_and_assert`'s errors.
     """
     path_config = package_config.path_config
     start_script_path = path_config.start_script_path
@@ -31,7 +31,7 @@ def stop_clp_package(package_config: PackageConfig) -> None:
     Stops the running instance of the CLP package.
 
     :param package_config:
-    :raise RuntimeError: If the package fails to stop.
+    :raise: Propagates `run_and_assert`'s errors.
     """
     path_config = package_config.path_config
     stop_script_path = path_config.stop_script_path
