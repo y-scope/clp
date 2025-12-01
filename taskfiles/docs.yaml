@@ -115,7 +115,7 @@ tasks:
 
   api-server-openapi-json:
     vars:
-      OUTPUT_FILE: "{{.G_DOCS_BUILD_DIR}}/_static/openapi.json"
+      OUTPUT_FILE: "{{.G_DOCS_BUILD_DIR}}/_static/api-server-openapi.json"
     sources:
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"

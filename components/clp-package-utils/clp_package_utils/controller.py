@@ -12,7 +12,6 @@ from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
-    ApiServer,
     AwsAuthType,
     BundledService,
     ClpConfig,
