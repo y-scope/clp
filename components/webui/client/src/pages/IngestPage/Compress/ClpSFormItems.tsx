@@ -4,6 +4,8 @@ import {
     Input,
 } from "antd";
 
+import {validateDatasetName} from "./validation";
+
 
 const DATASET_HELPER_TEXT = `If left empty, dataset "${CLP_DEFAULT_DATASET_NAME}" will be used.`;
 const DATASET_PLACEHOLDER_TEXT = "The dataset for new archives";
@@ -23,6 +25,18 @@ const ClpSFormItems = () => (
             label={"Dataset"}
             name={"dataset"}
             tooltip={DATASET_HELPER_TEXT}
+            rules={[
+                {
+                    validator: async (_, value: unknown) => {
+                        const error = validateDatasetName(value as string);
+                        if (error) {
+                            return Promise.reject(new Error(error));
+                        }
+
+                        return Promise.resolve();
+                    },
+                },
+            ]}
         >
             <Input placeholder={DATASET_PLACEHOLDER_TEXT}/>
         </Form.Item>
