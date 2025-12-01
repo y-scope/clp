@@ -32,8 +32,8 @@ x-healthcheck-defaults: &healthcheck_defaults
 x-volume-definitions:
   clp-config-readonly: &volume_clp_config_readonly
     type: "bind"
-    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
-    target: "/etc/clp-config.yml"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
+    target: "/etc/clp-config.yaml"
     read_only: true
   clp-logs: &volume_clp_logs
     type: "bind"
@@ -45,11 +45,14 @@ services:
     <<: *service_defaults
     image: "${CLP_DB_CONTAINER_IMAGE_REF:-mariadb:10-jammy}"
     hostname: "database"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the database.
+      replicas: "${CLP_DATABASE_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
       MYSQL_PASSWORD: "${CLP_DB_PASS:?Please set a value.}"
-      MYSQL_ROOT_PASSWORD: "${CLP_DB_PASS:?Please set a value.}"
+      MYSQL_ROOT_PASSWORD: "${CLP_DB_ROOT_PASS:?Please set a value.}"
       MYSQL_USER: "${CLP_DB_USER:?Please set a value.}"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
@@ -82,6 +85,8 @@ services:
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
+      CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
@@ -93,7 +98,7 @@ services:
       "python3",
       "-u",
       "-m", "clp_py_utils.create-db-tables",
-      "--config", "/etc/clp-config.yml",
+      "--config", "/etc/clp-config.yaml",
       "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE:-clp}",
     ]
 
@@ -101,6 +106,9 @@ services:
     <<: *service_defaults
     image: "rabbitmq:3.9.8"
     hostname: "queue"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the queue.
+      replicas: "${CLP_QUEUE_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS:?Please set a value.}"
@@ -125,6 +133,9 @@ services:
     <<: *service_defaults
     image: "redis:7.2.4"
     hostname: "redis"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the redis.
+      replicas: "${CLP_REDIS_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
@@ -161,6 +172,9 @@ services:
     <<: *service_defaults
     image: "mongo:7.0.1"
     hostname: "results_cache"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the results cache.
+      replicas: "${CLP_RESULTS_CACHE_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}"
@@ -234,7 +248,7 @@ services:
       "python3",
       "-u",
       "-m", "job_orchestration.scheduler.compress.compression_scheduler",
-      "--config", "/etc/clp-config.yml"
+      "--config", "/etc/clp-config.yaml"
     ]
 
   compression-worker:
@@ -243,7 +257,7 @@ services:
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
-      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_worker"
@@ -348,7 +362,7 @@ services:
     command: [
       "python3", "-u",
       "-m", "job_orchestration.garbage_collector.garbage_collector",
-      "--config", "/etc/clp-config.yml",
+      "--config", "/etc/clp-config.yaml",
     ]
 
   query-scheduler:
@@ -379,7 +393,7 @@ services:
       "python3",
       "-u",
       "-m", "job_orchestration.scheduler.query.query_scheduler",
-      "--config", "/etc/clp-config.yml"
+      "--config", "/etc/clp-config.yaml"
     ]
     healthcheck:
       <<: *healthcheck_defaults
@@ -396,7 +410,7 @@ services:
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
-      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/query_worker"
@@ -444,7 +458,7 @@ services:
     command: [
       "python3", "-u",
       "-m", "job_orchestration.reducer.reducer",
-      "--config", "/etc/clp-config.yml",
+      "--config", "/etc/clp-config.yaml",
       "--concurrency", "${CLP_REDUCER_CONCURRENCY:-1}",
       "--upsert-interval", "${CLP_REDUCER_UPSERT_INTERVAL:-100}"
     ]
@@ -452,12 +466,14 @@ services:
   mcp-server:
     <<: *service_defaults
     hostname: "mcp_server"
-    profiles: ["mcp"]
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the MCP server.
+      replicas: "${CLP_MCP_SERVER_ENABLED:-0}"
     environment:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
-      CLP_DB_USER: "${CLP_DB_USER}"
-      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
       - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
@@ -476,7 +492,7 @@ services:
       "-m", "clp_mcp_server.clp_mcp_server",
       "--host", "mcp_server",
       "--port", "8000",
-      "--config-path", "/etc/clp-config.yml",
+      "--config-path", "/etc/clp-config.yaml",
     ]
     healthcheck:
       <<: *healthcheck_defaults
@@ -494,7 +510,7 @@ services:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
-      RUST_LOG: "DEBUG"
+      RUST_LOG: "INFO"
     ports:
       - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
         published: "${CLP_API_SERVER_PORT:-3001}"
@@ -502,6 +518,8 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -511,7 +529,7 @@ services:
       "/opt/clp/bin/api_server",
       "--host", "0.0.0.0",
       "--port", "3001",
-      "--config", "/etc/clp-config.yml"
+      "--config", "/etc/clp-config.yaml"
     ]
     healthcheck:
       <<: *healthcheck_defaults

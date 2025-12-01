@@ -3,6 +3,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -85,6 +86,29 @@ public:
         return EncodedTextAst{std::move(encoded_vars), std::move(string_blob)};
     }
 
+    /**
+     * Parses and encodes the given text into an `EncodedTextAst` instance.
+     * @param text
+     * @return The encoded text AST.
+     */
+    [[nodiscard]] static auto parse_and_encode_from(std::string_view text) -> EncodedTextAst {
+        std::string logtype;
+        std::vector<encoded_variable_t> encoded_vars;
+        std::vector<int32_t> dict_var_bounds;
+        ffi::encode_message(text, logtype, encoded_vars, dict_var_bounds);
+
+        StringBlob string_blob;
+        for (size_t i{0}; i < dict_var_bounds.size(); i += 2) {
+            auto const begin_pos{static_cast<size_t>(dict_var_bounds[i])};
+            auto const length{static_cast<size_t>(dict_var_bounds[i + 1]) - begin_pos};
+            string_blob.append(text.substr(begin_pos, length));
+        }
+
+        string_blob.append(logtype);
+
+        return EncodedTextAst{std::move(encoded_vars), std::move(string_blob)};
+    }
+
     // Default copy & move constructors and assignment operators
     EncodedTextAst(EncodedTextAst const&) = default;
     EncodedTextAst(EncodedTextAst&&) noexcept = default;
@@ -93,6 +117,8 @@ public:
 
     // Destructor
     ~EncodedTextAst() = default;
+
+    auto operator==(EncodedTextAst const& other) const -> bool = default;
 
     // Methods
     [[nodiscard]] auto get_logtype() const -> std::string_view {
@@ -157,6 +183,9 @@ private:
     StringBlob m_string_blob;
     size_t m_num_dict_vars;
 };
+
+using EightByteEncodedTextAst = EncodedTextAst<ir::eight_byte_encoded_variable_t>;
+using FourByteEncodedTextAst = EncodedTextAst<ir::four_byte_encoded_variable_t>;
 
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 template <bool unescape_logtype>

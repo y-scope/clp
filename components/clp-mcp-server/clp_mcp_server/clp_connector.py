@@ -8,16 +8,13 @@ import msgpack
 from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME
 from pymongo import AsyncMongoClient
 
-from .constants import (
+from clp_mcp_server.constants import (
     POLLING_INTERVAL_SECONDS,
     QueryJobStatus,
     QueryJobType,
     SEARCH_MAX_NUM_RESULTS,
 )
-from .settings import (
-    CLP_DB_PASS,
-    CLP_DB_USER,
-)
+from clp_mcp_server.settings import CLP_DB_PASS, CLP_DB_USER
 
 
 class ClpConnector:
@@ -140,8 +137,7 @@ class ClpConnector:
                 break
             if status in error_states:
                 err_msg = (
-                    f"Query job with ID {query_id} ended in "
-                    f"status {QueryJobStatus(status).name}."
+                    f"Query job with ID {query_id} ended in status {QueryJobStatus(status).name}."
                 )
                 raise RuntimeError(err_msg)
             if status not in waiting_states:
@@ -167,9 +163,9 @@ class ClpConnector:
         async for doc in collection.find({}, limit=SEARCH_MAX_NUM_RESULTS):
             doc["link"] = (
                 f"{self._webui_addr}/streamFile?type=json"
-                f'&streamId={doc["archive_id"]}'
+                f"&streamId={doc['archive_id']}"
                 f"&dataset={CLP_DEFAULT_DATASET_NAME}"
-                f'&logEventIdx={doc["log_event_ix"]}'
+                f"&logEventIdx={doc['log_event_ix']}"
             )
             doc["_id"] = None
             results.append(doc)

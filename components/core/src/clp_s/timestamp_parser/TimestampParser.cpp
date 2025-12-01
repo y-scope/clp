@@ -1,16 +1,20 @@
 #include "TimestampParser.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <date/date.h>
+#include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -39,15 +43,25 @@ constexpr int cMaxParsedMinute{59};
 constexpr int cMinParsedSecond{0};
 constexpr int cMaxParsedSecond{60};
 constexpr int cMinParsedSubsecondNanoseconds{0};
+constexpr int cMinTimezoneOffsetHour{0};
+constexpr int cMaxTimezoneOffsetHour{23};
+constexpr int cMinTimezoneOffsetMinute{0};
+constexpr int cMaxTimezoneOffsetMinute{59};
 
 constexpr size_t cNumNanosecondPrecisionSubsecondDigits{9ULL};
 constexpr size_t cNumMicrosecondPrecisionSubsecondDigits{6ULL};
 constexpr size_t cNumMillisecondPrecisionSubsecondDigits{3ULL};
 constexpr size_t cNumSecondPrecisionSubsecondDigits{0ULL};
 
+constexpr int cMinutesInHour{60};
+
 constexpr int cDefaultYear{1970};
 constexpr int cDefaultMonth{1};
 constexpr int cDefaultDay{1};
+
+constexpr int64_t cEpochMilliseconds1971{31'536'000'000};
+constexpr int64_t cEpochMicroseconds1971{31'536'000'000'000};
+constexpr int64_t cEpochNanoseconds1971{31'536'000'000'000'000};
 
 constexpr std::array cAbbreviatedDaysOfWeek
         = {std::string_view{"Sun"},
@@ -90,6 +104,53 @@ constexpr std::array cPartsOfDay = {std::string_view{"AM"}, std::string_view{"PM
 
 constexpr std::array<int64_t, 10ULL> cPowersOfTen
         = {1, 10, 100, 1000, 10'000, 100'000, 1'000'000, 10'000'000, 100'000'000, 1'000'000'000};
+
+constexpr std::array cPlusMinus
+        = {std::string_view{"+"}, std::string_view{"-"}, std::string_view{"\u2212"}};
+
+constexpr std::string_view cUtc{"UTC"};
+constexpr std::string_view cSpace{" "};
+constexpr std::string_view cZulu{"Z"};
+
+constexpr std::array cDefaultDateTimePatterns{
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?\Z)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\Z)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?])"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S])"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
+        std::string_view{R"(<<<\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S:\?)"},
+        std::string_view{R"(\d \b \Y \H:\M:\S\O{,.}\?)"},
+        std::string_view{R"([\Y\m\d-\H:\M:\S])"},
+        std::string_view{R"(\y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
+        std::string_view{R"(\y\m\d\O{T }\k:\M:\S)"},
+        std::string_view{R"(\b \d, \Y \l:\M:\S \p)"},
+        std::string_view{R"(\b \d, \Y \I:\M:\S \p)"},
+        std::string_view{R"(\B \d, \Y \H:\M)"},
+        std::string_view{R"([\d\O{-/}\b\O{-/}\Y:\H:\M:\S)"},
+        std::string_view{R"(\a \b \e \H:\M:\S \Y)"},
+        std::string_view{R"(\b \d \H:\M:\S)"},
+        std::string_view{R"(\b \d \H:\M:\S\Z)"},
+        std::string_view{R"(\m\O{- }\d \H:\M:\S\O{,.}\?)"}
+};
+
+constexpr std::array cDefaultNumericPatterns{
+        std::string_view{R"(\P)"},
+        std::string_view{R"(\E.\?)"}
+};
+
+struct CatSequenceReplacement {
+public:
+    CatSequenceReplacement(size_t start_idx, size_t length, std::string replacement)
+            : start_idx{start_idx},
+              length{length},
+              replacement{std::move(replacement)} {}
+
+    size_t start_idx;
+    size_t length;
+    std::string replacement;
+};
 
 /**
  * Converts a padded decimal integer string to an integer.
@@ -140,6 +201,86 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 [[nodiscard]] auto convert_variable_length_string_prefix_to_number(std::string_view str)
         -> ystdlib::error_handling::Result<std::pair<int64_t, size_t>>;
 
+/**
+ * Extracts a bracket pattern delimited by `{` and `}` from the prefix of a string.
+ *
+ * For simplicity, the `\` character is not allowed to appear between brackets. Note that since we
+ * completely disallow `\` in the current implementation, it is possible to add support for escape
+ * sequences within brackets in a backwards-compatible way.
+ *
+ * @param str Substring with a prefix potentially corresponding to a bracket pattern.
+ * @return A result containing a string_view starting with the opening bracket and ending with the
+ * closing bracket, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if:
+ *     - There is no opening or closing bracket.
+ *     - There is a `\` character between the brackets.
+ *     - There are no characters between `{` and `}`.
+ */
+[[nodiscard]] auto extract_bracket_pattern(std::string_view str)
+        -> ystdlib::error_handling::Result<std::string_view>;
+
+/**
+ * Extracts a timezone offset and determines its value in minutes from the prefix of a string.
+ * @param str Substring with a prefix potentially corresponding to a timezone offset.
+ * @return A result containing a pair holding the prefix corresponding to the extracted timezone
+ * offset and the offset in minutes, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimezoneOffset if the prefix of the string doesn't correspond to a
+ *   timezone offset.
+ */
+[[nodiscard]] auto extract_timezone_offset_in_minutes(std::string_view str)
+        -> ystdlib::error_handling::Result<std::pair<std::string_view, int>>;
+
+/**
+ * @return The absolute value of the subsecond fractional component of a timestamp.
+ */
+[[nodiscard]] auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t;
+
+/**
+ * Estimates the precision of an epoch timestamp based on its proximity to 1971 in different
+ * precisions.
+ *
+ * This heuristic works because one year in epoch nanoseconds is approximately 1000 years in epoch
+ * microseconds, and so on. Note that this heuristic can not distinguish the precision of timestamps
+ * with absolute value sufficiently close to zero.
+ *
+ * @param timestamp
+ * @return A pair containing the scaling factor needed to convert the timestamp into nanosecond
+ * precision, and a format specifier indicating the precision of the timestamp.
+ */
+[[nodiscard]] auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>;
+
+/**
+ * Marshals a date-time timestamp according to a timestamp pattern.
+ * @param timestamp
+ * @param pattern
+ * @param buffer The buffer that the marshalled timestamp is appended to.
+ * @return A void result on success, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format malformed format
+ *   specifiers, or format specifiers that aren't supported in date-time timestamps.
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ */
+[[nodiscard]] auto marshal_date_time_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void>;
+
+/**
+ * Marshals a numeric timestamp according to a timestamp pattern.
+ * @param timestamp
+ * @param pattern
+ * @param buffer The buffer that the marshalled timestamp is appended to.
+ * @return A void result on success, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format specifiers that aren't
+ *   supported in numeric timestamps.
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ */
+[[nodiscard]] auto marshal_numeric_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void>;
+
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
     if (str.empty()) {
@@ -150,8 +291,15 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
     size_t i{};
     for (; i < (str.size() - 1) && padding_character == str.at(i); ++i) {}
 
+    // Check if the string is zero-padded after stripping `padding_character`, since
+    // `convert_string_to_int` allows zero-padding.
+    auto const stripped_str{str.substr(i)};
+    if (stripped_str.size() > 1ULL && '0' == stripped_str.front()) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
     int value{};
-    if (clp::string_utils::convert_string_to_int(str.substr(i), value)) {
+    if (clp::string_utils::convert_string_to_int(stripped_str, value)) {
         return value;
     }
     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -242,12 +390,543 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
     }
     return std::make_pair(converted_value, num_decimal_digits);
 }
+
+auto extract_bracket_pattern(std::string_view str)
+        -> ystdlib::error_handling::Result<std::string_view> {
+    if (str.empty() || '{' != str.front()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    for (size_t pattern_idx{1ULL}; pattern_idx < str.size(); ++pattern_idx) {
+        if ('\\' == str.at(pattern_idx)) {
+            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+        if ('}' == str.at(pattern_idx)) {
+            if (1ULL == pattern_idx) {
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+            }
+            return str.substr(0ULL, pattern_idx + 1ULL);
+        }
+    }
+    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+}
+
+auto extract_timezone_offset_in_minutes(std::string_view str)
+        -> ystdlib::error_handling::Result<std::pair<std::string_view, int>> {
+    auto const plus_minus_result{find_first_matching_prefix(str, cPlusMinus)};
+    if (plus_minus_result.has_error()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    int const sign_factor{0 == plus_minus_result.value() ? 1 : -1};
+    size_t num_timezone_bytes{cPlusMinus.at(plus_minus_result.value()).length()};
+
+    constexpr size_t cHoursFieldLength{2ULL};
+    if (num_timezone_bytes + cHoursFieldLength > str.size()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    auto const hours_result{
+            convert_padded_string_to_number(str.substr(num_timezone_bytes, cHoursFieldLength), '0')
+    };
+    if (hours_result.has_error()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    num_timezone_bytes += cHoursFieldLength;
+    auto const hours_offset{hours_result.value()};
+    if (hours_offset < cMinTimezoneOffsetHour || hours_offset > cMaxTimezoneOffsetHour) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    int offset{hours_offset * cMinutesInHour};
+    auto const hours_only_offset{
+            std::make_pair(str.substr(0ULL, num_timezone_bytes), sign_factor * offset)
+    };
+    if (str.size() == num_timezone_bytes) {
+        return hours_only_offset;
+    }
+
+    if (':' == str.at(num_timezone_bytes)) {
+        ++num_timezone_bytes;
+    }
+
+    constexpr size_t cMinutesFieldLength{2ULL};
+    if (num_timezone_bytes + cMinutesFieldLength > str.size()) {
+        return hours_only_offset;
+    }
+    auto const minutes_result{convert_padded_string_to_number(
+            str.substr(num_timezone_bytes, cMinutesFieldLength),
+            '0'
+    )};
+    if (minutes_result.has_error()) {
+        return hours_only_offset;
+    }
+    auto const minutes_offset{minutes_result.value()};
+    if (minutes_offset < cMinTimezoneOffsetMinute || minutes_offset > cMaxTimezoneOffsetMinute) {
+        return hours_only_offset;
+    }
+    offset += minutes_offset;
+    num_timezone_bytes += cMinutesFieldLength;
+    return std::make_pair(str.substr(0ULL, num_timezone_bytes), sign_factor * offset);
+}
+
+auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char> {
+    auto const abs_timestamp = timestamp < 0 ? -timestamp : timestamp;
+    if (abs_timestamp > cEpochNanoseconds1971) {
+        return std::make_pair(1LL, 'N');
+    }
+    if (abs_timestamp > cEpochMicroseconds1971) {
+        constexpr auto cFactor{cPowersOfTen
+                                       [cNumNanosecondPrecisionSubsecondDigits
+                                        - cNumMicrosecondPrecisionSubsecondDigits]};
+        return std::make_pair(cFactor, 'C');
+    }
+    if (abs_timestamp > cEpochMilliseconds1971) {
+        constexpr auto cFactor{cPowersOfTen
+                                       [cNumNanosecondPrecisionSubsecondDigits
+                                        - cNumMillisecondPrecisionSubsecondDigits]};
+        return std::make_pair(cFactor, 'L');
+    }
+    constexpr auto cFactor{
+            cPowersOfTen
+                    [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
+    };
+    return std::make_pair(cFactor, 'E');
+}
+
+auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t {
+    constexpr auto cFactor{
+            cPowersOfTen
+                    [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
+    };
+    auto const subsecond_nanoseconds{timestamp % cFactor};
+    return subsecond_nanoseconds < 0 ? -subsecond_nanoseconds : subsecond_nanoseconds;
+}
+
+// NOLINTBEGIN(readability-function-cognitive-complexity)
+auto marshal_date_time_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void> {
+    auto const timestamp_point{
+            date::sys_days(date::year(cDefaultYear) / cDefaultMonth / cDefaultDay)
+            + std::chrono::nanoseconds(timestamp)
+    };
+    auto const timezone_minutes_offset{
+            pattern.get_optional_timezone_size_and_offset().value_or(std::pair{0ULL, 0}).second
+    };
+    auto const timezone_adjusted_timestamp_point{
+            timestamp_point + std::chrono::minutes(timezone_minutes_offset)
+    };
+    auto const timestamp_date{date::floor<date::days>(timezone_adjusted_timestamp_point)};
+    auto const year_month_day{date::year_month_day(timestamp_date)};
+    auto const time_of_day_duration{timezone_adjusted_timestamp_point - timestamp_date};
+    auto const time_of_day{date::make_time(time_of_day_duration)};
+
+    bool escaped{false};
+    auto const raw_pattern{pattern.get_pattern()};
+    for (size_t pattern_idx{0ULL}; pattern_idx < raw_pattern.size(); ++pattern_idx) {
+        auto const c{raw_pattern.at(pattern_idx)};
+        if (false == escaped && '\\' == c) {
+            escaped = true;
+            continue;
+        }
+        if (false == escaped) {
+            buffer.push_back(c);
+            continue;
+        }
+        escaped = false;
+        switch (c) {
+            case 'y': {  // Zero-padded 2-digit year in century.
+                auto const year{year_month_day.year().operator int()};
+                if (year >= cTwoDigitYearHighOffset) {
+                    buffer.append(fmt::format("{:0>2d}", year - cTwoDigitYearHighOffset));
+                } else {
+                    buffer.append(fmt::format("{:0>2d}", year - cTwoDigitYearLowOffset));
+                }
+                break;
+            }
+            case 'Y': {  // Zero-padded 4-digit year.
+                auto const year{year_month_day.year().operator int()};
+                buffer.append(fmt::format("{:0>4d}", year));
+                break;
+            }
+            case 'B': {  // Full month name.
+                auto const month_idx{year_month_day.month().operator unsigned int() - 1};
+                buffer.append(cMonthNames.at(month_idx));
+                break;
+            }
+            case 'b': {  // Abbreviated month name.
+                auto const month_idx{year_month_day.month().operator unsigned int() - 1};
+                buffer.append(cAbbreviatedMonthNames.at(month_idx));
+                break;
+            }
+            case 'm': {  // Zero-padded month.
+                auto const month{year_month_day.month().operator unsigned int()};
+                buffer.append(fmt::format("{:0>2d}", month));
+                break;
+            }
+            case 'd': {  // Zero-padded day in month.
+                auto const day{year_month_day.day().operator unsigned int()};
+                buffer.append(fmt::format("{:0>2d}", day));
+                break;
+            }
+            case 'e': {  // Space-padded day in month.
+                auto const day{year_month_day.day().operator unsigned int()};
+                buffer.append(fmt::format("{: >2d}", day));
+                break;
+            }
+            case 'a': {  // Abbreviated day in week.
+                auto const day_in_week_idx{
+                        (date::year_month_weekday(timestamp_date).weekday_indexed().weekday()
+                         - date::Sunday)
+                                .count()
+                };
+                buffer.append(cAbbreviatedDaysOfWeek.at(day_in_week_idx));
+                break;
+            }
+            case 'p': {  // Part of day (AM/PM).
+                auto const part_of_day_idx{
+                        time_of_day.hours().count() >= cMaxParsedHour12HourClock ? 1ULL : 0ULL
+                };
+                buffer.append(cPartsOfDay.at(part_of_day_idx));
+                break;
+            }
+            case 'H': {  // 24-hour clock, zero-padded hour.
+                auto const hours{time_of_day.hours().count()};
+                buffer.append(fmt::format("{:0>2d}", hours));
+                break;
+            }
+            case 'k': {  // 24-hour clock, space-padded hour.
+                auto const hours{time_of_day.hours().count()};
+                buffer.append(fmt::format("{: >2d}", hours));
+                break;
+            }
+            case 'I': {  // 12-hour clock, zero-padded hour.
+                auto const hours{time_of_day.hours().count()};
+                auto const hours_mod_twelve{hours % cMaxParsedHour12HourClock};
+                auto const twelve_hour_clock_hours{
+                        0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
+                };
+                buffer.append(fmt::format("{:0>2d}", twelve_hour_clock_hours));
+                break;
+            }
+            case 'l': {  // 12-hour clock, space-padded hour.
+                auto const hours{time_of_day.hours().count()};
+                auto const hours_mod_twelve{hours % cMaxParsedHour12HourClock};
+                auto const twelve_hour_clock_hours{
+                        0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
+                };
+                buffer.append(fmt::format("{: >2d}", twelve_hour_clock_hours));
+                break;
+            }
+            case 'M': {  // Zero-padded minute.
+                auto const minutes{time_of_day.minutes().count()};
+                buffer.append(fmt::format("{:0>2d}", minutes));
+                break;
+            }
+            case 'S': {  // Zero-padded second.
+                auto const seconds{time_of_day.seconds().count()};
+                buffer.append(fmt::format("{:0>2d}", seconds));
+                break;
+            }
+            case '3': {  // Zero-padded 3-digit milliseconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMillisecondPrecisionSubsecondDigits]};
+                auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
+                auto const subsecond_milliseconds{subsecond_nanoseconds / cFactor};
+                buffer.append(fmt::format("{:0>3d}", subsecond_milliseconds));
+                break;
+            }
+            case '6': {  // Zero-padded 6-digit microseconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMicrosecondPrecisionSubsecondDigits]};
+                auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
+                auto const subsecond_microseconds{subsecond_nanoseconds / cFactor};
+                buffer.append(fmt::format("{:0>6d}", subsecond_microseconds));
+                break;
+            }
+            case '9': {  // Zero-padded 9-digit nanoseconds.
+                auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
+                buffer.append(fmt::format("{:0>9d}", subsecond_nanoseconds));
+                break;
+            }
+            case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
+                auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
+                auto const subsecond_nanoseconds_str{fmt::format("{:0>9d}", subsecond_nanoseconds)};
+                size_t num_digits_before_zero{subsecond_nanoseconds_str.size()};
+                while (num_digits_before_zero > 0
+                       && '0' == subsecond_nanoseconds_str.at(num_digits_before_zero - 1))
+                {
+                    --num_digits_before_zero;
+                }
+                if (0 == num_digits_before_zero) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                buffer.append(
+                        std::string_view{subsecond_nanoseconds_str}
+                                .substr(0ULL, num_digits_before_zero)
+                );
+                break;
+            }
+            case 'z': {  // Timezone offset.
+                auto const timezone_offset{pattern.get_optional_timezone_size_and_offset()};
+                if (false == timezone_offset.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                auto const timezone_pattern_size{timezone_offset.value().first};
+                buffer.append(raw_pattern.substr(pattern_idx + 2ULL, timezone_pattern_size));
+                pattern_idx += timezone_pattern_size + 2ULL;
+                break;
+            }
+            case '\\': {
+                buffer.push_back('\\');
+                break;
+            }
+            default:
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+    }
+    return ystdlib::error_handling::success();
+}
+
+// NOLINTEND(readability-function-cognitive-complexity)
+
+auto marshal_numeric_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void> {
+    bool escaped{false};
+    for (auto const c : pattern.get_pattern()) {
+        if (false == escaped && '\\' == c) {
+            escaped = true;
+            continue;
+        }
+        if (false == escaped) {
+            buffer.push_back(c);
+            continue;
+        }
+        escaped = false;
+        switch (c) {
+            case 'E': {  // Epoch seconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumSecondPrecisionSubsecondDigits]};
+                int64_t const epoch_second_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_second_timestamp));
+                break;
+            }
+            case 'L': {  // Epoch milliseconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMillisecondPrecisionSubsecondDigits]};
+                int64_t const epoch_millisecond_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_millisecond_timestamp));
+                break;
+            }
+            case 'C': {  // Epoch microseconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMicrosecondPrecisionSubsecondDigits]};
+                int64_t const epoch_microsecond_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_microsecond_timestamp));
+                break;
+            }
+            case 'N': {  // Epoch nanoseconds.
+                buffer.append(fmt::format("{}", timestamp));
+                break;
+            }
+            case '3': {  // Zero-padded 3-digit milliseconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMillisecondPrecisionSubsecondDigits]};
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                auto const subsecond_milliseconds{subsecond_nanoseconds / cFactor};
+                buffer.append(fmt::format("{:0>3d}", subsecond_milliseconds));
+                break;
+            }
+            case '6': {  // Zero-padded 6-digit microseconds.
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMicrosecondPrecisionSubsecondDigits]};
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                auto const subsecond_microseconds{subsecond_nanoseconds / cFactor};
+                buffer.append(fmt::format("{:0>6d}", subsecond_microseconds));
+                break;
+            }
+            case '9': {  // Zero-padded 9-digit nanoseconds.
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                buffer.append(fmt::format("{:0>9d}", subsecond_nanoseconds));
+                break;
+            }
+            case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                auto const subsecond_nanoseconds_str{fmt::format("{:0>9d}", subsecond_nanoseconds)};
+                size_t num_digits_before_zero{subsecond_nanoseconds_str.size()};
+                while (num_digits_before_zero > 0
+                       && '0' == subsecond_nanoseconds_str.at(num_digits_before_zero - 1))
+                {
+                    --num_digits_before_zero;
+                }
+                if (0 == num_digits_before_zero) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                buffer.append(
+                        std::string_view{subsecond_nanoseconds_str}
+                                .substr(0ULL, num_digits_before_zero)
+                );
+                break;
+            }
+            case '\\': {
+                buffer.push_back('\\');
+                break;
+            }
+            default:
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+    }
+    return ystdlib::error_handling::success();
+}
 }  // namespace
+
+auto TimestampPattern::create(std::string_view pattern)
+        -> ystdlib::error_handling::Result<TimestampPattern> {
+    std::vector<bool> format_specifiers(std::numeric_limits<unsigned char>::max() + 1ULL, false);
+    bool uses_date_type_representation{false};
+    bool uses_number_type_representation{false};
+    bool has_part_of_day{false};
+    bool uses_twelve_hour_clock{false};
+    std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset{std::nullopt};
+
+    bool escaped{false};
+    for (size_t pattern_idx{0ULL}; pattern_idx < pattern.size(); ++pattern_idx) {
+        auto const cur_format_specifier{pattern.at(pattern_idx)};
+        if (false == escaped) {
+            if ('\\' == cur_format_specifier) {
+                escaped = true;
+            }
+            continue;
+        }
+
+        auto unsigned_cur_format_specifier = static_cast<unsigned char>(cur_format_specifier);
+        if ('O' != cur_format_specifier && format_specifiers.at(unsigned_cur_format_specifier)) {
+            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+        format_specifiers[unsigned_cur_format_specifier] = true;
+
+        escaped = false;
+        switch (cur_format_specifier) {
+            case 'y':  // Zero-padded 2-digit year in century.
+            case 'Y':  // Zero-padded 4-digit year.
+            case 'B':  // Full month name.
+            case 'b':  // Abbreviated month name.
+            case 'm':  // Zero-padded month.
+            case 'd':  // Zero-padded day in month.
+            case 'e':  // Space-padded day in month.
+            case 'a':  // Abbreviated day in week.
+                uses_date_type_representation = true;
+                break;
+            case 'p':  // Part of day (AM/PM).
+                uses_date_type_representation = true;
+                has_part_of_day = true;
+                break;
+            case 'H':  // 24-hour clock, zero-padded hour.
+            case 'k':  // 24-hour clock, space-padded hour.
+                uses_date_type_representation = true;
+                break;
+            case 'I':  // 12-hour clock, zero-padded hour.
+            case 'l':  // 12-hour clock, space-padded hour.
+                uses_twelve_hour_clock = true;
+                uses_date_type_representation = true;
+                break;
+            case 'M':  // Zero-padded minute.
+            case 'S':  // Zero-padded second.
+                uses_date_type_representation = true;
+                break;
+            case '3':  // Zero-padded 3-digit milliseconds.
+            case '6':  // Zero-padded 6-digit microseconds.
+            case '9':  // Zero-padded 9-digit nanoseconds.
+            case 'T':  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
+                break;
+            case 'E':  // Epoch seconds.
+            case 'L':  // Epoch milliseconds.
+            case 'C':  // Epoch microseconds.
+            case 'N':  // Epoch nanoseconds.
+                uses_number_type_representation = true;
+                break;
+            case 'z': {  // Timezone offset.
+                auto const timezone_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                auto const timezone_str{timezone_bracket_pattern.substr(
+                        1ULL,
+                        timezone_bracket_pattern.size() - 2ULL
+                )};
+
+                auto const [extracted_timezone_str, extracted_timezone_offset]
+                        = YSTDLIB_ERROR_HANDLING_TRYX(
+                                extract_timezone_offset_in_minutes(timezone_str)
+                        );
+                if (extracted_timezone_str.size() != timezone_str.size()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+
+                optional_timezone_size_and_offset.emplace(
+                        extracted_timezone_str.size(),
+                        extracted_timezone_offset
+                );
+                pattern_idx += timezone_bracket_pattern.size();
+                uses_date_type_representation = true;
+                break;
+            }
+            case 'Z':  // Generic timezone.
+                uses_date_type_representation = true;
+                break;
+            case '?':  // Generic fractional second.
+                break;
+            case 'P':  // Unknown-precision epoch time.
+                uses_number_type_representation = true;
+                break;
+            case 'O': {  // One of several literal characters.
+                auto const bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                pattern_idx += bracket_pattern.size();
+                break;
+            }
+            case '\\': {
+                break;
+            }
+            default:
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+    }
+
+    if (escaped) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    if (uses_date_type_representation && uses_number_type_representation) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    if (uses_twelve_hour_clock != has_part_of_day) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    return TimestampPattern{
+            std::string{pattern},
+            optional_timezone_size_and_offset,
+            uses_date_type_representation,
+            uses_twelve_hour_clock
+    };
+}
 
 // NOLINTBEGIN(readability-function-cognitive-complexity)
 auto parse_timestamp(
         std::string_view timestamp,
-        std::string_view pattern,
+        TimestampPattern const& pattern,
         [[maybe_unused]] std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
     size_t pattern_idx{};
@@ -262,21 +941,21 @@ auto parse_timestamp(
     int parsed_subsecond_nanoseconds{};
     std::optional<int> optional_day_of_week_idx;
     std::optional<int> optional_part_of_day_idx;
+    std::optional<int> optional_timezone_offset_in_minutes;
 
     int64_t parsed_epoch_nanoseconds{};
 
-    bool date_type_representation{false};
-    bool number_type_representation{false};
-    bool uses_12_hour_clock{false};
+    std::vector<CatSequenceReplacement> cat_sequence_replacements;
 
     bool escaped{false};
-    for (; pattern_idx < pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
+    auto const raw_pattern{pattern.get_pattern()};
+    for (; pattern_idx < raw_pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
         if (false == escaped) {
-            if ('\\' == pattern[pattern_idx]) {
+            if ('\\' == raw_pattern[pattern_idx]) {
                 escaped = true;
                 continue;
             }
-            if (pattern[pattern_idx] == timestamp[timestamp_idx]) {
+            if (raw_pattern[pattern_idx] == timestamp[timestamp_idx]) {
                 ++timestamp_idx;
                 continue;
             }
@@ -284,7 +963,7 @@ auto parse_timestamp(
         }
 
         escaped = false;
-        switch (pattern[pattern_idx]) {
+        switch (raw_pattern[pattern_idx]) {
             case 'y': {  // Zero-padded 2-digit year in century.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
@@ -304,7 +983,6 @@ auto parse_timestamp(
                     parsed_year = two_digit_year + cTwoDigitYearHighOffset;
                 }
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'Y': {  // Zero-padded 4-digit year.
@@ -323,7 +1001,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'B': {  // Full month name.
@@ -332,7 +1009,6 @@ auto parse_timestamp(
                 )};
                 parsed_month = static_cast<int>(month_idx) + 1;
                 timestamp_idx += cMonthNames.at(month_idx).length();
-                date_type_representation = true;
                 break;
             }
             case 'b': {  // Abbreviated month name.
@@ -342,7 +1018,6 @@ auto parse_timestamp(
                 ))};
                 parsed_month = static_cast<int>(month_idx) + 1;
                 timestamp_idx += cAbbreviatedMonthNames.at(month_idx).length();
-                date_type_representation = true;
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -361,7 +1036,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'd': {  // Zero-padded day in month.
@@ -380,7 +1054,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'e': {  // Space-padded day in month.
@@ -399,7 +1072,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'a': {  // Abbreviated day in week.
@@ -409,7 +1081,6 @@ auto parse_timestamp(
                 ))};
                 timestamp_idx += cAbbreviatedDaysOfWeek.at(day_idx).length();
                 optional_day_of_week_idx = static_cast<int>(day_idx);
-                date_type_representation = true;
                 break;
             }
             case 'p': {  // Part of day (AM/PM).
@@ -418,7 +1089,6 @@ auto parse_timestamp(
                 )};
                 timestamp_idx += cPartsOfDay.at(part_of_day_idx).length();
                 optional_part_of_day_idx = static_cast<int>(part_of_day_idx);
-                date_type_representation = true;
                 break;
             }
             case 'H': {  // 24-hour clock, zero-padded hour.
@@ -439,7 +1109,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'k': {  // 24-hour clock, space-padded hour.
@@ -460,7 +1129,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'I': {  // 12-hour clock, zero-padded hour.
@@ -481,8 +1149,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                uses_12_hour_clock = true;
-                date_type_representation = true;
                 break;
             }
             case 'l': {  // 12-hour clock, space-padded hour.
@@ -503,8 +1169,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                uses_12_hour_clock = true;
-                date_type_representation = true;
                 break;
             }
             case 'M': {  // Zero-padded minute.
@@ -523,7 +1187,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'S': {  // Zero-padded second.
@@ -542,7 +1205,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
@@ -638,7 +1300,6 @@ auto parse_timestamp(
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumSecondPrecisionSubsecondDigits]};
                 parsed_epoch_nanoseconds = number * cFactor;
-                number_type_representation = true;
                 break;
             }
             case 'L': {  // Epoch milliseconds.
@@ -652,7 +1313,6 @@ auto parse_timestamp(
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumMillisecondPrecisionSubsecondDigits]};
                 parsed_epoch_nanoseconds = number * cFactor;
-                number_type_representation = true;
                 break;
             }
             case 'C': {  // Epoch microseconds.
@@ -666,7 +1326,6 @@ auto parse_timestamp(
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumMicrosecondPrecisionSubsecondDigits]};
                 parsed_epoch_nanoseconds = number * cFactor;
-                number_type_representation = true;
                 break;
             }
             case 'N': {  // Epoch nanoseconds.
@@ -677,14 +1336,142 @@ auto parse_timestamp(
                 );
                 timestamp_idx += num_digits;
                 parsed_epoch_nanoseconds = number;
-                number_type_representation = true;
                 break;
             }
-            case 'z':
-            case 'Z':
-            case '?':
-            case 'P':
-                return ErrorCode{ErrorCodeEnum::FormatSpecifierNotImplemented};
+            case 'z': {  // Timezone offset.
+                auto const& optional_timezone_size_and_offset{
+                        pattern.get_optional_timezone_size_and_offset()
+                };
+                if (false == optional_timezone_size_and_offset.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+
+                auto const [extracted_timezone_size, extracted_timezone_offset]
+                        = optional_timezone_size_and_offset.value();
+                if (false
+                    == timestamp.substr(timestamp_idx)
+                               .starts_with(raw_pattern.substr(
+                                       pattern_idx + 2ULL,
+                                       extracted_timezone_size
+                               )))
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                optional_timezone_offset_in_minutes = extracted_timezone_offset;
+                timestamp_idx += extracted_timezone_size;
+                pattern_idx += extracted_timezone_size + 2ULL;
+                break;
+            }
+            case 'Z': {  // Generic timezone.
+                std::string timezone_pattern;
+                auto remaining_unparsed_content{timestamp.substr(timestamp_idx)};
+                if (remaining_unparsed_content.empty()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                if (remaining_unparsed_content.starts_with(cSpace)) {
+                    timezone_pattern.append(cSpace);
+                    timestamp_idx += cSpace.size();
+                    remaining_unparsed_content = remaining_unparsed_content.substr(cSpace.size());
+                }
+                if (remaining_unparsed_content.starts_with(cUtc)) {
+                    timezone_pattern.append(cUtc);
+                    timestamp_idx += cUtc.size();
+                    remaining_unparsed_content = remaining_unparsed_content.substr(cUtc.size());
+                }
+
+                auto const extracted_timezone_result{
+                        extract_timezone_offset_in_minutes(remaining_unparsed_content)
+                };
+                if (false == extracted_timezone_result.has_error()) {
+                    auto const [extracted_timezone_str, extracted_timezone_offset]
+                            = extracted_timezone_result.value();
+                    timestamp_idx += extracted_timezone_str.size();
+                    timezone_pattern.append(fmt::format(R"(\z{{{}}})", extracted_timezone_str));
+                    remaining_unparsed_content
+                            = remaining_unparsed_content.substr(extracted_timezone_str.size());
+                    optional_timezone_offset_in_minutes = extracted_timezone_offset;
+                }
+
+                if (remaining_unparsed_content.starts_with(cZulu)) {
+                    timezone_pattern.append(cZulu);
+                    timestamp_idx += cZulu.size();
+                    optional_timezone_offset_in_minutes
+                            = optional_timezone_offset_in_minutes.value_or(0);
+                }
+
+                if (false == optional_timezone_offset_in_minutes.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                cat_sequence_replacements
+                        .emplace_back(pattern_idx - 1, 2ULL, std::move(timezone_pattern));
+                break;
+            }
+            case '?': {  // Generic fractional second.
+                constexpr size_t cMaxFieldLength{9};
+                auto const remaining_unparsed_content{timestamp.substr(timestamp_idx)};
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_positive_bounded_variable_length_string_prefix_to_number(
+                                remaining_unparsed_content,
+                                cMaxFieldLength
+                        )
+                );
+
+                if (cNumNanosecondPrecisionSubsecondDigits == num_digits) {
+                    cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "9");
+                } else if (cNumMicrosecondPrecisionSubsecondDigits == num_digits) {
+                    cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "6");
+                } else if (cNumMillisecondPrecisionSubsecondDigits == num_digits) {
+                    cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "3");
+                } else if ('0' != remaining_unparsed_content.at(num_digits - 1)) {
+                    cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "T");
+                } else {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += num_digits;
+                parsed_subsecond_nanoseconds
+                        = static_cast<int>(number * cPowersOfTen.at(cMaxFieldLength - num_digits));
+                break;
+            }
+            case 'P': {  // Unknown-precision epoch time.
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_variable_length_string_prefix_to_number(
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
+                auto const [factor, precision_specifier] = estimate_timestamp_precision(number);
+                cat_sequence_replacements
+                        .emplace_back(pattern_idx, 1ULL, std::string{precision_specifier});
+                parsed_epoch_nanoseconds = factor * number;
+                timestamp_idx += num_digits;
+                break;
+            }
+            case 'O': {  // One of several literal characters.
+                constexpr size_t cFieldLength{1};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                auto const bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(raw_pattern.substr(pattern_idx + 1ULL))
+                )};
+
+                auto const possible_chars{bracket_pattern.substr(1, bracket_pattern.size() - 2)};
+                auto const char_to_match{timestamp.at(timestamp_idx)};
+                if (possible_chars.cend() == std::ranges::find(possible_chars, char_to_match)) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                cat_sequence_replacements.emplace_back(
+                        pattern_idx - 1,
+                        2ULL + bracket_pattern.size(),
+                        std::string{char_to_match}
+                );
+                pattern_idx += bracket_pattern.size();
+                timestamp_idx += cFieldLength;
+                break;
+            }
             case '\\': {
                 if ('\\' == timestamp[timestamp_idx]) {
                     ++timestamp_idx;
@@ -697,40 +1484,40 @@ auto parse_timestamp(
         }
     }
 
-    if (escaped) {
-        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-    }
-
-    // Do not allow mixing format specifiers for date-and-time type timestamps and epoch-number type
-    // timestamps.
-    if (date_type_representation && number_type_representation) {
-        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-    }
-
     // Do not allow trailing unmatched content.
-    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
+    if (pattern_idx != raw_pattern.size() || timestamp_idx != timestamp.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
-    if ((uses_12_hour_clock && false == optional_part_of_day_idx.has_value())
-        || (false == uses_12_hour_clock && optional_part_of_day_idx.has_value()))
-    {
-        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    if (false == cat_sequence_replacements.empty()) {
+        generated_pattern.clear();
+        size_t last_pattern_idx{};
+        for (auto const& replacement : cat_sequence_replacements) {
+            generated_pattern.append(
+                    raw_pattern.substr(last_pattern_idx, replacement.start_idx - last_pattern_idx)
+            );
+            last_pattern_idx = replacement.start_idx + replacement.length;
+            generated_pattern.append(replacement.replacement);
+        }
+        generated_pattern.append(raw_pattern.substr(last_pattern_idx));
     }
+    std::string_view const returned_pattern{
+            cat_sequence_replacements.empty() ? raw_pattern : std::string_view{generated_pattern}
+    };
 
-    if (number_type_representation) {
+    if (false == pattern.uses_date_type_representation()) {
         epochtime_t epoch_nanoseconds{parsed_epoch_nanoseconds};
         if (epoch_nanoseconds < 0) {
             epoch_nanoseconds -= static_cast<epochtime_t>(parsed_subsecond_nanoseconds);
         } else {
             epoch_nanoseconds += static_cast<epochtime_t>(parsed_subsecond_nanoseconds);
         }
-        return {epoch_nanoseconds, pattern};
+        return {epoch_nanoseconds, returned_pattern};
     }
 
-    if (uses_12_hour_clock) {
+    if (pattern.uses_twelve_hour_clock()) {
         parsed_hour = (parsed_hour % cMaxParsedHour12HourClock)
-                      + optional_part_of_day_idx.value() * cMaxParsedHour12HourClock;
+                      + (optional_part_of_day_idx.value_or(0) * cMaxParsedHour12HourClock);
     }
 
     auto const year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
@@ -741,7 +1528,8 @@ auto parse_timestamp(
     auto const time_point = date::sys_days{year_month_day} + std::chrono::hours{parsed_hour}
                             + std::chrono::minutes{parsed_minute}
                             + std::chrono::seconds{parsed_second}
-                            + std::chrono::nanoseconds{parsed_subsecond_nanoseconds};
+                            + std::chrono::nanoseconds{parsed_subsecond_nanoseconds}
+                            - std::chrono::minutes{optional_timezone_offset_in_minutes.value_or(0)};
 
     if (optional_day_of_week_idx.has_value()) {
         auto const actual_day_of_week_idx{(date::year_month_weekday(date::sys_days(year_month_day))
@@ -758,8 +1546,87 @@ auto parse_timestamp(
             std::chrono::duration_cast<std::chrono::nanoseconds>(time_point.time_since_epoch())
                     .count()
     };
-    return {epoch_nanoseconds, pattern};
+    return {epoch_nanoseconds, returned_pattern};
 }
 
 // NOLINTEND(readability-function-cognitive-complexity)
+
+auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::string& buffer)
+        -> ystdlib::error_handling::Result<void> {
+    if (pattern.uses_date_type_representation()) {
+        YSTDLIB_ERROR_HANDLING_TRYV(marshal_date_time_timestamp(timestamp, pattern, buffer));
+    } else {
+        YSTDLIB_ERROR_HANDLING_TRYV(marshal_numeric_timestamp(timestamp, pattern, buffer));
+    }
+    return ystdlib::error_handling::success();
+}
+
+[[nodiscard]] auto search_known_timestamp_patterns(
+        std::string_view timestamp,
+        std::vector<TimestampPattern> const& patterns,
+        std::string& generated_pattern
+) -> std::optional<std::pair<epochtime_t, std::string_view>> {
+    for (auto const& pattern : patterns) {
+        auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
+        if (false == result.has_error()) {
+            return result.value();
+        }
+    }
+    return std::nullopt;
+}
+
+auto get_default_date_time_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    timestamp_patterns.reserve(cDefaultDateTimePatterns.size());
+    for (auto const pattern : cDefaultDateTimePatterns) {
+        timestamp_patterns.emplace_back(
+                YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))
+        );
+    }
+    return timestamp_patterns;
+}
+
+auto get_default_numeric_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    timestamp_patterns.reserve(cDefaultNumericPatterns.size());
+    for (auto const pattern : cDefaultNumericPatterns) {
+        timestamp_patterns.emplace_back(
+                YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))
+        );
+    }
+    return timestamp_patterns;
+}
+
+auto get_all_default_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    auto const date_time_patterns{
+            YSTDLIB_ERROR_HANDLING_TRYX(get_default_date_time_timestamp_patterns())
+    };
+    auto const numeric_patterns{
+            YSTDLIB_ERROR_HANDLING_TRYX(get_default_numeric_timestamp_patterns())
+    };
+    timestamp_patterns.reserve(date_time_patterns.size() + numeric_patterns.size());
+    timestamp_patterns.insert(
+            timestamp_patterns.cend(),
+            date_time_patterns.cbegin(),
+            date_time_patterns.cend()
+    );
+    timestamp_patterns
+            .insert(timestamp_patterns.cend(), numeric_patterns.cbegin(), numeric_patterns.cend());
+    return timestamp_patterns;
+}
+
+auto get_all_default_quoted_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    for (auto const& pattern : YSTDLIB_ERROR_HANDLING_TRYX(get_all_default_timestamp_patterns())) {
+        timestamp_patterns.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(
+                TimestampPattern::create(fmt::format(R"("{}")", pattern.get_pattern()))
+        ));
+    }
+    return timestamp_patterns;
+}
 }  // namespace clp_s::timestamp_parser

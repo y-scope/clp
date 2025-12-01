@@ -6,7 +6,6 @@ import pathlib
 import sys
 import time
 from contextlib import closing
-from typing import Union
 
 import brotli
 import msgpack
@@ -116,9 +115,10 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
 
 def handle_job(sql_adapter: SqlAdapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
-    with closing(sql_adapter.create_connection(True)) as db, closing(
-        db.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db,
+        closing(db.cursor(dictionary=True)) as db_cursor,
+    ):
         try:
             compressed_clp_io_config = brotli.compress(
                 msgpack.packb(clp_io_config.model_dump(exclude_none=True, exclude_unset=True)),
@@ -146,7 +146,7 @@ def _generate_clp_io_config(
     clp_config: ClpConfig,
     logs_to_compress: list[str],
     parsed_args: argparse.Namespace,
-) -> Union[S3InputConfig, FsInputConfig]:
+) -> S3InputConfig | FsInputConfig:
     input_type = parsed_args.input_type
 
     if input_type == "fs":
@@ -159,7 +159,7 @@ def _generate_clp_io_config(
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
             unstructured=parsed_args.unstructured,
         )
-    elif input_type != "s3":
+    if input_type != "s3":
         raise ValueError(f"Unsupported input type: `{input_type}`.")
 
     # Handle S3 inputs
@@ -183,7 +183,7 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
         )
-    elif s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
+    if s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
         if len(urls) != 1:
             raise ValueError(
                 f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
@@ -199,8 +199,7 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
         )
-    else:
-        raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
+    raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
 
 
 def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
@@ -372,7 +371,7 @@ def main(argv):
         logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
         clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
     except Exception:
-        logger.exception(f"Failed to process input.")
+        logger.exception("Failed to process input.")
         return -1
 
     clp_output_config = OutputConfig.model_validate(clp_config.archive_output.model_dump())
