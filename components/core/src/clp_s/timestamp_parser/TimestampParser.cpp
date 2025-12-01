@@ -1222,13 +1222,12 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const parsed_leap_second{
-                        YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
-                                timestamp.substr(timestamp_idx, cFieldLength),
-                                '0'
-                        ))
-                };
-                if (cParsedLeapSecond != parsed_leap_second) {
+                if (cParsedLeapSecond
+                    != YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                            timestamp.substr(timestamp_idx, cFieldLength),
+                            '0'
+                    )))
+                {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
                 parsed_second = cMaxParsedSecond;
@@ -1507,23 +1506,18 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const parsed_generic_second{
-                        YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
-                                timestamp.substr(timestamp_idx, cFieldLength),
-                                '0'
-                        ))
-                };
-                if (parsed_generic_second < cMinParsedSecond
-                    || parsed_generic_second > cParsedLeapSecond)
-                {
+                parsed_second = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                ));
+                if (parsed_second < cMinParsedSecond || parsed_second > cParsedLeapSecond) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                if (cParsedLeapSecond == parsed_generic_second) {
+                if (cParsedLeapSecond == parsed_second) {
                     parsed_second = cMaxParsedSecond;
                     cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "J");
                 } else {
-                    parsed_second = parsed_generic_second;
                     cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "S");
                 }
 

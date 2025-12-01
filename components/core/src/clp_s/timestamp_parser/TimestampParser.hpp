@@ -106,7 +106,7 @@ private:
  * - \I 12-hour clock, zero-padded hour (01-12).
  * - \l 12-hour clock, space-padded hour ( 1-12).
  * - \M Zero-padded minute (00-59).
- * - \S Zero-padded second (00-59).
+ * - \S Zero-padded non-leap second (00-59).
  * - \J Leap second (60).
  * - \3 Zero-padded millisecond (000-999).
  * - \6 Zero-padded microsecond (000000-999999).
