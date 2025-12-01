@@ -15,7 +15,6 @@ import {
  */
 const validateAbsolutePaths = (value: string): Nullable<string> => {
     const lines = value.split("\n");
-    let pathCount = 0;
     for (const [index, line] of lines.entries()) {
         const trimmedLine = line.trim();
         if (0 === trimmedLine.length) {
@@ -24,11 +23,6 @@ const validateAbsolutePaths = (value: string): Nullable<string> => {
         if (false === Value.Check(AbsolutePathSchema, trimmedLine)) {
             return `Line ${index + 1}: Path must be absolute (start with "/").`;
         }
-        pathCount++;
-    }
-
-    if (0 === pathCount) {
-        return "Please enter at least one path.";
     }
 
     return null;
@@ -44,6 +38,11 @@ const PathsInputFormItem = () => (
         label={"Paths"}
         name={"paths"}
         rules={[
+            {
+                message: "Please enter at least one path.",
+                required: true,
+                whitespace: true,
+            },
             {
                 // The `validator` function expects a `Promise` to be returned.
                 // eslint-disable-next-line @typescript-eslint/require-await
