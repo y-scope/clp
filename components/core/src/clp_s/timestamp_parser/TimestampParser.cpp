@@ -41,7 +41,8 @@ constexpr int cMaxParsedHour12HourClock{12};
 constexpr int cMinParsedMinute{0};
 constexpr int cMaxParsedMinute{59};
 constexpr int cMinParsedSecond{0};
-constexpr int cMaxParsedSecond{60};
+constexpr int cMaxParsedSecond{59};
+constexpr int cLeapSecond{60};
 constexpr int cMinParsedSubsecondNanoseconds{0};
 constexpr int cMinTimezoneOffsetHour{0};
 constexpr int cMaxTimezoneOffsetHour{23};
@@ -113,26 +114,26 @@ constexpr std::string_view cSpace{" "};
 constexpr std::string_view cZulu{"Z"};
 
 constexpr std::array cDefaultDateTimePatterns{
-        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?\Z)"},
-        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\Z)"},
-        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?)"},
-        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
-        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?])"},
-        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S])"},
-        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
-        std::string_view{R"(<<<\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S:\?)"},
-        std::string_view{R"(\d \b \Y \H:\M:\S\O{,.}\?)"},
-        std::string_view{R"([\Y\m\d-\H:\M:\S])"},
-        std::string_view{R"(\y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
-        std::string_view{R"(\y\m\d\O{T }\k:\M:\S)"},
-        std::string_view{R"(\b \d, \Y \l:\M:\S \p)"},
-        std::string_view{R"(\b \d, \Y \I:\M:\S \p)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?\Z)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\Z)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s)"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?])"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s])"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s)"},
+        std::string_view{R"(<<<\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s:\?)"},
+        std::string_view{R"(\d \b \Y \H:\M:\s\O{,.}\?)"},
+        std::string_view{R"([\Y\m\d-\H:\M:\s])"},
+        std::string_view{R"(\y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s)"},
+        std::string_view{R"(\y\m\d\O{T }\k:\M:\s)"},
+        std::string_view{R"(\b \d, \Y \l:\M:\s \p)"},
+        std::string_view{R"(\b \d, \Y \I:\M:\s \p)"},
         std::string_view{R"(\B \d, \Y \H:\M)"},
-        std::string_view{R"([\d\O{-/}\b\O{-/}\Y:\H:\M:\S)"},
-        std::string_view{R"(\a \b \e \H:\M:\S \Y)"},
-        std::string_view{R"(\b \d \H:\M:\S)"},
-        std::string_view{R"(\b \d \H:\M:\S\Z)"},
-        std::string_view{R"(\m\O{- }\d \H:\M:\S\O{,.}\?)"}
+        std::string_view{R"([\d\O{-/}\b\O{-/}\Y:\H:\M:\s)"},
+        std::string_view{R"(\a \b \e \H:\M:\s \Y)"},
+        std::string_view{R"(\b \d \H:\M:\s)"},
+        std::string_view{R"(\b \d \H:\M:\s\Z)"},
+        std::string_view{R"(\m\O{- }\d \H:\M:\s\O{,.}\?)"}
 };
 
 constexpr std::array cDefaultNumericPatterns{
@@ -623,9 +624,13 @@ auto marshal_date_time_timestamp(
                 buffer.append(fmt::format("{:0>2d}", minutes));
                 break;
             }
-            case 'S': {  // Zero-padded second.
+            case 'S': {  // Zero-padded non-leap second.
                 auto const seconds{time_of_day.seconds().count()};
                 buffer.append(fmt::format("{:0>2d}", seconds));
+                break;
+            }
+            case 'J': {  // Leap second.
+                buffer.append(fmt::format("{:0>2d}", cLeapSecond));
                 break;
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
@@ -841,7 +846,8 @@ auto TimestampPattern::create(std::string_view pattern)
                 uses_date_type_representation = true;
                 break;
             case 'M':  // Zero-padded minute.
-            case 'S':  // Zero-padded second.
+            case 'S':  // Zero-padded non-leap second.
+            case 'J':  // Leap second.
                 uses_date_type_representation = true;
                 break;
             case '3':  // Zero-padded 3-digit milliseconds.
@@ -895,6 +901,9 @@ auto TimestampPattern::create(std::string_view pattern)
                 pattern_idx += bracket_pattern.size();
                 break;
             }
+            case 's':  // Generic zero-padded second.
+                uses_date_type_representation = true;
+                break;
             case '\\': {
                 break;
             }
@@ -1189,7 +1198,7 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case 'S': {  // Zero-padded second.
+            case 'S': {  // Zero-padded non-leap second.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -1203,6 +1212,25 @@ auto parse_timestamp(
                 if (parsed_second < cMinParsedSecond || parsed_second > cMaxParsedSecond) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
+
+                timestamp_idx += cFieldLength;
+                break;
+            }
+            case 'J': {  // Leap second.
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                if (cLeapSecond
+                    != YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                            timestamp.substr(timestamp_idx, cFieldLength),
+                            '0'
+                    )))
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                parsed_second = cMaxParsedSecond;
 
                 timestamp_idx += cFieldLength;
                 break;
@@ -1469,6 +1497,30 @@ auto parse_timestamp(
                         std::string{char_to_match}
                 );
                 pattern_idx += bracket_pattern.size();
+                timestamp_idx += cFieldLength;
+                break;
+            }
+            case 's': {  // Generic zero-padded second.
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_second = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                ));
+                if (parsed_second < cMinParsedSecond || parsed_second > cLeapSecond) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                if (cLeapSecond == parsed_second) {
+                    parsed_second = cMaxParsedSecond;
+                    cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "J");
+                } else {
+                    cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "S");
+                }
+
                 timestamp_idx += cFieldLength;
                 break;
             }
