@@ -72,7 +72,7 @@ def main(argv):
         clp_config.validate_tmp_dir(True)
 
         if clp_config.package.storage_engine == StorageEngine.CLP:
-            logger.warning(f"API Server is not supported for storage engine `{StorageEngine.CLP}`")
+            logger.warning(f"API Server is not supported for storage engine `{StorageEngine.CLP}`.")
 
     except:
         logger.exception("Failed to load config.")
