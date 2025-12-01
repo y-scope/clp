@@ -240,6 +240,7 @@ services:
       "/opt/clp/bin/spider_scheduler",
       "--host", "${SPIDER_SCHEDULER_HOST}",
       "--port", "${SPIDER_SCHEDULER_PORT}",
+      "--bind-port", "6000",
       "--storage_url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
         user=${SPIDER_DB_USER:?Please set a value.}\
