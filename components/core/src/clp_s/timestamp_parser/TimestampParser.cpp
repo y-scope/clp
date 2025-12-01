@@ -42,7 +42,7 @@ constexpr int cMinParsedMinute{0};
 constexpr int cMaxParsedMinute{59};
 constexpr int cMinParsedSecond{0};
 constexpr int cMaxParsedSecond{59};
-constexpr int cParsedLeapSecond{60};
+constexpr int cLeapSecond{60};
 constexpr int cMinParsedSubsecondNanoseconds{0};
 constexpr int cMinTimezoneOffsetHour{0};
 constexpr int cMaxTimezoneOffsetHour{23};
@@ -624,13 +624,13 @@ auto marshal_date_time_timestamp(
                 buffer.append(fmt::format("{:0>2d}", minutes));
                 break;
             }
-            case 'S': {  // Zero-padded second.
+            case 'S': {  // Zero-padded non-leap second.
                 auto const seconds{time_of_day.seconds().count()};
                 buffer.append(fmt::format("{:0>2d}", seconds));
                 break;
             }
             case 'J': {  // Leap second.
-                buffer.append(fmt::format("{:0>2d}", cParsedLeapSecond));
+                buffer.append(fmt::format("{:0>2d}", cLeapSecond));
                 break;
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
@@ -846,7 +846,7 @@ auto TimestampPattern::create(std::string_view pattern)
                 uses_date_type_representation = true;
                 break;
             case 'M':  // Zero-padded minute.
-            case 'S':  // Zero-padded second.
+            case 'S':  // Zero-padded non-leap second.
             case 'J':  // Leap second.
                 uses_date_type_representation = true;
                 break;
@@ -1198,7 +1198,7 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case 'S': {  // Zero-padded second.
+            case 'S': {  // Zero-padded non-leap second.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -1222,7 +1222,7 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                if (cParsedLeapSecond
+                if (cLeapSecond
                     != YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
                             timestamp.substr(timestamp_idx, cFieldLength),
                             '0'
@@ -1510,11 +1510,11 @@ auto parse_timestamp(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
                 ));
-                if (parsed_second < cMinParsedSecond || parsed_second > cParsedLeapSecond) {
+                if (parsed_second < cMinParsedSecond || parsed_second > cLeapSecond) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                if (cParsedLeapSecond == parsed_second) {
+                if (cLeapSecond == parsed_second) {
                     parsed_second = cMaxParsedSecond;
                     cat_sequence_replacements.emplace_back(pattern_idx, 1ULL, "J");
                 } else {
