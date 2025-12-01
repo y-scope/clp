@@ -71,7 +71,7 @@ class PackagePathConfig:
     #: Root directory for package tests output.
     test_root_dir: InitVar[Path]
 
-    #: Directory to store any cached package config files.
+    #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
     def __post_init__(self, test_root_dir: Path) -> None:
@@ -89,7 +89,7 @@ class PackagePathConfig:
             )
             raise RuntimeError(err_msg)
 
-        # Initialize cache directory for package tests.
+        # Initialize directory for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
 
