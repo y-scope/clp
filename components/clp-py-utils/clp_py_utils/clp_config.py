@@ -69,6 +69,8 @@ CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
+CLP_DB_ROOT_USER_ENV_VAR_NAME = "CLP_DB_ROOT_USER"
+CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
@@ -79,6 +81,7 @@ CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
+NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 # Specific types
@@ -171,6 +174,20 @@ class Package(BaseModel):
         return self
 
 
+class ClpDbUserType(KebabCaseStrEnum):
+    """Database user types used by CLP components."""
+
+    CLP = auto()
+    ROOT = auto()
+
+
+class DbUserCredentials(BaseModel):
+    """Credentials for a database user."""
+
+    username: NonEmptyStr | None = None
+    password: NonEmptyStr | None = None
+
+
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
@@ -182,15 +199,39 @@ class Database(BaseModel):
     auto_commit: bool = False
     compress: bool = True
 
-    username: NonEmptyStr | None = None
-    password: NonEmptyStr | None = None
+    credentials: dict[ClpDbUserType, DbUserCredentials] = {
+        ClpDbUserType.CLP: DbUserCredentials(),
+        ClpDbUserType.ROOT: DbUserCredentials(),
+    }
 
-    def ensure_credentials_loaded(self):
-        if self.username is None or self.password is None:
-            raise ValueError("Credentials not loaded.")
+    def ensure_credentials_loaded(self, user_type: ClpDbUserType) -> None:
+        """
+        Ensures that credentials for the given `user_type` are loaded.
 
-    def get_mysql_connection_params(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+        :param user_type:
+        :raise ValueError: If credentials for the given `user_type` are not loaded.
+        """
+        if (
+            self.credentials[user_type].username is None
+            or self.credentials[user_type].password is None
+        ):
+            err_msg = f"Credentials for user type '{user_type}' are not loaded."
+            raise ValueError(err_msg)
+
+    def get_mysql_connection_params(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by mysql's or mariadb's `connect()`
+        method, ensuring only credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of MySQL connection parameters.
+        """
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
@@ -200,8 +241,8 @@ class Database(BaseModel):
         connection_params = {
             "host": host,
             "port": self.port,
-            "user": self.username,
-            "password": self.password,
+            "user": self.credentials[user_type].username,
+            "password": self.credentials[user_type].password,
             "database": self.name,
             "compress": self.compress,
             "autocommit": self.auto_commit,
@@ -210,51 +251,87 @@ class Database(BaseModel):
             connection_params["ssl_cert"] = self.ssl_cert
         return connection_params
 
-    def get_clp_connection_params_and_type(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+    def get_clp_connection_params_and_type(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by CLP components and ensures only
+        credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of CLP connection parameters.
+        """
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
             host = "127.0.0.1"
 
-        connection_params_and_type = {
-            # NOTE: clp-core does not distinguish between mysql and mariadb
-            "type": DatabaseEngine.MYSQL.value,
-            "host": host,
-            "port": self.port,
-            "username": self.username,
-            "password": self.password,
-            "name": self.name,
-            "table_prefix": CLP_METADATA_TABLE_PREFIX,
-            "compress": self.compress,
-            "autocommit": self.auto_commit,
-        }
-        if self.ssl_cert:
-            connection_params_and_type["ssl_cert"] = self.ssl_cert
-        return connection_params_and_type
+        d = self.dump_to_primitive_dict()
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump(exclude={"username", "password"})
+        d["credentials"] = {user_type: self.credentials[user_type].model_dump()}
+        d["host"] = host
+        d["table_prefix"] = CLP_METADATA_TABLE_PREFIX
+        # NOTE: clp-core does not distinguish between mysql and mariadb
+        d["type"] = DatabaseEngine.MYSQL.value
+
         return d
 
+    def dump_to_primitive_dict(self) -> dict[str, Any]:
+        """:return: A dictionary representation of this model, excluding credentials."""
+        return self.model_dump(exclude={"credentials"})
+
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        """
+        Loads database credentials from a YAML file.
+
+        :param credentials_file_path:
+        :raise ValueError: If the file is empty or does not contain the expected keys.
+        """
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.username")
-            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+            self.credentials[ClpDbUserType.CLP].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.username"
+            )
+            self.credentials[ClpDbUserType.CLP].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.password"
+            )
+            self.credentials[ClpDbUserType.ROOT].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.root_username"
+            )
+            self.credentials[ClpDbUserType.ROOT].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.root_password"
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
-    def load_credentials_from_env(self):
+    def load_credentials_from_env(self, user_type: ClpDbUserType = ClpDbUserType.CLP):
         """
-        :raise ValueError: if any expected environment variable is not set.
+        Loads database credentials from environment variables for the given user type.
+
+        :param user_type:
+        :raise ValueError: If the user type is not supported.
+        :raise ValueError: Propagates `_get_env_var`'s exceptions.
         """
-        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
-        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+        if user_type == ClpDbUserType.CLP:
+            user_env_var = CLP_DB_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.ROOT:
+            user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        else:
+            err_msg = f"Unsupported user type '{user_type}'."
+            raise ValueError(err_msg)
+
+        self.credentials[user_type].username = _get_env_var(user_env_var)
+        self.credentials[user_type].password = _get_env_var(pass_env_var)
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
@@ -262,7 +339,10 @@ class Database(BaseModel):
 
 
 class CompressionScheduler(BaseModel):
+    UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
+
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
 
 
