@@ -49,13 +49,14 @@ impl IngestionJobManager {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::create`]'s return values on failure.
+    /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
+        let region = config.base.region.clone();
         let key_prefix = config.base.key_prefix.clone();
         let s3_client_manager = self
             .create_s3_client_manager(config.base.region.as_str())
             .await;
-        self.create(key_prefix, move |job_id, sender| {
+        self.create_s3_ingestion_job(region, key_prefix, move |job_id, sender| {
             let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
             IngestionJob::S3Scanner(scanner)
         })
@@ -72,13 +73,14 @@ impl IngestionJobManager {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::create`]'s return values on failure.
+    /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_sqs_listener(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
+        let region = config.base.region.clone();
         let key_prefix = config.base.key_prefix.clone();
         let sqs_client_manager = self
             .create_sqs_client_manager(config.base.region.as_str())
             .await;
-        self.create(key_prefix, move |job_id, sender| {
+        self.create_s3_ingestion_job(region, key_prefix, move |job_id, sender| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
                 sqs_client_manager,
@@ -118,8 +120,33 @@ impl IngestionJobManager {
         }
     }
 
-    async fn create<JobCreationCallback>(
+    /// Creates a new S3 ingestion job with key prefix conflict detection.
+    ///
+    /// When multiple ingestion jobs run in parallel, this function ensures that key prefixes do not
+    /// conflict with each other, preventing duplicate object ingestion.
+    ///
+    /// A conflict is detected when both of the following conditions are met:
+    ///
+    /// * The regions of an existing job and the new job are identical, and
+    /// * The key prefixes are not mutually prefix-free (i.e., one is a prefix of the other).
+    ///
+    /// # Type Parameters
+    ///
+    /// * `JobCreationCallback` - A callback function type that the caller implements to create the
+    ///   ingestion job with the desired type.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Uuid)` containing the job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
+    async fn create_s3_ingestion_job<JobCreationCallback>(
         &self,
+        region: String,
         key_prefix: String,
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
@@ -127,13 +154,15 @@ impl IngestionJobManager {
         JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
         let mut job_table = self.job_table.lock().await;
         for table_entry in job_table.values() {
-            if is_mutually_prefix_free(table_entry.prefix.as_str(), key_prefix.as_str()) {
+            if table_entry.region != region
+                || is_mutually_prefix_free(table_entry.key_prefix.as_str(), key_prefix.as_str())
+            {
                 continue;
             }
             return Err(Error::PrefixConflict(format!(
                 "Cannot create ingestion job with prefix '{}' as it conflicts with existing job \
                  with prefix '{}'",
-                key_prefix, table_entry.prefix
+                key_prefix, table_entry.key_prefix
             )));
         }
 
@@ -155,7 +184,8 @@ impl IngestionJobManager {
             IngestionJobTableEntry {
                 ingestion_job: create_ingestion_job(job_id, sender),
                 listener: job_listener,
-                prefix: key_prefix,
+                region,
+                key_prefix,
             },
         );
         drop(job_table);
@@ -206,7 +236,8 @@ impl IngestionJobManager {
 struct IngestionJobTableEntry {
     ingestion_job: IngestionJob,
     listener: Listener,
-    prefix: String,
+    region: String,
+    key_prefix: String,
 }
 
 /// Submitter implementation for creating CLP compression jobs.
