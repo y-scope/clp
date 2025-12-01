@@ -20,7 +20,7 @@ const TIMESTAMP_KEY_HELPER_TEXT = (
             rel={"noopener"}
             target={"_blank"}
         >
-            see documentation
+            JSON search syntax docs
         </Typography.Link>
         .
     </>
