@@ -1,5 +1,6 @@
-use std::{fs, net::SocketAddr, path::Path};
+use std::path::Path;
 
+use clp_rust_utils::{Error as UtilsError, serde::yaml};
 use secrecy::SecretString;
 use serde::Deserialize;
 
@@ -33,40 +34,16 @@ impl AppConfig {
     /// * Returns [`ServiceError::Io`] if the file cannot be read.
     /// * Returns [`ServiceError::Yaml`] if parsing fails.
     pub fn from_file(path: &Path) -> ServiceResult<Self> {
-        let contents = fs::read_to_string(path)?;
-        let config: Self = serde_yaml::from_str(&contents)?;
-        Ok(config)
+        yaml::from_path(path).map_err(map_yaml_error)
     }
 }
 
 /// Network settings for the Axum server.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
 pub struct ServerConfig {
-    #[serde(default = "default_bind_address")]
     pub bind_address: String,
-    #[serde(default = "default_bind_port")]
     pub port: u16,
-}
-
-impl ServerConfig {
-    /// Renders the configured address pair into a [`SocketAddr`].
-    ///
-    /// # Returns:
-    ///
-    /// A [`SocketAddr`] that Axum can bind to when starting the HTTP server.
-    ///
-    /// # Errors:
-    ///
-    /// Returns [`ServiceError::Config`] if the address string cannot be parsed.
-    pub fn socket_addr(&self) -> ServiceResult<SocketAddr> {
-        let addr = format!("{}:{}", self.bind_address, self.port);
-        addr.parse().map_err(|err| {
-            ServiceError::Config(format!(
-                "invalid bind address `{}`:{} ({err})",
-                self.bind_address, self.port
-            ))
-        })
-    }
 }
 
 impl Default for ServerConfig {
@@ -110,4 +87,13 @@ const fn default_mysql_port() -> u16 {
 /// Supplies the default maximum connection count for the `MySQL` pool.
 const fn default_max_connections() -> u32 {
     DEFAULT_MAX_CONNECTIONS
+}
+
+/// Maps shared YAML helper errors into service-specific error variants.
+fn map_yaml_error(err: UtilsError) -> ServiceError {
+    match err {
+        UtilsError::Io(io_err) => ServiceError::Io(io_err),
+        UtilsError::SerdeYaml(yaml_err) => ServiceError::Yaml(yaml_err),
+        other => ServiceError::Config(other.to_string()),
+    }
 }

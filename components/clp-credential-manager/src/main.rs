@@ -35,7 +35,7 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    init_tracing();
+    init_tracing()?;
 
     let config = AppConfig::from_file(&args.config)?;
     let server_config = config.server.clone();
@@ -44,10 +44,11 @@ async fn main() -> anyhow::Result<()> {
 
     let router = build_router().with_state(shared_service);
 
-    let addr = server_config.socket_addr()?;
-    info!(address = %addr, "starting credential manager service");
+    let bind_address = server_config.bind_address;
+    let bind_port = server_config.port;
+    info!(address = %format!("{}:{}", bind_address, bind_port), "starting credential manager service");
 
-    let listener = TcpListener::bind(addr).await?;
+    let listener = TcpListener::bind((bind_address.as_str(), bind_port)).await?;
     axum::serve(listener, router).await?;
 
     Ok(())
@@ -57,12 +58,13 @@ async fn main() -> anyhow::Result<()> {
 ///
 /// The subscriber honors the `RUST_LOG` environment variable when present and otherwise
 /// defaults to the `info` level so local development remains verbose enough.
-fn init_tracing() {
+fn init_tracing() -> anyhow::Result<()> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    let _ = tracing_subscriber::fmt()
+    tracing_subscriber::fmt()
         .with_env_filter(env_filter)
         .with_target(false)
         .json()
-        .try_init();
+        .try_init()
+        .map_err(|err| anyhow::Error::msg(err.to_string()))
 }

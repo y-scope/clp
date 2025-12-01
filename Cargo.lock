@@ -940,6 +940,7 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "clp-rust-utils",
  "jsonwebtoken",
  "reqwest",
  "secrecy",

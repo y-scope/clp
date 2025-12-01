@@ -8,6 +8,7 @@ anyhow = "1.0.100"
 axum = { version = "0.8.6", features = ["json"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.51", features = ["derive"] }
+clp-rust-utils = { path = "../clp-rust-utils" }
 jsonwebtoken = "9.3.0"
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
