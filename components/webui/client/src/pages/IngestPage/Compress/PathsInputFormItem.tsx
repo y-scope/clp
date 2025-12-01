@@ -24,8 +24,8 @@ const PathsInputFormItem = () => (
             {
                 // The `validator` function expects a `Promise` to be returned.
                 // eslint-disable-next-line @typescript-eslint/require-await
-                validator: async (_, value?: string) => {
-                    const error = validateAbsolutePaths(value ?? "");
+                validator: async (_, value: string) => {
+                    const error = validateAbsolutePaths(value);
                     if (null !== error) {
                         throw new Error(error);
                     }
