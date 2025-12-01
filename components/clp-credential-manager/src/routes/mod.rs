@@ -1,6 +1,6 @@
 mod health;
 
-use axum::Router;
+use axum::{Router, routing::get};
 use tower_http::trace::TraceLayer;
 
 use crate::service::SharedService;
@@ -15,6 +15,6 @@ pub type AppState = SharedService;
 /// An [`axum::Router`] wired with all route trees and middleware layers.
 pub fn build_router() -> Router<AppState> {
     Router::new()
-        .merge(health::router())
+        .route("/health", get(health::health_check))
         .layer(TraceLayer::new_for_http())
 }
