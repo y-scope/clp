@@ -41,13 +41,12 @@ const ClpSFormItems = () => (
             tooltip={DATASET_HELPER_TEXT}
             rules={[
                 {
+                    // eslint-disable-next-line @typescript-eslint/require-await
                     validator: async (_, value: unknown) => {
                         const error = validateDatasetName(value as string);
                         if (error) {
-                            return Promise.reject(new Error(error));
+                            throw new Error(error);
                         }
-
-                        return Promise.resolve();
                     },
                 },
             ]}
