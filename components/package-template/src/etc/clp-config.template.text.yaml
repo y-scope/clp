@@ -1,10 +1,12 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
+
 package:
   storage_engine: "clp"
   query_engine: "clp"
-#
+
 # API server config
 api_server: null
+
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
