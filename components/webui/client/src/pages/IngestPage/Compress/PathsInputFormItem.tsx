@@ -58,7 +58,7 @@ const PathsInputFormItem = () => (
     >
         <Input.TextArea
             autoSize={{minRows: 4, maxRows: 10}}
-            placeholder={"Enter absolute paths to compress, one per line"}/>
+            placeholder={"Enter absolute paths on the server host, one per line"}/>
     </Form.Item>
 );
 
