@@ -51,7 +51,7 @@ def main(argv):
 
     # fmt: off
     cmd = [
-        "python3", str(script_dir / "initialize-admin-db-user.py"),
+        "python3", "-m", "clp_py_utils.initialize-admin-db-user",
         "--config", str(config_file_path),
     ]
     # fmt: on
