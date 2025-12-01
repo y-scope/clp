@@ -482,7 +482,10 @@ tasks:
       - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
 
       # Apply the config template
-      - "mv {{.OUTPUT_DIR}}/etc/clp-config.template.{{.FLAVOUR}}.yaml {{.OUTPUT_DIR}}/etc/clp-config.yaml"
+      - >-
+        mv
+        {{.OUTPUT_DIR}}/etc/clp-config.template.{{.FLAVOUR}}.yaml
+        {{.OUTPUT_DIR}}/etc/clp-config.yaml
       - "rm {{.OUTPUT_DIR}}/etc/clp-config.template.*.yaml"
 
       - >-
