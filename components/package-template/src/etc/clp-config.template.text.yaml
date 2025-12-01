@@ -3,6 +3,9 @@ package:
   storage_engine: "clp"
   query_engine: "clp"
 #
+# API server config
+api_server: null
+#
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
@@ -121,8 +124,6 @@ package:
 #    archive: 60
 #    search_result: 30
 #
-## API server config
-api_server: null
 #
 ## Presto client config
 #presto: null
