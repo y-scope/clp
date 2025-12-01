@@ -5,7 +5,6 @@ import shlex
 import subprocess
 import sys
 import uuid
-from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -78,11 +77,10 @@ def _generate_logs_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
-    dataset: Optional[str],
+    dataset: str | None,
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
-) -> List[str]:
-
+) -> list[str]:
     # fmt: off
     compress_cmd = [
         "python3",
@@ -269,7 +267,7 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")

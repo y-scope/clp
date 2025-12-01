@@ -180,7 +180,7 @@ def main(argv):
         search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Search failed.")

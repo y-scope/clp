@@ -1,7 +1,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
@@ -32,11 +32,18 @@ def _make_core_clp_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
         logger.error(
             f"Search is not supported for storage type '{storage_type}' while using the"
+            f" '{worker_config.package.storage_engine}' storage engine."
+        )
+        return None, None
+
+    if True == search_config.write_to_file:
+        logger.error(
+            f"Outputting search results to the file system is not supported while using the"
             f" '{worker_config.package.storage_engine}' storage engine."
         )
         return None, None
@@ -54,7 +61,7 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
@@ -100,7 +107,7 @@ def _make_command_and_env_vars(
     search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
 
     if StorageEngine.CLP == storage_engine:
@@ -152,6 +159,16 @@ def _make_command_and_env_vars(
             "--port", str(search_config.network_address[1])
         ))
         # fmt: on
+    elif search_config.write_to_file:
+        output_directory = worker_config.stream_output.get_directory() / results_collection
+        output_directory.mkdir(exist_ok=True)
+        output_path = output_directory / archive_id
+        # fmt: off
+        command.extend((
+            "file",
+            "--path", str(output_path),
+        ))
+        # fmt: on
     else:
         # fmt: off
         command.extend((
@@ -174,7 +191,7 @@ def search(
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     task_name = "search"
 
     # Setup logging to file

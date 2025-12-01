@@ -12,7 +12,6 @@ from job_orchestration.scheduler.constants import (
     QueryTaskStatus,
 )
 from pydantic import ValidationError
-from sql_adapter import SqlAdapter
 
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -22,6 +21,7 @@ from clp_py_utils.clp_config import (
     QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.sql_adapter import SqlAdapter
 
 # Setup logging
 # Create logger
@@ -55,9 +55,10 @@ def main(argv):
 
     try:
         sql_adapter = SqlAdapter(clp_config.database)
-        with closing(sql_adapter.create_connection(True)) as scheduling_db, closing(
-            scheduling_db.cursor(dictionary=True)
-        ) as scheduling_db_cursor:
+        with (
+            closing(sql_adapter.create_connection(True)) as scheduling_db,
+            closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor,
+        ):
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (

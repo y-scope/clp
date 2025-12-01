@@ -11,12 +11,12 @@ import {
 import {Nullable} from "@webui/common/utility-types";
 import {isAxiosError} from "axios";
 
-import {submitExtractStreamJob} from "../api/stream-files";
+import {submitExtractStreamJob} from "../../api/stream-files";
 import {
     EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
     QUERY_LOADING_STATE,
-} from "../typings/query";
+} from "../../typings/query";
 import Loading from "./Loading";
 
 

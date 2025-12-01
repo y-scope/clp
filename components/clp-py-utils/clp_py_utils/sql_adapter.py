@@ -1,14 +1,16 @@
+"""SQL adapter for connecting to a MySQL-compatible database."""
+
 import contextlib
 import logging
 import time
 
 import mariadb
 import mysql.connector
-import sqlalchemy.pool as pool
 from mysql.connector import errorcode
+from sqlalchemy import pool
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
-from clp_py_utils.clp_config import ClpDbUserType, Database
+from clp_py_utils.clp_config import ClpDbUserType, Database, DatabaseEngine
 
 
 class DummyCloseableObject:
@@ -58,14 +60,74 @@ class ConnectionPoolWrapper:
 
 
 class SqlAdapter:
+    """SQL adapter for connecting to a MySQL-compatible database."""
+
     def __init__(self, database_config: Database):
+        """Initializes the SqlAdapter with the CLP database config model."""
         self.database_config = database_config
 
-    def create_mysql_connection(
+    def create_connection(
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ) -> mysql.connector.MySQLConnection:
+    ) -> mysql.connector.abstracts.MySQLConnectionAbstract | mariadb.connection:
+        """
+        Creates a connection to the database.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be used to connect.
+        :return: The connection.
+        """
+        if self.database_config.type == DatabaseEngine.MYSQL:
+            return self._create_mysql_connection(disable_localhost_socket_connection, user_type)
+        if self.database_config.type == DatabaseEngine.MARIADB:
+            return self._create_mariadb_connection(disable_localhost_socket_connection, user_type)
+        raise NotImplementedError
+
+    def create_connection_pool(
+        self,
+        logger: logging.Logger,
+        pool_size: int,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> ConnectionPoolWrapper:
+        """
+        Creates a connection pool to the database.
+
+        :param logger: The logger to use for logging connection pool errors.
+        :param pool_size: The size of the connection pool.
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be used to connect.
+        :return: The connection pool.
+        """
+
+        def _create_connection():
+            return self.create_connection(disable_localhost_socket_connection, user_type)
+
+        if self.database_config.type == DatabaseEngine.MYSQL:
+            dialect = mysqlconnector.dialect()
+        elif self.database_config.type == DatabaseEngine.MARIADB:
+            dialect = mariadbconnector.dialect()
+        else:
+            raise NotImplementedError(
+                f"Database type '{self.database_config.type}' is not supported."
+            )
+        return ConnectionPoolWrapper(
+            pool.QueuePool(
+                _create_connection,
+                pool_size=pool_size,
+                dialect=dialect,
+                max_overflow=0,
+                pre_ping=True,
+            ),
+            logger,
+        )
+
+    def _create_mysql_connection(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> mysql.connector.abstracts.MySQLConnectionAbstract:
         try:
             connection = mysql.connector.connect(
                 **self.database_config.get_mysql_connection_params(
@@ -74,16 +136,18 @@ class SqlAdapter:
             )
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                logging.error("Database access denied.")
+                logging.exception("Database access denied.")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                logging.error(f'Specified database "{self.database_config.name}" does not exist.')
+                logging.exception(
+                    f'Specified database "{self.database_config.name}" does not exist.'
+                )
             else:
-                logging.error(err)
+                logging.exception(err)
             raise err
         else:
             return connection
 
-    def create_mariadb_connection(
+    def _create_mariadb_connection(
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
@@ -95,45 +159,7 @@ class SqlAdapter:
                 )
             )
         except mariadb.Error as err:
-            logging.error(f"Error connecting to MariaDB: {err}")
+            logging.exception(f"Error connecting to MariaDB: {err}")
             raise err
         else:
             return connection
-
-    def create_connection(
-        self,
-        disable_localhost_socket_connection: bool = False,
-        user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ):
-        if "mysql" == self.database_config.type:
-            return self.create_mysql_connection(disable_localhost_socket_connection, user_type)
-        elif "mariadb" == self.database_config.type:
-            return self.create_mariadb_connection(disable_localhost_socket_connection, user_type)
-        else:
-            raise NotImplementedError
-
-    def create_connection_pool(
-        self,
-        logger: logging.Logger,
-        pool_size: int,
-        disable_localhost_socket_connection: bool = False,
-    ):
-        def create_connection():
-            return self.create_connection(disable_localhost_socket_connection)
-
-        if "mysql" == self.database_config.type:
-            dialect = mysqlconnector.dialect()
-        elif "mariadb" == self.database_config.type:
-            dialect = mariadbconnector.dialect()
-        else:
-            raise NotImplementedError
-        return ConnectionPoolWrapper(
-            pool.QueuePool(
-                create_connection,
-                pool_size=pool_size,
-                dialect=dialect,
-                max_overflow=0,
-                pre_ping=True,
-            ),
-            logger,
-        )
