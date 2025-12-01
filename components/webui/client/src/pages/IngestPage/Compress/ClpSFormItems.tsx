@@ -13,7 +13,7 @@ const DATASET_PLACEHOLDER_TEXT = "The dataset for new archives";
 const TIMESTAMP_KEY_HELPER_TEXT = (
     <>
         If not provided, events will not have assigned timestamps and can only be searched from
-        the command line without a timestamp filter. Certain characters require escaping -
+        the command line without a timestamp filter. Certain characters require escaping. See the
         {" "}
         <Typography.Link
             href={"https://docs.yscope.com/clp/main/user-docs/reference-json-search-syntax.html#characters-that-require-escaping"}
