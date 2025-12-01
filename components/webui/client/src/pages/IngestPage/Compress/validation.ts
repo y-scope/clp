@@ -1,43 +1,18 @@
-import {SqlTableSuffix} from "../../../config/sql-table-suffix";
-import {settings} from "../../../settings";
+import {Value} from "@sinclair/typebox/value";
+import {ValueErrorType} from "@sinclair/typebox/errors";
 
+import {
+    DATASET_NAME_MAX_LEN,
+    DatasetNameSchema,
+} from "@webui/common/schemas/compression";
 
-/**
- * MySQL's maximum table name length.
- * Matches constants in `clp/components/clp-py-utils/clp_py_utils/clp_metadata_db_utils.py`.
- */
-const MYSQL_TABLE_NAME_MAX_LEN = 64;
-
-/**
- * Maximum length among all table suffixes.
- */
-const TABLE_SUFFIX_MAX_LEN = Math.max(
-    ...Object.values(SqlTableSuffix).map((suffix) => suffix.length)
-);
-
-/**
- * Calculates the maximum allowed dataset name length.
- *
- * @return The maximum allowed length for dataset names.
- */
-const calculateDatasetNameMaxLength = (): number => {
-    const clpTablePrefixLength = settings.SqlDbClpTablePrefix.length;
-
-    // 1 For the separator between the dataset name and the table suffix
-    return (
-        MYSQL_TABLE_NAME_MAX_LEN -
-        clpTablePrefixLength -
-        1 -
-        TABLE_SUFFIX_MAX_LEN
-    );
-};
 
 /**
  * Validates that the given dataset name abides by the following rules:
  * - Its length won't cause any metadata table names to exceed MySQL's max table name length.
  * - It only contains alphanumeric characters and underscores.
  *
- * @param datasetName The dataset name to validate.
+ * @param datasetName - The dataset name to validate.
  * @return An error message if invalid, or null if valid.
  */
 const validateDatasetName = (datasetName: string): string | null => {
@@ -46,22 +21,25 @@ const validateDatasetName = (datasetName: string): string | null => {
         return null;
     }
 
-    if (!(/^\w+$/).test(datasetName)) {
-        return "Dataset name can only contain alphanumeric characters and underscores.";
-    }
+    if (false === Value.Check(DatasetNameSchema, datasetName)) {
+        const errors = [...Value.Errors(DatasetNameSchema, datasetName)];
+        const firstError = errors[0];
 
-    const maxLength = calculateDatasetNameMaxLength();
-    if (datasetName.length > maxLength) {
-        return `Dataset name can only be a maximum of ${maxLength} characters long.`;
+        if (firstError) {
+            // Check which validation failed using TypeBox error types
+            if (ValueErrorType.StringMaxLength === firstError.type) {
+                return `Dataset name can only be a maximum of ${DATASET_NAME_MAX_LEN} characters long.`;
+            }
+            if (ValueErrorType.StringPattern === firstError.type) {
+                return "Dataset name can only contain alphanumeric characters and underscores.";
+            }
+        }
+
+        return firstError?.message ?? "Invalid dataset name.";
     }
 
     return null;
 };
 
 
-export {
-    calculateDatasetNameMaxLength,
-    MYSQL_TABLE_NAME_MAX_LEN,
-    TABLE_SUFFIX_MAX_LEN,
-    validateDatasetName,
-};
+export {validateDatasetName};
