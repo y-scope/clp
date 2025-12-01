@@ -34,7 +34,7 @@ impl AppConfig {
     /// * Returns [`ServiceError::Io`] if the file cannot be read.
     /// * Returns [`ServiceError::Yaml`] if parsing fails.
     pub fn from_file(path: &Path) -> ServiceResult<Self> {
-        yaml::from_path(path).map_err(map_yaml_error)
+        yaml::from_path(path)?
     }
 }
 
@@ -88,12 +88,12 @@ const fn default_mysql_port() -> u16 {
 const fn default_max_connections() -> u32 {
     DEFAULT_MAX_CONNECTIONS
 }
-
-/// Maps shared YAML helper errors into service-specific error variants.
-fn map_yaml_error(err: UtilsError) -> ServiceError {
+impl From<UtilsError> for ServiceError{
+fn from(err: UtilsError) -> ServiceError {
     match err {
         UtilsError::Io(io_err) => ServiceError::Io(io_err),
         UtilsError::SerdeYaml(yaml_err) => ServiceError::Yaml(yaml_err),
         other => ServiceError::Config(other.to_string()),
     }
+}
 }
