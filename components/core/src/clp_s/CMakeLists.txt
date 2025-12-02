@@ -1,3 +1,5 @@
+option(CLP_S_STATIC_EXE "Enable clp-s static exe" OFF)
+
 add_subdirectory(indexer)
 add_subdirectory(log_converter)
 add_subdirectory(search)
@@ -210,6 +212,11 @@ if(CLP_BUILD_CLP_S_IO)
                 ${CLP_S_IO_SOURCES}
         )
         add_library(clp_s::io ALIAS clp_s_io)
+        target_compile_definitions(
+                clp_s_io
+                PRIVATE
+                CLP_S_STATIC_EXE=$<BOOL:${CLP_S_STATIC_EXE}>
+        )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
@@ -428,6 +435,11 @@ if(CLP_BUILD_EXECUTABLES)
                 clp-s.cpp
                 ${CLP_S_EXE_SOURCES}
         )
+        target_compile_definitions(
+                clp-s
+                PRIVATE
+                CLP_S_STATIC_EXE=$<BOOL:${CLP_S_STATIC_EXE}>
+        )
         target_compile_features(clp-s PRIVATE cxx_std_20)
         target_link_libraries(
                 clp-s
@@ -452,4 +464,12 @@ if(CLP_BUILD_EXECUTABLES)
                 PROPERTIES
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
         )
+        if(CLP_S_STATIC_EXE)
+                target_link_options(
+                        clp-s
+                        PRIVATE
+                        -static-libgcc
+                        -static-libstdc++
+                )
+        endif()
 endif()

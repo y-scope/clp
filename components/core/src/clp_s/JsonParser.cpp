@@ -1319,6 +1319,7 @@ bool JsonParser::check_and_log_curl_error(
         Path const& path,
         std::shared_ptr<clp::ReaderInterface> reader
 ) {
+#if !CLP_S_STATIC_EXE
     if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
         nullptr != network_reader)
     {
@@ -1335,6 +1336,7 @@ bool JsonParser::check_and_log_curl_error(
             return true;
         }
     }
+#endif
     return false;
 }
 }  // namespace clp_s
