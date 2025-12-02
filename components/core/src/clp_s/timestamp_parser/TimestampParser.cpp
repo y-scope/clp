@@ -228,7 +228,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 /**
  * Extracts the elements of a comma separated list from a bracket pattern.
  * @param str The content between the brackets of the bracket pattern.
- * @return A results containing the offets and lengths of every element in the list, or an error
+ * @return A results containing the offsets and lengths of every element in the list, or an error
  * code indicating the failure:
  * - ErrorCodeEnum::InvalidTimestampPattern if:
  *     - Any element of the list contains the character '\\' or ' '.
