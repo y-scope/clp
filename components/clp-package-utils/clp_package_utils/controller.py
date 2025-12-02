@@ -903,7 +903,7 @@ class DockerComposeController(BaseController):
             env_vars |= self._set_up_env_for_queue()
         if self._clp_config.redis is not None:
             env_vars |= self._set_up_env_for_redis()
-        if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
             env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
@@ -992,7 +992,7 @@ class DockerComposeController(BaseController):
         :return: The Docker Compose file name to use based on the config.
         """
         deployment_type = self._clp_config.get_deployment_type()
-        match self._clp_config.get_deployment_type():
+        match deployment_type:
             case DeploymentType.BASE:
                 return "docker-compose-base.yaml"
             case DeploymentType.FULL:

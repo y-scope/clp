@@ -455,9 +455,9 @@ def main(argv) -> int | None:
     sql_adapter = SqlAdapter(clp_config.database)
 
     task_manager: CeleryTaskManager | SpiderTaskManager
-    if clp_config.compression_scheduler.type == OrchestrationType.celery:
+    if clp_config.compression_scheduler.type == OrchestrationType.CELERY:
         task_manager = CeleryTaskManager()
-    elif clp_config.compression_scheduler.type == OrchestrationType.spider:
+    elif clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
         clp_config.database.load_credentials_from_env(ClpDbUserType.SPIDER)
         task_manager = SpiderTaskManager(
             clp_config.database.get_container_url(ClpDbUserType.SPIDER)

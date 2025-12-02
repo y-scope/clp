@@ -53,7 +53,7 @@ def main(argv):
     try:
         clp_config = ClpConfig.model_validate(read_yaml_config_file(pathlib.Path(config_file_path)))
         clp_config.database.load_credentials_from_env()
-        if clp_config.compression_scheduler.type != OrchestrationType.spider:
+        if clp_config.compression_scheduler.type != OrchestrationType.SPIDER:
             logger.info("No spider database configured. Skipping Spider database initialization.")
             return 0
     except Exception as e:

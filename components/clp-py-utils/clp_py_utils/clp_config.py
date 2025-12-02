@@ -130,8 +130,8 @@ DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
 
 
 class OrchestrationType(KebabCaseStrEnum):
-    celery = auto()
-    spider = auto()
+    CELERY = auto()
+    SPIDER = auto()
 
 
 OrchestrationTypeStr = Annotated[OrchestrationType, StrEnumSerializer]
@@ -437,7 +437,7 @@ class CompressionScheduler(BaseModel):
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
-    type: OrchestrationTypeStr = OrchestrationType.celery
+    type: OrchestrationTypeStr = OrchestrationType.CELERY
 
 
 class QueryScheduler(BaseModel):
@@ -1000,7 +1000,7 @@ class ClpConfig(BaseModel):
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
     def get_deployment_type(self) -> DeploymentType:
-        if OrchestrationType.spider == self.compression_scheduler.type:
+        if OrchestrationType.SPIDER == self.compression_scheduler.type:
             if QueryEngine.PRESTO == self.package.query_engine:
                 return DeploymentType.SPIDER_BASE
             return DeploymentType.SPIDER_FULL
@@ -1030,7 +1030,7 @@ class ClpConfig(BaseModel):
     @model_validator(mode="after")
     def validate_spider_config(self):
         orchestration_type = self.compression_scheduler.type
-        if orchestration_type != OrchestrationType.spider:
+        if orchestration_type != OrchestrationType.SPIDER:
             return self
         if self.spider_scheduler is None:
             raise ValueError(
@@ -1043,7 +1043,7 @@ class ClpConfig(BaseModel):
     @model_validator(mode="after")
     def validate_celery_config(self):
         orchestration_type = self.compression_scheduler.type
-        if orchestration_type != OrchestrationType.celery:
+        if orchestration_type != OrchestrationType.CELERY:
             return self
         if self.queue is None:
             raise ValueError("`queue` must be configured when using Celery orchestration.")
