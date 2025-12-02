@@ -433,6 +433,8 @@ tasks:
     vars:
       VERSION: "r4.1.1"
     run: "once"
+    deps:
+      - task: "zstd"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
