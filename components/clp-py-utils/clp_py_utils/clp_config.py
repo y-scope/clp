@@ -826,7 +826,7 @@ class ClpConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    api_server: ApiServer = ApiServer()
+    api_server: ApiServer | None = ApiServer()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -981,6 +981,12 @@ class ClpConfig(BaseModel):
         if not profile_auth_used and self.aws_config_directory is not None:
             raise ValueError(
                 "aws_config_directory should not be set when profile authentication is not used"
+            )
+
+    def validate_api_server(self):
+        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
+            raise ValueError(
+                f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
 
     def load_container_image_ref(self):
