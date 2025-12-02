@@ -5,6 +5,7 @@ import useSearchStore from "../../../SearchState/index";
 import usePrestoSearchState from "../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import guidedGrid from "./index.module.css";
+import {LABEL_WIDTH} from "./typings";
 
 
 /**
@@ -20,8 +21,8 @@ const OrderBy = () => {
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     return (
-        <div className={guidedGrid["order"]}>
-            <InputLabel>ORDER BY</InputLabel>
+        <div className={guidedGrid["gridItem"]}>
+            <InputLabel width={LABEL_WIDTH}>ORDER BY</InputLabel>
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={disabled}

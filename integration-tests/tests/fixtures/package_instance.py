@@ -1,6 +1,5 @@
 """Fixtures that start and stop CLP package instances for integration tests."""
 
-import subprocess
 from collections.abc import Iterator
 
 import pytest
@@ -24,11 +23,9 @@ def fixt_package_instance(
     Starts a CLP package instance for the given configuration and stops it during teardown.
 
     :param fixt_package_config:
-    :param request:
     :return: Iterator that yields the running package instance.
     """
     mode_name = fixt_package_config.mode_name
-    instance: PackageInstance | None = None
 
     try:
         start_clp_package(fixt_package_config)
@@ -42,8 +39,4 @@ def fixt_package_instance(
             " .pytest.ini."
         )
     finally:
-        if instance is not None:
-            stop_clp_package(instance)
-        else:
-            # This means setup failed after start; fall back to calling stop script directly
-            subprocess.run([str(fixt_package_config.path_config.stop_script_path)], check=False)
+        stop_clp_package(fixt_package_config)
