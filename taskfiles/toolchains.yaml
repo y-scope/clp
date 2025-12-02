@@ -98,7 +98,6 @@ tasks:
         export RUSTUP_HOME="{{.G_RUSTUP_HOME}}"
         . "{{.G_CARGO_HOME}}/env"
         EOF
-        chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
 
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
