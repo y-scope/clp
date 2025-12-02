@@ -38,15 +38,23 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     raise RuntimeError(err_msg)
 
 
-def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
+def is_json_file_structurally_equal(
+    json_fp1: Path,
+    json_fp2: Path,
+    respect_key_order: bool = False,
+    respect_row_order: bool = False,
+) -> bool:
     """
     :param json_fp1:
     :param json_fp2:
-    :return: Whether two JSON files are structurally equal after sorting has been applied.
+    :param respect_key_order: If True, preserve the original key order within each mapping (row).
+    :param respect_row_order: If True, preserve the original ordering of top-level mappings.
+    :return: Whether the two JSON files are structurally equivalent after being normalized with the
+    same key and row ordering rules.
     """
     with (
-        _sort_json_keys_and_rows(json_fp1) as temp_file_1,
-        _sort_json_keys_and_rows(json_fp2) as temp_file_2,
+        _sort_json_keys_and_rows(json_fp1, respect_key_order, respect_row_order) as temp_file_1,
+        _sort_json_keys_and_rows(json_fp2, respect_key_order, respect_row_order) as temp_file_2,
     ):
         return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
 
@@ -96,11 +104,17 @@ def validate_dir_exists(dir_path: Path) -> None:
         raise ValueError(err_msg)
 
 
-def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
+def _sort_json_keys_and_rows(
+    json_fp: Path,
+    respect_key_order: bool = False,
+    respect_row_order: bool = False,
+) -> IO[str]:
     """
-    Normalize a JSON file to a stable, deterministically ordered form for comparison.
+    Normalize a JSON file into a structure-insensitive representation to for content comparison.
 
-    :param json_fp:
+    :param json_fp: Path to the JSON file to normalize.
+    :param respect_key_order: If True, preserve the original key order within each mapping (row).
+    :param respect_row_order: If True, preserve the original ordering of top-level mappings.
     :return: A named temporary file (delete on close) that contains the sorted JSON content.
     :raise: RuntimeError if either jq or sort is missing or fails due to execution errors.
     """
@@ -111,19 +125,29 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
         raise RuntimeError(err_msg)
 
     sorted_fp = NamedTemporaryFile(mode="w+", delete=True)  # noqa: SIM115
-    jq_proc = subprocess.Popen(
-        [jq_bin, "--sort-keys", "--compact-output", ".", str(json_fp)],
-        stdout=subprocess.PIPE,
-    )
+
+    jq_cmd = [jq_bin, "--compact-output"]
+    if not respect_key_order:
+        jq_cmd.append("--sort-keys")
+    jq_cmd.append(".")  # Identity filter
+    jq_cmd.append(str(json_fp))
+
+    jq_proc = None
     try:
-        subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
+        if respect_row_order:
+            subprocess.run(jq_cmd, stdout=sorted_fp, check=True)
+        else:
+            jq_proc = subprocess.Popen(jq_cmd, stdout=subprocess.PIPE)
+            subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
+            jq_rc = jq_proc.wait()
+            if jq_rc != 0:
+                raise subprocess.CalledProcessError(jq_rc, jq_cmd)  # noqa: TRY301
+    except subprocess.CalledProcessError as e:
+        err_msg = f"Failed to deterministically sort `{json_fp}`."
+        raise RuntimeError(err_msg) from e
     finally:
-        if jq_proc.stdout is not None:
+        if jq_proc is not None and jq_proc.stdout is not None:
             jq_proc.stdout.close()
-        jq_rc = jq_proc.wait()
-        if jq_rc != 0:
-            err_msg = f"jq failed with exit code {jq_rc} for {json_fp}"
-            raise RuntimeError(err_msg)
 
     sorted_fp.flush()
     sorted_fp.seek(0)
