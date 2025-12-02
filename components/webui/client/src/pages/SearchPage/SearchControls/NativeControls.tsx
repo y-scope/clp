@@ -1,7 +1,6 @@
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../config";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import Dataset from "./Dataset";
 import styles from "./index.module.css";
 import QueryInput from "./QueryInput";
