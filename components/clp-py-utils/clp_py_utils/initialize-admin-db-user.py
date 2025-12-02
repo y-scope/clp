@@ -54,12 +54,6 @@ def main(argv):
 
         admin_username = clp_config.database.credentials[ClpDbUserType.ADMIN].username
         admin_password = clp_config.database.credentials[ClpDbUserType.ADMIN].password
-        regular_username = clp_config.database.credentials[ClpDbUserType.CLP].username
-
-        if admin_username is None or admin_password is None or regular_username is None:
-            logger.error("Database credentials unexpectedly missing during privileged user setup.")
-            return -1
-
         escaped_admin_username = admin_username.replace("'", "''")
         escaped_admin_password = admin_password.replace("'", "''")
 
@@ -72,6 +66,9 @@ def main(argv):
             cursor.execute(
                 f"CREATE USER IF NOT EXISTS '{escaped_admin_username}'@'%'"
                 f" IDENTIFIED BY '{escaped_admin_password}'"
+            )
+            cursor.execute(
+                f"ALTER USER '{escaped_admin_username}'@'%' IDENTIFIED BY '{escaped_admin_password}'"
             )
 
             logger.info(
