@@ -58,13 +58,14 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     clp_config.query_scheduler.port = current_port
     current_port += 1
 
-    clp_config.api_server.port = current_port
-    current_port += 1
-
     clp_config.webui.port = current_port
     current_port += 1
 
     # Optional services
+    if clp_config.api_server is not None:
+        clp_config.api_server.port = current_port
+        current_port += 1
+
     if clp_config.mcp_server is not None:
         clp_config.mcp_server.port = current_port
         current_port += 1
