@@ -35,6 +35,14 @@ fn set_up_logging() -> anyhow::Result<tracing_appender::non_blocking::WorkerGuar
         RollingFileAppender::new(Rotation::HOURLY, logs_directory, "log_ingestor.log");
     let (non_blocking_writer, guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
+        .event_format(
+            tracing_subscriber::fmt::format()
+                .with_level(true)
+                .with_target(false)
+                .with_file(true)
+                .with_line_number(true)
+                .json(),
+        )
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_ansi(false)
         .with_writer(std::io::stdout.and(non_blocking_writer))
@@ -43,7 +51,7 @@ fn set_up_logging() -> anyhow::Result<tracing_appender::non_blocking::WorkerGuar
 }
 
 #[derive(Parser)]
-#[command(version)]
+#[command(version, about = "log-ingestor for CLP.")]
 struct Args {
     #[arg(long)]
     config: String,
@@ -90,5 +98,5 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn health() -> &'static str {
-    "Log ingestor is running"
+    "log-ingestor is running"
 }
