@@ -18,7 +18,7 @@ use utoipa::ToSchema;
 pub use crate::error::ClientError;
 
 /// Defines the request configuration for submitting a search query.
-#[derive(Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
     /// The search query as a KQL string.

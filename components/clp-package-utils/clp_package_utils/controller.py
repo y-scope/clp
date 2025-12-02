@@ -14,10 +14,16 @@ from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
     BundledService,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_USER_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     ClpConfig,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
@@ -150,7 +156,9 @@ class BaseController(ABC):
         # Runtime config
         env_vars |= {
             "CLP_DB_CONTAINER_IMAGE_REF": (
-                "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
+                "mysql:8.0.23"
+                if self._clp_config.database.type == DatabaseEngine.MYSQL
+                else "mariadb:10-jammy"
             ),
         }
 
@@ -175,9 +183,12 @@ class BaseController(ABC):
         }
 
         # Credentials
+        credentials = self._clp_config.database.credentials
         env_vars |= {
-            "CLP_DB_PASS": self._clp_config.database.password,
-            "CLP_DB_USER": self._clp_config.database.username,
+            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+            CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
+            CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
         }
 
         return env_vars
@@ -208,6 +219,11 @@ class BaseController(ABC):
         _chown_paths_if_root(resolved_logs_dir)
 
         env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= {
+            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+        }
 
         return env_vars
 
@@ -515,7 +531,9 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = API_SERVER_COMPONENT_NAME
-
+        if self._clp_config.api_server is None:
+            logger.info(f"The API Server is not configured, skipping {component_name} creation...")
+            return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name

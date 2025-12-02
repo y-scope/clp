@@ -50,15 +50,22 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
 #[allow(clippy::needless_for_each)]
 mod api_doc {
+    // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
+    // documentation. Importing the paths directly prevents this issue.
+    use super::{__path_health, __path_query, __path_query_results};
+
     #[derive(utoipa::OpenApi)]
-    #[openapi(info(
-        title = "API Server",
-        description = "API Server for CLP",
-        contact(name = "YScope")
-    ))]
+    #[openapi(
+        info(
+            title = "API Server",
+            description = "API Server for CLP",
+            contact(name = "YScope")
+        ),
+        paths(health, query, query_results)
+    )]
     pub struct ApiDoc;
 }
-use api_doc::ApiDoc;
+pub use api_doc::*;
 
 #[utoipa::path(
     get,
@@ -98,7 +105,17 @@ async fn query(
     State(client): State<Client>,
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
-    let search_job_id = client.submit_query(query_config).await?;
+    tracing::info!("Submitting query: {:?}", query_config);
+    let search_job_id = match client.submit_query(query_config).await {
+        Ok(id) => {
+            tracing::info!("Submitted query with search job ID: {}", id);
+            id
+        }
+        Err(err) => {
+            tracing::error!("Failed to submit query: {:?}", err);
+            return Err(err.into());
+        }
+    };
     let uri = format!("/query_results/{search_job_id}");
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
@@ -133,11 +150,29 @@ async fn query_results(
     State(client): State<Client>,
     Path(search_job_id): Path<u64>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
-    let results_stream = client.fetch_results(search_job_id).await?;
+    tracing::info!("Fetching results for search job ID: {}", search_job_id);
+    let results_stream = match client.fetch_results(search_job_id).await {
+        Ok(stream) => {
+            tracing::info!(
+                "Successfully initiated result stream for search job ID {}",
+                search_job_id
+            );
+            stream
+        }
+        Err(err) => {
+            tracing::error!(
+                "Failed to fetch results for search job ID {}: {:?}",
+                search_job_id,
+                err
+            );
+            return Err(err.into());
+        }
+    };
     let event_stream = results_stream.map(|res| {
         let message = res?;
         let trimmed_message = message.trim();
         if trimmed_message.lines().count() != 1 {
+            tracing::error!("Received malformed log line:\n{}", trimmed_message);
             return Err(HandlerError::InternalServer);
         }
         Ok(Event::default().data(trimmed_message))
