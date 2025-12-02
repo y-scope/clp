@@ -531,7 +531,9 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = API_SERVER_COMPONENT_NAME
-
+        if self._clp_config.api_server is None:
+            logger.info(f"The API Server is not configured, skipping {component_name} creation...")
+            return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -545,10 +547,6 @@ class BaseController(ABC):
             "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
-
-        # Disable for CLP
-        if self._clp_config.package.storage_engine == StorageEngine.CLP:
-            env_vars |= {"CLP_API_SERVER_ENABLED": "0"}
 
         return env_vars
 

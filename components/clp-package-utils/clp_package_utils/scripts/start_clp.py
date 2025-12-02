@@ -3,7 +3,7 @@ import logging
 import pathlib
 import sys
 
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, StorageEngine
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
@@ -66,14 +66,11 @@ def main(argv):
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
 
+        clp_config.validate_api_server()
         clp_config.validate_aws_config_dir(True)
         clp_config.validate_data_dir(True)
         clp_config.validate_logs_dir(True)
         clp_config.validate_tmp_dir(True)
-
-        if clp_config.package.storage_engine == StorageEngine.CLP:
-            logger.warning(f"API Server is not supported for storage engine `{StorageEngine.CLP}`.")
-
     except:
         logger.exception("Failed to load config.")
         return -1
