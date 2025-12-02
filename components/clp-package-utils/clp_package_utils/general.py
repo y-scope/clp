@@ -757,6 +757,8 @@ def run_subprocess_with_signal_forward(*args: Any, **kwargs: Any) -> subprocess.
     """
     Runs a subprocess in its own process group and forwards `SIGINT` and `SIGTERM` received on the
     calling process to the entire child process group.
+
+    :return: The completed subprocess.
     """
     kwargs["start_new_session"] = True
     proc = subprocess.Popen(*args, **kwargs)
