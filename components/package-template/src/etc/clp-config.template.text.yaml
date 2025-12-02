@@ -37,6 +37,7 @@ api_server: null
 #spider_scheduler:
 #  host: "localhost"
 #  port: 6000
+#  logging_level: "INFO"
 #
 #query_scheduler:
 #  host: "localhost"
