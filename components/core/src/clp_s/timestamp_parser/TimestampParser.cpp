@@ -606,10 +606,10 @@ auto marshal_date_time_timestamp(
             }
             case 'B': {  // Month name.
                 auto const month_idx{year_month_day.month().operator unsigned int() - 1};
-                auto const [month_offset, month_length]
-                        = pattern.get_month_name_offsets_and_lengths().at(month_idx);
-                buffer.append(raw_pattern.substr(pattern_idx + 2ULL + month_offset, month_length));
-                pattern_idx += pattern.get_month_name_bracket_pattern_length() + 2ULL;
+                auto const month_str{YSTDLIB_ERROR_HANDLING_TRYX(
+                        pattern.get_month_and_advance_pattern_idx(pattern_idx, month_idx)
+                )};
+                buffer.append(month_str);
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -628,18 +628,15 @@ auto marshal_date_time_timestamp(
                 break;
             }
             case 'A': {  // Day in week.
-                auto const day_in_week_idx{
+                auto const weekday_idx{
                         (date::year_month_weekday(timestamp_date).weekday_indexed().weekday()
                          - date::Sunday)
                                 .count()
                 };
-                auto const [day_in_week_offset, day_in_week_length]
-                        = pattern.get_weekday_name_offsets_and_lengths().at(day_in_week_idx);
-                buffer.append(raw_pattern.substr(
-                        pattern_idx + 2ULL + day_in_week_offset,
-                        day_in_week_length
-                ));
-                pattern_idx += pattern.get_weekday_name_bracket_pattern_length() + 2ULL;
+                auto const weekday_str{YSTDLIB_ERROR_HANDLING_TRYX(
+                        pattern.get_weekday_and_advance_pattern_idx(pattern_idx, weekday_idx)
+                )};
+                buffer.append(weekday_str);
                 break;
             }
             case 'p': {  // Part of day (AM/PM).
@@ -1035,6 +1032,63 @@ auto TimestampPattern::create(std::string_view pattern)
     };
 }
 
+auto TimestampPattern::find_first_matching_month_and_advance_pattern_idx(
+        size_t& pattern_idx,
+        std::string_view timestamp
+) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>> {
+    auto const month_names{
+            m_pattern.substr(pattern_idx + 2ULL, m_month_name_bracket_pattern_length)
+    };
+    auto const month_idx{YSTDLIB_ERROR_HANDLING_TRYX(
+            find_first_matching_prefix(timestamp, month_names, m_month_name_offsets_and_lengths)
+    )};
+    pattern_idx += m_month_name_bracket_pattern_length + 2ULL;
+    return {month_idx, m_month_name_offsets_and_lengths.at(month_idx).second};
+}
+
+auto TimestampPattern::find_first_matching_weekday_and_advance_pattern_idx(
+        size_t& pattern_idx,
+        std::string_view timestamp
+) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>> {
+    auto const weekday_names{
+            m_pattern.substr(pattern_idx + 2ULL, m_weekday_name_bracket_pattern_length)
+    };
+    auto const weekday_idx{YSTDLIB_ERROR_HANDLING_TRYX(
+            find_first_matching_prefix(timestamp, weekday_names, m_weekday_name_offsets_and_lengths)
+    )};
+    pattern_idx += m_weekday_name_bracket_pattern_length + 2ULL;
+    return {weekday_idx, m_weekday_name_offsets_and_lengths.at(weekday_idx).second};
+}
+
+auto
+TimestampPattern::get_month_and_advance_pattern_idx(size_t& pattern_idx, size_t month_idx) const
+        -> ystdlib::error_handling::Result<std::string_view> {
+    if (month_idx >= m_month_name_offsets_and_lengths.size()) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+    auto const month_names{
+            m_pattern.substr(pattern_idx + 2ULL, m_month_name_bracket_pattern_length)
+    };
+    auto const [month_offset, month_length] = m_month_name_offsets_and_lengths.at(month_idx);
+    pattern_idx += m_month_name_bracket_pattern_length + 2ULL;
+    return month_names.substr(month_offset, month_length);
+}
+
+auto
+TimestampPattern::get_weekday_and_advance_pattern_idx(size_t& pattern_idx, size_t weekday_idx) const
+        -> ystdlib::error_handling::Result<std::string_view> {
+    if (weekday_idx >= m_weekday_name_offsets_and_lengths.size()) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+    auto const weekday_names{
+            m_pattern.substr(pattern_idx + 2ULL, m_weekday_name_bracket_pattern_length)
+    };
+    auto const [weekday_offset, weekday_length]
+            = m_weekday_name_offsets_and_lengths.at(weekday_idx);
+    pattern_idx += m_weekday_name_bracket_pattern_length + 2ULL;
+    return weekday_names.substr(weekday_offset, weekday_length);
+}
+
 // NOLINTBEGIN(readability-function-cognitive-complexity)
 auto parse_timestamp(
         std::string_view timestamp,
@@ -1116,18 +1170,14 @@ auto parse_timestamp(
                 break;
             }
             case 'B': {  // Month name.
-                auto const month_names{raw_pattern.substr(
-                        pattern_idx + 2ULL,
-                        pattern.get_month_name_bracket_pattern_length()
-                )};
-                auto const month_idx{YSTDLIB_ERROR_HANDLING_TRYX(find_first_matching_prefix(
-                        timestamp.substr(timestamp_idx),
-                        month_names,
-                        pattern.get_month_name_offsets_and_lengths()
-                ))};
+                auto const [month_idx, month_length] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        pattern.find_first_matching_month_and_advance_pattern_idx(
+                                pattern_idx,
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
                 parsed_month = static_cast<int>(month_idx) + 1;
-                pattern_idx += month_names.size() + 2ULL;
-                timestamp_idx += pattern.get_month_name_offsets_and_lengths().at(month_idx).second;
+                timestamp_idx += month_length;
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -1185,18 +1235,14 @@ auto parse_timestamp(
                 break;
             }
             case 'A': {  // Day in week.
-                auto const weekday_names{raw_pattern.substr(
-                        pattern_idx + 2ULL,
-                        pattern.get_weekday_name_bracket_pattern_length()
-                )};
-                auto const day_idx{YSTDLIB_ERROR_HANDLING_TRYX(find_first_matching_prefix(
-                        timestamp.substr(timestamp_idx),
-                        weekday_names,
-                        pattern.get_weekday_name_offsets_and_lengths()
-                ))};
-                pattern_idx += weekday_names.size() + 2ULL;
-                timestamp_idx += pattern.get_weekday_name_offsets_and_lengths().at(day_idx).second;
-                optional_day_of_week_idx = static_cast<int>(day_idx);
+                auto const [weekday_idx, weekday_length] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        pattern.find_first_matching_weekday_and_advance_pattern_idx(
+                                pattern_idx,
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
+                timestamp_idx += weekday_length;
+                optional_day_of_week_idx = static_cast<int>(weekday_idx);
                 break;
             }
             case 'p': {  // Part of day (AM/PM).
