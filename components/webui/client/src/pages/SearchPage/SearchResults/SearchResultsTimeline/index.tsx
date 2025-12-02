@@ -1,9 +1,7 @@
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {Card} from "antd";
 
-import {
-    CLP_QUERY_ENGINES,
-    SETTINGS_QUERY_ENGINE,
-} from "../../../../config";
+import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import NativeResultsTimeline from "./NativeResultsTimeline";
 import PrestoResultsTimeline from "./Presto/PrestoResultsTimeline";
 

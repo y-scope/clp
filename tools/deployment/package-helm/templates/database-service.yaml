@@ -1,0 +1,22 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp.fullname" . }}-database
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "database"
+spec:
+  {{- if .Values.allowHostAccessForSbinScripts }}
+  type: "NodePort"
+  {{- else }}
+  clusterIP: "None"
+  {{- end }}
+  selector:
+    {{- include "clp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "database"
+  ports:
+    - port: 3306
+      targetPort: "database"
+      {{- if .Values.allowHostAccessForSbinScripts }}
+      nodePort: {{ .Values.clpConfig.database.port }}
+      {{- end }}

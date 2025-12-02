@@ -51,6 +51,17 @@ def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
         return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
 
 
+def resolve_path_env_var(var_name: str) -> Path:
+    """
+    :param var_name: Name of the environment variable holding a path.
+    :return: Absolute Path resolved from the input variable.
+    :raise: Propagates `get_env_var`'s exceptions.
+    :raise: Propagates `Path.expanduser`'s exceptions.
+    :raise: Propagates `Path.resolve`'s exceptions.
+    """
+    return Path(get_env_var(var_name)).expanduser().resolve()
+
+
 def unlink(rm_path: Path, force: bool = True) -> None:
     """
     Remove a file or directory at `path`.
