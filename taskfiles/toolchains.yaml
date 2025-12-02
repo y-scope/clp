@@ -94,10 +94,12 @@ tasks:
       - |-
         cat <<EOF > "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         #!/bin/sh
+        # Set up environment for Rust toolchain
         export CARGO_HOME="{{.G_CARGO_HOME}}"
         export RUSTUP_HOME="{{.G_RUSTUP_HOME}}"
-        export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
         . "{{.G_CARGO_HOME}}/env"
+        # Set up environment variable for Rust build directory
+        export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
         EOF
         chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
 
