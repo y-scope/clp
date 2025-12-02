@@ -125,11 +125,15 @@ private:
  *
  * - \y Zero-padded year in century (69-99 -> 1969-1999, 00-68 -> 2000-2068).
  * - \Y Zero-padded year (0000-9999).
- * - \B{January,...,December} Month name, one of twelve in the list between {}.
+ * - \B{January,...,December} Month in a year. The names inside `{}` must be provided in order
+ *   starting from January (indexed at 0) and include exactly twelve entries (January through
+ *   December) splitting by `,`.
  * - \m Zero-padded month (01-12).
  * - \d Zero-padded day in month (01-31).
  * - \e Space-padded day in month( 1-31).
- * - \A{Sunday,...,Saturday} Day in week, one of seven in the list between {}.
+ * - \A{Sunday,...,Saturday} Day in a week. The names inside `{}` must be provided in order starting
+ *   from Sunday (indexed at 0) and include exactly seven entries (Sunday through Saturday)
+ *   splitting by `,`.
  * - \p Part of day (AM/PM).
  * - \H 24-hour clock, zero-padded hour (00-23).
  * - \k 24-hour clock, space-padded hour ( 0-23).
