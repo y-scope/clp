@@ -391,7 +391,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
-                ${MONGOCXX_TARGET}
+                #${MONGOCXX_TARGET}
                 spdlog::spdlog
         )
 endif()
@@ -459,7 +459,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp_s::search
                 clp_s::search::ast
                 clp_s::search::kql
-                ${MONGOCXX_TARGET}
+                #${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
