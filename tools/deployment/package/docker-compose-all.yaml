@@ -84,6 +84,8 @@ services:
     <<: *service_defaults
     hostname: "db_table_creator"
     environment:
+      CLP_DB_ADMIN_PASS: "${CLP_DB_ADMIN_PASS:?Please set a value.}"
+      CLP_DB_ADMIN_USER: "${CLP_DB_ADMIN_USER:?Please set a value.}"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
       CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"

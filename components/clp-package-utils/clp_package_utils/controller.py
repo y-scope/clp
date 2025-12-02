@@ -14,6 +14,8 @@ from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
     BundledService,
+    CLP_DB_ADMIN_PASS_ENV_VAR_NAME,
+    CLP_DB_ADMIN_USER_ENV_VAR_NAME,
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_USER_ENV_VAR_NAME,
@@ -185,6 +187,8 @@ class BaseController(ABC):
         # Credentials
         credentials = self._clp_config.database.credentials
         env_vars |= {
+            CLP_DB_ADMIN_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ADMIN].password,
+            CLP_DB_ADMIN_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ADMIN].username,
             CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
             CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
             CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,

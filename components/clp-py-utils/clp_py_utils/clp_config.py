@@ -69,6 +69,8 @@ CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
+CLP_DB_ADMIN_USER_ENV_VAR_NAME = "CLP_DB_ADMIN_USER"
+CLP_DB_ADMIN_PASS_ENV_VAR_NAME = "CLP_DB_ADMIN_PASS"
 CLP_DB_ROOT_USER_ENV_VAR_NAME = "CLP_DB_ROOT_USER"
 CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
@@ -177,6 +179,7 @@ class Package(BaseModel):
 class ClpDbUserType(KebabCaseStrEnum):
     """Database user types used by CLP components."""
 
+    ADMIN = auto()
     CLP = auto()
     ROOT = auto()
 
@@ -200,6 +203,7 @@ class Database(BaseModel):
     compress: bool = True
 
     credentials: dict[ClpDbUserType, DbUserCredentials] = {
+        ClpDbUserType.ADMIN: DbUserCredentials(),
         ClpDbUserType.CLP: DbUserCredentials(),
         ClpDbUserType.ROOT: DbUserCredentials(),
     }
@@ -295,6 +299,12 @@ class Database(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
+            self.credentials[ClpDbUserType.ADMIN].username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.admin_username"
+            )
+            self.credentials[ClpDbUserType.ADMIN].password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.admin_password"
+            )
             self.credentials[ClpDbUserType.CLP].username = get_config_value(
                 config, f"{DB_COMPONENT_NAME}.username"
             )
@@ -320,7 +330,10 @@ class Database(BaseModel):
         :raise ValueError: If the user type is not supported.
         :raise ValueError: Propagates `_get_env_var`'s exceptions.
         """
-        if user_type == ClpDbUserType.CLP:
+        if user_type == ClpDbUserType.ADMIN:
+            user_env_var = CLP_DB_ADMIN_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_ADMIN_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.CLP:
             user_env_var = CLP_DB_USER_ENV_VAR_NAME
             pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
         elif user_type == ClpDbUserType.ROOT:

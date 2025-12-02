@@ -49,6 +49,14 @@ def main(argv):
     # fmt: on
     subprocess.run(cmd, check=True)
 
+    # fmt: off
+    cmd = [
+        "python3", "-m", "clp_py_utils.initialize-admin-db-user",
+        "--config", str(config_file_path),
+    ]
+    # fmt: on
+    subprocess.run(cmd, check=True)
+
     return 0
 
 
