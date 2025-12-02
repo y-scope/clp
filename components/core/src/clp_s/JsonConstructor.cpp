@@ -62,9 +62,6 @@ void JsonConstructor::store() {
 }
 
 void JsonConstructor::construct_in_order() {
-#if CLP_S_STATIC_EXE
-    throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__, "in order construct");
-#else
     std::string buffer;
     auto tables = m_archive_reader->read_all_tables();
     using ReaderPointer = std::shared_ptr<SchemaReader>;
@@ -83,6 +80,7 @@ void JsonConstructor::construct_in_order() {
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
+#if !CLP_S_STATIC_EXE
     mongocxx::client client;
     mongocxx::collection collection;
 
@@ -97,6 +95,7 @@ void JsonConstructor::construct_in_order() {
     }
 
     std::vector<bsoncxx::document::value> results;
+#endif
     auto finalize_chunk = [&](bool open_new_writer) {
         // Add one to last_idx to match clp's behaviour of having the end index be exclusive
         ++last_idx;
@@ -110,6 +109,7 @@ void JsonConstructor::construct_in_order() {
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
         }
 
+#if !CLP_S_STATIC_EXE
         if (m_option.metadata_db.has_value()) {
             results.emplace_back(
                     std::move(
@@ -138,6 +138,7 @@ void JsonConstructor::construct_in_order() {
                     )
             );
         }
+#endif
 
         if (m_option.print_ordered_chunk_stats) {
             nlohmann::json json_msg;
@@ -184,6 +185,7 @@ void JsonConstructor::construct_in_order() {
         }
     }
 
+#if !CLP_S_STATIC_EXE
     if (false == results.empty()) {
         try {
             collection.insert_many(results);
