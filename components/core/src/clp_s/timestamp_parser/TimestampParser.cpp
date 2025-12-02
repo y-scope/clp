@@ -606,10 +606,9 @@ auto marshal_date_time_timestamp(
             }
             case 'B': {  // Month name.
                 auto const month_idx{year_month_day.month().operator unsigned int() - 1};
-                auto const month_str{YSTDLIB_ERROR_HANDLING_TRYX(
+                buffer.append(YSTDLIB_ERROR_HANDLING_TRYX(
                         pattern.get_month_and_advance_pattern_idx(month_idx, pattern_idx)
-                )};
-                buffer.append(month_str);
+                ));
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -633,10 +632,9 @@ auto marshal_date_time_timestamp(
                          - date::Sunday)
                                 .count()
                 };
-                auto const weekday_str{YSTDLIB_ERROR_HANDLING_TRYX(
+                buffer.append(YSTDLIB_ERROR_HANDLING_TRYX(
                         pattern.get_weekday_and_advance_pattern_idx(weekday_idx, pattern_idx)
-                )};
-                buffer.append(weekday_str);
+                ));
                 break;
             }
             case 'p': {  // Part of day (AM/PM).
