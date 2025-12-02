@@ -1,5 +1,11 @@
 from datetime import date
 
+from sphinx.application import Sphinx
+
+# Constants
+CLP_VERSION = "main"
+
+
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -79,7 +85,7 @@ html_theme_options = {
     "show_prev_next": False,
     "switcher": {
         "json_url": "https://docs.yscope.com/_static/clp-versions.json",
-        "version_match": "main",
+        "version_match": CLP_VERSION,
     },
     "use_edit_page_button": True,
 }
@@ -90,7 +96,7 @@ html_theme_options = {
 html_context = {
     "github_user": "y-scope",
     "github_repo": "clp",
-    "github_version": "main",
+    "github_version": CLP_VERSION,
     "doc_path": "docs/src",
 }
 
@@ -99,5 +105,22 @@ html_context = {
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/static_assets.html
 
 
-def setup(app):
+def setup(app: Sphinx):
     app.add_css_file("custom.css")
+
+    app.connect("source-read", _replace_custom_variables)
+
+
+def _replace_custom_variables(app: Sphinx, docname: str, content: list[str]):
+    """
+    Replace custom variables in the docs with the variable values.
+
+    :param app:
+    :param docname:
+    :param content: The content of the doc in a list with a single element.
+    """
+    custom_variables = {
+        "DOCS_VAR_CLP_VERSION": CLP_VERSION,
+    }
+    for placeholder, value in custom_variables.items():
+        content[0] = content[0].replace(placeholder, value)
