@@ -607,7 +607,7 @@ auto marshal_date_time_timestamp(
             case 'B': {  // Month name.
                 auto const month_idx{year_month_day.month().operator unsigned int() - 1};
                 auto const month_str{YSTDLIB_ERROR_HANDLING_TRYX(
-                        pattern.get_month_and_advance_pattern_idx(pattern_idx, month_idx)
+                        pattern.get_month_and_advance_pattern_idx(month_idx, pattern_idx)
                 )};
                 buffer.append(month_str);
                 break;
@@ -634,7 +634,7 @@ auto marshal_date_time_timestamp(
                                 .count()
                 };
                 auto const weekday_str{YSTDLIB_ERROR_HANDLING_TRYX(
-                        pattern.get_weekday_and_advance_pattern_idx(pattern_idx, weekday_idx)
+                        pattern.get_weekday_and_advance_pattern_idx(weekday_idx, pattern_idx)
                 )};
                 buffer.append(weekday_str);
                 break;
@@ -1033,8 +1033,8 @@ auto TimestampPattern::create(std::string_view pattern)
 }
 
 auto TimestampPattern::find_first_matching_month_and_advance_pattern_idx(
-        size_t& pattern_idx,
-        std::string_view timestamp
+        std::string_view timestamp,
+        size_t& pattern_idx
 ) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>> {
     auto const month_names{
             m_pattern.substr(pattern_idx + 2ULL, m_month_name_bracket_pattern_length)
@@ -1047,8 +1047,8 @@ auto TimestampPattern::find_first_matching_month_and_advance_pattern_idx(
 }
 
 auto TimestampPattern::find_first_matching_weekday_and_advance_pattern_idx(
-        size_t& pattern_idx,
-        std::string_view timestamp
+        std::string_view timestamp,
+        size_t& pattern_idx
 ) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>> {
     auto const weekday_names{
             m_pattern.substr(pattern_idx + 2ULL, m_weekday_name_bracket_pattern_length)
@@ -1061,7 +1061,7 @@ auto TimestampPattern::find_first_matching_weekday_and_advance_pattern_idx(
 }
 
 auto
-TimestampPattern::get_month_and_advance_pattern_idx(size_t& pattern_idx, size_t month_idx) const
+TimestampPattern::get_month_and_advance_pattern_idx(size_t month_idx, size_t& pattern_idx) const
         -> ystdlib::error_handling::Result<std::string_view> {
     if (month_idx >= m_month_name_offsets_and_lengths.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -1075,7 +1075,7 @@ TimestampPattern::get_month_and_advance_pattern_idx(size_t& pattern_idx, size_t 
 }
 
 auto
-TimestampPattern::get_weekday_and_advance_pattern_idx(size_t& pattern_idx, size_t weekday_idx) const
+TimestampPattern::get_weekday_and_advance_pattern_idx(size_t weekday_idx, size_t& pattern_idx) const
         -> ystdlib::error_handling::Result<std::string_view> {
     if (weekday_idx >= m_weekday_name_offsets_and_lengths.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -1172,8 +1172,8 @@ auto parse_timestamp(
             case 'B': {  // Month name.
                 auto const [month_idx, month_length] = YSTDLIB_ERROR_HANDLING_TRYX(
                         pattern.find_first_matching_month_and_advance_pattern_idx(
-                                pattern_idx,
-                                timestamp.substr(timestamp_idx)
+                                timestamp.substr(timestamp_idx),
+                                pattern_idx
                         )
                 );
                 parsed_month = static_cast<int>(month_idx) + 1;
@@ -1237,8 +1237,8 @@ auto parse_timestamp(
             case 'A': {  // Day in week.
                 auto const [weekday_idx, weekday_length] = YSTDLIB_ERROR_HANDLING_TRYX(
                         pattern.find_first_matching_weekday_and_advance_pattern_idx(
-                                pattern_idx,
-                                timestamp.substr(timestamp_idx)
+                                timestamp.substr(timestamp_idx),
+                                pattern_idx
                         )
                 );
                 timestamp_idx += weekday_length;

@@ -54,57 +54,57 @@ public:
     [[nodiscard]] auto uses_twelve_hour_clock() const -> bool { return m_uses_twelve_hour_clock; }
 
     /**
-     * Finds the first matching month as a prefix of `timestamp`, and advances `pattern_idx` to the
-     * closing bracket of the month name format specifier if found.
+     * Finds the first matching month as a prefix of `timestamp`.
+     * @param timestamp
      * @param pattern_idx An index into the raw pattern starting at the "B" in a `\B{}` format
-     * specifier.
+     * specifier. On success, `pattern_idx` is advanced to the closing bracket in the raw pattern.
      * @return A result containing the index and length of the first matching month, or an error
      * code indicating the failure:
-     * - ErrorCodeEnum::IncompatibleTimestampPattern if no matching month is found.
+     * - Forwards `find_first_matching_prefix`'s return values on failure.
      */
     [[nodiscard]] auto find_first_matching_month_and_advance_pattern_idx(
-            size_t& pattern_idx,
-            std::string_view timestamp
+            std::string_view timestamp,
+            size_t& pattern_idx
     ) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>>;
 
     /**
-     * Finds the first matching weekday as a prefix of `timestamp`, and advances `pattern_idx` to
-     * the closing bracket of the weekday format specifier if found.
+     * Finds the first matching weekday as a prefix of `timestamp`.
+     * @param timestamp
      * @param pattern_idx An index into the raw pattern starting at the "A" in a `\A{}` format
-     * specifier.
+     * specifier. On success, `pattern_idx` is advanced to the closing bracket in the raw pattern.
      * @return A result containing the index and length of the first matching weekday, or an error
      * code indicating the failure:
-     * - ErrorCodeEnum::IncompatibleTimestampPattern if no matching weekday is found.
+     * - Forwards `find_first_matching_prefix`'s return values on failure.
      */
     [[nodiscard]] auto find_first_matching_weekday_and_advance_pattern_idx(
-            size_t& pattern_idx,
-            std::string_view timestamp
+            std::string_view timestamp,
+            size_t& pattern_idx
     ) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>>;
 
     /**
      * Gets the month at `month_idx` in a month name format specifier, and advances `pattern_idx` to
      * the closing bracket of the month name format specifier if found.
-     * @param pattern_idx An index into the raw pattern starting at the "B" in a `\B{}` format
-     * specifier.
      * @param month_idx An index into the months in a `\B{}` format specifier.
+     * @param pattern_idx An index into the raw pattern starting at the "B" in a `\B{}` format
+     * specifier. On success, `pattern_idx` is advanced to the closing bracket in the raw pattern.
      * @return A result containing the month, or an error code indicating the failure:
      * - ErrorCodeEnum::IncompatibleTimestampPattern if `month_idx` is out of bounds.
      */
     [[nodiscard]] auto
-    get_month_and_advance_pattern_idx(size_t& pattern_idx, size_t month_idx) const
+    get_month_and_advance_pattern_idx(size_t month_idx, size_t& pattern_idx) const
             -> ystdlib::error_handling::Result<std::string_view>;
 
     /**
      * Gets the weekday at `weekday_idx` in a weekday name format specifier, and advances
      * `pattern_idx` to the closing bracket of the weekday name format specifier if found.
-     * @param pattern_idx An index into the raw pattern starting at the "A" in a `\A{}` format
-     * specifier.
      * @param weekday_idx An index into the weekdays in a `\A{}` format specifier.
+     * @param pattern_idx An index into the raw pattern starting at the "A" in a `\A{}` format
+     * specifier. On success, `pattern_idx` is advanced to the closing bracket in the raw pattern.
      * @return A result containing the weekday, or an error code indicating the failure:
      * - ErrorCodeEnum::IncompatibleTimestampPattern if `weekday_idx` is out of bounds.
      */
     [[nodiscard]] auto
-    get_weekday_and_advance_pattern_idx(size_t& pattern_idx, size_t weekday_idx) const
+    get_weekday_and_advance_pattern_idx(size_t weekday_idx, size_t& pattern_idx) const
             -> ystdlib::error_handling::Result<std::string_view>;
 
 private:
