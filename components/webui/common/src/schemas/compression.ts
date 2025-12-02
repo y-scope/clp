@@ -6,7 +6,7 @@ import {
 import {
     CLP_DEFAULT_TABLE_PREFIX,
     SqlTableSuffix,
-} from "../config";
+} from "../config.js";
 
 
 /**
