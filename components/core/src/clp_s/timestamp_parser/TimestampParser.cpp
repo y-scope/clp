@@ -167,7 +167,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 [[nodiscard]] auto find_first_matching_prefix(
         std::string_view str,
         std::string_view candidates,
-        std::vector<std::pair<uint16_t, uint16_t>> candidate_substrings
+        std::vector<std::pair<uint16_t, uint16_t>> const& candidate_substrings
 ) -> ystdlib::error_handling::Result<size_t>;
 
 /**
@@ -327,7 +327,7 @@ auto find_first_matching_prefix(std::string_view str, std::span<std::string_view
 auto find_first_matching_prefix(
         std::string_view str,
         std::string_view candidates,
-        std::vector<std::pair<uint16_t, uint16_t>> candidate_substrings
+        std::vector<std::pair<uint16_t, uint16_t>> const& candidate_substrings
 ) -> ystdlib::error_handling::Result<size_t> {
     for (size_t candidate_idx{0ULL}; candidate_idx < candidate_substrings.size(); ++candidate_idx) {
         auto const [substring_offset, substring_length] = candidate_substrings[candidate_idx];
@@ -508,9 +508,10 @@ auto extract_bracket_pattern_list(std::string_view str)
                 }
                 entry_offsets_and_sizes.emplace_back(last_offset, i - last_offset);
                 last_offset = i + 1;
+                break;
             }
             default:
-                continue;
+                break;
         }
     }
 
