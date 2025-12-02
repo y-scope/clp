@@ -96,6 +96,7 @@ tasks:
         #!/bin/sh
         export CARGO_HOME="{{.G_CARGO_HOME}}"
         export RUSTUP_HOME="{{.G_RUSTUP_HOME}}"
+        export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
         . "{{.G_CARGO_HOME}}/env"
         EOF
         chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
