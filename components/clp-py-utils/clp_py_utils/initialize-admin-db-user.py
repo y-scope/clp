@@ -58,9 +58,10 @@ def main(argv):
         escaped_admin_password = admin_password.replace("'", "''")
 
         credentials_table = get_aws_credentials_table_name(table_prefix)
-        with closing(sql_adapter.create_connection(True, ClpDbUserType.ROOT)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
-        ) as cursor:
+        with (
+            closing(sql_adapter.create_connection(True, ClpDbUserType.ROOT)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as cursor,
+        ):
             logger.info(f"Creating admin database user '{admin_username}'...")
 
             cursor.execute(

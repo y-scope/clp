@@ -13,9 +13,9 @@ from typing import Any
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
+    BundledService,
     CLP_DB_ADMIN_PASS_ENV_VAR_NAME,
     CLP_DB_ADMIN_USER_ENV_VAR_NAME,
-    BundledService,
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_USER_ENV_VAR_NAME,
