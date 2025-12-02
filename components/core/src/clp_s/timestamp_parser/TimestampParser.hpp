@@ -101,7 +101,7 @@ public:
      * specifier.
      * @param weekday_idx An index into the weekdays in a `\A{}` format specifier.
      * @return A result containing the weekday, or an error code indicating the failure:
-     * - ErrorCodeEnum::IncompatibleTimestampPattern if `month_idx` is out of bounds.
+     * - ErrorCodeEnum::IncompatibleTimestampPattern if `weekday_idx` is out of bounds.
      */
     [[nodiscard]] auto
     get_weekday_and_advance_pattern_idx(size_t& pattern_idx, size_t weekday_idx) const
