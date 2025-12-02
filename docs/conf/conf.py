@@ -105,18 +105,18 @@ html_context = {
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/static_assets.html
 
 
-def setup(app: Sphinx):
+def setup(app: Sphinx) -> None:
     app.add_css_file("custom.css")
 
     app.connect("source-read", _replace_variable_placeholders)
 
 
-def _replace_variable_placeholders(app: Sphinx, docname: str, content: list[str]):
+def _replace_variable_placeholders(_app: Sphinx, _docname: str, content: list[str]) -> None:
     """
     Replaces each variable placeholder in the docs with the relevant value.
 
-    :param app:
-    :param docname:
+    :param _app:
+    :param _docname:
     :param content: The content of the doc in a list with a single element.
     """
     placeholder_to_value = {
