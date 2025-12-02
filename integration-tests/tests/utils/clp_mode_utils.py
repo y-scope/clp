@@ -15,6 +15,7 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
             storage_engine=StorageEngine.CLP,
             query_engine=QueryEngine.CLP,
         ),
+        api_server=None,
     ),
     "clp-json": lambda: ClpConfig(
         package=Package(
