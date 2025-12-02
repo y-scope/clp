@@ -24,6 +24,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 response: {
                     [constants.HTTP_STATUS_OK]: FileListingSchema,
                 },
+                tags: ["List Files & Directories"],
             },
         },
         async (request, reply) => {
