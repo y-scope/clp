@@ -4,11 +4,11 @@
 #include <string>
 #include <string_view>
 
-//#include <mongocxx/client.hpp>
-//#include <mongocxx/collection.hpp>
-//#include <mongocxx/exception/exception.hpp>
-//#include <mongocxx/instance.hpp>
-//#include <mongocxx/uri.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/exception/exception.hpp>
+#include <mongocxx/instance.hpp>
+#include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 

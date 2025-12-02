@@ -11,8 +11,8 @@
 #include <string_view>
 #include <vector>
 
-//#include <mongocxx/client.hpp>
-//#include <mongocxx/collection.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
 
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"

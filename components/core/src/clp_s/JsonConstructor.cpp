@@ -5,10 +5,10 @@
 #include <system_error>
 
 #include <fmt/format.h>
-//#include <mongocxx/client.hpp>
-//#include <mongocxx/collection.hpp>
-//#include <mongocxx/exception/exception.hpp>
-//#include <mongocxx/uri.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/exception/exception.hpp>
+#include <mongocxx/uri.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
