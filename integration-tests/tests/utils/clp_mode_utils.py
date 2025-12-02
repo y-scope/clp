@@ -29,6 +29,7 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
             storage_engine=StorageEngine.CLP,
             query_engine=QueryEngine.CLP,
         ),
+        api_server=None,
     ),
     "clp-json": lambda: ClpConfig(
         package=Package(
@@ -80,12 +81,10 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
     :return: ClpConfig object corresponding to the mode.
     :raise ValueError: If the mode is not supported.
     """
-    try:
-        config = CLP_MODE_CONFIGS[mode_name]
-    except KeyError as err:
+    if mode_name not in CLP_MODE_CONFIGS:
         err_msg = f"Unsupported mode: {mode_name}"
-        raise ValueError(err_msg) from err
-    return config()
+        raise ValueError(err_msg)
+    return CLP_MODE_CONFIGS[mode_name]()
 
 
 def get_required_component_list(config: ClpConfig) -> list[str]:

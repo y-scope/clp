@@ -16,11 +16,10 @@ logger = logging.getLogger(__name__)
 @pytest.mark.parametrize("fixt_package_config", TEST_MODES, indirect=True)
 def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the CLP package starts up successfully for the selected mode of operation.
+    Validate that the CLP package starts up successfully for the selected mode(s) of operation.
 
     :param fixt_package_instance:
     """
     # TODO: write code that properly validates that the package is running. This is a placeholder.
     mode_name = fixt_package_instance.package_config.mode_name
-    message = f"The '{mode_name}' package has been spun up successfully."
-    logger.info(message)
+    logger.info("The '%s' package has been spun up successfully.", mode_name)
