@@ -108,19 +108,19 @@ html_context = {
 def setup(app: Sphinx):
     app.add_css_file("custom.css")
 
-    app.connect("source-read", _replace_custom_variables)
+    app.connect("source-read", _replace_variable_placeholders)
 
 
-def _replace_custom_variables(app: Sphinx, docname: str, content: list[str]):
+def _replace_variable_placeholders(app: Sphinx, docname: str, content: list[str]):
     """
-    Replace custom variables in the docs with the variable values.
+    Replaces each variable placeholder in the docs with the relevant value.
 
     :param app:
     :param docname:
     :param content: The content of the doc in a list with a single element.
     """
-    custom_variables = {
+    placeholder_to_value = {
         "DOCS_VAR_CLP_VERSION": CLP_VERSION,
     }
-    for placeholder, value in custom_variables.items():
+    for placeholder, value in placeholder_to_value.items():
         content[0] = content[0].replace(placeholder, value)
