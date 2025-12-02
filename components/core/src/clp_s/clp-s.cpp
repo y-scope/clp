@@ -8,7 +8,7 @@
 #include <system_error>
 #include <utility>
 
-//#include <mongocxx/instance.hpp>
+#include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
