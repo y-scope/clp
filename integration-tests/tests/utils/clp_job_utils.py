@@ -1,0 +1,101 @@
+"""Provides utilities related to the test jobs for the CLP package."""
+
+import logging
+
+import pytest
+
+from tests.utils.config import (
+    PackageCompressJob,
+    PackageInstance,
+    PackageJobList,
+)
+from tests.utils.package_utils import compress_with_clp_package
+
+logger = logging.getLogger(__name__)
+
+
+PACKAGE_COMPRESS_JOBS: dict[str, PackageCompressJob] = {
+    "compress-postgresql": PackageCompressJob(
+        job_name="compress-postgresql",
+        log_fixture_name="postgresql",
+        mode="clp-json",
+        log_format="json",
+        unstructured=False,
+        dataset_name="postgresql",
+        timestamp_key="timestamp",
+    ),
+    "compress-hive-24hr": PackageCompressJob(
+        job_name="compress-hive-24hr",
+        log_fixture_name="hive_24hr",
+        mode="clp-text",
+        log_format="text",
+        unstructured=True,
+    ),
+    # Insert more compression jobs here as needed.
+}
+
+
+def _matches_keyword(job_name: str, keyword_filter: str) -> bool:
+    """Return True if this job should be included given the current -k filter."""
+    if not keyword_filter:
+        return True
+    return keyword_filter.lower() in job_name.lower()
+
+
+def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | None:
+    """
+    Builds the list of package jobs for this test run.
+
+    :param mode_name:
+    :param job_filter:
+    :return: PackageJobList if there are jobs for this mode, None if not.
+    """
+    logger.debug("Creating job list for mode %s (job filter: %s)", mode_name, job_filter)
+
+    package_compress_jobs: list[PackageCompressJob] = []
+
+    for job_name, package_compress_job in PACKAGE_COMPRESS_JOBS.items():
+        if package_compress_job.mode == mode_name and _matches_keyword(job_name, job_filter):
+            package_compress_jobs.append(package_compress_job)
+
+    if not package_compress_jobs:
+        return None
+    return PackageJobList(
+        package_compress_jobs=package_compress_jobs,
+    )
+
+
+def _run_package_compress_jobs(
+    request: pytest.FixtureRequest,
+    package_instance: PackageInstance,
+) -> None:
+    """
+    Run all the package compress jobs for this test run.
+
+    :param package_instance:
+    :param request:
+    """
+    package_job_list = package_instance.package_config.package_job_list
+    if package_job_list is None:
+        err_msg = "Package job list is not configured for this package instance."
+        raise RuntimeError(err_msg)
+
+    compress_jobs = package_job_list.package_compress_jobs
+    for compress_job in compress_jobs:
+        compress_with_clp_package(request, compress_job, package_instance)
+
+
+def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
+    """
+    Dispatches all the package jobs in `job_list` for this package test run.
+
+    :param jobs_list:
+    """
+    logger.debug("Dispatching test jobs.")
+
+    jobs_list = package_instance.package_config.package_job_list
+    if jobs_list is None:
+        return
+
+    if jobs_list.package_compress_jobs:
+        _run_package_compress_jobs(request, package_instance)
