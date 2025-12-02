@@ -22,6 +22,10 @@ vars:
   G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
+  G_ZSTD_LIB_NAME: "zstd"
+
+  # Installation directories
+  G_ZSTD_INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.G_ZSTD_LIB_NAME}}-install"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
@@ -438,6 +442,7 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DENABLE_UNINSTALL=OFF"
+            - "-Dpkgcfg_lib_ZSTD_zstd={{.G_ZSTD_INSTALL_PREFIX}}/lib/libzstd.a"
           LIB_NAME: "mongocxx"
           TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
           TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
@@ -632,6 +637,7 @@ tasks:
             - "-DZSTD_BUILD_STATIC=ON"
             - "-DZSTD_BUILD_TESTS=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
-          LIB_NAME: "zstd"
+          INSTALL_PREFIX: "{{.G_ZSTD_INSTALL_PREFIX}}"
+          LIB_NAME: "{{.G_ZSTD_LIB_NAME}}"
           TARBALL_SHA256: "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
           TARBALL_URL: "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
