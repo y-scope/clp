@@ -3,7 +3,7 @@
 from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import PackageConfig
 
-DEFAULT_CMD_TIMEOUT = 120.0
+DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 
 
 def start_clp_package(package_config: PackageConfig) -> None:
@@ -23,7 +23,7 @@ def start_clp_package(package_config: PackageConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_assert(start_cmd, timeout=DEFAULT_CMD_TIMEOUT)
+    run_and_assert(start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
 
 
 def stop_clp_package(package_config: PackageConfig) -> None:
@@ -43,4 +43,4 @@ def stop_clp_package(package_config: PackageConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_assert(stop_cmd, timeout=DEFAULT_CMD_TIMEOUT)
+    run_and_assert(stop_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
