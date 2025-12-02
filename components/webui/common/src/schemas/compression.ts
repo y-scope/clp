@@ -6,7 +6,7 @@ import {
 import {
     CLP_DEFAULT_TABLE_PREFIX,
     SqlTableSuffix,
-} from "../config";
+} from "../config.js";
 
 
 /**
@@ -43,10 +43,20 @@ const DatasetNameSchema = Type.String({
 });
 
 /**
+ * Schema for an absolute file system path.
+ * - Must not be empty.
+ * - Must start with "/": the path must be an absolute path.
+ */
+const AbsolutePathSchema = Type.String({
+    minLength: 1,
+    pattern: "^/",
+});
+
+/**
  * Schema for request to create a new compression job.
  */
 const CompressionJobCreationSchema = Type.Object({
-    paths: Type.Array(Type.String()),
+    paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
     dataset: Type.Optional(DatasetNameSchema),
     timestampKey: Type.Optional(Type.String()),
 });
@@ -63,6 +73,7 @@ const CompressionJobSchema = Type.Object({
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
 export {
+    AbsolutePathSchema,
     CompressionJobCreationSchema,
     CompressionJobSchema,
     DATASET_NAME_MAX_LEN,
