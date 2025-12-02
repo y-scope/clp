@@ -1,15 +1,10 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
-import {Type} from "@sinclair/typebox";
-import {FileListingSchema} from "@webui/common/schemas/os";
+import {
+    FileListingSchema,
+    FileListRequestSchema,
+} from "@webui/common/schemas/os";
 import fs from "fs/promises";
 import {constants} from "http2";
-
-
-const FileListRequestSchema = Type.Object({
-    path: Type.String({
-        default: "/",
-    }),
-});
 
 
 /**
