@@ -233,14 +233,13 @@ services:
       db-table-creator:
         condition: "service_completed_successfully"
     ports:
-      - host_ip: "${SPIDER_SCHEDULER_HOST}"
-        published: "${SPIDER_SCHEDULER_PORT}"
+      - host_ip: "${SPIDER_SCHEDULER_HOST:-127.0.0.1}"
+        published: "${SPIDER_SCHEDULER_PORT:-6000}"
         target: 6000
     command: [
       "/opt/clp/bin/spider_scheduler",
-      "--host", "${SPIDER_SCHEDULER_HOST}",
-      "--port", "${SPIDER_SCHEDULER_PORT}",
-      "--bind-port", "6000",
+      "--host", "spider_scheduler",
+      "--port", "6000",
       "--storage_url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
         user=${SPIDER_DB_USER:?Please set a value.}\
