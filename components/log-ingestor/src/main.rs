@@ -5,6 +5,19 @@ use clp_rust_utils::{clp_config::package, serde::yaml};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
+#[derive(Parser)]
+#[command(version, about = "log-ingestor for CLP.")]
+struct Args {
+    #[arg(long)]
+    config: String,
+
+    #[arg(long)]
+    host: String,
+
+    #[arg(long)]
+    port: u16,
+}
+
 fn read_config_and_credentials(
     args: &Args,
 ) -> anyhow::Result<(package::config::Config, package::credentials::Credentials)> {
@@ -48,19 +61,6 @@ fn set_up_logging() -> anyhow::Result<tracing_appender::non_blocking::WorkerGuar
         .with_writer(std::io::stdout.and(non_blocking_writer))
         .init();
     Ok(guard)
-}
-
-#[derive(Parser)]
-#[command(version, about = "log-ingestor for CLP.")]
-struct Args {
-    #[arg(long)]
-    config: String,
-
-    #[arg(long)]
-    host: String,
-
-    #[arg(long)]
-    port: u16,
 }
 
 async fn shutdown_signal() {
