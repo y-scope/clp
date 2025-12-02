@@ -75,6 +75,9 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         : ::clp_s::search::OutputHandler(should_output_timestamp, true),
           m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
+#if CLP_S_STATIC_EXE
+    throw OperationFailed(ErrorCode::ErrorCodeUnsupported, __FILENAME__, __LINE__);
+#else
     try {
         auto mongo_uri = mongocxx::uri(uri);
         m_client = mongocxx::client(mongo_uri);
@@ -83,9 +86,11 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
     } catch (mongocxx::exception const& e) {
         throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
     }
+#endif
 }
 
 ErrorCode ResultsCacheOutputHandler::flush() {
+#if !CLP_S_STATIC_EXE
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -138,6 +143,7 @@ ErrorCode ResultsCacheOutputHandler::flush() {
     } catch (mongocxx::exception const& e) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
+#endif
     return ErrorCode::ErrorCodeSuccess;
 }
 

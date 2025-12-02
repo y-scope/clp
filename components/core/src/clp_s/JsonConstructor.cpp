@@ -62,6 +62,9 @@ void JsonConstructor::store() {
 }
 
 void JsonConstructor::construct_in_order() {
+#if CLP_S_STATIC_EXE
+    throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__, "in order construct");
+#else
     std::string buffer;
     auto tables = m_archive_reader->read_all_tables();
     using ReaderPointer = std::shared_ptr<SchemaReader>;
@@ -188,5 +191,6 @@ void JsonConstructor::construct_in_order() {
             throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__, e.what());
         }
     }
+#endif
 }
 }  // namespace clp_s

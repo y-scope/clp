@@ -377,6 +377,11 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
         )
         add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
+        target_compile_definitions(
+                clp_s_json_constructor
+                PRIVATE
+                CLP_S_STATIC_EXE=$<BOOL:${CLP_S_STATIC_EXE}>
+        )
         target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
         target_include_directories(clp_s_json_constructor PUBLIC ../)
         target_link_libraries(

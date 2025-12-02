@@ -8,7 +8,7 @@
 #include <system_error>
 #include <utility>
 
-#include <mongocxx/instance.hpp>
+//#include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
@@ -296,8 +296,8 @@ int main(int argc, char const* argv[]) {
     }
 
     clp_s::TimestampPattern::init();
-    mongocxx::instance const mongocxx_instance{};
 #if !CLP_S_STATIC_EXE
+    mongocxx::instance const mongocxx_instance{};
     clp::CurlGlobalInstance const curl_instance{};
 #endif
 
