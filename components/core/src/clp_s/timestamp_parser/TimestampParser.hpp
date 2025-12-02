@@ -106,7 +106,8 @@ private:
  * - \I 12-hour clock, zero-padded hour (01-12).
  * - \l 12-hour clock, space-padded hour ( 1-12).
  * - \M Zero-padded minute (00-59).
- * - \S Zero-padded second (00-60) (60 for leap seconds).
+ * - \S Zero-padded non-leap second (00-59).
+ * - \J Leap second (60).
  * - \3 Zero-padded millisecond (000-999).
  * - \6 Zero-padded microsecond (000000-999999).
  * - \9 Zero-padded nanosecond (000000000-999999999).
@@ -124,6 +125,7 @@ private:
  * - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
  * - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on a heuristic.
  * - \O{...} One of several literal characters, described by content between {}.
+ * - \s Generic zero-padded second (00-60) -- resolves to \S or \J.
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
@@ -148,6 +150,19 @@ private:
         TimestampPattern const& pattern,
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
+
+/**
+ * Marshals a timestamp according to a timestamp pattern.
+ * @param timestamp
+ * @param pattern
+ * @param buffer The buffer that the marshalled timestamp is appended to.
+ * @return A void result on success, or an error code indicating the failure:
+ * - Forwards `marshal_date_time_timestamp`'s return values.
+ * - Forwards `marshal_numeric_timestamp`'s return values.
+ */
+[[nodiscard]] auto
+marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::string& buffer)
+        -> ystdlib::error_handling::Result<void>;
 
 /**
  * Parses a timestamp according to the first matching pattern in a list of patterns.
