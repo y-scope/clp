@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def fixt_package_config(
-    fixt_package_path_config: PackagePathConfig,
     request: pytest.FixtureRequest,
+    fixt_package_path_config: PackagePathConfig,
 ) -> Iterator[PackageConfig]:
     """
     Creates and maintains a PackageConfig object for a specific CLP mode.
@@ -53,7 +53,6 @@ def fixt_package_config(
             f"Invalid BASE_PORT value '{base_port_string}' in pytest.ini; expected an integer."
         )
         raise ValueError(err_msg) from err
-
     assign_ports_from_base(base_port, clp_config_obj)
 
     # Compute the list of required components for this mode.
@@ -77,11 +76,8 @@ def fixt_package_config(
         yield package_config
     finally:
         logger.debug("Removing the temporary config file and var contents.")
+        package_config.temp_config_file_path.unlink(missing_ok=True)
 
-        with contextlib.suppress(FileNotFoundError):
-            package_config.temp_config_file_path.unlink()
-
-        # Clear data, tmp, and log from the package directory.
         data_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
         tmp_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_TMP_DIRECTORY_PATH
         for directory_path in (data_dir, tmp_dir):

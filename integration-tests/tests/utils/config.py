@@ -17,7 +17,11 @@ from tests.utils.utils import (
     unlink,
     validate_dir_exists,
     validate_file_exists,
+    validate_file_exists,
 )
+
+if TYPE_CHECKING:
+    from clp_py_utils.clp_config import ClpConfig
 
 
 @dataclass(frozen=True)
@@ -73,7 +77,7 @@ class PackagePathConfig:
     #: Root directory for package tests output.
     test_root_dir: InitVar[Path]
 
-    #: Directory to store any cached package config files.
+    #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
     #: Directory where the CLP package writes logs.
@@ -94,7 +98,7 @@ class PackagePathConfig:
             )
             raise RuntimeError(err_msg)
 
-        # Initialize cache directory for package tests.
+        # Initialize directory for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
 

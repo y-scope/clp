@@ -34,7 +34,6 @@ def fixt_package_instance(
     """
     mode_name = fixt_package_config.mode_name
     no_jobs: bool = bool(request.config.option.NO_JOBS)
-    instance: PackageInstance | None = None
     package_job_list = fixt_package_config.package_job_list
 
     # Do not start this mode if there are no jobs and the '--no-jobs' flag wasn't specified by user.
@@ -42,7 +41,6 @@ def fixt_package_instance(
         pytest.skip(f"No jobs to run for mode {mode_name} with current job filter.")
 
     try:
-        logger.debug("Starting up the %s package.", mode_name)
         start_clp_package(fixt_package_config)
         instance = PackageInstance(package_config=fixt_package_config)
 
@@ -58,12 +56,7 @@ def fixt_package_instance(
             " .pytest.ini."
         )
     finally:
-        logger.debug("Now stopping the %s package...", mode_name)
-        if instance is not None:
-            stop_clp_package(instance)
-        else:
-            # This means setup failed after start; fall back to calling stop script directly
-            subprocess.run([str(fixt_package_config.path_config.stop_script_path)], check=False)
+        stop_clp_package(fixt_package_config)
 
         if mode_name == "clp-json-presto":
             stop_presto_cluster()

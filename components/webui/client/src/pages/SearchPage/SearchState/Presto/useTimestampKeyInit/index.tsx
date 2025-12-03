@@ -1,33 +1,27 @@
 import {useEffect} from "react";
 
 import {useQuery} from "@tanstack/react-query";
-import {
-    message,
-    Select,
-    SelectProps,
-} from "antd";
+import {message} from "antd";
 
-import useSearchStore from "../../../../SearchState";
-import usePrestoSearchState from "../../../../SearchState/Presto";
-import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
+import useSearchStore from "../../";
+import usePrestoSearchState from "..";
 import {fetchTimestampColumns} from "./sql";
 
 
 /**
- * Renders a timestamp key selector component
+ * Hook to initialize timestamp key. Fetches timestamp columns and sets a default if none is
+ * selected. Shows messages for errors or warnings with data fetching.
  *
- * @param selectProps
  * @return
  */
-const TimestampKeySelect = (selectProps: SelectProps<string>) => {
+const useTimestampKeyInit = () => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
     const updateTimestampKey = usePrestoSearchState((state) => state.updateTimestampKey);
-    const searchUiState = useSearchStore((state) => state.searchUiState);
 
     const [messageApi, contextHolder] = message.useMessage();
 
-    const {data: timestampKeys, isPending, isSuccess, isError} = useQuery({
+    const {data: timestampKeys, isSuccess, isError} = useQuery({
         queryKey: [
             "timestampColumns",
             dataset,
@@ -37,6 +31,14 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
             []),
         enabled: null !== dataset,
     });
+
+    // Reset timestamp key when dataset changes.
+    useEffect(() => {
+        updateTimestampKey(null);
+    }, [
+        dataset,
+        updateTimestampKey,
+    ]);
 
     useEffect(() => {
         if (isSuccess) {
@@ -51,6 +53,7 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
         updateTimestampKey,
     ]);
 
+    // Show error message if fetch fails
     useEffect(() => {
         if (isError) {
             messageApi.error({
@@ -63,6 +66,7 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
         messageApi,
     ]);
 
+    // Show warning if no timestamp columns found
     useEffect(() => {
         if (isSuccess && 0 === timestampKeys.length) {
             messageApi.warning({
@@ -79,34 +83,7 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
         updateTimestampKey,
     ]);
 
-    // Reset timestamp key when dataset changes
-    useEffect(() => {
-        updateTimestampKey(null);
-    }, [
-        dataset,
-        updateTimestampKey,
-    ]);
-
-    const handleTimestampKeyChange = (value: string) => {
-        updateTimestampKey(value);
-    };
-
-    return (
-        <>
-            {contextHolder}
-            <Select<string>
-                loading={isPending}
-                options={(timestampKeys || []).map((option) => ({label: option, value: option}))}
-                value={timestampKey}
-                disabled={
-                    null === dataset ||
-                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                    searchUiState === SEARCH_UI_STATE.QUERYING
-                }
-                onChange={handleTimestampKeyChange}
-                {...selectProps}/>
-        </>
-    );
+    return {contextHolder};
 };
 
-export default TimestampKeySelect;
+export default useTimestampKeyInit;
