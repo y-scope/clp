@@ -356,30 +356,26 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
     m_logtype_dict_entry.clear();
     size_t num_uncompressed_bytes = 0;
     // Timestamp is included in the uncompressed message size
-    uint32_t start_pos = log_output_buffer->get_token(0).m_start_pos;
+    uint32_t start_pos = log_output_buffer->get_token(0).get_start_pos();
     if (timestamp_pattern == nullptr) {
-        start_pos = log_output_buffer->get_token(1).m_start_pos;
+        start_pos = log_output_buffer->get_token(1).get_start_pos();
     }
-    uint32_t end_pos = log_output_buffer->get_token(log_output_buffer->pos() - 1).m_end_pos;
+    uint32_t end_pos = log_output_buffer->get_token(log_output_buffer->pos() - 1).get_end_pos();
     if (start_pos <= end_pos) {
         num_uncompressed_bytes = end_pos - start_pos;
     } else {
         num_uncompressed_bytes
-                = log_output_buffer->get_token(0).m_buffer_size - start_pos + end_pos;
+                = log_output_buffer->get_token(0).get_buffer_size() - start_pos + end_pos;
     }
     for (uint32_t i = 1; i < log_output_buffer->pos(); i++) {
         log_surgeon::Token& token = log_output_buffer->get_mutable_token(i);
-        int token_type = token.m_type_ids_ptr->at(0);
+        int token_type = token.get_type_ids()->at(0);
         if (log_output_buffer->has_delimiters() && (timestamp_pattern != nullptr || i > 1)
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
         {
             m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
-            if (token.m_start_pos == token.m_buffer_size - 1) {
-                token.m_start_pos = 0;
-            } else {
-                token.m_start_pos++;
-            }
+            token.increment_start_pos();
         }
         switch (token_type) {
             case static_cast<int>(log_surgeon::SymbolId::TokenNewline):

@@ -99,6 +99,10 @@ public:
      */
     void add_float_var();
     /**
+     * Adds a schema node variable placeholder.
+     */
+    auto add_schema_var() -> void;
+    /**
      * Adds a dictionary variable placeholder
      */
     void add_dictionary_var();
@@ -170,6 +174,11 @@ public:
      * Decodes the log type
      */
     void decode_log_type();
+
+    /**
+     * Encode a constant to the log type by escaping any necessary characters.
+     */
+    auto encode_constant(std::string_view constant) -> void;
 
     /**
      * Checks if the entry has been initialized
