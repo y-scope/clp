@@ -24,10 +24,8 @@ def fixt_package_config(
     """
     mode_name: str = request.param
 
-    # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
-    # Compute the list of required components for this mode.
     required_components = get_required_component_list(clp_config_obj)
 
     # Construct PackageConfig.
