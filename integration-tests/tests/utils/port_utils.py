@@ -4,7 +4,7 @@ from clp_py_utils.clp_config import ClpConfig
 
 # MAX_REQUIRED_PORTS is equal to the max number of CLP package components that need a port.
 MAX_REQUIRED_PORTS = 10
-MIN_NON_PRIVILEGED_PORT = 1023
+MIN_NON_PRIVILEGED_PORT = 1024
 MAX_PORT = 65535
 
 
@@ -13,8 +13,8 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     Assign ports for all components that require a port in `clp_config`. Ports are assigned
     relative to `base_port`.
 
-    :param clp_config:
     :param base_port:
+    :param clp_config:
     """
     # Ensure base_port is valid and that there's enough room to assign all ports.
     _validate_base_port(base_port=base_port)
