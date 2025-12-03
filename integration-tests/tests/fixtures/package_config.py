@@ -1,6 +1,5 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
-import contextlib
 import logging
 from collections.abc import Iterator
 

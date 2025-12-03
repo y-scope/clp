@@ -1,7 +1,6 @@
 """Fixtures that start and stop CLP package instances for integration tests."""
 
 import logging
-import subprocess
 from collections.abc import Iterator
 
 import pytest

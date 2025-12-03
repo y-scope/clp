@@ -17,11 +17,7 @@ from tests.utils.utils import (
     unlink,
     validate_dir_exists,
     validate_file_exists,
-    validate_file_exists,
 )
-
-if TYPE_CHECKING:
-    from clp_py_utils.clp_config import ClpConfig
 
 
 @dataclass(frozen=True)
