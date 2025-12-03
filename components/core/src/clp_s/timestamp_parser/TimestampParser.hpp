@@ -224,7 +224,7 @@ private:
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
 /**
- * Marshals a timestamp according to a timestamp pattern.
+ * Marshals a timestamp as a JSON literal according to a timestamp pattern.
  * @param timestamp
  * @param pattern
  * @param buffer The buffer that the marshalled timestamp is appended to.

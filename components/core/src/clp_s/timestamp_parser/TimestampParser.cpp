@@ -293,9 +293,21 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 
 /**
  * @param c
- * @return Whether `c` indicates a JSON escape sequence when preceded by a backslash.
+ * @return Whether `c` indicates an unsupported JSON escape sequence when preceded by a backslash.
  */
-[[nodiscard]] auto is_json_escape_sequence(char c) -> bool;
+[[nodiscard]] auto is_unsupported_json_escape_sequence(char c) -> bool;
+
+/**
+ * @param c
+ * @return Whether `c` is an unsupported character.
+ */
+[[nodiscard]] auto is_unsupported_character(char c) -> bool;
+
+/**
+ * @param c
+ * @return Whether `c` is a repeatable escape sequence.
+ */
+[[nodiscard]] auto is_repeatable_escape_sequence(char c) -> bool;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
@@ -746,7 +758,7 @@ auto marshal_date_time_timestamp(
                 break;
             }
             case '\\': {
-                buffer.push_back('\\');
+                buffer.append(cJsonEscapedBackslash);
                 break;
             }
             default:
@@ -855,16 +867,29 @@ auto marshal_numeric_timestamp(
     return ystdlib::error_handling::success();
 }
 
-auto is_json_escape_sequence(char c) -> bool {
+auto is_unsupported_json_escape_sequence(char c) -> bool {
     switch (c) {
         case '"':
-        case '\\':
         case 'b':
         case 'f':
         case 'n':
         case 'r':
         case 't':
         case 'u':
+            return true;
+        default:
+            return false;
+    }
+}
+
+auto is_unsupported_character(char c) -> bool {
+    return '"' == c || ('\x00' <= c && c <= '\x1f');
+}
+
+auto is_repeatable_escape_sequence(char c) -> bool {
+    switch (c) {
+        case 'O':
+        case '\\':
             return true;
         default:
             return false;
@@ -886,16 +911,15 @@ auto TimestampPattern::create(std::string_view pattern)
     uint16_t month_name_bracket_pattern_length{};
     uint16_t weekday_name_bracket_pattern_length{};
 
-    if (pattern.size() >= 2 && '"' == pattern.front() && '"' == pattern.back()) {
-        pattern = pattern.substr(1, pattern.size() - 2);
-    }
-
+    bool const quoted_pattern{
+            pattern.size() >= 2 && '"' == pattern.front() && '"' == pattern.back()
+    };
+    size_t const start_idx{quoted_pattern ? 1ULL : 0ULL};
+    size_t const end_idx{quoted_pattern ? pattern.size() - 1ULL : pattern.size()};
     bool escaped{false};
-    for (size_t pattern_idx{0ULL}; pattern_idx < pattern.size(); ++pattern_idx) {
+    for (size_t pattern_idx{start_idx}; pattern_idx < end_idx; ++pattern_idx) {
         auto const cur_format_specifier{pattern.at(pattern_idx)};
-        if ('"' == cur_format_specifier
-            || ('\x00' <= cur_format_specifier && cur_format_specifier <= '\x1F'))
-        {
+        if (is_unsupported_character(cur_format_specifier)) {
             return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
 
@@ -906,12 +930,14 @@ auto TimestampPattern::create(std::string_view pattern)
             continue;
         }
 
-        if ('\\' != cur_format_specifier && is_json_escape_sequence(cur_format_specifier)) {
+        if (is_unsupported_json_escape_sequence(cur_format_specifier)) {
             return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
 
         auto unsigned_cur_format_specifier = static_cast<unsigned char>(cur_format_specifier);
-        if ('O' != cur_format_specifier && format_specifiers.at(unsigned_cur_format_specifier)) {
+        if (false == is_repeatable_escape_sequence(cur_format_specifier)
+            && format_specifiers.at(unsigned_cur_format_specifier))
+        {
             return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
         format_specifiers[unsigned_cur_format_specifier] = true;
@@ -1035,11 +1061,9 @@ auto TimestampPattern::create(std::string_view pattern)
                 break;
             }
             case 's':  // Generic zero-padded second.
+            case '\\':
                 uses_date_type_representation = true;
                 break;
-            case '\\': {
-                break;
-            }
             default:
                 return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }

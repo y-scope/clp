@@ -638,5 +638,37 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE(expected_result.timestamp == marshalled_timestamp);
         }
     }
+
+    SECTION("Timestamps containing JSON escape sequences are parsed accurately.") {
+        std::vector<ExpectedParsingResult> const expected_parsing_results{
+                {R"(2015\\02\\01T01:02:03.004)",
+                 R"(\Y\\\m\\\dT\H:\M:\S.\3)",
+                 1'422'752'523'004'000'000},
+        };
+
+        std::string generated_pattern;
+        for (auto const& expected_result : expected_parsing_results) {
+            auto const timestamp_pattern_result{TimestampPattern::create(expected_result.pattern)};
+            REQUIRE_FALSE(timestamp_pattern_result.has_error());
+            auto const parse_result{parse_timestamp(
+                    expected_result.timestamp,
+                    timestamp_pattern_result.value(),
+                    generated_pattern,
+                    true
+            )};
+            REQUIRE_FALSE(parse_result.has_error());
+            REQUIRE(expected_result.epoch_timestamp == parse_result.value().first);
+            REQUIRE(expected_result.pattern == parse_result.value().second);
+
+            std::string marshalled_timestamp;
+            auto const marshal_result{marshal_timestamp(
+                    expected_result.epoch_timestamp,
+                    timestamp_pattern_result.value(),
+                    marshalled_timestamp
+            )};
+            REQUIRE_FALSE(marshal_result.has_error());
+            REQUIRE(expected_result.timestamp == marshalled_timestamp);
+        }
+    }
 }
 }  // namespace clp_s::timestamp_parser::test
