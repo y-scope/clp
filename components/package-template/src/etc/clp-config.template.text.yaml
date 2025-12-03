@@ -1,8 +1,12 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
-#package:
-#  storage_engine: "clp-s"
-#  query_engine: "clp-s"
-#
+
+package:
+  storage_engine: "clp"
+  query_engine: "clp"
+
+# API server config
+api_server: null
+
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
@@ -25,7 +29,6 @@
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
-#  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 #  logging_level: "INFO"
 #
 #query_scheduler:
@@ -122,14 +125,6 @@
 #    archive: 60
 #    search_result: 30
 #
-## API server config
-#api_server:
-#  host: "localhost"
-#  port: 3001
-#  default_max_num_query_results: 1000
-#  query_job_polling:
-#    initial_backoff_ms: 100
-#    max_backoff_ms: 5000
 #
 ## Presto client config
 #presto: null
