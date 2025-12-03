@@ -165,8 +165,9 @@ def _generate_s3_logs_list(
     with open(output_file_path, "w") as file:
         for object_key in object_keys:
             s3_virtual_hosted_style_url = generate_s3_virtual_hosted_style_url(
-                s3_input_config.region_code, s3_input_config.bucket, object_key
+                s3_input_config.region_code, s3_input_config.bucket, s3_input_config.endpoint_url, object_key
             )
+            print("url list to clp-s {}", s3_virtual_hosted_style_url)
             file.write(s3_virtual_hosted_style_url)
             file.write("\n")
 
@@ -413,7 +414,9 @@ def run_clp(
     if InputType.FS == input_type:
         _generate_fs_logs_list(logs_list_path, paths_to_compress)
     elif InputType.S3 == input_type:
-        _generate_s3_logs_list(logs_list_path, paths_to_compress, clp_config.input)
+        _generate_s3_logs_list(
+            logs_list_path, paths_to_compress, clp_config.input
+        )
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)

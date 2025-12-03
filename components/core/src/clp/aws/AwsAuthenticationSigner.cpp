@@ -189,14 +189,14 @@ S3Url::S3Url(string const& url) {
         );
     }
 
-    if (cAwsEndpoint != m_end_point) {
-        throw OperationFailed(
-                ErrorCode_BadParam,
-                __FILENAME__,
-                __LINE__,
-                "Invalid S3 endpoint: " + m_end_point
-        );
-    }
+    // if (cAwsEndpoint != m_end_point) {
+    //     throw OperationFailed(
+    //             ErrorCode_BadParam,
+    //             __FILENAME__,
+    //             __LINE__,
+    //             "Invalid S3 endpoint: " + m_end_point
+    //     );
+    // }
 
     if (m_region.empty()) {
         m_region = cDefaultRegion;

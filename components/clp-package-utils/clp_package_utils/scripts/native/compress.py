@@ -172,13 +172,15 @@ def _generate_clp_io_config(
     urls = logs_to_compress[1:]
 
     if s3_compress_subcommand == S3_OBJECT_COMPRESSION:
-        region_code, bucket, key_prefix, keys = _parse_and_validate_s3_object_urls(urls)
+        region_code, bucket, endpoint, key_prefix, keys = _parse_and_validate_s3_object_urls(urls)
+        logger.info(f"{endpoint = }")
         return S3InputConfig(
             dataset=parsed_args.dataset,
             region_code=region_code,
             bucket=bucket,
             key_prefix=key_prefix,
             keys=keys,
+            endpoint=endpoint,
             aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
@@ -188,13 +190,15 @@ def _generate_clp_io_config(
             raise ValueError(
                 f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
             )
-        region_code, bucket, key_prefix = parse_s3_url(urls[0])
+        region_code, bucket, endpoint, key_prefix = parse_s3_url(urls[0])
+        logger.info(f"{endpoint = }")
         return S3InputConfig(
             dataset=parsed_args.dataset,
             region_code=region_code,
             bucket=bucket,
             key_prefix=key_prefix,
             keys=None,
+            endpoint_url=endpoint,
             aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
@@ -248,7 +252,7 @@ def _parse_and_validate_s3_object_urls(
     keys = set()
 
     for url in urls:
-        parsed_region_code, parsed_bucket_name, key = parse_s3_url(url)
+        parsed_region_code, parsed_bucket_name, endpoint, key = parse_s3_url(url)
 
         if region_code is None:
             region_code = parsed_region_code
@@ -266,6 +270,8 @@ def _parse_and_validate_s3_object_urls(
                 f" Found {bucket_name} and {parsed_bucket_name}."
             )
 
+        # TODO: all s3 urls mut be in the same endpoint
+
         if key in keys:
             raise ValueError(f"Duplicate S3 key found: {key}.")
         keys.add(key)
@@ -276,7 +282,7 @@ def _parse_and_validate_s3_object_urls(
     if len(key_prefix) == 0:
         raise ValueError("The given S3 URLs have no common prefix.")
 
-    return region_code, bucket_name, key_prefix, key_list
+    return region_code, bucket_name, endpoint, key_prefix, key_list
 
 
 def _get_aws_authentication_from_config(clp_config: ClpConfig) -> AwsAuthentication:

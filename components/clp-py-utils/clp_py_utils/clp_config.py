@@ -509,10 +509,11 @@ class AwsAuthentication(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_code: NonEmptyStr
-    bucket: NonEmptyStr
+    region_code: str
+    bucket: str
     key_prefix: str
     aws_authentication: AwsAuthentication
+    endpoint_url: str | None
 
 
 class S3IngestionConfig(BaseModel):

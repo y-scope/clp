@@ -180,6 +180,7 @@ auto try_sign_url(std::string& url) -> bool {
 
     try {
         clp::aws::S3Url s3_url{url};
+        SPDLOG_INFO("signed s3 url");
         if (auto const rc = signer.generate_presigned_url(s3_url, url);
             clp::ErrorCode::ErrorCode_Success != rc)
         {
@@ -193,12 +194,15 @@ auto try_sign_url(std::string& url) -> bool {
 
 auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
         -> std::shared_ptr<clp::ReaderInterface> {
+    SPDLOG_ERROR("Creating network reader for url {}", url);
     std::string request_url{url};
     switch (auth.method) {
         case AuthMethod::S3PresignedUrlV4:
-            if (false == try_sign_url(request_url)) {
-                return nullptr;
-            }
+            // SPDLOG_ERROR("Signing url {}", url);
+            // if (false == try_sign_url(request_url)) {
+                // return nullptr;
+            // }
+            // SPDLOG_ERROR("Successfuly signed url {}", url);
             break;
         case AuthMethod::None:
             break;
