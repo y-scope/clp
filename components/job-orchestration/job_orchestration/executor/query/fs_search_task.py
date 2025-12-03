@@ -252,8 +252,6 @@ def search(
 
     storage_config = worker_config.stream_output.storage
     if StorageType.S3 == storage_config.type and search_config.write_to_file:
-        logger.info("Uploading query results to S3...")
-
         s3_config = storage_config.s3_config
         dest_path = f"{job_id}/{archive_id}"
         src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
