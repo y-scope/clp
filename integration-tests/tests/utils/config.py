@@ -163,12 +163,23 @@ class PackageSearchJob:
 
 
 @dataclass(frozen=True)
+class PrestoFilterJob:
+    """A filter job for a package test."""
+
+    job_name: str
+    mode: str
+    package_compress_job: PackageCompressJob
+    filter: str
+    # Add data members as needed, like desired_result
+
+
+@dataclass(frozen=True)
 class PackageJobList:
     """List of jobs to run during a package test."""
 
     package_compress_jobs: list[PackageCompressJob]
     package_search_jobs: list[PackageSearchJob]
-    # TODO: add job types as needed.
+    presto_filter_jobs: list[PrestoFilterJob]
 
 
 @dataclass(frozen=True)

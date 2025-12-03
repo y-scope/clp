@@ -14,6 +14,7 @@ from tests.utils.config import (
     PackageConfig,
     PackageInstance,
     PackageSearchJob,
+    PrestoFilterJob,
 )
 from tests.utils.docker_utils import get_docker_binary_path
 from tests.utils.utils import (
@@ -378,3 +379,26 @@ def search_with_clp_package(
             f"{search_output}"
         )
         pytest.fail(error_message)
+
+
+def run_presto_filter(
+    request: pytest.FixtureRequest,
+    presto_filter: PrestoFilterJob,
+    package_instance: PackageInstance,
+) -> None:
+    """
+    Run a Presto filter.
+
+    :param request:
+    :param presto_filter:
+    :param package_instance:
+    """
+    # Start up the Presto CLI.
+
+    # Run the filter.
+
+    # Get the result and verify its correctness.
+
+    # Shut down the Presto CLI.
+    
+    return

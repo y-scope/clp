@@ -11,8 +11,13 @@ from tests.utils.config import (
     PackageInstance,
     PackageJobList,
     PackageSearchJob,
+    PrestoFilterJob,
 )
-from tests.utils.package_utils import compress_with_clp_package, search_with_clp_package
+from tests.utils.package_utils import (
+    compress_with_clp_package,
+    search_with_clp_package,
+    run_presto_filter
+)
 from tests.utils.utils import unlink
 
 logger = logging.getLogger(__name__)
@@ -283,6 +288,8 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
     ),
 }
 
+PRESTO_FILTER_JOBS: dict[str, PrestoFilterJob] = {}
+
 
 def _matches_keyword(job_name: str, keyword_filter: str) -> bool:
     """Return True if this job should be included given the current -k filter."""
@@ -303,6 +310,7 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
 
     package_compress_jobs: list[PackageCompressJob] = []
     package_search_jobs: list[PackageSearchJob] = []
+    presto_filter_jobs: list[PrestoFilterJob] = []
 
     for job_name, package_compress_job in PACKAGE_COMPRESS_JOBS.items():
         if package_compress_job.mode == mode_name and _matches_keyword(job_name, job_filter):
@@ -313,12 +321,19 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
             package_search_jobs.append(package_search_job)
             if package_search_job.package_compress_job not in package_compress_jobs:
                 package_compress_jobs.append(package_search_job.package_compress_job)
+    
+    for job_name, presto_filter_job in PRESTO_FILTER_JOBS.items():
+        if presto_filter_job.mode == mode_name and _matches_keyword(job_name, job_filter):
+            presto_filter_jobs.append(presto_filter_job)
+            if presto_filter_job.package_compress_job not in package_compress_jobs:
+                package_compress_jobs.append(presto_filter_job.package_compress_job)
 
-    if not package_compress_jobs and not package_search_jobs:
+    if not package_compress_jobs and not package_search_jobs and not presto_filter_jobs:
         return None
     return PackageJobList(
         package_compress_jobs=package_compress_jobs,
         package_search_jobs=package_search_jobs,
+        presto_filter_jobs=presto_filter_jobs,
     )
 
 
@@ -337,6 +352,7 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
 
     package_compress_jobs = package_job_list.package_compress_jobs
     package_search_jobs = package_job_list.package_search_jobs
+    presto_filter_jobs = package_job_list.presto_filter_jobs
     clp_package_dir = package_instance.package_config.path_config.clp_package_dir
 
     # Perform initial cleanup just in case there are any logs currently in archives.
@@ -345,7 +361,7 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
         for child in archives_dir.iterdir():
             unlink(child)
 
-    # For each compression job, run it, then its dependent search jobs, then cleanup.
+    # For each compression job, run it, then its dependent jobs, then cleanup.
     for package_compress_job in package_compress_jobs:
         # Run the compression job.
         compress_with_clp_package(request, package_compress_job, package_instance)
@@ -355,7 +371,11 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
             if package_search_job.package_compress_job is package_compress_job:
                 search_with_clp_package(request, package_search_job, package_instance)
 
-        # Cleanup this compress job to prevent multiple compression jobs stored in archives.
+        for presto_filter_job in presto_filter_jobs:
+            if presto_filter_job.package_compress_job is package_compress_job:
+                run_presto_filter(request, presto_filter_job, package_instance)
+
+        # Cleanup to prevent multiple compression jobs stored in archives.
         if archives_dir.exists():
             for child in archives_dir.iterdir():
                 unlink(child)
