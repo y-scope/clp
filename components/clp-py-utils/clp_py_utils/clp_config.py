@@ -321,8 +321,8 @@ class Database(BaseModel):
             raise ValueError(err_msg)
 
         self.credentials[user_type] = DbUserCredentials(
-                username=_get_env_var(user_env_var),
-                password=_get_env_var(pass_env_var),
+            username=_get_env_var(user_env_var),
+            password=_get_env_var(pass_env_var),
         )
 
     def transform_for_container(self):
