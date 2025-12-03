@@ -75,7 +75,6 @@ CLP_BASE_COMPONENTS = [
     _to_docker_compose_service_name(RESULTS_CACHE_COMPONENT_NAME),
     _to_docker_compose_service_name(COMPRESSION_SCHEDULER_COMPONENT_NAME),
     _to_docker_compose_service_name(COMPRESSION_WORKER_COMPONENT_NAME),
-    _to_docker_compose_service_name(API_SERVER_COMPONENT_NAME),
     _to_docker_compose_service_name(WEBUI_COMPONENT_NAME),
 ]
 
