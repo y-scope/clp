@@ -53,7 +53,7 @@ services:
       MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
       MYSQL_PASSWORD: "${CLP_DB_PASS:?Please set a value.}"
       MYSQL_ROOT_PASSWORD: "${CLP_DB_ROOT_PASS:?Please set a value.}"
-      MYSQL_USER: "${CLP_DB_USER:?clp-user}"
+      MYSQL_USER: "${CLP_DB_USER:-clp-user}"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
         published: "${CLP_DB_PORT:-3306}"
@@ -87,7 +87,7 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
       CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
-      CLP_DB_USER: "${CLP_DB_USER:?clp-user}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - *volume_clp_config_readonly
@@ -473,7 +473,7 @@ services:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?clp-user}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
       - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
