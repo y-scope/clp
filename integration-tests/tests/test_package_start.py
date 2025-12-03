@@ -1,11 +1,10 @@
 """Integration tests verifying that the CLP package can be started and stopped."""
 
-import logging
-
 import pytest
 
 from tests.utils.asserting_utils import (
     validate_package_running,
+    validate_presto_running,
     validate_running_mode_correct,
 )
 from tests.utils.clp_job_utils import (
@@ -17,8 +16,6 @@ from tests.utils.config import (
 )
 
 TEST_MODES = CLP_MODE_CONFIGS.keys()
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.mark.package
@@ -32,26 +29,16 @@ def test_clp_package(
 
     :param fixt_package_instance:
     """
-    mode_name = fixt_package_instance.package_config.mode_name
-    instance_id = fixt_package_instance.clp_instance_id
-
     # Ensure that all package components are running.
-    logger.debug(
-        "Checking if all components of %s package with instance ID '%s' are running properly.",
-        mode_name,
-        instance_id,
-    )
-
     validate_package_running(fixt_package_instance)
 
     # Ensure that the package is running in the correct mode.
-    logger.debug(
-        "Checking that the %s package with instance ID '%s' is running in the correct mode.",
-        mode_name,
-        instance_id,
-    )
-
     validate_running_mode_correct(fixt_package_instance)
+
+    # If running a Presto cluster as part of the test, validate that it is running properly.
+    mode_name = fixt_package_instance.package_config.mode_name
+    if mode_name == "clp-json-presto":
+        validate_presto_running()
 
     # Run all jobs.
     package_job_list = fixt_package_instance.package_config.package_job_list

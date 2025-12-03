@@ -3,19 +3,6 @@
 import re
 import shutil
 import subprocess
-from enum import Enum
-
-
-class DockerStatus(str, Enum):
-    """Enum of possible Docker Statuses."""
-
-    created = "created"
-    restarting = "restarting"
-    running = "running"
-    removing = "removing"
-    paused = "paused"
-    exited = "exited"
-    dead = "dead"
 
 
 def get_docker_binary_path() -> str:
@@ -47,7 +34,6 @@ def list_running_containers_with_prefix(prefix: str) -> list[str]:
         "ps",
         "--format", "{{.Names}}",
         "--filter", f"name={prefix}",
-        "--filter", f"status={DockerStatus.running}",
     ]
     # fmt: on
     ps_proc = subprocess.run(docker_ps_cmd, stdout=subprocess.PIPE, text=True, check=True)

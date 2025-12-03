@@ -8,10 +8,13 @@ from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
 from tests.utils.clp_mode_utils import (
+    CLP_PRESTO_COMPONENTS,
     compute_mode_signature,
 )
 from tests.utils.config import PackageInstance
-from tests.utils.docker_utils import list_running_containers_with_prefix
+from tests.utils.docker_utils import (
+    list_running_containers_with_prefix,
+)
 from tests.utils.utils import load_yaml_to_dict
 
 
@@ -73,3 +76,21 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
 
     if running_signature != intended_signature:
         pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
+
+
+def validate_presto_running() -> None:
+    """
+    Validate that a Presto cluster is running.
+
+    :param package_instance:
+    """
+    required_components = CLP_PRESTO_COMPONENTS
+
+    for component in required_components:
+        prefix = f"presto-clp-{component}-"
+        running_matches = list_running_containers_with_prefix(prefix)
+        if len(running_matches) == 0:
+            pytest.fail(
+                f"No running container found for component '{component}' "
+                f"(expected name prefix '{prefix}')."
+            )

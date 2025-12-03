@@ -82,7 +82,6 @@ PACKAGE_COMPRESS_JOBS: dict[str, PackageCompressJob] = {
             "tag1",
         ],
     ),
-    # Insert more compression jobs here as needed.
 }
 
 PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {

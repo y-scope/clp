@@ -1,6 +1,9 @@
 """Provides utility functions for interacting with the CLP package."""
 
+import json
 import subprocess
+from pathlib import Path
+from typing import Final
 
 import pytest
 
@@ -12,6 +15,23 @@ from tests.utils.config import (
     PackageInstance,
     PackageSearchJob,
 )
+from tests.utils.docker_utils import get_docker_binary_path
+from tests.utils.utils import (
+    resolve_path_env_var,
+    validate_dir_exists,
+    validate_file_exists,
+)
+
+# Datatypes and constants for constructing 'split-filter.json'.
+SplitFilterRuleDict = dict[str, object]
+SplitFilterDict = dict[str, SplitFilterRuleDict]
+
+DEFAULT_REQUIRED: Final[bool] = False
+DEFAULT_RANGE_MAPPING: Final[dict[str, str]] = {
+    "lowerBound": "begin_timestamp",
+    "upperBound": "end_timestamp",
+}
+DEFAULT_CUSTOM_OPTIONS: Final[dict[str, dict[str, str]]] = {"rangeMapping": DEFAULT_RANGE_MAPPING}
 
 
 def start_clp_package(package_config: PackageConfig) -> None:
@@ -37,6 +57,116 @@ def start_clp_package(package_config: PackageConfig) -> None:
         raise RuntimeError(err_msg) from err
 
 
+def _construct_split_filters(dataset_timestamp_dict: dict[str, str]) -> SplitFilterDict:
+    """
+    Constructs a split filter for each dataset.
+
+    :param dataset_timestamp_dict:
+    :return: A `SplitFilterDict` object.
+    """
+    split_filters: SplitFilterDict = {}
+    for dataset, timestamp_column_name in dataset_timestamp_dict.items():
+        rule: SplitFilterRuleDict = {
+            "columnName": timestamp_column_name,
+            "customOptions": DEFAULT_CUSTOM_OPTIONS,
+            "required": DEFAULT_REQUIRED,
+        }
+        split_filters[f"clp.default.{dataset}"] = rule
+
+    return split_filters
+
+
+def _write_split_filter_json(split_filters: SplitFilterDict, split_filter_file_path: Path) -> None:
+    """
+    Write split filter JSON with pretty formatting and a trailing newline.
+
+    Empty dictionaries are written with opening and closing braces on separate lines.
+    """
+    with split_filter_file_path.open("w", encoding="utf-8") as split_filter_file:
+        if not split_filters:
+            split_filter_file.write("{\n}\n")
+        else:
+            json.dump(split_filters, split_filter_file, indent=2)
+            split_filter_file.write("\n")
+
+
+def start_presto_cluster(package_config: PackageConfig) -> None:
+    """
+    Starts a Presto cluster for the CLP package.
+
+    :param package_config:
+    """
+    # Generate the necessary config for Presto to work with CLP.
+    clp_repo_dir: Path = resolve_path_env_var("CLP_REPO_DIR")
+    validate_dir_exists(clp_repo_dir)
+
+    set_up_config_path = (
+        clp_repo_dir / "tools" / "deployment" / "presto-clp" / "scripts" / "set-up-config.sh"
+    )
+    validate_file_exists(set_up_config_path)
+
+    # fmt: off
+    setup_presto_cmd = [
+        str(set_up_config_path),
+        str(package_config.path_config.clp_package_dir),
+    ]
+    # fmt: on
+    subprocess.run(setup_presto_cmd, check=True)
+
+    # Configure Presto to use CLP's metadata database by modifying 'split-filter.json'.
+    dataset_timestamp_dict: dict[str, str] = {}
+    package_job_list = package_config.package_job_list
+    if package_job_list is not None:
+        package_compress_jobs = package_job_list.package_compress_jobs
+    else:
+        package_compress_jobs = None
+
+    if package_compress_jobs is not None:
+        for package_compress_job in package_compress_jobs:
+            dataset_name = package_compress_job.dataset_name
+            timestamp_key = package_compress_job.timestamp_key
+
+            # Skip jobs that do not specify both dataset_name and timestamp_key.
+            if dataset_name is None or timestamp_key is None:
+                continue
+
+            dataset_timestamp_dict[dataset_name] = timestamp_key
+
+        # Construct split filters.
+        split_filters = _construct_split_filters(dataset_timestamp_dict)
+
+        # Write 'split-filter.json'.
+        split_filter_file_path = (
+            clp_repo_dir
+            / "tools"
+            / "deployment"
+            / "presto-clp"
+            / "coordinator"
+            / "config-template"
+            / "split-filter.json"
+        )
+        validate_file_exists(split_filter_file_path)
+
+        _write_split_filter_json(split_filters, split_filter_file_path)
+
+    # Start up the Presto cluster.
+    docker_bin = get_docker_binary_path()
+    docker_compose_file_path = (
+        clp_repo_dir / "tools" / "deployment" / "presto-clp" / "docker-compose.yaml"
+    )
+    validate_file_exists(docker_compose_file_path)
+
+    start_presto_cmd = [
+        docker_bin,
+        "compose",
+        "--file",
+        str(docker_compose_file_path),
+        "up",
+        "--detach",
+    ]
+    subprocess.run(start_presto_cmd, check=True)
+
+
 def stop_clp_package(instance: PackageInstance) -> None:
     """
     Stops an instance of the CLP package.
@@ -57,6 +187,36 @@ def stop_clp_package(instance: PackageInstance) -> None:
     except Exception as err:
         err_msg = f"Failed to stop an instance of the {package_config.mode_name} package."
         raise RuntimeError(err_msg) from err
+
+
+def stop_presto_cluster() -> None:
+    """Stops a Presto cluster for the CLP package."""
+    clp_repo_dir: Path = resolve_path_env_var("CLP_REPO_DIR")
+    validate_dir_exists(clp_repo_dir)
+
+    docker_bin = get_docker_binary_path()
+    docker_compose_file_path = (
+        clp_repo_dir / "tools" / "deployment" / "presto-clp" / "docker-compose.yaml"
+    )
+    validate_file_exists(docker_compose_file_path)
+
+    stop_presto_cmd = [docker_bin, "compose", "--file", str(docker_compose_file_path), "down"]
+    subprocess.run(stop_presto_cmd, check=True)
+
+    # Restore split-filter.json file to what it was pre-run.
+    split_filter_file_path = (
+        clp_repo_dir
+        / "tools"
+        / "deployment"
+        / "presto-clp"
+        / "coordinator"
+        / "config-template"
+        / "split-filter.json"
+    )
+    validate_file_exists(split_filter_file_path)
+
+    empty_json: SplitFilterDict = {}
+    _write_split_filter_json(empty_json, split_filter_file_path)
 
 
 def compress_with_clp_package(

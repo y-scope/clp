@@ -12,7 +12,9 @@ from tests.utils.config import (
 )
 from tests.utils.package_utils import (
     start_clp_package,
+    start_presto_cluster,
     stop_clp_package,
+    stop_presto_cluster,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,10 @@ def fixt_package_instance(
         logger.debug("Starting up the %s package.", mode_name)
         start_clp_package(fixt_package_config)
         instance = PackageInstance(package_config=fixt_package_config)
+
+        if mode_name == "clp-json-presto":
+            start_presto_cluster(fixt_package_config)
+
         yield instance
     except RuntimeError:
         base_port_string = request.config.getini("BASE_PORT")
@@ -58,3 +64,6 @@ def fixt_package_instance(
         else:
             # This means setup failed after start; fall back to calling stop script directly
             subprocess.run([str(fixt_package_config.path_config.stop_script_path)], check=False)
+
+        if mode_name == "clp-json-presto":
+            stop_presto_cluster()
