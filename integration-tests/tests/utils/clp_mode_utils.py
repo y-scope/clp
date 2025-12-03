@@ -4,9 +4,11 @@ from collections.abc import Callable
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
+    ApiServer,
     ClpConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    Database,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
@@ -15,27 +17,70 @@ from clp_py_utils.clp_config import (
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
+    QueryScheduler,
+    Queue,
     QUEUE_COMPONENT_NAME,
+    Redis,
     REDIS_COMPONENT_NAME,
+    Reducer,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    ResultsCache,
     StorageEngine,
+    WebUi,
     WEBUI_COMPONENT_NAME,
 )
 
+BASE_PORT = 50000
+
+
+def _make_clp_config_with_ports(
+    package: Package,
+    enable_api_server: bool,
+    base_port: int = BASE_PORT,
+) -> ClpConfig:
+    """
+    Build a ClpConfig where the main networked components listen on ports
+    starting at base_port.
+    """
+    database_port = base_port + 0
+    queue_port = base_port + 1
+    redis_port = base_port + 2
+    results_cache_port = base_port + 3
+    query_scheduler_port = base_port + 4
+    reducer_base_port = base_port + 5
+    webui_port = base_port + 6
+    api_server_port = base_port + 7
+
+    return ClpConfig(
+        package=package,
+        database=Database(port=database_port),
+        queue=Queue(port=queue_port),
+        redis=Redis(port=redis_port),
+        results_cache=ResultsCache(port=results_cache_port),
+        query_scheduler=QueryScheduler(port=query_scheduler_port),
+        reducer=Reducer(base_port=reducer_base_port),
+        webui=WebUi(port=webui_port),
+        api_server=ApiServer(port=api_server_port) if enable_api_server else None,
+    )
+
+
 CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
-    "clp-text": lambda: ClpConfig(
+    "clp-text": lambda: _make_clp_config_with_ports(
         package=Package(
             storage_engine=StorageEngine.CLP,
             query_engine=QueryEngine.CLP,
         ),
-        api_server=None,
+        enable_api_server=False,
+        base_port=50000,
     ),
-    "clp-json": lambda: ClpConfig(
+    "clp-json": lambda: _make_clp_config_with_ports(
         package=Package(
             storage_engine=StorageEngine.CLP_S,
             query_engine=QueryEngine.CLP_S,
         ),
+        enable_api_server=True,
+        base_port=50000,
     ),
 }
 
@@ -90,17 +135,16 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
 
 def get_required_component_list(config: ClpConfig) -> list[str]:
     """
-    Constructs a list of the components that the CLP package described in `config` needs to run
+    Constructs the list of components required for the CLP package described in `config` to run
     properly.
 
     :param config:
     :return: List of components required by the package.
     """
-    component_list: list[str] = []
-    component_list.extend(CLP_BASE_COMPONENTS)
+    component_list: list[str] = list(CLP_BASE_COMPONENTS)
 
     deployment_type = config.get_deployment_type()
-    if deployment_type == DeploymentType.FULL:
+    if DeploymentType.FULL == deployment_type:
         component_list.extend(CLP_QUERY_COMPONENTS)
 
     if config.api_server is not None:

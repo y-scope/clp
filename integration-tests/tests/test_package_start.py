@@ -26,7 +26,7 @@ def test_clp_package(fixt_package_instance: PackageInstance) -> None:
 
     component_list = fixt_package_instance.package_config.component_list
     logger.info(
-        "The required components for the '%s' package are:\n%s",
+        "The '%s' package runs with the following required components :\n%s",
         mode_name,
         "\n".join(component_list),
     )
