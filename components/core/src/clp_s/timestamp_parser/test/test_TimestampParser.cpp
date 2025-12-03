@@ -51,8 +51,10 @@ struct ExpectedCatSequenceTransformation {
  * @param specifier The format specifier.
  * @param content A list of string payloads that are valid content for `specifier`.
  */
-void
-assert_specifier_accepts_valid_content(char specifier, std::vector<std::string> const& content);
+void assert_specifier_accepts_valid_content(
+        std::string specifier,
+        std::vector<std::string> const& content
+);
 
 /**
  * Generates all numbers in the range [`begin`, `end`], left-padded with `padding` up to
@@ -85,8 +87,10 @@ auto generate_padded_numbers_in_range(size_t begin, size_t end, size_t field_len
  */
 [[nodiscard]] auto generate_padded_number_subset(size_t num_digits) -> std::vector<std::string>;
 
-void
-assert_specifier_accepts_valid_content(char specifier, std::vector<std::string> const& content) {
+void assert_specifier_accepts_valid_content(
+        std::string specifier,
+        std::vector<std::string> const& content
+) {
     // We use a trailing literal to ensure that the specifier exactly consumes all of the content.
     auto const pattern{fmt::format(R"(\{}a)", specifier)};
     std::string generated_pattern;
@@ -137,10 +141,10 @@ auto generate_padded_number_subset(size_t num_digits) -> std::vector<std::string
 TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
     SECTION("Format specifiers accept valid content.") {
         auto const two_digit_years{generate_padded_numbers_in_range(0, 99, 2, '0')};
-        assert_specifier_accepts_valid_content('y', two_digit_years);
+        assert_specifier_accepts_valid_content("y", two_digit_years);
 
         auto const four_digit_years{generate_padded_numbers_in_range(0, 9999, 4, '0')};
-        assert_specifier_accepts_valid_content('Y', four_digit_years);
+        assert_specifier_accepts_valid_content("Y", four_digit_years);
 
         std::vector<std::string> const months{
                 "January",
@@ -156,7 +160,11 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 "November",
                 "December"
         };
-        assert_specifier_accepts_valid_content('B', months);
+        assert_specifier_accepts_valid_content(
+                "B{January,February,March,April,May,June,July,August,September,October,November,"
+                "December}",
+                months
+        );
 
         std::vector<std::string> const abbreviated_months{
                 "Jan",
@@ -172,16 +180,19 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 "Nov",
                 "Dec"
         };
-        assert_specifier_accepts_valid_content('b', abbreviated_months);
+        assert_specifier_accepts_valid_content(
+                "B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec}",
+                abbreviated_months
+        );
 
         auto const two_digit_months{generate_padded_numbers_in_range(1, 12, 2, '0')};
-        assert_specifier_accepts_valid_content('m', two_digit_months);
+        assert_specifier_accepts_valid_content("m", two_digit_months);
 
         auto const two_digit_days{generate_padded_numbers_in_range(1, 31, 2, '0')};
-        assert_specifier_accepts_valid_content('d', two_digit_days);
+        assert_specifier_accepts_valid_content("d", two_digit_days);
 
         auto const space_padded_days{generate_padded_numbers_in_range(1, 31, 2, ' ')};
-        assert_specifier_accepts_valid_content('e', space_padded_days);
+        assert_specifier_accepts_valid_content("e", space_padded_days);
 
         // The parser asserts that the day of the week in the timestamp is actually correct, so we
         // need to include some extra date information to have days of the week line up.
@@ -194,7 +205,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 "02 Fri",
                 "03 Sat"
         };
-        constexpr std::string_view cDayInWeekPattern{R"(\d \aa)"};
+        constexpr std::string_view cDayInWeekPattern{R"(\d \A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}a)"};
         auto const day_in_week_pattern_result{
                 TimestampPattern::create(std::string{cDayInWeekPattern})
         };
@@ -212,10 +223,10 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         }
 
         auto const two_digit_hours{generate_padded_numbers_in_range(0, 23, 2, '0')};
-        assert_specifier_accepts_valid_content('H', two_digit_hours);
+        assert_specifier_accepts_valid_content("H", two_digit_hours);
 
         auto const space_padded_hours{generate_padded_numbers_in_range(0, 23, 2, ' ')};
-        assert_specifier_accepts_valid_content('k', space_padded_hours);
+        assert_specifier_accepts_valid_content("k", space_padded_hours);
 
         auto const twelve_hour_clock_two_digit_hours{
                 generate_padded_numbers_in_range(1, 12, 2, '0')
@@ -250,25 +261,25 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         }
 
         auto const two_digit_minutes{generate_padded_numbers_in_range(0, 59, 2, '0')};
-        assert_specifier_accepts_valid_content('M', two_digit_minutes);
+        assert_specifier_accepts_valid_content("M", two_digit_minutes);
 
         auto const two_digit_seconds{generate_padded_numbers_in_range(0, 59, 2, '0')};
-        assert_specifier_accepts_valid_content('S', two_digit_seconds);
+        assert_specifier_accepts_valid_content("S", two_digit_seconds);
 
         auto const two_digit_leap_seconds{generate_padded_numbers_in_range(60, 60, 2, '0')};
-        assert_specifier_accepts_valid_content('J', two_digit_leap_seconds);
+        assert_specifier_accepts_valid_content("J", two_digit_leap_seconds);
 
         auto const milliseconds{generate_padded_number_subset(3)};
-        assert_specifier_accepts_valid_content('3', milliseconds);
+        assert_specifier_accepts_valid_content("3", milliseconds);
 
         auto const microseconds{generate_padded_number_subset(6)};
-        assert_specifier_accepts_valid_content('6', microseconds);
+        assert_specifier_accepts_valid_content("6", microseconds);
 
         auto const nanoseconds{generate_padded_number_subset(9)};
-        assert_specifier_accepts_valid_content('9', nanoseconds);
+        assert_specifier_accepts_valid_content("9", nanoseconds);
 
         auto const variable_length_nanoseconds{generate_number_triangles(9)};
-        assert_specifier_accepts_valid_content('T', variable_length_nanoseconds);
+        assert_specifier_accepts_valid_content("T", variable_length_nanoseconds);
 
         auto const epoch_timestamps{generate_number_triangles(15)};
         std::vector<std::string> negative_epoch_timestamps;
@@ -276,14 +287,14 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         for (auto const& timestamp : epoch_timestamps) {
             negative_epoch_timestamps.emplace_back(fmt::format("-{}", timestamp));
         }
-        assert_specifier_accepts_valid_content('E', epoch_timestamps);
-        assert_specifier_accepts_valid_content('E', negative_epoch_timestamps);
-        assert_specifier_accepts_valid_content('L', epoch_timestamps);
-        assert_specifier_accepts_valid_content('L', negative_epoch_timestamps);
-        assert_specifier_accepts_valid_content('C', epoch_timestamps);
-        assert_specifier_accepts_valid_content('C', negative_epoch_timestamps);
-        assert_specifier_accepts_valid_content('N', epoch_timestamps);
-        assert_specifier_accepts_valid_content('N', negative_epoch_timestamps);
+        assert_specifier_accepts_valid_content("E", epoch_timestamps);
+        assert_specifier_accepts_valid_content("E", negative_epoch_timestamps);
+        assert_specifier_accepts_valid_content("L", epoch_timestamps);
+        assert_specifier_accepts_valid_content("L", negative_epoch_timestamps);
+        assert_specifier_accepts_valid_content("C", epoch_timestamps);
+        assert_specifier_accepts_valid_content("C", negative_epoch_timestamps);
+        assert_specifier_accepts_valid_content("N", epoch_timestamps);
+        assert_specifier_accepts_valid_content("N", negative_epoch_timestamps);
 
         constexpr std::array cHoursOffsetPattenrs
                 = {std::string_view{"+{}"}, std::string_view{"-{}"}, std::string_view{"\u2212{}"}};
@@ -456,18 +467,36 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"2015/02/01 01:02:03", R"(\Y/\m/\d \H:\M:\S)", 1'422'752'523'000'000'000},
                 {"15/02/01 01:02:03", R"(\y/\m/\d \H:\M:\S)", 1'422'752'523'000'000'000},
                 {"150201  1:02:03", R"(\y\m\d \k:\M:\S)", 1'422'752'523'000'000'000},
-                {"01 Feb 2015 01:02:03,004", R"(\d \b \Y \H:\M:\S,\3)", 1'422'752'523'004'000'000},
-                {"Feb 01, 2015  1:02:03 AM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'752'523'000'000'000},
-                {"Feb 01, 2015 01:02:03 AM", R"(\b \d, \Y \I:\M:\S \p)", 1'422'752'523'000'000'000},
-                {"Feb 01, 2015 12:02:03 AM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'748'923'000'000'000},
-                {"Feb 01, 2015 12:02:03 PM", R"(\b \d, \Y \l:\M:\S \p)", 1'422'792'123'000'000'000},
-                {"February 01, 2015 01:02", R"(\B \d, \Y \H:\M)", 1'422'752'520'000'000'000},
-                {"[01/Feb/2015:01:02:03", R"([\d/\b/\Y:\H:\M:\S)", 1'422'752'523'000'000'000},
-                {"Sun Feb  1 01:02:03 2015", R"(\a \b \e \H:\M:\S \Y)", 1'422'752'523'000'000'000},
+                {"01 Feb 2015 01:02:03,004",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S,\3)",
+                 1'422'752'523'004'000'000},
+                {"Feb 01, 2015  1:02:03 AM",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d, \Y \l:\M:\S \p)",
+                 1'422'752'523'000'000'000},
+                {"Feb 01, 2015 01:02:03 AM",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d, \Y \I:\M:\S \p)",
+                 1'422'752'523'000'000'000},
+                {"Feb 01, 2015 12:02:03 AM",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d, \Y \l:\M:\S \p)",
+                 1'422'748'923'000'000'000},
+                {"Feb 01, 2015 12:02:03 PM",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d, \Y \l:\M:\S \p)",
+                 1'422'792'123'000'000'000},
+                {"February 01, 2015 01:02",
+                 R"(\B{January,February,March,April,May,June,July,August,September,October,November,December} \d, \Y \H:\M)",
+                 1'422'752'520'000'000'000},
+                {"[01/Feb/2015:01:02:03",
+                 R"([\d/\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec}/\Y:\H:\M:\S)",
+                 1'422'752'523'000'000'000},
+                {"Sun Feb  1 01:02:03 2015",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat} \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \e \H:\M:\S \Y)",
+                 1'422'752'523'000'000'000},
                 {"<<<2015-02-01 01:02:03:004",
                  R"(<<<\Y-\m-\d \H:\M:\S:\3)",
                  1'422'752'523'004'000'000},
-                {"Jan 21 11:56:42", R"(\b \d \H:\M:\S)", 1'771'002'000'000'000},
+                {"Jan 21 11:56:42",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S)",
+                 1'771'002'000'000'000},
                 {"01-21 11:56:42.392", R"(\m-\d \H:\M:\S.\3)", 1'771'002'392'000'000},
                 {"2015/01/31 15:50:45.123", R"(\Y/\m/\d \H:\M:\S.\3)", 1'422'719'445'123'000'000},
                 {"2015/01/31 15:50:45,123", R"(\Y/\m/\d \H:\M:\S,\3)", 1'422'719'445'123'000'000},
@@ -495,20 +524,26 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"-1762445893.001002000", R"(\E.\9)", -1'762'445'893'001'002'000},
                 {"-1762445893.00100201", R"(\E.\T)", -1'762'445'893'001'002'010},
                 {"-1762445893.1", R"(\E.\T)", -1'762'445'893'100'000'000},
-                {"Jan 21 11:56:42Z", R"(\b \d \H:\M:\SZ)", 1'771'002'000'000'000},
-                {"Jan 21 11:56:42 UTC-01", R"(\b \d \H:\M:\S UTC\z{-01})", 1'774'602'000'000'000},
+                {"Jan 21 11:56:42Z",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\SZ)",
+                 1'771'002'000'000'000},
+                {"Jan 21 11:56:42 UTC-01",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{-01})",
+                 1'774'602'000'000'000},
                 {"Jan 21 11:56:42 UTC-01:30",
-                 R"(\b \d \H:\M:\S UTC\z{-01:30})",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{-01:30})",
                  1'776'402'000'000'000},
                 {"Jan 21 11:56:42 UTC-0130",
-                 R"(\b \d \H:\M:\S UTC\z{-0130})",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{-0130})",
                  1'776'402'000'000'000},
-                {"Jan 21 11:56:42 UTC+01", R"(\b \d \H:\M:\S UTC\z{+01})", 1'767'402'000'000'000},
+                {"Jan 21 11:56:42 UTC+01",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{+01})",
+                 1'767'402'000'000'000},
                 {"Jan 21 11:56:42 UTC+01:30",
-                 R"(\b \d \H:\M:\S UTC\z{+01:30})",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{+01:30})",
                  1'765'602'000'000'000},
                 {"Jan 21 11:56:42 UTC+0130",
-                 R"(\b \d \H:\M:\S UTC\z{+0130})",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{+0130})",
                  1'765'602'000'000'000},
                 {"1895-11-20T21:55:46,010", R"(\Y-\m-\dT\H:\M:\S,\3)", -2'338'769'053'990'000'000},
                 {"2016-12-31T23:59:59,999Z", R"(\Y-\m-\dT\H:\M:\S,\3Z)", 1'483'228'799'999'000'000},
