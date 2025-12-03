@@ -29,11 +29,11 @@ tasks:
     cmd: "uv run pytest tests/test_clp_native_py_project_imports.py"
 
   package:
-    deps:
-      - task: "::package"
-    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     env:
       CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
       CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
       CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    deps:
+      - task: "::package"
     cmd: "uv run pytest -m package"
