@@ -246,7 +246,7 @@ def handle_extract_file_cmd(
         "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
-    credentials = clp_db_connection_params["credentials"]
+    credentials = Database.model_validate(clp_db_connection_params).credentials
     extract_env = {
         **os.environ,
         CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
