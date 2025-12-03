@@ -37,7 +37,7 @@ const Jobs = () => {
     return (
         <DashboardCard
             isLoading={isPending}
-            title={"Ingestion Jobs"}
+            title={"Compression Jobs"}
         >
             <VirtualTable<JobData>
                 className={styles["jobs"] || ""}

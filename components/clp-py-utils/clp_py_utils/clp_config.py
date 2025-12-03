@@ -184,8 +184,8 @@ class ClpDbUserType(KebabCaseStrEnum):
 class DbUserCredentials(BaseModel):
     """Credentials for a database user."""
 
-    username: NonEmptyStr | None = None
-    password: NonEmptyStr | None = None
+    username: NonEmptyStr
+    password: NonEmptyStr
 
 
 class Database(BaseModel):
@@ -199,10 +199,7 @@ class Database(BaseModel):
     auto_commit: bool = False
     compress: bool = True
 
-    credentials: dict[ClpDbUserType, DbUserCredentials] = {
-        ClpDbUserType.CLP: DbUserCredentials(),
-        ClpDbUserType.ROOT: DbUserCredentials(),
-    }
+    credentials: dict[ClpDbUserType, DbUserCredentials] = {}
 
     def ensure_credentials_loaded(self, user_type: ClpDbUserType) -> None:
         """
@@ -211,10 +208,7 @@ class Database(BaseModel):
         :param user_type:
         :raise ValueError: If credentials for the given `user_type` are not loaded.
         """
-        if (
-            self.credentials[user_type].username is None
-            or self.credentials[user_type].password is None
-        ):
+        if user_type not in self.credentials:
             err_msg = f"Credentials for user type '{user_type}' are not loaded."
             raise ValueError(err_msg)
 
@@ -295,17 +289,13 @@ class Database(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.credentials[ClpDbUserType.CLP].username = get_config_value(
-                config, f"{DB_COMPONENT_NAME}.username"
+            self.credentials[ClpDbUserType.CLP] = DbUserCredentials(
+                username=get_config_value(config, f"{DB_COMPONENT_NAME}.username"),
+                password=get_config_value(config, f"{DB_COMPONENT_NAME}.password"),
             )
-            self.credentials[ClpDbUserType.CLP].password = get_config_value(
-                config, f"{DB_COMPONENT_NAME}.password"
-            )
-            self.credentials[ClpDbUserType.ROOT].username = get_config_value(
-                config, f"{DB_COMPONENT_NAME}.root_username"
-            )
-            self.credentials[ClpDbUserType.ROOT].password = get_config_value(
-                config, f"{DB_COMPONENT_NAME}.root_password"
+            self.credentials[ClpDbUserType.ROOT] = DbUserCredentials(
+                username=get_config_value(config, f"{DB_COMPONENT_NAME}.root_username"),
+                password=get_config_value(config, f"{DB_COMPONENT_NAME}.root_password"),
             )
         except KeyError as ex:
             raise ValueError(
@@ -330,8 +320,10 @@ class Database(BaseModel):
             err_msg = f"Unsupported user type '{user_type}'."
             raise ValueError(err_msg)
 
-        self.credentials[user_type].username = _get_env_var(user_env_var)
-        self.credentials[user_type].password = _get_env_var(pass_env_var)
+        self.credentials[user_type] = DbUserCredentials(
+            username=_get_env_var(user_env_var),
+            password=_get_env_var(pass_env_var),
+        )
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
@@ -733,7 +725,7 @@ class ClpConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    api_server: ApiServer = ApiServer()
+    api_server: ApiServer | None = ApiServer()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -888,6 +880,12 @@ class ClpConfig(BaseModel):
         if not profile_auth_used and self.aws_config_directory is not None:
             raise ValueError(
                 "aws_config_directory should not be set when profile authentication is not used"
+            )
+
+    def validate_api_server(self):
+        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
+            raise ValueError(
+                f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
 
     def load_container_image_ref(self):

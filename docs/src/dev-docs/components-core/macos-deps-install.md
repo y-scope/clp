@@ -16,4 +16,4 @@ To install all dependencies, run:
 components/core/tools/scripts/lib_install/macos/install-all.sh
 ```
 
-[gh-workflow]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-core-build-macos.yaml
+[gh-workflow]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/.github/workflows/clp-core-build-macos.yaml
