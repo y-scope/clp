@@ -13,8 +13,8 @@ import {handleQuerySubmit} from "../../../SearchControls/Native/search-requests"
 import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
-import {useAggregationResults} from "../useAggregationResults";
 import {computeTimelineConfig} from "../utils";
+import {useAggregationResults} from "./useAggregationResults";
 
 
 /**

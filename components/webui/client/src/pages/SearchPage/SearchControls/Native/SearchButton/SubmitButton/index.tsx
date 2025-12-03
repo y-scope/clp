@@ -13,11 +13,11 @@ import {SETTINGS_STORAGE_ENGINE} from "../../../../../../config";
 import {computeTimelineConfig} from "../../../../SearchResults/SearchResultsTimeline/utils";
 import useSearchStore from "../../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
-import {handleQuerySubmit} from "../../search-requests";
 import {
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
 } from "../../../TimeRangeInput/utils";
+import {handleQuerySubmit} from "../../search-requests";
 import styles from "./index.module.css";
 
 
