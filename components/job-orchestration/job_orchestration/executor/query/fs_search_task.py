@@ -12,7 +12,11 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
+from clp_py_utils.s3_utils import (
+    generate_s3_virtual_hosted_style_url,
+    get_credential_env_vars,
+    s3_put,
+)
 from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.executor.query.celery import app
@@ -245,5 +249,20 @@ def search(
         task_id=task_id,
         start_time=start_time,
     )
+
+    storage_config = worker_config.stream_output.storage
+    if StorageType.S3 == storage_config.type and search_config.write_to_file:
+        logger.info("Uploading query results to S3...")
+
+        s3_config = storage_config.s3_config
+        dest_path = f"{job_id}/{archive_id}"
+        src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
+
+        logger.info(f"Uploading query results {dest_path} to S3...")
+        try:
+            s3_put(s3_config, src_file, dest_path)
+            logger.info(f"Finished uploading query results {dest_path} to S3.")
+        except Exception as err:
+            logger.error(f"Failed to upload query results {dest_path}: {err}")
 
     return task_results.model_dump()
