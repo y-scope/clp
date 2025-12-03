@@ -3,7 +3,6 @@
 import pytest
 
 # Make the fixtures defined in `tests/fixtures/` globally available without imports.
-# Make the fixtures defined in `tests/fixtures/` globally available without imports.
 pytest_plugins = [
     "tests.fixtures.integration_test_logs",
     "tests.fixtures.path_configs",
@@ -18,8 +17,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
     :param parser:
     """
-    parser.addini(
-        "BASE_PORT",
-        "Base port for CLP package integration tests.",
+    parser.addoption(
+        "--clp-base-port",
+        action="store",
         default="55000",
+        help="Base port for CLP package integration tests.",
     )

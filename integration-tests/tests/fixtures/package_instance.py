@@ -15,10 +15,7 @@ from tests.utils.package_utils import (
 
 
 @pytest.fixture
-def fixt_package_instance(
-    fixt_package_config: PackageConfig,
-    request: pytest.FixtureRequest,
-) -> Iterator[PackageInstance]:
+def fixt_package_instance(fixt_package_config: PackageConfig) -> Iterator[PackageInstance]:
     """
     Starts a CLP package instance for the given configuration and stops it during teardown.
 
@@ -32,11 +29,11 @@ def fixt_package_instance(
         instance = PackageInstance(package_config=fixt_package_config)
         yield instance
     except RuntimeError:
-        base_port_string = request.config.getini("BASE_PORT")
+        base_port = fixt_package_config.base_port
         pytest.fail(
             f"Failed to start the {mode_name} package. This could mean that one of the ports"
-            f" derived from BASE_PORT={base_port_string} was unavailable. Try changing BASE_PORT in"
-            " .pytest.ini."
+            f" derived from base_port={base_port} was unavailable. You can specify a new value for"
+            " base_port wth the '--clp-base-port' flag."
         )
     finally:
         stop_clp_package(fixt_package_config)

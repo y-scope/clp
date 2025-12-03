@@ -19,22 +19,20 @@ def fixt_package_config(
 
     :param request:
     :return: An iterator that yields the PackageConfig object for the specified mode.
+    :raise ValueError: if the CLP base port is invalid.
     """
     mode_name: str = request.param
 
     # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
-    # Assign ports based on BASE_PORT from ini.
-    base_port_string = request.config.getini("BASE_PORT")
+    # Assign ports based on the clp base port CLI option.
+    base_port_string = request.config.getoption("--clp-base-port")
     try:
         base_port = int(base_port_string)
     except ValueError as err:
-        err_msg = (
-            f"Invalid BASE_PORT value '{base_port_string}' in pytest.ini; expected an integer."
-        )
+        err_msg = f"Invalid value '{base_port_string}' for '--clp-base-port'; expected an integer."
         raise ValueError(err_msg) from err
-
     assign_ports_from_base(base_port, clp_config_obj)
 
     # Construct PackageConfig.
@@ -42,6 +40,7 @@ def fixt_package_config(
         path_config=fixt_package_path_config,
         mode_name=mode_name,
         clp_config=clp_config_obj,
+        base_port=base_port,
     )
 
     try:
