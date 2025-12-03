@@ -771,9 +771,13 @@ def run_subprocess_with_signal_forward(*args: Any, **kwargs: Any) -> subprocess.
 
     def _signal_handler(signum: int, frame: Any) -> None:
         """Run cleanup, then invoke the original handler."""
-        # Terminate the entire process group to cascade termination to all children.
-        pgid = os.getpgid(proc.pid)
-        os.killpg(pgid, signum)
+        try:
+            # Terminate the entire process group to cascade termination to all children.
+            pgid = os.getpgid(proc.pid)
+            os.killpg(pgid, signum)
+        except ProcessLookupError:
+            # Child already terminated.
+            pass
 
         # Restore and invoke original handler
         original = original_handlers[signal.Signals(signum)]
