@@ -795,7 +795,7 @@ def run_subprocess_with_signal_forward(*args: Any, **kwargs: Any) -> subprocess.
         for sig, handler in original_handlers.items():
             signal.signal(sig, handler)
 
-    return subprocess.CompletedProcess(args[0], proc.returncode)
+    return subprocess.CompletedProcess(proc.args, proc.returncode)
 
 
 def _is_docker_compose_project_running(project_name: str) -> bool:
