@@ -17,7 +17,7 @@ use secrecy::{ExposeSecret, SecretString};
 /// A newly created S3 client.
 #[must_use]
 pub async fn create_new_client(
-    endpoint: &str,
+    optional_endpoint: Option<&str>,
     region_id: &str,
     access_key_id: &str,
     secret_access_key: &SecretString,
@@ -31,11 +31,11 @@ pub async fn create_new_client(
     );
     let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let config = Builder::from(&base_config)
-        .endpoint_url(endpoint)
+    let mut config_builder = Builder::from(&base_config)
         .region(region)
         .credentials_provider(credential)
-        .force_path_style(true)
-        .build();
+        .force_path_style(true);
+    config_builder.set_endpoint_url(optional_endpoint.map(|s| s.to_owned()));
+    let config = config_builder.build();
     Client::from_conf(config)
 }

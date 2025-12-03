@@ -1,3 +1,8 @@
+use aws_sdk_s3::{
+    error::SdkError,
+    operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
+    primitives::ByteStreamError,
+};
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -17,6 +22,9 @@ pub enum ClientError {
 
     #[error("Malformed data")]
     MalformedData,
+
+    #[error("`AwsError`: {description}")]
+    Aws { description: String },
 }
 
 /// Empty trait to mark errors that indicate malformed data.
@@ -33,6 +41,30 @@ impl<Enum: TryFromPrimitive> IsMalformedData for num_enum::TryFromPrimitiveError
 impl<T: IsMalformedData> From<T> for ClientError {
     fn from(_value: T) -> Self {
         Self::MalformedData
+    }
+}
+
+impl From<SdkError<GetObjectError>> for ClientError {
+    fn from(value: SdkError<GetObjectError>) -> Self {
+        Self::Aws {
+            description: value.to_string().to_owned(),
+        }
+    }
+}
+
+impl From<SdkError<ListObjectsV2Error>> for ClientError {
+    fn from(value: SdkError<ListObjectsV2Error>) -> Self {
+        Self::Aws {
+            description: value.to_string().to_owned(),
+        }
+    }
+}
+
+impl From<ByteStreamError> for ClientError {
+    fn from(value: ByteStreamError) -> Self {
+        Self::Aws {
+            description: value.to_string().to_owned(),
+        }
     }
 }
 

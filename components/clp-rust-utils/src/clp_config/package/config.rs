@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::clp_config::S3Config;
+
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
@@ -168,7 +170,10 @@ pub enum StreamOutputStorage {
     Fs { directory: String },
 
     #[serde(rename = "s3")]
-    S3 { staging_directory: String },
+    S3 {
+        staging_directory: String,
+        s3_config: S3Config,
+    },
 }
 
 impl Default for StreamOutputStorage {
