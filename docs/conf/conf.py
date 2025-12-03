@@ -3,7 +3,7 @@ from datetime import date
 from sphinx.application import Sphinx
 
 # Constants
-CLP_VERSION = "main"
+CLP_GIT_REF = "main"
 
 
 # -- Project information -------------------------------------------------------
@@ -85,7 +85,7 @@ html_theme_options = {
     "show_prev_next": False,
     "switcher": {
         "json_url": "https://docs.yscope.com/_static/clp-versions.json",
-        "version_match": CLP_VERSION,
+        "version_match": CLP_GIT_REF,
     },
     "use_edit_page_button": True,
 }
@@ -96,7 +96,7 @@ html_theme_options = {
 html_context = {
     "github_user": "y-scope",
     "github_repo": "clp",
-    "github_version": CLP_VERSION,
+    "github_version": CLP_GIT_REF,
     "doc_path": "docs/src",
 }
 
@@ -120,7 +120,7 @@ def _replace_variable_placeholders(_app: Sphinx, _docname: str, content: list[st
     :param content: The content of the doc in a list with a single element.
     """
     placeholder_to_value = {
-        "DOCS_VAR_CLP_VERSION": CLP_VERSION,
+        "DOCS_VAR_CLP_GIT_REF": CLP_GIT_REF,
     }
     for placeholder, value in placeholder_to_value.items():
         content[0] = content[0].replace(placeholder, value)
