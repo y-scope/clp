@@ -145,7 +145,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
     SECTION("Timestamp pattern templates reject illegal sequences.") {
         std::vector<std::string> const illegal_timestamp_pattern_templates{
                 R"(")",
-                R"(abc")"
+                R"(abc")",
                 R"("abc)",
                 std::string{"\x00", 1ULL},
                 "\x01",
