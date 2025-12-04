@@ -18,9 +18,6 @@ from tests.utils.utils import (
     validate_file_exists,
 )
 
-if TYPE_CHECKING:
-    from clp_py_utils.clp_config import ClpConfig
-
 
 @dataclass(frozen=True)
 class ClpCorePathConfig:
