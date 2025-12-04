@@ -227,6 +227,7 @@ private:
  *   - ErrorCodeEnum::InvalidDate if parsing was successful, but some components of the timestamp
  *     offer conflicting information about the actual date (e.g., if the parsed day of the week
  *     doesn't match up with the rest of the timestamp information).
+ *   - ErrorCodeEnum::InvalidEscapeSequence if the pattern contains an unsupported escape sequence.
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,

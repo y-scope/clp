@@ -266,6 +266,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format malformed format
  *   specifiers, or format specifiers that aren't supported in date-time timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ * - ErrorCodeEnum::InvalidEscapeSequence `pattern` contains an unsupported escape sequence.
  */
 [[nodiscard]] auto marshal_date_time_timestamp(
         epochtime_t timestamp,
@@ -279,9 +280,8 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @param pattern
  * @param buffer The buffer that the marshalled timestamp is appended to.
  * @return A void result on success, or an error code indicating the failure:
- * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format specifiers that aren't
- *   supported in numeric timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ * - ErrorCodeEnum::InvalidEscapeSequence `pattern` contains an unsupported escape sequence.
  */
 [[nodiscard]] auto marshal_numeric_timestamp(
         epochtime_t timestamp,
@@ -761,7 +761,7 @@ auto marshal_date_time_timestamp(
                 break;
             }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
     return ystdlib::error_handling::success();
@@ -860,7 +860,7 @@ auto marshal_numeric_timestamp(
                 break;
             }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
     return ystdlib::error_handling::success();
