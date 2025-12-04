@@ -1,11 +1,19 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use clp_rust_utils::{
-    clp_config::{AwsAuthentication::Credentials, AwsCredentials, S3Config},
-    database::mysql::create_mysql_pool,
-    ingestion_job::S3IngestionBaseConfig,
-    job_config::{ClpIoConfig, CompressionJobStatus, OutputConfig, S3InputConfig},
+    clp_config::{
+        AwsAuthentication::Credentials,
+        AwsCredentials,
+        S3Config,
+        package::config::ArchiveOutput,
+    },
+    job_config::{
+        ClpIoConfig,
+        CompressionJobStatus,
+        InputConfig,
+        OutputConfig,
+        S3IngestionBaseConfig,
+        S3InputConfig,
+    },
     s3::ObjectMetadata,
 };
 use const_format::formatcp;
@@ -19,35 +27,17 @@ const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 /// A compression submitter that implements [`BufferSubmitter`] to submit compression jobs to CLP.
 pub struct CompressionJobSubmitter {
     db_pool: MySqlPool,
-    aws_credentials: AwsCredentials,
-    output_config: Arc<OutputConfig>,
-    ingestion_job_config: S3IngestionBaseConfig,
+    io_config_template: ClpIoConfig,
 }
 
 #[async_trait::async_trait]
 impl BufferSubmitter for CompressionJobSubmitter {
     async fn submit(&self, buffer: &[ObjectMetadata]) -> Result<()> {
-        let s3_config = S3Config {
-            bucket: self.ingestion_job_config.bucket_name.clone(),
-            region_code: self.ingestion_job_config.region.clone(),
-            key_prefix: self.ingestion_job_config.key_prefix.clone(),
-            aws_authentication: Credentials {
-                credentials: self.aws_credentials.clone(),
-            },
+        let mut io_config = self.io_config_template.clone();
+        let s3_input_config = match &mut io_config.input {
+            InputConfig::S3InputConfig { config } => config,
         };
-        let s3_input_config = S3InputConfig {
-            s3_config,
-            keys: Some(buffer.iter().map(|obj| obj.key.clone()).collect()),
-            dataset: self.ingestion_job_config.dataset.clone(),
-            timestamp_key: self.ingestion_job_config.timestamp_key.clone(),
-            unstructured: self.ingestion_job_config.unstructured,
-        };
-        let io_config = ClpIoConfig {
-            input: clp_rust_utils::job_config::InputConfig::S3InputConfig {
-                config: s3_input_config,
-            },
-            output: (*self.output_config).clone(),
-        };
+        s3_input_config.keys = Some(buffer.iter().map(|obj| obj.key.clone()).collect());
         tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
             self.db_pool.clone(),
             io_config,
@@ -63,17 +53,44 @@ impl CompressionJobSubmitter {
     ///
     /// A newly created instance with the given parameters, dedicated to submitting compression jobs
     /// created by the given ingestion job specification.
-    pub const fn new(
+    #[must_use]
+    pub fn new(
         db_pool: MySqlPool,
         aws_credentials: AwsCredentials,
-        output_config: Arc<OutputConfig>,
+        archive_output_config: &ArchiveOutput,
         ingestion_job_config: S3IngestionBaseConfig,
     ) -> Self {
+        let s3_input_config = S3InputConfig {
+            s3_config: S3Config {
+                bucket: ingestion_job_config.bucket_name,
+                region_code: ingestion_job_config.region,
+                key_prefix: ingestion_job_config.key_prefix,
+                aws_authentication: Credentials {
+                    credentials: aws_credentials,
+                },
+            },
+            keys: None,
+            dataset: ingestion_job_config.dataset,
+            timestamp_key: ingestion_job_config.timestamp_key,
+            unstructured: ingestion_job_config.unstructured,
+        };
+        let output_config = OutputConfig {
+            tags: ingestion_job_config.tags,
+            target_archive_size: archive_output_config.target_archive_size,
+            target_dictionaries_size: archive_output_config.target_dictionaries_size,
+            target_encoded_file_size: archive_output_config.target_encoded_file_size,
+            target_segment_size: archive_output_config.target_segment_size,
+            compression_level: archive_output_config.compression_level,
+        };
+        let io_config_template = ClpIoConfig {
+            input: InputConfig::S3InputConfig {
+                config: s3_input_config,
+            },
+            output: output_config,
+        };
         Self {
             db_pool,
-            aws_credentials,
-            output_config,
-            ingestion_job_config,
+            io_config_template,
         }
     }
 }
@@ -150,7 +167,7 @@ async fn submit_clp_compression_job_and_wait_for_completion(
                     CompressionJobStatus::Succeeded => {
                         break;
                     }
-                    _ => continue,
+                    _ => {}
                 }
             }
             Err(e) => {
