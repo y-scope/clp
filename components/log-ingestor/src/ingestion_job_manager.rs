@@ -2,10 +2,10 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use clp_rust_utils::{
+    clp_config::AwsCredentials,
     s3::{ObjectMetadata, create_new_client as create_s3_client},
     sqs::create_new_client as create_sqs_client,
 };
-use secrecy::SecretString;
 use tokio::sync::{Mutex, mpsc};
 use uuid::Uuid;
 
@@ -34,8 +34,7 @@ pub struct IngestionJobManager {
     buffer_timeout: Duration,
     buffer_size_threshold: u64,
     channel_capacity: usize,
-    aws_access_key_id: String,
-    aws_secret_access_key: SecretString,
+    aws_credentials: AwsCredentials,
 }
 
 impl IngestionJobManager {
@@ -201,8 +200,8 @@ impl IngestionJobManager {
         let s3_client = create_s3_client(
             s3_endpoint.as_str(),
             region,
-            self.aws_access_key_id.as_str(),
-            &self.aws_secret_access_key,
+            self.aws_credentials.access_key_id.as_str(),
+            &self.aws_credentials.secret_access_key,
         )
         .await;
         S3ClientWrapper::from(s3_client)
@@ -216,8 +215,8 @@ impl IngestionJobManager {
         let sqs_client = create_sqs_client(
             sqs_endpoint.as_str(),
             region,
-            self.aws_access_key_id.as_str(),
-            &self.aws_secret_access_key,
+            self.aws_credentials.access_key_id.as_str(),
+            &self.aws_credentials.secret_access_key,
         )
         .await;
         SqsClientWrapper::from(sqs_client)
