@@ -10,7 +10,9 @@ enum class ErrorCodeEnum : uint8_t {
     InvalidTimestampPattern = 1,
     IncompatibleTimestampPattern,
     InvalidDate,
-    InvalidTimezoneOffset
+    InvalidTimezoneOffset,
+    InvalidEscapeSequence,
+    InvalidCharacter
 };
 
 using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
