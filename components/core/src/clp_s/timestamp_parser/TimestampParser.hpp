@@ -206,8 +206,8 @@ private:
  * Any escape sequence not listed above is invalid. In addition, patterns must not contain:
  *
  * - ASCII control characters (U+0000 through U+001F).
- * - The double-quote character `"` (unless the whole pattern is supplied as a JSON string literal,
- *   e.g. `"<pattern>"`).
+ * - The double-quote character `"` (except for the opening an closing quote if the whole pattern is
+ *   written like a JSON string literal e.g. `"<pattern>"`).
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
