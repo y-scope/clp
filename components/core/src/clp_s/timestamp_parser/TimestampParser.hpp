@@ -27,7 +27,7 @@ public:
      * - ErrorCodeEnum::InvalidTimezone if `pattern` contains a \z{} format specifier with an
      *   invalid timezone.
      * - ErrorCodeEnum::InvalidEscapeSequence if `pattern` contains an unsupported escape sequence.
-     * - ErrorCodeEnum::InvalidCharacter if `pattern contains an unsupported character.
+     * - ErrorCodeEnum::InvalidCharacter if `pattern` contains an unsupported character.
      */
     [[nodiscard]] static auto create(std::string_view pattern)
             -> ystdlib::error_handling::Result<TimestampPattern>;
