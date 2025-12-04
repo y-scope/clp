@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <stdexcept>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -256,7 +256,9 @@ bool search_archive(
                 break;
             case CommandLineArguments::OutputHandlerType::ResultsCache:
 #if CLP_S_EXCLUDE_MONGOCXX
-                throw std::runtime_error("Simplified static clp-s executable does not support mongocxx.");
+                throw std::runtime_error(
+                        "Simplified static clp-s executable does not support mongocxx."
+                );
 #else
                 output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
                         command_line_arguments.get_mongodb_uri(),
