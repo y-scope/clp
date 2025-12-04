@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use async_trait::async_trait;
+use clp_rust_utils::clp_config::package::config::Config as ClpConfig;
+use clp_rust_utils::clp_config::package::credentials::Credentials as ClpCredentials;
+
 use clp_rust_utils::{
     clp_config::AwsCredentials,
     s3::{ObjectMetadata, create_new_client as create_s3_client},
@@ -8,6 +10,8 @@ use clp_rust_utils::{
 };
 use tokio::sync::{Mutex, mpsc};
 use uuid::Uuid;
+use clp_rust_utils::job_config::OutputConfig;
+use crate::compression::CompressionJobSubmitter;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
@@ -35,9 +39,15 @@ pub struct IngestionJobManager {
     buffer_size_threshold: u64,
     channel_capacity: usize,
     aws_credentials: AwsCredentials,
+    output_config: Arc<OutputConfig>,
+    mysql_pool: sqlx::MySqlPool,
 }
 
 impl IngestionJobManager {
+    pub async fn from_config(clp_config: ClpConfig, clp_credentials: ClpCredentials) -> anyhow::Result<Self> {
+
+    }
+
     /// Creates a new S3 scanner ingestion job.
     ///
     /// # Returns
@@ -216,7 +226,7 @@ impl IngestionJobManager {
             sqs_endpoint.as_str(),
             region,
             self.aws_credentials.access_key_id.as_str(),
-            &self.aws_credentials.secret_access_key,
+            &self.aws_credentials.secret_access_key
         )
         .await;
         SqsClientWrapper::from(sqs_client)
@@ -237,16 +247,6 @@ struct IngestionJobTableEntry {
     listener: Listener,
     region: String,
     key_prefix: String,
-}
-
-/// Submitter implementation for creating CLP compression jobs.
-struct CompressionJobSubmitter {}
-
-#[async_trait]
-impl BufferSubmitter for CompressionJobSubmitter {
-    async fn submit(&self, _buffer: &[ObjectMetadata]) -> anyhow::Result<()> {
-        todo!("Not implemented yet")
-    }
 }
 
 /// # Returns:

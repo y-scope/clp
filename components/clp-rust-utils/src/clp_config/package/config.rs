@@ -1,4 +1,6 @@
+use std::time::Duration;
 use serde::Deserialize;
+use crate::clp_config::AwsCredentials;
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -14,6 +16,7 @@ pub struct Config {
     pub database: Database,
     pub results_cache: ResultsCache,
     pub api_server: ApiServer,
+    pub log_ingestor: LogIngestor,
     pub logs_directory: String,
     pub stream_output: StreamOutput,
 }
@@ -25,6 +28,7 @@ impl Default for Config {
             database: Database::default(),
             results_cache: ResultsCache::default(),
             api_server: ApiServer::default(),
+            log_ingestor: LogIngestor::default(),
             logs_directory: "var/log".to_owned(),
             stream_output: StreamOutput::default(),
         }
@@ -175,6 +179,28 @@ impl Default for StreamOutputStorage {
     fn default() -> Self {
         Self::Fs {
             directory: "var/data/streams".to_owned(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct LogIngestor {
+    pub host: String,
+    pub port: u16,
+    pub buffer_timeout_sec: u64,
+    pub buffer_size_threshold: u64,
+    pub channel_capacity: usize,
+}
+
+impl Default for LogIngestor {
+    fn default() -> Self {
+        Self {
+            host: "localhost".to_owned(),
+            port: 3333,
+            buffer_timeout_sec: 300,
+            buffer_size_threshold: 50 * 1024 * 1024,
+            channel_capacity: 10,
         }
     }
 }
