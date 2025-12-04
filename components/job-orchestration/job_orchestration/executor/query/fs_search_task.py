@@ -26,6 +26,7 @@ from job_orchestration.executor.query.utils import (
 )
 from job_orchestration.executor.utils import load_worker_config
 from job_orchestration.scheduler.job_config import SearchJobConfig
+from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
