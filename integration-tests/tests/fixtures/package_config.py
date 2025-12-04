@@ -4,7 +4,10 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.utils.clp_mode_utils import get_clp_config_from_mode
+from tests.utils.clp_mode_utils import (
+    get_clp_config_from_mode,
+    get_required_component_list,
+)
 from tests.utils.config import PackageConfig, PackagePathConfig
 
 
@@ -21,13 +24,15 @@ def fixt_package_config(
     """
     mode_name: str = request.param
 
-    # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
+
+    required_components = get_required_component_list(clp_config_obj)
 
     # Construct PackageConfig.
     package_config = PackageConfig(
         path_config=fixt_package_path_config,
         mode_name=mode_name,
+        component_list=required_components,
         clp_config=clp_config_obj,
     )
 

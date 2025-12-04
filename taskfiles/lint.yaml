@@ -70,7 +70,7 @@ tasks:
         ct lint \
           --chart-dirs="tools/deployment" \
           --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
-          --lint-conf=".yamllint.yaml"
+          --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
     sources: &js_source_files
@@ -116,8 +116,8 @@ tasks:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
+          --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
           ".github" \
-          ".yamllint.yaml" \
           "components/core/.clang-format" \
           "components/core/config" \
           "components/core/tools/" \
