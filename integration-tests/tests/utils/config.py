@@ -18,6 +18,9 @@ from tests.utils.utils import (
     validate_file_exists,
 )
 
+if TYPE_CHECKING:
+    from clp_py_utils.clp_config import ClpConfig
+
 
 @dataclass(frozen=True)
 class ClpCorePathConfig:
@@ -72,7 +75,7 @@ class PackagePathConfig:
     #: Root directory for package tests output.
     test_root_dir: InitVar[Path]
 
-    #: Directory to store any cached package config files.
+    #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
     #: Directory where the CLP package writes logs.
@@ -93,7 +96,7 @@ class PackagePathConfig:
             )
             raise RuntimeError(err_msg)
 
-        # Initialize cache directory for package tests.
+        # Initialize directory for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
 
@@ -126,13 +129,13 @@ class PackageConfig:
     #: Path configuration for this package.
     path_config: PackagePathConfig
 
-    #: Name of the mode of operation represented in this config.
+    #: Name of the package operation mode.
     mode_name: str
 
     #: The list of CLP components that this package needs.
     component_list: list[str]
 
-    #: The ClpConfig instance that describes this package configuration.
+    #: The Pydantic representation of a CLP package configuration.
     clp_config: ClpConfig
 
     def __post_init__(self) -> None:
@@ -160,7 +163,7 @@ class PackageConfig:
 class PackageInstance:
     """Metadata for a running instance of the CLP package."""
 
-    #: Config describing this package instance.
+    #: The configuration for this package instance.
     package_config: PackageConfig
 
     #: The instance ID of the running package.

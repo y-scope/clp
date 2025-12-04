@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 @pytest.mark.parametrize("fixt_package_config", TEST_MODES, indirect=True)
 def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that all of the components of the CLP package start up successfully for the selected
-    mode of operation.
+    Validate that the CLP package starts up successfully for the selected mode(s) of operation.
 
     :param fixt_package_instance:
     """

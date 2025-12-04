@@ -1,6 +1,5 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
-import contextlib
 from collections.abc import Iterator
 
 import pytest
@@ -14,8 +13,8 @@ from tests.utils.config import PackageConfig, PackagePathConfig
 
 @pytest.fixture
 def fixt_package_config(
-    fixt_package_path_config: PackagePathConfig,
     request: pytest.FixtureRequest,
+    fixt_package_path_config: PackagePathConfig,
 ) -> Iterator[PackageConfig]:
     """
     Creates and maintains a PackageConfig object for a specific CLP mode.
@@ -25,10 +24,8 @@ def fixt_package_config(
     """
     mode_name: str = request.param
 
-    # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
-    # Compute the list of required components for this mode.
     required_components = get_required_component_list(clp_config_obj)
 
     # Construct PackageConfig.
@@ -42,5 +39,4 @@ def fixt_package_config(
     try:
         yield package_config
     finally:
-        with contextlib.suppress(FileNotFoundError):
-            package_config.temp_config_file_path.unlink()
+        package_config.temp_config_file_path.unlink(missing_ok=True)
