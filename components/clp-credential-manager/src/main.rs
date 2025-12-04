@@ -29,8 +29,12 @@ struct Args {
 ///
 /// # Errors:
 ///
-/// Returns [`anyhow::Error`] when configuration parsing, database connections, TCP binding,
-/// or Axum startup fail.
+/// Returns an error if:
+///
+/// * Forwards [`AppConfig::from_file`]'s return values on failure.
+/// * Forwards [`CredentialManagerService::new`]'s return values on failure.
+/// * Forwards [`TcpListener::bind`]'s return values on failure.
+/// * Forwards [`axum::serve`]'s return values on failure.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();

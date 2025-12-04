@@ -89,6 +89,7 @@ const fn default_mysql_port() -> u16 {
 const fn default_max_connections() -> u32 {
     DEFAULT_MAX_CONNECTIONS
 }
+
 impl From<UtilsError> for ServiceError {
     fn from(err: UtilsError) -> Self {
         match err {
