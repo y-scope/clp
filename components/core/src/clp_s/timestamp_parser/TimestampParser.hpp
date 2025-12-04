@@ -203,11 +203,11 @@ private:
  *
  * - \\ Literal backslash.
  *
- * Any escape sequences not in these lists is illegal. As well, all of the following characters are
- * illegal:
+ * Any escape sequence not listed above is invalid. In addition, patterns must not contain:
  *
- * - Control characters (characters in the range `\x00` to `\x1F`).
- * - Double quotes `"`, excepting quotes that surround a timestamp pattern like `"<pattern>"`.
+ * - ASCII control characters (U+0000 through U+001F).
+ * - The double-quote character `"` (unless the whole pattern is supplied as a JSON string literal,
+ *   e.g. `"<pattern>"`).
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
