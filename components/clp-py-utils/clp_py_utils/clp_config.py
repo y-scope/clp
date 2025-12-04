@@ -2,6 +2,7 @@ import os
 import pathlib
 from enum import auto
 from typing import Annotated, Any, ClassVar, Literal
+from urllib.parse import urlencode
 
 import yaml
 from pydantic import (
@@ -327,11 +328,15 @@ class Database(BaseModel):
         Returns a JDBC URL for connecting to the database using the given user type.
         """
         self.ensure_credentials_loaded(user_type)
+        query = urlencode(
+            {
+                "user": self.credentials[user_type].username,
+                "password": self.credentials[user_type].password,
+            }
+        )
         return (
             f"jdbc:{self.type.value}://{self.host}:{self.port}/"
-            f"{self.name[_get_db_name_for_user_type(user_type)]}?"
-            f"user={self.credentials[user_type].username}"
-            f"&password={self.credentials[user_type].password}"
+            f"{self.name[_get_db_name_for_user_type(user_type)]}?{query}"
         )
 
     def get_container_url(self, user_type: ClpDbUserType = ClpDbUserType.CLP) -> str:
@@ -339,11 +344,15 @@ class Database(BaseModel):
         Returns a JDBC URL for connecting to the database from within a container.
         """
         self.ensure_credentials_loaded(user_type)
+        query = urlencode(
+            {
+                "user": self.credentials[user_type].username,
+                "password": self.credentials[user_type].password,
+            }
+        )
         return (
             f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
-            f"{self.name[_get_db_name_for_user_type(user_type)]}"
-            f"?user={self.credentials[user_type].username}"
-            f"&password={self.credentials[user_type].password}"
+            f"{self.name[_get_db_name_for_user_type(user_type)]}?{query}"
         )
 
     def dump_to_primitive_dict(self) -> dict[str, Any]:
