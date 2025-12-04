@@ -3,7 +3,6 @@ name: "clp-package-spider"
 include:
   - "docker-compose.utils.yaml"
 
-
 services:
   database:
     extends:
