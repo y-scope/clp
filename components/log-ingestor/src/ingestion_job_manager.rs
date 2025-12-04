@@ -5,6 +5,7 @@ use clp_rust_utils::clp_config::package::credentials::Credentials as ClpCredenti
 
 use clp_rust_utils::{
     clp_config::AwsCredentials,
+    job_config::S3IngestionBaseConfig,
     s3::{ObjectMetadata, create_new_client as create_s3_client},
     sqs::create_new_client as create_sqs_client,
 };
@@ -60,12 +61,11 @@ impl IngestionJobManager {
     ///
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
-        let region = config.base.region.clone();
-        let key_prefix = config.base.key_prefix.clone();
+        let ingestion_job_config = config.base.clone();
         let s3_client_manager = self
             .create_s3_client_manager(config.base.region.as_str())
             .await;
-        self.create_s3_ingestion_job(region, key_prefix, move |job_id, sender| {
+        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
             let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
             IngestionJob::S3Scanner(scanner)
         })
@@ -84,12 +84,11 @@ impl IngestionJobManager {
     ///
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_sqs_listener(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
-        let region = config.base.region.clone();
-        let key_prefix = config.base.key_prefix.clone();
+        let ingestion_job_config = config.base.clone();
         let sqs_client_manager = self
             .create_sqs_client_manager(config.base.region.as_str())
             .await;
-        self.create_s3_ingestion_job(region, key_prefix, move |job_id, sender| {
+        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
                 sqs_client_manager,
@@ -155,23 +154,25 @@ impl IngestionJobManager {
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
     async fn create_s3_ingestion_job<JobCreationCallback>(
         &self,
-        region: String,
-        key_prefix: String,
+        ingestion_job_config: S3IngestionBaseConfig,
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
         JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
         let mut job_table = self.job_table.lock().await;
         for table_entry in job_table.values() {
-            if table_entry.region != region
-                || is_mutually_prefix_free(table_entry.key_prefix.as_str(), key_prefix.as_str())
+            if table_entry.region != ingestion_job_config.region
+                || is_mutually_prefix_free(
+                    table_entry.key_prefix.as_str(),
+                    ingestion_job_config.key_prefix.as_str(),
+                )
             {
                 continue;
             }
             return Err(Error::PrefixConflict(format!(
                 "Cannot create ingestion job with prefix '{}' as it conflicts with existing job \
                  with prefix '{}'",
-                key_prefix, table_entry.key_prefix
+                ingestion_job_config.key_prefix, table_entry.key_prefix
             )));
         }
 
@@ -184,9 +185,11 @@ impl IngestionJobManager {
             }
         };
 
+        let region = ingestion_job_config.region.clone();
+        let key_prefix = ingestion_job_config.key_prefix.clone();
         // At this point, we use one listener per ingestion job. However, the listener itself is
         // designed to be shared among multiple ingestion jobs in the future.
-        let job_listener = self.create_listener();
+        let job_listener = self.create_listener(ingestion_job_config);
         let sender = job_listener.get_new_sender();
         job_table.insert(
             job_id,
@@ -235,7 +238,7 @@ impl IngestionJobManager {
     /// # Returns
     ///
     /// A new listener for receiving object metadata to ingest.
-    fn create_listener(&self) -> Listener {
+    fn create_listener(&self, _ingestion_job_config: S3IngestionBaseConfig) -> Listener {
         let buffer = Buffer::new(CompressionJobSubmitter {}, self.buffer_size_threshold);
         Listener::spawn(buffer, self.buffer_timeout, self.channel_capacity)
     }
