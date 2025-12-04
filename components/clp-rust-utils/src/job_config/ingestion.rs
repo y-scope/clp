@@ -18,4 +18,7 @@ pub struct S3IngestionBaseConfig {
 
     /// Whether to treat the ingested objects as unstructured logs.
     pub unstructured: bool,
+
+    /// Tags to apply on the compressed archives.
+    pub tags: Option<Vec<String>>,
 }
