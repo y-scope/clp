@@ -37,7 +37,7 @@ rules:
 
   line-length:
     max: 100
-    allow-non-breakable-words: false
+    allow-non-breakable-words: true
 
   octal-values:
     forbid-implicit-octal: true

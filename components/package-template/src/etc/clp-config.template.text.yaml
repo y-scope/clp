@@ -19,7 +19,13 @@ api_server: null
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yaml"
 #
-#bundled: ["database", "queue", "redis", "results_cache"]
+## Remove any bundled services below if you wish to use your own. For more information, see
+## https://docs.yscope.com/clp/main/user-docs/guides-external-database.html#configuring-clp-to-use-external-databases
+#bundled:
+#  - "database"
+#  - "queue"
+#  - "redis"
+#  - "results_cache"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"

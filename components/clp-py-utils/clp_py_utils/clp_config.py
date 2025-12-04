@@ -945,10 +945,14 @@ class ClpConfig(BaseModel):
         self.archive_output.storage.transform_for_container()
         self.stream_output.storage.transform_for_container()
 
-        self.database.transform_for_container()
-        self.queue.transform_for_container()
-        self.redis.transform_for_container()
-        self.results_cache.transform_for_container()
+        if BundledService.DATABASE in self.bundled:
+            self.database.transform_for_container()
+        if BundledService.QUEUE in self.bundled:
+            self.queue.transform_for_container()
+        if BundledService.REDIS in self.bundled:
+            self.redis.transform_for_container()
+        if BundledService.RESULTS_CACHE in self.bundled:
+            self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
         if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:

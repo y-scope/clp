@@ -153,6 +153,11 @@ class BaseController(ABC):
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
         }
 
+        # Binding config
+        env_vars |= {
+            "CLP_DB_BIND_HOST": _get_ip_from_hostname(self._clp_config.database.host),
+        }
+
         # Runtime config
         env_vars |= {
             "CLP_DB_CONTAINER_IMAGE_REF": (
@@ -176,8 +181,12 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
+        if BundledService.DATABASE in self._clp_config.bundled:
+            db_host = DB_COMPONENT_NAME
+        else:
+            db_host = _get_container_accessible_host(self._clp_config.database.host)
         env_vars |= {
-            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
+            "CLP_DB_HOST": db_host,
             "CLP_DB_NAME": self._clp_config.database.name,
             "CLP_DB_PORT": str(self._clp_config.database.port),
         }
@@ -225,6 +234,11 @@ class BaseController(ABC):
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
         }
 
+        # Binding config
+        env_vars |= {
+            "CLP_QUEUE_BIND_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
+        }
+
         return env_vars
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
@@ -238,8 +252,12 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
+        if BundledService.QUEUE in self._clp_config.bundled:
+            queue_host = QUEUE_COMPONENT_NAME
+        else:
+            queue_host = _get_container_accessible_host(self._clp_config.queue.host)
         env_vars |= {
-            "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
+            "CLP_QUEUE_HOST": queue_host,
             "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
         }
 
@@ -283,19 +301,16 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Backend databases
-        env_vars |= {
-            "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
-                self._clp_config.redis.compression_backend_database
-            ),
-            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
-        }
-
         # Paths
         env_vars |= {
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
             "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
             "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        # Binding config
+        env_vars |= {
+            "CLP_REDIS_BIND_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
         }
 
         return env_vars
@@ -312,14 +327,26 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
+        if BundledService.REDIS in self._clp_config.bundled:
+            redis_host = REDIS_COMPONENT_NAME
+        else:
+            redis_host = _get_container_accessible_host(self._clp_config.redis.host)
         env_vars |= {
-            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
+            "CLP_REDIS_HOST": redis_host,
             "CLP_REDIS_PORT": str(self._clp_config.redis.port),
         }
 
         # Credentials
         env_vars |= {
             "CLP_REDIS_PASS": self._clp_config.redis.password,
+        }
+
+        # Backend databases
+        env_vars |= {
+            "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
+                self._clp_config.redis.compression_backend_database
+            ),
+            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
 
         return env_vars
@@ -356,17 +383,18 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Collections
-        env_vars |= {
-            "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": (
-                self._clp_config.results_cache.stream_collection_name
-            ),
-        }
         # Paths
         env_vars |= {
             "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
             "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
             "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        # Binding config
+        env_vars |= {
+            "CLP_RESULTS_CACHE_BIND_HOST": _get_ip_from_hostname(
+                self._clp_config.results_cache.host
+            ),
         }
 
         return env_vars
@@ -383,10 +411,23 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
+        if BundledService.RESULTS_CACHE in self._clp_config.bundled:
+            results_cache_host = RESULTS_CACHE_COMPONENT_NAME
+        else:
+            results_cache_host = _get_container_accessible_host(
+                self._clp_config.results_cache.host
+            )
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
-            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
+            "CLP_RESULTS_CACHE_HOST": results_cache_host,
             "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+        }
+
+        # Collections
+        env_vars |= {
+            "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": (
+                self._clp_config.results_cache.stream_collection_name
+            ),
         }
 
         return env_vars
@@ -1013,6 +1054,26 @@ def _chown_recursively(
     """
     chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
+def _get_container_accessible_host(hostname: str) -> str:
+    """
+    Resolves a hostname to a host that is accessible from within a container.
+
+    If the hostname resolves to 127.0.0.1, it is replaced with "host.docker.internal" so that the
+    container can access the host machine.
+
+    :param hostname:
+    :return: The resolved hostname or IP address.
+    """
+    try:
+        ip = socket.gethostbyname(hostname)
+    except socket.error:
+        return hostname
+
+    if "127.0.0.1" == ip:
+        return "host.docker.internal"
+    return hostname
 
 
 def _get_ip_from_hostname(hostname: str) -> str:

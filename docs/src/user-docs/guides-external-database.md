@@ -173,28 +173,39 @@ When using AWS DocumentDB or MongoDB Atlas:
 
 ## Configuring CLP to use external databases
 
-After setting up your external databases, configure CLP to use them by editing `etc/clp-config.yaml`:
+After setting up your external databases, configure CLP to use them:
 
-```yaml
-database:
-  host: "<mariadb-hostname-or-ip>"
-  port: 3306
-  name: "clp-db"
-  # Credentials will be set in etc/credentials.yaml
+1. Edit `etc/clp-config.yaml` to specify which services are bundled (managed by the `clp-package`
+   Docker Compose project):
 
-results_cache:
-  host: "<mongodb-hostname-or-ip>"
-  port: 27017
-  name: "clp-query-results"
-```
+   ```yaml
+   # Remove "database" and "results_cache" from this list to use external instances
+   bundled:
+     # - "database"
+     - "queue"
+     - "redis"
+     # - "results_cache"
+   ```
 
-Set the credentials in `etc/credentials.yaml`:
+2. Configure the connection details for your external databases in `etc/clp-config.yaml`:
 
-```yaml
-database:
-  username: "clp-user"
-  password: "<your-mariadb-password>"
-```
+   ```yaml
+   database:
+     host: "<mariadb-hostname-or-ip>"
+     port: <mariadb-port>
+
+   results_cache:
+     host: "<mongodb-hostname-or-ip>"
+     port: <mongodb-port>
+   ```
+
+3. Set the credentials in `etc/credentials.yaml`:
+
+   ```yaml
+   database:
+     username: "clp-user"
+     password: "<your-mariadb-password>"
+   ```
 
 :::{note}
 When using external databases in a multi-host deployment, you do **not** need to start the
