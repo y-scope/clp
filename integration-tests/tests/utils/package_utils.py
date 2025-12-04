@@ -1,11 +1,9 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-import subprocess
+from tests.utils.asserting_utils import run_and_assert
+from tests.utils.config import PackageConfig
 
-from tests.utils.config import (
-    PackageConfig,
-    PackageInstance,
-)
+DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 
 
 def start_clp_package(package_config: PackageConfig) -> None:
@@ -13,41 +11,36 @@ def start_clp_package(package_config: PackageConfig) -> None:
     Starts an instance of the CLP package.
 
     :param package_config:
-    :raise RuntimeError: If the package fails to start.
+    :raise: Propagates `run_and_assert`'s errors.
     """
     path_config = package_config.path_config
     start_script_path = path_config.start_script_path
     temp_config_file_path = package_config.temp_config_file_path
-    try:
-        # fmt: off
-        start_cmd = [
-            str(start_script_path),
-            "--config", str(temp_config_file_path),
-        ]
-        # fmt: on
-        subprocess.run(start_cmd, check=True)
-    except Exception as err:
-        err_msg = f"Failed to start an instance of the {package_config.mode_name} package."
-        raise RuntimeError(err_msg) from err
+
+    # fmt: off
+    start_cmd = [
+        str(start_script_path),
+        "--config", str(temp_config_file_path),
+    ]
+    # fmt: on
+    run_and_assert(start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
 
 
-def stop_clp_package(instance: PackageInstance) -> None:
+def stop_clp_package(package_config: PackageConfig) -> None:
     """
-    Stops an instance of the CLP package.
+    Stops the running instance of the CLP package.
 
-    :param instance:
-    :raise RuntimeError: If the package fails to stop.
+    :param package_config:
+    :raise: Propagates `run_and_assert`'s errors.
     """
-    package_config = instance.package_config
     path_config = package_config.path_config
     stop_script_path = path_config.stop_script_path
-    try:
-        # fmt: off
-        stop_cmd = [
-            str(stop_script_path)
-        ]
-        # fmt: on
-        subprocess.run(stop_cmd, check=True)
-    except Exception as err:
-        err_msg = f"Failed to stop an instance of the {package_config.mode_name} package."
-        raise RuntimeError(err_msg) from err
+    temp_config_file_path = package_config.temp_config_file_path
+
+    # fmt: off
+    stop_cmd = [
+        str(stop_script_path),
+        "--config", str(temp_config_file_path),
+    ]
+    # fmt: on
+    run_and_assert(stop_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)

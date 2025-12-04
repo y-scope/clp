@@ -469,7 +469,7 @@ wheels = [
 
 [[package]]
 name = "clp-mcp-server"
-version = "0.6.1.dev0"
+version = "0.7.1.dev0"
 source = { editable = "../components/clp-mcp-server" }
 dependencies = [
     { name = "aiomysql" },
@@ -503,7 +503,7 @@ dev = [
 
 [[package]]
 name = "clp-package-utils"
-version = "0.6.1.dev0"
+version = "0.7.1.dev0"
 source = { editable = "../components/clp-package-utils" }
 dependencies = [
     { name = "brotli" },
@@ -536,7 +536,7 @@ dev = [
 
 [[package]]
 name = "clp-py-utils"
-version = "0.6.1.dev0"
+version = "0.7.1.dev0"
 source = { editable = "../components/clp-py-utils" }
 dependencies = [
     { name = "boto3" },
@@ -921,9 +921,9 @@ dev = [
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-env", specifier = ">=1.1.5" },
-    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "ruff", specifier = ">=0.11.12" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.20240808" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
 ]
 
 [[package]]
@@ -982,7 +982,7 @@ wheels = [
 
 [[package]]
 name = "job-orchestration"
-version = "0.6.1.dev0"
+version = "0.7.1.dev0"
 source = { editable = "../components/job-orchestration" }
 dependencies = [
     { name = "brotli" },

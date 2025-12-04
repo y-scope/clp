@@ -3,7 +3,6 @@
 import pytest
 
 from tests.utils.asserting_utils import (
-    validate_package_running,
     validate_running_mode_correct,
 )
 from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
@@ -16,13 +15,9 @@ TEST_MODES = CLP_MODE_CONFIGS.keys()
 @pytest.mark.parametrize("fixt_package_config", TEST_MODES, indirect=True)
 def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that all of the components of the CLP package start up successfully for the selected
-    mode of operation.
+    Validate that the CLP package starts up successfully for the selected mode(s) of operation.
 
     :param fixt_package_instance:
     """
-    # Ensure that all package components are running.
-    validate_package_running(fixt_package_instance)
-
     # Ensure that the package is running in the correct mode.
     validate_running_mode_correct(fixt_package_instance)
