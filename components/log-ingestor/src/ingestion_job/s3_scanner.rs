@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use aws_sdk_s3::Client;
-use clp_rust_utils::{ingestion_job::S3IngestionBaseConfig, s3::ObjectMetadata};
+use clp_rust_utils::{job_config::S3IngestionBaseConfig, s3::ObjectMetadata};
 use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;

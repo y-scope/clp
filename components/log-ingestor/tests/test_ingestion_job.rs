@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
-use clp_rust_utils::{ingestion_job::S3IngestionBaseConfig, s3::ObjectMetadata};
+use clp_rust_utils::{job_config::S3IngestionBaseConfig, s3::ObjectMetadata};
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     ingestion_job::{S3ScannerConfig, SqsListener, SqsListenerConfig},
@@ -177,6 +177,7 @@ async fn test_sqs_listener() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            tags: None,
         },
         max_num_messages_to_fetch: 2,
         init_polling_backoff_sec: 1,
@@ -256,6 +257,7 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            tags: None,
         },
         scanning_interval: Duration::from_millis(300),
         start_after: None,

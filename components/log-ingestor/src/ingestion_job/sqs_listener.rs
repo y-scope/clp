@@ -1,7 +1,7 @@
 use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
-    ingestion_job::S3IngestionBaseConfig,
+    job_config::S3IngestionBaseConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
