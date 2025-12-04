@@ -52,7 +52,7 @@ services:
     environment:
       MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
       MYSQL_PASSWORD: "${CLP_DB_PASS:?Please set a value.}"
-      MYSQL_ROOT_PASSWORD: "${CLP_DB_PASS:?Please set a value.}"
+      MYSQL_ROOT_PASSWORD: "${CLP_DB_ROOT_PASS:?Please set a value.}"
       MYSQL_USER: "${CLP_DB_USER:?Please set a value.}"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
@@ -85,6 +85,8 @@ services:
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
+      CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
@@ -305,6 +307,7 @@ services:
         target: 4000
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
       - type: "bind"
         source: "./var/www/webui/client/settings.json"
@@ -470,8 +473,8 @@ services:
     environment:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
-      CLP_DB_USER: "${CLP_DB_USER}"
-      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
       - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
@@ -504,11 +507,14 @@ services:
   api-server:
     <<: *service_defaults
     hostname: "api_server"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the API server.
+      replicas: "${CLP_API_SERVER_ENABLED:-1}"
     environment:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
-      RUST_LOG: "DEBUG"
+      RUST_LOG: "INFO"
     ports:
       - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
         published: "${CLP_API_SERVER_PORT:-3001}"

@@ -34,6 +34,13 @@ How to deploy CLP across multiple hosts.
 :::
 
 :::{grid-item-card}
+:link: guides-using-the-api-server
+Using the API server
+^^^
+How to use the API server to interact with CLP.
+:::
+
+:::{grid-item-card}
 :link: guides-using-presto
 Using Presto with CLP
 ^^^
