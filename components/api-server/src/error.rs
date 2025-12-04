@@ -47,7 +47,7 @@ impl<T: IsMalformedData> From<T> for ClientError {
 impl From<SdkError<GetObjectError>> for ClientError {
     fn from(value: SdkError<GetObjectError>) -> Self {
         Self::Aws {
-            description: value.to_string().to_owned(),
+            description: value.to_string(),
         }
     }
 }
@@ -55,7 +55,7 @@ impl From<SdkError<GetObjectError>> for ClientError {
 impl From<SdkError<ListObjectsV2Error>> for ClientError {
     fn from(value: SdkError<ListObjectsV2Error>) -> Self {
         Self::Aws {
-            description: value.to_string().to_owned(),
+            description: value.to_string(),
         }
     }
 }
@@ -63,7 +63,7 @@ impl From<SdkError<ListObjectsV2Error>> for ClientError {
 impl From<ByteStreamError> for ClientError {
     fn from(value: ByteStreamError) -> Self {
         Self::Aws {
-            description: value.to_string().to_owned(),
+            description: value.to_string(),
         }
     }
 }

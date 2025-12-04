@@ -315,8 +315,7 @@ impl Client {
     ///
     /// # Panics
     ///
-    /// Panics if the stream output storage is not file system.
-    ///
+    /// Panics if the stream output storage is not S3.
     async fn fetch_results_from_s3(
         &self,
         search_job_id: u64,
