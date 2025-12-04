@@ -29,9 +29,7 @@ constexpr int cMinParsedMonth{1};
 constexpr int cMaxParsedMonth{12};
 constexpr int cMinParsedYear{0};
 constexpr int cMaxParsedYear{9999};
-constexpr int cMinTwoDigitYear{0};
 constexpr int cTwoDigitYearOffsetBoundary{69};
-constexpr int cMaxTwoDigitYear{99};
 constexpr int cTwoDigitYearLowOffset{1900};
 constexpr int cTwoDigitYearHighOffset{2000};
 constexpr int cMinParsedHour24HourClock{0};
@@ -293,7 +291,8 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 
 /**
  * @param c
- * @return Whether `c` indicates an unsupported JSON escape sequence when preceded by a backslash.
+ * @return Whether `c` indicates an unsupported JSON escape sequence when treated as an escaped
+ * character.
  */
 [[nodiscard]] auto is_unsupported_json_escape_sequence(char c) -> bool;
 
@@ -857,7 +856,7 @@ auto marshal_numeric_timestamp(
                 break;
             }
             case '\\': {
-                buffer.push_back('\\');
+                buffer.append(cJsonEscapedBackslash);
                 break;
             }
             default:
@@ -920,7 +919,7 @@ auto TimestampPattern::create(std::string_view pattern)
     for (size_t pattern_idx{start_idx}; pattern_idx < end_idx; ++pattern_idx) {
         auto const cur_format_specifier{pattern.at(pattern_idx)};
         if (is_unsupported_character(cur_format_specifier)) {
-            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+            return ErrorCode{ErrorCodeEnum::InvalidCharacter};
         }
 
         if (false == escaped) {
@@ -931,7 +930,7 @@ auto TimestampPattern::create(std::string_view pattern)
         }
 
         if (is_unsupported_json_escape_sequence(cur_format_specifier)) {
-            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+            return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
 
         auto unsigned_cur_format_specifier = static_cast<unsigned char>(cur_format_specifier);
@@ -1061,11 +1060,12 @@ auto TimestampPattern::create(std::string_view pattern)
                 break;
             }
             case 's':  // Generic zero-padded second.
-            case '\\':
                 uses_date_type_representation = true;
                 break;
+            case '\\':
+                break;
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
 
@@ -1160,8 +1160,8 @@ TimestampPattern::get_weekday_and_advance_pattern_idx(size_t weekday_idx, size_t
 auto parse_timestamp(
         std::string_view timestamp,
         TimestampPattern const& pattern,
-        std::string& generated_pattern,
-        bool is_json_literal
+        bool is_json_literal,
+        std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
     size_t pattern_idx{};
     size_t timestamp_idx{};
@@ -1746,23 +1746,15 @@ auto parse_timestamp(
                 break;
             }
             case '\\': {
-                size_t const field_length{is_json_literal ? 2ULL : 1ULL};
-                if (timestamp_idx + field_length > timestamp.size()) {
+                auto const expected_backslash{is_json_literal ? cJsonEscapedBackslash : "\\"};
+                if (false == timestamp.substr(timestamp_idx).starts_with(expected_backslash)) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
-
-                if (false == is_json_literal && '\\' == timestamp.at(timestamp_idx)) {
-                    ++timestamp_idx;
-                    continue;
-                }
-                if (timestamp.substr(timestamp_idx).starts_with(cJsonEscapedBackslash)) {
-                    timestamp_idx += cJsonEscapedBackslash.size();
-                    continue;
-                }
-                return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                timestamp_idx += expected_backslash.size();
+                break;
             }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
 
@@ -1846,11 +1838,11 @@ auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, s
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
-        std::string& generated_pattern,
-        bool is_json_literal
+        bool is_json_literal,
+        std::string& generated_pattern
 ) -> std::optional<std::pair<epochtime_t, std::string_view>> {
     for (auto const& pattern : patterns) {
-        auto const result{parse_timestamp(timestamp, pattern, generated_pattern, is_json_literal)};
+        auto const result{parse_timestamp(timestamp, pattern, is_json_literal, generated_pattern)};
         if (false == result.has_error()) {
             return result.value();
         }

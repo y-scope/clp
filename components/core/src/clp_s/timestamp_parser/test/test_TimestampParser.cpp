@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 
 #include "../../Defs.hpp"
+#include "../ErrorCode.hpp"
 #include "../TimestampParser.hpp"
 
 namespace clp_s::timestamp_parser::test {
@@ -103,8 +104,8 @@ void assert_specifier_accepts_valid_content(
         auto const result{parse_timestamp(
                 timestamp,
                 timestamp_pattern_result.value(),
-                generated_pattern,
-                false
+                false,
+                generated_pattern
         )};
         REQUIRE_FALSE(result.has_error());
         REQUIRE(result.value().second == pattern);
@@ -143,13 +144,23 @@ auto generate_padded_number_subset(size_t num_digits) -> std::vector<std::string
 
 TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
     SECTION("Timestamp pattern templates reject illegal sequences.") {
-        std::vector<std::string> const illegal_timestamp_pattern_templates{
+        std::vector<std::string> const illegal_character_timestamp_pattern_templates{
                 R"(")",
                 R"(abc")",
                 R"("abc)",
                 std::string{"\x00", 1ULL},
                 "\x01",
                 "\x1f",
+        };
+        for (auto const& illegal_timestamp_pattern_template :
+             illegal_character_timestamp_pattern_templates)
+        {
+            auto const result{TimestampPattern::create(illegal_timestamp_pattern_template)};
+            REQUIRE(result.has_error());
+            REQUIRE(ErrorCode{ErrorCodeEnum::InvalidCharacter} == result.error());
+        }
+
+        std::vector<std::string> const illegal_escape_timestamp_pattern_templates{
                 R"(\u0000)",
                 R"(\b)",
                 R"(\f)",
@@ -158,9 +169,12 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 R"(\t)",
                 R"(\u)"
         };
-        for (auto const& illegal_timestamp_pattern_template : illegal_timestamp_pattern_templates) {
+        for (auto const& illegal_timestamp_pattern_template :
+             illegal_escape_timestamp_pattern_templates)
+        {
             auto const result{TimestampPattern::create(illegal_timestamp_pattern_template)};
             REQUIRE(result.has_error());
+            REQUIRE(ErrorCode{ErrorCodeEnum::InvalidEscapeSequence} == result.error());
         }
     }
 
@@ -170,16 +184,16 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
 
         std::string generated_pattern;
         REQUIRE_FALSE(
-                parse_timestamp(R"(\)", backlash_pattern_result.value(), generated_pattern, false)
+                parse_timestamp(R"(\)", backlash_pattern_result.value(), false, generated_pattern)
                         .has_error()
         );
-        REQUIRE(parse_timestamp(R"(\\)", backlash_pattern_result.value(), generated_pattern, false)
+        REQUIRE(parse_timestamp(R"(\\)", backlash_pattern_result.value(), false, generated_pattern)
                         .has_error());
         REQUIRE_FALSE(
-                parse_timestamp(R"(\\)", backlash_pattern_result.value(), generated_pattern, true)
+                parse_timestamp(R"(\\)", backlash_pattern_result.value(), true, generated_pattern)
                         .has_error()
         );
-        REQUIRE(parse_timestamp(R"(\)", backlash_pattern_result.value(), generated_pattern, true)
+        REQUIRE(parse_timestamp(R"(\)", backlash_pattern_result.value(), true, generated_pattern)
                         .has_error());
     }
 
@@ -260,8 +274,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             auto const result{parse_timestamp(
                     timestamp,
                     day_in_week_pattern_result.value(),
-                    generated_pattern,
-                    false
+                    false,
+                    generated_pattern
             )};
             REQUIRE_FALSE(result.has_error());
             REQUIRE(result.value().second == cDayInWeekPattern);
@@ -292,8 +306,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                     auto const result{parse_timestamp(
                             timestamp,
                             timestamp_pattern_result.value(),
-                            generated_pattern,
-                            false
+                            false,
+                            generated_pattern
                     )};
                     REQUIRE_FALSE(result.has_error());
                     REQUIRE(result.value().second == pattern);
@@ -365,8 +379,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 auto const result{parse_timestamp(
                         hour_offset,
                         timestamp_pattern_result.value(),
-                        generated_pattern,
-                        false
+                        false,
+                        generated_pattern
                 )};
                 REQUIRE_FALSE(result.has_error());
                 REQUIRE(result.value().second == hour_offset_specifier);
@@ -386,8 +400,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                     auto const result{parse_timestamp(
                             hour_minute_offset,
                             timestamp_pattern_result.value(),
-                            generated_pattern,
-                            false
+                            false,
+                            generated_pattern
                     )};
                     REQUIRE_FALSE(result.has_error());
                     REQUIRE(result.value().second == hour_minute_specifier);
@@ -410,8 +424,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 auto const result{parse_timestamp(
                         transformation.timestamp,
                         timestamp_pattern_result.value(),
-                        generated_pattern,
-                        false
+                        false,
+                        generated_pattern
                 )};
                 REQUIRE_FALSE(result.has_error());
                 REQUIRE(transformation.transformed_pattern == result.value().second);
@@ -610,8 +624,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             auto const result{parse_timestamp(
                     expected_result.timestamp,
                     timestamp_pattern_result.value(),
-                    generated_pattern,
-                    false
+                    false,
+                    generated_pattern
             )};
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
@@ -619,8 +633,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             auto const searched_result{search_known_timestamp_patterns(
                     expected_result.timestamp,
                     default_patterns,
-                    generated_pattern,
-                    false
+                    false,
+                    generated_pattern
             )};
             REQUIRE(searched_result.has_value());
             // NOLINTBEGIN(bugprone-unchecked-optional-access)
@@ -653,8 +667,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             auto const parse_result{parse_timestamp(
                     expected_result.timestamp,
                     timestamp_pattern_result.value(),
-                    generated_pattern,
-                    true
+                    true,
+                    generated_pattern
             )};
             REQUIRE_FALSE(parse_result.has_error());
             REQUIRE(expected_result.epoch_timestamp == parse_result.value().first);

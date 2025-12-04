@@ -26,6 +26,8 @@ public:
      * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` is not a valid timestamp pattern.
      * - ErrorCodeEnum::InvalidTimezone if `pattern` contains a \z{} format specifier with an
      *   invalid timezone.
+     * - ErrorCodeEnum::InvalidEscapeSequence if `pattern` contains an unsupported escape sequence.
+     * - ErrorCodeEnum::InvalidCharacter if `pattern contains an unsupported character.
      */
     [[nodiscard]] static auto create(std::string_view pattern)
             -> ystdlib::error_handling::Result<TimestampPattern>;
@@ -197,12 +199,22 @@ private:
  * - \O{...} One of several literal characters, described by content between {}.
  * - \s Generic zero-padded second (00-60) -- resolves to \S or \J.
  *
+ * As well as the following escape sequences:
+ *
+ * - \\ Literal backslash.
+ *
+ * Any escape sequences not in these lists is illegal. As well, all of the following characters are
+ * illegal:
+ *
+ * - Control characters (characters in the range `\x00` to `\x1F`).
+ * - Double quotes `"`, excepting quotes that surround a timestamp pattern like `"<pattern>"`.
+ *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
  * sequences.
+ * @param is_json_literal Whether the timestamp is a JSON literal or a raw UTF-8 string.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
  * necessary.
- * @param is_json_literal Whether the timestamp is a JSON literal or a raw UTF-8 string.
  * @return A result containing a pair, or an error code indicating the failure:
  * - The pair:
  *   - The timestamp in epoch nanoseconds.
@@ -219,8 +231,8 @@ private:
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
         TimestampPattern const& pattern,
-        std::string& generated_pattern,
-        bool is_json_literal
+        bool is_json_literal,
+        std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
 /**
@@ -240,9 +252,9 @@ marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::s
  * Parses a timestamp according to the first matching pattern in a list of patterns.
  * @param timestamp
  * @param patterns A list of timestamp patterns.
+ * @param is_json_literal Whether the timestamp is a JSON literal or a raw UTF-8 string.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
  * necessary.
- * @param is_json_literal Whether the timestamp is a JSON literal or a raw UTF-8 string.
  * @return A pair containing:
  *   - The timestamp in epoch nanoseconds.
  *   - An `std::string_view` of the timestamp pattern that corresponds to the timestamp.
@@ -252,8 +264,8 @@ marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::s
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
-        std::string& generated_pattern,
-        bool is_json_literal
+        bool is_json_literal,
+        std::string& generated_pattern
 ) -> std::optional<std::pair<epochtime_t, std::string_view>>;
 
 /**
