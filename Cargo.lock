@@ -2241,6 +2241,8 @@ dependencies = [
  "async-trait",
  "aws-sdk-s3",
  "aws-sdk-sqs",
+ "axum",
+ "clap",
  "clp-rust-utils",
  "secrecy",
  "serde_json",
@@ -2248,6 +2250,9 @@ dependencies = [
  "stdext",
  "tokio",
  "tokio-util",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
  "uuid",
 ]
 
