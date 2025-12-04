@@ -5,12 +5,9 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use jsonwebtoken::errors::Error as JwtError;
+use clp_rust_utils::Error as UtilsError;
 use serde::Serialize;
 use thiserror::Error;
-
-/// Convenience alias for functions that return a [`ServiceError`].
-pub type ServiceResult<T> = Result<T, ServiceError>;
 
 /// Canonical error enumeration for the credential manager.
 #[derive(Debug, Error)]
@@ -18,10 +15,13 @@ pub enum ServiceError {
     #[error("configuration error: {0}")]
     Config(String),
 
+    #[error("configuration file error: {0}")]
+    ConfigFile(#[from] UtilsError),
+
     #[error("validation error: {0}")]
     Validation(String),
 
-    #[error("database error: {0}")]
+    #[error("`sqlx::Error`: {0}")]
     Database(#[source] sqlx::Error),
 
     #[error("resource conflict: {0}")]
@@ -30,13 +30,10 @@ pub enum ServiceError {
     #[error("resource not found: {0}")]
     NotFound(String),
 
-    #[error("jwt error: {0}")]
-    Jwt(#[source] JwtError),
-
-    #[error("i/o error: {0}")]
+    #[error("`std::io::Error`: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("serialization error: {0}")]
+    #[error("`serde_yaml::Error`: {0}")]
     Yaml(#[from] serde_yaml::Error),
 }
 
@@ -47,6 +44,10 @@ impl From<sqlx::Error> for ServiceError {
     /// # Parameters:
     ///
     /// * `err`: The database error surfaced by `sqlx`.
+    ///
+    /// # Returns
+    ///
+    /// A [`ServiceError`] variant that best describes the provided database error.
     fn from(err: sqlx::Error) -> Self {
         if matches!(err, sqlx::Error::RowNotFound) {
             return Self::NotFound("requested record was not found".to_owned());
@@ -75,9 +76,11 @@ impl ServiceError {
             Self::Validation(_) => StatusCode::BAD_REQUEST,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::Config(_) | Self::Database(_) | Self::Jwt(_) | Self::Io(_) | Self::Yaml(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            Self::Config(_)
+            | Self::ConfigFile(_)
+            | Self::Database(_)
+            | Self::Io(_)
+            | Self::Yaml(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -85,7 +88,7 @@ impl ServiceError {
 impl IntoResponse for ServiceError {
     /// Serializes the error payload into JSON schema so clients receive consistent bodies.
     ///
-    /// # Returns:
+    /// # Returns
     ///
     /// An [`axum::response::Response`] containing the status code plus `{"error": "..."}` body.
     fn into_response(self) -> Response {

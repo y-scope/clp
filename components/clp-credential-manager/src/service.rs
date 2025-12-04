@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use secrecy::ExposeSecret;
-use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
+use clp_rust_utils::{
+    clp_config::package::{config as package_config, credentials as package_credentials},
+    database::mysql::create_mysql_pool,
+};
+use sqlx::MySqlPool;
 
-use crate::{config::AppConfig, error::ServiceResult};
-
-/// Reference-counted handle that Axum stores as application state.
-pub type SharedService = Arc<CredentialManagerService>;
+use crate::{config::CredentialManagerConfig, error::ServiceError};
 
 /// High-level facade that wires together persistence, auditing, and JWT handling.
 #[allow(dead_code)]
@@ -14,43 +14,53 @@ pub struct CredentialManagerService {
     db_pool: MySqlPool,
 }
 
+/// State handle that Axum stores and clones for each request.
+#[derive(Clone)]
+pub struct CredentialManagerServiceState {
+    inner: Arc<CredentialManagerService>,
+}
+
 impl CredentialManagerService {
     /// Establishes the database connection pool used by all route handlers.
     ///
-    /// # Parameters:
-    ///
-    /// * `config`: Fully parsed application configuration that contains database settings.
-    ///
-    /// # Returns:
+    /// # Returns
     ///
     /// A fully initialized [`CredentialManagerService`] ready to be shared with Axum routes.
     ///
-    /// # Errors:
+    /// # Errors
     ///
-    /// * Propagates errors from [`MySqlPoolOptions::connect_with`] when the pool cannot be created.
-    pub async fn new(config: &AppConfig) -> ServiceResult<Self> {
+    /// Returns an error if:
+    ///
+    /// * [`create_mysql_pool`] fails to create the pool.
+    pub async fn new(config: &CredentialManagerConfig) -> Result<Self, ServiceError> {
         let db_config = &config.database;
-        let options = sqlx::mysql::MySqlConnectOptions::new()
-            .host(&db_config.host)
-            .port(db_config.port)
-            .database(&db_config.name)
-            .username(&db_config.user)
-            .password(db_config.password.expose_secret());
+        let pool_config = package_config::Database {
+            host: db_config.host.clone(),
+            port: db_config.port,
+            name: db_config.name.clone(),
+        };
+        let pool_credentials = package_credentials::Database {
+            user: db_config.user.clone(),
+            password: db_config.password.clone(),
+        };
 
-        let pool = MySqlPoolOptions::new()
-            .max_connections(db_config.max_connections)
-            .connect_with(options)
+        let pool = create_mysql_pool(&pool_config, &pool_credentials, db_config.max_connections)
             .await?;
 
         Ok(Self { db_pool: pool })
     }
 
-    /// Wraps `self` in an [`Arc`] so it can be cloned into Axum handlers.
-    ///
-    /// # Returns:
-    ///
-    /// A [`SharedService`] reference-counted pointer that implements [`Clone`].
-    pub fn clone_shared(self) -> SharedService {
-        Arc::new(self)
+    /// Consumes the service and wraps it in the sharable state handle.
+    pub fn into_state(self) -> CredentialManagerServiceState {
+        CredentialManagerServiceState::new(self)
+    }
+}
+
+impl CredentialManagerServiceState {
+    /// Wraps the provided service inside an [`Arc`] so Axum can clone it per request.
+    pub fn new(service: CredentialManagerService) -> Self {
+        Self {
+            inner: Arc::new(service),
+        }
     }
 }

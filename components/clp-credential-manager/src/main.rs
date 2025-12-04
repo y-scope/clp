@@ -5,12 +5,18 @@ mod service;
 
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clap::Parser;
 use tokio::net::TcpListener;
 use tracing::info;
-use tracing_subscriber::EnvFilter;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
-use crate::{config::AppConfig, routes::build_router, service::CredentialManagerService};
+use crate::{
+    config::CredentialManagerConfig,
+    routes::build_router,
+    service::{CredentialManagerService, CredentialManagerServiceState},
+};
 
 /// CLI arguments accepted by the credential manager binary.
 #[derive(Debug, Parser)]
@@ -27,11 +33,15 @@ struct Args {
 
 /// Binary entry point that configures logging, loads config, and starts Axum.
 ///
-/// # Errors:
+/// # Returns
+///
+/// `Ok(())` once the HTTP server shuts down gracefully.
+///
+/// # Errors
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`AppConfig::from_file`]'s return values on failure.
+/// * Forwards [`CredentialManagerConfig::from_file`]'s return values on failure.
 /// * Forwards [`CredentialManagerService::new`]'s return values on failure.
 /// * Forwards [`TcpListener::bind`]'s return values on failure.
 /// * Forwards [`axum::serve`]'s return values on failure.
@@ -39,18 +49,21 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    init_tracing()?;
+    let _guard = set_up_logging()?;
 
-    let config = AppConfig::from_file(&args.config)?;
+    let config = CredentialManagerConfig::from_file(&args.config)?;
     let server_config = config.server.clone();
     let service = CredentialManagerService::new(&config).await?;
-    let shared_service = service.clone_shared();
+    let shared_state = CredentialManagerServiceState::new(service);
 
-    let router = build_router().with_state(shared_service);
+    let router = build_router().with_state(shared_state);
 
     let bind_address = server_config.bind_address;
     let bind_port = server_config.port;
-    info!(address = %format!("{}:{}", bind_address, bind_port), "starting credential manager service");
+    info!(
+        address = %format!("{}:{}", bind_address, bind_port),
+        "starting credential manager service",
+    );
 
     let listener = TcpListener::bind((bind_address.as_str(), bind_port)).await?;
     axum::serve(listener, router).await?;
@@ -62,13 +75,36 @@ async fn main() -> anyhow::Result<()> {
 ///
 /// The subscriber honors the `RUST_LOG` environment variable when present and otherwise
 /// defaults to the `info` level so local development remains verbose enough.
-fn init_tracing() -> anyhow::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
+///
+/// # Returns
+///
+/// `Ok(())` once the global subscriber is installed.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Setting up the tracing subscriber fails because it was already initialized or another
+///   subscriber error occurs.
+fn set_up_logging() -> anyhow::Result<tracing_appender::non_blocking::WorkerGuard> {
+    let logs_directory =
+        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
+    let logs_directory = std::path::Path::new(logs_directory.as_str());
+    let file_appender =
+        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "log_ingestor.log");
+    let (non_blocking_writer, guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
-        .with_env_filter(env_filter)
-        .with_target(false)
-        .json()
-        .try_init()
-        .map_err(|err| anyhow::Error::msg(err.to_string()))
+        .event_format(
+            tracing_subscriber::fmt::format()
+                .with_level(true)
+                .with_target(false)
+                .with_file(true)
+                .with_line_number(true)
+                .json(),
+        )
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_ansi(false)
+        .with_writer(std::io::stdout.and(non_blocking_writer))
+        .init();
+    Ok(guard)
 }
