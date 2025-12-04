@@ -8,7 +8,8 @@ from typing import Any
 import pytest
 
 from tests.utils.config import PackageInstance
-from tests.utils.docker_utils import list_running_containers_with_prefix
+from tests.utils.docker_utils import list_running_containers_in_compose_project
+from tests.utils.utils import strip_prefix, strip_regex_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -35,20 +36,32 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
 
 def validate_package_running(package_instance: PackageInstance) -> None:
     """
-    Validate that the given package instance is running. Each required component must have at least
-    one running container whose name matches the expected prefix. Calls pytest.fail on the first
-    missing component.
+    Validate that the given package instance is running and that its Compose project has exactly the
+    expected set of component containers.
 
     :param package_instance:
     """
+    # Get list of containers currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
+    project_name = f"clp-package-{instance_id}"
+    running_containers = list_running_containers_in_compose_project(project_name)
+
+    # Construct list of unique running component names.
+    running_components = []
+    prefix = f"{project_name}-"
+    regex_suffix = r"-\d+"
+    for container_name in running_containers:
+        component_name = strip_prefix(container_name, prefix)
+        component_name = strip_regex_suffix(component_name, regex_suffix)
+        if component_name not in running_components:
+            running_components.append(component_name)
+
+    # Get list of required components.
     required_components = package_instance.package_config.component_list
 
-    for component in required_components:
-        prefix = f"clp-package-{instance_id}-{component}-"
-        running_matches = list_running_containers_with_prefix(prefix)
-        if len(running_matches) == 0:
-            pytest.fail(
-                f"No running container found for component '{component}' "
-                f"(expected name prefix '{prefix}')."
-            )
+    # Alphabetize each list and compare them.
+    required_components.sort()
+    running_components.sort()
+
+    if required_components != running_components:
+        pytest.fail("The list of required components did not match the list of running components.")
