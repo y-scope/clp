@@ -1326,6 +1326,7 @@ bool JsonParser::check_and_log_curl_error(
     {
         throw std::runtime_error("Simplified static clp-s executable does not support libcurl.");
     }
+    return false;
 }
 #else
 bool JsonParser::check_and_log_curl_error(
