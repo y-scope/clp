@@ -80,7 +80,7 @@ void JsonConstructor::construct_in_order() {
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
-#if !CLP_S_STATIC_EXE
+#if !CLP_S_EXCLUDE_MONGOCXX
     mongocxx::client client;
     mongocxx::collection collection;
 
@@ -109,7 +109,7 @@ void JsonConstructor::construct_in_order() {
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
         }
 
-#if !CLP_S_STATIC_EXE
+#if !CLP_S_EXCLUDE_MONGOCXX
         if (m_option.metadata_db.has_value()) {
             results.emplace_back(
                     std::move(
@@ -185,7 +185,7 @@ void JsonConstructor::construct_in_order() {
         }
     }
 
-#if !CLP_S_STATIC_EXE
+#if !CLP_S_EXCLUDE_MONGOCXX
     if (false == results.empty()) {
         try {
             collection.insert_many(results);

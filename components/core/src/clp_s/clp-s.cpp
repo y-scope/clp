@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -254,6 +255,9 @@ bool search_archive(
                 }
                 break;
             case CommandLineArguments::OutputHandlerType::ResultsCache:
+#if CLP_S_EXCLUDE_MONGOCXX
+                throw std::runtime_error("Simplified static clp-s executable does not support mongocxx.");
+#else
                 output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
@@ -261,6 +265,7 @@ bool search_archive(
                         command_line_arguments.get_max_num_results()
                 );
                 break;
+#endif
             case CommandLineArguments::OutputHandlerType::Stdout:
                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                 break;
@@ -296,8 +301,10 @@ int main(int argc, char const* argv[]) {
     }
 
     clp_s::TimestampPattern::init();
-#if !CLP_S_STATIC_EXE
+#if !CLP_S_EXCLUDE_MONGOCXX
     mongocxx::instance const mongocxx_instance{};
+#endif
+#if !CLP_S_EXCLUDE_LIBCURL
     clp::CurlGlobalInstance const curl_instance{};
 #endif
 

@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -191,12 +192,14 @@ auto try_sign_url(std::string& url) -> bool {
     return true;
 }
 
+#if CLP_S_EXCLUDE_LIBCURL
 auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
         -> std::shared_ptr<clp::ReaderInterface> {
-#if CLP_S_STATIC_EXE
-    SPDLOG_ERROR("Static clp-s executable currently does not support NetworkReader.");
-    return nullptr;
+    throw std::runtime_error("Simplified static clp-s executable does not support libcurl.");
+}
 #else
+auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
+        -> std::shared_ptr<clp::ReaderInterface> {
     std::string request_url{url};
     switch (auth.method) {
         case AuthMethod::S3PresignedUrlV4:
@@ -216,8 +219,8 @@ auto try_create_network_reader(std::string_view const url, NetworkAuthOption con
         SPDLOG_ERROR("Failed to open url for reading - {}", e.what());
         return nullptr;
     }
-#endif
 }
+#endif
 
 auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool {
     constexpr std::array<char, 4> cZstdMagicNumber = {'\x28', '\xB5', '\x2F', '\xFD'};

@@ -115,6 +115,7 @@ private:
     int m_socket_fd;
 };
 
+#if !CLP_S_EXCLUDE_MONGOCXX
 /**
  * Output handler that writes to a MongoDB collection.
  */
@@ -186,11 +187,9 @@ public:
     void write(std::string_view message) override { write(message, 0, {}, 0); }
 
 private:
-#if !CLP_S_STATIC_EXE
     mongocxx::client m_client;
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
-#endif
     uint64_t m_batch_size;
     uint64_t m_max_num_results;
     std::priority_queue<
@@ -200,6 +199,7 @@ private:
     >
             m_latest_results;
 };
+#endif
 
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.

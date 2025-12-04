@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -1315,11 +1316,22 @@ void JsonParser::split_archive() {
     m_archive_writer->open(m_archive_options);
 }
 
+#if CLP_S_EXCLUDE_LIBCURL
 bool JsonParser::check_and_log_curl_error(
         Path const& path,
         std::shared_ptr<clp::ReaderInterface> reader
 ) {
-#if !CLP_S_STATIC_EXE
+    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
+        nullptr != network_reader)
+    {
+        throw std::runtime_error("Simplified static clp-s executable does not support libcurl.");
+    }
+}
+#else
+bool JsonParser::check_and_log_curl_error(
+        Path const& path,
+        std::shared_ptr<clp::ReaderInterface> reader
+) {
     if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
         nullptr != network_reader)
     {
@@ -1336,7 +1348,7 @@ bool JsonParser::check_and_log_curl_error(
             return true;
         }
     }
-#endif
     return false;
 }
+#endif
 }  // namespace clp_s

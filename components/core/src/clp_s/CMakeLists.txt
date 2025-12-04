@@ -1,4 +1,34 @@
-option(CLP_S_STATIC_EXE "Enable clp-s static exe" OFF)
+include(CMakeDependentOption)
+
+option(
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        "Build clp-s as a simplified statically linked executable with reduced dependencies."
+        OFF
+)
+
+cmake_dependent_option(
+        CLP_S_EXCLUDE_LIBCURL
+        "Exclude libcurl support from the simplified static clp-s executable."
+        ON
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        OFF
+)
+
+cmake_dependent_option(
+        CLP_S_EXCLUDE_MONGOCXX
+        "Exclude mongocxx support from the simplified static clp-s executable."
+        ON
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        OFF
+)
+
+cmake_dependent_option(
+        CLP_S_STATIC_GCC_RUNTIME
+        "Link the simplified static clp-s executable against static libgcc and libstdc++."
+        ON
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        OFF
+)
 
 add_subdirectory(indexer)
 add_subdirectory(log_converter)
@@ -215,7 +245,7 @@ if(CLP_BUILD_CLP_S_IO)
         target_compile_definitions(
                 clp_s_io
                 PRIVATE
-                CLP_S_STATIC_EXE=$<BOOL:${CLP_S_STATIC_EXE}>
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
         )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
@@ -278,6 +308,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
         )
         add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+        target_compile_definitions(
+                clp_s_archive_writer
+                PRIVATE
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+        )
         target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_writer PUBLIC ../)
         target_link_libraries(
@@ -380,7 +415,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
         target_compile_definitions(
                 clp_s_json_constructor
                 PRIVATE
-                CLP_S_STATIC_EXE=$<BOOL:${CLP_S_STATIC_EXE}>
+                CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
         )
         target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
         target_include_directories(clp_s_json_constructor PUBLIC ../)
@@ -443,7 +478,8 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_definitions(
                 clp-s
                 PRIVATE
-                CLP_S_STATIC_EXE=$<BOOL:${CLP_S_STATIC_EXE}>
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+                CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
         )
         target_compile_features(clp-s PRIVATE cxx_std_20)
         target_link_libraries(
@@ -469,7 +505,7 @@ if(CLP_BUILD_EXECUTABLES)
                 PROPERTIES
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
         )
-        if(CLP_S_STATIC_EXE)
+        if(CLP_S_STATIC_GCC_RUNTIME)
                 target_link_options(
                         clp-s
                         PRIVATE
