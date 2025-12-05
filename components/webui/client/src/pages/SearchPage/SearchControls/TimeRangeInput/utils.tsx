@@ -122,11 +122,83 @@ const isValidDateRange = (
     return null !== dates && null !== dates[0] && null !== dates[1];
 };
 
+/**
+ * AntD date range position.
+ */
+enum DATE_RANGE_POSITION {
+    START = "start",
+    END = "end",
+}
+
+/**
+ * AntD RangePicker prop key for date range position.
+ */
+const DATE_RANGE_PROP_KEY = "date-range";
+
+/**
+ * Map of time range options to their display text
+ */
+const TIME_RANGE_DISPLAY_TEXT_MAP: Record<
+    TIME_RANGE_OPTION,
+    Record<DATE_RANGE_POSITION, string>
+> = {
+    [TIME_RANGE_OPTION.LAST_15_MINUTES]: {
+        [DATE_RANGE_POSITION.START]: "15 minutes ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.LAST_HOUR]: {
+        [DATE_RANGE_POSITION.START]: "1 hour ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.TODAY]: {
+        [DATE_RANGE_POSITION.START]: "Start of today",
+        [DATE_RANGE_POSITION.END]: "End of today",
+    },
+    [TIME_RANGE_OPTION.YESTERDAY]: {
+        [DATE_RANGE_POSITION.START]: "Start of yesterday",
+        [DATE_RANGE_POSITION.END]: "End of yesterday",
+    },
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: {
+        [DATE_RANGE_POSITION.START]: "7 days ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: {
+        [DATE_RANGE_POSITION.START]: "30 days ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.LAST_12_MONTHS]: {
+        [DATE_RANGE_POSITION.START]: "12 months ago",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.MONTH_TO_DATE]: {
+        [DATE_RANGE_POSITION.START]: "Start of month",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.YEAR_TO_DATE]: {
+        [DATE_RANGE_POSITION.START]: "Start of year",
+        [DATE_RANGE_POSITION.END]: "Now",
+    },
+    [TIME_RANGE_OPTION.ALL_TIME]: {
+        [DATE_RANGE_POSITION.START]: "First timestamp",
+        [DATE_RANGE_POSITION.END]: "Last timestamp",
+    },
+
+    // Custom option is just a placeholder for typing purposes, its values should not
+    // be used.
+    [TIME_RANGE_OPTION.CUSTOM]: {
+        [DATE_RANGE_POSITION.START]: "Start date",
+        [DATE_RANGE_POSITION.END]: "End date",
+    },
+};
+
 
 export {
+    DATE_RANGE_POSITION,
+    DATE_RANGE_PROP_KEY,
     DEFAULT_TIME_RANGE,
     DEFAULT_TIME_RANGE_OPTION,
     isValidDateRange,
+    TIME_RANGE_DISPLAY_TEXT_MAP,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
