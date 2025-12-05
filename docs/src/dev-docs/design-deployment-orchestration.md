@@ -29,7 +29,8 @@ one-time initialization jobs and their functions.
             "primaryBorderColor": "transparent",
             "lineColor": "#007fff",
             "secondaryColor": "#007fff",
-            "tertiaryColor": "#fff"
+            "tertiaryColor": "#fff",
+            "clusterBkg": "#d1f6ff"
         }
     }
 }%%
@@ -41,7 +42,9 @@ graph LR
   results_cache["results-cache (MongoDB)"]
   compression_scheduler["compression-scheduler"]
   query_scheduler["query-scheduler"]
+  spider_scheduler["spider-scheduler"]
   compression_worker["compression-worker"]
+  spider_compression_worker["spider-compression-worker"]
   query_worker["query-worker"]
   reducer["reducer"]
   api_server["api-server"]
@@ -63,6 +66,8 @@ graph LR
   queue -->|healthy| query_scheduler
   redis -->|healthy| query_scheduler
   query_scheduler -->|healthy| reducer
+  db_table_creator -->|healthy| spider_scheduler
+  db_table_creator -->|healthy| spider_compression_worker
   results_cache_indices_creator -->|completed_successfully| reducer
   db_table_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| api_server
@@ -75,9 +80,11 @@ graph LR
 
   subgraph Databases
     database
-    queue
-    redis
     results_cache
+    subgraph Celery[Celery<br/>Native Query Engine]
+        queue
+        redis
+    end
   end
 
   subgraph Initialization jobs
@@ -88,10 +95,17 @@ graph LR
   subgraph Schedulers
     compression_scheduler
     query_scheduler
+    subgraph SpiderSchedulers[Spider]
+        spider_scheduler
+    end
+    spider_scheduler
   end
 
   subgraph Workers
     compression_worker
+    subgraph SpiderWorkers[Spider Workers]
+        spider_compression_worker["spider-compression-worker"]
+    end
     query_worker
     reducer
   end
@@ -106,6 +120,13 @@ graph LR
     mcp_server
   end
 
+  %% Edges Styles
+  linkStyle 3,4,6,7 stroke:#ffd700,color:#ffd700
+  linkStyle 9,10 stroke:#00ced1,color:#00ced1
+  %% Subgraphs Styles
+  style Celery fill:#ffffe0,stroke:#ffd700
+  style SpiderSchedulers fill:#e0ffff,stroke:#00ced1
+  style SpiderWorkers fill:#e0ffff,stroke:#00ced1
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -117,21 +138,23 @@ graph LR
 :::{table}
 :align: left
 
-| Service               | Description                                                     |
-|-----------------------|-----------------------------------------------------------------|
-| database              | Database for archive metadata, compression jobs, and query jobs |
-| queue                 | Task queue for schedulers                                       |
-| redis                 | Task result storage for workers                                 |
-| compression_scheduler | Scheduler for compression jobs                                  |
-| query_scheduler       | Scheduler for search/aggregation jobs                           |
-| results_cache         | Storage for the workers to return search results to the UI      |
-| compression_worker    | Worker processes for compression jobs                           |
-| query_worker          | Worker processes for search/aggregation jobs                    |
-| reducer               | Reducers for performing the final stages of aggregation jobs    |
-| api_server            | API server for submitting queries                               |
-| webui                 | Web server for the UI                                           |
-| mcp_server            | MCP server for AI agent to access CLP functionalities           |
-| garbage_collector     | Process to manage data retention                                |
+| Service                   | Description                                                     |
+|---------------------------|-----------------------------------------------------------------|
+| database                  | Database for archive metadata, compression jobs, and query jobs |
+| queue                     | Task queue for schedulers                                       |
+| redis                     | Task result storage for workers                                 |
+| compression_scheduler     | Scheduler for compression jobs                                  |
+| query_scheduler           | Scheduler for search/aggregation jobs                           |
+| spider_scheduler          | Scheduler for Spider distributed task execution framework.      |
+| results_cache             | Storage for the workers to return search results to the UI      |
+| compression_worker        | Worker processes for compression jobs                           |
+| spider_compression_worker | Worker processes for compression jobs using Spider              |
+| query_worker              | Worker processes for search/aggregation jobs                    |
+| reducer                   | Reducers for performing the final stages of aggregation jobs    |
+| api_server                | API server for submitting queries                               |
+| webui                     | Web server for the UI                                           |
+| mcp_server                | MCP server for AI agent to access CLP functionalities           |
+| garbage_collector         | Process to manage data retention                                |
 
 :::
 
@@ -210,12 +233,16 @@ instance ID.
 
 ### Deployment Types
 
-CLP supports two deployment types determined by the `package.query_engine` configuration setting.
+CLP supports four deployment types determined by the `package.compression_scheduler.type` and
+`package.query_engine` configuration setting.
 
-1. **BASE**: For deployments using [Presto][presto-integration] as the query engine. This deployment
-   only uses `docker-compose.base.yaml`.
-2. **FULL**: For deployments using one of CLP's native query engines. This uses both
-   `docker-compose.base.yaml` and `docker-compose.yaml`.
+| Deployment Type | Compression Scheduler | Query Engine                 | Docker Compose File                |
+|-----------------|-----------------------|------------------------------|------------------------------------|
+| Base            | Celery                | [Presto][presto-integration] | `docker-compose-base.yaml`         |
+| Full            | Celery                | Native                       | `docker-compose.yaml`              |
+| Spider Base     | Spider                | [Presto][presto-integration] | `docker-compose-spider-base.yaml`  |
+| Spider Full     | Spider                | Native                       | `docker-compose-spider.yaml`       |
+
 
 ### Implementation details
 
