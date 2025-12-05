@@ -4,7 +4,6 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
     DatePicker,
 } from "antd";
-import type {RangePickerProps} from "antd/es/date-picker";
 import dayjs from "dayjs";
 
 import {SETTINGS_QUERY_ENGINE} from "../../../../config";
@@ -81,7 +80,12 @@ const TimeRangeInput = () => {
         />
     ), [isOpen]);
 
-    type CalendarChangeHandler = NonNullable<RangePickerProps["onCalendarChange"]>;
+    type CalendarChangeHandler = (
+        dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null,
+        dateStrings: [string, string],
+        info: {range?: "start" | "end"}
+    ) => void;
+
     const handleCalendarChange = useCallback<CalendarChangeHandler>((dates, _dateStrings, _info) => {
         handleRangePickerChange(dates);
     }, [handleRangePickerChange]);
