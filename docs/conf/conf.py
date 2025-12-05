@@ -1,4 +1,7 @@
-from datetime import date
+# ruff: noqa: INP001 The Sphinx config file is a standalone script rather than an importable module.
+"""Sphinx configuration file for CLP documentation."""
+
+from datetime import datetime, timezone
 
 from sphinx.application import Sphinx
 
@@ -11,7 +14,8 @@ CLP_GIT_REF = "main"
 
 project = "CLP"
 # NOTE: We don't include a period after "Inc" since the theme adds one already.
-copyright = f"2021-{date.today().year} YScope Inc"
+# Ignore A001: Shadows built-in name 'copyright' for Sphinx config.
+copyright = f"2021-{datetime.now(tz=timezone.utc).year} YScope Inc"  # noqa: A001
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -106,6 +110,11 @@ html_context = {
 
 
 def setup(app: Sphinx) -> None:
+    """
+    Sets up Sphinx app with custom CSS.
+
+    :param app:
+    """
     app.add_css_file("custom.css")
 
     app.connect("source-read", _replace_variable_placeholders)
