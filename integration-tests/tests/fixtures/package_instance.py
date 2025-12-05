@@ -55,7 +55,7 @@ def fixt_package_instance(
             " .pytest.ini."
         )
     finally:
-        stop_clp_package(fixt_package_config)
-
         if mode_name == "clp-json-presto":
             stop_presto_cluster()
+
+        stop_clp_package(fixt_package_config)

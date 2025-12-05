@@ -15,8 +15,8 @@ from tests.utils.config import (
 )
 from tests.utils.package_utils import (
     compress_with_clp_package,
+    run_presto_filter,
     search_with_clp_package,
-    run_presto_filter
 )
 from tests.utils.utils import unlink
 
@@ -288,7 +288,14 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
     ),
 }
 
-PRESTO_FILTER_JOBS: dict[str, PrestoFilterJob] = {}
+PRESTO_FILTER_JOBS: dict[str, PrestoFilterJob] = {
+    "filter-describe-postgresql": PrestoFilterJob(
+        job_name="filter-describe-postgresql",
+        mode="clp-json-presto",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
+        filter="DESCRIBE postgresql;",
+    ),
+}
 
 
 def _matches_keyword(job_name: str, keyword_filter: str) -> bool:
@@ -321,7 +328,7 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
             package_search_jobs.append(package_search_job)
             if package_search_job.package_compress_job not in package_compress_jobs:
                 package_compress_jobs.append(package_search_job.package_compress_job)
-    
+
     for job_name, presto_filter_job in PRESTO_FILTER_JOBS.items():
         if presto_filter_job.mode == mode_name and _matches_keyword(job_name, job_filter):
             presto_filter_jobs.append(presto_filter_job)
@@ -335,6 +342,13 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
         package_search_jobs=package_search_jobs,
         presto_filter_jobs=presto_filter_jobs,
     )
+
+
+def _remove_directory_children(directory: Path) -> None:
+    """Remove all children of `directory`."""
+    if directory.exists():
+        for child in directory.iterdir():
+            unlink(child)
 
 
 def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
@@ -357,9 +371,7 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
 
     # Perform initial cleanup just in case there are any logs currently in archives.
     archives_dir = clp_package_dir / CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
-    if archives_dir.exists():
-        for child in archives_dir.iterdir():
-            unlink(child)
+    _remove_directory_children(archives_dir)
 
     # For each compression job, run it, then its dependent jobs, then cleanup.
     for package_compress_job in package_compress_jobs:
@@ -373,9 +385,7 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
 
         for presto_filter_job in presto_filter_jobs:
             if presto_filter_job.package_compress_job is package_compress_job:
-                run_presto_filter(request, presto_filter_job, package_instance)
+                run_presto_filter(presto_filter_job)
 
         # Cleanup to prevent multiple compression jobs stored in archives.
-        if archives_dir.exists():
-            for child in archives_dir.iterdir():
-                unlink(child)
+        _remove_directory_children(archives_dir)

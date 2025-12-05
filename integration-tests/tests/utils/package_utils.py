@@ -3,9 +3,10 @@
 import json
 import subprocess
 from pathlib import Path
-from typing import Final
+from typing import Any
 
 import pytest
+from clp_py_utils.clp_config import PRESTO_COORDINATOR_COMPONENT_NAME
 
 from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
@@ -24,17 +25,6 @@ from tests.utils.utils import (
 )
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
-
-# Datatypes and constants for constructing 'split-filter.json'.
-SplitFilterRuleDict = dict[str, object]
-SplitFilterDict = dict[str, SplitFilterRuleDict]
-
-DEFAULT_REQUIRED: Final[bool] = False
-DEFAULT_RANGE_MAPPING: Final[dict[str, str]] = {
-    "lowerBound": "begin_timestamp",
-    "upperBound": "end_timestamp",
-}
-DEFAULT_CUSTOM_OPTIONS: Final[dict[str, dict[str, str]]] = {"rangeMapping": DEFAULT_RANGE_MAPPING}
 
 
 def start_clp_package(package_config: PackageConfig) -> None:
@@ -57,26 +47,30 @@ def start_clp_package(package_config: PackageConfig) -> None:
     run_and_assert(start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
 
 
-def _construct_split_filters(dataset_timestamp_dict: dict[str, str]) -> SplitFilterDict:
+def _construct_split_filters(dataset_timestamp_dict: dict[str, str]) -> dict[str, Any]:
     """
     Constructs a split filter for each dataset.
 
     :param dataset_timestamp_dict:
-    :return: A `SplitFilterDict` object.
+    :return: A dictionary mapping dataset identifiers to split filters.
     """
-    split_filters: SplitFilterDict = {}
-    for dataset, timestamp_column_name in dataset_timestamp_dict.items():
-        rule: SplitFilterRuleDict = {
-            "columnName": timestamp_column_name,
-            "customOptions": DEFAULT_CUSTOM_OPTIONS,
-            "required": DEFAULT_REQUIRED,
-        }
-        split_filters[f"clp.default.{dataset}"] = rule
+    split_filters: dict[str, Any] = {}
+
+    for dataset, timestamp_key in dataset_timestamp_dict.items():
+        split_filters[f"clp.default.{dataset}"] = [
+            {
+                "columnName": timestamp_key,
+                "customOptions": {
+                    "rangeMapping": {"lowerBound": "begin_timestamp", "upperBound": "end_timestamp"}
+                },
+                "required": "false",
+            }
+        ]
 
     return split_filters
 
 
-def _write_split_filter_json(split_filters: SplitFilterDict, split_filter_file_path: Path) -> None:
+def _write_split_filter_json(split_filters: dict[str, Any], split_filter_file_path: Path) -> None:
     """
     Write split filter JSON with pretty formatting and a trailing newline.
 
@@ -213,7 +207,7 @@ def stop_presto_cluster() -> None:
     )
     validate_file_exists(split_filter_file_path)
 
-    empty_json: SplitFilterDict = {}
+    empty_json: dict[str, Any] = {}
     _write_split_filter_json(empty_json, split_filter_file_path)
 
 
@@ -382,9 +376,7 @@ def search_with_clp_package(
 
 
 def run_presto_filter(
-    request: pytest.FixtureRequest,
-    presto_filter: PrestoFilterJob,
-    package_instance: PackageInstance,
+    presto_filter_job: PrestoFilterJob,
 ) -> None:
     """
     Run a Presto filter.
@@ -393,12 +385,37 @@ def run_presto_filter(
     :param presto_filter:
     :param package_instance:
     """
-    # Start up the Presto CLI.
+    # Run the filter in the Presto CLI.
+    clp_repo_dir: Path = resolve_path_env_var("CLP_REPO_DIR")
+    validate_dir_exists(clp_repo_dir)
 
-    # Run the filter.
+    docker_bin = get_docker_binary_path()
+    docker_compose_file_path = (
+        clp_repo_dir / "tools" / "deployment" / "presto-clp" / "docker-compose.yaml"
+    )
+    validate_file_exists(docker_compose_file_path)
+
+    presto_filter = presto_filter_job.filter
+
+    presto_filter_cmd = [
+        docker_bin,
+        "compose",
+        "--file",
+        str(docker_compose_file_path),
+        "exec",
+        "-T",
+        PRESTO_COORDINATOR_COMPONENT_NAME,
+        "presto-cli",
+        "--catalog",
+        "clp",
+        "--schema",
+        "default",
+        "--output-format",
+        "ALIGNED",
+        "--execute",
+        presto_filter,
+    ]
+
+    run_and_assert(presto_filter_cmd)
 
     # Get the result and verify its correctness.
-
-    # Shut down the Presto CLI.
-    
-    return
