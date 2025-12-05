@@ -8,7 +8,9 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#include <stdexcept>
+#if CLP_S_EXCLUDE_LIBCURL
+    #include <stdexcept>
+#endif
 #include <string>
 #include <vector>
 

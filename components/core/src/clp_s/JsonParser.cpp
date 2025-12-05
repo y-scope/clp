@@ -6,7 +6,9 @@
 #include <memory>
 #include <optional>
 #include <stack>
-#include <stdexcept>
+#if CLP_S_EXCLUDE_LIBCURL
+    #include <stdexcept>
+#endif
 #include <string>
 #include <string_view>
 #include <utility>

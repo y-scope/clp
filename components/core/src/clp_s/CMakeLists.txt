@@ -395,6 +395,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 ${CLP_S_ARCHIVE_READER_SOURCES}
         )
         add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+        target_compile_definitions(
+                clp_s_archive_reader
+                PRIVATE
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+        )
         target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_reader PUBLIC ../)
         target_link_libraries(
@@ -447,6 +452,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
+                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 spdlog::spdlog
