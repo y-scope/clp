@@ -2,18 +2,35 @@
     display: inline-flex;
 }
 
-.timeRangeInputContainer :global(.ant-select) {
-    min-width: 150px;
-}
-
-/* Makes border flush with range picker */
-.customSelected :global(.ant-select-selector) {
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-}
-
 .rangePicker {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
     min-width: 350px;
+}
+
+.panelContainer {
+    display: flex;
+    flex-direction: row;
+}
+
+.sidebarPresets {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0;
+    border-right: 1px solid rgba(5, 5, 5, 0.06);
+    width: 140px;
+    overflow-y: auto;
+}
+
+.presetItem {
+    padding: 4px 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.3s;
+    color: rgba(0, 0, 0, 0.88);
+    line-height: 1.5;
+    margin: 0 4px;
+}
+
+.presetItem:hover {
+    background-color: rgba(0, 0, 0, 0.04);
 }
