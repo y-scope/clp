@@ -10,14 +10,14 @@
 #include <utility>
 
 #if !CLP_S_EXCLUDE_MONGOCXX
-#include <mongocxx/instance.hpp>
+    #include <mongocxx/instance.hpp>
 #endif
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 #if !CLP_S_EXCLUDE_LIBCURL
-#include "../clp/CurlGlobalInstance.hpp"
+    #include "../clp/CurlGlobalInstance.hpp"
 #endif
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
