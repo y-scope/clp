@@ -1,9 +1,14 @@
+#!/usr/bin/env python3
+
+"""Script to start multiple Spider workers."""
+
 import argparse
 import logging
 import os
 import pathlib
 import socket
 import subprocess
+import sys
 
 # Setup logging
 # Create logger
@@ -37,21 +42,22 @@ def main() -> None:
     num_workers = args.num_workers
     if num_workers < 1:
         logger.error("Number of concurrent workers must be at least 1.")
-        exit(1)
+        sys.exit(1)
     storage_url = args.storage_url
     host = args.host
     if host is None:
         try:
-            host = socket.gethostbyname(socket.gethostname())
-        except (socket.gaierror, socket.herror) as e:
-            logger.error(f"Failed to resolve hostname: {e}")
-            exit(1)
+            hostname = socket.gethostname()
+            host = socket.gethostbyname(hostname)
+        except (OSError, socket.gaierror, socket.herror):
+            logger.exception("Failed to resolve hostname.")
+            sys.exit(1)
 
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
     if not spider_worker_path.exists():
-        logger.error(f"spider_worker not found at {spider_worker_path}")
-        exit(1)
+        logger.error("spider_worker not found at %s", spider_worker_path)
+        sys.exit(1)
 
     # Start multiple spider workers
     processes = []
@@ -61,20 +67,31 @@ def main() -> None:
                 [spider_worker_path, "--storage_url", storage_url, "--host", host]
             )
             processes.append(process)
-    except OSError as e:
-        logger.error(f"Failed to start Spider worker: {e}")
+            logger.info(f"Started Spider worker {i+1}/{num_workers} (PID: {process.pid})")
+    except OSError:
+        logger.exception("Failed to start Spider worker.")
         for process in processes:
+            logger.info(f"Terminating worker process {process.pid}")
             process.terminate()
-        exit(1)
+
+    # Wait for termination with timeout
+    for process in processes:
+        try:
+            process.wait(timeout=SPIDER_WORKER_TERM_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Worker process {process.pid} did not terminate, sending SIGKILL")
+            process.kill()
+            process.wait()
+        sys.exit(1)
 
     exit_code = 0
     for process in processes:
         worker_proc_exit_code = process.wait()
         if worker_proc_exit_code != 0:
-            logger.error(f"Spider worker exited with code {worker_proc_exit_code}")
+            logger.error("Spider worker exited with code %d.", worker_proc_exit_code)
             exit_code = 1
 
-    exit(exit_code)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

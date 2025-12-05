@@ -1,3 +1,5 @@
+"""Pydantic serialization utilities."""
+
 import pathlib
 from typing import Annotated
 

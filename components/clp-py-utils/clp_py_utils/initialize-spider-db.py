@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+"""Script to initialize Spider database."""
+
 import argparse
 import logging
 import pathlib
@@ -8,11 +11,9 @@ from contextlib import closing
 
 from pydantic import ValidationError
 
-from clp_py_utils.clp_config import ClpDbNameType
-
-from .clp_config import ClpConfig, ClpDbUserType
-from .core import read_yaml_config_file
-from .sql_adapter import SqlAdapter
+from clp_py_utils.clp_config import ClpConfig, ClpDbNameType, ClpDbUserType
+from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.sql_adapter import SqlAdapter
 
 # Setup logging
 # Create logger
@@ -222,7 +223,7 @@ CREATE TABLE IF NOT EXISTS `task_kv_data`
 ]
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     args_parser = argparse.ArgumentParser(description="Sets up Spider database.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
@@ -230,7 +231,6 @@ def main(argv):
     config_path = pathlib.Path(parsed_args.config)
     try:
         clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
-        clp_config.database.load_credentials_from_env()
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.CLP)
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.ROOT)
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.SPIDER)

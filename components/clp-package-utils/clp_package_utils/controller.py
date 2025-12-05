@@ -188,8 +188,9 @@ class BaseController(ABC):
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
             "CLP_DB_NAME": self._clp_config.database.name[ClpDbNameType.CLP],
             "CLP_DB_PORT": str(self._clp_config.database.port),
-            "SPIDER_DB_NAME": self._clp_config.database.name[ClpDbNameType.SPIDER],
         }
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
+            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.name[ClpDbNameType.SPIDER]
 
         # Credentials
         credentials = self._clp_config.database.credentials
@@ -901,12 +902,9 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_redis_bundling()
         env_vars |= self._set_up_env_for_results_cache_bundling()
         env_vars |= self._set_up_env_for_database()
-        if self._clp_config.queue is not None:
-            env_vars |= self._set_up_env_for_queue()
-        if self._clp_config.redis is not None:
-            env_vars |= self._set_up_env_for_redis()
-        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
-            env_vars |= self._set_up_env_for_spider_scheduler()
+        env_vars |= self._set_up_env_for_queue()
+        env_vars |= self._set_up_env_for_redis()
+        env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
@@ -1004,7 +1002,7 @@ class DockerComposeController(BaseController):
             case DeploymentType.SPIDER_FULL:
                 return "docker-compose-spider.yaml"
             case _:
-                raise ValueError("Unsupported deployment type: %s", deployment_type)
+                raise ValueError(f"Unsupported deployment type: {deployment_type}")
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:
