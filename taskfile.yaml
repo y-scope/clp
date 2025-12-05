@@ -633,6 +633,13 @@ tasks:
         vars:
             PLATFORM: "manylinux_2_28_x86_64"
 
+  # Must be run inside manylinux_2_28_aarch64 container
+  python-wheel-clp-core-manylinux_2_28_aarch64:
+    cmds:
+      - task: "python-wheel-clp-core"
+        vars:
+          PLATFORM: "manylinux_2_28_aarch64"
+
   python-wheel-clp-core:
     internal: true
     deps:
