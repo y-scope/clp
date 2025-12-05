@@ -14,6 +14,7 @@ tasks:
   check:
     cmds:
       - task: "check-cpp-full"
+      - task: "check-helm"
       - task: "check-js"
       - task: "check-py"
       - task: "check-rust"
@@ -32,6 +33,7 @@ tasks:
   fix:
     cmds:
       - task: "fix-cpp-full"
+      - task: "fix-helm"
       - task: "fix-js"
       - task: "fix-py"
       - task: "fix-rust"
@@ -53,6 +55,22 @@ tasks:
       - task: "fix-py"
       - task: "fix-rust"
       - task: "fix-yaml"
+
+  helm:
+    aliases:
+      - "check-helm"
+      - "fix-helm"
+    deps:
+      - "toolchains:helm"
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        ct lint \
+          --chart-dirs="tools/deployment" \
+          --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
+          --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
     sources: &js_source_files
@@ -98,16 +116,17 @@ tasks:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
-          .github \
-          .yamllint.yaml \
-          components/core/.clang-format \
-          components/core/config \
-          components/core/tools/ \
-          components/package-template/src/etc \
-          docs \
-          taskfile.yaml \
-          taskfiles \
-          tools/deployment
+          --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
+          ".github" \
+          "components/core/.clang-format" \
+          "components/core/config" \
+          "components/core/tools/" \
+          "components/package-template/src/etc" \
+          "docs" \
+          "taskfile.yaml" \
+          "taskfiles" \
+          "tools/deployment/package" \
+          "tools/deployment/presto-clp"
 
   check-cpp-format:
     sources: &cpp_source_files
