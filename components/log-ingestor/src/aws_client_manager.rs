@@ -2,10 +2,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
-use clp_rust_utils::{
-    s3::create_new_client as create_s3_client,
-    sqs::create_new_client as create_sqs_client,
-};
 
 /// A marker trait for AWS client types.
 pub trait AwsClientType: Clone {}
@@ -54,7 +50,7 @@ impl SqsClientWrapper {
 
     pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
         let sqs_endpoint = format!("https://sqs.{region}.amazonaws.com");
-        let sqs_client = create_sqs_client(
+        let sqs_client = clp_rust_utils::sqs::create_new_client(
             sqs_endpoint.as_str(),
             region,
             access_key_id,
@@ -85,7 +81,7 @@ impl S3ClientWrapper {
 
     pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
         let s3_endpoint = format!("https://s3.{region}.amazonaws.com");
-        let s3_client = create_s3_client(
+        let s3_client = clp_rust_utils::s3::create_new_client(
             s3_endpoint.as_str(),
             region,
             access_key_id,
