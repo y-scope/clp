@@ -1,0 +1,9 @@
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-staged-streams" (include "clp.fullname" .))
+  "component" "staged-streams"
+  "nodeRole" "control-plane"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" "/tmp/clp/var/data/staged-streams"
+) }}
