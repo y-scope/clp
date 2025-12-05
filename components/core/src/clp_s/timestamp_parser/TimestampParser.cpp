@@ -29,9 +29,7 @@ constexpr int cMinParsedMonth{1};
 constexpr int cMaxParsedMonth{12};
 constexpr int cMinParsedYear{0};
 constexpr int cMaxParsedYear{9999};
-constexpr int cMinTwoDigitYear{0};
 constexpr int cTwoDigitYearOffsetBoundary{69};
-constexpr int cMaxTwoDigitYear{99};
 constexpr int cTwoDigitYearLowOffset{1900};
 constexpr int cTwoDigitYearHighOffset{2000};
 constexpr int cMinParsedHour24HourClock{0};
@@ -119,6 +117,8 @@ constexpr std::array cDefaultNumericPatterns{
         std::string_view{R"(\P)"},
         std::string_view{R"(\E.\?)"}
 };
+
+constexpr std::string_view cJsonEscapedBackslash{R"(\\)"};
 
 struct CatSequenceReplacement {
 public:
@@ -266,6 +266,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format malformed format
  *   specifiers, or format specifiers that aren't supported in date-time timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ * - ErrorCodeEnum::InvalidEscapeSequence `pattern` contains an unsupported escape sequence.
  */
 [[nodiscard]] auto marshal_date_time_timestamp(
         epochtime_t timestamp,
@@ -279,15 +280,33 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @param pattern
  * @param buffer The buffer that the marshalled timestamp is appended to.
  * @return A void result on success, or an error code indicating the failure:
- * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format specifiers that aren't
- *   supported in numeric timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ * - ErrorCodeEnum::InvalidEscapeSequence `pattern` contains an unsupported escape sequence.
  */
 [[nodiscard]] auto marshal_numeric_timestamp(
         epochtime_t timestamp,
         TimestampPattern const& pattern,
         std::string& buffer
 ) -> ystdlib::error_handling::Result<void>;
+
+/**
+ * @param c
+ * @return Whether `c` indicates an unsupported JSON escape sequence when treated as an escaped
+ * character.
+ */
+[[nodiscard]] auto is_unsupported_json_escape_sequence(char c) -> bool;
+
+/**
+ * @param c
+ * @return Whether `c` is an unsupported character.
+ */
+[[nodiscard]] auto is_unsupported_character(char c) -> bool;
+
+/**
+ * @param c
+ * @return Whether `c` is a repeatable escape sequence.
+ */
+[[nodiscard]] auto is_repeatable_escape_sequence(char c) -> bool;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
@@ -738,11 +757,11 @@ auto marshal_date_time_timestamp(
                 break;
             }
             case '\\': {
-                buffer.push_back('\\');
+                buffer.append(cJsonEscapedBackslash);
                 break;
             }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
     return ystdlib::error_handling::success();
@@ -837,17 +856,47 @@ auto marshal_numeric_timestamp(
                 break;
             }
             case '\\': {
-                buffer.push_back('\\');
+                buffer.append(cJsonEscapedBackslash);
                 break;
             }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
     return ystdlib::error_handling::success();
 }
+
+auto is_unsupported_json_escape_sequence(char c) -> bool {
+    switch (c) {
+        case '"':
+        case 'b':
+        case 'f':
+        case 'n':
+        case 'r':
+        case 't':
+        case 'u':
+            return true;
+        default:
+            return false;
+    }
+}
+
+auto is_unsupported_character(char c) -> bool {
+    return '"' == c || ('\x00' <= c && c <= '\x1f');
+}
+
+auto is_repeatable_escape_sequence(char c) -> bool {
+    switch (c) {
+        case 'O':
+        case '\\':
+            return true;
+        default:
+            return false;
+    }
+}
 }  // namespace
 
+// NOLINTBEGIN(readability-function-cognitive-complexity)
 auto TimestampPattern::create(std::string_view pattern)
         -> ystdlib::error_handling::Result<TimestampPattern> {
     std::vector<bool> format_specifiers(std::numeric_limits<unsigned char>::max() + 1ULL, false);
@@ -861,9 +910,18 @@ auto TimestampPattern::create(std::string_view pattern)
     uint16_t month_name_bracket_pattern_length{};
     uint16_t weekday_name_bracket_pattern_length{};
 
+    bool const quoted_pattern{
+            pattern.size() >= 2 && '"' == pattern.front() && '"' == pattern.back()
+    };
+    size_t const start_idx{quoted_pattern ? 1ULL : 0ULL};
+    size_t const end_idx{quoted_pattern ? pattern.size() - 1ULL : pattern.size()};
     bool escaped{false};
-    for (size_t pattern_idx{0ULL}; pattern_idx < pattern.size(); ++pattern_idx) {
+    for (size_t pattern_idx{start_idx}; pattern_idx < end_idx; ++pattern_idx) {
         auto const cur_format_specifier{pattern.at(pattern_idx)};
+        if (is_unsupported_character(cur_format_specifier)) {
+            return ErrorCode{ErrorCodeEnum::InvalidCharacter};
+        }
+
         if (false == escaped) {
             if ('\\' == cur_format_specifier) {
                 escaped = true;
@@ -871,8 +929,14 @@ auto TimestampPattern::create(std::string_view pattern)
             continue;
         }
 
+        if (is_unsupported_json_escape_sequence(cur_format_specifier)) {
+            return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
+        }
+
         auto unsigned_cur_format_specifier = static_cast<unsigned char>(cur_format_specifier);
-        if ('O' != cur_format_specifier && format_specifiers.at(unsigned_cur_format_specifier)) {
+        if (false == is_repeatable_escape_sequence(cur_format_specifier)
+            && format_specifiers.at(unsigned_cur_format_specifier))
+        {
             return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
         format_specifiers[unsigned_cur_format_specifier] = true;
@@ -998,11 +1062,10 @@ auto TimestampPattern::create(std::string_view pattern)
             case 's':  // Generic zero-padded second.
                 uses_date_type_representation = true;
                 break;
-            case '\\': {
+            case '\\':
                 break;
-            }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
 
@@ -1030,13 +1093,16 @@ auto TimestampPattern::create(std::string_view pattern)
     };
 }
 
+// NOLINTEND(readability-function-cognitive-complexity)
+
 auto TimestampPattern::find_first_matching_month_and_advance_pattern_idx(
         std::string_view timestamp,
         size_t& pattern_idx
 ) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>> {
-    auto const month_names{
-            m_pattern.substr(pattern_idx + 2ULL, m_month_name_bracket_pattern_length)
-    };
+    auto const month_names{std::string_view{m_pattern}.substr(
+            pattern_idx + 2ULL,
+            m_month_name_bracket_pattern_length
+    )};
     auto const month_idx{YSTDLIB_ERROR_HANDLING_TRYX(
             find_first_matching_prefix(timestamp, month_names, m_month_name_offsets_and_lengths)
     )};
@@ -1048,9 +1114,10 @@ auto TimestampPattern::find_first_matching_weekday_and_advance_pattern_idx(
         std::string_view timestamp,
         size_t& pattern_idx
 ) const -> ystdlib::error_handling::Result<std::pair<size_t, size_t>> {
-    auto const weekday_names{
-            m_pattern.substr(pattern_idx + 2ULL, m_weekday_name_bracket_pattern_length)
-    };
+    auto const weekday_names{std::string_view{m_pattern}.substr(
+            pattern_idx + 2ULL,
+            m_weekday_name_bracket_pattern_length
+    )};
     auto const weekday_idx{YSTDLIB_ERROR_HANDLING_TRYX(
             find_first_matching_prefix(timestamp, weekday_names, m_weekday_name_offsets_and_lengths)
     )};
@@ -1064,9 +1131,10 @@ TimestampPattern::get_month_and_advance_pattern_idx(size_t month_idx, size_t& pa
     if (month_idx >= m_month_name_offsets_and_lengths.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
-    auto const month_names{
-            m_pattern.substr(pattern_idx + 2ULL, m_month_name_bracket_pattern_length)
-    };
+    auto const month_names{std::string_view{m_pattern}.substr(
+            pattern_idx + 2ULL,
+            m_month_name_bracket_pattern_length
+    )};
     auto const [month_offset, month_length] = m_month_name_offsets_and_lengths.at(month_idx);
     pattern_idx += m_month_name_bracket_pattern_length + 2ULL;
     return month_names.substr(month_offset, month_length);
@@ -1078,9 +1146,10 @@ TimestampPattern::get_weekday_and_advance_pattern_idx(size_t weekday_idx, size_t
     if (weekday_idx >= m_weekday_name_offsets_and_lengths.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
-    auto const weekday_names{
-            m_pattern.substr(pattern_idx + 2ULL, m_weekday_name_bracket_pattern_length)
-    };
+    auto const weekday_names{std::string_view{m_pattern}.substr(
+            pattern_idx + 2ULL,
+            m_weekday_name_bracket_pattern_length
+    )};
     auto const [weekday_offset, weekday_length]
             = m_weekday_name_offsets_and_lengths.at(weekday_idx);
     pattern_idx += m_weekday_name_bracket_pattern_length + 2ULL;
@@ -1091,7 +1160,8 @@ TimestampPattern::get_weekday_and_advance_pattern_idx(size_t weekday_idx, size_t
 auto parse_timestamp(
         std::string_view timestamp,
         TimestampPattern const& pattern,
-        [[maybe_unused]] std::string& generated_pattern
+        bool is_json_literal,
+        std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
     size_t pattern_idx{};
     size_t timestamp_idx{};
@@ -1676,14 +1746,15 @@ auto parse_timestamp(
                 break;
             }
             case '\\': {
-                if ('\\' == timestamp[timestamp_idx]) {
-                    ++timestamp_idx;
-                    continue;
+                auto const expected_backslash{is_json_literal ? cJsonEscapedBackslash : "\\"};
+                if (false == timestamp.substr(timestamp_idx).starts_with(expected_backslash)) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
-                return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                timestamp_idx += expected_backslash.size();
+                break;
             }
             default:
-                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                return ErrorCode{ErrorCodeEnum::InvalidEscapeSequence};
         }
     }
 
@@ -1767,10 +1838,11 @@ auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, s
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
+        bool is_json_literal,
         std::string& generated_pattern
 ) -> std::optional<std::pair<epochtime_t, std::string_view>> {
     for (auto const& pattern : patterns) {
-        auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
+        auto const result{parse_timestamp(timestamp, pattern, is_json_literal, generated_pattern)};
         if (false == result.has_error()) {
             return result.value();
         }
