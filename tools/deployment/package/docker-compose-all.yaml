@@ -340,7 +340,7 @@ services:
       "python3",
       "-u",
       "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
-      "--host", "compression_worker"
+      "--host", "compression_worker",
       "--num-workers", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
