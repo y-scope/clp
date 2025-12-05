@@ -17,9 +17,8 @@ from tests.utils.package_utils import (
     compress_with_clp_package,
     run_presto_filter,
     search_with_clp_package,
-    resolve_path_env_var,
 )
-from tests.utils.utils import unlink
+from tests.utils.utils import resolve_path_env_var, unlink
 
 logger = logging.getLogger(__name__)
 
@@ -296,8 +295,7 @@ PRESTO_FILTER_JOBS: dict[str, PrestoFilterJob] = {
         package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
         filter="DESCRIBE postgresql;",
         ground_truth_file=(
-            resolve_path_env_var("TEST_DATA_DIR") /
-            "filter-describe-postgresql.jsonl"
+            resolve_path_env_var("TEST_DATA_DIR") / "filter-describe-postgresql.jsonl"
         ),
     ),
     "filter-select-distinct-postgresql": PrestoFilterJob(
@@ -306,8 +304,7 @@ PRESTO_FILTER_JOBS: dict[str, PrestoFilterJob] = {
         package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
         filter="SELECT DISTINCT error_severity FROM postgresql;",
         ground_truth_file=(
-            resolve_path_env_var("TEST_DATA_DIR") /
-            "filter-select-distinct-postgresql.jsonl"
+            resolve_path_env_var("TEST_DATA_DIR") / "filter-select-distinct-postgresql.jsonl"
         ),
     ),
 }

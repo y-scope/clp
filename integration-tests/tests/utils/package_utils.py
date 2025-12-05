@@ -1,8 +1,8 @@
 """Provides utility functions for interacting with the CLP package."""
 
-import tempfile
 import json
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -20,10 +20,10 @@ from tests.utils.config import (
 )
 from tests.utils.docker_utils import get_docker_binary_path
 from tests.utils.utils import (
+    is_json_file_structurally_equal,
     resolve_path_env_var,
     validate_dir_exists,
     validate_file_exists,
-    is_json_file_structurally_equal,
 )
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
@@ -430,9 +430,7 @@ def run_presto_filter(
     ground_truth_file_path: Path = presto_filter_job.ground_truth_file
     with tempfile.TemporaryDirectory() as temporary_output_directory_name:
         # Write output to tempfile.
-        presto_output_file_path = (
-            Path(temporary_output_directory_name) / "presto_output.jsonl"
-        )
+        presto_output_file_path = Path(temporary_output_directory_name) / "presto_output.jsonl"
         presto_output_file_path.write_text(presto_output_text)
 
         # Compare tempfile with ground truth.
@@ -441,6 +439,5 @@ def run_presto_filter(
             ground_truth_file_path,
         ):
             pytest.fail(
-                f"Presto filter output did not match ground truth file: "
-                f"'{ground_truth_file_path}'"
+                f"Presto filter output did not match ground truth file: '{ground_truth_file_path}'"
             )
