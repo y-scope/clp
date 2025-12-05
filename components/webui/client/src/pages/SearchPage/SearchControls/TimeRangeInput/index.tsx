@@ -4,6 +4,7 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
     DatePicker,
 } from "antd";
+import type {RangePickerProps} from "antd/es/date-picker";
 import dayjs from "dayjs";
 
 import {SETTINGS_QUERY_ENGINE} from "../../../../config";
@@ -14,11 +15,9 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
 import TimeDateInput from "./TimeDateInput";
+import type {TimeDateInputProps} from "./TimeDateInput";
 import TimeRangePanel from "./TimeRangePanel/index";
-import {
-    isValidDateRange,
-    TIME_RANGE_OPTION,
-} from "./utils";
+import {isValidDateRange, TIME_RANGE_OPTION} from "./utils";
 
 
 
@@ -75,6 +74,18 @@ const TimeRangeInput = () => {
         />
     ), [handleClose]);
 
+    const inputComponent = useCallback((props: TimeDateInputProps) => (
+        <TimeDateInput
+            {...props}
+            isPickerOpen={isOpen}
+        />
+    ), [isOpen]);
+
+    type CalendarChangeHandler = NonNullable<RangePickerProps["onCalendarChange"]>;
+    const handleCalendarChange = useCallback<CalendarChangeHandler>((dates, _dateStrings, _info) => {
+        handleRangePickerChange(dates);
+    }, [handleRangePickerChange]);
+
     const renderFooter = useCallback(() => {
         if (false === isPrestoGuided) {
             return null;
@@ -96,13 +107,11 @@ const TimeRangeInput = () => {
                     size={"middle"}
                     value={timeRange}
                     components={{
-                        input: TimeDateInput,
+                        input: inputComponent,
                     }}
                     disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
-                    onCalendarChange={(dates) => {
-                        handleRangePickerChange(dates);
-                    }}
+                    onCalendarChange={handleCalendarChange}
                     open={isOpen}
                     onOpenChange={handleOpenChange}
                 />

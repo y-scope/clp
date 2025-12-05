@@ -21,8 +21,8 @@ const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
     const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
 
     const handlePresetClick = async (option: TIME_RANGE_OPTION) => {
-        const dates = await TIME_RANGE_OPTION_DAYJS_MAP[option]();
         updateTimeRangeOption(option);
+        const dates = await TIME_RANGE_OPTION_DAYJS_MAP[option]();
         updateTimeRange([dates[0].utc(true), dates[1].utc(true)]);
         onClose();
     };

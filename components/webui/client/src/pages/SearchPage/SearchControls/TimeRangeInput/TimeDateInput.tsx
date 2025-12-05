@@ -1,3 +1,5 @@
+import {useState} from "react";
+
 import useSearchStore from "../../SearchState/index";
 import {
     DATE_RANGE_POSITION,
@@ -6,10 +8,10 @@ import {
     TIME_RANGE_OPTION,
 } from "./utils";
 
-
 interface TimeDateInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     value: string;
     [DATE_RANGE_PROP_KEY]: DATE_RANGE_POSITION;
+    isPickerOpen?: boolean;
 }
 
 /**
@@ -23,13 +25,28 @@ const TimeDateInput = (props: TimeDateInputProps) => {
         value,
         [DATE_RANGE_PROP_KEY]: dateRange,
         onChange,
+        onFocus,
+        onBlur,
+        isPickerOpen = false,
+        ...restProps
     } = props;
+
+    const [isFocused, setIsFocused] = useState(false);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
-
-    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
+    const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen || isFocused) ?
         value :
         TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(true);
+        onFocus?.(e);
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        setIsFocused(false);
+        onBlur?.(e);
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
@@ -40,12 +57,15 @@ const TimeDateInput = (props: TimeDateInputProps) => {
 
     return (
         <input
-            {...props}
+            {...restProps}
             value={displayText}
             onChange={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
         />
     );
 };
 
 
+export type {TimeDateInputProps};
 export default TimeDateInput;
