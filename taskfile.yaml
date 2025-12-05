@@ -18,6 +18,7 @@ vars:
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
+  G_PYTHON_WHEEL_CLP_CORE_DIR: "{{.ROOT_DIR}}/python-wheels/clp-core"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
   # Build paths
@@ -29,6 +30,8 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
+  G_PYTHON_WHEEL_VENV_DIR: "{{.G_BUILD_DIR}}/python-wheel-venv"
+  G_PYTHON_WHEELS: "{{.G_BUILD_DIR}}/python-wheels"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
   G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
@@ -594,3 +597,62 @@ tasks:
     silent: true
     run: "once"
     cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
+
+  python-wheel-venv:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_PYTHON_WHEEL_VENV_DIR}}"
+    sources:
+      - "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/requirements-dev.txt"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "init"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - task: "utils:misc:create-venv"
+        vars:
+          LABEL: "package"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/requirements-dev.txt"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  # Must be run inside manylinux_2_28_x86_64 container
+  python-wheel-clp-core-manylinux_2_28_x86_64:
+    cmds:
+      - task: "python-wheel-clp-core"
+        vars:
+            PLATFORM: "manylinux_2_28_x86_64"
+
+  python-wheel-clp-core:
+    internal: true
+    deps:
+      - "python-wheel-venv"
+      - "core"
+    requires:
+      vars: ["PLATFORM"]
+    dir: "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}"
+    cmds:
+      - |-
+        mkdir "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/tmp"
+      - defer: |-
+          rm -rf "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/tmp"
+      - |-
+        cp "{{.G_BUILD_DIR}}/core/clp-s" "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/tmp/clp-s"
+      - |-
+        . "{{.G_PYTHON_WHEEL_VENV_DIR}}/bin/activate"
+        rm -rf dist
+        python3 -m build --wheel --outdir "{{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/tmp"
+        auditwheel repair \
+          {{.G_PYTHON_WHEEL_CLP_CORE_DIR}}/tmp/*.whl \
+          --plat "{{.PLATFORM}}" \
+          --wheel-dir "{{.G_PYTHON_WHEELS}}"

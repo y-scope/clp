@@ -1,0 +1,21 @@
+[build-system]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "clp-core"
+authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
+description = "CLP core binaries"
+readme = "README.md"
+version = "0.7.1-beta.0"
+
+[project.scripts]
+"clp-s" = "clp_core:clp_s"
+
+[tool.scikit-build]
+wheel.packages = ["clp_core"]
+wheel.py-api = "py3"
+cmake.version = "==3.31.0"
+ninja.version = ">=1.10.0"
+cmake.verbose = true
+logging.level = "DEBUG"
