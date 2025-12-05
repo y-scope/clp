@@ -245,6 +245,13 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
+        if self._clp_config.queue is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
@@ -319,6 +326,13 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDIS_COMPONENT_NAME
+        if self._clp_config.redis is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
@@ -343,6 +357,13 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = SPIDER_SCHEDULER_COMPONENT_NAME
+        if self._clp_config.compression_scheduler.type != OrchestrationType.SPIDER:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
