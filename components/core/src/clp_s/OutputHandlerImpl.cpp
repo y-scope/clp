@@ -4,11 +4,13 @@
 #include <string>
 #include <string_view>
 
+#if !CLP_S_EXCLUDE_MONGOCXX
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
+#endif
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 

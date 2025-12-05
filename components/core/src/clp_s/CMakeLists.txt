@@ -165,14 +165,26 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
-                OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
         )
+        if(NOT CLP_S_EXCLUDE_LIBCURL)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PRIVATE
+                        ${CURL_LIBRARIES}
+                )
+        endif()
+        if(NOT CLP_S_EXCLUDE_MONGOCXX)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PRIVATE
+                        OpenSSL::Crypto
+                )
+        endif()
 endif()
 
 set(
@@ -328,10 +340,16 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 PRIVATE
                 Boost::url
                 clp_s::timestamp_pattern
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
+        if(NOT CLP_S_EXCLUDE_LIBCURL)
+                target_link_libraries(
+                        clp_s_archive_writer
+                        PRIVATE
+                        ${CURL_LIBRARIES}
+                )
+        endif()
 endif()
 
 set(
@@ -392,10 +410,16 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 Boost::url
                 clp_s::clp_dependencies
                 clp_s::timestamp_pattern
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
+        if(NOT CLP_S_EXCLUDE_LIBCURL)
+                target_link_libraries(
+                        clp_s_archive_writer
+                        PRIVATE
+                        ${CURL_LIBRARIES}
+                )
+        endif()
 endif()
 
 set(
@@ -426,9 +450,15 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
-                ${MONGOCXX_TARGET}
                 spdlog::spdlog
         )
+        if(NOT CLP_S_EXCLUDE_MONGOCXX)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PRIVATE
+                        ${MONGOCXX_TARGET}
+                )
+        endif()
 endif()
 
 set(
@@ -495,11 +525,17 @@ if(CLP_BUILD_EXECUTABLES)
                 clp_s::search
                 clp_s::search::ast
                 clp_s::search::kql
-                ${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
         )
+        if(NOT CLP_S_EXCLUDE_MONGOCXX)
+                target_link_libraries(
+                        clp-s
+                        PRIVATE
+                        ${MONGOCXX_TARGET}
+                )
+        endif()
         set_target_properties(
                 clp-s
                 PROPERTIES

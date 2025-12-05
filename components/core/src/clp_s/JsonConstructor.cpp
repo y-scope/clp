@@ -5,10 +5,12 @@
 #include <system_error>
 
 #include <fmt/format.h>
+#if !CLP_S_EXCLUDE_MONGOCXX
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/uri.hpp>
+#endif
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 

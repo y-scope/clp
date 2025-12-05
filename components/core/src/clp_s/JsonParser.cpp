@@ -14,7 +14,9 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
+#if !CLP_S_EXCLUDE_LIBCURL
 #include <curl/curl.h>
+#endif
 #include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>

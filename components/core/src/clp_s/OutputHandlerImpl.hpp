@@ -11,8 +11,10 @@
 #include <string_view>
 #include <vector>
 
+#if !CLP_S_EXCLUDE_MONGOCXX
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#endif
 
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
