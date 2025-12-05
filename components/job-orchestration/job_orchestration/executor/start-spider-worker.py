@@ -111,7 +111,9 @@ def wait_exit(processes: list[subprocess.Popen]) -> int:
             if code != 0 and exit_code == 0:
                 exit_code = code
         except subprocess.TimeoutExpired:
-            logger.warning("Worker process %d did not terminate in time, sending SIGKILL.", proc.pid)
+            logger.warning(
+                "Worker process %d did not terminate in time, sending SIGKILL.", proc.pid
+            )
             proc.kill()
             proc.wait()
     return exit_code
