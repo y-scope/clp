@@ -22,7 +22,7 @@ def fixt_package_config(
 
     :param request:
     :return: An iterator that yields the PackageConfig object for the specified mode.
-    :raise ValueError: if the CLP base port is invalid.
+    :raise ValueError: if the CLP base port's value is invalid.
     """
     mode_name: str = request.param
 

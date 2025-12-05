@@ -20,14 +20,16 @@ PORT_LIKE_ATTR_NAMES = [
 
 def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     """
-    Assign ports for all components described in `clp_config` that require a port. Ports are
-    assigned relative to `base_port`.
+    Assign ports for all active components described in `clp_config` that require a port. Ports are
+    assigned relative to `base_port`. Assume that port attributes appear directly under each
+    component with no further nesting, and that each component that requires a port defines only one
+    port attribute using one of the names in `PORT_LIKE_ATTR_NAMES`.
 
     :param base_port:
     :param clp_config:
     :raise ValueError: if the base port is out of range or if any required port is in use.
     """
-    # Discover which components in ClpConfig have a port-like data member.
+    # Discover which components in ClpConfig have a port attribute.
     component_port_targets: list[tuple[Any, str, int]] = []
     for attr_name, attr_value in vars(clp_config).items():
         if attr_name.startswith("_") or attr_value is None:
@@ -40,12 +42,11 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
                 break
 
         if port_attr_name is None:
-            # This component doesn't have any port-like attributes.
             continue
 
         ports_required_for_component = 1
         if attr_name == "reducer":
-            # The reducer needs a block of ports starting at its base_port.
+            # The reducer cluster needs a block of ports starting at its `base_port`.
             ports_required_for_component = REDUCER_MAX_PORTS
 
         component_port_targets.append((attr_value, port_attr_name, ports_required_for_component))
@@ -66,43 +67,16 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
         current_port += ports_required_for_component
 
 
-def _validate_port_range(port_range: range) -> None:
+def _format_inclusive_port_range(port_range: range) -> str:
     """
-    Validate that `port_range` falls completely within `VALID_PORT_RANGE`.
+    Return a prettified string describing an inclusive range.
 
     :param port_range:
-    :raise ValueError: if any part of `port_range` falls outside `VALID_PORT_RANGE`.
+    :return: range description of the form "'start' to "'end' inclusive".
     """
-    if port_range.start < VALID_PORT_RANGE.start or port_range.stop > VALID_PORT_RANGE.stop:
-        required_start_port = port_range.start
-        required_end_port = port_range.stop - 1
-        min_valid_port = VALID_PORT_RANGE.start
-        max_valid_port = VALID_PORT_RANGE.stop - 1
-        err_msg = (
-            f"The port range derived from --clp-base-port ('{required_start_port}' to"
-            f" '{required_end_port}' inclusive) must fall within the range of valid ports"
-            f" ('{min_valid_port}' to '{max_valid_port}' inclusive)."
-        )
-        raise ValueError(err_msg)
-
-
-def _validate_ports_available_in_range(host: str, port_range: range) -> None:
-    """
-    Validate that each port in `port_range` is available on `host`.
-
-    :param host:
-    :param port_range:
-    :raise ValueError: if any port in the range cannot be bound.
-    """
-    for port in port_range:
-        if not _is_port_free(port=port, host=host):
-            start_port = port_range.start
-            end_port = port_range.stop - 1
-            err_msg = (
-                f"Port '{port}' in the desired range '{start_port}' to '{end_port}' is already in"
-                " use. Choose a different port range for the test environment."
-            )
-            raise ValueError(err_msg)
+    start_port = port_range.start
+    end_port = port_range.stop - 1
+    return f"'{start_port}' to '{end_port}' inclusive"
 
 
 def _is_port_free(port: int, host: str) -> bool:
@@ -119,3 +93,42 @@ def _is_port_free(port: int, host: str) -> bool:
         except OSError:
             return False
         return True
+
+
+def _validate_ports_available_in_range(host: str, port_range: range) -> None:
+    """
+    Validate that each port in `port_range` is available on `host`.
+
+    :param host:
+    :param port_range:
+    :raise ValueError: if any port in the range cannot be bound.
+    """
+    for port in port_range:
+        if not _is_port_free(port=port, host=host):
+            desired_range_str = _format_inclusive_port_range(port_range)
+            err_msg = (
+                f"Port '{port}' in the desired range ({desired_range_str}) is already in use."
+                " Choose a different port range for the test environment."
+            )
+            raise ValueError(err_msg)
+
+
+def _validate_port_range(port_range: range) -> None:
+    """
+    Validate that `port_range` falls completely within `VALID_PORT_RANGE`.
+
+    :param port_range:
+    :raise ValueError: if any part of `port_range` falls outside `VALID_PORT_RANGE`.
+    """
+    required_start_port = port_range.start
+    required_end_port = port_range.stop - 1
+    min_valid_port = VALID_PORT_RANGE.start
+    max_valid_port = VALID_PORT_RANGE.stop - 1
+    if required_start_port < min_valid_port or required_end_port > max_valid_port:
+        required_range_str = _format_inclusive_port_range(port_range)
+        valid_range_str = _format_inclusive_port_range(VALID_PORT_RANGE)
+        err_msg = (
+            f"The port range derived from --clp-base-port ({required_range_str}) must fall within"
+            f" the range of valid ports ({valid_range_str})."
+        )
+        raise ValueError(err_msg)
