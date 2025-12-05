@@ -24,7 +24,8 @@ const TimeDateInput = (props: TimeDateInputProps) => {
         [DATE_RANGE_PROP_KEY]: dateRange,
         onChange,
     } = props;
-    const {timeRangeOption, updateTimeRangeOption} = useSearchStore();
+    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
+    const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
 
     const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
         value :

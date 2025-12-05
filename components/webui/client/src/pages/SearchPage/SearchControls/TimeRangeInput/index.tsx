@@ -14,11 +14,10 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
 import TimeDateInput from "./TimeDateInput";
+import TimeRangePanel from "./TimeRangePanel/index";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
-    TIME_RANGE_OPTION_NAMES,
-    TIME_RANGE_OPTION_DAYJS_MAP,
 } from "./utils";
 
 
@@ -44,13 +43,6 @@ const TimeRangeInput = () => {
     const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
                            sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
-    const handlePresetClick = useCallback(async (option: TIME_RANGE_OPTION) => {
-        const dates = await TIME_RANGE_OPTION_DAYJS_MAP[option]();
-        updateTimeRangeOption(option);
-        updateTimeRange([dates[0].utc(true), dates[1].utc(true)]);
-        setIsOpen(false);
-    }, [updateTimeRangeOption, updateTimeRange]);
-
     const handleRangePickerChange = (
         dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
     ) => {
@@ -72,24 +64,16 @@ const TimeRangeInput = () => {
         setIsOpen(open);
     };
 
+    const handleClose = useCallback(() => {
+        setIsOpen(false);
+    }, []);
+
     const panelRender = useCallback((panelNode: React.ReactNode) => (
-        <div className={styles["panelContainer"]}>
-            <div className={styles["sidebarPresets"]}>
-                {TIME_RANGE_OPTION_NAMES
-                    .filter((option) => option !== TIME_RANGE_OPTION.CUSTOM)
-                    .map((option) => (
-                        <div
-                            key={option}
-                            className={styles["presetItem"]}
-                            onClick={() => handlePresetClick(option)}
-                        >
-                            {option}
-                        </div>
-                    ))}
-            </div>
-            {panelNode}
-        </div>
-    ), [handlePresetClick]);
+        <TimeRangePanel
+            panelNode={panelNode}
+            onClose={handleClose}
+        />
+    ), [handleClose]);
 
     const renderFooter = useCallback(() => {
         if (false === isPrestoGuided) {
