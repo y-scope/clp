@@ -20,6 +20,8 @@ logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
+SPIDER_WORKER_TERM_TIMEOUT_SECONDS = 5
+
 
 def parse_args() -> argparse.Namespace:
     """
@@ -62,31 +64,31 @@ def main() -> None:
     # Start multiple spider workers
     processes = []
     try:
-        for _ in range(num_workers):
-            process = subprocess.Popen(
+        for i in range(num_workers):
+            proc = subprocess.Popen(
                 [spider_worker_path, "--storage_url", storage_url, "--host", host]
             )
-            processes.append(process)
-            logger.info(f"Started Spider worker {i + 1}/{num_workers} (PID: {process.pid})")
+            processes.append(proc)
+            logger.info("Started Spider worker %d/%d (PID: %d)", i + 1, num_workers, proc.pid)
     except OSError:
         logger.exception("Failed to start Spider worker.")
-        for process in processes:
-            logger.info(f"Terminating worker process {process.pid}")
-            process.terminate()
+        for proc in processes:
+            logger.info(f"Terminating worker process {proc.pid}")
+            proc.terminate()
 
     # Wait for termination with timeout
-    for process in processes:
+    for proc in processes:
         try:
-            process.wait(timeout=SPIDER_WORKER_TERM_TIMEOUT_SECONDS)
+            proc.wait(timeout=SPIDER_WORKER_TERM_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
-            logger.warning(f"Worker process {process.pid} did not terminate, sending SIGKILL")
-            process.kill()
-            process.wait()
+            logger.warning("Worker process %d did not terminate in time, sending SIGKILL", proc.pid)
+            proc.kill()
+            proc.wait()
         sys.exit(1)
 
     exit_code = 0
-    for process in processes:
-        worker_proc_exit_code = process.wait()
+    for proc in processes:
+        worker_proc_exit_code = proc.wait()
         if worker_proc_exit_code != 0:
             logger.error("Spider worker exited with code %d.", worker_proc_exit_code)
             exit_code = 1
