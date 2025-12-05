@@ -187,7 +187,7 @@ async fn test_sqs_listener() -> Result<()> {
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.endpoint.as_str(),
+        Some(aws_config.endpoint.as_str()),
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
         &secret_access_key,
@@ -235,7 +235,7 @@ async fn test_s3_scanner() -> Result<()> {
     let secret_access_key =
         secrecy::SecretString::new(aws_config.secret_access_key.clone().into_boxed_str());
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.endpoint.as_str(),
+        Some(aws_config.endpoint.as_str()),
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
         &secret_access_key,
