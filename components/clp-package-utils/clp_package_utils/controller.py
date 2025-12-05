@@ -843,12 +843,16 @@ class BaseController(ABC):
             else:
                 settings[key] = value
 
-_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType({
-    DeploymentType.BASE: "docker-compose-base.yaml",
-    DeploymentType.FULL: "docker-compose.yaml",
-    DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
-    DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
-})
+
+_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
+    {
+        DeploymentType.BASE: "docker-compose-base.yaml",
+        DeploymentType.FULL: "docker-compose.yaml",
+        DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
+        DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
+    }
+)
+
 
 class DockerComposeController(BaseController):
     """
