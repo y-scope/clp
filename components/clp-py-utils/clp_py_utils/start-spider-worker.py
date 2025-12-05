@@ -105,17 +105,8 @@ def main() -> None:
             logger.warning("Worker process %d did not terminate in time, sending SIGKILL", proc.pid)
             proc.kill()
             proc.wait()
-        sys.exit(1)
 
-    exit_code = 0
-    for proc in processes:
-        worker_proc_exit_code = proc.wait()
-        if worker_proc_exit_code != 0:
-            logger.error("Spider worker exited with code %d.", worker_proc_exit_code)
-            exit_code = 1
-
-    sys.exit(exit_code)
-
+    sys.exit(1)
 
 if __name__ == "__main__":
     main()
