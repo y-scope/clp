@@ -162,6 +162,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp::string_utils
                 log_surgeon::log_surgeon
                 ystdlib::containers
+                ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
                 fmt::fmt
