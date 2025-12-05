@@ -1,4 +1,4 @@
-# ruff: noqa: INP001 The Sphinx config file is a standalone scripts rather than an importable module.
+# ruff: noqa: INP001 The Sphinx config file is a standalone script rather than an importable module.
 """Sphinx configuration file for CLP documentation."""
 
 from datetime import datetime, timezone
