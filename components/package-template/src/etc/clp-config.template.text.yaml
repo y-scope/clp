@@ -25,7 +25,7 @@ api_server: null
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
 #  port: 3306
-#  name:
+#  names:
 #    clp: "clp-db"
 #    spider: "spider-db"
 #

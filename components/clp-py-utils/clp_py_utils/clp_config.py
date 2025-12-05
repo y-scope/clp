@@ -233,7 +233,7 @@ class Database(BaseModel):
     type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
-    name: dict[ClpDbNameType, NonEmptyStr] = {
+    names: dict[ClpDbNameType, NonEmptyStr] = {
         ClpDbNameType.CLP: "clp-db",
         ClpDbNameType.SPIDER: "spider-db",
     }
@@ -279,7 +279,7 @@ class Database(BaseModel):
             "port": self.port,
             "user": self.credentials[user_type].username,
             "password": self.credentials[user_type].password,
-            "database": self.name[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]],
+            "database": self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]],
             "compress": self.compress,
             "autocommit": self.auto_commit,
         }
@@ -329,7 +329,7 @@ class Database(BaseModel):
         )
         return (
             f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
-            f"{self.name[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
+            f"{self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
         )
 
     def dump_to_primitive_dict(self) -> dict[str, Any]:
