@@ -91,6 +91,8 @@ def main() -> None:
         for proc in processes:
             logger.info(f"Terminating worker process {proc.pid}")
             proc.terminate()
+        wait_exit(processes)
+        sys.exit(1)
 
     signal.signal(signal.SIGTERM, handle_sigterm)
 
@@ -98,15 +100,30 @@ def main() -> None:
     stop_event.wait()
 
     # Wait for termination with timeout
+    exit_code = wait_exit(processes)
+    sys.exit(exit_code)
+
+
+def wait_exit(processes: list[subprocess.Popen]) -> int:
+    """
+    Waits for all processes to exit.
+    If the process does not exit within the timeout, it is killed.
+
+    :param processes: List of subprocess.Popen objects.
+    :return: Exit code of the first non-zero exit code, or 0 if all processes exited successfully.
+    """
+    exit_code = 0
     for proc in processes:
         try:
-            proc.wait(timeout=SPIDER_WORKER_TERM_TIMEOUT_SECONDS)
+            code = proc.wait(timeout=SPIDER_WORKER_TERM_TIMEOUT_SECONDS)
+            if code != 0 and exit_code == 0:
+                exit_code = code
         except subprocess.TimeoutExpired:
             logger.warning("Worker process %d did not terminate in time, sending SIGKILL", proc.pid)
             proc.kill()
             proc.wait()
+    return exit_code
 
-    sys.exit(1)
 
 if __name__ == "__main__":
     main()
