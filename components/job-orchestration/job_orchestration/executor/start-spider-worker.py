@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
         "--num-workers", type=int, default=1, help="Number of concurrent Spider workers."
     )
     parser.add_argument("--storage-url", type=str, required=True, help="Spider storage URL.")
-    parser.add_argument("--host", type=str, required=True, default=None, help="The worker host.")
+    parser.add_argument("--host", type=str, required=True, help="The worker host.")
     return parser.parse_args()
 
 
@@ -66,7 +66,7 @@ def main() -> None:
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
     if not spider_worker_path.exists():
-        logger.error("spider_worker not found at %s", spider_worker_path)
+        logger.error("spider_worker not found at %s.", spider_worker_path)
         sys.exit(1)
 
     # Start multiple spider workers
@@ -77,11 +77,11 @@ def main() -> None:
                 [spider_worker_path, "--storage_url", storage_url, "--host", host]
             )
             processes.append(proc)
-            logger.info("Started Spider worker %d/%d (PID: %d)", i + 1, num_workers, proc.pid)
+            logger.info("Started Spider worker %d/%d (PID: %d).", i + 1, num_workers, proc.pid)
     except OSError:
         logger.exception("Failed to start Spider worker.")
         for proc in processes:
-            logger.info(f"Terminating worker process {proc.pid}")
+            logger.info("Terminating worker process %d.", proc.pid)
             proc.terminate()
         wait_exit(processes)
         sys.exit(1)
@@ -111,7 +111,7 @@ def wait_exit(processes: list[subprocess.Popen]) -> int:
             if code != 0 and exit_code == 0:
                 exit_code = code
         except subprocess.TimeoutExpired:
-            logger.warning("Worker process %d did not terminate in time, sending SIGKILL", proc.pid)
+            logger.warning("Worker process %d did not terminate in time, sending SIGKILL.", proc.pid)
             proc.kill()
             proc.wait()
     return exit_code
