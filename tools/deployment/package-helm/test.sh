@@ -8,7 +8,7 @@ set -o pipefail
 
 kind delete cluster --name clp-test
 rm -rf /tmp/clp
-mkdir -p /tmp/clp/var/{data,log}/database
+mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache}
 
 cat <<EOF | kind create cluster --name clp-test --config=-
   kind: Cluster
@@ -21,6 +21,9 @@ cat <<EOF | kind create cluster --name clp-test --config=-
     extraPortMappings:
     - containerPort: 30306
       hostPort: 30306
+      protocol: TCP
+    - containerPort: 30017
+      hostPort: 30017
       protocol: TCP
 EOF
 

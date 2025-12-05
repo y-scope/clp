@@ -1,0 +1,44 @@
+apiVersion: "batch/v1"
+kind: "Job"
+metadata:
+  name: {{ include "clp.fullname" . }}-results-cache-indices-creator
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "results-cache-indices-creator"
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "results-cache-indices-creator"
+    spec:
+      restartPolicy: "OnFailure"
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-results-cache"
+          image: "busybox:latest"
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-results-cache 27017;
+                do echo Waiting for results-cache to be ready...;
+                sleep 2;
+              done
+      containers:
+        - name: "results-cache-indices-creator"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          command: [
+            "python3", "-u",
+            "-m", "clp_py_utils.initialize-results-cache",
+            "--uri", "mongodb://{{ include "clp.fullname" . }}-results-cache:27017/{{ .Values.clpConfig.results_cache.db_name }}",
+            "--stream-collection", {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+          ]
