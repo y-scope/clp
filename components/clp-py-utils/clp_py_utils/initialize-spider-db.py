@@ -235,7 +235,7 @@ def main(argv: list[str]) -> int:
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.ROOT)
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.SPIDER)
     except (ValidationError, ValueError) as err:
-        logger.error(err)
+        logger.exception("Invalid CLP configuration.")
         return -1
     except Exception:
         logger.exception("Failed to load CLP configuration.")
@@ -252,18 +252,18 @@ def main(argv: list[str]) -> int:
             spider_db_user = clp_config.database.credentials[ClpDbUserType.SPIDER].username
             spider_db_password = clp_config.database.credentials[ClpDbUserType.SPIDER].password
             if not _validate_name(spider_db_name):
-                logger.error(f"Invalid database name: {spider_db_name}")
+                logger.exception("Invalid database name: %s.", spider_db_name)
                 return -1
             if not _validate_name(spider_db_user):
-                logger.error(f"Invalid database user name: {spider_db_user}")
+                logger.exception("Invalid database user name: %s.", spider_db_user)
                 return -1
             if not _validate_name(clp_db_user):
-                logger.error(f"Invalid CLP database user name: {clp_db_user}")
+                logger.exception("Invalid CLP database user name: %s.", clp_db_user)
                 return -1
 
             db_cursor.execute(f"""CREATE DATABASE IF NOT EXISTS `{spider_db_name}`""")
             if spider_db_password is None:
-                logger.error("Password must be set for Spider database user.")
+                logger.exception("Password must be set for Spider database user.")
                 return -1
             db_cursor.execute(
                 f"""CREATE USER IF NOT EXISTS '{spider_db_user}'@'%' IDENTIFIED BY '{spider_db_password}'"""
