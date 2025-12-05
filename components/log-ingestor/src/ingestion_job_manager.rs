@@ -185,23 +185,19 @@ impl IngestionJobManager {
             }
         };
 
-        let region = ingestion_job_config.region.clone();
-        let bucket_name = ingestion_job_config.bucket_name.clone();
-        let key_prefix = ingestion_job_config.key_prefix.clone();
-        let dataset = ingestion_job_config.dataset.clone();
         // At this point, we use one listener per ingestion job. However, the listener itself is
         // designed to be shared among multiple ingestion jobs in the future.
-        let job_listener = self.create_listener(ingestion_job_config);
+        let job_listener = self.create_listener(&ingestion_job_config);
         let sender = job_listener.get_new_sender();
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
                 ingestion_job: create_ingestion_job(job_id, sender),
                 listener: job_listener,
-                bucket_name,
-                region,
-                key_prefix,
-                dataset,
+                bucket_name: ingestion_job_config.bucket_name,
+                region: ingestion_job_config.region,
+                key_prefix: ingestion_job_config.key_prefix,
+                dataset: ingestion_job_config.dataset,
             },
         );
         drop(job_table);
@@ -212,7 +208,7 @@ impl IngestionJobManager {
     /// # Returns
     ///
     /// A new listener for receiving object metadata to ingest.
-    fn create_listener(&self, _ingestion_job_config: S3IngestionBaseConfig) -> Listener {
+    fn create_listener(&self, _ingestion_job_config: &S3IngestionBaseConfig) -> Listener {
         let buffer = Buffer::new(CompressionJobSubmitter {}, self.buffer_size_threshold);
         Listener::spawn(buffer, self.buffer_timeout, self.channel_capacity)
     }
