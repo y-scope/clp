@@ -414,7 +414,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
         )
         if(NOT CLP_S_EXCLUDE_LIBCURL)
                 target_link_libraries(
-                        clp_s_archive_writer
+                        clp_s_archive_reader
                         PRIVATE
                         ${CURL_LIBRARIES}
                 )
@@ -452,7 +452,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
         )
         if(NOT CLP_S_EXCLUDE_MONGOCXX)
                 target_link_libraries(
-                        clp_s_clp_dependencies
+                        clp_s_json_constructor
                         PRIVATE
                         ${MONGOCXX_TARGET}
                 )
