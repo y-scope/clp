@@ -282,7 +282,6 @@ pub enum LogsInput {
 
 #[cfg(test)]
 mod tests {
-    use secrecy::ExposeSecret;
 
     use super::LogsInput;
 
@@ -309,10 +308,7 @@ mod tests {
             LogsInput::S3 { config } => match config.aws_authentication {
                 crate::clp_config::AwsAuthentication::Credentials { credentials } => {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
-                    assert_eq!(
-                        credentials.secret_access_key.expose_secret(),
-                        SECRET_ACCESS_KEY
-                    );
+                    assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
