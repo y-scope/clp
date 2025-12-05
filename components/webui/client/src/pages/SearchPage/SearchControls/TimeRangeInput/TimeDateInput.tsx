@@ -6,6 +6,7 @@ import {
     TIME_RANGE_OPTION,
 } from "./utils";
 
+
 interface TimeDateInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     value: string;
     [DATE_RANGE_PROP_KEY]: DATE_RANGE_POSITION;
@@ -31,7 +32,7 @@ const TimeDateInput = (props: TimeDateInputProps) => {
 
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
-        const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen) ?
+    const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen) ?
         value :
         TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
 
@@ -54,10 +55,9 @@ const TimeDateInput = (props: TimeDateInputProps) => {
         <input
             {...restProps}
             value={displayText}
-            onChange={handleChange}
-            onFocus={handleFocus}
             onBlur={handleBlur}
-        />
+            onChange={handleChange}
+            onFocus={handleFocus}/>
     );
 };
 

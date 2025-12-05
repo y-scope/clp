@@ -1,9 +1,10 @@
-import {useCallback, useState} from "react";
+import {
+    useCallback,
+    useState,
+} from "react";
 
 import {CLP_QUERY_ENGINES} from "@webui/common/config";
-import {
-    DatePicker,
-} from "antd";
+import {DatePicker} from "antd";
 import dayjs from "dayjs";
 
 import {SETTINGS_QUERY_ENGINE} from "../../../../config";
@@ -13,11 +14,13 @@ import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
-import TimeDateInput from "./TimeDateInput";
 import type {TimeDateInputProps} from "./TimeDateInput";
+import TimeDateInput from "./TimeDateInput";
 import TimeRangePanel from "./TimeRangePanel/index";
-import {isValidDateRange, TIME_RANGE_OPTION} from "./utils";
-
+import {
+    isValidDateRange,
+    TIME_RANGE_OPTION,
+} from "./utils";
 
 
 /**
@@ -69,15 +72,13 @@ const TimeRangeInput = () => {
     const panelRender = useCallback((panelNode: React.ReactNode) => (
         <TimeRangePanel
             panelNode={panelNode}
-            onClose={handleClose}
-        />
+            onClose={handleClose}/>
     ), [handleClose]);
 
     const inputComponent = useCallback((props: TimeDateInputProps) => (
         <TimeDateInput
             {...props}
-            isPickerOpen={isOpen}
-        />
+            isPickerOpen={isOpen}/>
     ), [isOpen]);
 
     type CalendarChangeHandler = (
@@ -103,22 +104,21 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <DatePicker.RangePicker
-                    allowClear={true}
-                    className={styles["rangePicker"] || ""}
-                    panelRender={panelRender}
-                    renderExtraFooter={renderFooter}
-                    showTime={true}
-                    size={"middle"}
-                    value={timeRange}
-                    components={{
-                        input: inputComponent,
-                    }}
-                    disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                allowClear={true}
+                className={styles["rangePicker"] || ""}
+                open={isOpen}
+                panelRender={panelRender}
+                renderExtraFooter={renderFooter}
+                showTime={true}
+                size={"middle"}
+                value={timeRange}
+                components={{
+                    input: inputComponent,
+                }}
+                disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
-                    onCalendarChange={handleCalendarChange}
-                    open={isOpen}
-                    onOpenChange={handleOpenChange}
-                />
+                onCalendarChange={handleCalendarChange}
+                onOpenChange={handleOpenChange}/>
         </div>
     );
 };
