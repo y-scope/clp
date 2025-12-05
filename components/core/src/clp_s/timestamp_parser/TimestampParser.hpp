@@ -26,6 +26,8 @@ public:
      * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` is not a valid timestamp pattern.
      * - ErrorCodeEnum::InvalidTimezone if `pattern` contains a \z{} format specifier with an
      *   invalid timezone.
+     * - ErrorCodeEnum::InvalidEscapeSequence if `pattern` contains an unsupported escape sequence.
+     * - ErrorCodeEnum::InvalidCharacter if `pattern` contains an unsupported character.
      */
     [[nodiscard]] static auto create(std::string_view pattern)
             -> ystdlib::error_handling::Result<TimestampPattern>;
@@ -197,9 +199,20 @@ private:
  * - \O{...} One of several literal characters, described by content between {}.
  * - \s Generic zero-padded second (00-60) -- resolves to \S or \J.
  *
+ * As well as the following escape sequences:
+ *
+ * - \\ Literal backslash.
+ *
+ * Any escape sequence not listed above is invalid. In addition, patterns must not contain:
+ *
+ * - ASCII control characters (U+0000 through U+001F).
+ * - The double-quote character `"` (except for the surrounding quotes if the pattern is provided as
+ *   a JSON string literal, e.g., `"<pattern>"`).
+ *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
  * sequences.
+ * @param is_json_literal Whether the timestamp is a JSON literal or a raw UTF-8 string.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
  * necessary.
  * @return A result containing a pair, or an error code indicating the failure:
@@ -214,15 +227,17 @@ private:
  *   - ErrorCodeEnum::InvalidDate if parsing was successful, but some components of the timestamp
  *     offer conflicting information about the actual date (e.g., if the parsed day of the week
  *     doesn't match up with the rest of the timestamp information).
+ *   - ErrorCodeEnum::InvalidEscapeSequence if the pattern contains an unsupported escape sequence.
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
         TimestampPattern const& pattern,
+        bool is_json_literal,
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
 /**
- * Marshals a timestamp according to a timestamp pattern.
+ * Marshals a timestamp as a JSON literal according to a timestamp pattern.
  * @param timestamp
  * @param pattern
  * @param buffer The buffer that the marshalled timestamp is appended to.
@@ -238,6 +253,7 @@ marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::s
  * Parses a timestamp according to the first matching pattern in a list of patterns.
  * @param timestamp
  * @param patterns A list of timestamp patterns.
+ * @param is_json_literal Whether the timestamp is a JSON literal or a raw UTF-8 string.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
  * necessary.
  * @return A pair containing:
@@ -249,6 +265,7 @@ marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::s
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
+        bool is_json_literal,
         std::string& generated_pattern
 ) -> std::optional<std::pair<epochtime_t, std::string_view>>;
 
