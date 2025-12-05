@@ -223,6 +223,8 @@ class BaseController(ABC):
             # Bundling
             return EnvVarsDict({"CLP_QUEUE_ENABLED": "0"})
 
+        logger.info("Setting up environment for bundling %s...", component_name)
+
         logs_dir = self._clp_config.logs_directory / component_name
         validate_queue_config(self._clp_config, logs_dir)
 

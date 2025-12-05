@@ -337,9 +337,8 @@ services:
       db-table-creator:
         condition: "service_completed_successfully"
     command: [
-      "python3",
-      "-u",
-      "/opt/clp/lib/python3/site-packages/job_orchestration/executor/start-spider-worker.py",
+      "python3", "-u",
+      "-m", "job_orchestration.executor.start-spider-worker",
       "--host", "compression_worker",
       "--num-workers", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "jdbc:mariadb://database:3306/\
