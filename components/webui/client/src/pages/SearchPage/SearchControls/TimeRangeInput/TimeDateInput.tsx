@@ -1,5 +1,3 @@
-import {useState} from "react";
-
 import useSearchStore from "../../SearchState/index";
 import {
     DATE_RANGE_POSITION,
@@ -31,20 +29,17 @@ const TimeDateInput = (props: TimeDateInputProps) => {
         ...restProps
     } = props;
 
-    const [isFocused, setIsFocused] = useState(false);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
-    const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen || isFocused) ?
+        const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen) ?
         value :
         TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-        setIsFocused(true);
         onFocus?.(e);
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-        setIsFocused(false);
         onBlur?.(e);
     };
 
