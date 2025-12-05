@@ -6,9 +6,11 @@ import argparse
 import logging
 import os
 import pathlib
+import signal
 import socket
 import subprocess
 import sys
+import threading
 
 # Setup logging
 # Create logger
@@ -21,6 +23,20 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 SPIDER_WORKER_TERM_TIMEOUT_SECONDS = 5
+
+stop_event = threading.Event()
+
+
+def handle_sigterm(signum, frame) -> None:
+    """
+    Signal handler for SIGTERM.
+    Stops all running workers gracefully.
+
+    :param signum: The signal number.
+    :param frame: The current stack frame.
+    """
+    logger.info("Received SIGTERM, stopping workers...")
+    stop_event.set()
 
 
 def parse_args() -> argparse.Namespace:
@@ -75,6 +91,11 @@ def main() -> None:
         for proc in processes:
             logger.info(f"Terminating worker process {proc.pid}")
             proc.terminate()
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
+    # Wait for SIGTERM
+    stop_event.wait()
 
     # Wait for termination with timeout
     for proc in processes:
