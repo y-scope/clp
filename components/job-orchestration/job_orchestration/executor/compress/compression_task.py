@@ -196,7 +196,7 @@ def _get_db_connection_args_for_clp_cmd(
         "--db-port",
         str(clp_metadata_db_connection_config["port"]),
         "--db-name",
-        clp_metadata_db_connection_config["name"][ClpDbUserType.CLP],
+        clp_metadata_db_connection_config["names"][ClpDbUserType.CLP],
         "--db-table-prefix",
         clp_metadata_db_connection_config["table_prefix"],
     ]

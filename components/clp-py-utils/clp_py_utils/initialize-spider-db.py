@@ -248,7 +248,7 @@ def main(argv: list[str]) -> int:
             closing(db_conn.cursor()) as db_cursor,
         ):
             clp_db_user = clp_config.database.credentials[ClpDbUserType.CLP].username
-            spider_db_name = clp_config.database.name[ClpDbNameType.SPIDER]
+            spider_db_name = clp_config.database.names[ClpDbNameType.SPIDER]
             spider_db_user = clp_config.database.credentials[ClpDbUserType.SPIDER].username
             spider_db_password = clp_config.database.credentials[ClpDbUserType.SPIDER].password
             if not _validate_name(spider_db_name):

@@ -187,11 +187,11 @@ class BaseController(ABC):
         # Connection config
         env_vars |= {
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
-            "CLP_DB_NAME": self._clp_config.database.name[ClpDbNameType.CLP],
+            "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
             "CLP_DB_PORT": str(self._clp_config.database.port),
         }
         if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
-            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.name[ClpDbNameType.SPIDER]
+            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
 
         # Credentials
         credentials = self._clp_config.database.credentials
@@ -663,7 +663,7 @@ class BaseController(ABC):
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
-            "SqlDbName": self._clp_config.database.name[ClpDbNameType.CLP],
+            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
