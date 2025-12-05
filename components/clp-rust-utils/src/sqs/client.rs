@@ -3,7 +3,6 @@ use aws_sdk_sqs::{
     Client,
     config::{Builder, Credentials, Region},
 };
-use secrecy::{ExposeSecret, SecretString};
 
 /// Creates a new SQS client.
 /// The client is configured using the latest AWS SDK behavior version.
@@ -16,11 +15,11 @@ pub async fn create_new_client(
     endpoint: &str,
     region_id: &str,
     access_key_id: &str,
-    secret_access_key: &SecretString,
+    secret_access_key: &str,
 ) -> Client {
     let credential = Credentials::new(
         access_key_id,
-        secret_access_key.expose_secret(),
+        secret_access_key,
         None,
         None,
         "clp-credential-provider",
