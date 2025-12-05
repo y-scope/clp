@@ -45,6 +45,8 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     or if the running mode does not match the intended mode.
 
     :param package_instance:
+    :raise: Propagates `load_yaml_to_dict`'s errors.
+    :raise ValidationError: if the ClpConfig object cannot be validated.
     """
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
@@ -58,4 +60,8 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     intended_signature = compute_mode_signature(intended_config)
 
     if running_signature != intended_signature:
-        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
+        pytest.fail(
+            f"Mode mismatch: running configuration does not match intended configuration.\n"
+            f"Intended: '{intended_signature}'\n"
+            f"Running: '{running_signature}'"
+        )
