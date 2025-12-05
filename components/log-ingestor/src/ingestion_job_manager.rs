@@ -213,7 +213,7 @@ impl IngestionJobManager {
             s3_endpoint.as_str(),
             region,
             self.aws_credentials.access_key_id.as_str(),
-            &self.aws_credentials.secret_access_key,
+            self.aws_credentials.secret_access_key.as_str(),
         )
         .await;
         S3ClientWrapper::from(s3_client)
@@ -228,7 +228,7 @@ impl IngestionJobManager {
             sqs_endpoint.as_str(),
             region,
             self.aws_credentials.access_key_id.as_str(),
-            &self.aws_credentials.secret_access_key,
+            self.aws_credentials.secret_access_key.as_str(),
         )
         .await;
         SqsClientWrapper::from(sqs_client)
