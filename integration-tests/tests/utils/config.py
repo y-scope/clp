@@ -4,18 +4,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import yaml
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_SHARED_CONFIG_FILENAME,
+    ClpConfig,
+)
 
 from tests.utils.utils import (
     unlink,
     validate_dir_exists,
     validate_file_exists,
 )
-
-if TYPE_CHECKING:
-    from clp_py_utils.clp_config import ClpConfig
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,9 @@ class PackagePathConfig:
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
+    #: Directory where the CLP package writes logs.
+    clp_log_dir: Path = field(init=False, repr=True)
+
     def __post_init__(self, test_root_dir: Path) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the CLP package directory exists and contains required directories.
@@ -93,8 +97,16 @@ class PackagePathConfig:
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
 
+        # Initialize log directory for the package.
+        object.__setattr__(
+            self,
+            "clp_log_dir",
+            clp_package_dir / CLP_DEFAULT_LOG_DIRECTORY_PATH,
+        )
+
         # Create directories if they do not already exist.
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
+        self.clp_log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def start_script_path(self) -> Path:
@@ -151,10 +163,20 @@ class PackageInstance:
     #: The configuration for this package instance.
     package_config: PackageConfig
 
+    #: The path to the .clp-config.yaml file constructed by the package during spin up.
+    shared_config_file_path: Path = field(init=False, repr=True)
+
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
+        path_config = self.package_config.path_config
+
         # Validate that the temp config file exists.
         validate_file_exists(self.package_config.temp_config_file_path)
+
+        # Set shared_config_file_path and validate it exists.
+        shared_config_file_path = path_config.clp_log_dir / CLP_SHARED_CONFIG_FILENAME
+        validate_file_exists(shared_config_file_path)
+        object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
 
 
 @dataclass(frozen=True)
