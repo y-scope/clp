@@ -162,7 +162,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp::string_utils
                 log_surgeon::log_surgeon
                 ystdlib::containers
-                ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
                 fmt::fmt
@@ -447,7 +446,6 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
-                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 spdlog::spdlog
