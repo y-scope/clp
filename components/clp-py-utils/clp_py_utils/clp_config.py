@@ -1,6 +1,7 @@
 import os
 import pathlib
 from enum import auto
+from types import MappingProxyType
 from typing import Annotated, Any, ClassVar, Literal
 from urllib.parse import urlencode
 
@@ -204,6 +205,13 @@ class ClpDbNameType(KebabCaseStrEnum):
     SPIDER = auto()
 
 
+_DB_USER_TYPE_TO_DB_NAME_TYPE: MappingProxyType[ClpDbUserType, ClpDbNameType] = MappingProxyType({
+    ClpDbUserType.CLP: ClpDbNameType.CLP,
+    ClpDbUserType.ROOT: ClpDbNameType.CLP,
+    ClpDbUserType.SPIDER: ClpDbNameType.SPIDER,
+})
+
+
 yaml.SafeDumper.add_multi_representer(
     KebabCaseStrEnum,
     yaml.representer.SafeRepresenter.represent_str,
@@ -215,23 +223,6 @@ class DbUserCredentials(BaseModel):
 
     username: NonEmptyStr
     password: NonEmptyStr
-
-
-def _get_db_name_for_user_type(user_type: ClpDbUserType) -> ClpDbNameType:
-    """
-    Returns the database name type corresponding to the given user type.
-    :param user_type:
-    :return: Database name type corresponding to the user type.
-    """
-    match user_type:
-        case ClpDbUserType.CLP:
-            return ClpDbNameType.CLP
-        case ClpDbUserType.ROOT:
-            return ClpDbNameType.CLP
-        case ClpDbUserType.SPIDER:
-            return ClpDbNameType.SPIDER
-        case _:
-            raise ValueError(f"Unsupported user type '{user_type}'.")
 
 
 class Database(BaseModel):
@@ -286,7 +277,7 @@ class Database(BaseModel):
             "port": self.port,
             "user": self.credentials[user_type].username,
             "password": self.credentials[user_type].password,
-            "database": self.name[_get_db_name_for_user_type(user_type)],
+            "database": self.name[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]],
             "compress": self.compress,
             "autocommit": self.auto_commit,
         }
@@ -336,7 +327,7 @@ class Database(BaseModel):
         )
         return (
             f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
-            f"{self.name[_get_db_name_for_user_type(user_type)]}?{query}"
+            f"{self.name[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
         )
 
     def dump_to_primitive_dict(self) -> dict[str, Any]:
