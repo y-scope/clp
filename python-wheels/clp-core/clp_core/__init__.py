@@ -37,9 +37,6 @@ def _run_python(name, *args):
         command += list(args)
     else:
         command += sys.argv[1:]
-
-    # as MS Windows is not able to run Python scripts directly by name,
-    # we have to call the interpreter and pass the script as parameter
     return subprocess.call(command)
 
 
