@@ -8,6 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
+from types import MappingProxyType
 from typing import Any
 
 from clp_py_utils.clp_config import (
@@ -842,6 +843,12 @@ class BaseController(ABC):
             else:
                 settings[key] = value
 
+_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType({
+    DeploymentType.BASE: "docker-compose-base.yaml",
+    DeploymentType.FULL: "docker-compose.yaml",
+    DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
+    DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
+})
 
 class DockerComposeController(BaseController):
     """
@@ -1012,18 +1019,7 @@ class DockerComposeController(BaseController):
         """
         :return: The Docker Compose file name to use based on the config.
         """
-        deployment_type = self._clp_config.get_deployment_type()
-        match deployment_type:
-            case DeploymentType.BASE:
-                return "docker-compose-base.yaml"
-            case DeploymentType.FULL:
-                return "docker-compose.yaml"
-            case DeploymentType.SPIDER_BASE:
-                return "docker-compose-spider-base.yaml"
-            case DeploymentType.SPIDER_FULL:
-                return "docker-compose-spider.yaml"
-            case _:
-                raise ValueError(f"Unsupported deployment type: {deployment_type}")
+        return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:
