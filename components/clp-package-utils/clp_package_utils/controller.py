@@ -214,15 +214,14 @@ class BaseController(ABC):
         """
         component_name = QUEUE_COMPONENT_NAME
 
-        if BundledService.QUEUE not in self._clp_config.bundled:
+        if self._clp_config.queue is None or BundledService.QUEUE not in self._clp_config.bundled:
             logger.info(
-                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
                 component_name,
             )
             # Bundling
             return EnvVarsDict({"CLP_QUEUE_ENABLED": "0"})
-
-        logger.info("Setting up environment for bundling %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_queue_config(self._clp_config, logs_dir)
@@ -279,9 +278,10 @@ class BaseController(ABC):
         """
         component_name = REDIS_COMPONENT_NAME
 
-        if BundledService.REDIS not in self._clp_config.bundled:
+        if self._clp_config.redis is None or BundledService.REDIS not in self._clp_config.bundled:
             logger.info(
-                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
                 component_name,
             )
             # Bundling
