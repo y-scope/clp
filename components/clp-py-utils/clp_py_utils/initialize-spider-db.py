@@ -234,7 +234,7 @@ def main(argv: list[str]) -> int:
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.CLP)
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.ROOT)
         clp_config.database.load_credentials_from_env(user_type=ClpDbUserType.SPIDER)
-    except (ValidationError, ValueError) as err:
+    except (ValidationError, ValueError):
         logger.exception("Invalid CLP configuration.")
         return -1
     except Exception:

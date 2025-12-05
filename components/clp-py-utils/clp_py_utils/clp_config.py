@@ -205,11 +205,13 @@ class ClpDbNameType(KebabCaseStrEnum):
     SPIDER = auto()
 
 
-_DB_USER_TYPE_TO_DB_NAME_TYPE: MappingProxyType[ClpDbUserType, ClpDbNameType] = MappingProxyType({
-    ClpDbUserType.CLP: ClpDbNameType.CLP,
-    ClpDbUserType.ROOT: ClpDbNameType.CLP,
-    ClpDbUserType.SPIDER: ClpDbNameType.SPIDER,
-})
+_DB_USER_TYPE_TO_DB_NAME_TYPE: MappingProxyType[ClpDbUserType, ClpDbNameType] = MappingProxyType(
+    {
+        ClpDbUserType.CLP: ClpDbNameType.CLP,
+        ClpDbUserType.ROOT: ClpDbNameType.CLP,
+        ClpDbUserType.SPIDER: ClpDbNameType.SPIDER,
+    }
+)
 
 
 yaml.SafeDumper.add_multi_representer(

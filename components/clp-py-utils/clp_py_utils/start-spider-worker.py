@@ -67,7 +67,7 @@ def main() -> None:
                 [spider_worker_path, "--storage_url", storage_url, "--host", host]
             )
             processes.append(process)
-            logger.info(f"Started Spider worker {i+1}/{num_workers} (PID: {process.pid})")
+            logger.info(f"Started Spider worker {i + 1}/{num_workers} (PID: {process.pid})")
     except OSError:
         logger.exception("Failed to start Spider worker.")
         for process in processes:
