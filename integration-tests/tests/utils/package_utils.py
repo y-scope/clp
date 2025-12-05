@@ -1,5 +1,6 @@
 """Provides utility functions for interacting with the CLP package."""
 
+import tempfile
 import json
 import subprocess
 from pathlib import Path
@@ -22,6 +23,7 @@ from tests.utils.utils import (
     resolve_path_env_var,
     validate_dir_exists,
     validate_file_exists,
+    is_json_file_structurally_equal,
 )
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
@@ -411,11 +413,34 @@ def run_presto_filter(
         "--schema",
         "default",
         "--output-format",
-        "ALIGNED",
+        "JSON",
         "--execute",
         presto_filter,
     ]
 
-    run_and_assert(presto_filter_cmd)
+    # Run the filter and capture its JSON output.
+    presto_filter_proc = run_and_assert(
+        presto_filter_cmd,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    presto_output_text = presto_filter_proc.stdout
 
-    # Get the result and verify its correctness.
+    # Check that the output matches ground truth.
+    ground_truth_file_path: Path = presto_filter_job.ground_truth_file
+    with tempfile.TemporaryDirectory() as temporary_output_directory_name:
+        # Write output to tempfile.
+        presto_output_file_path = (
+            Path(temporary_output_directory_name) / "presto_output.jsonl"
+        )
+        presto_output_file_path.write_text(presto_output_text)
+
+        # Compare tempfile with ground truth.
+        if not is_json_file_structurally_equal(
+            presto_output_file_path,
+            ground_truth_file_path,
+        ):
+            pytest.fail(
+                f"Presto filter output did not match ground truth file: "
+                f"'{ground_truth_file_path}'"
+            )

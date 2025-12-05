@@ -170,7 +170,7 @@ class PrestoFilterJob:
     mode: str
     package_compress_job: PackageCompressJob
     filter: str
-    # Add data members as needed, like desired_result
+    ground_truth_file: Path
 
 
 @dataclass(frozen=True)
