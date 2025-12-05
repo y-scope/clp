@@ -7,7 +7,6 @@ import logging
 import os
 import pathlib
 import signal
-import socket
 import subprocess
 import sys
 import threading
@@ -49,7 +48,7 @@ def parse_args() -> argparse.Namespace:
         "--num-workers", type=int, default=1, help="Number of concurrent Spider workers."
     )
     parser.add_argument("--storage-url", type=str, required=True, help="Spider storage URL.")
-    parser.add_argument("--host", type=str, required=False, default=None, help="The worker host.")
+    parser.add_argument("--host", type=str, required=True, default=None, help="The worker host.")
     return parser.parse_args()
 
 
@@ -63,13 +62,6 @@ def main() -> None:
         sys.exit(1)
     storage_url = args.storage_url
     host = args.host
-    if host is None:
-        try:
-            hostname = socket.gethostname()
-            host = socket.gethostbyname(hostname)
-        except (OSError, socket.gaierror, socket.herror):
-            logger.exception("Failed to resolve hostname.")
-            sys.exit(1)
 
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
