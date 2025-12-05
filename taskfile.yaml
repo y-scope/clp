@@ -216,34 +216,27 @@ tasks:
     internal: true
     sources: *core_source_files
     deps:
-      - "codegen:clp-s-generate-parsers"
       - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.G_CORE_STATIC_COMPONENT_BUILD_DIR}}"
           EXTRA_ARGS:
-            - "-DCLP_USE_STATIC_LIBS=ON"
             - "-DCLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE=ON"
+            - "-DCLP_USE_STATIC_LIBS=ON"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
 
   core-static-build:
     internal: true
     sources: *core_source_files
     generates:
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_CORE_STATIC_COMPONENT_BUILD_DIR}}/clp-s"
     cmds:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_STATIC_COMPONENT_BUILD_DIR}}"
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
-          TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "log-converter", "reducer-server"]
+          TARGETS: ["clp-s"]
 
   # NOTE: We rely on cargo for checksumming. It automatically rebuilds when source files change or
   # when a binary is missing.
