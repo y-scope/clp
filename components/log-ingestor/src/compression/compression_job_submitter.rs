@@ -4,7 +4,7 @@ use clp_rust_utils::{
         AwsAuthentication::Credentials,
         AwsCredentials,
         S3Config,
-        package::config::ArchiveOutput,
+        package::{DEFAULT_DATASET_NAME, config::ArchiveOutput},
     },
     job_config::{
         ClpIoConfig,
@@ -70,7 +70,13 @@ impl CompressionJobSubmitter {
                 },
             },
             keys: None,
-            dataset: ingestion_job_config.dataset.clone(),
+            // NOTE: Workaround for #1735
+            dataset: Some(
+                ingestion_job_config
+                    .dataset
+                    .clone()
+                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.to_string()),
+            ),
             timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,
         };
