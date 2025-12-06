@@ -6,15 +6,15 @@ import {
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {Dayjs} from "dayjs";
 
-import ResultsTimeline from "../../../../components/ResultsTimeline/index";
-import {TimelineConfig} from "../../../../components/ResultsTimeline/typings";
-import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
-import {handleQuerySubmit} from "../../SearchControls/search-requests";
-import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
-import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import ResultsTimeline from "../../../../../components/ResultsTimeline/index";
+import {TimelineConfig} from "../../../../../components/ResultsTimeline/typings";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
+import {handleQuerySubmit} from "../../../SearchControls/Native/search-requests";
+import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../../SearchState/typings";
+import {computeTimelineConfig} from "../utils";
 import {useAggregationResults} from "./useAggregationResults";
-import {computeTimelineConfig} from "./utils";
 
 
 /**

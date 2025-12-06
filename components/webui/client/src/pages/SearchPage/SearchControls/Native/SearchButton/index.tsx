@@ -1,5 +1,5 @@
-import useSearchStore from "../../SearchState/index";
-import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import useSearchStore from "../../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import CancelButton from "./CancelButton";
 import SubmitButton from "./SubmitButton";
 

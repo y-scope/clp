@@ -3,7 +3,7 @@ import {useCallback} from "react";
 import {CloseOutlined} from "@ant-design/icons";
 import {Button} from "antd";
 
-import useSearchStore from "../../SearchState/index";
+import useSearchStore from "../../../SearchState/index";
 import {handleQueryCancel} from "../search-requests";
 
 

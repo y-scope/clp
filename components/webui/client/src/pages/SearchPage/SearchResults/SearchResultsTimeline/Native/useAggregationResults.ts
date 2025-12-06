@@ -1,7 +1,7 @@
-import MongoSocketCollection from "../../../../api/socket/MongoSocketCollection";
-import {useCursor} from "../../../../api/socket/useCursor";
-import {TimelineBucket} from "../../../../components/ResultsTimeline/typings";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
+import MongoSocketCollection from "../../../../../api/socket/MongoSocketCollection";
+import {useCursor} from "../../../../../api/socket/useCursor";
+import {TimelineBucket} from "../../../../../components/ResultsTimeline/typings";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 
 
 /**
