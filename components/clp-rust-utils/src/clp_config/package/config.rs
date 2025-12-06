@@ -219,6 +219,7 @@ impl Default for LogIngestor {
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct ArchiveOutput {
     pub target_archive_size: u64,
     pub target_dictionaries_size: u64,
