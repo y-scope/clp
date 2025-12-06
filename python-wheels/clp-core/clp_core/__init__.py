@@ -1,38 +1,24 @@
+"""Thin Python wrapper for invoking the bundled clp_s executable."""
+
+import functools
 import subprocess
 import sys
+from importlib.resources import files
 from pathlib import Path
-import functools
-
-if sys.version_info.minor >= 9:
-    # Only available on 3.9 or later, and required on 3.12
-    from importlib.resources import files
-else:
-    import pkg_resources
+from typing import Any
 
 
-@functools.lru_cache(maxsize=None)
-def _get_executable(name:str) -> Path:
-    exe: Path
-    if sys.version_info.minor >= 9:
-        # Only available in 3.9 or later, and required in 3.12
-        exe = Path(files("clp_core") / f"bin/{name}")
-    else:
-        exe = Path(pkg_resources.resource_filename("clp_core", f"bin/{name}"))
+@functools.cache
+def _get_executable(name: str) -> Path:
+    exe = Path(str(files("clp_core") / f"bin/{name}"))
     if exe.exists():
         return exe
+    err_msg = f"No executable found for {name} at {exe}"
+    raise FileNotFoundError(err_msg)
 
-    raise FileNotFoundError(f"No executable found for {name} at {exe}")
 
-def _run(name, *args):
-    command = [_get_executable(name)]
-    if args:
-        command += list(args)
-    else:
-        command += sys.argv[1:]
-    return subprocess.call(command)
-
-def _run_python(name, *args):
-    command = [sys.executable, _get_executable(name)]
+def _run(name: str, *args: Any) -> int:
+    command = [str(_get_executable(name))]
     if args:
         command += list(args)
     else:
@@ -40,5 +26,15 @@ def _run_python(name, *args):
     return subprocess.call(command)
 
 
-def clp_s():
+def _run_python(name: str, *args: Any) -> int:
+    command = [sys.executable, str(_get_executable(name))]
+    if args:
+        command += list(args)
+    else:
+        command += sys.argv[1:]
+    return subprocess.call(command)
+
+
+def clp_s() -> None:
+    """Entry point that dispatches to the clp_s executable."""
     raise SystemExit(_run("clp-s"))

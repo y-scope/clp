@@ -603,9 +603,7 @@ tasks:
     cmds:
       - |-
         rm -rf "{{.G_PYTHON_WHEELS_CLP_CORE_BUILD_DIR}}"
-        rm -rf tmp
-        mkdir -p tmp
-        cp "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s" tmp/clp-s
+        rm -rf tmp && mkdir -p tmp
         uv run python3 -m build --wheel --outdir tmp
         uv run auditwheel repair tmp/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_CLP_CORE_BUILD_DIR}}"
         rm -rf tmp

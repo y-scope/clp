@@ -3,7 +3,7 @@ project(${SKBUILD_PROJECT_NAME} VERSION ${SKBUILD_PROJECT_VERSION})
 
 message(STATUS "clp-core version: ${SKBUILD_PROJECT_VERSION}")
 
-set(CLP_S_EXE "${PROJECT_SOURCE_DIR}/tmp/clp-s")
+set(CLP_S_EXE "${PROJECT_SOURCE_DIR}/../../build/core/clp-s")
 
 # This step is required so that the executable's permission can be set properly.
 install(PROGRAMS ${CLP_S_EXE} DESTINATION clp_core/bin)
