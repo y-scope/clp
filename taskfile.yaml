@@ -598,14 +598,14 @@ tasks:
     cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
 
   python-wheels-clp-core:
-    #deps: ["core"]
+    deps: ["core"]
     dir: "{{.G_PYTHON_WHEELS_CLP_CORE_DIR}}"
     cmds:
       - |-
         rm -rf "{{.G_PYTHON_WHEELS_CLP_CORE_BUILD_DIR}}"
-        rm -rf ./tmp
-        mkdir -p ./tmp
-        cp "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s" ./tmp/clp-s
-        uv run python3 -m build --wheel --outdir ./tmp
-        uv run auditwheel repair ./tmp/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_CLP_CORE_BUILD_DIR}}"
-        rm -rf ./tmp
+        rm -rf tmp
+        mkdir -p tmp
+        cp "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s" tmp/clp-s
+        uv run python3 -m build --wheel --outdir tmp
+        uv run auditwheel repair tmp/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_CLP_CORE_BUILD_DIR}}"
+        rm -rf tmp
