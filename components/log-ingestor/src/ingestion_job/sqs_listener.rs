@@ -1,7 +1,7 @@
 use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
-    job_config::S3IngestionBaseConfig,
+    job_config::ingestion::s3::SqsListenerConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
@@ -10,16 +10,6 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::aws_client_manager::AwsClientManagerType;
-
-/// Configuration for a SQS listener job.
-#[derive(Debug, Clone)]
-pub struct SqsListenerConfig {
-    pub queue_url: String,
-    pub base: S3IngestionBaseConfig,
-    pub max_num_messages_to_fetch: i32,
-    pub init_polling_backoff_sec: i32,
-    pub max_polling_backoff_sec: i32,
-}
 
 /// Represents a SQS listener task that listens to SQS messages and extracts S3 object metadata.
 ///

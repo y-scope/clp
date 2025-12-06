@@ -2,20 +2,12 @@ use std::time::Duration;
 
 use anyhow::Result;
 use aws_sdk_s3::Client;
-use clp_rust_utils::{job_config::S3IngestionBaseConfig, s3::ObjectMetadata};
+use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetadata};
 use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::aws_client_manager::AwsClientManagerType;
-
-/// Configuration for a S3 scanner job.
-#[derive(Debug, Clone)]
-pub struct S3ScannerConfig {
-    pub base: S3IngestionBaseConfig,
-    pub scanning_interval: Duration,
-    pub start_after: Option<String>,
-}
 
 /// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
 /// object metadata for newly created objects.
@@ -25,6 +17,7 @@ pub struct S3ScannerConfig {
 /// * [`S3ClientManager`]: The type of the AWS S3 client manager.
 struct Task<S3ClientManager: AwsClientManagerType<Client>> {
     s3_client_manager: S3ClientManager,
+    scanning_interval: Duration,
     config: S3ScannerConfig,
     sender: mpsc::Sender<ObjectMetadata>,
 }
@@ -124,7 +117,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
 
     /// Sleeps for the configured scanning interval.
     pub async fn sleep(&self) {
-        tokio::time::sleep(self.config.scanning_interval).await;
+        tokio::time::sleep(self.scanning_interval).await;
     }
 }
 
@@ -155,8 +148,10 @@ impl S3Scanner {
         config: S3ScannerConfig,
         sender: mpsc::Sender<ObjectMetadata>,
     ) -> Self {
+        let scanning_interval = Duration::from_secs(u64::from(config.scanning_interval_sec));
         let task = Task {
             s3_client_manager,
+            scanning_interval,
             config,
             sender,
         };

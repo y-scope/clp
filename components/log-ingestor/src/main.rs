@@ -1,5 +1,5 @@
 use anyhow::Context;
-use axum::{Router, routing::get};
+use axum::Router;
 use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -86,17 +86,11 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let app = Router::new()
-        .route("/", get(health))
-        .route("/health", get(health));
+    let app = Router::new();
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
-}
-
-async fn health() -> &'static str {
-    "log-ingestor is running"
 }
