@@ -34,6 +34,25 @@ enum Error {
     InvalidJobId(String),
 }
 
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        let status_code = match &self {
+            Self::IngestionJobManagerError(e) => match e {
+                IngestionJobManagerError::InternalError(_) => {
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                }
+                IngestionJobManagerError::JobNotFound(_) => axum::http::StatusCode::NOT_FOUND,
+                IngestionJobManagerError::PrefixConflict(_) => axum::http::StatusCode::CONFLICT,
+            },
+            Self::InvalidJobId(_) => axum::http::StatusCode::BAD_REQUEST,
+        };
+        let body = serde_json::json!({
+            "error": self.to_string()
+        });
+        (status_code, Json(body)).into_response()
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CreationResponse {
@@ -115,24 +134,5 @@ async fn stop_and_delete_job(
             tracing::error!(err = ? err, "Failed to stop and delete ingestion job.");
             Err(Error::IngestionJobManagerError(err))
         }
-    }
-}
-
-impl IntoResponse for Error {
-    fn into_response(self) -> axum::response::Response {
-        let status_code = match &self {
-            Self::IngestionJobManagerError(e) => match e {
-                IngestionJobManagerError::InternalError(_) => {
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
-                }
-                IngestionJobManagerError::JobNotFound(_) => axum::http::StatusCode::NOT_FOUND,
-                IngestionJobManagerError::PrefixConflict(_) => axum::http::StatusCode::CONFLICT,
-            },
-            Self::InvalidJobId(_) => axum::http::StatusCode::BAD_REQUEST,
-        };
-        let body = serde_json::json!({
-            "error": self.to_string()
-        });
-        (status_code, Json(body)).into_response()
     }
 }
