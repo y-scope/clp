@@ -1,8 +1,14 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use async_trait::async_trait;
 use clp_rust_utils::{
-    clp_config::AwsCredentials,
+    clp_config::{
+        AwsAuthentication,
+        AwsCredentials,
+        package::{
+            config::{ArchiveOutput, Config as ClpConfig, LogsInput},
+            credentials::Credentials as ClpCredentials,
+        },
+    },
     job_config::S3IngestionBaseConfig,
     s3::ObjectMetadata,
 };
@@ -11,7 +17,7 @@ use uuid::Uuid;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    compression::{Buffer, BufferSubmitter, Listener},
+    compression::{Buffer, CompressionJobSubmitter, Listener},
     ingestion_job::{IngestionJob, S3Scanner, S3ScannerConfig, SqsListenerConfig},
 };
 
@@ -35,9 +41,58 @@ pub struct IngestionJobManager {
     buffer_size_threshold: u64,
     channel_capacity: usize,
     aws_credentials: AwsCredentials,
+    archive_output_config: ArchiveOutput,
+    mysql_pool: sqlx::MySqlPool,
 }
 
 impl IngestionJobManager {
+    /// Factory function.
+    ///
+    /// Creates a new ingestion job manager from the given CLP configuration and credentials.
+    ///
+    /// # Returns
+    ///
+    /// A newly created ingestion job manager on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * The logs input type in the CLP configuration is unsupported.
+    /// * Forwards [`clp_rust_utils::database::mysql::create_mysql_pool`]'s return values on
+    ///   failure.
+    pub async fn from_config(
+        clp_config: ClpConfig,
+        clp_credentials: ClpCredentials,
+    ) -> anyhow::Result<Self> {
+        let aws_credentials = match clp_config.logs_input {
+            LogsInput::S3 { config } => match config.aws_authentication {
+                AwsAuthentication::Credentials { credentials } => credentials,
+            },
+            LogsInput::Fs { .. } => {
+                return Err(anyhow::anyhow!(
+                    "Invalid CLP config: Unsupported logs input type. The current implementation \
+                     only supports S3 input."
+                ));
+            }
+        };
+        let mysql_pool = clp_rust_utils::database::mysql::create_mysql_pool(
+            &clp_config.database,
+            &clp_credentials.database,
+            10,
+        )
+        .await?;
+        Ok(Self {
+            job_table: Arc::new(Mutex::new(HashMap::new())),
+            buffer_timeout: Duration::from_secs(clp_config.log_ingestor.buffer_timeout_sec),
+            buffer_size_threshold: clp_config.log_ingestor.buffer_size_threshold,
+            channel_capacity: clp_config.log_ingestor.channel_capacity,
+            aws_credentials,
+            archive_output_config: clp_config.archive_output,
+            mysql_pool,
+        })
+    }
+
     /// Creates a new S3 scanner ingestion job.
     ///
     /// # Returns
@@ -208,9 +263,18 @@ impl IngestionJobManager {
     /// # Returns
     ///
     /// A new listener for receiving object metadata to ingest.
-    fn create_listener(&self, _ingestion_job_config: &S3IngestionBaseConfig) -> Listener {
-        let buffer = Buffer::new(CompressionJobSubmitter {}, self.buffer_size_threshold);
-        Listener::spawn(buffer, self.buffer_timeout, self.channel_capacity)
+    fn create_listener(&self, ingestion_job_config: &S3IngestionBaseConfig) -> Listener {
+        let submitter = CompressionJobSubmitter::new(
+            self.mysql_pool.clone(),
+            self.aws_credentials.clone(),
+            &self.archive_output_config,
+            ingestion_job_config,
+        );
+        Listener::spawn(
+            Buffer::new(submitter, self.buffer_size_threshold),
+            self.buffer_timeout,
+            self.channel_capacity,
+        )
     }
 }
 
@@ -222,16 +286,6 @@ struct IngestionJobTableEntry {
     bucket_name: String,
     key_prefix: String,
     dataset: Option<String>,
-}
-
-/// Submitter implementation for creating CLP compression jobs.
-struct CompressionJobSubmitter {}
-
-#[async_trait]
-impl BufferSubmitter for CompressionJobSubmitter {
-    async fn submit(&self, _buffer: &[ObjectMetadata]) -> anyhow::Result<()> {
-        todo!("Not implemented yet")
-    }
 }
 
 /// # Returns:
