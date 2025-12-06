@@ -252,7 +252,11 @@ def search(
     )
 
     storage_config = worker_config.stream_output.storage
-    if StorageType.S3 == storage_config.type and search_config.write_to_file:
+    if (
+        StorageType.S3 == storage_config.type
+        and search_config.write_to_file
+        and QueryTaskStatus.SUCCEEDED == task_results.status
+    ):
         s3_config = storage_config.s3_config
         dest_path = f"{job_id}/{archive_id}"
         src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
@@ -265,5 +269,7 @@ def search(
             logger.error(f"Failed to upload query results {dest_path}: {err}")
             task_results.status = QueryTaskStatus.FAILED
             task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
+
+        src_file.unlink()
 
     return task_results.model_dump()
