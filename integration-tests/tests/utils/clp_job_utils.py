@@ -7,6 +7,7 @@ import pytest
 from clp_py_utils.clp_config import CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
 
 from tests.utils.config import (
+    AdminToolsJob,
     PackageCompressJob,
     PackageInstance,
     PackageJobList,
@@ -15,6 +16,7 @@ from tests.utils.config import (
 )
 from tests.utils.package_utils import (
     compress_with_clp_package,
+    run_admin_tools_job,
     run_presto_filter,
     search_with_clp_package,
 )
@@ -309,12 +311,249 @@ PRESTO_FILTER_JOBS: dict[str, PrestoFilterJob] = {
     ),
 }
 
+ADMIN_TOOLS_JOBS: dict[str, AdminToolsJob] = {
+    "admin-tools-find-tagged-data": AdminToolsJob(
+        job_name="admin-tools-find-tagged-data",
+        mode=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+    ),
+    "admin-tools-find-tagged-data-time-range": AdminToolsJob(
+        job_name="admin-tools-find-tagged-data-time-range",
+        mode=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=1710770400000,
+        end_time=1710770940000,
+    ),
+    "admin-tools-delete-by-ids-tagged-data": AdminToolsJob(
+        job_name="admin-tools-delete-by-ids-tagged-data",
+        mode=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        tool="archive-manager",
+        command="del",
+        by_ids=True,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+    ),
+    "admin-tools-find-tagged-data-after-delete-by-ids": AdminToolsJob(
+        job_name="admin-tools-find-tagged-data-after-delete-by-ids",
+        mode=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+    ),
+    "admin-tools-delete-by-filter-tagged-data": AdminToolsJob(
+        job_name="admin-tools-delete-by-filter-tagged-data",
+        mode=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        tool="archive-manager",
+        command="del",
+        by_ids=False,
+        by_filter=True,
+        begin_time=1736497800000,
+        end_time=1736498340000,
+    ),
+    "admin-tools-find-tagged-data-time-range-after-delete-by-filter": AdminToolsJob(
+        job_name="admin-tools-find-tagged-data-time-range-after-delete-by-filter",
+        mode=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-tagged-data-spark"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=1736497800000,
+        end_time=1736498340000,
+    ),
+    "admin-tools-find-text": AdminToolsJob(
+        job_name="admin-tools-find-text",
+        mode=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+    ),
+    "admin-tools-find-text-time-range": AdminToolsJob(
+        job_name="admin-tools-find-text-time-range",
+        mode=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=0,
+        end_time=1761165583429,
+    ),
+    "admin-tools-delete-by-ids-text": AdminToolsJob(
+        job_name="admin-tools-delete-by-ids-text",
+        mode=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        tool="archive-manager",
+        command="del",
+        by_ids=True,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+    ),
+    "admin-tools-find-text-after-delete-by-ids": AdminToolsJob(
+        job_name="admin-tools-find-text-after-delete-by-ids",
+        mode=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+    ),
+    "admin-tools-delete-by-filter-text": AdminToolsJob(
+        job_name="admin-tools-delete-by-filter-text",
+        mode=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        tool="archive-manager",
+        command="del",
+        by_ids=False,
+        by_filter=True,
+        begin_time=0,
+        end_time=1761165583429,
+    ),
+    "admin-tools-find-text-time-range-after-delete-by-filter": AdminToolsJob(
+        job_name="admin-tools-find-text-time-range-after-delete-by-filter",
+        mode=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        tool="archive-manager",
+        command="find",
+        by_ids=False,
+        by_filter=False,
+        begin_time=0,
+        end_time=1761165583429,
+    ),
+    "admin-tools-dataset-list": AdminToolsJob(
+        job_name="admin-tools-dataset-list",
+        mode=PACKAGE_COMPRESS_JOBS["compress-postgresql"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
+        tool="dataset-manager",
+        command="list",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+        dataset_name=None,
+    ),
+    "admin-tools-dataset-delete-default": AdminToolsJob(
+        job_name="admin-tools-dataset-delete-default",
+        mode=PACKAGE_COMPRESS_JOBS["compress-default-dataset"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-default-dataset"],
+        tool="dataset-manager",
+        command="del",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+        dataset_name="default",
+    ),
+    "admin-tools-dataset-list-after-delete-default": AdminToolsJob(
+        job_name="admin-tools-dataset-list-after-delete-default",
+        mode=PACKAGE_COMPRESS_JOBS["compress-postgresql"].mode,
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
+        tool="dataset-manager",
+        command="list",
+        by_ids=False,
+        by_filter=False,
+        begin_time=None,
+        end_time=None,
+        dataset_name=None,
+    ),
+}
+
 
 def _matches_keyword(job_name: str, keyword_filter: str) -> bool:
     """Return True if this job should be included given the current -k filter."""
     if not keyword_filter:
         return True
     return keyword_filter.lower() in job_name.lower()
+
+
+def _build_package_compress_jobs(
+    mode_name: str,
+    job_filter: str,
+) -> list[PackageCompressJob]:
+    package_compress_jobs: list[PackageCompressJob] = []
+    for job_name, package_compress_job in PACKAGE_COMPRESS_JOBS.items():
+        if package_compress_job.mode == mode_name and _matches_keyword(job_name, job_filter):
+            package_compress_jobs.append(package_compress_job)
+    return package_compress_jobs
+
+
+def _extend_with_package_search_jobs(
+    mode_name: str,
+    job_filter: str,
+    package_search_jobs: list[PackageSearchJob],
+    package_compress_jobs: list[PackageCompressJob],
+) -> None:
+    for job_name, package_search_job in PACKAGE_SEARCH_JOBS.items():
+        if package_search_job.mode == mode_name and _matches_keyword(job_name, job_filter):
+            package_search_jobs.append(package_search_job)
+            if package_search_job.package_compress_job not in package_compress_jobs:
+                package_compress_jobs.append(package_search_job.package_compress_job)
+
+
+def _extend_with_presto_filter_jobs(
+    mode_name: str,
+    job_filter: str,
+    presto_filter_jobs: list[PrestoFilterJob],
+    package_compress_jobs: list[PackageCompressJob],
+) -> None:
+    for job_name, presto_filter_job in PRESTO_FILTER_JOBS.items():
+        if presto_filter_job.mode == mode_name and _matches_keyword(job_name, job_filter):
+            presto_filter_jobs.append(presto_filter_job)
+            if presto_filter_job.package_compress_job not in package_compress_jobs:
+                package_compress_jobs.append(presto_filter_job.package_compress_job)
+
+
+def _extend_with_admin_tools_jobs(
+    mode_name: str,
+    job_filter: str,
+    admin_tools_jobs: list[AdminToolsJob],
+    package_compress_jobs: list[PackageCompressJob],
+) -> None:
+    for job_name, admin_tools_job in ADMIN_TOOLS_JOBS.items():
+        if admin_tools_job.mode == mode_name and _matches_keyword(job_name, job_filter):
+            admin_tools_jobs.append(admin_tools_job)
+            if admin_tools_job.package_compress_job not in package_compress_jobs:
+                package_compress_jobs.append(admin_tools_job.package_compress_job)
+
+
+def _has_any_jobs(
+    package_compress_jobs: list[PackageCompressJob],
+    package_search_jobs: list[PackageSearchJob],
+    presto_filter_jobs: list[PrestoFilterJob],
+    admin_tools_jobs: list[AdminToolsJob],
+) -> bool:
+    return any(
+        (
+            package_compress_jobs,
+            package_search_jobs,
+            presto_filter_jobs,
+            admin_tools_jobs,
+        )
+    )
 
 
 def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | None:
@@ -327,32 +566,46 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
     """
     logger.debug("Creating job list for mode %s (job filter: %s)", mode_name, job_filter)
 
-    package_compress_jobs: list[PackageCompressJob] = []
+    package_compress_jobs: list[PackageCompressJob] = _build_package_compress_jobs(
+        mode_name,
+        job_filter,
+    )
     package_search_jobs: list[PackageSearchJob] = []
     presto_filter_jobs: list[PrestoFilterJob] = []
+    admin_tools_jobs: list[AdminToolsJob] = []
 
-    for job_name, package_compress_job in PACKAGE_COMPRESS_JOBS.items():
-        if package_compress_job.mode == mode_name and _matches_keyword(job_name, job_filter):
-            package_compress_jobs.append(package_compress_job)
+    _extend_with_package_search_jobs(
+        mode_name,
+        job_filter,
+        package_search_jobs,
+        package_compress_jobs,
+    )
+    _extend_with_presto_filter_jobs(
+        mode_name,
+        job_filter,
+        presto_filter_jobs,
+        package_compress_jobs,
+    )
+    _extend_with_admin_tools_jobs(
+        mode_name,
+        job_filter,
+        admin_tools_jobs,
+        package_compress_jobs,
+    )
 
-    for job_name, package_search_job in PACKAGE_SEARCH_JOBS.items():
-        if package_search_job.mode == mode_name and _matches_keyword(job_name, job_filter):
-            package_search_jobs.append(package_search_job)
-            if package_search_job.package_compress_job not in package_compress_jobs:
-                package_compress_jobs.append(package_search_job.package_compress_job)
-
-    for job_name, presto_filter_job in PRESTO_FILTER_JOBS.items():
-        if presto_filter_job.mode == mode_name and _matches_keyword(job_name, job_filter):
-            presto_filter_jobs.append(presto_filter_job)
-            if presto_filter_job.package_compress_job not in package_compress_jobs:
-                package_compress_jobs.append(presto_filter_job.package_compress_job)
-
-    if not package_compress_jobs and not package_search_jobs and not presto_filter_jobs:
+    if not _has_any_jobs(
+        package_compress_jobs,
+        package_search_jobs,
+        presto_filter_jobs,
+        admin_tools_jobs,
+    ):
         return None
+
     return PackageJobList(
         package_compress_jobs=package_compress_jobs,
         package_search_jobs=package_search_jobs,
         presto_filter_jobs=presto_filter_jobs,
+        admin_tools_jobs=admin_tools_jobs,
     )
 
 
@@ -379,6 +632,7 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
     package_compress_jobs = package_job_list.package_compress_jobs
     package_search_jobs = package_job_list.package_search_jobs
     presto_filter_jobs = package_job_list.presto_filter_jobs
+    admin_tools_jobs = package_job_list.admin_tools_jobs
     clp_package_dir = package_instance.package_config.path_config.clp_package_dir
 
     # Perform initial cleanup just in case there are any logs currently in archives.
@@ -398,6 +652,10 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
         for presto_filter_job in presto_filter_jobs:
             if presto_filter_job.package_compress_job is package_compress_job:
                 run_presto_filter(presto_filter_job)
+
+        for admin_tools_job in admin_tools_jobs:
+            if admin_tools_job.package_compress_job is package_compress_job:
+                run_admin_tools_job(admin_tools_job, package_instance)
 
         # Cleanup to prevent multiple compression jobs stored in archives.
         _remove_directory_children(archives_dir)

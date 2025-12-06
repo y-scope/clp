@@ -126,8 +126,18 @@ class PackagePathConfig:
 
     @property
     def search_script_path(self) -> Path:
-        """:return: The absolute path to the package compress script."""
+        """:return: The absolute path to the package search script."""
         return self.clp_package_dir / "sbin" / "search.sh"
+
+    @property
+    def archive_manager_script_path(self) -> Path:
+        """:return: The absolute path to the package archive manager script."""
+        return self.clp_package_dir / "sbin" / "admin-tools" / "archive-manager.sh"
+
+    @property
+    def dataset_manager_script_path(self) -> Path:
+        """:return: The absolute path to the package dataset manager script."""
+        return self.clp_package_dir / "sbin" / "admin-tools" / "dataset-manager.sh"
 
 
 @dataclass(frozen=True)
@@ -174,12 +184,30 @@ class PrestoFilterJob:
 
 
 @dataclass(frozen=True)
+class AdminToolsJob:
+    """An admin-tools job for a package test."""
+
+    job_name: str
+    mode: str
+    package_compress_job: PackageCompressJob
+    tool: str
+    command: str
+    by_ids: bool
+    by_filter: bool
+    begin_time: int | None = None
+    end_time: int | None = None
+    dataset_name: str | None = None
+    # add attributes as needed
+
+
+@dataclass(frozen=True)
 class PackageJobList:
     """List of jobs to run during a package test."""
 
     package_compress_jobs: list[PackageCompressJob]
     package_search_jobs: list[PackageSearchJob]
     presto_filter_jobs: list[PrestoFilterJob]
+    admin_tools_jobs: list[AdminToolsJob]
 
 
 @dataclass(frozen=True)

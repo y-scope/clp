@@ -7,10 +7,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from clp_py_utils.clp_config import PRESTO_COORDINATOR_COMPONENT_NAME
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH,
+    PRESTO_COORDINATOR_COMPONENT_NAME,
+)
 
 from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
+    AdminToolsJob,
     IntegrationTestLogs,
     PackageCompressJob,
     PackageConfig,
@@ -441,3 +445,109 @@ def run_presto_filter(
             pytest.fail(
                 f"Presto filter output did not match ground truth file: '{ground_truth_file_path}'"
             )
+
+
+def run_admin_tools_job(admin_tools_job: AdminToolsJob, package_instance: PackageInstance) -> None:
+    """
+    Docstring for run_admin_tools_job
+
+    :param admin_tools_job: Description
+    :type admin_tools_job: AdminToolsJob
+    :param package_instance: Description
+    :type package_instance: PackageInstance
+    """
+    tool = admin_tools_job.tool
+    if tool == "archive-manager":
+        _run_archive_manager_job(admin_tools_job, package_instance)
+    elif tool == "dataset-manager":
+        _run_dataset_manager_job(admin_tools_job, package_instance)
+    else:
+        pytest.fail(f"Tool {tool} not supported.")
+
+
+def _run_archive_manager_job(
+    admin_tools_job: AdminToolsJob, package_instance: PackageInstance
+) -> None:
+    package_config = package_instance.package_config
+    archive_manager_script_path = package_config.path_config.archive_manager_script_path
+    temp_config_file_path = package_config.temp_config_file_path
+    compress_job = admin_tools_job.package_compress_job
+    archive_manager_cmd = [
+        str(archive_manager_script_path),
+        "--config",
+        str(temp_config_file_path),
+    ]
+    if compress_job.dataset_name is not None:
+        archive_manager_cmd.extend(
+            [
+                "--dataset",
+                compress_job.dataset_name,
+            ]
+        )
+
+    archive_manager_cmd.append(admin_tools_job.command)
+    if admin_tools_job.by_ids:
+        archive_dir = CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
+        archive_id = _get_archive_id(archive_dir, compress_job.dataset_name)
+        archive_manager_cmd.extend(
+            [
+                "by-ids",
+                archive_id,
+            ]
+        )
+    if admin_tools_job.by_filter:
+        archive_manager_cmd.append("by-filter")
+
+    if admin_tools_job.begin_time is not None:
+        archive_manager_cmd.extend(
+            [
+                "--begin-ts",
+                str(admin_tools_job.begin_time),
+            ]
+        )
+    if admin_tools_job.end_time is not None:
+        archive_manager_cmd.extend(
+            [
+                "--end-ts",
+                str(admin_tools_job.end_time),
+            ]
+        )
+
+    run_and_assert(archive_manager_cmd)
+
+
+def _run_dataset_manager_job(
+    admin_tools_job: AdminToolsJob,
+    package_instance: PackageInstance,
+) -> None:
+    package_config = package_instance.package_config
+    dataset_manager_script_path = package_config.path_config.dataset_manager_script_path
+    temp_config_file_path = package_config.temp_config_file_path
+
+    dataset_manager_cmd = [
+        str(dataset_manager_script_path),
+        "--config",
+        str(temp_config_file_path),
+    ]
+    dataset_manager_cmd.append(admin_tools_job.command)
+    if admin_tools_job.dataset_name is not None:
+        dataset_manager_cmd.append(admin_tools_job.dataset_name)
+
+    run_and_assert(dataset_manager_cmd)
+
+
+def _get_archive_id(archive_dir: Path, dataset_name: str | None) -> str:
+    directory = resolve_path_env_var("CLP_PACKAGE_DIR") / archive_dir
+    if dataset_name is not None:
+        directory /= dataset_name
+
+    if not directory.is_dir():
+        err_msg = f"Archive directory not found: {directory}"
+        raise FileNotFoundError(err_msg)
+
+    for child in directory.iterdir():
+        if child.is_dir():
+            return child.name
+
+    err_msg = f"Archive directory contains no archive subdirectories: {directory}"
+    raise ValueError(err_msg)
