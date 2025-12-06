@@ -58,24 +58,24 @@ impl CompressionJobSubmitter {
         db_pool: MySqlPool,
         aws_credentials: AwsCredentials,
         archive_output_config: &ArchiveOutput,
-        ingestion_job_config: S3IngestionBaseConfig,
+        ingestion_job_config: &S3IngestionBaseConfig,
     ) -> Self {
         let s3_input_config = S3InputConfig {
             s3_config: S3Config {
-                bucket: ingestion_job_config.bucket_name,
-                region_code: ingestion_job_config.region,
-                key_prefix: ingestion_job_config.key_prefix,
+                bucket: ingestion_job_config.bucket_name.clone(),
+                region_code: ingestion_job_config.region.clone(),
+                key_prefix: ingestion_job_config.key_prefix.clone(),
                 aws_authentication: Credentials {
                     credentials: aws_credentials,
                 },
             },
             keys: None,
-            dataset: ingestion_job_config.dataset,
-            timestamp_key: ingestion_job_config.timestamp_key,
+            dataset: ingestion_job_config.dataset.clone(),
+            timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,
         };
         let output_config = OutputConfig {
-            tags: ingestion_job_config.tags,
+            tags: ingestion_job_config.tags.clone(),
             target_archive_size: archive_output_config.target_archive_size,
             target_dictionaries_size: archive_output_config.target_dictionaries_size,
             target_encoded_file_size: archive_output_config.target_encoded_file_size,

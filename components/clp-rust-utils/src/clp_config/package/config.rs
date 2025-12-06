@@ -219,6 +219,7 @@ impl Default for LogIngestor {
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct ArchiveOutput {
     pub target_archive_size: u64,
     pub target_dictionaries_size: u64,
@@ -282,8 +283,6 @@ pub enum LogsInput {
 
 #[cfg(test)]
 mod tests {
-    use secrecy::ExposeSecret;
-
     use super::LogsInput;
 
     #[test]
@@ -309,10 +308,7 @@ mod tests {
             LogsInput::S3 { config } => match config.aws_authentication {
                 crate::clp_config::AwsAuthentication::Credentials { credentials } => {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
-                    assert_eq!(
-                        credentials.secret_access_key.expose_secret(),
-                        SECRET_ACCESS_KEY
-                    );
+                    assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),

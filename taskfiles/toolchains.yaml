@@ -101,7 +101,6 @@ tasks:
         # Set up environment variable for Rust build directory
         export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
         EOF
-        chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
 
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-

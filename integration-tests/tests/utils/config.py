@@ -117,6 +117,9 @@ class PackageConfig:
     #: Name of the package operation mode.
     mode_name: str
 
+    #: The list of CLP components that this package needs.
+    component_list: list[str]
+
     #: The Pydantic representation of a CLP package configuration.
     clp_config: ClpConfig
 
