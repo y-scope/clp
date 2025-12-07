@@ -31,7 +31,6 @@ data:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: {{ include "clp.fullname" . }}-results-cache
       port: 27017
-      retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
 
   mysql-logging.cnf: |
