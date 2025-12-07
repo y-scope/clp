@@ -150,7 +150,7 @@ services:
     volumes:
       - type: "bind"
         source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
-        target: "/usr/local/etc/redis/redis.conf"
+        target: "/etc/redis/redis.conf"
         read_only: true
       - type: "bind"
         source: "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}"
@@ -160,7 +160,7 @@ services:
         target: "/var/log/redis"
     command: [
       "redis-server",
-      "/usr/local/etc/redis/redis.conf",
+      "/etc/redis/redis.conf",
       "--requirepass", "${CLP_REDIS_PASS:?Please set a value.}"
     ]
     healthcheck:
