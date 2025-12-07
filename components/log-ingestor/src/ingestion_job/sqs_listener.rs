@@ -40,7 +40,9 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///   [`aws_sdk_sqs::operation::receive_message::builders::ReceiveMessageFluentBuilder::send`]'s
     ///   return values on failure.
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
-        let mut polling_backoff_sec = self.config.init_polling_backoff_sec;
+        const MAX_NUM_MESSAGES_TO_FETCH: i32 = 10;
+        const MAX_WAIT_TIME_SEC: i32 = 20;
+
         loop {
             select! {
                 // Cancellation requested.
@@ -52,14 +54,9 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
                 result = self.sqs_client_manager.get().await?
                     .receive_message()
                     .queue_url(self.config.queue_url.as_str())
-                    .max_number_of_messages(self.config.max_num_messages_to_fetch)
-                    .wait_time_seconds(polling_backoff_sec).send() => {
-                    polling_backoff_sec = if self.process_sqs_response(result?).await? {
-                        self.config.init_polling_backoff_sec
-                    } else { std::cmp::min(
-                        polling_backoff_sec.saturating_mul(2),
-                        self.config.max_polling_backoff_sec
-                    ) };
+                    .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
+                    .wait_time_seconds(MAX_WAIT_TIME_SEC).send() => {
+                    let _ = self.process_sqs_response(result?).await?;
                 }
             }
         }

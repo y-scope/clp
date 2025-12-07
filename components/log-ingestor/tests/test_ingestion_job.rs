@@ -180,9 +180,6 @@ async fn test_sqs_listener() -> Result<()> {
             unstructured: false,
             tags: None,
         },
-        max_num_messages_to_fetch: 2,
-        init_polling_backoff_sec: 1,
-        max_polling_backoff_sec: 1,
     };
 
     let (sender, receiver) = mpsc::channel::<ObjectMetadata>(TEST_CHANNEL_CAPACITY);

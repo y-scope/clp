@@ -39,21 +39,6 @@ pub mod s3 {
         /// The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated
         /// to this ingestion job.
         pub queue_url: String,
-
-        /// The maximum number of messages to fetch from SQS in each polling attempt. Defaults to
-        /// 10.
-        #[serde(default = "default_max_num_messages_to_fetch")]
-        pub max_num_messages_to_fetch: i32,
-
-        /// Initial backoff time in seconds for polling SQS when no messages are available.
-        /// Defaults to 30 seconds.
-        #[serde(default = "default_init_polling_backoff_sec")]
-        pub init_polling_backoff_sec: i32,
-
-        /// Maximum backoff time in seconds for polling SQS when no messages are available.
-        /// Defaults to 300 seconds.
-        #[serde(default = "default_max_polling_backoff_sec")]
-        pub max_polling_backoff_sec: i32,
     }
 
     /// Configuration for a S3 scanner job.
@@ -63,7 +48,7 @@ pub mod s3 {
         pub base: BaseConfig,
 
         /// The scan interval in seconds. Defaults to 30 seconds.
-        #[serde(default = "default_scan_interval_sec")]
+        #[serde(default = "default_scanning_interval_sec")]
         pub scanning_interval_sec: u32,
 
         /// The key to ingest after. If specified, only objects with keys lexicographically greater
@@ -76,19 +61,7 @@ pub mod s3 {
         false
     }
 
-    const fn default_max_num_messages_to_fetch() -> i32 {
-        10
-    }
-
-    const fn default_init_polling_backoff_sec() -> i32 {
+    const fn default_scanning_interval_sec() -> u32 {
         30
-    }
-
-    const fn default_max_polling_backoff_sec() -> i32 {
-        300
-    }
-
-    const fn default_scan_interval_sec() -> u32 {
-        300
     }
 }
