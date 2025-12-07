@@ -40,7 +40,7 @@ spec:
             - name: "RABBITMQ_LOGS"
               value: "/var/log/rabbitmq/rabbitmq.log"
           ports:
-            - name: "amqp"
+            - name: "queue"
               containerPort: 5672
           volumeMounts:
             - name: "queue-logs"
