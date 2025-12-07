@@ -20,9 +20,7 @@ TEST_MODES = CLP_MODE_CONFIGS.keys()
 
 @pytest.mark.package
 @pytest.mark.parametrize("fixt_package_config", TEST_MODES, indirect=True)
-def test_clp_package(
-    request: pytest.FixtureRequest, fixt_package_instance: PackageInstance
-) -> None:
+def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     """
     Validate that all of the components of the CLP package start up successfully for the selected
     mode of operation.
@@ -43,4 +41,4 @@ def test_clp_package(
     # Run all jobs.
     package_job_list = fixt_package_instance.package_config.package_job_list
     if package_job_list is not None:
-        dispatch_test_jobs(request, fixt_package_instance)
+        dispatch_test_jobs(fixt_package_instance)

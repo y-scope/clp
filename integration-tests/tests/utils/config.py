@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -76,6 +77,9 @@ class PackagePathConfig:
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
+    #: Directory where decompressed logs will be stored.
+    package_decompression_dir: Path = field(init=False, repr=True)
+
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
@@ -97,6 +101,9 @@ class PackagePathConfig:
         # Initialize directory for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        object.__setattr__(
+            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -125,6 +132,11 @@ class PackagePathConfig:
         return self.clp_package_dir / "sbin" / "compress.sh"
 
     @property
+    def decompress_script_path(self) -> Path:
+        """:return: The absolute path to the package decompress script."""
+        return self.clp_package_dir / "sbin" / "decompress.sh"
+
+    @property
     def search_script_path(self) -> Path:
         """:return: The absolute path to the package search script."""
         return self.clp_package_dir / "sbin" / "search.sh"
@@ -141,73 +153,80 @@ class PackagePathConfig:
 
 
 @dataclass(frozen=True)
-class PackageCompressJob:
+class PackageCompressionJob:
     """A compression job for a package test."""
 
+    # The name of the job.
     job_name: str
-    log_fixture_name: str
+
+    # The mode the job should be running in.
     mode: str
-    log_format: str
-    unstructured: bool
-    dataset_name: str | None = None
-    timestamp_key: str | None = None
-    tags: list[str] | None = None
-    subpath: Path | None = None
+
+    # Script path (relative to the CLP package).
+    script_path: Path
+
+    # The path to the logs relative to integration-tests/tests/data/logs
+    # (either a file or directory).
+    log_path: Path
+
+    # Flags to specify in the command.
+    flags: dict[str, Any] | None
+
+    # Arguments to specify in the command.
+    args: list[str] | None
 
 
 @dataclass(frozen=True)
-class PackageSearchJob:
-    """A search job for a package test."""
+class PackagePostCompressionJob:
+    """A job for a package test."""
 
+    # The name of the job.
     job_name: str
-    mode: str
-    package_compress_job: PackageCompressJob
-    ignore_case: bool
-    count: bool
-    wildcard_query: str
-    desired_result: str
-    begin_time: int | None = None
-    end_time: int | None = None
-    count_by_time: int | None = None
-    file_subpath: Path | None = None
+
+    # The PackageCompressionJob this job depends on.
+    compression_job: PackageCompressionJob
+
+    # Script path (relative to the CLP package).
+    script_path: Path
+
+    # Flags to specify in the command.
+    flags: dict[str, Any] | None
+
+    # Arguments to specify in the command.
+    args: list[str] | None
+
+    # The path to the file that holds output ground truth.
+    output_ground_truth_file: Path
+
+    # Special attribute for `del by-ids` admin command.
+    requires_archive_id: bool = False
 
 
+# Presto filters get their own class because they are not run on the CLP package.
 @dataclass(frozen=True)
 class PrestoFilterJob:
-    """A filter job for a package test."""
+    """A Presto filter job for a package test."""
 
+    # The name of the job.
     job_name: str
-    mode: str
-    package_compress_job: PackageCompressJob
+
+    # The PackageCompressionJob this job depends on.
+    compression_job: PackageCompressionJob
+
+    # The filter to run on the logs.
     filter: str
-    ground_truth_file: Path
 
-
-@dataclass(frozen=True)
-class AdminToolsJob:
-    """An admin-tools job for a package test."""
-
-    job_name: str
-    mode: str
-    package_compress_job: PackageCompressJob
-    tool: str
-    command: str
-    by_ids: bool
-    by_filter: bool
-    begin_time: int | None = None
-    end_time: int | None = None
-    dataset_name: str | None = None
-    # add attributes as needed
+    # The path to the file that holds output ground truth.
+    output_ground_truth_file: Path
 
 
 @dataclass(frozen=True)
 class PackageJobList:
     """List of jobs to run during a package test."""
 
-    package_compress_jobs: list[PackageCompressJob]
-    package_search_jobs: list[PackageSearchJob]
+    package_compression_jobs: list[PackageCompressionJob]
+    package_post_compression_jobs: list[PackagePostCompressionJob]
     presto_filter_jobs: list[PrestoFilterJob]
-    admin_tools_jobs: list[AdminToolsJob]
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,15 @@
+1972-12-18T05:33:00.000 apollo-17 d12 e000 final midcourse update confirms entry interface conditions within limits; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T05:42:35.999 apollo-17 d12 e001 service module systems evaluated ahead of planned jettison sequence; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T05:52:11.998 apollo-17 d12 e002 crew configures command module for standalone entry operations; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:01:47.997 apollo-17 d12 e003 communications tests conducted with recovery ships and aircraft; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:11:23.996 apollo-17 d12 e004 reentry checklist reviewed step by step with mission control; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:20:59.995 apollo-17 d12 e005 photography documents Earth weather systems along ground track; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:30:35.994 apollo-17 d12 e006 crew secures loose items in cabin to prevent free floating during G loads; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:40:11.993 apollo-17 d12 e007 instrument packages stowed in locations compatible with landing loads; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:49:47.992 apollo-17 d12 e008 guidance computer switched to appropriate reentry programs; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T06:59:23.991 apollo-17 d12 e009 service module jettison countdown initiated by crew on mission timers; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T07:08:59.990 apollo-17 d12 e010 physical conditioning exercises performed to prepare for gravity return; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T07:18:35.989 apollo-17 d12 e011 flight controllers monitor final trajectory refinements in real time; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T07:28:11.988 apollo-17 d12 e012 spacecraft attitude adjusted for correct heat shield orientation; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T07:37:47.987 apollo-17 d12 e013 entry corridor displays show predicted deceleration profile for crew; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-18T07:47:23.986 apollo-17 d12 e014 crew reports readiness for high speed entry and ocean splashdown; all primary systems nominal; communications lock; navigation solution within expected error

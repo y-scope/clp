@@ -1,0 +1,150 @@
+1977-09-05T12:56:01Z VOYAGER-1 MISSION_LOG launch from Cape Canaveral; ascent and staging remain nominal; guidance solution holds trajectory toward outer planets
+1978-01-01T19:36:42Z VOYAGER-1 MISSION_LOG Jupiter encounter sequence loads into flight data system; command verification passes; observation timeline covers major atmospheric features
+1978-04-30T02:17:24Z VOYAGER-1 MISSION_LOG magnetometer records entry into Jovian magnetosphere; charged particle flux rises according to pre encounter models
+1978-08-26T08:58:06Z VOYAGER-1 MISSION_LOG Jupiter closest approach observations in progress; multiple Galilean moon flybys executed; data return saturates scheduled tracking passes
+1978-12-22T15:38:48Z VOYAGER-1 MISSION_LOG cruise toward Jupiter; imaging subsystem acquires long range optical navigation frames; science teams begin calibration sequences
+1979-04-19T22:19:30Z VOYAGER-1 MISSION_LOG Jupiter encounter sequence loads into flight data system; command verification passes; observation timeline covers major atmospheric features
+1979-08-16T05:00:12Z VOYAGER-1 MISSION_LOG magnetometer records entry into Jovian magnetosphere; charged particle flux rises according to pre encounter models
+1979-12-12T11:40:54Z VOYAGER-1 MISSION_LOG Jupiter closest approach observations in progress; multiple Galilean moon flybys executed; data return saturates scheduled tracking passes
+1980-04-08T18:21:35Z VOYAGER-1 MISSION_LOG post Jupiter trajectory refinement directs spacecraft toward Saturn; updated ephemerides reduce navigation uncertainties
+1980-08-05T01:02:17Z VOYAGER-1 MISSION_LOG Saturn approach observations begin; ring system photometry and occultation planning refine timing constraints
+1980-12-01T07:42:59Z VOYAGER-1 MISSION_LOG Saturn closest approach and Titan flyby execute; gravity assist redirects spacecraft out of ecliptic plane toward outer heliosphere
+1981-03-29T14:23:41Z VOYAGER-1 MISSION_LOG post Saturn imaging sequence completes; engineering team prepares for long duration heliospheric cruise phase
+1981-07-25T21:04:23Z VOYAGER-1 MISSION_LOG post Jupiter trajectory refinement directs spacecraft toward Saturn; updated ephemerides reduce navigation uncertainties
+1981-11-21T03:45:05Z VOYAGER-1 MISSION_LOG Saturn approach observations begin; ring system photometry and occultation planning refine timing constraints
+1982-03-19T10:25:47Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1982-07-15T17:06:29Z VOYAGER-1 MISSION_LOG extended mission configuration validated; fault protection rules updated to account for aging avionics and reduced power margins
+1982-11-10T23:47:10Z VOYAGER-1 MISSION_LOG interplanetary cruise continues beyond Saturn orbit; radioisotope thermoelectric generator power output slowly declines
+1983-03-09T06:27:52Z VOYAGER-1 MISSION_LOG cosmic ray detector records gradual increase in high energy particles as solar influence weakens with distance
+1983-07-05T13:08:34Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1983-10-31T19:49:16Z VOYAGER-1 MISSION_LOG extended mission configuration validated; fault protection rules updated to account for aging avionics and reduced power margins
+1984-02-27T02:29:58Z VOYAGER-1 MISSION_LOG interplanetary cruise continues beyond Saturn orbit; radioisotope thermoelectric generator power output slowly declines
+1984-06-24T09:10:40Z VOYAGER-1 MISSION_LOG cosmic ray detector records gradual increase in high energy particles as solar influence weakens with distance
+1984-10-20T15:51:22Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1985-02-15T22:32:04Z VOYAGER-1 MISSION_LOG extended mission configuration validated; fault protection rules updated to account for aging avionics and reduced power margins
+1985-06-14T05:12:45Z VOYAGER-1 MISSION_LOG interplanetary cruise continues beyond Saturn orbit; radioisotope thermoelectric generator power output slowly declines
+1985-10-10T11:53:27Z VOYAGER-1 MISSION_LOG cosmic ray detector records gradual increase in high energy particles as solar influence weakens with distance
+1986-02-05T18:34:09Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1986-06-04T01:14:51Z VOYAGER-1 MISSION_LOG extended mission configuration validated; fault protection rules updated to account for aging avionics and reduced power margins
+1986-09-30T07:55:33Z VOYAGER-1 MISSION_LOG interplanetary cruise continues beyond Saturn orbit; radioisotope thermoelectric generator power output slowly declines
+1987-01-26T14:36:15Z VOYAGER-1 MISSION_LOG cosmic ray detector records gradual increase in high energy particles as solar influence weakens with distance
+1987-05-24T21:16:57Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1987-09-20T03:57:39Z VOYAGER-1 MISSION_LOG extended mission configuration validated; fault protection rules updated to account for aging avionics and reduced power margins
+1988-01-16T10:38:20Z VOYAGER-1 MISSION_LOG interplanetary cruise continues beyond Saturn orbit; radioisotope thermoelectric generator power output slowly declines
+1988-05-13T17:19:02Z VOYAGER-1 MISSION_LOG cosmic ray detector records gradual increase in high energy particles as solar influence weakens with distance
+1988-09-08T23:59:44Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1989-01-05T06:40:26Z VOYAGER-1 MISSION_LOG extended mission configuration validated; fault protection rules updated to account for aging avionics and reduced power margins
+1989-05-03T13:21:08Z VOYAGER-1 MISSION_LOG interplanetary cruise continues beyond Saturn orbit; radioisotope thermoelectric generator power output slowly declines
+1989-08-29T20:01:50Z VOYAGER-1 MISSION_LOG cosmic ray detector records gradual increase in high energy particles as solar influence weakens with distance
+1989-12-26T02:42:32Z VOYAGER-1 MISSION_LOG plasma wave and ultraviolet instruments monitor solar wind structure in distant outer heliosphere
+1990-04-23T09:23:14Z VOYAGER-1 MISSION_LOG mission designation updated to Voyager Interstellar Mission; long term science focus shifts to heliospheric boundary studies
+1990-08-19T16:03:55Z VOYAGER-1 MISSION_LOG Pale Blue Dot imaging campaign around solar system family portrait completes; imaging system later powered down to conserve resources
+1990-12-15T22:44:37Z VOYAGER-1 MISSION_LOG attitude control performs slow roll maneuvers to support final imaging; star tracker performance remains within specification
+1991-04-13T05:25:19Z VOYAGER-1 MISSION_LOG telemetry bit rate reduction implemented; Deep Space Network schedules adjust to compensate for weaker downlink signal
+1991-08-09T12:06:01Z VOYAGER-1 MISSION_LOG mission designation updated to Voyager Interstellar Mission; long term science focus shifts to heliospheric boundary studies
+1991-12-05T18:46:43Z VOYAGER-1 MISSION_LOG Pale Blue Dot imaging campaign around solar system family portrait completes; imaging system later powered down to conserve resources
+1992-04-02T01:27:25Z VOYAGER-1 MISSION_LOG attitude control performs slow roll maneuvers to support final imaging; star tracker performance remains within specification
+1992-07-29T08:08:07Z VOYAGER-1 MISSION_LOG telemetry bit rate reduction implemented; Deep Space Network schedules adjust to compensate for weaker downlink signal
+1992-11-24T14:48:48Z VOYAGER-1 MISSION_LOG mission designation updated to Voyager Interstellar Mission; long term science focus shifts to heliospheric boundary studies
+1993-03-22T21:29:30Z VOYAGER-1 MISSION_LOG Pale Blue Dot imaging campaign around solar system family portrait completes; imaging system later powered down to conserve resources
+1993-07-19T04:10:12Z VOYAGER-1 MISSION_LOG attitude control performs slow roll maneuvers to support final imaging; star tracker performance remains within specification
+1993-11-14T10:50:54Z VOYAGER-1 MISSION_LOG telemetry bit rate reduction implemented; Deep Space Network schedules adjust to compensate for weaker downlink signal
+1994-03-12T17:31:36Z VOYAGER-1 MISSION_LOG mission designation updated to Voyager Interstellar Mission; long term science focus shifts to heliospheric boundary studies
+1994-07-09T00:12:18Z VOYAGER-1 MISSION_LOG Pale Blue Dot imaging campaign around solar system family portrait completes; imaging system later powered down to conserve resources
+1994-11-04T06:53:00Z VOYAGER-1 MISSION_LOG attitude control performs slow roll maneuvers to support final imaging; star tracker performance remains within specification
+1995-03-02T13:33:42Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+1995-06-28T20:14:23Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+1995-10-25T02:55:05Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+1996-02-20T09:35:47Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+1996-06-17T16:16:29Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+1996-10-13T22:57:11Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+1997-02-09T05:37:53Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+1997-06-07T12:18:35Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+1997-10-03T18:59:17Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+1998-01-30T01:39:58Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+1998-05-28T08:20:40Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+1998-09-23T15:01:22Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+1999-01-19T21:42:04Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+1999-05-18T04:22:46Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+1999-09-13T11:03:28Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+2000-01-09T17:44:10Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+2000-05-07T00:24:52Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+2000-09-02T07:05:33Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+2000-12-29T13:46:15Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+2001-04-26T20:26:57Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+2001-08-23T03:07:39Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+2001-12-19T09:48:21Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+2002-04-16T16:29:03Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+2002-08-12T23:09:45Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+2002-12-09T05:50:27Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+2003-04-06T12:31:08Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+2003-08-02T19:11:50Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+2003-11-29T01:52:32Z VOYAGER-1 MISSION_LOG cosmic ray instrument registers changes in energetic particle populations associated with termination shock structures
+2004-03-26T08:33:14Z VOYAGER-1 MISSION_LOG antenna pointing constraints tighten as hydrazine reserves age; momentum management continues within conservative limits
+2004-07-22T15:13:56Z VOYAGER-1 MISSION_LOG new fault protection and power management parameters uplinked to adapt to declining radioisotope thermoelectric generator output
+2004-11-17T21:54:38Z VOYAGER-1 MISSION_LOG spacecraft approaches and then crosses termination shock region; plasma data indicate major heliospheric boundary transition
+2005-03-16T04:35:20Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2005-07-12T11:16:01Z VOYAGER-1 MISSION_LOG instrument calibrations refine long baseline trends; teams track slow drifts in sensor response over multiple decades
+2005-11-07T17:56:43Z VOYAGER-1 MISSION_LOG critical flight software patches transmitted at very low data rates; round trip light time imposes multi hour command delays
+2006-03-06T00:37:25Z VOYAGER-1 MISSION_LOG spacecraft moves through outer heliosheath; magnetic field measurements show evolving structure near heliopause
+2006-07-02T07:18:07Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2006-10-28T13:58:49Z VOYAGER-1 MISSION_LOG instrument calibrations refine long baseline trends; teams track slow drifts in sensor response over multiple decades
+2007-02-23T20:39:31Z VOYAGER-1 MISSION_LOG critical flight software patches transmitted at very low data rates; round trip light time imposes multi hour command delays
+2007-06-22T03:20:13Z VOYAGER-1 MISSION_LOG spacecraft moves through outer heliosheath; magnetic field measurements show evolving structure near heliopause
+2007-10-18T10:00:55Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2008-02-13T16:41:36Z VOYAGER-1 MISSION_LOG instrument calibrations refine long baseline trends; teams track slow drifts in sensor response over multiple decades
+2008-06-10T23:22:18Z VOYAGER-1 MISSION_LOG critical flight software patches transmitted at very low data rates; round trip light time imposes multi hour command delays
+2008-10-07T06:03:00Z VOYAGER-1 MISSION_LOG spacecraft moves through outer heliosheath; magnetic field measurements show evolving structure near heliopause
+2009-02-02T12:43:42Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2009-05-31T19:24:24Z VOYAGER-1 MISSION_LOG instrument calibrations refine long baseline trends; teams track slow drifts in sensor response over multiple decades
+2009-09-27T02:05:06Z VOYAGER-1 MISSION_LOG critical flight software patches transmitted at very low data rates; round trip light time imposes multi hour command delays
+2010-01-23T08:45:48Z VOYAGER-1 MISSION_LOG spacecraft moves through outer heliosheath; magnetic field measurements show evolving structure near heliopause
+2010-05-21T15:26:30Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2010-09-16T22:07:11Z VOYAGER-1 MISSION_LOG instrument calibrations refine long baseline trends; teams track slow drifts in sensor response over multiple decades
+2011-01-13T04:47:53Z VOYAGER-1 MISSION_LOG critical flight software patches transmitted at very low data rates; round trip light time imposes multi hour command delays
+2011-05-11T11:28:35Z VOYAGER-1 MISSION_LOG spacecraft moves through outer heliosheath; magnetic field measurements show evolving structure near heliopause
+2011-09-06T18:09:17Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2012-01-03T00:49:59Z VOYAGER-1 MISSION_LOG instrument calibrations refine long baseline trends; teams track slow drifts in sensor response over multiple decades
+2012-04-30T07:30:41Z VOYAGER-1 MISSION_LOG critical flight software patches transmitted at very low data rates; round trip light time imposes multi hour command delays
+2012-08-26T14:11:23Z VOYAGER-1 MISSION_LOG spacecraft moves through outer heliosheath; magnetic field measurements show evolving structure near heliopause
+2012-12-22T20:52:05Z VOYAGER-1 MISSION_LOG solar activity variations propagate outward; delayed signatures appear in plasma wave and energetic particle data
+2013-04-20T03:32:46Z VOYAGER-1 MISSION_LOG operations teams adopt interstellar mission profile; priority shifts to monitoring local interstellar medium conditions
+2013-08-16T10:13:28Z VOYAGER-1 MISSION_LOG analysis of boundary crossing signatures continues using multi year combined instrument observations
+2013-12-12T16:54:10Z VOYAGER-1 MISSION_LOG data sets indicate transition into interstellar space; plasma density estimates support location beyond heliopause boundary
+2014-04-09T23:34:52Z VOYAGER-1 MISSION_LOG cosmic ray detectors measure enhanced galactic particle flux; solar modulation signatures diminish significantly
+2014-08-06T06:15:34Z VOYAGER-1 MISSION_LOG operations teams adopt interstellar mission profile; priority shifts to monitoring local interstellar medium conditions
+2014-12-02T12:56:16Z VOYAGER-1 MISSION_LOG analysis of boundary crossing signatures continues using multi year combined instrument observations
+2015-03-30T19:36:58Z VOYAGER-1 MISSION_LOG data sets indicate transition into interstellar space; plasma density estimates support location beyond heliopause boundary
+2015-07-27T02:17:40Z VOYAGER-1 MISSION_LOG cosmic ray detectors measure enhanced galactic particle flux; solar modulation signatures diminish significantly
+2015-11-22T08:58:21Z VOYAGER-1 MISSION_LOG operations teams adopt interstellar mission profile; priority shifts to monitoring local interstellar medium conditions
+2016-03-19T15:39:03Z VOYAGER-1 MISSION_LOG analysis of boundary crossing signatures continues using multi year combined instrument observations
+2016-07-15T22:19:45Z VOYAGER-1 MISSION_LOG data sets indicate transition into interstellar space; plasma density estimates support location beyond heliopause boundary
+2016-11-11T05:00:27Z VOYAGER-1 MISSION_LOG cosmic ray detectors measure enhanced galactic particle flux; solar modulation signatures diminish significantly
+2017-03-09T11:41:09Z VOYAGER-1 MISSION_LOG operations teams adopt interstellar mission profile; priority shifts to monitoring local interstellar medium conditions
+2017-07-05T18:21:51Z VOYAGER-1 MISSION_LOG analysis of boundary crossing signatures continues using multi year combined instrument observations
+2017-11-01T01:02:33Z VOYAGER-1 MISSION_LOG data sets indicate transition into interstellar space; plasma density estimates support location beyond heliopause boundary
+2018-02-27T07:43:15Z VOYAGER-1 MISSION_LOG aging attitude control hardware shows occasional anomalies; autonomous fault protection maintains stable pointing
+2018-06-25T14:23:56Z VOYAGER-1 MISSION_LOG Deep Space Network upgrades improve reception of increasingly weak carrier; link margin remains narrow but adequate
+2018-10-21T21:04:38Z VOYAGER-1 MISSION_LOG engineering reviews examine tradeoffs between science return, data rate, and remaining power and propellant resources
+2019-02-17T03:45:20Z VOYAGER-1 MISSION_LOG radioisotope power decline forces selective instrument shutdown; power sharing strategy revised to extend mission lifetime
+2019-06-15T10:26:02Z VOYAGER-1 MISSION_LOG aging attitude control hardware shows occasional anomalies; autonomous fault protection maintains stable pointing
+2019-10-11T17:06:44Z VOYAGER-1 MISSION_LOG Deep Space Network upgrades improve reception of increasingly weak carrier; link margin remains narrow but adequate
+2020-02-06T23:47:26Z VOYAGER-1 MISSION_LOG engineering reviews examine tradeoffs between science return, data rate, and remaining power and propellant resources
+2020-06-04T06:28:08Z VOYAGER-1 MISSION_LOG radioisotope power decline forces selective instrument shutdown; power sharing strategy revised to extend mission lifetime
+2020-09-30T13:08:49Z VOYAGER-1 MISSION_LOG aging attitude control hardware shows occasional anomalies; autonomous fault protection maintains stable pointing
+2021-01-26T19:49:31Z VOYAGER-1 MISSION_LOG Deep Space Network upgrades improve reception of increasingly weak carrier; link margin remains narrow but adequate
+2021-05-25T02:30:13Z VOYAGER-1 MISSION_LOG engineering reviews examine tradeoffs between science return, data rate, and remaining power and propellant resources
+2021-09-20T09:10:55Z VOYAGER-1 MISSION_LOG radioisotope power decline forces selective instrument shutdown; power sharing strategy revised to extend mission lifetime
+2022-01-16T15:51:37Z VOYAGER-1 MISSION_LOG aging attitude control hardware shows occasional anomalies; autonomous fault protection maintains stable pointing
+2022-05-14T22:32:19Z VOYAGER-1 MISSION_LOG Deep Space Network upgrades improve reception of increasingly weak carrier; link margin remains narrow but adequate
+2022-09-10T05:13:01Z VOYAGER-1 MISSION_LOG engineering reviews examine tradeoffs between science return, data rate, and remaining power and propellant resources
+2023-01-06T11:53:43Z VOYAGER-1 MISSION_LOG spacecraft continues interstellar cruise; remaining instruments transmit low rate measurements of local interstellar medium
+2023-05-04T18:34:24Z VOYAGER-1 MISSION_LOG command sequences become shorter and more conservative; on board autonomy safeguards protect against single point failures
+2023-08-31T01:15:06Z VOYAGER-1 MISSION_LOG navigation solutions rely on long integration Doppler tracking; tiny velocity changes remain measurable across vast distance
+2023-12-27T07:55:48Z VOYAGER-1 MISSION_LOG status reports describe spacecraft as operational with very limited power margin; mission classified as continuing interstellar exploration
+2024-04-23T14:36:30Z VOYAGER-1 MISSION_LOG spacecraft continues interstellar cruise; remaining instruments transmit low rate measurements of local interstellar medium
+2024-08-19T21:17:12Z VOYAGER-1 MISSION_LOG command sequences become shorter and more conservative; on board autonomy safeguards protect against single point failures
+2024-12-16T03:57:54Z VOYAGER-1 MISSION_LOG navigation solutions rely on long integration Doppler tracking; tiny velocity changes remain measurable across vast distance
+2025-04-13T10:38:36Z VOYAGER-1 MISSION_LOG status reports describe spacecraft as operational with very limited power margin; mission classified as continuing interstellar exploration
+2025-08-09T17:19:18Z VOYAGER-1 MISSION_LOG spacecraft continues interstellar cruise; remaining instruments transmit low rate measurements of local interstellar medium
+2025-12-05T23:59:59Z VOYAGER-1 MISSION_LOG command sequences become shorter and more conservative; on board autonomy safeguards protect against single point failures

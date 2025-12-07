@@ -1,0 +1,15 @@
+1972-12-19T05:33:00.000 apollo-17 d13 e000 service module jettison executed leaving command module alone for entry; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T05:38:44.786 apollo-17 d13 e001 final attitude adjustments bring heat shield into entry orientation; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T05:44:29.572 apollo-17 d13 e002 radio blackout interval begins as plasma sheath forms around capsule; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T05:50:14.358 apollo-17 d13 e003 communications restored after blackout with voice contact to recovery forces; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T05:55:59.144 apollo-17 d13 e004 deceleration loads peak within planned values on crew couches; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:01:43.930 apollo-17 d13 e005 drogue parachute deployment sequence initiates to stabilize capsule; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:07:28.716 apollo-17 d13 e006 main parachutes deploy and show symmetrical inflation on visual checks; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:13:13.502 apollo-17 d13 e007 command module descends toward Pacific splashdown zone near recovery ship; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:18:58.288 apollo-17 d13 e008 impact with ocean surface recorded within predicted time and location; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:24:43.074 apollo-17 d13 e009 uprighting system inflates to place capsule in correct flotation attitude; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:30:27.860 apollo-17 d13 e010 recovery swimmers deploy from helicopters and secure lines to spacecraft; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:36:12.646 apollo-17 d13 e011 hatch opening occurs after cabin ventilation checks and safety verifications; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:41:57.432 apollo-17 d13 e012 crew exits command module and boards recovery helicopter for transport; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:47:42.218 apollo-17 d13 e013 command module hoisted onto recovery ship deck for post flight inspection; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-19T06:53:27.004 apollo-17 d13 e014 mission debriefing begins with engineering and science team representatives; all primary systems nominal; communications lock; navigation solution within expected error
