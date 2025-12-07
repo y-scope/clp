@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use clp_rust_utils::{
     clp_config::{
         AwsAuthentication::Credentials,
@@ -30,7 +31,7 @@ pub struct CompressionJobSubmitter {
     io_config_template: ClpIoConfig,
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl BufferSubmitter for CompressionJobSubmitter {
     async fn submit(&self, buffer: &[ObjectMetadata]) -> Result<()> {
         let mut io_config = self.io_config_template.clone();
