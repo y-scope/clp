@@ -1,8 +1,4 @@
-use aws_sdk_s3::{
-    error::SdkError,
-    operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
-    primitives::ByteStreamError,
-};
+use aws_sdk_s3::{error::SdkError, primitives::ByteStreamError};
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -44,16 +40,8 @@ impl<T: IsMalformedData> From<T> for ClientError {
     }
 }
 
-impl From<SdkError<GetObjectError>> for ClientError {
-    fn from(value: SdkError<GetObjectError>) -> Self {
-        Self::Aws {
-            description: value.to_string(),
-        }
-    }
-}
-
-impl From<SdkError<ListObjectsV2Error>> for ClientError {
-    fn from(value: SdkError<ListObjectsV2Error>) -> Self {
+impl<AwsSdkErrorType> From<SdkError<AwsSdkErrorType>> for ClientError {
+    fn from(value: SdkError<AwsSdkErrorType>) -> Self {
         Self::Aws {
             description: value.to_string(),
         }

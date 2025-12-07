@@ -14,7 +14,6 @@ use clp_rust_utils::{
 };
 use futures::{Stream, StreamExt};
 use pin_project_lite::pin_project;
-use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use utoipa::ToSchema;
@@ -193,21 +192,18 @@ impl Client {
         let job_config = self.get_job_config(search_job_id).await?;
 
         if job_config.write_to_file {
-            match &self.config.stream_output.storage {
-                StreamOutputStorage::Fs { directory: _ } => {
-                    return Ok(SearchResultStream::File {
-                        inner: self.fetch_results_from_file(search_job_id),
-                    });
-                }
+            let stream = match &self.config.stream_output.storage {
+                StreamOutputStorage::Fs { directory: _ } => SearchResultStream::File {
+                    inner: self.fetch_results_from_file(search_job_id),
+                },
                 StreamOutputStorage::S3 {
                     staging_directory: _,
                     s3_config: _,
-                } => {
-                    return Ok(SearchResultStream::S3 {
-                        inner: self.fetch_results_from_s3(search_job_id).await,
-                    });
-                }
-            }
+                } => SearchResultStream::S3 {
+                    inner: self.fetch_results_from_s3(search_job_id).await,
+                },
+            };
+            return Ok(stream);
         }
 
         self.fetch_results_from_mongo(search_job_id)
@@ -310,8 +306,13 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`aws_sdk_s3::error::SdkError`]'s return values on failure.
-    /// * Forwards [`aws_sdk_s3::error::primitives::ByteStreamError`]'s return values on failure.
+    /// * Forwards the pagination stream's error returned from S3 list-object-v2 operation's
+    ///   paginator (i.e., from
+    ///   [`aws_smithy_async::future::pagination_stream::PaginationStream::next`]).
+    /// * Forwards S3 get-object operation's return values on failure (i.e., from
+    ///   [`aws_sdk_s3::operation::get_object::builders::GetObjectFluentBuilder::send`]).
+    /// * Forwards [`aws_smithy_types::byte_stream::ByteStream::collect`]'s return values on
+    ///   failure.
     ///
     /// # Panics
     ///
@@ -321,11 +322,7 @@ impl Client {
         search_job_id: u64,
     ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
         tracing::info!("Streaming results from S3");
-        let StreamOutputStorage::S3 {
-            staging_directory: _,
-            s3_config,
-        } = &self.config.stream_output.storage
-        else {
+        let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
             unreachable!();
         };
 
@@ -335,10 +332,10 @@ impl Client {
         let credentials = credentials.clone();
 
         let s3_client = clp_rust_utils::s3::create_new_client(
-            None,
             s3_config.region_code.as_str(),
             credentials.access_key_id.as_str(),
-            &SecretString::from(credentials.secret_access_key.as_str()),
+            credentials.secret_access_key.as_str(),
+            None,
         )
         .await;
 
@@ -351,14 +348,18 @@ impl Client {
             .into_paginator()
             .send();
 
-        let stream = stream! {
+        stream! {
             while let Some(object_page) = object_pages.next().await {
-                tracing::info!("Received S3 object page: {:?}", object_page);
+                tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
                     let Some(key) = object.key() else {
                         tracing::info!("S3 object {:?} doesn't have a key", object);
                         continue;
                     };
+                    if key.ends_with('/') {
+                        tracing::info!("Skipping S3 object with key {} as it is a directory", key);
+                        continue;
+                    }
                     tracing::info!("Streaming results from S3 object with key: {}", key);
                     let obj = s3_client
                         .get_object()
@@ -374,8 +375,7 @@ impl Client {
                     }
                 }
             }
-        };
-        stream
+        }
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
@@ -434,6 +434,7 @@ pin_project! {
     ///
     /// * `FileStream`: Streaming from file system storage.
     /// * `MongoStream`: Streaming from MongoDB storage.
+    /// * `S3Stream`: Streaming from S3 storage.
     #[project = SearchResultStreamProj]
     pub enum SearchResultStream<FileStream, MongoStream, S3Stream>
     where
