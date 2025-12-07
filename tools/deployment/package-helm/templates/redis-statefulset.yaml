@@ -26,10 +26,12 @@ spec:
         - name: "redis"
           image: "redis:7.2.4"
           imagePullPolicy: "Always"
-          command: [
-            "redis-server", "/etc/redis/redis.conf",
-            "--requirepass", "$(REDIS_PASSWORD)"
-          ]
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              redis-server "/etc/redis/redis.conf"
+              --requirepass "${REDIS_PASSWORD}"
           env:
             - name: "REDIS_PASSWORD"
               valueFrom:
