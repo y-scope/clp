@@ -59,7 +59,7 @@ def fixt_package_config(
 
     # Build the job list for this mode and the current job filter.
     no_jobs: bool = bool(request.config.option.NO_JOBS)
-    job_filter: str = request.config.option.JOB_NAME or ""
+    job_filter: str = request.config.option.JOB_NAME_CONTAINS or ""
     package_job_list = None if no_jobs else build_package_job_list(mode_name, job_filter)
 
     # Construct PackageConfig.

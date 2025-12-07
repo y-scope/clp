@@ -23,24 +23,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default="55000",
     )
     parser.addoption(
-        "--job-name",
-        dest="JOB_NAME",
-        help="Filter CLP jobs by their name (exact match).",
-    )
-    parser.addoption(
-        "--job-startswith",
-        dest="JOB_STARTSWITH",
-        help="Filter CLP jobs by name prefix.",
-    )
-    parser.addoption(
-        "--job-contains",
-        dest="JOB_CONTAINS",
-        help="Filter CLP jobs by substring.",
-    )
-    parser.addoption(
-        "--job-endswith",
-        dest="JOB_ENDSWITH",
-        help="Filter CLP jobs by name suffix.",
+        "--job-name-contains",
+        dest="JOB_NAME_CONTAINS",
+        help="Filter CLP jobs by their name.",
     )
     parser.addoption(
         "--no-jobs",
