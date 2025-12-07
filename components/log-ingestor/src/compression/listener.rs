@@ -60,6 +60,10 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                             );
                         }
                         Some(object_metadata) => {
+                            tracing::debug!(
+                                object = ? object_metadata,
+                                "Received new object metadata."
+                            );
                             self.buffer.add(object_metadata).await?;
                         }
                     }

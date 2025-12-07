@@ -127,7 +127,7 @@ async fn stop_and_delete_job(
         .await
     {
         Ok(()) => {
-            tracing::info!(job_id = ? job_id, "Stopped and deleted ingestion job.");
+            tracing::info!(job_id = ? job_id, "The ingestion job has been deleted.");
             Ok(())
         }
         Err(err) => {

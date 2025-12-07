@@ -166,7 +166,9 @@ impl IngestionJobManagerState {
         match job_to_remove {
             Some(entry) => {
                 entry.ingestion_job.shutdown_and_join().await?;
+                tracing::debug!("Ingestion job {} shut down.", job_id);
                 entry.listener.shutdown_and_join().await?;
+                tracing::debug!("Ingestion job {}'s listener shut down.", job_id);
                 Ok(())
             }
             None => Err(Error::JobNotFound(job_id)),

@@ -8,14 +8,9 @@ use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 #[derive(Parser)]
 #[command(version, about = "log-ingestor for CLP.")]
 struct Args {
+    /// Path to the CLP config file.
     #[arg(long)]
     config: String,
-
-    #[arg(long)]
-    host: String,
-
-    #[arg(long)]
-    port: u16,
 }
 
 fn read_config_and_credentials(
@@ -81,7 +76,7 @@ async fn main() -> anyhow::Result<()> {
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = set_up_logging()?;
 
-    let addr = format!("{}:{}", args.host, args.port);
+    let addr = format!("{}:{}", config.log_ingestor.host, config.log_ingestor.port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .context(format!("Cannot listen to {addr}"))?;

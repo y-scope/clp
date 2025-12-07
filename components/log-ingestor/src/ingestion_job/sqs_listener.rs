@@ -100,6 +100,10 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
 
             for record in event.records {
                 if let Some(object_metadata) = self.extract_object_metadata(record) {
+                    tracing::info!(
+                        object = ? object_metadata,
+                        "Received new object metadata from SQS."
+                    );
                     self.sender.send(object_metadata).await?;
                     ingested = true;
                 }
@@ -184,7 +188,15 @@ impl SqsListener {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move {
+            match task.run(child_cancel_token).await {
+                Ok(()) => Ok(()),
+                Err(e) => {
+                    tracing::error!(error = ? e, "SQS listener task execution failed.");
+                    Err(e)
+                }
+            }
+        });
         Self {
             id,
             cancel_token,

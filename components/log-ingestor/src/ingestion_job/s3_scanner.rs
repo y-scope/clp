@@ -55,8 +55,15 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
                         // simplicity.
                         continue;
                     }
-                    self.sleep().await;
                 }
+            }
+
+            // Sleep for the configured interval or until cancellation is requested.
+            select! {
+                () = cancel_token.cancelled() => {
+                    return Ok(());
+                }
+                () = self.sleep() => {}
             }
         }
     }
@@ -102,13 +109,13 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
             if key.ends_with('/') {
                 continue;
             }
-            self.sender
-                .send(ObjectMetadata {
-                    bucket: self.config.base.bucket_name.clone(),
-                    key: key.clone(),
-                    size: size.try_into()?,
-                })
-                .await?;
+            let object_metadata = ObjectMetadata {
+                bucket: self.config.base.bucket_name.clone(),
+                key: key.clone(),
+                size: size.try_into()?,
+            };
+            tracing::info!(object = ? object_metadata, "Scanned new object metadata on S3.");
+            self.sender.send(object_metadata).await?;
             self.config.start_after = Some(key);
         }
 
@@ -157,7 +164,15 @@ impl S3Scanner {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move {
+            match task.run(child_cancel_token).await {
+                Ok(()) => Ok(()),
+                Err(e) => {
+                    tracing::error!(error = ? e, "S3 scanner task execution failed.");
+                    Err(e)
+                }
+            }
+        });
         Self {
             id,
             cancel_token,
