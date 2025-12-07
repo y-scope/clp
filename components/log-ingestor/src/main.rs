@@ -1,7 +1,7 @@
 use anyhow::Context;
-use axum::Router;
 use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
+use log_ingestor::{ingestion_job_manager::IngestionJobManagerState, routes::create_router};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
@@ -78,7 +78,7 @@ async fn shutdown_signal() {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let (_config, _credentials) = read_config_and_credentials(&args)?;
+    let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = set_up_logging()?;
 
     let addr = format!("{}:{}", args.host, args.port);
@@ -86,10 +86,21 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let app = Router::new();
-
+    let log_ingestor_manager_state = match IngestionJobManagerState::from_config(
+        config,
+        credentials,
+    )
+    .await
+    {
+        Ok(state) => state,
+        Err(err) => {
+            tracing::error!(err = ? err, "Failed to create ingestion job manager from CLP config.");
+            return Err(err);
+        }
+    };
+    let log_ingestor_router = create_router().with_state(log_ingestor_manager_state);
     tracing::info!("Server started at {addr}");
-    axum::serve(listener, app)
+    axum::serve(listener, log_ingestor_router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())

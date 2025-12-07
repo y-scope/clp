@@ -17,7 +17,7 @@ use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJ
 /// # Returns
 ///
 /// A newly created router instance configured without setting the state.
-pub fn create_routes() -> Router<IngestionJobManagerState> {
+pub fn create_router() -> Router<IngestionJobManagerState> {
     Router::new()
         .route("/", get(health))
         .route("/create_s3_scanner_job", post(create_s3_scanner_job))
