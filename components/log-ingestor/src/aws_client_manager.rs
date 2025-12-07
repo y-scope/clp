@@ -47,6 +47,18 @@ impl SqsClientWrapper {
     pub const fn from(client: SqsClient) -> Self {
         Self { client }
     }
+
+    pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
+        let sqs_endpoint = format!("https://sqs.{region}.amazonaws.com");
+        let sqs_client = clp_rust_utils::sqs::create_new_client(
+            sqs_endpoint.as_str(),
+            region,
+            access_key_id,
+            secret_access_key,
+        )
+        .await;
+        Self::from(sqs_client)
+    }
 }
 
 /// A simple wrapper around an `S3Client` that implements the `AwsClientManagerType` trait.
@@ -65,5 +77,17 @@ impl S3ClientWrapper {
     #[must_use]
     pub const fn from(client: S3Client) -> Self {
         Self { client }
+    }
+
+    pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
+        let s3_endpoint = format!("https://s3.{region}.amazonaws.com");
+        let s3_client = clp_rust_utils::s3::create_new_client(
+            s3_endpoint.as_str(),
+            region,
+            access_key_id,
+            secret_access_key,
+        )
+        .await;
+        Self::from(s3_client)
     }
 }
