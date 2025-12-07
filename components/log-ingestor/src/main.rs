@@ -81,18 +81,12 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let log_ingestor_manager_state = match IngestionJobManagerState::from_config(
-        config,
-        credentials,
-    )
-    .await
-    {
-        Ok(state) => state,
-        Err(err) => {
+    let log_ingestor_manager_state = IngestionJobManagerState::from_config(config, credentials)
+        .await
+        .inspect_err(|err| {
             tracing::error!(err = ? err, "Failed to create ingestion job manager from CLP config.");
-            return Err(err);
-        }
-    };
+        })?;
+
     let log_ingestor_router = create_router().with_state(log_ingestor_manager_state);
     tracing::info!("Server started at {addr}");
     axum::serve(listener, log_ingestor_router)
