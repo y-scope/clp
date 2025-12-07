@@ -49,16 +49,13 @@ clpConfig:
   logs_directory: "/tmp/clp/var/log"
 
 credentials:
-  # Database credentials
   database:
     username: "clp-user"
     password: "pass"
 
-  # Queue credentials
   queue:
     username: "clp-user"
     password: "pass"
 
-  # Redis credentials
   redis:
     password: "pass"
