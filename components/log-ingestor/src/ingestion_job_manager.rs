@@ -9,7 +9,7 @@ use clp_rust_utils::{
             credentials::Credentials as ClpCredentials,
         },
     },
-    job_config::S3IngestionBaseConfig,
+    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
     s3::ObjectMetadata,
 };
 use tokio::sync::{Mutex, mpsc};
@@ -18,7 +18,7 @@ use uuid::Uuid;
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     compression::{Buffer, CompressionJobSubmitter, Listener},
-    ingestion_job::{IngestionJob, S3Scanner, S3ScannerConfig, SqsListenerConfig},
+    ingestion_job::{IngestionJob, S3Scanner},
 };
 
 /// Errors for ingestion job manager operations.
@@ -34,18 +34,13 @@ pub enum Error {
     PrefixConflict(String),
 }
 
-/// An async-safe manager for creating and managing ingestion jobs.
-pub struct IngestionJobManager {
-    job_table: Arc<Mutex<HashMap<Uuid, IngestionJobTableEntry>>>,
-    buffer_timeout: Duration,
-    buffer_size_threshold: u64,
-    channel_capacity: usize,
-    aws_credentials: AwsCredentials,
-    archive_output_config: ArchiveOutput,
-    mysql_pool: sqlx::MySqlPool,
+/// An async-safe state for creating and managing ingestion jobs.
+#[derive(Clone)]
+pub struct IngestionJobManagerState {
+    inner: Arc<IngestionJobManager>,
 }
 
-impl IngestionJobManager {
+impl IngestionJobManagerState {
     /// Factory function.
     ///
     /// Creates a new ingestion job manager from the given CLP configuration and credentials.
@@ -82,15 +77,16 @@ impl IngestionJobManager {
             10,
         )
         .await?;
-        Ok(Self {
-            job_table: Arc::new(Mutex::new(HashMap::new())),
+        let inner = Arc::new(IngestionJobManager {
+            job_table: Mutex::new(HashMap::new()),
             buffer_timeout: Duration::from_secs(clp_config.log_ingestor.buffer_timeout_sec),
             buffer_size_threshold: clp_config.log_ingestor.buffer_size_threshold,
             channel_capacity: clp_config.log_ingestor.channel_capacity,
             aws_credentials,
             archive_output_config: clp_config.archive_output,
             mysql_pool,
-        })
+        });
+        Ok(Self { inner })
     }
 
     /// Creates a new S3 scanner ingestion job.
@@ -105,14 +101,13 @@ impl IngestionJobManager {
     ///
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
-        let ingestion_job_config = config.base.clone();
         let s3_client_manager = S3ClientWrapper::create(
             config.base.region.as_str(),
-            self.aws_credentials.access_key_id.as_str(),
-            self.aws_credentials.secret_access_key.as_str(),
+            self.inner.aws_credentials.access_key_id.as_str(),
+            self.inner.aws_credentials.secret_access_key.as_str(),
         )
         .await;
-        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
+        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {
             let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
             IngestionJob::S3Scanner(scanner)
         })
@@ -130,12 +125,12 @@ impl IngestionJobManager {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
-    pub async fn create_sqs_listener(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
+    pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
         let ingestion_job_config = config.base.clone();
         let sqs_client_manager = SqsClientWrapper::create(
             config.base.region.as_str(),
-            self.aws_credentials.access_key_id.as_str(),
-            self.aws_credentials.secret_access_key.as_str(),
+            self.inner.aws_credentials.access_key_id.as_str(),
+            self.inner.aws_credentials.secret_access_key.as_str(),
         )
         .await;
         self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
@@ -164,14 +159,16 @@ impl IngestionJobManager {
     /// * Forwards [`IngestionJob::shutdown_and_join`]'s return value on failure.
     /// * Forwards [`Listener::shutdown_and_join`]'s return value on failure.
     pub async fn shutdown_and_remove_job(&self, job_id: Uuid) -> Result<(), Error> {
-        let mut job_table = self.job_table.lock().await;
+        let mut job_table = self.inner.job_table.lock().await;
         let job_to_remove = job_table.remove(&job_id);
         drop(job_table);
 
         match job_to_remove {
             Some(entry) => {
                 entry.ingestion_job.shutdown_and_join().await?;
+                tracing::debug!("Ingestion job {} shut down.", job_id);
                 entry.listener.shutdown_and_join().await?;
+                tracing::debug!("Ingestion job {}'s listener shut down.", job_id);
                 Ok(())
             }
             None => Err(Error::JobNotFound(job_id)),
@@ -206,12 +203,12 @@ impl IngestionJobManager {
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
     async fn create_s3_ingestion_job<JobCreationCallback>(
         &self,
-        ingestion_job_config: S3IngestionBaseConfig,
+        ingestion_job_config: BaseConfig,
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
         JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
-        let mut job_table = self.job_table.lock().await;
+        let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
             if table_entry.region != ingestion_job_config.region
                 || table_entry.bucket_name != ingestion_job_config.bucket_name
@@ -263,19 +260,30 @@ impl IngestionJobManager {
     /// # Returns
     ///
     /// A new listener for receiving object metadata to ingest.
-    fn create_listener(&self, ingestion_job_config: &S3IngestionBaseConfig) -> Listener {
+    fn create_listener(&self, ingestion_job_config: &BaseConfig) -> Listener {
         let submitter = CompressionJobSubmitter::new(
-            self.mysql_pool.clone(),
-            self.aws_credentials.clone(),
-            &self.archive_output_config,
+            self.inner.mysql_pool.clone(),
+            self.inner.aws_credentials.clone(),
+            &self.inner.archive_output_config,
             ingestion_job_config,
         );
         Listener::spawn(
-            Buffer::new(submitter, self.buffer_size_threshold),
-            self.buffer_timeout,
-            self.channel_capacity,
+            Buffer::new(submitter, self.inner.buffer_size_threshold),
+            self.inner.buffer_timeout,
+            self.inner.channel_capacity,
         )
     }
+}
+
+/// Internal shared states for managing ingestion jobs. Must be wrapped in an `Arc`.
+struct IngestionJobManager {
+    job_table: Mutex<HashMap<Uuid, IngestionJobTableEntry>>,
+    buffer_timeout: Duration,
+    buffer_size_threshold: u64,
+    channel_capacity: usize,
+    aws_credentials: AwsCredentials,
+    archive_output_config: ArchiveOutput,
+    mysql_pool: sqlx::MySqlPool,
 }
 
 /// Represents an entry in the ingestion job table.

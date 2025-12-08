@@ -197,6 +197,7 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
+    #[serde(rename = "buffer_timeout")]
     pub buffer_timeout_sec: u64,
     pub buffer_size_threshold: u64,
     pub channel_capacity: usize,
@@ -206,7 +207,7 @@ impl Default for LogIngestor {
     fn default() -> Self {
         Self {
             host: "localhost".to_owned(),
-            port: 3333,
+            port: 3270,
             buffer_timeout_sec: 300,
             buffer_size_threshold: 50 * 1024 * 1024,
             channel_capacity: 10,

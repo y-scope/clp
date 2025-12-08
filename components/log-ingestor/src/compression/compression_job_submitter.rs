@@ -12,8 +12,8 @@ use clp_rust_utils::{
         CompressionJobStatus,
         InputConfig,
         OutputConfig,
-        S3IngestionBaseConfig,
         S3InputConfig,
+        ingestion::s3::BaseConfig,
     },
     s3::ObjectMetadata,
 };
@@ -59,7 +59,7 @@ impl CompressionJobSubmitter {
         db_pool: MySqlPool,
         aws_credentials: AwsCredentials,
         archive_output_config: &ArchiveOutput,
-        ingestion_job_config: &S3IngestionBaseConfig,
+        ingestion_job_config: &BaseConfig,
     ) -> Self {
         let s3_input_config = S3InputConfig {
             s3_config: S3Config {

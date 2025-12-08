@@ -2142,6 +2142,7 @@ dependencies = [
  "clp-rust-utils",
  "const_format",
  "secrecy",
+ "serde",
  "serde_json",
  "serial_test",
  "sqlx",
