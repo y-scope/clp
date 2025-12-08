@@ -193,7 +193,7 @@ impl Client {
 
         if job_config.write_to_file {
             let stream = match &self.config.stream_output.storage {
-                StreamOutputStorage::Fs { directory: _ } => SearchResultStream::File {
+                StreamOutputStorage::Fs { .. } => SearchResultStream::File {
                     inner: self.fetch_results_from_file(search_job_id),
                 },
                 StreamOutputStorage::S3 {
