@@ -56,7 +56,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
                     .queue_url(self.config.queue_url.as_str())
                     .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
                     .wait_time_seconds(MAX_WAIT_TIME_SEC).send() => {
-                    let _ = self.process_sqs_response(result?).await?;
+                    self.process_sqs_response(result?).await?;
                 }
             }
         }
