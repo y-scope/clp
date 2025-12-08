@@ -189,13 +189,9 @@ impl SqsListener {
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
         let handle = tokio::spawn(async move {
-            match task.run(child_cancel_token).await {
-                Ok(()) => Ok(()),
-                Err(e) => {
-                    tracing::error!(error = ? e, "SQS listener task execution failed.");
-                    Err(e)
-                }
-            }
+            task.run(child_cancel_token).await.inspect_err(|err| {
+                tracing::error!(error = ? err, "SQS listener task execution failed.");
+            })
         });
         Self {
             id,
