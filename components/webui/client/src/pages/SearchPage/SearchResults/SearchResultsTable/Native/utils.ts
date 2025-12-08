@@ -1,6 +1,6 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 
-import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
 import type {SearchResult} from "./SearchResultsVirtualTable/typings";
 
 
