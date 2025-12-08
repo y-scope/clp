@@ -203,7 +203,7 @@ impl Default for LogIngestor {
     fn default() -> Self {
         Self {
             host: "localhost".to_owned(),
-            port: 3333,
+            port: 3270,
             buffer_timeout_sec: 300,
             buffer_size_threshold: 50 * 1024 * 1024,
             channel_capacity: 10,

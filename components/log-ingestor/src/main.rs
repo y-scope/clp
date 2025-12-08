@@ -11,6 +11,14 @@ struct Args {
     /// Path to the CLP config file.
     #[arg(long)]
     config: String,
+
+    /// Host to bind the server to.
+    #[arg(long)]
+    host: String,
+
+    /// Port to bind the server to.
+    #[arg(long)]
+    port: u16,
 }
 
 fn read_config_and_credentials(
@@ -76,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = set_up_logging()?;
 
-    let addr = format!("{}:{}", config.log_ingestor.host, config.log_ingestor.port);
+    let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .context(format!("Cannot listen to {addr}"))?;
