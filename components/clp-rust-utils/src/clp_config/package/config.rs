@@ -283,7 +283,6 @@ pub enum LogsInput {
 
 #[cfg(test)]
 mod tests {
-
     use super::LogsInput;
 
     #[test]
