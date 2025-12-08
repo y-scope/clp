@@ -456,6 +456,8 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
             "password": secrets.token_urlsafe(8),
             "root_username": "root",
             "root_password": secrets.token_urlsafe(8),
+            "spider_username": "spider-user",
+            "spider_password": secrets.token_urlsafe(8),
         },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
