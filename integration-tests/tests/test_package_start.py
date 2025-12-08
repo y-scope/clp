@@ -23,3 +23,10 @@ def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     # TODO: write code that properly validates that the package is running. This is a placeholder.
     mode_name = fixt_package_instance.package_config.mode_name
     logger.info("The '%s' package has been spun up successfully.", mode_name)
+
+    component_list = fixt_package_instance.package_config.component_list
+    logger.info(
+        "The '%s' package runs with the following required components :\n%s",
+        mode_name,
+        "\n".join(component_list),
+    )
