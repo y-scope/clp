@@ -9,10 +9,10 @@ import {
     cancelQuery,
     clearQueryResults,
     submitQuery,
-} from "../../../api/search";
-import {SETTINGS_STORAGE_ENGINE} from "../../../config";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/";
-import {SEARCH_UI_STATE} from "../SearchState/typings";
+} from "../../../../api/search";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {unquoteString} from "./utils";
 
 

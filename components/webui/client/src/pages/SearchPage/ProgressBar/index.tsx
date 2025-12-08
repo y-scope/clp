@@ -2,9 +2,9 @@ import {useEffect} from "react";
 
 import {Progress} from "antd";
 
-import useSearchStore from "../../SearchState";
-import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import {usePseudoProgress} from "../../SearchState/usePseudoProgress";
+import useSearchStore from "../SearchState";
+import {SEARCH_UI_STATE} from "../SearchState/typings";
+import {usePseudoProgress} from "../SearchState/usePseudoProgress";
 import styles from "./index.module.css";
 
 

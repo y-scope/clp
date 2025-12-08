@@ -1,7 +1,7 @@
 import {useEffect} from "react";
 
-import VirtualTable from "../../../../../components/VirtualTable";
-import useSearchStore from "../../../SearchState/index";
+import VirtualTable from "../../../../../../components/VirtualTable";
+import useSearchStore from "../../../../SearchState/index";
 import {
     SearchResult,
     searchResultsTableColumns,

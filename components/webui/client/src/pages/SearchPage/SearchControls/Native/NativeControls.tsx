@@ -1,12 +1,12 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 
-import {SETTINGS_STORAGE_ENGINE} from "../../../config";
-import Dataset from "./Dataset";
-import styles from "./index.module.css";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
+import Dataset from "../Dataset";
+import styles from "../index.module.css";
+import QueryStatus from "../QueryStatus";
+import TimeRangeInput from "../TimeRangeInput";
 import QueryInput from "./QueryInput";
-import QueryStatus from "./QueryStatus";
 import SearchButton from "./SearchButton";
-import TimeRangeInput from "./TimeRangeInput";
 
 
 /**

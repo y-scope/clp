@@ -2,7 +2,7 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 
 import {SETTINGS_QUERY_ENGINE} from "../../config";
 import styles from "./index.module.css";
-import {ProgressBar} from "./Presto/ProgressBar";
+import {ProgressBar} from "./ProgressBar";
 import SearchControls from "./SearchControls";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
