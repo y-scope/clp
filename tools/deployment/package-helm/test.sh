@@ -8,7 +8,13 @@ set -o pipefail
 
 kind delete cluster --name clp-test
 rm -rf /tmp/clp
-mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache}
+mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache,compression-scheduler,compression-worker,query-scheduler,query-worker,reducer}
+mkdir -p /tmp/clp/var/data/{archives,streams}
+mkdir -p /tmp/clp/var/log/user
+mkdir -p /tmp/clp/var/tmp
+mkdir -p /tmp/clp/samples
+wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1 \
+  | tar xz -C /tmp/clp/samples &
 
 cat <<EOF | kind create cluster --name clp-test --config=-
   kind: Cluster
@@ -24,6 +30,9 @@ cat <<EOF | kind create cluster --name clp-test --config=-
       protocol: TCP
     - containerPort: 30017
       hostPort: 30017
+      protocol: TCP
+    - containerPort: 30400
+      hostPort: 30400
       protocol: TCP
 EOF
 

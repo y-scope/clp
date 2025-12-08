@@ -1,0 +1,105 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-webui
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "webui"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "webui"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "webui"
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-database"
+          image: "busybox:latest"
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-database 3306;
+                do echo Waiting for database to be ready...;
+                sleep 2;
+              done
+        - name: "wait-for-results-cache"
+          image: "busybox:latest"
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-results-cache 27017;
+                do echo Waiting for results-cache to be ready...;
+                sleep 2;
+              done
+      containers:
+        - name: "webui"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "HOST"
+              value: "0.0.0.0"
+            - name: "NODE_ENV"
+              value: "production"
+            - name: "NODE_PATH"
+              value: "/opt/clp/var/www/webui/server/node_modules"
+            - name: "PORT"
+              value: "4000"
+            - name: "RATE_LIMIT"
+              value: "1000"
+          ports:
+            - name: "webui"
+              containerPort: 4000
+          volumeMounts:
+            - name: "client-settings"
+              mountPath: "/opt/clp/var/www/webui/client/settings.json"
+              subPath: "webui-client-settings.json"
+              readOnly: true
+            - name: "server-settings"
+              mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
+              subPath: "webui-server-settings.json"
+              readOnly: true
+            - name: "streams"
+              mountPath: "/var/data/streams"
+          command: [
+            "/opt/clp/bin/node-22",
+            "/opt/clp/var/www/webui/server/dist/src/main.js"
+          ]
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            tcpSocket: &webui-health-check
+              port: 4000
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            tcpSocket: *webui-health-check
+      volumes:
+        - name: "client-settings"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "server-settings"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "streams"
+          persistentVolumeClaim:
+            claimName: {{ include "clp.fullname" . }}-streams
