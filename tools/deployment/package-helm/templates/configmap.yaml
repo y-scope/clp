@@ -19,6 +19,19 @@ data:
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    queue:
+      host: {{ include "clp.fullname" . }}-queue
+      port: 5672
+    redis:
+      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
+      host: {{ include "clp.fullname" . }}-redis
+      port: 6379
+      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
+    results_cache:
+      db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
+      host: {{ include "clp.fullname" . }}-results-cache
+      port: 27017
+      stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
 
   mysql-logging.cnf: |
     [mysqld]
@@ -31,3 +44,19 @@ data:
     # https://dev.mysql.com/doc/refman/8.0/en/error-log-destination-configuration.html
     # Send error logs to file
     log_error=/var/log/mysql/mysql-error.log
+
+  redis.conf: |
+    # For full reference of configuration options see
+    # https://raw.githubusercontent.com/redis/redis/7.2/redis.conf
+
+    databases 2
+    logfile "/var/log/redis/redis.log"
+
+  mongod.conf: |
+    replication:
+      replSetName: "rs0"
+    systemLog:
+      destination: file
+      path: /var/log/mongodb/mongod.log
+      logAppend: true
+      timeStampFormat: iso8601-local

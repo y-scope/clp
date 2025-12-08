@@ -1,0 +1,69 @@
+apiVersion: "apps/v1"
+kind: "StatefulSet"
+metadata:
+  name: {{ include "clp.fullname" . }}-queue
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "queue"
+spec:
+  serviceName: {{ include "clp.fullname" . }}-queue
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "queue"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "queue"
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
+        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
+        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
+      containers:
+        - name: "queue"
+          image: "rabbitmq:3.9.8"
+          imagePullPolicy: "Always"
+          env:
+            - name: "RABBITMQ_DEFAULT_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-queue
+                  key: "username"
+            - name: "RABBITMQ_DEFAULT_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-queue
+                  key: "password"
+            - name: "RABBITMQ_LOGS"
+              value: "/var/log/rabbitmq/rabbitmq.log"
+          ports:
+            - name: "queue"
+              containerPort: 5672
+          volumeMounts:
+            - name: "queue-logs"
+              mountPath: "/var/log/rabbitmq"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec: &queue-health-check
+              command: ["rabbitmq-diagnostics", "check_running"]
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            exec: *queue-health-check
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: "Delete"
+  volumeClaimTemplates:
+    - metadata:
+        name: "queue-logs"
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "local-storage"
+        selector:
+          matchLabels:
+            {{- include "clp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: "queue"
+        resources:
+          requests:
+            storage: "5Gi"
