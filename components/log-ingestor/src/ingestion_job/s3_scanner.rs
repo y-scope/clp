@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use aws_sdk_s3::Client;
-use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::{job_config::S3IngestionBaseConfig, s3::ObjectMetadata};
 use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -12,8 +12,7 @@ use crate::aws_client_manager::AwsClientManagerType;
 /// Configuration for a S3 scanner job.
 #[derive(Debug, Clone)]
 pub struct S3ScannerConfig {
-    pub bucket_name: String,
-    pub prefix: String,
+    pub base: S3IngestionBaseConfig,
     pub scanning_interval: Duration,
     pub start_after: Option<String>,
 }
@@ -94,8 +93,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
         let client = self.s3_client_manager.get().await?;
         let response = client
             .list_objects_v2()
-            .bucket(self.config.bucket_name.as_str())
-            .prefix(self.config.prefix.as_str())
+            .bucket(self.config.base.bucket_name.as_str())
+            .prefix(self.config.base.key_prefix.as_str())
             .set_start_after(self.config.start_after.clone())
             .send()
             .await?;
@@ -112,7 +111,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
             }
             self.sender
                 .send(ObjectMetadata {
-                    bucket: self.config.bucket_name.clone(),
+                    bucket: self.config.base.bucket_name.clone(),
                     key: key.clone(),
                     size: size.try_into()?,
                 })

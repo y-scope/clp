@@ -26,13 +26,12 @@ spec:
         - name: "results-cache"
           image: "mongo:7.0.1"
           imagePullPolicy: "Always"
-          command: [
-            "mongod",
+          args: [
             "--config", "/etc/mongo/mongod.conf",
             "--bind_ip", "0.0.0.0"
           ]
           ports:
-            - name: "mongodb"
+            - name: "results-cache"
               containerPort: 27017
           volumeMounts:
             - name: "results-cache-data"

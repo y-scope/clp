@@ -40,7 +40,7 @@ spec:
             - name: "RABBITMQ_LOGS"
               value: "/var/log/rabbitmq/rabbitmq.log"
           ports:
-            - name: "amqp"
+            - name: "queue"
               containerPort: 5672
           volumeMounts:
             - name: "queue-logs"
@@ -48,7 +48,7 @@ spec:
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &queue-health-check
-              command: [ "rabbitmq-diagnostics", "check_running" ]
+              command: ["rabbitmq-diagnostics", "check_running"]
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *queue-health-check

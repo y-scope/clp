@@ -70,7 +70,7 @@ class SqlAdapter:
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ) -> mysql.connector.abstracts.MySQLConnectionAbstract | mariadb.connection:
+    ) -> mysql.connector.abstracts.MySQLConnectionAbstract | mariadb.Connection:
         """
         Creates a connection to the database.
 
@@ -151,7 +151,7 @@ class SqlAdapter:
         self,
         disable_localhost_socket_connection: bool = False,
         user_type: ClpDbUserType = ClpDbUserType.CLP,
-    ) -> mariadb.connection:
+    ) -> mariadb.Connection:
         try:
             connection = mariadb.connect(
                 **self.database_config.get_mysql_connection_params(

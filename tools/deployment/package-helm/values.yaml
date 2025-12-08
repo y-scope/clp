@@ -164,16 +164,13 @@ clpConfig:
   aws_config_directory: null
 
 credentials:
-  # Database credentials
   database:
     username: "clp-user"
     password: "pass"
 
-  # Queue credentials
   queue:
     username: "clp-user"
     password: "pass"
 
-  # Redis credentials
   redis:
     password: "pass"

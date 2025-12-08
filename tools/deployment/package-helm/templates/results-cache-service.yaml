@@ -16,7 +16,7 @@ spec:
     app.kubernetes.io/component: "results-cache"
   ports:
     - port: 27017
-      targetPort: "mongodb"
+      targetPort: "results-cache"
       {{- if .Values.allowHostAccessForSbinScripts }}
       nodePort: {{ .Values.clpConfig.results_cache.port }}
       {{- end }}
