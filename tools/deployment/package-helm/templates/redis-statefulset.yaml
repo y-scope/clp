@@ -26,12 +26,11 @@ spec:
         - name: "redis"
           image: "redis:7.2.4"
           imagePullPolicy: "Always"
-          command:
-            - "sh"
-            - "-c"
-            - >-
-              redis-server "/etc/redis/redis.conf"
-              --requirepass "${REDIS_PASSWORD}"
+          command: [
+            "redis-server",
+            "/etc/redis/redis.conf",
+            "--requirepass", "$(REDIS_PASSWORD)"
+          ]
           env:
             - name: "REDIS_PASSWORD"
               valueFrom:
@@ -53,15 +52,13 @@ spec:
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &redis-health-check
-              command:
-                - "sh"
-                - "-c"
-                - >-
-                  redis-cli
-                  -h 127.0.0.1
-                  -p 6379
-                  -a "${REDIS_PASSWORD}"
-                  PING
+              command: [
+                "redis-cli",
+                "-h", "127.0.0.1",
+                "-p", "6379",
+                "-a", "$(REDIS_PASSWORD)",
+                "PING"
+              ]
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *redis-health-check
