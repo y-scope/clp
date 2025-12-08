@@ -27,6 +27,7 @@ data:
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
+      max_concurrent_tasks_per_job: {{ .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
