@@ -1,6 +1,7 @@
 use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
+    job_config::S3IngestionBaseConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
@@ -14,8 +15,7 @@ use crate::aws_client_manager::AwsClientManagerType;
 #[derive(Debug, Clone)]
 pub struct SqsListenerConfig {
     pub queue_url: String,
-    pub bucket_name: String,
-    pub prefix: String,
+    pub base: S3IngestionBaseConfig,
     pub max_num_messages_to_fetch: i32,
     pub init_polling_backoff_sec: i32,
     pub max_polling_backoff_sec: i32,
@@ -143,7 +143,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///   * [`Self::is_relevant_object`] evaluates to `false`.
     fn extract_object_metadata(&self, record: Record) -> Option<ObjectMetadata> {
         if !record.event_name.starts_with("ObjectCreated:")
-            || self.config.bucket_name != record.s3.bucket.name.as_str()
+            || self.config.base.bucket_name != record.s3.bucket.name.as_str()
             || !self.is_relevant_object(record.s3.object.key.as_str())
         {
             return None;
@@ -159,7 +159,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///
     /// Whether the object key corresponds to a relevant object based on the listener's prefix.
     fn is_relevant_object(&self, object_key: &str) -> bool {
-        !object_key.ends_with('/') && object_key.starts_with(self.config.prefix.as_str())
+        !object_key.ends_with('/') && object_key.starts_with(self.config.base.key_prefix.as_str())
     }
 }
 
