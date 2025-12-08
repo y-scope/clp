@@ -1,12 +1,25 @@
 """Provide general utility functions used across `integration-tests`."""
 
 import os
-import re
 import shutil
 import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import IO
+
+
+def get_binary_path(name: str) -> str:
+    """
+    Finds the absolute path to the program binary called `name` in the current PATH.
+
+    :return: Absolute path to the program binary.
+    :raise RuntimeError: `name` is not found on PATH.
+    """
+    program_binary = shutil.which(name)
+    if program_binary is None:
+        err_msg = f"'{name}' not found in PATH"
+        raise RuntimeError(err_msg)
+    return program_binary
 
 
 def get_env_var(var_name: str) -> str:
@@ -61,34 +74,6 @@ def resolve_path_env_var(var_name: str) -> Path:
     :raise: Propagates `Path.resolve`'s exceptions.
     """
     return Path(get_env_var(var_name)).expanduser().resolve()
-
-
-def strip_prefix(text: str, prefix: str) -> str:
-    """
-    Remove the given prefix from text if it is present.
-
-    :param text:
-    :param prefix:
-    :return: The string with `prefix` removed (if it was there).
-    """
-    if prefix and text.startswith(prefix):
-        return text[len(prefix) :]
-    return text
-
-
-def strip_regex_suffix(text: str, suffix_pattern: str) -> str:
-    """
-    Remove the part of text at the end that matches regex suffix_pattern, if present.
-
-    :param text:
-    :param suffix_pattern:
-    :return: The string with `suffix_pattern` removed (if it was there).
-    """
-    pattern = re.compile(suffix_pattern + r"$")
-    match = pattern.search(text)
-    if not match:
-        return text
-    return text[: match.start()]
 
 
 def unlink(rm_path: Path, force: bool = True) -> None:
