@@ -7,7 +7,8 @@ metadata:
 data:
   clp-config.yaml: |
     api_server:
-      default_max_num_query_results: {{ .Values.clpConfig.api_server.default_max_num_query_results }}
+      default_max_num_query_results: {{
+        .Values.clpConfig.api_server.default_max_num_query_results }}
       host: "localhost"
       port: 3001
       query_job_polling:
@@ -19,15 +20,19 @@ data:
       storage:
         directory: "/var/data/archives"
         type: "fs"
-      target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size }}
-      target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size }}
-      target_encoded_file_size: {{ .Values.clpConfig.archive_output.target_encoded_file_size }}
-      target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size }}
+      target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
+      target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
+        | int }}
+      target_encoded_file_size: {{ .Values.clpConfig.archive_output.target_encoded_file_size
+        | int }}
+      target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
+        | int }}
     aws_config_directory: {{ .Values.clpConfig.aws_config_directory }}
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
-      max_concurrent_tasks_per_job: {{ .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
+      max_concurrent_tasks_per_job: {{
+        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
@@ -57,7 +62,8 @@ data:
       host: {{ include "clp.fullname" . }}-query-scheduler
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
-      num_archives_to_search_per_sub_job: {{ .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
+      num_archives_to_search_per_sub_job: {{
+        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
       port: 7000
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
@@ -84,13 +90,14 @@ data:
       storage:
         directory: "/var/data/streams"
         type: "fs"
-      target_uncompressed_size: {{ .Values.clpConfig.stream_output.target_uncompressed_size }}
+      target_uncompressed_size: {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }}
     tmp_directory: "/var/tmp"
     webui:
       host: "localhost"
       port: 4000
       rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
-      results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
+      results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
+        | quote }}
 
   mysql-logging.cnf: |
     [mysqld]
@@ -125,7 +132,8 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
-      "MongoDbSearchResultsMetadataCollectionName": {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+      "MongoDbSearchResultsMetadataCollectionName":
+        {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
       "SqlDbClpDatasetsTableName": "clp_datasets",
       "SqlDbClpFilesTableName": "clp_files",
@@ -143,20 +151,26 @@ data:
       "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
       "MongoDbPort": 27017,
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
-      "MongoDbSearchResultsMetadataCollectionName": {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+      "MongoDbSearchResultsMetadataCollectionName":
+        {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "MongoDbStreamFilesCollectionName": "stream-files",
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
       "StreamFilesDir": "/var/data/streams",
-      "StreamTargetUncompressedSize": {{ .Values.clpConfig.stream_output.target_uncompressed_size }},
+      "StreamTargetUncompressedSize":
+        {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
       "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
-      "ArchiveOutputTargetArchiveSize": {{ .Values.clpConfig.archive_output.target_archive_size }},
-      "ArchiveOutputTargetDictionariesSize": {{ .Values.clpConfig.archive_output.target_dictionaries_size }},
-      "ArchiveOutputTargetEncodedFileSize": {{ .Values.clpConfig.archive_output.target_encoded_file_size }},
-      "ArchiveOutputTargetSegmentSize": {{ .Values.clpConfig.archive_output.target_segment_size }},
+      "ArchiveOutputTargetArchiveSize":
+        {{ .Values.clpConfig.archive_output.target_archive_size | int }},
+      "ArchiveOutputTargetDictionariesSize":
+        {{ .Values.clpConfig.archive_output.target_dictionaries_size | int }},
+      "ArchiveOutputTargetEncodedFileSize":
+        {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
+      "ArchiveOutputTargetSegmentSize":
+        {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "PrestoHost": null,
