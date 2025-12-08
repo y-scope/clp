@@ -69,7 +69,7 @@ spec:
             - name: "RATE_LIMIT"
               value: "1000"
           ports:
-            - name: "http"
+            - name: "webui"
               containerPort: 4000
           volumeMounts:
             - name: "client-settings"

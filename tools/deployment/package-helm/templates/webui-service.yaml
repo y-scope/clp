@@ -12,5 +12,5 @@ spec:
     app.kubernetes.io/component: "webui"
   ports:
     - port: 4000
-      targetPort: "http"
+      targetPort: "webui"
       nodePort: {{ .Values.clpConfig.webui.port }}

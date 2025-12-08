@@ -66,7 +66,7 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
-            - name: "http"
+            - name: "mcp-server"
               containerPort: 8000
           volumeMounts:
             - name: "config"

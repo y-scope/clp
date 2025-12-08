@@ -12,5 +12,5 @@ spec:
     app.kubernetes.io/component: "api-server"
   ports:
     - port: 3001
-      targetPort: "http"
+      targetPort: "api-server"
       nodePort: {{ .Values.clpConfig.api_server.port }}

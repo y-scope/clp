@@ -63,7 +63,7 @@ spec:
             - name: "RUST_LOG"
               value: "DEBUG"
           ports:
-            - name: "http"
+            - name: "api-server"
               containerPort: 3001
           volumeMounts:
             - name: "config"
