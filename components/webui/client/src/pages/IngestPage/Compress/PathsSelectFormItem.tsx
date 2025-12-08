@@ -10,11 +10,12 @@ import {
 import {
     Empty,
     Form,
+    GetProps,
     Spin,
     TreeSelect,
 } from "antd";
-import {SafeKey} from "antd/es/table/interface";
-import {DataNode} from "antd/es/tree";
+
+type DataNode = NonNullable<GetProps<typeof TreeSelect>["treeData"]>[number];
 
 import useFsTreeStore from "./fsTreeStore";
 import styles from "./PathsSelectFormItem.module.css";
@@ -71,7 +72,7 @@ const PathsSelectFormItem = () => {
         toggleNode(node.key as string);
     }, []);
 
-    const handleTreeExpand = useCallback((newExpandedKeys: SafeKey[]) => {
+    const handleTreeExpand = useCallback((newExpandedKeys: React.Key[]) => {
         const {handleTreeExpansion} = useFsTreeStore.getState();
         handleTreeExpansion(newExpandedKeys as string[]);
     }, []);
