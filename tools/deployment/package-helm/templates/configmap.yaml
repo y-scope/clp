@@ -6,6 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
 data:
   clp-config.yaml: |
+    {{- if eq .Values.clpConfig.package.storage_engine "clp-s" }}
     api_server:
       default_max_num_query_results: {{
         .Values.clpConfig.api_server.default_max_num_query_results }}
@@ -14,6 +15,9 @@ data:
       query_job_polling:
         initial_backoff_ms: {{ .Values.clpConfig.api_server.query_job_polling.initial_backoff_ms }}
         max_backoff_ms: {{ .Values.clpConfig.api_server.query_job_polling.max_backoff_ms }}
+    {{- else }}
+    api_server: null
+    {{- end }}
     archive_output:
       compression_level: {{ .Values.clpConfig.archive_output.compression_level }}
       retention_period: {{ .Values.clpConfig.archive_output.retention_period }}
