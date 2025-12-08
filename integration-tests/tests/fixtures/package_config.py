@@ -1,7 +1,5 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
-import contextlib
-import logging
 import shutil
 from collections.abc import Iterator
 
@@ -25,13 +23,11 @@ from tests.utils.config import (
 )
 from tests.utils.port_utils import assign_ports_from_base
 
-logger = logging.getLogger(__name__)
-
 
 @pytest.fixture
 def fixt_package_config(
-    fixt_package_path_config: PackagePathConfig,
     request: pytest.FixtureRequest,
+    fixt_package_path_config: PackagePathConfig,
 ) -> Iterator[PackageConfig]:
     """
     Creates and maintains a PackageConfig object for a specific CLP mode.
@@ -40,9 +36,7 @@ def fixt_package_config(
     :return: An iterator that yields the PackageConfig object for the specified mode.
     """
     mode_name: str = request.param
-    logger.debug("Creating a temporary config file for the %s package.", mode_name)
 
-    # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
     # Assign ports based on BASE_PORT from ini.
@@ -57,7 +51,6 @@ def fixt_package_config(
 
     assign_ports_from_base(base_port, clp_config_obj)
 
-    # Compute the list of required components for this mode.
     required_components = get_required_component_list(clp_config_obj)
 
     # Build the job list for this mode and the current job filter.
@@ -77,10 +70,7 @@ def fixt_package_config(
     try:
         yield package_config
     finally:
-        logger.debug("Removing the temporary config file and var contents.")
-
-        with contextlib.suppress(FileNotFoundError):
-            package_config.temp_config_file_path.unlink()
+        package_config.temp_config_file_path.unlink(missing_ok=True)
 
         # Clear data, tmp, and log from the package directory.
         data_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH

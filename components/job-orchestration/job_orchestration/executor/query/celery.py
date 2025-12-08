@@ -1,6 +1,6 @@
 from celery import Celery
 
-from . import celeryconfig
+from job_orchestration.executor.query import celeryconfig
 
 app = Celery("query")
 app.config_from_object(celeryconfig)

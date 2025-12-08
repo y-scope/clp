@@ -27,30 +27,14 @@ def test_clp_package(
     request: pytest.FixtureRequest, fixt_package_instance: PackageInstance
 ) -> None:
     """
-    Validate that all of the components of the CLP package start up successfully for the selected
-    mode of operation.
+    Validate that the CLP package starts up successfully for the selected mode(s) of operation.
 
     :param fixt_package_instance:
     """
-    mode_name = fixt_package_instance.package_config.mode_name
-    instance_id = fixt_package_instance.clp_instance_id
-
     # Ensure that all package components are running.
-    logger.debug(
-        "Checking if all components of %s package with instance ID '%s' are running properly.",
-        mode_name,
-        instance_id,
-    )
-
     validate_package_running(fixt_package_instance)
 
     # Ensure that the package is running in the correct mode.
-    logger.debug(
-        "Checking that the %s package with instance ID '%s' is running in the correct mode.",
-        mode_name,
-        instance_id,
-    )
-
     validate_running_mode_correct(fixt_package_instance)
 
     # Run all jobs.
