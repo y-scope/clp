@@ -13,6 +13,8 @@ mkdir -p /tmp/clp/var/data/{archives,staged-archives,staged-streams,streams}
 mkdir -p /tmp/clp/var/log/user
 mkdir -p /tmp/clp/var/tmp
 mkdir -p /tmp/clp/samples
+wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1 \
+  | tar xz -C /tmp/clp/samples &
 
 cat <<EOF | kind create cluster --name clp-test --config=-
   kind: Cluster
@@ -39,8 +41,6 @@ cat <<EOF | kind create cluster --name clp-test --config=-
       hostPort: 30800
       protocol: TCP
 EOF
-
-cp /home/junhao/samples/postgresql.jsonl /tmp/clp/postgresql.jsonl
 
 helm uninstall test || true
 sleep 2
