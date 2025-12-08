@@ -73,16 +73,11 @@ async fn create_s3_scanner_job(
     let job_id = match ingestion_job_manager_state
         .create_s3_scanner_job(config)
         .await
-    {
-        Ok(job_id) => {
-            tracing::info!(job_id = ? job_id, "Created S3 scanner ingestion job.");
-            job_id
-        }
-        Err(err) => {
+        .map_err(|err| => {
             tracing::error!(err = ? err, "Failed to create S3 scanner ingestion job.");
-            return Err(Error::IngestionJobManagerError(err));
-        }
-    };
+            return Error::IngestionJobManagerError(err);
+        })?;
+    tracing::info!(job_id = ? job_id, "Created S3 scanner ingestion job.");
     Ok(Json(CreationResponse {
         id: job_id.to_string(),
     }))
