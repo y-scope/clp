@@ -124,10 +124,11 @@ data:
     {
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
       "MongoDbSearchResultsMetadataCollectionName": {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
-      "SqlDbClpArchivesTableName": "",
+      "SqlDbClpArchivesTableName": "clp_archives",
       "SqlDbClpDatasetsTableName": "clp_datasets",
-      "SqlDbClpFilesTableName": "",
+      "SqlDbClpFilesTableName": "clp_files",
       "SqlDbClpTablePrefix": "clp_",
       "SqlDbCompressionJobsTableName": "compression_jobs"
     }
@@ -138,6 +139,7 @@ data:
       "SqlDbPort": 3306,
       "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
       "SqlDbQueryJobsTableName": "query_jobs",
+      "SqlDbCompressionJobsTableName": "compression_jobs",
       "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
       "MongoDbPort": 27017,
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
@@ -150,7 +152,13 @@ data:
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
+      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
+      "ArchiveOutputTargetArchiveSize": {{ .Values.clpConfig.archive_output.target_archive_size }},
+      "ArchiveOutputTargetDictionariesSize": {{ .Values.clpConfig.archive_output.target_dictionaries_size }},
+      "ArchiveOutputTargetEncodedFileSize": {{ .Values.clpConfig.archive_output.target_encoded_file_size }},
+      "ArchiveOutputTargetSegmentSize": {{ .Values.clpConfig.archive_output.target_segment_size }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "PrestoHost": null,
       "PrestoPort": null
     }
