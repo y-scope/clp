@@ -2,8 +2,8 @@ import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {TableProps} from "antd";
 import dayjs from "dayjs";
 
-import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../../typings/datetime";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../../../config";
+import {DATETIME_FORMAT_TEMPLATE} from "../../../../../../typings/datetime";
 import Message from "../Message";
 import {getStreamId} from "../utils";
 
