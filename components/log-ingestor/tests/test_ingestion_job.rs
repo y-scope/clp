@@ -4,10 +4,13 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
-use clp_rust_utils::{job_config::S3IngestionBaseConfig, s3::ObjectMetadata};
+use clp_rust_utils::{
+    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
+    s3::ObjectMetadata,
+};
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{S3ScannerConfig, SqsListener, SqsListenerConfig},
+    ingestion_job::SqsListener,
 };
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -168,7 +171,7 @@ async fn test_sqs_listener() -> Result<()> {
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
         ),
-        base: S3IngestionBaseConfig {
+        base: BaseConfig {
             region: aws_config.region.clone(),
             bucket_name: aws_config.bucket_name.clone(),
             key_prefix: prefix.clone(),
@@ -177,9 +180,6 @@ async fn test_sqs_listener() -> Result<()> {
             unstructured: false,
             tags: None,
         },
-        max_num_messages_to_fetch: 2,
-        init_polling_backoff_sec: 1,
-        max_polling_backoff_sec: 1,
     };
 
     let (sender, receiver) = mpsc::channel::<ObjectMetadata>(TEST_CHANNEL_CAPACITY);
@@ -246,7 +246,7 @@ async fn test_s3_scanner() -> Result<()> {
     .await;
 
     let s3_scanner_config = S3ScannerConfig {
-        base: S3IngestionBaseConfig {
+        base: BaseConfig {
             region: aws_config.region.clone(),
             bucket_name: aws_config.bucket_name.clone(),
             key_prefix: prefix.clone(),
@@ -255,7 +255,7 @@ async fn test_s3_scanner() -> Result<()> {
             unstructured: false,
             tags: None,
         },
-        scanning_interval: Duration::from_millis(300),
+        scanning_interval_sec: 1,
         start_after: None,
     };
 
