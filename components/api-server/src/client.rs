@@ -196,10 +196,7 @@ impl Client {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
                     inner: self.fetch_results_from_file(search_job_id),
                 },
-                StreamOutputStorage::S3 {
-                    staging_directory: _,
-                    s3_config: _,
-                } => SearchResultStream::S3 {
+                StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
                     inner: self.fetch_results_from_s3(search_job_id).await,
                 },
             };
