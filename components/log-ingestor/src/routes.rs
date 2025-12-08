@@ -37,18 +37,23 @@ enum Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        let status_code = match &self {
+        let (status_code, error_message) = match &self {
             Self::IngestionJobManagerError(e) => match e {
-                IngestionJobManagerError::InternalError(_) => {
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                IngestionJobManagerError::InternalError(_) => (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                ),
+                IngestionJobManagerError::JobNotFound(_) => {
+                    (axum::http::StatusCode::NOT_FOUND, self.to_string())
                 }
-                IngestionJobManagerError::JobNotFound(_) => axum::http::StatusCode::NOT_FOUND,
-                IngestionJobManagerError::PrefixConflict(_) => axum::http::StatusCode::CONFLICT,
+                IngestionJobManagerError::PrefixConflict(_) => {
+                    (axum::http::StatusCode::CONFLICT, self.to_string())
+                }
             },
-            Self::InvalidJobId(_) => axum::http::StatusCode::BAD_REQUEST,
+            Self::InvalidJobId(_) => (axum::http::StatusCode::BAD_REQUEST, self.to_string()),
         };
         let body = serde_json::json!({
-            "error": self.to_string()
+            "error": error_message
         });
         (status_code, Json(body)).into_response()
     }
