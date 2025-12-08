@@ -25,6 +25,8 @@ cat <<EOF | kind create cluster --name clp-test --config=-
   nodes:
   - role: control-plane
     extraMounts:
+    - hostPath: /home
+      containerPath: /home
     - hostPath: /tmp/clp
       containerPath: /tmp/clp
     extraPortMappings:
