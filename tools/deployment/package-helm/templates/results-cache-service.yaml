@@ -1,0 +1,22 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp.fullname" . }}-results-cache
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "results-cache"
+spec:
+  {{- if .Values.allowHostAccessForSbinScripts }}
+  type: "NodePort"
+  {{- else }}
+  clusterIP: "None"
+  {{- end }}
+  selector:
+    {{- include "clp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "results-cache"
+  ports:
+    - port: 27017
+      targetPort: "results-cache"
+      {{- if .Values.allowHostAccessForSbinScripts }}
+      nodePort: {{ .Values.clpConfig.results_cache.port }}
+      {{- end }}

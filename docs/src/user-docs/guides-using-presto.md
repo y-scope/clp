@@ -33,7 +33,7 @@ Using Presto with CLP requires:
 
 1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package,
    but don't start the package just yet.
-2. Before starting the package, update the package's config file (`etc/clp-config.yml`) as follows:
+2. Before starting the package, update the package's config file (`etc/clp-config.yaml`) as follows:
 
     * Set the `package.query_engine` key to `"presto"`.
 
@@ -42,23 +42,6 @@ Using Presto with CLP requires:
         storage_engine: "clp-s"
         query_engine: "presto"
       ```
-
-    * Set the `database.host` key to a non-localhost hostname/IP.
-
-      ```yaml
-        database:
-        #  type: "mariadb"
-          host: "<non-local-ip-address>"
-        #  port: 3306
-        #  name: "clp-db"
-      ```
-
-      :::{note}
-      This change is necessary because the Presto containers run on a Docker network, and CLP's
-      database runs on the host network. `localhost` will refer to a different entity in each of
-      those contexts. This limitation will be addressed in the future when we unify Presto and CLP's
-      deployment infrastructure.
-      :::
 
     * Set the `results_cache.retention_period` key to `null` since the CLP + Presto integration
       doesn't yet support garbage collection.
@@ -213,7 +196,7 @@ SELECT foo.bar FROM default LIMIT 1;
 ### Querying from CLP's UI
 
 CLP's UI should be available at [http://localhost:4000](http://localhost:4000) (if you changed
-`webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
+`webui.host` or `webui.port` in `etc/clp-config.yaml`, use the new values).
 
 :::{note}
 The UI can only run one query at a time, and queries must not end with a `;`.

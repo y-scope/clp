@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
+set -o errexit
+set -o nounset
 set -o pipefail
 
 readonly PRESTO_CONFIG_DIR="/opt/presto-server/etc"

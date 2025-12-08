@@ -1,6 +1,7 @@
 version: "3"
 
 includes:
+  lock: "./lock.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
@@ -41,8 +42,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
@@ -57,10 +56,10 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "f9baaae0886439862204e8062c69dd49354cb14ad4e59f7c35779d544384955e"
+          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
           OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/3abe4cc.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
 
   core-all-parallel:
     internal: true
@@ -101,8 +100,8 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
           CMAKE_PACKAGE_NAME: "spider"
-          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
-          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          TAR_SHA256: "ef24c3271565864e630ac2c650fc46c62f0dd74d1a4c896fbdc67e5f37d9177e"
+          TAR_URL: "https://github.com/y-scope/spider/archive/32711f9.tar.gz"
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
@@ -117,8 +116,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
@@ -370,8 +367,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "69a99e0804a52c6b6397c5e7eabecc9bb4915d0145632c66fc63ad13678ff56a"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a722d07.tar.gz"
+          TARBALL_SHA256: "4551ea50cd22e8423770fd66a167e1c86053b1f4957f72c582a2da93e7820210"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/840f262.tar.gz"
 
   lz4:
     internal: true
@@ -405,6 +402,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DINSTALL_LAYOUT=DEB"
           LIB_NAME: "mariadb-connector-cpp"

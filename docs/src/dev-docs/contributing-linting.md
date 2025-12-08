@@ -13,7 +13,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 
 * `curl`
 * `md5sum`
-* Python 3.9 or newer
+* Python 3.10 or newer
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
   * We pin the version to 3.44.0 due to [y-scope/clp#1352].
@@ -33,10 +33,10 @@ To also apply any automatic fixes:
 task lint:fix
 ```
 
-[clp-artifact-build]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-artifact-build.yaml
-[clp-lint]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-lint.yaml
+[clp-artifact-build]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/.github/workflows/clp-artifact-build.yaml
+[clp-lint]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/.github/workflows/clp-lint.yaml
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yaml
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352

@@ -1,37 +1,23 @@
 .gridContainer {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, minmax(100px, 1fr));
     grid-auto-rows: 32px;
     gap: 5px;
 }
 
-.select {
-    grid-column: span 2;
-    display: flex;
-}
-
-.from {
+.gridItem {
     grid-column: span 1;
     display: flex;
 }
 
 .timestampKey {
-    grid-column: span 1;
-    display: flex;
-}
-
-.where {
-    grid-column: span 2;
-    display: flex;
-}
-
-.order {
-    grid-column: span 2;
+    width: 300px;
     display: flex;
 }
 
 .widthSelect {
-    width: 100%;
+    width: 0;
+    flex-grow: 1;
 }
 
 .noLeftBorderRadiusSelect :global(.ant-select-selector) {

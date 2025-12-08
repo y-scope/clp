@@ -1,0 +1,9 @@
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-database-data" (include "clp.fullname" .))
+  "component" "database"
+  "nodeRole" "control-plane"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/database" .Values.clpConfig.data_directory)
+) }}
