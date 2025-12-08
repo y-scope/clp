@@ -107,6 +107,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
+ "aws-sdk-s3",
  "axum",
  "clap",
  "clp-rust-utils",

@@ -25,9 +25,17 @@ clpConfig:
 
   database:
     type: "mariadb"  # "mariadb" or "mysql"
-    host: "localhost"
     port: 30306
     name: "clp-db"
+
+  redis:
+    query_backend_database: 0
+    compression_backend_database: 1
+
+  results_cache:
+    port: 30017
+    db_name: "clp-query-results"
+    stream_collection_name: "stream-files"
 
   # Location where other data (besides archives) are stored. It will be created if
   # it doesn't exist.
@@ -41,7 +49,13 @@ clpConfig:
   logs_directory: "/tmp/clp/var/log"
 
 credentials:
-  # Database credentials
   database:
     username: "clp-user"
+    password: "pass"
+
+  queue:
+    username: "clp-user"
+    password: "pass"
+
+  redis:
     password: "pass"
