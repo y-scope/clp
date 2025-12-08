@@ -13,7 +13,6 @@ from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
-    LOG_INGESTOR_COMPONENT_NAME,
     AwsAuthType,
     BundledService,
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -33,6 +32,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OrchestrationType,
     QUERY_JOBS_TABLE_NAME,

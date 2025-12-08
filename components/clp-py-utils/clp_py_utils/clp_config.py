@@ -758,12 +758,14 @@ class ApiServer(BaseModel):
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
 
+
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3270
     buffer_timeout: PositiveInt = 300
-    buffer_size_threshold: PositiveInt = 52428800 # 50 MB
+    buffer_size_threshold: PositiveInt = 52428800  # 50 MB
     channel_capacity: PositiveInt = 10
+
 
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
