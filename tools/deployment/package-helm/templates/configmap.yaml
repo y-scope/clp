@@ -148,7 +148,7 @@ data:
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
       "StreamFilesDir": "/var/data/streams",
-      "StreamTargetUncompressedSize": 134217728,
+      "StreamTargetUncompressedSize": {{ .Values.clpConfig.stream_output.target_uncompressed_size }},
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
