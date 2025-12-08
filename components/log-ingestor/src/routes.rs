@@ -8,7 +8,7 @@ use axum::{
     routing::{delete, get, post},
 };
 use clp_rust_utils::job_config::ingestion::s3::{S3ScannerConfig, SqsListenerConfig};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState};
 
@@ -59,8 +59,7 @@ impl IntoResponse for Error {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Serialize)]
 struct CreationResponse {
     /// The unique ID of the created ingestion job.
     id: String,
