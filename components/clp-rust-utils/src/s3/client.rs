@@ -16,10 +16,10 @@ use aws_sdk_s3::{
 /// A newly created S3 client.
 #[must_use]
 pub async fn create_new_client(
-    endpoint: &str,
     region_id: &str,
     access_key_id: &str,
     secret_access_key: &str,
+    endpoint: Option<&str>,
 ) -> Client {
     let credential = Credentials::new(
         access_key_id,
@@ -30,11 +30,11 @@ pub async fn create_new_client(
     );
     let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let config = Builder::from(&base_config)
-        .endpoint_url(endpoint)
+    let mut config_builder = Builder::from(&base_config)
         .region(region)
         .credentials_provider(credential)
-        .force_path_style(true)
-        .build();
+        .force_path_style(true);
+    config_builder.set_endpoint_url(endpoint.map(std::borrow::ToOwned::to_owned));
+    let config = config_builder.build();
     Client::from_conf(config)
 }

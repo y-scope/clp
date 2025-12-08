@@ -12,10 +12,10 @@ use aws_sdk_sqs::{
 /// A newly created SQS client.
 #[must_use]
 pub async fn create_new_client(
-    endpoint: &str,
     region_id: &str,
     access_key_id: &str,
     secret_access_key: &str,
+    endpoint: Option<&str>,
 ) -> Client {
     let credential = Credentials::new(
         access_key_id,
@@ -26,10 +26,9 @@ pub async fn create_new_client(
     );
     let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let config = Builder::from(&base_config)
-        .endpoint_url(endpoint)
+    let mut config_builder = Builder::from(&base_config)
         .credentials_provider(credential)
-        .region(region)
-        .build();
-    Client::from_conf(config)
+        .region(region);
+    config_builder.set_endpoint_url(endpoint.map(std::borrow::ToOwned::to_owned));
+    Client::from_conf(config_builder.build())
 }

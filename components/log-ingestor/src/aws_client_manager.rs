@@ -49,14 +49,9 @@ impl SqsClientWrapper {
     }
 
     pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
-        let sqs_endpoint = format!("https://sqs.{region}.amazonaws.com");
-        let sqs_client = clp_rust_utils::sqs::create_new_client(
-            sqs_endpoint.as_str(),
-            region,
-            access_key_id,
-            secret_access_key,
-        )
-        .await;
+        let sqs_client =
+            clp_rust_utils::sqs::create_new_client(region, access_key_id, secret_access_key, None)
+                .await;
         Self::from(sqs_client)
     }
 }
@@ -80,14 +75,9 @@ impl S3ClientWrapper {
     }
 
     pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
-        let s3_endpoint = format!("https://s3.{region}.amazonaws.com");
-        let s3_client = clp_rust_utils::s3::create_new_client(
-            s3_endpoint.as_str(),
-            region,
-            access_key_id,
-            secret_access_key,
-        )
-        .await;
+        let s3_client =
+            clp_rust_utils::s3::create_new_client(region, access_key_id, secret_access_key, None)
+                .await;
         Self::from(s3_client)
     }
 }
