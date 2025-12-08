@@ -31,11 +31,19 @@
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
 #  port: 3306
-#  name: "clp-db"
+#  names:
+#    clp: "clp-db"
+#    spider: "spider-db"
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+#  logging_level: "INFO"
+#  type: "celery"  # "celery" or "spider"
+#
+#spider_scheduler:
+#  host: "localhost"
+#  port: 6000
 #  logging_level: "INFO"
 #
 #query_scheduler:
