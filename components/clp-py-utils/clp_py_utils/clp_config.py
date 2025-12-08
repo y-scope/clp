@@ -41,6 +41,7 @@ PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 API_SERVER_COMPONENT_NAME = "api_server"
+LOG_INGESTOR_COMPONENT_NAME = "log_ingestor"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
@@ -757,6 +758,12 @@ class ApiServer(BaseModel):
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
 
+class LogIngestor(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 3270
+    buffer_timeout: PositiveInt = 300
+    buffer_size_threshold: PositiveInt = 52428800 # 50 MB
+    channel_capacity: PositiveInt = 10
 
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
@@ -802,6 +809,7 @@ class ClpConfig(BaseModel):
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
+    log_ingestor: LogIngestor | None = LogIngestor()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -962,6 +970,12 @@ class ClpConfig(BaseModel):
         if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
             raise ValueError(
                 f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            )
+
+    def validate_log_ingestor(self):
+        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
+            raise ValueError(
+                f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
 
     def load_container_image_ref(self):

@@ -48,6 +48,7 @@ graph LR
   garbage_collector["garbage-collector"]
   webui["webui"]
   mcp_server["mcp-server"]
+  log_ingestor["log-ingestor"]
 
   %% One-time jobs
   db_table_creator["db-table-creator"]
@@ -72,6 +73,7 @@ graph LR
   results_cache_indices_creator -->|completed_successfully| mcp_server
   db_table_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
+  db_table_creator -->|completed_successfully| log_ingestor
 
   subgraph Databases
     database
@@ -98,6 +100,7 @@ graph LR
 
   subgraph Management & UI
     api_server
+    log_ingestor
     garbage_collector
     webui
   end
@@ -132,6 +135,7 @@ graph LR
 | webui                 | Web server for the UI                                           |
 | mcp_server            | MCP server for AI agent to access CLP functionalities           |
 | garbage_collector     | Process to manage data retention                                |
+| log_ingestor          | A background service for continuous log ingestion               |
 
 :::
 
