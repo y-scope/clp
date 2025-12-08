@@ -17,22 +17,29 @@ interface TimeRangePanelProps {
 }
 
 /**
+ * Renders a time range selection panel with preset options and a custom date picker.
  *
- * @param root0
- * @param root0.panelNode
- * @param root0.onClose
+ * @param props
+ * @param props.panelNode The date picker panel node
+ * @param props.onClose Callback to close the panel
+ * @return
  */
 const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
     const {token} = theme.useToken();
     const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
     const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
 
-    const handlePresetClick = async (option: TIME_RANGE_OPTION) => {
+    const handlePresetClick = (option: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(option);
-        const dates = await TIME_RANGE_OPTION_DAYJS_MAP[option]();
-        updateTimeRange([dates[0].utc(true),
-            dates[1].utc(true)]);
-        onClose();
+        TIME_RANGE_OPTION_DAYJS_MAP[option]()
+            .then((dates) => {
+                updateTimeRange([dates[0].utc(true),
+                    dates[1].utc(true)]);
+                onClose();
+            })
+            .catch((e: unknown) => {
+                console.error("Failed to set time range:", e);
+            });
     };
 
     return (
@@ -55,7 +62,9 @@ const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
                                 paddingInline: token.paddingXS,
                                 paddingBlock: token.paddingXXS,
                             }}
-                            onClick={() => handlePresetClick(option)}
+                            onClick={() => {
+                                handlePresetClick(option);
+                            }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.backgroundColor = token.controlItemBgHover;
                             }}

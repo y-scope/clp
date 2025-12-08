@@ -14,8 +14,7 @@ import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
-import type {TimeDateInputProps} from "./TimeDateInput";
-import TimeDateInput from "./TimeDateInput";
+import TimeDateInput, {type TimeDateInputProps} from "./TimeDateInput";
 import TimeRangePanel from "./TimeRangePanel/index";
 import {
     isValidDateRange,
@@ -44,7 +43,7 @@ const TimeRangeInput = () => {
     const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
                            sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
-    const handleRangePickerChange = (
+    const handleRangePickerChange = useCallback((
         dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
     ) => {
         if (!isValidDateRange(dates)) {
@@ -59,7 +58,8 @@ const TimeRangeInput = () => {
             dates[0].utc(true),
             dates[1].utc(true),
         ]);
-    };
+    }, [updateTimeRange,
+        updateTimeRangeOption]);
 
     const handleOpenChange = (open: boolean) => {
         setIsOpen(open);
@@ -87,7 +87,7 @@ const TimeRangeInput = () => {
         info: {range?: "start" | "end"}
     ) => void;
 
-    const handleCalendarChange = useCallback<CalendarChangeHandler>((dates, _dateStrings, _info) => {
+    const handleCalendarChange = useCallback<CalendarChangeHandler>((dates) => {
         handleRangePickerChange(dates);
     }, [handleRangePickerChange]);
 
