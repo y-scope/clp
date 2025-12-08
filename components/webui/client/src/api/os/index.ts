@@ -9,7 +9,9 @@ import axios from "axios";
  * @return
  */
 const listFiles = async (path: string): Promise<FileListing> => {
-    const {data} = await axios.get<FileListing>(`/api/os/ls?path=${encodeURIComponent(path)}`);
+    const {data} = await axios.get<FileListing>("/api/os/ls", {
+        params: {path},
+    });
 
     return data;
 };
