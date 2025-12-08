@@ -150,7 +150,7 @@ services:
     volumes:
       - type: "bind"
         source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
-        target: "/usr/local/etc/redis/redis.conf"
+        target: "/etc/redis/redis.conf"
         read_only: true
       - type: "bind"
         source: "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}"
@@ -160,7 +160,7 @@ services:
         target: "/var/log/redis"
     command: [
       "redis-server",
-      "/usr/local/etc/redis/redis.conf",
+      "/etc/redis/redis.conf",
       "--requirepass", "${CLP_REDIS_PASS:?Please set a value.}"
     ]
     healthcheck:
@@ -264,7 +264,7 @@ services:
       - *volume_clp_config_readonly
       - *volume_clp_logs
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -299,7 +299,7 @@ services:
       - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
     command: [
       "python3",
@@ -367,7 +367,7 @@ services:
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams:ro"
       - type: "bind"
         source: "./var/www/webui/client/settings.json"
         target: "/opt/clp/var/www/webui/client/settings.json"
@@ -481,7 +481,7 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives:ro"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
