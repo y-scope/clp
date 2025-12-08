@@ -10,10 +10,9 @@ from typing import IO
 
 def get_binary_path(name: str) -> str:
     """
-    Finds the absolute path to the program binary called `name` in the current PATH.
-
+    :param name: Name of the program binary to locate.
     :return: Absolute path to the program binary.
-    :raise RuntimeError: `name` is not found on PATH.
+    :raise RuntimeError: if the program binary is not found on $PATH.
     """
     program_binary = shutil.which(name)
     if program_binary is None:

@@ -39,25 +39,26 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     in the Compose project exactly matches the list of required components.
 
     :param package_instance:
+    :raise pytest.fail: if the sets of running services and required components do not match.
     """
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
     project_name = f"clp-package-{instance_id}"
-    running_services = list_running_services_in_compose_project(project_name)
+    running_services = set(list_running_services_in_compose_project(project_name))
 
     # Compare with list of required components.
-    required_components = package_instance.package_config.component_list
-    if set(required_components) == set(running_services):
+    required_components = set(package_instance.package_config.component_list)
+    if required_components == running_services:
         return
 
     fail_msg = "Component mismatch."
 
-    missing_components = set(required_components) - set(running_services)
+    missing_components = required_components - running_services
     if missing_components:
-        fail_msg += f" Missing components: {missing_components}."
+        fail_msg += f"\nMissing components: {missing_components}."
 
-    unexpected_components = set(running_services) - set(required_components)
+    unexpected_components = running_services - required_components
     if unexpected_components:
-        fail_msg += f" Unexpected services: {unexpected_components}."
+        fail_msg += f"\nUnexpected services: {unexpected_components}."
 
     pytest.fail(fail_msg)
