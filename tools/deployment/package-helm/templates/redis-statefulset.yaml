@@ -61,7 +61,7 @@ spec:
                   -h 127.0.0.1
                   -p 6379
                   -a "${REDIS_PASSWORD}"
-                  ping
+                  PING
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *redis-health-check
