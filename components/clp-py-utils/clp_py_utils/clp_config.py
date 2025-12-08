@@ -975,7 +975,7 @@ class ClpConfig(BaseModel):
             )
 
     def validate_log_ingestor(self):
-        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
+        if StorageEngine.CLP == self.package.storage_engine and self.log_ingestor is not None:
             raise ValueError(
                 f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
