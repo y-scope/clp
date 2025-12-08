@@ -20,6 +20,7 @@ use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJ
 pub fn create_router() -> Router<IngestionJobManagerState> {
     Router::new()
         .route("/", get(health))
+        .route("/health", get(health))
         .route("/create_s3_scanner_job", post(create_s3_scanner_job))
         .route("/create_sqs_listener_job", post(create_sqs_listener_job))
         .route("/stop_and_delete_job/{job_id}", delete(stop_and_delete_job))
