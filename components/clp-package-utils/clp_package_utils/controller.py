@@ -8,6 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
+from types import MappingProxyType
 from typing import Any
 
 from clp_py_utils.clp_config import (
@@ -18,7 +19,11 @@ from clp_py_utils.clp_config import (
     CLP_DB_ROOT_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_USER_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_QUEUE_PASS_ENV_VAR_NAME,
+    CLP_QUEUE_USER_ENV_VAR_NAME,
+    CLP_REDIS_PASS_ENV_VAR_NAME,
     ClpConfig,
+    ClpDbNameType,
     ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -28,6 +33,7 @@ from clp_py_utils.clp_config import (
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
+    OrchestrationType,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -36,6 +42,9 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_DB_PASS_ENV_VAR_NAME,
+    SPIDER_DB_USER_ENV_VAR_NAME,
+    SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -178,17 +187,21 @@ class BaseController(ABC):
         # Connection config
         env_vars |= {
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
-            "CLP_DB_NAME": self._clp_config.database.name,
+            "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
             "CLP_DB_PORT": str(self._clp_config.database.port),
         }
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
+            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
 
         # Credentials
         credentials = self._clp_config.database.credentials
         env_vars |= {
             CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
             CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            SPIDER_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].password,
             CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
             CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+            SPIDER_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].username,
         }
 
         return env_vars
@@ -201,9 +214,10 @@ class BaseController(ABC):
         """
         component_name = QUEUE_COMPONENT_NAME
 
-        if BundledService.QUEUE not in self._clp_config.bundled:
+        if self._clp_config.queue is None or BundledService.QUEUE not in self._clp_config.bundled:
             logger.info(
-                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
                 component_name,
             )
             # Bundling
@@ -233,6 +247,13 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
+        if self._clp_config.queue is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
@@ -245,8 +266,8 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_QUEUE_PASS": self._clp_config.queue.password,
-            "CLP_QUEUE_USER": self._clp_config.queue.username,
+            CLP_QUEUE_PASS_ENV_VAR_NAME: self._clp_config.queue.password,
+            CLP_QUEUE_USER_ENV_VAR_NAME: self._clp_config.queue.username,
         }
 
         return env_vars
@@ -259,9 +280,10 @@ class BaseController(ABC):
         """
         component_name = REDIS_COMPONENT_NAME
 
-        if BundledService.REDIS not in self._clp_config.bundled:
+        if self._clp_config.redis is None or BundledService.REDIS not in self._clp_config.bundled:
             logger.info(
-                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
                 component_name,
             )
             # Bundling
@@ -307,6 +329,13 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDIS_COMPONENT_NAME
+        if self._clp_config.redis is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
@@ -319,7 +348,33 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_REDIS_PASS": self._clp_config.redis.password,
+            CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the Spider scheduler component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = SPIDER_SCHEDULER_COMPONENT_NAME
+        if self._clp_config.compression_scheduler.type != OrchestrationType.SPIDER:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self._clp_config.spider_scheduler.host),
+            "SPIDER_SCHEDULER_PORT": str(self._clp_config.spider_scheduler.port),
         }
 
         return env_vars
@@ -610,7 +665,7 @@ class BaseController(ABC):
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
-            "SqlDbName": self._clp_config.database.name,
+            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
@@ -791,6 +846,16 @@ class BaseController(ABC):
                 settings[key] = value
 
 
+_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
+    {
+        DeploymentType.BASE: "docker-compose-base.yaml",
+        DeploymentType.FULL: "docker-compose.yaml",
+        DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
+        DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
+    }
+)
+
+
 class DockerComposeController(BaseController):
     """
     Controller for orchestrating CLP components using Docker Compose.
@@ -873,6 +938,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
+        env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
@@ -959,10 +1025,7 @@ class DockerComposeController(BaseController):
         """
         :return: The Docker Compose file name to use based on the config.
         """
-        deployment_type = self._clp_config.get_deployment_type()
-        if deployment_type == DeploymentType.BASE:
-            return "docker-compose-base.yaml"
-        return "docker-compose.yaml"
+        return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:

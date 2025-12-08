@@ -40,7 +40,6 @@ def fixt_package_config(
     mode_name: str = request.param
     logger.debug("Creating a temporary config file for the %s package.", mode_name)
 
-    # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
     # Assign ports based on BASE_PORT from ini.
@@ -66,6 +65,7 @@ def fixt_package_config(
     package_config = PackageConfig(
         path_config=fixt_package_path_config,
         mode_name=mode_name,
+        component_list=required_components,
         component_list=required_components,
         clp_config=clp_config_obj,
         package_job_list=package_job_list,
