@@ -80,7 +80,7 @@ data:
       port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
     reducer:
-      base_port: {{ .Values.clpConfig.reducer.base_port }}
+      base_port: 14009
       host: {{ include "clp.fullname" . }}-reducer
       logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
       upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
