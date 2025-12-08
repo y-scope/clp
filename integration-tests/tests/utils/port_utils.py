@@ -10,8 +10,9 @@ MIN_NON_PRIVILEGED_PORT = 1024
 MAX_PORT = 65535
 VALID_PORT_RANGE = range(MIN_NON_PRIVILEGED_PORT, MAX_PORT + 1)
 
-# CLP constants.
+# Practical maximum number of reducer instances.
 REDUCER_MAX_PORTS = 128
+
 PORT_LIKE_ATTR_NAMES = [
     "port",
     "base_port",
@@ -31,6 +32,7 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     """
     # Discover which components in ClpConfig have a port attribute.
     component_port_targets: list[tuple[Any, str, int]] = []
+    total_ports_required = 0
     for attr_name, attr_value in vars(clp_config).items():
         if attr_name.startswith("_") or attr_value is None:
             continue
@@ -50,20 +52,17 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
             ports_required_for_component = REDUCER_MAX_PORTS
 
         component_port_targets.append((attr_value, port_attr_name, ports_required_for_component))
+        total_ports_required += ports_required_for_component
 
     # Ensure desired port range is valid and that all ports in the range are available.
-    total_ports_required = sum(
-        ports_required_for_component
-        for _, _, ports_required_for_component in component_port_targets
-    )
     desired_port_range = range(base_port, base_port + total_ports_required)
     _validate_port_range(port_range=desired_port_range)
     _validate_ports_available_in_range(host="127.0.0.1", port_range=desired_port_range)
 
     # Assign ports to the components.
     current_port = base_port
-    for attr_value, port_attr_name, ports_required_for_component in component_port_targets:
-        setattr(attr_value, port_attr_name, current_port)
+    for component_config, port_attr_name, ports_required_for_component in component_port_targets:
+        setattr(component_config, port_attr_name, current_port)
         current_port += ports_required_for_component
 
 
