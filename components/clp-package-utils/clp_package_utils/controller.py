@@ -616,6 +616,12 @@ class BaseController(ABC):
         if self._clp_config.log_ingestor is None:
             logger.info("%s is not configured, skipping environment setup...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        if self._clp_config.logs_input.type != StorageType.S3:
+            logger.info(
+                "%s is only applicable for S3 logs input type, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
         logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name

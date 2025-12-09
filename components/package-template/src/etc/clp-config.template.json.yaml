@@ -13,6 +13,7 @@
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
 
+## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
 #log_ingestor:
 #  host: "localhost"
 #  port: 3002
