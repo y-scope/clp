@@ -95,7 +95,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: "--check --diff"
           RUFF_CHECK_FLAGS: ""
           RUFF_FORMAT_FLAGS: "--diff"
 
@@ -103,7 +102,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: ""
           RUFF_CHECK_FLAGS: "--fix"
           RUFF_FORMAT_FLAGS: ""
 
@@ -787,9 +785,15 @@ tasks:
         - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
         - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
-      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
+      vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
+      - for:
+          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy . || true
       - for:
           - "components/core/tools/scripts/utils"
           - "tools/deployment"
@@ -798,20 +802,14 @@ tasks:
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
-          black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_CHECK_FLAGS}} .
+          ruff format {{.RUFF_FORMAT_FLAGS}} .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
-      - for:
-          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
-        cmd: |-
-          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
-          uv run --directory "{{.ITEM}}" mypy . || true
 
   check-rust:
     cmds:
