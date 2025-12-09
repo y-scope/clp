@@ -27,7 +27,9 @@
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
 #include "InputConfig.hpp"
+#include "search/ast/DateLiteral.hpp"
 #include "search/ast/Expression.hpp"
+#include "search/ast/SetDateLiteralPrecision.hpp"
 
 // This include has a circular dependency with the `.inc` file.
 // The following clang-tidy suppression should be removed once the circular dependency is resolved.
@@ -36,6 +38,8 @@
 
 using clp_s::KvIrSearchError;
 using clp_s::KvIrSearchErrorEnum;
+using clp_s::search::ast::DateLiteral;
+using clp_s::search::ast::SetDateLiteralPrecision;
 using KvIrSearchErrorCategory = ystdlib::error_handling::ErrorCategory<KvIrSearchErrorEnum>;
 
 namespace clp_s {
@@ -267,6 +271,9 @@ auto search_kv_ir_stream(
                 " Values will be ignored."
         );
     }
+
+    SetDateLiteralPrecision date_precision_pass{DateLiteral::Precision::Milliseconds};
+    query = date_precision_pass.run(query);
 
     try {
         clp::streaming_compression::zstd::Decompressor decompressor;
