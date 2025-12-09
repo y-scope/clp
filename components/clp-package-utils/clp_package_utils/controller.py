@@ -628,6 +628,10 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_LOG_INGESTOR_HOST": _get_ip_from_hostname(self._clp_config.log_ingestor.host),
             "CLP_LOG_INGESTOR_PORT": str(self._clp_config.log_ingestor.port),
+        }
+
+        # Logging config
+        env_vars |= {
             "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
         }
 
