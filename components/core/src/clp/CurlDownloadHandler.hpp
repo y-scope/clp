@@ -93,17 +93,20 @@ public:
 
 private:
     /**
-     * Find the certificate authority(CA) bundle file on the current host.
+     * Locate the certificate authority(CA) bundle file on the current host.
      *
-     * This provides consistent CA bundle resolution for curl operations across both native and
-     * cross-compiled environments.
+     * This provides consistent CA bundle resolution for curl on Linux systems when the runtime
+     * environment differs from the build environment. MacOS and Windows rely on their
+     * native certificate stores and are not checked. See also: https://curl.se/docs/sslcerts.html
+     *
      * Resolution order:
      *   1. Environment variables CURL_CA_BUNDLE then SSL_CERT_FILE, if set.
      *   2. Well-known CA bundle paths.
-     * See also: https://curl.se/docs/sslcerts.html
+     *   3. If nothing is found, return an empty string. The caller needs to check the output so as
+     *      not to override curl defaults and let it use the platform's own certificate store or
+     *      whatever it was built with.
      *
      * @return Absolute path to the CA bundle file.
-     * @throw CurlOperationFailed if no usable CA bundle file can be found.
      */
     static auto get_host_ca_bundle_path() -> std::string;
 
