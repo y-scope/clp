@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <curl/curl.h>
+#include <curl/system.h>
 
 #include "CurlEasyHandle.hpp"
 #include "CurlStringList.hpp"
@@ -91,6 +92,24 @@ public:
     [[nodiscard]] auto perform() -> CURLcode { return m_easy_handle.perform(); }
 
 private:
+    /**
+     * Find the certificate authority(CA) bundle file on the current host.
+     *
+     * This provides consistent CA bundle resolution for curl operations across both native and
+     * cross-compiled environments.
+     * Resolution order:
+     *   1. Environment variables CURL_CA_BUNDLE then SSL_CERT_FILE, if set.
+     *   2. Well-known CA bundle paths.
+     * See also: https://curl.se/docs/sslcerts.html
+     *
+     * @return Absolute path to the CA bundle file.
+     * @throw CurlOperationFailed if no usable CA bundle file can be found.
+     */
+    static auto get_host_ca_bundle_path() -> std::string;
+
+    static constexpr std::string_view cDebianCaBundlePath = "/etc/ssl/certs/ca-certificates.crt";
+    static constexpr std::string_view cCentOsCaBundlePath = "/etc/pki/tls/certs/ca-bundle.crt";
+
     CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
     std::shared_ptr<ErrorMsgBuf> m_error_msg_buf;

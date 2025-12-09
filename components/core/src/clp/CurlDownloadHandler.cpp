@@ -5,6 +5,8 @@
 #include <cctype>
 #include <chrono>
 #include <cstddef>
+#include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -42,7 +44,10 @@ CurlDownloadHandler::CurlDownloadHandler(
     }
 
     // Set up src url
-    m_easy_handle.set_option(CURLOPT_URL, src_url.data());
+    m_easy_handle.set_option(CURLOPT_URL, std::string(src_url).c_str());
+
+    // Set up CA bundle path
+    m_easy_handle.set_option(CURLOPT_CAINFO, get_host_ca_bundle_path().c_str());
 
     // Set up progress callback
     m_easy_handle.set_option(CURLOPT_XFERINFOFUNCTION, progress_callback);
@@ -114,5 +119,31 @@ CurlDownloadHandler::CurlDownloadHandler(
 
     // Set up failure on HTTP error reponse
     m_easy_handle.set_option(CURLOPT_FAILONERROR, static_cast<long>(true));
+}
+
+auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::string {
+    // Read-only operation. No multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (auto* const path = std::getenv("CURL_CA_BUNDLE")) {
+        return path;
+    }
+    // Read-only operation. No multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (auto* const path = std::getenv("SSL_CERT_FILE")) {
+        return path;
+    }
+    if (std::filesystem::exists(cDebianCaBundlePath)) {
+        return std::string(cDebianCaBundlePath);
+    }
+    if (std::filesystem::exists(cCentOsCaBundlePath)) {
+        return std::string(cCentOsCaBundlePath);
+    }
+    throw CurlOperationFailed(
+            ErrorCode_Failure,
+            __FILE__,
+            __LINE__,
+            CURLE_SSL_CACERT_BADFILE,
+            "`CurlDownloadHandler` failed to find the CA bundle file path."
+    );
 }
 }  // namespace clp
