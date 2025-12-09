@@ -250,7 +250,7 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
 }
 
 TEST_CASE("process_schema_empty_token", "[dfa_search]") {
-    MockVarDictionary const var_dict{make_var_dict({pair{0, "100"}})};
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
     VariableQueryToken const empty_int_token{cIntId, "", false};
@@ -260,7 +260,7 @@ TEST_CASE("process_schema_empty_token", "[dfa_search]") {
 }
 
 TEST_CASE("process_schema_unmatched_token", "[dfa_search]") {
-    MockVarDictionary const var_dict{make_var_dict({pair{0, "100"}})};
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
     VariableQueryToken const int_token{cIntId, "200", false};
@@ -274,7 +274,7 @@ TEST_CASE("process_schema_unmatched_token", "[dfa_search]") {
 }
 
 TEST_CASE("process_schema_int_token", "[dfa_search]") {
-    MockVarDictionary const var_dict{make_var_dict({pair{0, "100"}})};
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
     VariableQueryToken const int_token{cIntId, "100", false};
@@ -288,7 +288,7 @@ TEST_CASE("process_schema_int_token", "[dfa_search]") {
 }
 
 TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
-    MockVarDictionary const var_dict{make_var_dict({pair{0, "10a0"}, pair{1, "10b0"}})};
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "10a0"}, pair{1, "10b0"}})};
 
     SECTION("interpret_as_int") {
         SubQuery sub_query;
@@ -339,7 +339,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
 // this. In the future if CLP is more sophisticated, the two sections behave differently.
 TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]") {
     size_t id{0};
-    MockVarDictionary const var_dict{make_var_dict(
+    MockVariableDictionary const var_dict{make_var_dict(
             {pair{id++, "100000000000000000000000010"},
              pair{id++, "100000000000000000000000020"},
              pair{id++, "100000000000000000000000030"},
@@ -395,7 +395,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
 
 TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     size_t id{0};
-    MockVarDictionary const var_dict{make_var_dict(
+    MockVariableDictionary const var_dict{make_var_dict(
             {pair{id++, "10a0"},
              pair{id++, "10b0"},
              pair{id++, "100000000000000000000000010"},
@@ -481,7 +481,7 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
 }
 
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
-    MockVarDictionary const var_dict{
+    MockVariableDictionary const var_dict{
             make_var_dict({pair{0, "1a3"}, pair{1, "10a"}, pair{2, "10b"}})
     };
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
@@ -527,7 +527,7 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
 }
 
 TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]") {
-    MockVarDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},

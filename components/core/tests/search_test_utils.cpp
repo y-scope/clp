@@ -29,8 +29,8 @@ using std::unordered_set;
 using std::variant;
 using std::vector;
 
-auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVarDictionary {
-    MockVarDictionary dict;
+auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVariableDictionary {
+    MockVariableDictionary dict;
     for (auto const& [id, val] : entries) {
         dict.add_entry(id, val);
     }

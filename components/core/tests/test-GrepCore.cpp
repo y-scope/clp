@@ -166,7 +166,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
     )};
 
-    MockVarDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},

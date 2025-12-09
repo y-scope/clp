@@ -33,9 +33,9 @@ using VarInfo = tuple<bool, bool, unordered_set<variable_dictionary_id_t>>;
 /**
  * @param entries Vector of (id, value) pairs to populate the variable
  * dictionary.
- * @return A `MockVarDictionary` initialized with the given entries.
+ * @return A `MockVariableDictionary` initialized with the given entries.
  */
-auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVarDictionary;
+auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVariableDictionary;
 
 /**
  * @param entries Vector of logtypes, where each logtype is represented by a vector of tokens. Each

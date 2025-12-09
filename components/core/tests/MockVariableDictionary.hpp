@@ -15,9 +15,9 @@
  *
  * Adheres to `VariableDictionaryEntryReq`.
  */
-class MockVarEntry {
+class MockVariableEntry {
 public:
-    explicit MockVarEntry(clp::variable_dictionary_id_t const id, std::string value)
+    explicit MockVariableEntry(clp::variable_dictionary_id_t const id, std::string value)
             : m_id{id},
               m_value{std::move(value)} {}
 
@@ -35,9 +35,9 @@ private:
  *
  * Provides a method for adding entries and adheres to `VariableDictionaryReaderReq`.
  */
-class MockVarDictionary {
+class MockVariableDictionary {
 public:
-    using Entry = MockVarEntry;
+    using Entry = MockVariableEntry;
     using dictionary_id_t = clp::variable_dictionary_id_t;
 
     auto add_entry(dictionary_id_t const id, std::string value) -> void {
