@@ -64,6 +64,8 @@ set(
         ../clp/GrepCore.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
+        ../clp/SchemaSearcher.cpp
+        ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
