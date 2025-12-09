@@ -29,8 +29,6 @@ using std::variant;
 using std::vector;
 using clp::variable_dictionary_id_t;
 
-using VarInfo = tuple<bool, bool, unordered_set<variable_dictionary_id_t>>;
-
 auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVarDictionary {
     MockVarDictionary dict;
     for (auto const& [id, val] : entries) {

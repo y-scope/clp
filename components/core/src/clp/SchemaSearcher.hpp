@@ -334,4 +334,4 @@ auto SchemaSearcher::process_schema_var_token(
 }
 }  // namespace clp
 
-#endif  //CLP_SCHEMASEARCHER_HPP
+#endif  // CLP_SCHEMASEARCHER_HPP
