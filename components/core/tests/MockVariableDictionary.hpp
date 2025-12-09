@@ -10,14 +10,6 @@
 #include "../src/clp/Defs.h"
 #include "../src/clp/string_utils/string_utils.hpp"
 
-using clp::string_utils::wildcard_match_unsafe_case_sensitive;
-using std::string;
-using std::string_view;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
-using clp::variable_dictionary_id_t;
-
 /**
  * Simple helper class representing a mock variable dictionary entry for unit tests.
  *
@@ -25,17 +17,17 @@ using clp::variable_dictionary_id_t;
  */
 class MockVarEntry {
 public:
-    explicit MockVarEntry(variable_dictionary_id_t const id, string value)
+    explicit MockVarEntry(clp::variable_dictionary_id_t const id, std::string value)
             : m_id{id},
               m_value{std::move(value)} {}
 
-    [[nodiscard]] auto get_id() const -> variable_dictionary_id_t { return m_id; }
+    [[nodiscard]] auto get_id() const -> clp::variable_dictionary_id_t { return m_id; }
 
-    [[nodiscard]] auto get_value() const -> string const& { return m_value; }
+    [[nodiscard]] auto get_value() const -> std::string const& { return m_value; }
 
 private:
-    variable_dictionary_id_t m_id;
-    string m_value;
+    clp::variable_dictionary_id_t m_id;
+    std::string m_value;
 };
 
 /**
@@ -46,14 +38,14 @@ private:
 class MockVarDictionary {
 public:
     using Entry = MockVarEntry;
-    using dictionary_id_t = variable_dictionary_id_t;
+    using dictionary_id_t = clp::variable_dictionary_id_t;
 
-    auto add_entry(dictionary_id_t const id, string value) -> void {
+    auto add_entry(dictionary_id_t const id, std::string value) -> void {
         m_storage.emplace(id, Entry{id, std::move(value)});
     }
 
-    [[nodiscard]] auto get_value(dictionary_id_t const id) const -> string const& {
-        static string const cEmpty{};
+    [[nodiscard]] auto get_value(dictionary_id_t const id) const -> std::string const& {
+        static std::string const cEmpty{};
         auto const it{m_storage.find(id)};
         if (m_storage.end() != it) {
             return it->second.get_value();
@@ -61,9 +53,10 @@ public:
         return cEmpty;
     }
 
-    auto get_entry_matching_value(string_view const val, [[maybe_unused]] bool ignore_case) const
-            -> vector<Entry const*> {
-        vector<Entry const*> results;
+    auto
+    get_entry_matching_value(std::string_view const val, [[maybe_unused]] bool ignore_case) const
+            -> std::vector<Entry const*> {
+        std::vector<Entry const*> results;
         for (auto const& [id, entry] : m_storage) {
             if (val == entry.get_value()) {
                 results.push_back(&entry);
@@ -73,19 +66,19 @@ public:
     }
 
     auto get_entries_matching_wildcard_string(
-            string_view const val,
+            std::string_view const val,
             [[maybe_unused]] bool ignore_case,
-            unordered_set<Entry const*>& results
+            std::unordered_set<Entry const*>& results
     ) const -> void {
         for (auto const& [id, entry] : m_storage) {
-            if (wildcard_match_unsafe_case_sensitive(entry.get_value(), val)) {
+            if (clp::string_utils::wildcard_match_unsafe_case_sensitive(entry.get_value(), val)) {
                 results.insert(&entry);
             }
         }
     }
 
 private:
-    unordered_map<dictionary_id_t, Entry> m_storage;
+    std::unordered_map<dictionary_id_t, Entry> m_storage;
 };
 
 #endif  // MOCK_VARIABLE_DICTIONARY_HPP
