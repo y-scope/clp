@@ -249,7 +249,7 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
     REQUIRE(expected_logtype_strings == logtype_strings);
 }
 
-TEST_CASE("process_schema_empty_token ", "[dfa_search]") {
+TEST_CASE("process_schema_empty_token", "[dfa_search]") {
     MockVarDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
@@ -259,7 +259,7 @@ TEST_CASE("process_schema_empty_token ", "[dfa_search]") {
     REQUIRE(0 == sub_query.get_num_possible_vars());
 }
 
-TEST_CASE("process_schema_unmatched_token ", "[dfa_search]") {
+TEST_CASE("process_schema_unmatched_token", "[dfa_search]") {
     MockVarDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
@@ -273,7 +273,7 @@ TEST_CASE("process_schema_unmatched_token ", "[dfa_search]") {
     REQUIRE(var.get_possible_var_dict_ids().empty());
 }
 
-TEST_CASE("process_schema_int_token ", "[dfa_search]") {
+TEST_CASE("process_schema_int_token", "[dfa_search]") {
     MockVarDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
@@ -287,7 +287,7 @@ TEST_CASE("process_schema_int_token ", "[dfa_search]") {
     REQUIRE(var.get_possible_var_dict_ids().empty());
 }
 
-TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
+TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
     MockVarDictionary const var_dict{make_var_dict({pair{0, "10a0"}, pair{1, "10b0"}})};
 
     SECTION("interpret_as_int") {
@@ -337,7 +337,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 
 // NOTE: CLP currently treats all non-encoded variables as the same, so the below test demonstrates
 // this. In the future if CLP is more sophisticated, the two sections behave differently.
-TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
+TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]") {
     size_t id{0};
     MockVarDictionary const var_dict{make_var_dict(
             {pair{id++, "100000000000000000000000010"},
@@ -393,7 +393,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]
     }
 }
 
-TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
+TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     size_t id{0};
     MockVarDictionary const var_dict{make_var_dict(
             {pair{id++, "10a0"},
