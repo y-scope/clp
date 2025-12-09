@@ -481,11 +481,9 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
 }
 
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
-    MockVarDictionary const var_dict{make_var_dict({
-            pair{0, "1a3"},
-            pair{1, "10a"},
-            pair{2, "10b"}
-    })};
+    MockVarDictionary const var_dict{
+            make_var_dict({pair{0, "1a3"}, pair{1, "10a"}, pair{2, "10b"}})
+    };
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},

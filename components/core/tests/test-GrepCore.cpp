@@ -19,8 +19,8 @@ using log_surgeon::Schema;
 using log_surgeon::SchemaVarAST;
 using log_surgeon::SymbolId::TokenFloat;
 using log_surgeon::SymbolId::TokenInt;
-using std::string;
 using std::pair;
+using std::string;
 using std::vector;
 
 constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};

@@ -19,15 +19,15 @@
 
 using clp::EncodedVariableInterpreter;
 using clp::logtype_dictionary_id_t;
+using clp::SubQuery;
+using clp::variable_dictionary_id_t;
 using std::pair;
 using std::string;
 using std::string_view;
-using clp::SubQuery;
 using std::tuple;
 using std::unordered_set;
 using std::variant;
 using std::vector;
-using clp::variable_dictionary_id_t;
 
 auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVarDictionary {
     MockVarDictionary dict;

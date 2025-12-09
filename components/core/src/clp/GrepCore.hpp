@@ -233,13 +233,8 @@ std::optional<Query> GrepCore::process_raw_query(
             }
         }
     } else {
-        sub_queries = SchemaSearcher::search(
-                search_string,
-                lexer,
-                logtype_dict,
-                var_dict,
-                ignore_case
-        );
+        sub_queries =
+                SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
     }
 
     if (sub_queries.empty()) {
