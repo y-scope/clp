@@ -35,8 +35,8 @@ public:
         return false;
     }
 
-    auto
-    add_constant(std::string_view const msg, size_t const begin_pos, size_t const length) -> void {
+    auto add_constant(std::string_view const msg, size_t const begin_pos, size_t const length)
+            -> void {
         m_value.append(msg.substr(begin_pos, length));
     }
 

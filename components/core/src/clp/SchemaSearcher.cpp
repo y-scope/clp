@@ -31,8 +31,10 @@ auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& i
         QueryInterpretation normalized_interpretation;
         for (auto const& token : interpretation.get_logtype()) {
             auto const& src_string{std::visit(
-                [](auto const& token) -> std::string const& {return token.get_query_substring();},
-                token
+                    [](auto const& tok) -> std::string const& {
+                        return tok.get_query_substring();
+                    },
+                    token
             )};
             string normalized_string;
             normalized_string.reserve(src_string.size());
@@ -117,11 +119,7 @@ auto SchemaSearcher::generate_logtype_string(
         bool const is_float{TokenFloat == var_type};
 
         if (wildcard_encodable_positions.end()
-            != std::ranges::find(
-                    wildcard_encodable_positions.begin(),
-                    wildcard_encodable_positions.end(),
-                    i
-            ))
+            != std::ranges::find(wildcard_encodable_positions, i))
         {
             if (mask_encoded_flags[i]) {
                 if (is_int) {
