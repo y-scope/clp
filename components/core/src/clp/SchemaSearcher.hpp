@@ -68,7 +68,7 @@ private:
             std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations
     ) -> std::set<log_surgeon::wildcard_query_parser::QueryInterpretation>;
 
-        /**
+    /**
      * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
      * to search for within the archive.
      *
