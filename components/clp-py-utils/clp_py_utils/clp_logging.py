@@ -10,15 +10,6 @@ LoggingLevel = Literal[
     "CRITICAL",
 ]
 
-LoggingLevelRust = Literal[
-    "ERROR",
-    "WARN",
-    "INFO",
-    "DEBUG",
-    "TRACE",
-    "OFF",
-]
-
 
 def get_logging_formatter():
     return logging.Formatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")

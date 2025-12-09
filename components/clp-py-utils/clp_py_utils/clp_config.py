@@ -17,7 +17,7 @@ from pydantic import (
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from clp_py_utils.clp_logging import LoggingLevel, LoggingLevelRust
+from clp_py_utils.clp_logging import LoggingLevel
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -97,6 +97,15 @@ DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
+
+LoggingLevelRust = Literal[
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "TRACE",
+    "OFF",
+]
 
 
 class DeploymentType(KebabCaseStrEnum):
