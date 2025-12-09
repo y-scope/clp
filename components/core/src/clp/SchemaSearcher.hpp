@@ -141,7 +141,7 @@ private:
      *
      * @param interpretation The interpretation to convert to a logtype string.
      * @param wildcard_encodable_positions A vector of positions of encodable wildcard variables.
-     * @param mask_encoded_flags A vector indicating if a variables is mask encoded.
+     * @param mask_encoded_flags A vector indicating if a variable is mask encoded.
      * @return The logtype string corresponding to this combination of encoded variables.
      */
     static auto generate_logtype_string(
