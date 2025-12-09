@@ -208,7 +208,7 @@ docker compose \
   up api-server \
     --no-deps --wait
 
-# Start log ingestor
+# Start log-ingestor
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up log-ingestor \
