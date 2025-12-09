@@ -14,8 +14,6 @@ later.
 * [CLP][clp-releases] v0.7.0 or higher
 * [Docker] v28 or higher
 * [Docker Compose][docker-compose] v2.20.2 or higher
-* Python
-* python3-venv (for the version of Python installed)
 
 ## Set up
 
@@ -28,7 +26,7 @@ Spider in configuration.
    but don't start the package just yet.
 2. Before starting the package, update the package's config file (`etc/clp-config.yaml`) as follows:
 
-    * Set the `compression_scheduler.type` key to `"spider"`.
+    * Change the `compression_scheduler.type` field to `"spider"`.
 
       ```yaml
       compression_scheduler:
@@ -42,7 +40,7 @@ Spider in configuration.
             db_name: "spider-db"
         ```
 
-    * (Optional) Set the `spider_scheduler`.
+    * (Optional) Override the `spider_scheduler` default config to change listening host or avoid port conflicts .
 
         ```yaml
         spider_scheduler:

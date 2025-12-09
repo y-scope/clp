@@ -233,7 +233,7 @@ instance ID.
 
 ### Deployment Types
 
-CLP supports four deployment types determined by the `package.compression_scheduler.type` and
+CLP supports four deployment types determined by the `compression_scheduler.type` and
 `package.query_engine` configuration setting.
 
 | Deployment Type | Compression Scheduler | Query Engine                 | Docker Compose File                |

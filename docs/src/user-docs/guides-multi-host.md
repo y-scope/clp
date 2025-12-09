@@ -162,13 +162,13 @@ docker compose \
   up db-table-creator \
     --no-deps
 
-# Start queue (optional, only if using Celery)
+# Start queue (if using Celery)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up queue \
     --no-deps --wait
 
-# Start redis (optional, only if using Celery)
+# Start redis (if using Celery)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up redis \
@@ -236,7 +236,7 @@ docker compose \
 # Worker services (can be started on multiple hosts)
 ################################################################################
 
-# Start compression worker (optional, only if using Celery)
+# Start compression worker (if using Celery)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up compression-worker \
