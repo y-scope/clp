@@ -47,7 +47,10 @@ CurlDownloadHandler::CurlDownloadHandler(
     m_easy_handle.set_option(CURLOPT_URL, std::string(src_url).c_str());
 
     // Set up CA bundle path
-    m_easy_handle.set_option(CURLOPT_CAINFO, get_host_ca_bundle_path().c_str());
+    auto const ca_bundle_path = get_host_ca_bundle_path();
+    if (!ca_bundle_path.empty()) {
+        m_easy_handle.set_option(CURLOPT_CAINFO, ca_bundle_path.c_str());
+    }
 
     // Set up progress callback
     m_easy_handle.set_option(CURLOPT_XFERINFOFUNCTION, progress_callback);
@@ -122,6 +125,10 @@ CurlDownloadHandler::CurlDownloadHandler(
 }
 
 auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::string {
+#if defined(_WIN32) || defined(__APPLE__)
+    // Use the platform certificate store on Windows and macOS.
+    return {};
+#else
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
     if (auto* const path = std::getenv("CURL_CA_BUNDLE")) {
@@ -138,12 +145,7 @@ auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::string {
     if (std::filesystem::exists(cCentOsCaBundlePath)) {
         return std::string(cCentOsCaBundlePath);
     }
-    throw CurlOperationFailed(
-            ErrorCode_Failure,
-            __FILE__,
-            __LINE__,
-            CURLE_SSL_CACERT_BADFILE,
-            "`CurlDownloadHandler` failed to find the CA bundle file path."
-    );
+    return {};
+#endif
 }
 }  // namespace clp
