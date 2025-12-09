@@ -79,6 +79,7 @@ auto check_sub_query(
         unordered_set<logtype_dictionary_id_t> const& logtype_ids
 ) -> void {
     CAPTURE(id);
+    REQUIRE(id < sub_queries.size());
     auto const& sub_query{sub_queries[id]};
 
     REQUIRE(wildcard_match_required == sub_query.wildcard_match_required());
