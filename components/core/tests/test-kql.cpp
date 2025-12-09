@@ -335,10 +335,16 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
 
     SECTION("Timestamp expressions are parsed correctly.") {
         auto const [query, expected_operation] = GENERATE(
-            std::make_pair(R"(* : timestamp("1970-01-01 00:00:00.000000001"))", FilterOperation::EQ),
-            std::make_pair(R"(* : timestamp("1", "\N"))", FilterOperation::EQ),
-            std::make_pair(R"(* < timestamp("1970-01-01 00:00:00.000000001"))", FilterOperation::LT),
-            std::make_pair(R"(* < timestamp("1", "\N"))", FilterOperation::LT)
+                std::make_pair(
+                        R"(* : timestamp("1970-01-01 00:00:00.000000001"))",
+                        FilterOperation::EQ
+                ),
+                std::make_pair(R"(* : timestamp("1", "\N"))", FilterOperation::EQ),
+                std::make_pair(
+                        R"(* < timestamp("1970-01-01 00:00:00.000000001"))",
+                        FilterOperation::LT
+                ),
+                std::make_pair(R"(* < timestamp("1", "\N"))", FilterOperation::LT)
         );
 
         stringstream query_stream{query};
@@ -360,15 +366,15 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
 
     SECTION("Invalid timestamp expressions are rejected.") {
         auto invalid_query = GENERATE(
-            R"(a: timestamp()",
-            R"(a: timestamp())",
-            R"(a: timestamp(,))",
-            R"(a: timestamp("1",)",
-            R"(a: timestamp("1)",
-            R"(a: timestamp(1))",
-            R"(a: timestamp("a"))",
-            R"(a: timestamp("12345", "\Y-\m-\d"))",
-            R"(a: timestamp("12345", "\N))"
+                R"(a: timestamp()",
+                R"(a: timestamp())",
+                R"(a: timestamp(,))",
+                R"(a: timestamp("1",)",
+                R"(a: timestamp("1)",
+                R"(a: timestamp(1))",
+                R"(a: timestamp("a"))",
+                R"(a: timestamp("12345", "\Y-\m-\d"))",
+                R"(a: timestamp("12345", "\N))"
         );
         stringstream invalid_query_stream{invalid_query};
         REQUIRE(nullptr == parse_kql_expression(invalid_query_stream));
