@@ -25,6 +25,7 @@
 #  # The capacity of the internal channel used for communication between an ingestion job and the
 #  # log buffer.
 #  channel_capacity: 10
+#  logging_level: "INFO"
 
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.

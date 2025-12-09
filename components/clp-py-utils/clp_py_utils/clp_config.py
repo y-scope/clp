@@ -17,7 +17,7 @@ from pydantic import (
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from clp_py_utils.clp_logging import LoggingLevel
+from clp_py_utils.clp_logging import LoggingLevel, LoggingLevelRust
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -763,8 +763,9 @@ class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3270
     buffer_timeout: PositiveInt = 300
-    buffer_size_threshold: PositiveInt = 52428800  # 50 MB
+    buffer_size_threshold: PositiveInt = 52428800  # 50 MiB
     channel_capacity: PositiveInt = 10
+    logging_level: LoggingLevelRust = "INFO"
 
 
 class Presto(BaseModel):
@@ -974,12 +975,6 @@ class ClpConfig(BaseModel):
                 f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
 
-    def validate_log_ingestor(self):
-        if StorageEngine.CLP == self.package.storage_engine and self.log_ingestor is not None:
-            raise ValueError(
-                f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
-            )
-
     def load_container_image_ref(self):
         if self.container_image_ref is not None:
             # Accept configured value for debug purposes
@@ -1013,6 +1008,15 @@ class ClpConfig(BaseModel):
             d[key] = None if value is None else value.dump_to_primitive_dict()
 
         return d
+
+    @model_validator(mode="after")
+    def validate_log_ingestor_config(self):
+        if self.log_ingestor is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def validate_presto_config(self):

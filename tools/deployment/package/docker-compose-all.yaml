@@ -613,7 +613,7 @@ services:
       CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
-      RUST_LOG: "INFO"
+      RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
     ports:
       - host_ip: "${CLP_LOG_INGESTOR_HOST:-127.0.0.1}"
         published: "${CLP_LOG_INGESTOR_PORT:-3270}"

@@ -201,6 +201,7 @@ pub struct LogIngestor {
     pub buffer_timeout_sec: u64,
     pub buffer_size_threshold: u64,
     pub channel_capacity: usize,
+    pub logging_level: String,
 }
 
 impl Default for LogIngestor {
@@ -211,6 +212,7 @@ impl Default for LogIngestor {
             buffer_timeout_sec: 300,
             buffer_size_threshold: 50 * 1024 * 1024,
             channel_capacity: 10,
+            logging_level: "INFO".to_owned(),
         }
     }
 }

@@ -614,9 +614,9 @@ class BaseController(ABC):
         """
         component_name = LOG_INGESTOR_COMPONENT_NAME
         if self._clp_config.log_ingestor is None:
-            logger.info(f"log-ingestor is not configured, skipping {component_name} creation...")
+            logger.info("log-ingestor is not configured, skipping %s creation...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -628,6 +628,7 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_LOG_INGESTOR_HOST": _get_ip_from_hostname(self._clp_config.log_ingestor.host),
             "CLP_LOG_INGESTOR_PORT": str(self._clp_config.log_ingestor.port),
+            "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
         }
 
         return env_vars
