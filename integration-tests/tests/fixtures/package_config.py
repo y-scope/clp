@@ -1,14 +1,27 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
+import shutil
 from collections.abc import Iterator
 
 import pytest
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATA_DIRECTORY_PATH,
+    CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_DEFAULT_TMP_DIRECTORY_PATH,
+)
 
+from tests.utils.clp_job_utils import (
+    build_package_job_list,
+)
 from tests.utils.clp_mode_utils import (
     get_clp_config_from_mode,
     get_required_component_list,
 )
-from tests.utils.config import PackageConfig, PackagePathConfig
+from tests.utils.config import (
+    PackageConfig,
+    PackagePathConfig,
+)
+from tests.utils.port_utils import assign_ports_from_base
 
 
 @pytest.fixture
@@ -26,7 +39,24 @@ def fixt_package_config(
 
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
+    # Assign ports based on BASE_PORT from ini.
+    base_port_string = request.config.getini("BASE_PORT")
+    try:
+        base_port = int(base_port_string)
+    except ValueError as err:
+        err_msg = (
+            f"Invalid BASE_PORT value '{base_port_string}' in pytest.ini; expected an integer."
+        )
+        raise ValueError(err_msg) from err
+
+    assign_ports_from_base(base_port, clp_config_obj)
+
     required_components = get_required_component_list(clp_config_obj)
+
+    # Build the job list for this mode and the current job filter.
+    no_jobs: bool = bool(request.config.option.NO_JOBS)
+    job_filter: str = request.config.option.JOB_NAME or ""
+    package_job_list = None if no_jobs else build_package_job_list(mode_name, job_filter)
 
     # Construct PackageConfig.
     package_config = PackageConfig(
@@ -34,9 +64,17 @@ def fixt_package_config(
         mode_name=mode_name,
         component_list=required_components,
         clp_config=clp_config_obj,
+        package_job_list=package_job_list,
     )
 
     try:
         yield package_config
     finally:
         package_config.temp_config_file_path.unlink(missing_ok=True)
+
+        # Clear data, tmp, and log from the package directory.
+        data_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
+        tmp_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_TMP_DIRECTORY_PATH
+        log_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        for directory_path in (data_dir, tmp_dir, log_dir):
+            shutil.rmtree(directory_path, ignore_errors=True)
