@@ -48,7 +48,7 @@ CurlDownloadHandler::CurlDownloadHandler(
 
     // Set up CA bundle path
     auto const ca_bundle_path = get_host_ca_bundle_path();
-    if (!ca_bundle_path.empty()) {
+    if (false == ca_bundle_path.empty()) {
         m_easy_handle.set_option(CURLOPT_CAINFO, ca_bundle_path.c_str());
     }
 
