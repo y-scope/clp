@@ -8,10 +8,29 @@
 #include "msgpack.hpp"
 
 namespace clp_s {
+/**
+ * @param major_version
+ * @param minor_version
+ * @param patch_version
+ * @return The archive version, composed of a major, minor, and patch version.
+ */
+constexpr auto
+make_archive_version(uint8_t major_version, uint8_t minor_version, uint16_t patch_version)
+        -> uint32_t {
+    constexpr uint32_t cMajorVersionOffset{24U};
+    constexpr uint32_t cMinorVersionOffset{16U};
+    return (static_cast<uint32_t>(major_version) << cMajorVersionOffset)
+           | (static_cast<uint32_t>(minor_version) << cMinorVersionOffset)
+           | static_cast<uint32_t>(patch_version);
+}
+
 // define the version
 constexpr uint8_t cArchiveMajorVersion = 0;
 constexpr uint8_t cArchiveMinorVersion = 4;
 constexpr uint16_t cArchivePatchVersion = 1;
+constexpr uint32_t cArchiveVersion{
+        make_archive_version(cArchiveMajorVersion, cArchiveMinorVersion, cArchivePatchVersion)
+};
 
 // define the magic number
 constexpr uint8_t cStructuredSFAMagicNumber[] = {0xFD, 0x2F, 0xC5, 0x30};
