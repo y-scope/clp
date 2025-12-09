@@ -8,7 +8,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 project_root_dir="$script_dir/../../../"
 download_dep_script="$script_dir/download-dep.py"
 
-readonly YSCOPE_DEV_UTILS_COMMIT_SHA="307e711fe8bdab29a8aa23bb1f1212748df3f144"
+readonly YSCOPE_DEV_UTILS_COMMIT_SHA="6ec46856cfda8cbfb65d9386affbe3bc429186cb"
 python3 "${download_dep_script}" \
     "https://github.com/y-scope/yscope-dev-utils/archive/${YSCOPE_DEV_UTILS_COMMIT_SHA}.zip" \
     "yscope-dev-utils-${YSCOPE_DEV_UTILS_COMMIT_SHA}" \
