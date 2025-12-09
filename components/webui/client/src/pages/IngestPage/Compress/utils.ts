@@ -1,4 +1,5 @@
-import {
+import {FileEntry} from "@webui/common/schemas/os";
+import type {
     GetProp,
     TreeSelectProps,
 } from "antd";
@@ -8,39 +9,14 @@ import {settings} from "../../../settings";
 
 type TreeNode = Omit<GetProp<TreeSelectProps, "treeData">[number], "label">;
 
-interface FileItem {
-    isExpandable: boolean;
-    name: string;
-    parentPath: string;
-}
-
+const ROOT_PATH = "/";
 
 /**
- * Extracts the base directory path from a search string.
+ * Joins path segments into a normalized POSIX path. Empty segments are ignored and consecutive
+ * slashes are collapsed.
  *
- * @param value
- * @return the base directory path.
- */
-const extractBasePath = (value: string): string => {
-    if (value.endsWith("/")) {
-        return "/" === value ?
-            "/" :
-            value.slice(0, -1);
-    }
-
-    const lastSlashIndex = value.lastIndexOf("/");
-    if (-1 === lastSlashIndex || 0 === lastSlashIndex) {
-        return "/";
-    }
-
-    return value.substring(0, lastSlashIndex);
-};
-
-/**
- * Joins multiple path segments into a single normalized POSIX file system path.
- *
- * @param parts
- * @return The normalized path.
+ * @param parts Path segments to join
+ * @return The normalized path
  */
 const joinPath = (...parts: string[]): string => parts
     .filter(Boolean)
@@ -48,49 +24,50 @@ const joinPath = (...parts: string[]): string => parts
     .replace(/\/{2,}/g, "/");
 
 /**
- * Normalizes a path for client display by removing the LogsInputRootDir prefix in a container
- * environment.
+ * Removes the LogsInputRootDir prefix from a server path.
  *
- * @param fullPath
- * @return The normalized path relative to LogsInputRootDir.
+ * @param serverPath The full server path (e.g., "/mnt/logs/mydir")
+ * @return The user-facing path (e.g., "/mydir")
  */
-const removeLsPathPrefix = (fullPath: string): string => {
-    return fullPath.replace(new RegExp(`^${settings.LogsInputRootDir}/*`), "/");
+const removeServerPrefix = (serverPath: string): string => {
+    const stripped = serverPath.startsWith(settings.LogsInputRootDir) ?
+        serverPath.slice(settings.LogsInputRootDir.length) :
+        serverPath;
+
+    return joinPath(ROOT_PATH, stripped);
 };
 
 /**
- * Maps file system item to Antd TreeSelect flat tree node format.
+ * Adds the LogsInputRootDir prefix to a user-facing path.
  *
- * @param fileItem
- * @return the mapped Antd TreeSelect flat tree node.
+ * @param userPath The user-facing path (e.g., "/mydir")
+ * @return The full server path (e.g., "/mnt/logs/mydir")
  */
-const mapFileToTreeNode = (fileItem: FileItem): TreeNode => {
-    const {isExpandable, name, parentPath} = fileItem;
-    const normalizedParentPath = 0 === parentPath.length ?
-        "/" :
-        removeLsPathPrefix(parentPath);
-    const pathPrefix = normalizedParentPath.endsWith("/") ?
-        normalizedParentPath :
-        `${normalizedParentPath}/`;
-    const fullPath = pathPrefix + name;
+const addServerPrefix = (userPath: string): string => joinPath(settings.LogsInputRootDir, userPath);
+
+/**
+ * Converts API file listing item to an Ant Design TreeSelect node.
+ *
+ * @param fileEntry File item from the `/os/ls` API response
+ * @param parentPath User-facing parent path for tree hierarchy
+ * @return TreeNode with normalized path as id/value
+ */
+const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
+    const fullPath = joinPath(removeServerPrefix(fileEntry.parentPath), fileEntry.name);
 
     return {
         id: fullPath,
-        isLeaf: !isExpandable,
-        pId: normalizedParentPath,
-        title: name,
+        isLeaf: false === fileEntry.isExpandable,
+        pId: parentPath,
+        title: fileEntry.name,
         value: fullPath,
     };
 };
 
 
-export type {
-    FileItem,
-    TreeNode,
-};
+export type {TreeNode};
 export {
-    extractBasePath,
-    joinPath,
-    mapFileToTreeNode,
-    removeLsPathPrefix,
+    addServerPrefix,
+    ROOT_PATH,
+    toTreeNode,
 };

@@ -1,92 +1,115 @@
 import React, {
     useCallback,
-    useEffect,
+    useRef,
+    useState,
 } from "react";
 
 import {
     MinusOutlined,
     PlusOutlined,
 } from "@ant-design/icons";
+import {FileEntry} from "@webui/common/schemas/os";
 import {
-    Empty,
     Form,
-    GetProps,
-    Spin,
+    message,
     TreeSelect,
 } from "antd";
 
-type DataNode = NonNullable<GetProps<typeof TreeSelect>["treeData"]>[number];
-
-import useFsTreeStore from "./fsTreeStore";
-import styles from "./PathsSelectFormItem.module.css";
+import {listFiles} from "../../../api/os";
 import {
-    handleLoadData,
-    handleSearch,
-    initializeTree,
-} from "./treeEventHandlers";
+    addServerPrefix,
+    ROOT_PATH,
+    toTreeNode,
+    type TreeNode,
+} from "./utils";
 
-
-const TREE_SELECT_LIST_HEIGHT = 512;
 
 /**
- * Renders an empty state display when a path is not found.
- *
- * @return
+ * Height of the dropdown list in pixels.
  */
-const PathNotFoundEmpty = () => (
-    <Empty
-        description={"Path not found"}
-        image={Empty.PRESENTED_IMAGE_SIMPLE}/>
-);
+const LIST_HEIGHT_PX = 512;
+
 
 /**
- * Renders an empty state with a loading spinner.
- *
- * @return
+ * Root tree node representing the filesystem root.
  */
-const PathLoadingEmpty = () => (
-    <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={<Spin
-            size={"default"}
-            spinning={true}/>}/>
-);
+const ROOT_NODE: TreeNode = Object.freeze({
+    id: ROOT_PATH,
+    isLeaf: false,
+    pId: null,
+    title: ROOT_PATH,
+    value: ROOT_PATH,
+});
 
 /**
- * Renders a form item for selecting file paths for compression job submission.
+ * Icon component for tree node expand/collapse state.
  *
- * @return
+ * @param props Component props.
+ * @param props.expanded Whether the node is expanded (passed by Ant Design).
+ * @return Plus or minus icon based on expand state.
+ */
+// The "expanded" prop name is dictated by Ant Design TreeSelect.
+// eslint-disable-next-line react/boolean-prop-naming
+const SwitcherIcon = ({expanded}: {expanded?: boolean}) => (expanded ?
+    <MinusOutlined style={{color: "grey"}}/> :
+    <PlusOutlined style={{color: "grey"}}/>);
+
+/**
+ * Form item with TreeSelect for selecting file paths for compression.
+ * Supports lazy loading and search with auto-expand.
+ *
+ * @return Form.Item component with TreeSelect.
  */
 const PathsSelectFormItem = () => {
-    const expandedKeys = useFsTreeStore((state) => state.expandedKeys);
-    const isLoading = useFsTreeStore((state) => state.isLoading);
-    const treeData = useFsTreeStore((state) => state.treeData);
+    const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
+    const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+    const loadedPaths = useRef(new Set<string>());
 
-    useEffect(() => {
-        initializeTree();
+    const addNodes = useCallback((nodes: TreeNode[]) => {
+        setTreeData((prev) => {
+            const existingIds = new Set(prev.map((n) => n["id"] as string));
+            const newNodes = nodes.filter((n) => false === existingIds.has(n["id"] as string));
+
+            return 0 < newNodes.length ?
+                [
+                    ...prev,
+                    ...newNodes,
+                ] :
+                prev;
+        });
     }, []);
 
-    const handleTitleClick = useCallback((ev: React.MouseEvent, node: DataNode) => {
-        ev.stopPropagation();
-        const {toggleNode} = useFsTreeStore.getState();
-        toggleNode(node.key as string);
-    }, []);
+    const loadPath = useCallback(async (path: string) => {
+        if (loadedPaths.current.has(path)) {
+            return;
+        }
+        loadedPaths.current.add(path);
+        try {
+            const files: FileEntry[] = await listFiles(addServerPrefix(path));
+            addNodes(files.map((f) => toTreeNode(f, path)));
+        } catch (e) {
+            loadedPaths.current.delete(path);
+            throw e;
+        }
+    }, [addNodes]);
 
-    const handleTreeExpand = useCallback((newExpandedKeys: React.Key[]) => {
-        const {handleTreeExpansion} = useFsTreeStore.getState();
-        handleTreeExpansion(newExpandedKeys as string[]);
-    }, []);
+    const handleLoadData = useCallback(async ({value}: {value?: string | number}) => {
+        if ("string" !== typeof value) {
+            return;
+        }
+        try {
+            await loadPath(value);
+        } catch (e) {
+            console.error("Failed to load directory:", e);
+            message.error(e instanceof Error ?
+                e.message :
+                "Unknown error while loading paths");
+        }
+    }, [loadPath]);
 
-    const treeTitleRender = useCallback((node: DataNode) => (
-        <span
-            className={styles["treeNodeTitle"]}
-            onClick={(e) => {
-                handleTitleClick(e, node);
-            }}
-        >
-            {node.title as string}
-        </span>
-    ), [handleTitleClick]);
+    const handleTreeExpand = useCallback((keys: React.Key[]) => {
+        setExpandedKeys(keys as string[]);
+    }, []);
 
     return (
         <Form.Item
@@ -96,29 +119,19 @@ const PathsSelectFormItem = () => {
         >
             <TreeSelect
                 allowClear={true}
-                filterTreeNode={false}
-                listHeight={TREE_SELECT_LIST_HEIGHT}
+                listHeight={LIST_HEIGHT_PX}
                 loadData={handleLoadData}
                 multiple={true}
-                placeholder={"Please select paths to compress"}
+                placeholder={"Select paths to compress"}
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
-                showSearch={true}
+                showSearch={false}
+                switcherIcon={SwitcherIcon}
                 treeCheckable={true}
-                treeData={treeData as DataNode[]}
+                treeData={treeData}
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
-                treeTitleRender={treeTitleRender}
-                notFoundContent={isLoading ?
-                    <PathLoadingEmpty/> :
-                    <PathNotFoundEmpty/>}
-                switcherIcon={(props: {expanded?: boolean}) => (
-                    props.expanded ?
-                        <MinusOutlined style={{color: "grey"}}/> :
-                        <PlusOutlined style={{color: "grey"}}/>
-                )}
-                onSearch={handleSearch}
                 onTreeExpand={handleTreeExpand}/>
         </Form.Item>
     );
