@@ -124,12 +124,12 @@ CurlDownloadHandler::CurlDownloadHandler(
 auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::string {
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    if (auto * const path = std::getenv("CURL_CA_BUNDLE")) {
+    if (auto* const path = std::getenv("CURL_CA_BUNDLE")) {
         return path;
     }
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    if (auto * const path = std::getenv("SSL_CERT_FILE")) {
+    if (auto* const path = std::getenv("SSL_CERT_FILE")) {
         return path;
     }
     if (std::filesystem::exists(cDebianCaBundlePath)) {
