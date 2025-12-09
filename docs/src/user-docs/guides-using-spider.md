@@ -41,7 +41,7 @@ Spider in configuration.
                 spider: "spider-db"
         ```
 
-    * (Optional) Override the `spider_scheduler` default config to change listening host or avoid port conflicts .
+    * (Optional) Override the `spider_scheduler` default config to change listening host or avoid port conflicts.
 
         ```yaml
         spider_scheduler:
