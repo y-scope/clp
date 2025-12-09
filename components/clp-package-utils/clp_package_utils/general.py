@@ -429,7 +429,7 @@ def load_config_file(config_file_path: pathlib.Path) -> ClpConfig:
     """
     Load and validate a CLP configuration file.
 
-    :param config_file_path: Path to the CLP configuration file.
+    :param config_file_path:
     :return: The loaded and validated ClpConfig object.
     :raise ValueError: If the specified config file does not exist.
     """
