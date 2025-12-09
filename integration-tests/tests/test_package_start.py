@@ -1,7 +1,5 @@
 """Integration tests verifying that the CLP package can be started and stopped."""
 
-import logging
-
 import pytest
 
 from tests.utils.asserting_utils import (
@@ -11,8 +9,6 @@ from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
 from tests.utils.config import PackageInstance
 
 TEST_MODES = CLP_MODE_CONFIGS.keys()
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.mark.package
