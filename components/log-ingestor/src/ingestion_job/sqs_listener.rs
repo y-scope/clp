@@ -1,7 +1,7 @@
 use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
-    job_config::S3IngestionBaseConfig,
+    job_config::ingestion::s3::SqsListenerConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
@@ -10,16 +10,6 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::aws_client_manager::AwsClientManagerType;
-
-/// Configuration for a SQS listener job.
-#[derive(Debug, Clone)]
-pub struct SqsListenerConfig {
-    pub queue_url: String,
-    pub base: S3IngestionBaseConfig,
-    pub max_num_messages_to_fetch: i32,
-    pub init_polling_backoff_sec: i32,
-    pub max_polling_backoff_sec: i32,
-}
 
 /// Represents a SQS listener task that listens to SQS messages and extracts S3 object metadata.
 ///
@@ -50,7 +40,9 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///   [`aws_sdk_sqs::operation::receive_message::builders::ReceiveMessageFluentBuilder::send`]'s
     ///   return values on failure.
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
-        let mut polling_backoff_sec = self.config.init_polling_backoff_sec;
+        const MAX_NUM_MESSAGES_TO_FETCH: i32 = 10;
+        const MAX_WAIT_TIME_SEC: i32 = 20;
+
         loop {
             select! {
                 // Cancellation requested.
@@ -62,14 +54,9 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
                 result = self.sqs_client_manager.get().await?
                     .receive_message()
                     .queue_url(self.config.queue_url.as_str())
-                    .max_number_of_messages(self.config.max_num_messages_to_fetch)
-                    .wait_time_seconds(polling_backoff_sec).send() => {
-                    polling_backoff_sec = if self.process_sqs_response(result?).await? {
-                        self.config.init_polling_backoff_sec
-                    } else { std::cmp::min(
-                        polling_backoff_sec.saturating_mul(2),
-                        self.config.max_polling_backoff_sec
-                    ) };
+                    .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
+                    .wait_time_seconds(MAX_WAIT_TIME_SEC).send() => {
+                    self.process_sqs_response(result?).await?;
                 }
             }
         }
@@ -113,6 +100,10 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
 
             for record in event.records {
                 if let Some(object_metadata) = self.extract_object_metadata(record) {
+                    tracing::info!(
+                        object = ? object_metadata,
+                        "Received new object metadata from SQS."
+                    );
                     self.sender.send(object_metadata).await?;
                     ingested = true;
                 }
@@ -197,7 +188,11 @@ impl SqsListener {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move {
+            task.run(child_cancel_token).await.inspect_err(|err| {
+                tracing::error!(error = ? err, "SQS listener task execution failed.");
+            })
+        });
         Self {
             id,
             cancel_token,

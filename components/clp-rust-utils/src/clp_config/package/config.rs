@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::clp_config::AwsAuthentication;
+use crate::clp_config::{AwsAuthentication, S3Config};
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -178,7 +178,10 @@ pub enum StreamOutputStorage {
     Fs { directory: String },
 
     #[serde(rename = "s3")]
-    S3 { staging_directory: String },
+    S3 {
+        staging_directory: String,
+        s3_config: S3Config,
+    },
 }
 
 impl Default for StreamOutputStorage {
@@ -194,6 +197,7 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
+    #[serde(rename = "buffer_timeout")]
     pub buffer_timeout_sec: u64,
     pub buffer_size_threshold: u64,
     pub channel_capacity: usize,
@@ -203,7 +207,7 @@ impl Default for LogIngestor {
     fn default() -> Self {
         Self {
             host: "localhost".to_owned(),
-            port: 3333,
+            port: 3270,
             buffer_timeout_sec: 300,
             buffer_size_threshold: 50 * 1024 * 1024,
             channel_capacity: 10,
@@ -283,7 +287,6 @@ pub enum LogsInput {
 
 #[cfg(test)]
 mod tests {
-
     use super::LogsInput;
 
     #[test]
