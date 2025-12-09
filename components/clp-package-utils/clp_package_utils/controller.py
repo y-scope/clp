@@ -614,7 +614,7 @@ class BaseController(ABC):
         """
         component_name = LOG_INGESTOR_COMPONENT_NAME
         if self._clp_config.log_ingestor is None:
-            logger.info("log-ingestor is not configured, skipping %s creation...", component_name)
+            logger.info("%s is not configured, skipping environment setup...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
         logger.info("Setting up environment for %s...", component_name)
 
