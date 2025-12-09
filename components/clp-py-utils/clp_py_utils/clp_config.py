@@ -761,7 +761,7 @@ class ApiServer(BaseModel):
 
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
-    port: Port = 3270
+    port: Port = 3002
     buffer_timeout: PositiveInt = 300
     buffer_size_threshold: PositiveInt = 52428800  # 50 MiB
     channel_capacity: PositiveInt = 10

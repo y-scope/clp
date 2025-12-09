@@ -16,7 +16,7 @@
 ## log-ingestor config
 #log_ingestor:
 #  host: "localhost"
-#  port: 3270
+#  port: 3002
 #  # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
 #  # arrives.
 #  buffer_timeout: 300

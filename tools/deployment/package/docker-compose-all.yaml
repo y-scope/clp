@@ -616,8 +616,8 @@ services:
       RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
     ports:
       - host_ip: "${CLP_LOG_INGESTOR_HOST:-127.0.0.1}"
-        published: "${CLP_LOG_INGESTOR_PORT:-3270}"
-        target: 3270
+        published: "${CLP_LOG_INGESTOR_PORT:-3002}"
+        target: 3002
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -628,7 +628,7 @@ services:
       "/opt/clp/bin/log-ingestor",
       "--config", "/etc/clp-config.yaml",
       "--host", "0.0.0.0",
-      "--port", "3270"
+      "--port", "3002"
     ]
     healthcheck:
       <<: *healthcheck_defaults
@@ -636,5 +636,5 @@ services:
         "CMD",
         "curl",
         "-f",
-        "http://log_ingestor:3270/health"
+        "http://log_ingestor:3002/health"
       ]
