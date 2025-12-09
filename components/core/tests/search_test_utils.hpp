@@ -11,38 +11,27 @@
 #include <vector>
 
 #include "../src/clp/Defs.h"
-#include "../src/clp/EncodedVariableInterpreter.hpp"
 #include "../src/clp/Query.hpp"
 #include "MockLogTypeDictionary.hpp"
 #include "MockVariableDictionary.hpp"
 
-using clp::EncodedVariableInterpreter;
-using clp::logtype_dictionary_id_t;
-using clp::SubQuery;
-using clp::variable_dictionary_id_t;
-using std::pair;
-using std::string;
-using std::string_view;
-using std::tuple;
-using std::unordered_set;
-using std::variant;
-using std::vector;
-
-using VarInfo = tuple<bool, bool, unordered_set<variable_dictionary_id_t>>;
+using VarInfo = std::tuple<bool, bool, std::unordered_set<clp::variable_dictionary_id_t>>;
 
 /**
  * @param entries Vector of (id, value) pairs to populate the variable
  * dictionary.
  * @return A `MockVariableDictionary` initialized with the given entries.
  */
-auto make_var_dict(vector<pair<size_t, string>> const& entries) -> MockVariableDictionary;
+auto
+make_var_dict(std::vector<std::pair<size_t, std::string>> const& entries) -> MockVariableDictionary;
 
 /**
  * @param entries Vector of logtypes, where each logtype is represented by a vector of tokens. Each
  * token is either a literal substring (`string_view`) or a variable placeholder (`char`).
  * @return A `MockLogTypeDictionary` initialized with the given entries.
  */
-auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries)
+auto
+make_logtype_dict(std::vector<std::vector<std::variant<std::string_view, char>>> const& entries)
         -> MockLogTypeDictionary;
 
 /**
@@ -61,7 +50,9 @@ auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries
  * @param tokens Vector of tokens to convert into a logtype string.
  * @return A `string` representing the expected encoded logtype.
  */
-auto generate_expected_logtype_string(vector<variant<string_view, char>> const& tokens) -> string;
+auto
+generate_expected_logtype_string(std::vector<std::variant<std::string_view, char>> const& tokens)
+        -> std::string;
 
 /**
  * Checks that a `SubQuery` at a given index matches the expected properties.
@@ -81,10 +72,10 @@ auto generate_expected_logtype_string(vector<variant<string_view, char>> const& 
  */
 auto check_sub_query(
         size_t id,
-        vector<SubQuery> const& sub_queries,
+        std::vector<clp::SubQuery> const& sub_queries,
         bool wildcard_match_required,
-        vector<VarInfo> const& vars_info,
-        unordered_set<logtype_dictionary_id_t> const& logtype_ids
+        std::vector<VarInfo> const& vars_info,
+        std::unordered_set<clp::logtype_dictionary_id_t> const& logtype_ids
 ) -> void;
 
 #endif  // SEARCH_TEST_UTILS_HPP
