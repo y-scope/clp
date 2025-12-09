@@ -1,38 +1,37 @@
 #ifndef CLP_S_SEARCH_DATELITERAL_HPP
 #define CLP_S_SEARCH_DATELITERAL_HPP
 
+#include <cstdint>
 #include <memory>
 
 #include "../../Defs.hpp"
-#include "Integral.hpp"
+#include "Literal.hpp"
 
 namespace clp_s::search::ast {
-constexpr literal_type_bitmask_t cDateLiteralTypes = EpochDateT;
-
 /**
  * Class for Date literal in the search AST. Represents time
  * in epoch time.
  */
-class DateLiteral : public Integral {
+class DateLiteral : public Literal {
 public:
-    // Deleted copy
+    // Types
+    enum Precision : uint8_t {
+        Seconds,
+        Milliseconds,
+        Microseconds,
+        Nanoseconds
+    };
+
+    // Delete copy constructor and assignment operator.
     DateLiteral(DateLiteral const&) = delete;
     DateLiteral& operator=(DateLiteral const&) = delete;
 
     /**
-     * Create a Date literal from an integral value
-     * @param v the time as a double or epoch
-     * @return A Date literal
+     * Creates a Date literal from a timestamp in epoch nanoseconds.
+     * @param v The timestamp value.
+     * @return A `shared_ptr` referencing the newly created date literal.
      */
-    static std::shared_ptr<Literal> create_from_float(double v);
-    static std::shared_ptr<Literal> create_from_int(epochtime_t v);
-
-    /**
-     * Attempt to create a Date literal from string. Tries to parse the string using
-     * TimestampPattern.
-     * @return A Date Literal or nullptr if the string can not be parsed as date.
-     */
-    static std::shared_ptr<Literal> create_from_string(std::string const& v);
+    static std::shared_ptr<Literal> create(epochtime_t v);
 
     // Methods inherited from Value
     void print() const override;
@@ -46,17 +45,35 @@ public:
 
     bool as_epoch_date() override { return true; }
 
-    bool as_clp_string(std::string& ret, FilterOperation op) override;
+    bool as_int(int64_t& ret, FilterOperation op) override;
 
-    bool as_var_string(std::string& ret, FilterOperation op) override;
+    bool as_float(double& ret, FilterOperation op) override;
+
+    // Methods
+    /**
+     * @param precision
+     * @return The literal timestamp as the given precision (rounded towards zero).
+     */
+    auto as_precision(Precision precision) -> epochtime_t;
+
+    /**
+     * Sets the precision of the timestamp returned by `as_int`. The returned value from `as_int` is
+     * the same as the value obtained returned by calling `as_precision(precision)`.
+     * @param precision
+     */
+    void set_default_precision(Precision precision);
 
 private:
-    std::string m_epoch_str;
+    // Types
+    static constexpr literal_type_bitmask_t cDateLiteralTypes = EpochDateT;
 
     // Constructors
-    explicit DateLiteral(double v, std::string s);
+    explicit DateLiteral(epochtime_t timestamp);
 
-    explicit DateLiteral(epochtime_t v, std::string s);
+    // Variables
+    epochtime_t m_timestamp{};
+    epochtime_t m_default_precision_timestamp{};
+    double m_double_timestamp{};
 };
 }  // namespace clp_s::search::ast
 

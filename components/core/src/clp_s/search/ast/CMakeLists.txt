@@ -60,8 +60,6 @@ if(CLP_BUILD_CLP_S_SEARCH_AST)
     target_include_directories(clp_s_search_ast PUBLIC ../../../)
     target_link_libraries(
         clp_s_search_ast
-        PUBLIC
-        clp_s::timestamp_pattern
         PRIVATE
         simdjson::simdjson
     )

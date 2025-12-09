@@ -2,77 +2,55 @@
 
 #include <sstream>
 
-#include "../../TimestampPattern.hpp"
+#include "../../Defs.hpp"
 #include "SearchUtils.hpp"
 
 namespace clp_s::search::ast {
-DateLiteral::DateLiteral(double v, std::string s) : Integral(v), m_epoch_str(std::move(s)) {}
+namespace {
+constexpr epochtime_t cNanosecondsInMicrosecond{1000LL};
+constexpr epochtime_t cNanosecondsInMillisecond{1000LL * cNanosecondsInMicrosecond};
+constexpr epochtime_t cNanosecondsInSecond{1000LL * cNanosecondsInMillisecond};
+}  // namespace
 
-DateLiteral::DateLiteral(epochtime_t v, std::string s) : Integral(v), m_epoch_str(std::move(s)) {}
+DateLiteral::DateLiteral(epochtime_t v)
+        : m_timestamp{v},
+          m_default_precision_timestamp{v},
+          m_double_timestamp{static_cast<double>(v) / cNanosecondsInSecond} {}
 
-std::shared_ptr<Literal> DateLiteral::create_from_float(double v) {
-    std::ostringstream s;
-    s << v;
-    s.str();
-    return std::shared_ptr<Literal>(static_cast<Literal*>(new DateLiteral(v, s.str())));
-}
-
-std::shared_ptr<Literal> DateLiteral::create_from_int(epochtime_t v) {
-    std::ostringstream s;
-    s << v;
-    s.str();
-    return std::shared_ptr<Literal>(static_cast<Literal*>(new DateLiteral(v, s.str())));
-}
-
-std::shared_ptr<Literal> DateLiteral::create_from_string(std::string const& v) {
-    // begin end arguments are returned only -- their value doesn't matter
-    size_t timestamp_begin_pos{0};
-    size_t timestamp_end_pos{0};
-    epochtime_t timestamp;
-    auto pattern = TimestampPattern::search_known_ts_patterns(
-            v,
-            timestamp,
-            timestamp_begin_pos,
-            timestamp_end_pos
-    );
-    if (pattern == nullptr) {
-        return std::shared_ptr<Literal>(nullptr);
-    }
-
-    return std::shared_ptr<Literal>(static_cast<Literal*>(new DateLiteral(timestamp, v)));
+std::shared_ptr<Literal> DateLiteral::create(epochtime_t v) {
+    return std::shared_ptr<Literal>(static_cast<Literal*>(new DateLiteral(v)));
 }
 
 void DateLiteral::print() const {
-    get_print_stream() << m_epoch_str;
+    get_print_stream() << "timestamp(" << m_default_precision_timestamp << ")";
 }
 
-bool DateLiteral::as_clp_string(std::string& ret, FilterOperation op) {
-    if (op == FilterOperation::LT || op == FilterOperation::GT || op == FilterOperation::LTE
-        || op == FilterOperation::GTE)
-    {
-        return false;
-    }
-
-    if (m_epoch_str.find(' ') == std::string::npos) {
-        return false;
-    }
-
-    ret = m_epoch_str;
+bool DateLiteral::as_int(int64_t& ret, FilterOperation op) {
+    ret = m_default_precision_timestamp;
     return true;
 }
 
-bool DateLiteral::as_var_string(std::string& ret, FilterOperation op) {
-    if (op == FilterOperation::LT || op == FilterOperation::GT || op == FilterOperation::LTE
-        || op == FilterOperation::GTE)
-    {
-        return false;
-    }
-
-    if (m_epoch_str.find(' ') != std::string::npos) {
-        return false;
-    }
-
-    ret = m_epoch_str;
+bool DateLiteral::as_float(double& ret, FilterOperation op) {
+    ret = m_double_timestamp;
     return true;
+}
+
+auto DateLiteral::as_precision(Precision precision) -> epochtime_t {
+    switch (precision) {
+        case Precision::Seconds:
+            return m_timestamp / cNanosecondsInSecond;
+        case Precision::Milliseconds:
+            return m_timestamp / cNanosecondsInMillisecond;
+        case Precision::Microseconds:
+            return m_timestamp / cNanosecondsInMicrosecond;
+        case Precision::Nanoseconds:
+            return m_timestamp;
+        default:
+            return m_timestamp;
+    }
+}
+
+void DateLiteral::set_default_precision(Precision precision) {
+    m_default_precision_timestamp = as_precision(precision);
 }
 }  // namespace clp_s::search::ast
