@@ -435,16 +435,14 @@ def load_config_file(config_file_path: pathlib.Path) -> ClpConfig:
     """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-    resolved_config_path = resolve_host_path_in_container(config_file_path)
-    resolved_default_path = resolve_host_path_in_container(default_config_file_path)
 
-    if resolved_config_path.exists():
-        raw_clp_config = read_yaml_config_file(resolved_config_path)
+    if config_file_path.exists():
+        raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:
             clp_config = ClpConfig()
         else:
             clp_config = ClpConfig.model_validate(raw_clp_config)
-    elif resolved_config_path != resolved_default_path:
+    elif config_file_path != default_config_file_path:
         err_msg = f"Config file '{config_file_path}' does not exist."
         raise ValueError(err_msg)
     else:
