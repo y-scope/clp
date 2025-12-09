@@ -1,6 +1,9 @@
 #include "EvaluateTimestampIndex.hpp"
 
+#include <memory>
+
 #include "ast/AndExpr.hpp"
+#include "ast/DateLiteral.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
@@ -9,6 +12,7 @@
 #include "ast/OrExpr.hpp"
 
 using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::DateLiteral;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
@@ -106,7 +110,12 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
                     ret = range_it->second->evaluate_filter(filter_op, float_literal);
                     break;
                 case TimestampEntry::TimestampEncoding::Epoch:
-                    if (false == literal->as_int(int_literal, filter_op)) {
+                    if (auto const date_literal{std::dynamic_pointer_cast<DateLiteral>(literal)};
+                        nullptr != date_literal)
+                    {
+                        int_literal
+                                = date_literal->as_precision(DateLiteral::Precision::Milliseconds);
+                    } else if (false == literal->as_int(int_literal, filter_op)) {
                         return EvaluatedValue::Unknown;
                     }
                     ret = range_it->second->evaluate_filter(filter_op, int_literal);
