@@ -31,9 +31,7 @@ auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& i
         QueryInterpretation normalized_interpretation;
         for (auto const& token : interpretation.get_logtype()) {
             auto const& src_string{std::visit(
-                [](auto const& token) -> std::string const& {
-                    return token.get_query_substring();
-                },
+                [](auto const& token) -> std::string const& {return token.get_query_substring();},
                 token
             )};
             string normalized_string;
@@ -45,19 +43,19 @@ auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& i
             }
 
             std::visit(
-                overloaded{
-                    [&](VariableQueryToken const& variable_token) -> void {
-                        normalized_interpretation.append_variable_token(
-                                variable_token.get_variable_type(),
-                                normalized_string,
-                                variable_token.get_contains_wildcard()
-                        );
+                    overloaded{
+                            [&](VariableQueryToken const& variable_token) -> void {
+                                normalized_interpretation.append_variable_token(
+                                        variable_token.get_variable_type(),
+                                        normalized_string,
+                                        variable_token.get_contains_wildcard()
+                                );
+                            },
+                            [&]([[maybe_unused]] StaticQueryToken const& static_token) -> void {
+                                normalized_interpretation.append_static_token(normalized_string);
+                            }
                     },
-                    [&]([[maybe_unused]] StaticQueryToken const& static_token) -> void {
-                        normalized_interpretation.append_static_token(normalized_string);
-                    }
-                },
-                token
+                    token
             );
         }
         normalized_interpretations.insert(normalized_interpretation);
