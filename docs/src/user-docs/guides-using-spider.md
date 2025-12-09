@@ -33,11 +33,12 @@ Spider in configuration.
         type: "spider"
       ```
 
-    * (Optional) Set the `spider_db`.
+    * (Optional) Override database.names.spider to avoid name conflicts when using self-provisioned database instances.
 
         ```yaml
-        spider_db:
-            db_name: "spider-db"
+        database:
+            names:
+                spider: "spider-db"
         ```
 
     * (Optional) Override the `spider_scheduler` default config to change listening host or avoid port conflicts .
@@ -48,13 +49,13 @@ Spider in configuration.
             port: 6000
         ```
 
-3. (Optional) Before starting the package, update the package's credential file (`etc/credentials.yaml`)
-   to add Spider database credentials as follows:
+3. (Optional) If you do not intend to use generated credentials, set your own Spider credentials in
+   `etc/credentials.yaml` before starting the package.
 
     ```yaml
-    spider_db:
-      username: "spider_user"
-      password: "spider_password"
+    database:
+      spider_username: "spider-user"
+      spider_password: "spider-pass"
     ```
 
 4. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP.
