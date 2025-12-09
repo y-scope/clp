@@ -11,7 +11,7 @@ later.
 
 ## Requirements
 
-* [CLP][clp-releases] v0.7.0 or higher
+* [CLP][clp-releases] v0.8.0 or higher
 * [Docker] v28 or higher
 * [Docker Compose][docker-compose] v2.20.2 or higher
 
