@@ -11,17 +11,17 @@ auto SetDateLiteralPrecision::run(std::shared_ptr<Expression>& expr)
         -> std::shared_ptr<Expression> {
     std::vector<std::shared_ptr<Expression>> work_list{expr};
     while (false == work_list.empty()) {
-        auto const expr{work_list.back()};
+        auto const sub_expr{work_list.back()};
         work_list.pop_back();
 
-        if (expr->has_only_expression_operands()) {
-            for (auto const& op : expr->get_op_list()) {
+        if (sub_expr->has_only_expression_operands()) {
+            for (auto const& op : sub_expr->get_op_list()) {
                 work_list.emplace_back(std::static_pointer_cast<Expression>(op));
             }
             continue;
         }
 
-        for (auto const& op : expr->get_op_list()) {
+        for (auto const& op : sub_expr->get_op_list()) {
             if (auto date_literal{std::dynamic_pointer_cast<DateLiteral>(op)};
                 nullptr != date_literal)
             {
