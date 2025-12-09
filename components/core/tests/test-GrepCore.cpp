@@ -69,7 +69,6 @@ auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
 }
 }  // namespace
 
-// Tests: `get_bounds_of_next_potential_var`
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     string str;
     size_t begin_pos{};

@@ -152,7 +152,6 @@ auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> c
 }
 }  //  namespace
 
-// Tests: `get_wildcard_encodable_positions`
 TEST_CASE("get_wildcard_encodable_positions_for_empty_interpretation", "[dfa_search]") {
     QueryInterpretation const interpretation{};
 
@@ -481,7 +480,6 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
     }
 }
 
-// Tests: `generate_schema_sub_queries`
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     MockVarDictionary const var_dict{make_var_dict({
             pair{0, "1a3"},
