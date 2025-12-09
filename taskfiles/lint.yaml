@@ -820,8 +820,10 @@ tasks:
 
   fix-rust:
     cmds:
-      - task: "fix-rust-format"
+      # `fix-rust-static` must come before `fix-rust-format` to ensure that any fixes made by the
+      # static analysis tool (Clippy) are also formatted.
       - task: "fix-rust-static"
+      - task: "fix-rust-format"
 
   check-rust-format:
     cmds:
