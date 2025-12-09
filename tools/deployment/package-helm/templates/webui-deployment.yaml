@@ -67,7 +67,7 @@ spec:
             - name: "PORT"
               value: "4000"
             - name: "RATE_LIMIT"
-              value: "1000"
+              value: {{ .Values.clpConfig.webui.rate_limit | quote }}
           ports:
             - name: "webui"
               containerPort: 4000
