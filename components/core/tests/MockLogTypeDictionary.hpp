@@ -35,7 +35,8 @@ public:
         return false;
     }
 
-    auto add_constant(std::string_view const msg, size_t const begin_pos, size_t const length) -> void {
+    auto
+    add_constant(std::string_view const msg, size_t const begin_pos, size_t const length) -> void {
         m_value.append(msg.substr(begin_pos, length));
     }
 
@@ -96,10 +97,8 @@ public:
             std::unordered_set<Entry const*>& results
     ) const -> void {
         for (auto const& entry : m_storage) {
-            if (clp::string_utils::wildcard_match_unsafe_case_sensitive(
-                    entry.get_value(),
-                    logtype
-            )) {
+            if (clp::string_utils::wildcard_match_unsafe_case_sensitive(entry.get_value(), logtype))
+            {
                 results.insert(&entry);
             }
         }

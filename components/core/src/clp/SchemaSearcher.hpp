@@ -22,7 +22,7 @@
 
 namespace clp {
 #ifdef CLP_BUILD_TESTING
-class SchemaSearcherTest;
+        class SchemaSearcherTest;
 #endif
 
 class SchemaSearcher {
