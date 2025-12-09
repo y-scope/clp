@@ -338,6 +338,7 @@ function(validate_clp_s_search_kql_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
