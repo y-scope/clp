@@ -17,7 +17,7 @@
 
 /**
  * Type alias for variable information in tests.
- * Elements: (is_dict_var, is_percise_var, var_dict_ids)
+ * Elements: (is_dict_var, is_precise_var, var_dict_ids)
  */
 using VarInfo = std::tuple<bool, bool, std::unordered_set<clp::variable_dictionary_id_t>>;
 
