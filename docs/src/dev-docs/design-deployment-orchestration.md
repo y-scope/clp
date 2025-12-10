@@ -243,7 +243,6 @@ CLP supports four deployment types determined by the `compression_scheduler.type
 | Spider Base     | Spider                | [Presto][presto-integration] | `docker-compose-spider-base.yaml`  |
 | Spider Full     | Spider                | Native                       | `docker-compose-spider.yaml`       |
 
-
 ### Implementation details
 
 One notable implementation detail is in how we handle mounts that are only necessary under certain
