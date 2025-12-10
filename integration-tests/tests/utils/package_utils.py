@@ -24,7 +24,6 @@ from tests.utils.utils import (
     get_binary_path,
     is_dir_tree_content_equal,
     resolve_path_env_var,
-    unlink,
     validate_dir_exists,
     validate_file_exists,
 )
