@@ -29,11 +29,11 @@ def fixt_package_config(
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
     # Assign ports based on the clp base port CLI option.
-    base_port_string = request.config.getoption("--clp-base-port")
+    base_port_string = request.config.getoption("--base-port")
     try:
         base_port = int(base_port_string)
     except ValueError as err:
-        err_msg = f"Invalid value '{base_port_string}' for '--clp-base-port'; expected an integer."
+        err_msg = f"Invalid value '{base_port_string}' for '--base-port'; expected an integer."
         raise ValueError(err_msg) from err
     assign_ports_from_base(base_port, clp_config_obj)
 

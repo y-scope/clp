@@ -1,6 +1,7 @@
 """Functions for facilitating the port connections for the CLP package."""
 
 import socket
+from dataclasses import dataclass
 from typing import Any
 
 from clp_py_utils.clp_config import ClpConfig
@@ -13,65 +14,111 @@ VALID_PORT_RANGE = range(MIN_NON_PRIVILEGED_PORT, MAX_PORT + 1)
 # Practical maximum number of reducer instances.
 REDUCER_MAX_PORTS = 128
 
-PORT_LIKE_ATTR_NAMES = [
-    "port",
-    "base_port",
-]
+# Attribute names used to discover port configuration in component objects.
+PORT_ATTR_NAMES = ["port", "base_port"]
+
+
+@dataclass
+class PortAssignment:
+    """
+    Represents a port assignment for a CLP component.
+
+    :param component: The component configuration object that needs port assignment.
+    :param attr_name: The name of the port attribute on the component.
+    :param port_count: The number of consecutive ports needed by this component.
+    """
+
+    component: Any
+    attr_name: str
+    port_count: int
 
 
 def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     """
-    Assign ports for all active components described in `clp_config` that require a port. Ports are
-    assigned relative to `base_port`. Assume that port attributes appear directly under each
-    component with no further nesting, and that each component that requires a port defines only one
-    port attribute using one of the names in `PORT_LIKE_ATTR_NAMES`.
+    Assign ports to all components in `clp_config` that require them, starting from `base_port`.
+    Ports are assigned sequentially, with each component receiving the number of ports it requires.
 
     :param base_port:
     :param clp_config:
-    :raise ValueError: if the base port is out of range or if any required port is in use.
+    :raise ValueError: If the base port is out of range, or if any required port is in use.
     """
-    # Discover which components in ClpConfig have a port attribute.
-    component_port_targets: list[tuple[Any, str, int]] = []
-    total_ports_required = 0
-    for attr_name, attr_value in vars(clp_config).items():
-        if attr_name.startswith("_") or attr_value is None:
-            continue
+    # Discover which components need port assignments.
+    port_assignments = _discover_port_assignments(clp_config)
+    total_ports_needed = sum(assignment.port_count for assignment in port_assignments)
 
-        port_attr_name: str | None = None
-        for port_like_name in PORT_LIKE_ATTR_NAMES:
-            if hasattr(attr_value, port_like_name):
-                port_attr_name = port_like_name
-                break
-
-        if port_attr_name is None:
-            continue
-
-        ports_required_for_component = 1
-        if attr_name == "reducer":
-            # The reducer cluster needs a block of ports starting at its `base_port`.
-            ports_required_for_component = REDUCER_MAX_PORTS
-
-        component_port_targets.append((attr_value, port_attr_name, ports_required_for_component))
-        total_ports_required += ports_required_for_component
-
-    # Ensure desired port range is valid and that all ports in the range are available.
-    desired_port_range = range(base_port, base_port + total_ports_required)
-    _validate_port_range(port_range=desired_port_range)
-    _validate_ports_available_in_range(host="127.0.0.1", port_range=desired_port_range)
+    # Validate that all required ports are valid and available.
+    port_range = range(base_port, base_port + total_ports_needed)
+    _validate_port_range_bounds(port_range)
+    _check_ports_available(host="127.0.0.1", port_range=port_range)
 
     # Assign ports to the components.
     current_port = base_port
-    for component_config, port_attr_name, ports_required_for_component in component_port_targets:
-        setattr(component_config, port_attr_name, current_port)
-        current_port += ports_required_for_component
+    for assignment in port_assignments:
+        setattr(assignment.component, assignment.attr_name, current_port)
+        current_port += assignment.port_count
 
 
-def _format_inclusive_port_range(port_range: range) -> str:
+def _check_ports_available(host: str, port_range: range) -> None:
     """
-    Return a prettified string describing an inclusive range.
+    Check that all ports in the given range are available for binding.
+
+    :param host:
+    :param port_range:
+    :raise ValueError: If any port in the range is already in use.
+    """
+    for port in port_range:
+        if not _is_port_free(port=port, host=host):
+            range_str = _format_port_range(port_range)
+            err_msg = (
+                f"Port '{port}' in the desired range ({range_str}) is already in use. "
+                "Choose a different port range for the test environment."
+            )
+            raise ValueError(err_msg)
+
+
+def _discover_port_assignments(clp_config: ClpConfig) -> list[PortAssignment]:
+    """
+    Discover which components in `clp_config` require port assignments.
+
+    :param clp_config:
+    :return: A list of PortAssignment objects describing what ports each component needs.
+    """
+    port_assignments: list[PortAssignment] = []
+
+    for component_name, component_config in vars(clp_config).items():
+        # Skip private attributes and None values.
+        if component_name.startswith("_") or component_config is None:
+            continue
+
+        # Check if this component has a port attribute.
+        port_attr_name = None
+        for attr_name in PORT_ATTR_NAMES:
+            if hasattr(component_config, attr_name):
+                port_attr_name = attr_name
+                break
+        if port_attr_name is None:
+            continue
+
+        # Determine how many ports this component needs.
+        port_count = REDUCER_MAX_PORTS if component_name == "reducer" else 1
+
+        port_assignments.append(
+            PortAssignment(
+                component=component_config,
+                attr_name=port_attr_name,
+                port_count=port_count,
+            )
+        )
+
+    return port_assignments
+
+
+def _format_port_range(port_range: range) -> str:
+    """
+    Format a port range as a human-readable string.
 
     :param port_range:
-    :return: range description of the form "'start' to "'end' inclusive".
+    :return: A string like "'1024' to '65535' inclusive".
     """
     start_port = port_range.start
     end_port = port_range.stop - 1
@@ -94,40 +141,23 @@ def _is_port_free(port: int, host: str) -> bool:
         return True
 
 
-def _validate_ports_available_in_range(host: str, port_range: range) -> None:
+def _validate_port_range_bounds(port_range: range) -> None:
     """
-    Validate that each port in `port_range` is available on `host`.
-
-    :param host:
-    :param port_range:
-    :raise ValueError: if any port in the range cannot be bound.
-    """
-    for port in port_range:
-        if not _is_port_free(port=port, host=host):
-            desired_range_str = _format_inclusive_port_range(port_range)
-            err_msg = (
-                f"Port '{port}' in the desired range ({desired_range_str}) is already in use."
-                " Choose a different port range for the test environment."
-            )
-            raise ValueError(err_msg)
-
-
-def _validate_port_range(port_range: range) -> None:
-    """
-    Validate that `port_range` falls completely within `VALID_PORT_RANGE`.
+    Validates that the given port range falls within the valid port range.
 
     :param port_range:
-    :raise ValueError: if any part of `port_range` falls outside `VALID_PORT_RANGE`.
+    :raise ValueError: If any part of the range falls outside valid port numbers.
     """
-    required_start_port = port_range.start
-    required_end_port = port_range.stop - 1
+    start_port = port_range.start
+    end_port = port_range.stop - 1
     min_valid_port = VALID_PORT_RANGE.start
     max_valid_port = VALID_PORT_RANGE.stop - 1
-    if required_start_port < min_valid_port or required_end_port > max_valid_port:
-        required_range_str = _format_inclusive_port_range(port_range)
-        valid_range_str = _format_inclusive_port_range(VALID_PORT_RANGE)
+
+    if start_port < min_valid_port or end_port > max_valid_port:
+        required_range_str = _format_port_range(port_range)
+        valid_range_str = _format_port_range(VALID_PORT_RANGE)
         err_msg = (
-            f"The port range derived from --clp-base-port ({required_range_str}) must fall within"
+            f"The port range derived from --base-port ({required_range_str}) must fall within"
             f" the range of valid ports ({valid_range_str})."
         )
         raise ValueError(err_msg)
