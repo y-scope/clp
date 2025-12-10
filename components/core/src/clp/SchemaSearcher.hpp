@@ -228,11 +228,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
                 {
                     bool is_mask_encoded{false};
                     if (wildcard_encodable_positions.end()
-                        != std::ranges::find(
-                                wildcard_encodable_positions.begin(),
-                                wildcard_encodable_positions.end(),
-                                i
-                        ))
+                        != std::ranges::find(wildcard_encodable_positions, i))
                     {
                         is_mask_encoded = mask_encoded_flags[i];
                     }
