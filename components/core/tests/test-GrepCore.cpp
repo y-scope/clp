@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <utility>
@@ -161,6 +162,11 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
 }
 
 TEST_CASE("process_raw_query", "[dfa_search]") {
+    constexpr uint32_t cNoBeginTimestamp{0};
+    constexpr uint32_t cNoEndTimestamp{0};
+    constexpr bool cIgnoreCase{true};
+    constexpr bool cSearchArchive{false};
+
     auto lexer{make_test_lexer(
             {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
     )};
@@ -177,9 +183,16 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
 
     string const raw_query{"text 100 10? 3.14*"};
 
-    auto const query{
-            GrepCore::process_raw_query(logtype_dict, var_dict, raw_query, 0, 0, true, lexer, false)
-    };
+    auto const query{GrepCore::process_raw_query(
+            logtype_dict,
+            var_dict,
+            raw_query,
+            cNoBeginTimestamp,
+            cNoEndTimestamp,
+            cIgnoreCase,
+            lexer,
+            cSearchArchive
+    )};
 
     REQUIRE(query.has_value());
     auto const& sub_queries{query.value().get_sub_queries()};
