@@ -208,6 +208,12 @@ docker compose \
   up api-server \
     --no-deps --wait
 
+# Start log-ingestor (optional, only if configured)
+docker compose \
+  --project-name "clp-package-$(cat var/log/instance-id)" \
+  up log-ingestor \
+    --no-deps --wait
+
 # Start webui
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \

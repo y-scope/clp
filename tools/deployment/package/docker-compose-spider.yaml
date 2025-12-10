@@ -80,3 +80,8 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "reducer"
+
+  log-ingestor:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "log-ingestor"

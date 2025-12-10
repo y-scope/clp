@@ -79,8 +79,10 @@ impl IngestionJobManagerState {
         .await?;
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
-            buffer_timeout: Duration::from_secs(clp_config.log_ingestor.buffer_timeout_sec),
-            buffer_size_threshold: clp_config.log_ingestor.buffer_size_threshold,
+            buffer_flush_timeout: Duration::from_secs(
+                clp_config.log_ingestor.buffer_flush_timeout_sec,
+            ),
+            buffer_flush_threshold: clp_config.log_ingestor.buffer_flush_threshold,
             channel_capacity: clp_config.log_ingestor.channel_capacity,
             aws_credentials,
             archive_output_config: clp_config.archive_output,
@@ -268,8 +270,8 @@ impl IngestionJobManagerState {
             ingestion_job_config,
         );
         Listener::spawn(
-            Buffer::new(submitter, self.inner.buffer_size_threshold),
-            self.inner.buffer_timeout,
+            Buffer::new(submitter, self.inner.buffer_flush_threshold),
+            self.inner.buffer_flush_timeout,
             self.inner.channel_capacity,
         )
     }
@@ -278,8 +280,8 @@ impl IngestionJobManagerState {
 /// Internal shared states for managing ingestion jobs. Must be wrapped in an `Arc`.
 struct IngestionJobManager {
     job_table: Mutex<HashMap<Uuid, IngestionJobTableEntry>>,
-    buffer_timeout: Duration,
-    buffer_size_threshold: u64,
+    buffer_flush_timeout: Duration,
+    buffer_flush_threshold: u64,
     channel_capacity: usize,
     aws_credentials: AwsCredentials,
     archive_output_config: ArchiveOutput,
