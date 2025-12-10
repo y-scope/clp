@@ -50,6 +50,7 @@ graph LR
   garbage_collector["garbage-collector"]
   webui["webui"]
   mcp_server["mcp-server"]
+  log_ingestor["log-ingestor"]
 
   %% One-time jobs
   db_table_creator["db-table-creator"]
@@ -81,7 +82,8 @@ graph LR
   db_table_creator -->|completed_successfully| spider_compression_worker
   db_table_creator -->|completed_successfully| spider_scheduler
   db_table_creator -->|completed_successfully| webui
-  linkStyle 7,8,9,10,11,12,13 stroke:#0000ff
+  db_table_creator -->|completed_successfully| log_ingestor
+  linkStyle 7,8,9,10,11,12,13,14 stroke:#0000ff
 
   %% Link 14-19: Results Cache Initialization Job --> Services
   results_cache_indices_creator -->|completed_successfully| api_server
@@ -89,7 +91,7 @@ graph LR
   results_cache_indices_creator -->|completed_successfully| mcp_server
   results_cache_indices_creator -->|completed_successfully| reducer
   results_cache_indices_creator -->|completed_successfully| webui
-  linkStyle 14,15,16,17,18,19 stroke:#008000
+  linkStyle 15,16,17,18,19,20 stroke:#008000
 
   subgraph Databases
     database
@@ -120,6 +122,7 @@ graph LR
 
   subgraph Management & UI
     api_server
+    log_ingestor
     garbage_collector
     webui
   end
@@ -143,23 +146,24 @@ graph LR
 :::{table}
 :align: left
 
-| Service                   | Description                                                     |
-|---------------------------|-----------------------------------------------------------------|
-| database                  | Database for archive metadata, compression jobs, and query jobs |
-| queue                     | Task queue for schedulers                                       |
-| redis                     | Task result storage for workers                                 |
-| compression_scheduler     | Scheduler for compression jobs                                  |
-| query_scheduler           | Scheduler for search/aggregation jobs                           |
-| spider_scheduler          | Scheduler for Spider distributed task execution framework       |
-| results_cache             | Storage for the workers to return search results to the UI      |
-| compression_worker        | Worker processes for compression jobs using Celery              |
-| spider_compression_worker | Worker processes for compression jobs using Spider              |
-| query_worker              | Worker processes for search/aggregation jobs using Celery       |
-| reducer                   | Reducers for performing the final stages of aggregation jobs    |
-| api_server                | API server for submitting queries                               |
-| webui                     | Web server for the UI                                           |
-| mcp_server                | MCP server for AI agent to access CLP functionalities           |
-| garbage_collector         | Process to manage data retention                                |
+| Service                   | Description                                                        |
+|---------------------------|--------------------------------------------------------------------|
+| database                  | Database for archive metadata, compression jobs, and query jobs    |
+| queue                     | Task queue for schedulers                                          |
+| redis                     | Task result storage for workers                                    |
+| compression_scheduler     | Scheduler for compression jobs                                     |
+| query_scheduler           | Scheduler for search/aggregation jobs                              |
+| spider_scheduler          | Scheduler for Spider distributed task execution framework          |
+| results_cache             | Storage for the workers to return search results to the UI         |
+| compression_worker        | Worker processes for compression jobs using Celery                 |
+| spider_compression_worker | Worker processes for compression jobs using Spider                 |
+| query_worker              | Worker processes for search/aggregation jobs using Celery          |
+| reducer                   | Reducers for performing the final stages of aggregation jobs       |
+| api_server                | API server for submitting queries                                  |
+| webui                     | Web server for the UI                                              |
+| mcp_server                | MCP server for AI agent to access CLP functionalities              |
+| garbage_collector         | Process to manage data retention                                   |
+| log_ingestor              | Server for orchestrating and running continuous log ingestion jobs |
 
 :::
 

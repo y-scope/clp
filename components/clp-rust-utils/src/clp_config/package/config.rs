@@ -192,25 +192,32 @@ impl Default for StreamOutputStorage {
     }
 }
 
+/// Mirror of `clp_py_utils.clp_config.LogIngestor`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
-    #[serde(rename = "buffer_timeout")]
-    pub buffer_timeout_sec: u64,
-    pub buffer_size_threshold: u64,
+    #[serde(rename = "buffer_flush_timeout")]
+    pub buffer_flush_timeout_sec: u64,
+    pub buffer_flush_threshold: u64,
     pub channel_capacity: usize,
+    pub logging_level: String,
 }
 
 impl Default for LogIngestor {
     fn default() -> Self {
         Self {
             host: "localhost".to_owned(),
-            port: 3270,
-            buffer_timeout_sec: 300,
-            buffer_size_threshold: 50 * 1024 * 1024,
+            port: 3002,
+            buffer_flush_timeout_sec: 300,
+            buffer_flush_threshold: 256 * 1024 * 1024,
             channel_capacity: 10,
+            logging_level: "INFO".to_owned(),
         }
     }
 }
