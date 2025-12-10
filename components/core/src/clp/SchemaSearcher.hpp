@@ -22,12 +22,12 @@
 
 namespace clp {
 #ifdef CLP_BUILD_TESTING
-    class SchemaSearcherTest;
+class SchemaSearcherTest;
 #endif
 
 class SchemaSearcher {
 #ifdef CLP_BUILD_TESTING
-        friend class SchemaSearcherTest;
+    friend class SchemaSearcherTest;
 #endif
 
 public:
@@ -35,13 +35,12 @@ public:
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
-    static auto search(
-            std::string const& search_string,
-            log_surgeon::lexers::ByteLexer& lexer,
-            LogTypeDictionaryReaderType const& logtype_dict,
-            VariableDictionaryReaderType const& var_dict,
-            bool ignore_case
-    ) -> std::vector<SubQuery> {
+    static auto
+    search(std::string const& search_string,
+           log_surgeon::lexers::ByteLexer& lexer,
+           LogTypeDictionaryReaderType const& logtype_dict,
+           VariableDictionaryReaderType const& var_dict,
+           bool ignore_case) -> std::vector<SubQuery> {
         // TODO: Optimize such that interpretations are only generated once per schema.
         log_surgeon::wildcard_query_parser::Query const query{search_string};
         auto const interpretations{query.get_all_multi_token_interpretations(lexer)};

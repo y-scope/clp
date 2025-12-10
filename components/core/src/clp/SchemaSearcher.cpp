@@ -31,9 +31,7 @@ auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& i
         QueryInterpretation normalized_interpretation;
         for (auto const& token : interpretation.get_logtype()) {
             auto const& src_string{std::visit(
-                    [](auto const& tok) -> std::string const& {
-                        return tok.get_query_substring();
-                    },
+                    [](auto const& tok) -> std::string const& { return tok.get_query_substring(); },
                     token
             )};
             string normalized_string;

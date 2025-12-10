@@ -22,17 +22,17 @@ using VarInfo = std::tuple<bool, bool, std::unordered_set<clp::variable_dictiona
  * dictionary.
  * @return A `MockVariableDictionary` initialized with the given entries.
  */
-auto
-make_var_dict(std::vector<std::pair<size_t, std::string>> const& entries) -> MockVariableDictionary;
+auto make_var_dict(std::vector<std::pair<size_t, std::string>> const& entries)
+        -> MockVariableDictionary;
 
 /**
  * @param entries Vector of logtypes, where each logtype is represented by a vector of tokens. Each
  * token is either a literal substring (`string_view`) or a variable placeholder (`char`).
  * @return A `MockLogTypeDictionary` initialized with the given entries.
  */
-auto
-make_logtype_dict(std::vector<std::vector<std::variant<std::string_view, char>>> const& entries)
-        -> MockLogTypeDictionary;
+auto make_logtype_dict(
+        std::vector<std::vector<std::variant<std::string_view, char>>> const& entries
+) -> MockLogTypeDictionary;
 
 /**
  * Generates a logtype string from a vector of tokens.
@@ -50,9 +50,9 @@ make_logtype_dict(std::vector<std::vector<std::variant<std::string_view, char>>>
  * @param tokens Vector of tokens to convert into a logtype string.
  * @return A `string` representing the expected encoded logtype.
  */
-auto
-generate_expected_logtype_string(std::vector<std::variant<std::string_view, char>> const& tokens)
-        -> std::string;
+auto generate_expected_logtype_string(
+        std::vector<std::variant<std::string_view, char>> const& tokens
+) -> std::string;
 
 /**
  * Checks that a `SubQuery` at a given index matches the expected properties.
