@@ -710,6 +710,10 @@ class BaseController(ABC):
             )
             client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
             server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        else:
+            client_settings_json_updates["LogsInputDir"] = None
+            client_settings_json_updates["LogsInputRootDir"] = None
+            server_settings_json_updates["LogsInputRootDir"] = None
 
         resolved_client_settings_json_path = resolve_host_path_in_container(
             client_settings_json_path

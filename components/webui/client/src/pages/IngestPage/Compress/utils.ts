@@ -28,10 +28,16 @@ const joinPath = (...parts: string[]): string => parts
  *
  * @param serverPath The full server path (e.g., "/mnt/logs/mydir")
  * @return The user-facing path (e.g., "/mydir")
+ * @throws Error if `LogsInputRootDir` is not configured.
  */
 const removeServerPrefix = (serverPath: string): string => {
-    const stripped = serverPath.startsWith(settings.LogsInputRootDir) ?
-        serverPath.slice(settings.LogsInputRootDir.length) :
+    const logsInputRootDir = settings.LogsInputRootDir;
+    if (null === logsInputRootDir) {
+        throw new Error("LogsInputRootDir is not configured.");
+    }
+
+    const stripped = serverPath.startsWith(logsInputRootDir) ?
+        serverPath.slice(logsInputRootDir.length) :
         serverPath;
 
     return joinPath(ROOT_PATH, stripped);
@@ -42,8 +48,16 @@ const removeServerPrefix = (serverPath: string): string => {
  *
  * @param userPath The user-facing path (e.g., "/mydir")
  * @return The full server path (e.g., "/mnt/logs/mydir")
+ * @throws Error if `LogsInputRootDir` is not configured.
  */
-const addServerPrefix = (userPath: string): string => joinPath(settings.LogsInputRootDir, userPath);
+const addServerPrefix = (userPath: string): string => {
+    const logsInputRootDir = settings.LogsInputRootDir;
+    if (null === logsInputRootDir) {
+        throw new Error("LogsInputRootDir is not configured.");
+    }
+
+    return joinPath(logsInputRootDir, userPath);
+};
 
 /**
  * Converts API file listing item to an Ant Design TreeSelect node.
