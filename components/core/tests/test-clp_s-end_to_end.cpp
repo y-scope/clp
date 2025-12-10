@@ -123,6 +123,8 @@ void validate_archive_header() {
         for (size_t i{0}; i < cReservedPaddingLength; ++i) {
             REQUIRE(0ULL == archive_header.reserved_padding[i]);
         }
+
+        REQUIRE_NOTHROW(archive_reader.close());
     }
 }
 
