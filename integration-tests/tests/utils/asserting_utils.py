@@ -9,9 +9,7 @@ import pytest
 from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
-from tests.utils.clp_mode_utils import (
-    compute_mode_signature,
-)
+from tests.utils.clp_mode_utils import compute_mode_signature
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_services_in_compose_project
 from tests.utils.utils import load_yaml_to_dict
@@ -79,6 +77,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise: Propagates `load_yaml_to_dict`'s errors.
     :raise pytest.fail: if the ClpConfig object cannot be validated.
+    :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
