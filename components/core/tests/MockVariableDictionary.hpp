@@ -17,7 +17,7 @@
  */
 class MockVariableEntry {
 public:
-    explicit MockVariableEntry(clp::variable_dictionary_id_t const id, std::string value)
+    MockVariableEntry(clp::variable_dictionary_id_t const id, std::string value)
             : m_id{id},
               m_value{std::move(value)} {}
 
