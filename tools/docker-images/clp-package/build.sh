@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
+set -o errexit
+set -o nounset
 set -o pipefail
 
 remove_temp_file_and_prev_image() {
@@ -8,10 +9,10 @@ remove_temp_file_and_prev_image() {
 
     [[ -z "$prev_image_id" || "$prev_image_id" == "$new_image_id" ]] && return
 
-    if docker image inspect "$prev_image_id" >/dev/null 2>&1; then
-        echo "Removing previous image $prev_image_id."
-        docker image remove "$prev_image_id"
-    fi
+    docker image inspect "$prev_image_id" >/dev/null 2>&1 || return
+
+    echo "Removing previous image $prev_image_id."
+    docker image remove "$prev_image_id" || true
 }
 trap remove_temp_file_and_prev_image EXIT
 

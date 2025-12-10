@@ -13,7 +13,10 @@ This guide describes the following:
 To run a CLP release, you'll need:
 
 * [Docker](#docker)
-* [Python](#python)
+  * `containerd.io` >= 1.7.18
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
+  * `docker-compose-plugin` >= 2.28.1
 
 ### Docker
 
@@ -29,19 +32,7 @@ NOTE:
 
 * If you're not running as root, ensure Docker can be run
   [without superuser privileges][docker-non-root].
-* If you're using Docker Desktop, ensure version 4.34 or higher is installed, and
-  [host networking is enabled][docker-desktop-host-networking].
-
-### Python
-
-To check whether Python is installed on your system, run:
-
-```bash
-python3 --version
-```
-
-CLP requires Python 3.9 or higher. If Python isn't installed, or if the version isn't high enough,
-install or upgrade it by following the instructions for your OS.
+* If you're using Docker Desktop, ensure version 4.34 or higher is installed.
 
 ---
 
@@ -54,7 +45,7 @@ There are two flavors of CLP:
 
 :::{note}
 Both flavors contain the same binaries but are configured with different values for the
-`package.storage_engine` key in the package's config file (`etc/clp-config.yml`).
+`package.storage_engine` key in the package's config file (`etc/clp-config.yaml`).
 :::
 
 ### clp-json
@@ -139,5 +130,4 @@ How to compress and search unstructured text logs.
 
 [clp-releases]: https://github.com/y-scope/clp/releases
 [Docker]: https://docs.docker.com/engine/install/
-[docker-desktop-host-networking]: https://docs.docker.com/engine/network/drivers/host/#docker-desktop
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user

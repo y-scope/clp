@@ -46,7 +46,6 @@ runs:
     - run: >-
         docker run
         --user $(id -u):$(id -g)
-        --env npm_config_cache=/tmp/.npm
         --volume "$GITHUB_WORKSPACE":/mnt/repo
         --workdir /mnt/repo
         ${{steps.get_image_props.outputs.qualified_image_name}}

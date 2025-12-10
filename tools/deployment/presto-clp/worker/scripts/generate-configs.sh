@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
+set -o errexit
+set -o nounset
 set -o pipefail
 
 # Emits a log event to stderr with an auto-generated ISO timestamp as well as the given level

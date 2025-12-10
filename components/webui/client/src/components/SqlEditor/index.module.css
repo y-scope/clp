@@ -3,4 +3,6 @@
     min-height: 0;
     min-width: 0;
     width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    overflow: hidden;
 }

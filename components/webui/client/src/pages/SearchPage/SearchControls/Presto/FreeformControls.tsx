@@ -5,10 +5,6 @@ import SqlQueryInput from "./SqlQueryInput";
 import SqlSearchButton from "./SqlSearchButton";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Remove flag and related logic when the new guide UI is fully implemented.
-const isGuidedEnabled = "true" === import.meta.env["VITE_GUIDED_DEV"];
-
 /**
  * Renders controls and status for freeform sql.
  *
@@ -16,15 +12,13 @@ const isGuidedEnabled = "true" === import.meta.env["VITE_GUIDED_DEV"];
  */
 const FreeformControls = () => (
     <div className={styles["searchControlsContainer"]}>
+        <div className={styles["runRow"]}>
+            <SqlInterfaceButton/>
+            <SqlSearchButton/>
+        </div>
         <SqlQueryInput/>
-        <div className={styles["statusAndButtonsRow"]}>
-            <div className={styles["status"]}>
-                <QueryStatus/>
-            </div>
-            <div className={styles["buttons"]}>
-                {isGuidedEnabled && <SqlInterfaceButton/>}
-                <SqlSearchButton/>
-            </div>
+        <div className={styles["status"]}>
+            <QueryStatus/>
         </div>
     </div>
 );

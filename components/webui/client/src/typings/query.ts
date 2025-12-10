@@ -60,8 +60,7 @@ interface QueryLoadingStateDescription {
 /**
  * Descriptions for query loading states.
  */
-const QUERY_LOADING_STATE_DESCRIPTIONS
-: Record<QUERY_LOADING_STATE, QueryLoadingStateDescription> =
+const QUERY_LOADING_STATE_DESCRIPTIONS: Record<QUERY_LOADING_STATE, QueryLoadingStateDescription> =
     Object.freeze({
         [QUERY_LOADING_STATE.SUBMITTING]: {
             label: "Submitting query Job",

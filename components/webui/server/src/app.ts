@@ -7,7 +7,7 @@ import {
     FastifyInstance,
     FastifyPluginOptions,
 } from "fastify";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 
 
 const RATE_LIMIT_MAX_REQUESTS = 3;
@@ -63,7 +63,7 @@ export default async function serviceApp (
         );
 
         if ("undefined" !== typeof err.statusCode &&
-            Number(StatusCodes.INTERNAL_SERVER_ERROR) > err.statusCode
+            constants.HTTP_STATUS_INTERNAL_SERVER_ERROR > err.statusCode
         ) {
             reply.code(err.statusCode);
 

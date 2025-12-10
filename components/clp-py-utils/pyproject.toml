@@ -1,28 +1,51 @@
 [project]
-requires-python = ">= 3.9"
-
-[tool.poetry]
 name = "clp-py-utils"
-version = "0.5.2-dev"
+version = "0.7.1-dev"
 description = "Utilities for other Python packages in CLP."
-authors = ["YScope Inc. <dev@yscope.com>"]
+authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = ">= 3.9"
-boto3 = "^1.35.81"
-# mariadb version must be compatible with libmariadev installed in runtime env.
-# See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
-mariadb = "~1.0.11"
-mysql-connector-python = "^8.2.0"
-pydantic = "^2.11.9"
-python-dotenv = "^1.0.1"
-python-Levenshtein = "~0.22"
-sqlalchemy = "~2.0"
-PyYAML = "^6.0.1"
-result = "^0.17.0"
-StrEnum = "^0.4.15"
+requires-python = ">=3.10"
+dependencies = [
+    "boto3>=1.40.55",
+    "mariadb>=1.1.14",
+    "mysql-connector-python>=9.4.0",
+    "pydantic>=2.12.3",
+    "python-Levenshtein>=0.27.1",
+    "PyYAML>=6.0.3",
+    "result>=0.17.0",
+    "sqlalchemy>=2.0.44",
+    "StrEnum>=0.4.15",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+clp = [
+    "clp-package-utils",
+    "job-orchestration",
+]
+dev = [
+    "mypy>=1.18.2",
+    "ruff>=0.14.4",
+]
+
+[tool.mypy]
+strict = true
+
+# Additional output
+pretty = true
+show_error_code_links = true
+show_error_context = true
+show_error_end = true
+
+[tool.ruff]
+extend = "../../ruff.toml"
+
+[tool.uv]
+default-groups = ["clp", "dev"]
+
+[tool.uv.sources]
+clp-package-utils = { path = "../clp-package-utils" }
+job-orchestration = { path = "../job-orchestration" }
