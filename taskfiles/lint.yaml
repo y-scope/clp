@@ -14,6 +14,7 @@ tasks:
   check:
     cmds:
       - task: "check-cpp-full"
+      - task: "check-helm"
       - task: "check-js"
       - task: "check-py"
       - task: "check-rust"
@@ -32,6 +33,7 @@ tasks:
   fix:
     cmds:
       - task: "fix-cpp-full"
+      - task: "fix-helm"
       - task: "fix-js"
       - task: "fix-py"
       - task: "fix-rust"
@@ -53,6 +55,22 @@ tasks:
       - task: "fix-py"
       - task: "fix-rust"
       - task: "fix-yaml"
+
+  helm:
+    aliases:
+      - "check-helm"
+      - "fix-helm"
+    deps:
+      - "toolchains:helm"
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        ct lint \
+          --chart-dirs="tools/deployment" \
+          --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
+          --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
     sources: &js_source_files
@@ -77,7 +95,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: "--check --diff"
           RUFF_CHECK_FLAGS: ""
           RUFF_FORMAT_FLAGS: "--diff"
 
@@ -85,7 +102,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: ""
           RUFF_CHECK_FLAGS: "--fix"
           RUFF_FORMAT_FLAGS: ""
 
@@ -98,16 +114,17 @@ tasks:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
-          .github \
-          .yamllint.yaml \
-          components/core/.clang-format \
-          components/core/config \
-          components/core/tools/ \
-          components/package-template/src/etc \
-          docs \
-          taskfile.yaml \
-          taskfiles \
-          tools/deployment
+          --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
+          ".github" \
+          "components/core/.clang-format" \
+          "components/core/config" \
+          "components/core/tools/" \
+          "components/package-template/src/etc" \
+          "docs" \
+          "taskfile.yaml" \
+          "taskfiles" \
+          "tools/deployment/package" \
+          "tools/deployment/presto-clp"
 
   check-cpp-format:
     sources: &cpp_source_files
@@ -768,9 +785,15 @@ tasks:
         - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
         - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
-      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
+      vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
+      - for:
+          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy . || true
       - for:
           - "components/core/tools/scripts/utils"
           - "tools/deployment"
@@ -779,20 +802,14 @@ tasks:
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
-          black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_CHECK_FLAGS}} .
+          ruff format {{.RUFF_FORMAT_FLAGS}} .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
-      - for:
-          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
-        cmd: |-
-          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
-          uv run --directory "{{.ITEM}}" mypy . || true
 
   check-rust:
     cmds:
@@ -801,8 +818,10 @@ tasks:
 
   fix-rust:
     cmds:
-      - task: "fix-rust-format"
+      # `fix-rust-static` must come before `fix-rust-format` to ensure that any fixes made by the
+      # static analysis tool (Clippy) are also formatted.
       - task: "fix-rust-static"
+      - task: "fix-rust-format"
 
   check-rust-format:
     cmds:

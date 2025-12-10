@@ -13,7 +13,7 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
-from .server import create_mcp_server
+from clp_mcp_server.server import create_mcp_server
 
 logger = get_logger(MCP_SERVER_COMPONENT_NAME)
 
