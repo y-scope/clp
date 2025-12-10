@@ -20,8 +20,8 @@ from tests.utils.config import (
     PackagePostCompressionJob,
     PrestoFilterJob,
 )
-from tests.utils.docker_utils import get_docker_binary_path
 from tests.utils.utils import (
+    get_binary_path,
     is_dir_tree_content_equal,
     resolve_path_env_var,
     unlink,
@@ -151,7 +151,7 @@ def start_presto_cluster(package_config: PackageConfig) -> None:
         _write_split_filter_json(split_filters, split_filter_file_path)
 
     # Start up the Presto cluster.
-    docker_bin = get_docker_binary_path()
+    docker_bin = get_binary_path("docker")
     docker_compose_file_path = (
         clp_repo_dir / "tools" / "deployment" / "presto-clp" / "docker-compose.yaml"
     )
@@ -193,7 +193,7 @@ def stop_presto_cluster() -> None:
     clp_repo_dir: Path = resolve_path_env_var("CLP_REPO_DIR")
     validate_dir_exists(clp_repo_dir)
 
-    docker_bin = get_docker_binary_path()
+    docker_bin = get_binary_path("docker")
     docker_compose_file_path = (
         clp_repo_dir / "tools" / "deployment" / "presto-clp" / "docker-compose.yaml"
     )
@@ -391,7 +391,7 @@ def run_presto_filter(
     clp_repo_dir: Path = resolve_path_env_var("CLP_REPO_DIR")
     validate_dir_exists(clp_repo_dir)
 
-    docker_bin = get_docker_binary_path()
+    docker_bin = get_binary_path("docker")
     docker_compose_file_path = (
         clp_repo_dir / "tools" / "deployment" / "presto-clp" / "docker-compose.yaml"
     )

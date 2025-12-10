@@ -115,6 +115,7 @@ class PackagePathConfig:
         # Create directories if they do not already exist.
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
         self.clp_log_dir.mkdir(parents=True, exist_ok=True)
+        self.clp_log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def start_script_path(self) -> Path:

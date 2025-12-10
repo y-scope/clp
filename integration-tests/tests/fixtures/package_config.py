@@ -66,7 +66,6 @@ def fixt_package_config(
         path_config=fixt_package_path_config,
         mode_name=mode_name,
         component_list=required_components,
-        component_list=required_components,
         clp_config=clp_config_obj,
         package_job_list=package_job_list,
     )

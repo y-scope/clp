@@ -7,8 +7,8 @@ import {
     Typography,
 } from "antd";
 
-import {STREAM_TYPE} from "../../../../../config";
-import useSearchStore from "../../../../SearchPage/SearchState";
+import {STREAM_TYPE} from "../../../../../../config";
+import useSearchStore from "../../../../SearchState";
 import styles from "./index.module.css";
 
 
