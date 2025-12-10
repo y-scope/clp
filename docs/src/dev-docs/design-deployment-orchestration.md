@@ -48,6 +48,7 @@ graph LR
   garbage_collector["garbage-collector"]
   webui["webui"]
   mcp_server["mcp-server"]
+  log_ingestor["log-ingestor"]
 
   %% One-time jobs
   db_table_creator["db-table-creator"]
@@ -72,6 +73,7 @@ graph LR
   results_cache_indices_creator -->|completed_successfully| mcp_server
   db_table_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
+  db_table_creator -->|completed_successfully| log_ingestor
 
   subgraph Databases
     database
@@ -98,6 +100,7 @@ graph LR
 
   subgraph Management & UI
     api_server
+    log_ingestor
     garbage_collector
     webui
   end
@@ -117,21 +120,22 @@ graph LR
 :::{table}
 :align: left
 
-| Service               | Description                                                     |
-|-----------------------|-----------------------------------------------------------------|
-| database              | Database for archive metadata, compression jobs, and query jobs |
-| queue                 | Task queue for schedulers                                       |
-| redis                 | Task result storage for workers                                 |
-| compression_scheduler | Scheduler for compression jobs                                  |
-| query_scheduler       | Scheduler for search/aggregation jobs                           |
-| results_cache         | Storage for the workers to return search results to the UI      |
-| compression_worker    | Worker processes for compression jobs                           |
-| query_worker          | Worker processes for search/aggregation jobs                    |
-| reducer               | Reducers for performing the final stages of aggregation jobs    |
-| api_server            | API server for submitting queries                               |
-| webui                 | Web server for the UI                                           |
-| mcp_server            | MCP server for AI agent to access CLP functionalities           |
-| garbage_collector     | Process to manage data retention                                |
+| Service               | Description                                                        |
+|-----------------------|--------------------------------------------------------------------|
+| database              | Database for archive metadata, compression jobs, and query jobs    |
+| queue                 | Task queue for schedulers                                          |
+| redis                 | Task result storage for workers                                    |
+| compression_scheduler | Scheduler for compression jobs                                     |
+| query_scheduler       | Scheduler for search/aggregation jobs                              |
+| results_cache         | Storage for the workers to return search results to the UI         |
+| compression_worker    | Worker processes for compression jobs                              |
+| query_worker          | Worker processes for search/aggregation jobs                       |
+| reducer               | Reducers for performing the final stages of aggregation jobs       |
+| api_server            | API server for submitting queries                                  |
+| webui                 | Web server for the UI                                              |
+| mcp_server            | MCP server for AI agent to access CLP functionalities              |
+| garbage_collector     | Process to manage data retention                                   |
+| log_ingestor          | Server for orchestrating and running continuous log ingestion jobs |
 
 :::
 
