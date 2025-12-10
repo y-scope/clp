@@ -7,11 +7,11 @@ import {
     cancelQuery,
     clearQueryResults,
     submitQuery,
-} from "../../../../api/presto-search";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
-import usePrestoSearchState from "../../SearchState/Presto";
-import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
-import {SEARCH_UI_STATE} from "../../SearchState/typings";
+} from "../../../../../api/presto-search";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState";
+import usePrestoSearchState from "../../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../../SearchState/Presto/typings";
+import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 
 
 /**

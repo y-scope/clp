@@ -7,9 +7,9 @@ import {
 
 import {Nullable} from "@webui/common/utility-types";
 
-import SqlEditor, {SqlEditorType} from "../../../../../components/SqlEditor";
-import useSearchStore from "../../../SearchState/index";
-import {SEARCH_UI_STATE} from "../../../SearchState/typings";
+import SqlEditor, {SqlEditorType} from "../../../../../../components/SqlEditor";
+import useSearchStore from "../../../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import styles from "./index.module.css";
 
 
