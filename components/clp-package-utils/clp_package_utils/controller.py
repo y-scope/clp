@@ -32,6 +32,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OrchestrationType,
     QUERY_JOBS_TABLE_NAME,
@@ -605,6 +606,43 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the log ingestor component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = LOG_INGESTOR_COMPONENT_NAME
+        if self._clp_config.log_ingestor is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        if self._clp_config.logs_input.type != StorageType.S3:
+            logger.info(
+                "%s is only applicable for S3 logs input type, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_HOST": _get_ip_from_hostname(self._clp_config.log_ingestor.host),
+            "CLP_LOG_INGESTOR_PORT": str(self._clp_config.log_ingestor.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
+        }
+
+        return env_vars
+
     def _set_up_env_for_webui(self, container_clp_config: ClpConfig) -> EnvVarsDict:
         """
         Sets up environment variables and settings for the Web UI component.
@@ -946,6 +984,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_api_server()
+        env_vars |= self._set_up_env_for_log_ingestor()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
