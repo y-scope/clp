@@ -7,6 +7,7 @@ import sys
 
 import click
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
