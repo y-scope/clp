@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "msgpack.hpp"
@@ -22,6 +23,20 @@ make_archive_version(uint8_t major_version, uint8_t minor_version, uint16_t patc
     return (static_cast<uint32_t>(major_version) << cMajorVersionOffset)
            | (static_cast<uint32_t>(minor_version) << cMinorVersionOffset)
            | static_cast<uint32_t>(patch_version);
+}
+
+/**
+ * @param archive_version
+ * @return A tuple containing the major, minor, and patch version for an archive.
+ */
+constexpr auto decompose_archive_version(uint32_t archive_version)
+        -> std::tuple<uint8_t, uint8_t, uint16_t> {
+    constexpr uint32_t cMajorVersionOffset{24U};
+    constexpr uint32_t cMinorVersionOffset{16U};
+    uint8_t const major_version{static_cast<uint8_t>(archive_version >> cMajorVersionOffset)};
+    uint8_t const minor_version{static_cast<uint8_t>(archive_version >> cMinorVersionOffset)};
+    uint16_t const patch_version{static_cast<uint16_t>(archive_version)};
+    return std::make_tuple(major_version, minor_version, patch_version);
 }
 
 // define the version
