@@ -217,7 +217,7 @@ def main(argv: list[str]) -> int:
     # Validate and load config file
     config_file_path = Path(parsed_args.config)
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(config_file_path)
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
     except:
