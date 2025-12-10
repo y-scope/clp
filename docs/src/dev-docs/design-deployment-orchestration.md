@@ -83,7 +83,7 @@ graph LR
   db_table_creator -->|completed_successfully| spider_scheduler
   db_table_creator -->|completed_successfully| webui
   db_table_creator -->|completed_successfully| log_ingestor
-  linkStyle 7,8,9,10,11,12,13,14 stroke:#0000ff
+  linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
 
   %% Link 14-19: Results Cache Initialization Job --> Services
   results_cache_indices_creator -->|completed_successfully| api_server
@@ -91,7 +91,7 @@ graph LR
   results_cache_indices_creator -->|completed_successfully| mcp_server
   results_cache_indices_creator -->|completed_successfully| reducer
   results_cache_indices_creator -->|completed_successfully| webui
-  linkStyle 15,16,17,18,19,20 stroke:#008000
+  linkStyle 16,17,18,19,20 stroke:#008000
 
   subgraph Databases
     database
