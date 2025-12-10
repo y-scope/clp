@@ -11,9 +11,11 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+#include "../src/clp/Defs.h"
 #include "../src/clp/GrepCore.hpp"
 #include "search_test_utils.hpp"
 
+using clp::epochtime_t;
 using clp::GrepCore;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::Schema;
@@ -162,10 +164,10 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
 }
 
 TEST_CASE("process_raw_query", "[dfa_search]") {
-    constexpr uint32_t cNoBeginTimestamp{0};
-    constexpr uint32_t cNoEndTimestamp{0};
+    constexpr epochtime_t cNoBeginTimestamp{0};
+    constexpr epochtime_t cNoEndTimestamp{0};
     constexpr bool cIgnoreCase{true};
-    constexpr bool cSearchArchive{false};
+    constexpr bool cUseHeuristic{false};
 
     auto lexer{make_test_lexer(
             {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
@@ -191,7 +193,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             cNoEndTimestamp,
             cIgnoreCase,
             lexer,
-            cSearchArchive
+            cUseHeuristic
     )};
 
     REQUIRE(query.has_value());
