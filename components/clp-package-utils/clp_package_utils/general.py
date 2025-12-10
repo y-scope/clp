@@ -427,11 +427,12 @@ def validate_config_key_existence(config, key):
 
 def load_config_file(config_file_path: pathlib.Path) -> ClpConfig:
     """
-    Load and validate a CLP configuration file.
+    Loads and validates a CLP configuration file.
 
     :param config_file_path:
     :return: The loaded and validated ClpConfig object.
-    :raise ValueError: If the specified config file does not exist.
+    :raise ValueError: If the specified config file does not exist, and the requested path is not
+    the path to the default config file.
     """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH

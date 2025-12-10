@@ -55,8 +55,8 @@ def main(
 
     try:
         # Validate and load config file.
-        clp_config = load_config_file(config)
-        clp_home = get_clp_home()
+        config_file_path = pathlib.Path(config)
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if clp_config.queue is not None:

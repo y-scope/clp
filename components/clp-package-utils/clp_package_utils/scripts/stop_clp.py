@@ -28,7 +28,8 @@ logger = logging.getLogger(__name__)
 def main(config: pathlib.Path) -> None:
     """Stop the CLP Package."""
     try:
-        clp_config = load_config_file(config)
+        config_file_path = pathlib.Path(config)
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
     except Exception:
         logger.exception("Failed to load config.")
         sys.exit(1)
