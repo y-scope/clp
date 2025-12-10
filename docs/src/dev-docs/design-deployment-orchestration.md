@@ -62,7 +62,7 @@ graph LR
   results_cache -->|healthy| results_cache_indices_creator
   linkStyle 0,1 stroke:#ffa500
 
-  %% Link 2-5: Celery Dependencies --> Schedulers
+  %% Link 2-5: Celery dependencies --> Schedulers
   queue -->|healthy| compression_scheduler
   redis -->|healthy| compression_scheduler
   queue -->|healthy| query_scheduler
@@ -85,7 +85,7 @@ graph LR
   db_table_creator -->|completed_successfully| webui
   linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
 
-  %% Link 16-20: Results Cache Initialization Job --> Services
+  %% Link 16-20: Results cache initialization job --> Services
   results_cache_indices_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| mcp_server
