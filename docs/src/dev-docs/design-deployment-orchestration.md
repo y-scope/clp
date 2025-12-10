@@ -29,8 +29,7 @@ one-time initialization jobs and their functions.
             "primaryBorderColor": "transparent",
             "lineColor": "#007fff",
             "secondaryColor": "#007fff",
-            "tertiaryColor": "#fff",
-            "clusterBkg": "#d1f6ff"
+            "tertiaryColor": "#fff"
         }
     }
 }%%
@@ -57,31 +56,45 @@ graph LR
   results_cache_indices_creator["results-cache-indices-creator"]
 
   %% Dependencies
+  %% Link 0-1: Database --> Database initialization jobs
   database -->|healthy| db_table_creator
   results_cache -->|healthy| results_cache_indices_creator
-  db_table_creator -->|completed_successfully| compression_scheduler
+  linkStyle 0,1 stroke:#ffa500
+
+  %% Link 2-5: Celery Dependencies --> Schedulers
   queue -->|healthy| compression_scheduler
   redis -->|healthy| compression_scheduler
-  db_table_creator -->|completed_successfully| query_scheduler
   queue -->|healthy| query_scheduler
   redis -->|healthy| query_scheduler
+  linkStyle 2,3,4,5 stroke:#ff0000
+
+  %% Link 6: Schedulers --> Workers
   query_scheduler -->|healthy| reducer
-  db_table_creator -->|healthy| spider_scheduler
-  db_table_creator -->|healthy| spider_compression_worker
-  results_cache_indices_creator -->|completed_successfully| reducer
+  linkStyle 6 stroke:#800080
+
+  %% Link 7-13: Database initialization job --> Services
   db_table_creator -->|completed_successfully| api_server
-  results_cache_indices_creator -->|completed_successfully| api_server
-  db_table_creator -->|completed_successfully| webui
-  results_cache_indices_creator -->|completed_successfully| webui
-  db_table_creator -->|completed_successfully| mcp_server
-  results_cache_indices_creator -->|completed_successfully| mcp_server
+  db_table_creator -->|completed_successfully| compression_scheduler
   db_table_creator -->|completed_successfully| garbage_collector
+  db_table_creator -->|completed_successfully| mcp_server
+  db_table_creator -->|completed_successfully| query_scheduler
+  db_table_creator -->|completed_successfully| spider_compression_worker
+  db_table_creator -->|completed_successfully| spider_scheduler
+  db_table_creator -->|completed_successfully| webui
+  linkStyle 7,8,9,10,11,12,13 stroke:#0000ff
+
+  %% Link 14-19: Results Cache Initialization Job --> Services
+  results_cache_indices_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| garbage_collector
+  results_cache_indices_creator -->|completed_successfully| mcp_server
+  results_cache_indices_creator -->|completed_successfully| reducer
+  results_cache_indices_creator -->|completed_successfully| webui
+  linkStyle 14,15,16,17,18,19 stroke:#008000
 
   subgraph Databases
     database
     results_cache
-    subgraph Celery[Celery<br/>Native Query Engine]
+    subgraph celery_dependencies[Celery Dependencies]
         queue
         redis
     end
@@ -95,17 +108,12 @@ graph LR
   subgraph Schedulers
     compression_scheduler
     query_scheduler
-    subgraph SpiderSchedulers[Spider]
-        spider_scheduler
-    end
     spider_scheduler
   end
 
   subgraph Workers
     compression_worker
-    subgraph SpiderWorkers[Spider Workers]
-        spider_compression_worker["spider-compression-worker"]
-    end
+    spider_compression_worker
     query_worker
     reducer
   end
@@ -120,13 +128,10 @@ graph LR
     mcp_server
   end
 
-  %% Edges Styles
-  linkStyle 3,4,6,7 stroke:#ffd700,color:#ffd700
-  linkStyle 9,10 stroke:#00ced1,color:#00ced1
-  %% Subgraphs Styles
-  style Celery fill:#ffffe0,stroke:#ffd700
-  style SpiderSchedulers fill:#e0ffff,stroke:#00ced1
-  style SpiderWorkers fill:#e0ffff,stroke:#00ced1
+  %% Subgraph styles
+  style celery_dependencies fill:#ffffe0
+  style spider_compression_worker fill:#008080
+  style spider_scheduler fill:#008080
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
