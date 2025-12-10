@@ -32,20 +32,20 @@ logger = logging.getLogger(__name__)
     help="CLP package configuration file.",
 )
 @click.option(
+    "--setup-only",
+    is_flag=True,
+    help="Validate configuration and prepare directories without starting services.",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
     help="Enable debug logging.",
 )
-@click.option(
-    "--setup-only",
-    is_flag=True,
-    help="Validate configuration and prepare directories without starting services.",
-)
 def main(
     config: pathlib.Path,
-    verbose: bool,
     setup_only: bool,
+    verbose: bool,
 ) -> None:
     """Start the CLP Package."""
     if verbose:
