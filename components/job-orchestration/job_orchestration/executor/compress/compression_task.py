@@ -10,6 +10,7 @@ from typing import Any
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    ClpDbNameType,
     ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -196,7 +197,7 @@ def _get_db_connection_args_for_clp_cmd(
         "--db-port",
         str(clp_metadata_db_connection_config["port"]),
         "--db-name",
-        clp_metadata_db_connection_config["names"][ClpDbUserType.CLP],
+        clp_metadata_db_connection_config["names"][ClpDbNameType.CLP],
         "--db-table-prefix",
         clp_metadata_db_connection_config["table_prefix"],
     ]
