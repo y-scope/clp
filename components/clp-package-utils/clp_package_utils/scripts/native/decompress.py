@@ -13,8 +13,9 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     ClpConfig,
+    ClpDbUserType,
     ClpDbNameType,
-    Database
+    Database,
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
 from clp_py_utils.sql_adapter import SqlAdapter
