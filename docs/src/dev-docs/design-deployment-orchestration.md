@@ -73,19 +73,19 @@ graph LR
   query_scheduler -->|healthy| reducer
   linkStyle 6 stroke:#800080
 
-  %% Link 7-13: Database initialization job --> Services
+  %% Link 7-15: Database initialization job --> Services
   db_table_creator -->|completed_successfully| api_server
   db_table_creator -->|completed_successfully| compression_scheduler
   db_table_creator -->|completed_successfully| garbage_collector
+  db_table_creator -->|completed_successfully| log_ingestor
   db_table_creator -->|completed_successfully| mcp_server
   db_table_creator -->|completed_successfully| query_scheduler
   db_table_creator -->|completed_successfully| spider_compression_worker
   db_table_creator -->|completed_successfully| spider_scheduler
   db_table_creator -->|completed_successfully| webui
-  db_table_creator -->|completed_successfully| log_ingestor
   linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
 
-  %% Link 14-19: Results Cache Initialization Job --> Services
+  %% Link 16-20: Results Cache Initialization Job --> Services
   results_cache_indices_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| mcp_server
