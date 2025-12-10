@@ -145,11 +145,11 @@ graph LR
 | redis                     | Task result storage for workers                                 |
 | compression_scheduler     | Scheduler for compression jobs                                  |
 | query_scheduler           | Scheduler for search/aggregation jobs                           |
-| spider_scheduler          | Scheduler for Spider distributed task execution framework.      |
+| spider_scheduler          | Scheduler for Spider distributed task execution framework       |
 | results_cache             | Storage for the workers to return search results to the UI      |
-| compression_worker        | Worker processes for compression jobs                           |
+| compression_worker        | Worker processes for compression jobs using Celery              |
 | spider_compression_worker | Worker processes for compression jobs using Spider              |
-| query_worker              | Worker processes for search/aggregation jobs                    |
+| query_worker              | Worker processes for search/aggregation jobs using Celery       |
 | reducer                   | Reducers for performing the final stages of aggregation jobs    |
 | api_server                | API server for submitting queries                               |
 | webui                     | Web server for the UI                                           |

@@ -33,7 +33,7 @@ Spider in configuration.
         type: "spider"
       ```
 
-    * (Optional) Override database.names.spider to avoid name conflicts when using self-provisioned database instances.
+    * (Optional) Override `database.names.spider` to avoid name conflicts when using self-provisioned database instances.
 
         ```yaml
         database:
