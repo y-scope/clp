@@ -24,7 +24,7 @@ public:
     };
 
     using SchemaMap = std::map<int32_t, Schema>;
-    static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
 
     /**
      * Reads the schema tree from an archive

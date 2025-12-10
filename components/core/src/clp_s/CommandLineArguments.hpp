@@ -198,14 +198,14 @@ private:
     int m_compression_level{3};
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     bool m_print_archive_stats{false};
-    size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
+    size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MiB
     bool m_no_retain_float_format{false};
     bool m_single_file_archive{false};
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
     size_t m_target_ordered_chunk_size{};
     bool m_print_ordered_chunk_stats{false};
-    size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
+    size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MiB
     bool m_disable_log_order{false};
 
     // MongoDB configuration variables
