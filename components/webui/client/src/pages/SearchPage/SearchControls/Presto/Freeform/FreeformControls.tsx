@@ -1,4 +1,4 @@
-import styles from "../index.module.css";
+import styles from "../../index.module.css";
 import QueryStatus from "../../QueryStatus";
 import SqlInterfaceSelector from "../SqlInterfaceSelector";
 import SqlQueryInput from "./SqlQueryInput";

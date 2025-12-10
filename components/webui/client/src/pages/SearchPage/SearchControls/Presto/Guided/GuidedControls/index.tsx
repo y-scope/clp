@@ -1,5 +1,5 @@
 import useTimestampKeyInit from "../../../../SearchState/Presto/useTimestampKeyInit";
-import searchStyles from "../../index.module.css";
+import searchStyles from "../../../index.module.css";
 import QueryStatus from "../../../QueryStatus";
 import TimeRangeInput from "../../../TimeRangeInput";
 import SqlInterfaceSelector from "../../SqlInterfaceSelector";
