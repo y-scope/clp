@@ -5,11 +5,11 @@ import type {
 } from "antd";
 
 import {settings} from "../../../settings";
+import {ROOT_PATH} from "./typings";
 
 
 type TreeNode = Omit<GetProp<TreeSelectProps, "treeData">[number], "label">;
 
-const ROOT_PATH = "/";
 
 /**
  * Joins path segments into a normalized POSIX path. Empty segments are ignored and consecutive

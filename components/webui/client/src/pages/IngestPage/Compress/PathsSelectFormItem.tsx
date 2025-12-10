@@ -17,29 +17,15 @@ import {
 
 import {listFiles} from "../../../api/os";
 import {
+    LIST_HEIGHT_PX,
+    ROOT_NODE,
+} from "./typings";
+import {
     addServerPrefix,
-    ROOT_PATH,
     toTreeNode,
     type TreeNode,
 } from "./utils";
 
-
-/**
- * Height of the dropdown list in pixels.
- */
-const LIST_HEIGHT_PX = 512;
-
-
-/**
- * Root tree node representing the filesystem root.
- */
-const ROOT_NODE: TreeNode = Object.freeze({
-    id: ROOT_PATH,
-    isLeaf: false,
-    pId: null,
-    title: ROOT_PATH,
-    value: ROOT_PATH,
-});
 
 /**
  * Icon component for tree node expand/collapse state.
