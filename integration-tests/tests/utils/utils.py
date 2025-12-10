@@ -8,6 +8,19 @@ from tempfile import NamedTemporaryFile
 from typing import IO
 
 
+def get_binary_path(name: str) -> str:
+    """
+    :param name: Name of the program binary to locate.
+    :return: Absolute path to the program binary.
+    :raise RuntimeError: if the program binary is not found on $PATH.
+    """
+    program_binary = shutil.which(name)
+    if program_binary is None:
+        err_msg = f"'{name}' not found in PATH"
+        raise RuntimeError(err_msg)
+    return program_binary
+
+
 def get_env_var(var_name: str) -> str:
     """
     :param var_name:
