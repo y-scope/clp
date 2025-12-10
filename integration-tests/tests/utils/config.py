@@ -189,7 +189,6 @@ class PackageInstance:
         validate_file_exists(shared_config_file_path)
         object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
 
-
     @staticmethod
     def _get_clp_instance_id(clp_instance_id_file_path: Path) -> str:
         """
