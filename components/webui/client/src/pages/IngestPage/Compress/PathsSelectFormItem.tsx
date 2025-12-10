@@ -46,7 +46,7 @@ const ROOT_NODE: TreeNode = Object.freeze({
  *
  * @param props Component props.
  * @param props.expanded Whether the node is expanded (passed by Ant Design).
- * @return Plus or minus icon based on expand state.
+ * @return
  */
 // The "expanded" prop name is dictated by Ant Design TreeSelect.
 // eslint-disable-next-line react/boolean-prop-naming
@@ -58,7 +58,7 @@ const SwitcherIcon = ({expanded}: {expanded?: boolean}) => (expanded ?
  * Form item with TreeSelect for selecting file paths for compression.
  * Supports lazy loading and search with auto-expand.
  *
- * @return Form.Item component with TreeSelect.
+ * @return
  */
 const PathsSelectFormItem = () => {
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
