@@ -15,16 +15,16 @@ import {
     TreeSelect,
 } from "antd";
 
-import {listFiles} from "../../../api/os";
+import {listFiles} from "../../../../api/os";
 import {
     LIST_HEIGHT_PX,
     ROOT_NODE,
-} from "./typings";
+} from "../typings";
 import {
     addServerPrefix,
     toTreeNode,
     type TreeNode,
-} from "./utils";
+} from "../utils";
 
 
 /**
