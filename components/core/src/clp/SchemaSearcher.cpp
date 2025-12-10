@@ -37,7 +37,7 @@ auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& i
             string normalized_string;
             normalized_string.reserve(src_string.size());
             for (auto const c : src_string) {
-                if (c != '*' || normalized_string.empty() || normalized_string.back() != '*') {
+                if ('*' != c || normalized_string.empty() || '*' != normalized_string.back()) {
                     normalized_string += c;
                 }
             }
