@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
@@ -163,6 +164,9 @@ class PackageInstance:
     #: The configuration for this package instance.
     package_config: PackageConfig
 
+    #: The instance ID of the running package.
+    clp_instance_id: str = field(init=False, repr=True)
+
     #: The path to the .clp-config.yaml file constructed by the package during spin up.
     shared_config_file_path: Path = field(init=False, repr=True)
 
@@ -173,10 +177,42 @@ class PackageInstance:
         # Validate that the temp config file exists.
         validate_file_exists(self.package_config.temp_config_file_path)
 
+        # Set clp_instance_id from instance-id file.
+        path_config = self.package_config.path_config
+        clp_instance_id_file_path = path_config.clp_log_dir / "instance-id"
+        validate_file_exists(clp_instance_id_file_path)
+        clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
+        object.__setattr__(self, "clp_instance_id", clp_instance_id)
+
         # Set shared_config_file_path and validate it exists.
         shared_config_file_path = path_config.clp_log_dir / CLP_SHARED_CONFIG_FILENAME
         validate_file_exists(shared_config_file_path)
         object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
+
+
+    @staticmethod
+    def _get_clp_instance_id(clp_instance_id_file_path: Path) -> str:
+        """
+        Reads the CLP instance ID from the given file and validates its format.
+
+        :param clp_instance_id_file_path:
+        :return: The 4-character hexadecimal instance ID.
+        :raise ValueError: If the file cannot be read or contents are not a 4-character hex string.
+        """
+        try:
+            contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
+        except OSError as err:
+            err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}'"
+            raise ValueError(err_msg) from err
+
+        if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):
+            err_msg = (
+                f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
+                f" hexadecimal string, but read {contents}."
+            )
+            raise ValueError(err_msg)
+
+        return contents
 
 
 @dataclass(frozen=True)

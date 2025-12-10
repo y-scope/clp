@@ -60,6 +60,10 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                             );
                         }
                         Some(object_metadata) => {
+                            tracing::debug!(
+                                object = ? object_metadata,
+                                "Received new object metadata."
+                            );
                             self.buffer.add(object_metadata).await?;
                         }
                     }
@@ -112,7 +116,11 @@ impl Listener {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move {
+            task.run(child_cancel_token).await.inspect_err(|err| {
+                tracing::error!(error = ? err, "Listener task execution failed.");
+            })
+        });
 
         Self {
             sender,
