@@ -242,7 +242,7 @@ def handle_extract_file_cmd(
         "--db-type", clp_db_connection_params["type"],
         "--db-host", clp_db_connection_params["host"],
         "--db-port", str(clp_db_connection_params["port"]),
-        "--db-name", clp_db_connection_params["name"],
+        "--db-name", clp_db_connection_params["names"][ClpDbUserType.CLP],
         "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
