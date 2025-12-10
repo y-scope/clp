@@ -52,6 +52,8 @@ credentials:
   database:
     username: "clp-user"
     password: "pass"
+    root_username: "root"
+    root_password: "root-pass"
 
   queue:
     username: "clp-user"
