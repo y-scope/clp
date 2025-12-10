@@ -13,8 +13,8 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     ClpConfig,
-    ClpDbUserType,
-    Database,
+    ClpDbNameType,
+    Database
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
 from clp_py_utils.sql_adapter import SqlAdapter
@@ -242,7 +242,7 @@ def handle_extract_file_cmd(
         "--db-type", clp_db_connection_params["type"],
         "--db-host", clp_db_connection_params["host"],
         "--db-port", str(clp_db_connection_params["port"]),
-        "--db-name", clp_db_connection_params["names"][ClpDbUserType.CLP],
+        "--db-name", clp_db_connection_params["names"][ClpDbNameType.CLP],
         "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
