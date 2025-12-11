@@ -1,11 +1,14 @@
-import {
+import React, {
+    type ComponentProps,
     useCallback,
     useState,
 } from "react";
 
 import {CLP_QUERY_ENGINES} from "@webui/common/config";
-import {DatePicker} from "antd";
-import dayjs from "dayjs";
+import {
+    DatePicker,
+    GetProp,
+} from "antd";
 
 import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
@@ -20,6 +23,12 @@ import {
     isValidDateRange,
     TIME_RANGE_OPTION,
 } from "./utils";
+
+
+type RangePickerDates = Parameters<
+    NonNullable<
+        GetProp<ComponentProps<typeof DatePicker.RangePicker>, "onCalendarChange">
+    >>[0];
 
 
 /**
@@ -40,11 +49,12 @@ const TimeRangeInput = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
-    const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
-                           sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
+    const isPrestoGuided =
+        SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
+        sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
     const handleRangePickerChange = useCallback((
-        dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+        dates: RangePickerDates
     ) => {
         if (!isValidDateRange(dates)) {
             return;
@@ -81,13 +91,9 @@ const TimeRangeInput = () => {
             isPickerOpen={isOpen}/>
     ), [isOpen]);
 
-    type CalendarChangeHandler = (
-        dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null,
-        dateStrings: [string, string],
-        info: {range?: "start" | "end"}
-    ) => void;
-
-    const handleCalendarChange = useCallback<CalendarChangeHandler>((dates) => {
+    const handleCalendarChange = useCallback((
+        dates: RangePickerDates
+    ) => {
         handleRangePickerChange(dates);
     }, [handleRangePickerChange]);
 

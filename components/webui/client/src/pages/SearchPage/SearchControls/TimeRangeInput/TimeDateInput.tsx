@@ -24,8 +24,6 @@ const TimeDateInput = (props: TimeDateInputProps) => {
         value,
         [DATE_RANGE_PROP_KEY]: dateRange,
         onChange,
-        onFocus,
-        onBlur,
         isPickerOpen = false,
         ...restProps
     } = props;
@@ -35,14 +33,6 @@ const TimeDateInput = (props: TimeDateInputProps) => {
     const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen) ?
         value :
         TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
-
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-        onFocus?.(e);
-    };
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-        onBlur?.(e);
-    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
@@ -55,9 +45,7 @@ const TimeDateInput = (props: TimeDateInputProps) => {
         <input
             {...restProps}
             value={displayText}
-            onBlur={handleBlur}
-            onChange={handleChange}
-            onFocus={handleFocus}/>
+            onChange={handleChange}/>
     );
 };
 
