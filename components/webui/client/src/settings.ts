@@ -2,8 +2,8 @@ import axios from "axios";
 
 
 type Settings = {
-    ClpQueryEngine: string;
     ClpStorageEngine: string;
+    ClpQueryEngine: string;
     LogsInputType: string;
     LogsInputDir: string | null;
     LogsInputRootDir: string | null;
