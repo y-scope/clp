@@ -4,10 +4,6 @@ import React, {
     useState,
 } from "react";
 
-import {
-    MinusOutlined,
-    PlusOutlined,
-} from "@ant-design/icons";
 import {FileEntry} from "@webui/common/schemas/os";
 import {
     Form,
@@ -25,20 +21,8 @@ import {
     toTreeNode,
     type TreeNode,
 } from "../utils";
+import SwitcherIcon from "./SwitcherIcon";
 
-
-/**
- * Icon component for tree node expand/collapse state.
- *
- * @param props Component props.
- * @param props.expanded Whether the node is expanded (passed by Ant Design).
- * @return
- */
-// The "expanded" prop name is dictated by Ant Design TreeSelect.
-// eslint-disable-next-line react/boolean-prop-naming
-const SwitcherIcon = ({expanded}: {expanded?: boolean}) => (expanded ?
-    <MinusOutlined style={{color: "grey"}}/> :
-    <PlusOutlined style={{color: "grey"}}/>);
 
 /**
  * Form item with TreeSelect for selecting file paths for compression.
