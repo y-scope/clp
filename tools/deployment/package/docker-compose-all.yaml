@@ -612,7 +612,7 @@ services:
     environment:
       CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
     ports:
       - host_ip: "${CLP_LOG_INGESTOR_HOST:-127.0.0.1}"
