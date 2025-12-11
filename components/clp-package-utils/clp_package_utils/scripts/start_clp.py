@@ -47,7 +47,7 @@ def main(
     setup_only: bool,
     verbose: bool,
 ) -> None:
-    """Start the CLP Package."""
+    """Starts the CLP Package."""
     if verbose:
         logger.setLevel(logging.DEBUG)
     else:
