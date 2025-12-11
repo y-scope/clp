@@ -55,8 +55,8 @@ def main(
 
     try:
         # Validate and load config file.
-        config_file_path = pathlib.Path(config)
-        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
+        resolved_config_path = resolve_host_path_in_container(config)
+        clp_config = load_config_file(resolved_config_path)
         clp_home = get_clp_home()
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
