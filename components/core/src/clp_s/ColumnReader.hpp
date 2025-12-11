@@ -290,12 +290,41 @@ private:
     bool m_is_array;
 };
 
+class LogTypeColumnReader : public BaseColumnReader {
+public:
+    LogTypeColumnReader(int32_t id, std::shared_ptr<LogTypeDictionaryReader> log_dict)
+            : BaseColumnReader(id),
+              m_log_dict(std::move(log_dict)) {}
+
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
+
+    auto get_type() -> NodeType override { return NodeType::LogType; }
+
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
+
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
+
+    auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
+
+private:
+    std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
+    UnalignedMemSpan<uint64_t> m_logtypes;
+};
+
 class VariableStringColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    VariableStringColumnReader(int32_t id, std::shared_ptr<VariableDictionaryReader> var_dict)
+    VariableStringColumnReader(
+            int32_t id,
+            std::shared_ptr<VariableDictionaryReader> var_dict,
+            NodeType type
+    )
             : BaseColumnReader(id),
-              m_var_dict(std::move(var_dict)) {}
+              m_var_dict(std::move(var_dict)),
+              m_type(type) {}
 
     // Destructor
     ~VariableStringColumnReader() override = default;
@@ -303,7 +332,7 @@ public:
     // Methods inherited from BaseColumnReader
     void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::VarString; }
+    NodeType get_type() override { return m_type; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(
             uint64_t cur_message
@@ -325,6 +354,8 @@ private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
 
     UnalignedMemSpan<uint64_t> m_variables;
+
+    NodeType m_type;
 };
 
 class DateStringColumnReader : public BaseColumnReader {

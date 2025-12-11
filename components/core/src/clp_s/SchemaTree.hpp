@@ -28,6 +28,24 @@ namespace clp_s {
  * demarcate data needed by the implementation that is not part of the log record. In particular,
  * the implementation may create a special subtree of the MPT which contains fields used to record
  * things like original log order.
+ *
+ * TODO clpsls
+ *
+ * LogMessage: Stores a structured/parsed version of a log message (currently detected as a string
+ * containing delimiters). It is made up of a single LogType node and as many CaptureVar and
+ * primitive type nodes as appear in the message.
+ *
+ * LogType: Functionally similar to a ClpString, but has no variable dictionary component as the
+ * variables are stored in their own nodes unlike a ClpsString. The logtype dictionary component is
+ * identical.
+ *
+ * CaptureVar: Contains a VarString node representing the entire log surgeon schema variable (a
+ * "full match" of the regex pattern) and any number of primitive type nodes for each named capture
+ * group in the variable.
+ *
+ * The actual captures are stored in nodes of their appropriate type (currently just VarString). It
+ * may be improve compression to store the "full match" of a variable similar to a log type using
+ * placeholders for the capture groups.
  */
 enum class NodeType : uint8_t {
     Integer,
@@ -44,6 +62,9 @@ enum class NodeType : uint8_t {
     DeltaInteger,
     FormattedFloat,
     DictionaryFloat,
+    LogMessage = 100,
+    LogType,
+    CaptureVar,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 

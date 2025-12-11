@@ -66,6 +66,11 @@ void LogTypeDictionaryEntry::add_float_var() {
     EncodedVariableInterpreter::add_float_var(m_value);
 }
 
+auto LogTypeDictionaryEntry::add_schema_var() -> void {
+    m_placeholder_positions.push_back(m_value.length());
+    EncodedVariableInterpreter::add_schema_var(m_value);
+}
+
 void LogTypeDictionaryEntry::add_escape() {
     m_placeholder_positions.push_back(m_value.length());
     EncodedVariableInterpreter::add_escape(m_value);
@@ -79,17 +84,9 @@ bool LogTypeDictionaryEntry::parse_next_var(
         string_view& var
 ) {
     auto last_var_end_pos = var_end_pos;
-    // clang-format off
-    auto escape_handler = [&](
-        [[maybe_unused]] string_view constant,
-        [[maybe_unused]] size_t char_to_escape_pos,
-        string& logtype
-    ) -> void {
-        m_placeholder_positions.push_back(logtype.size());
-        ++m_num_escaped_placeholders;
-        logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
-    };
-    // clang-format on
+    auto escape_handler = [&]([[maybe_unused]] string_view constant,
+                              [[maybe_unused]] size_t char_to_escape_pos,
+                              [[maybe_unused]] string& logtype) -> void { add_escape(); };
     if (get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
         auto constant = msg.substr(last_var_end_pos, var_begin_pos - last_var_end_pos);
@@ -163,7 +160,7 @@ void LogTypeDictionaryEntry::read_from_file(
 void LogTypeDictionaryEntry::decode_log_type(string& escaped_value) {
     bool is_escaped = false;
     string constant;
-    for (char c : escaped_value) {
+    for (auto const c : escaped_value) {
         if (is_escaped) {
             constant += c;
             is_escaped = false;
@@ -185,6 +182,10 @@ void LogTypeDictionaryEntry::decode_log_type(string& escaped_value) {
                 add_constant(constant, 0, constant.length());
                 constant.clear();
                 add_dictionary_var();
+            } else if (enum_to_underlying_type(VariablePlaceholder::Schema) == c) {
+                add_constant(constant, 0, constant.length());
+                constant.clear();
+                add_schema_var();
             } else {
                 constant += c;
             }
@@ -200,6 +201,13 @@ void LogTypeDictionaryEntry::decode_log_type() {
     string escaped_value = std::move(m_value);
     m_value.clear();
     decode_log_type(escaped_value);
+}
+
+auto LogTypeDictionaryEntry::encode_constant(std::string_view constant) -> void {
+    auto escape_handler = [&]([[maybe_unused]] string_view constant,
+                              [[maybe_unused]] size_t char_to_escape_pos,
+                              [[maybe_unused]] string& logtype) -> void { add_escape(); };
+    append_constant_to_logtype(constant, escape_handler, m_value);
 }
 
 size_t VariableDictionaryEntry::get_data_size() const {

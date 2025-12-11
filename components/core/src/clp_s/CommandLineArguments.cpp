@@ -2,11 +2,20 @@
 
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <string_view>
 
+#include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/OutputHandlerImpl.hpp>
+#include <clp_s/search/OutputHandler.hpp>
+#include <reducer/network_utils.hpp>
 
 #include "../clp/cli_utils.hpp"
 #include "../clp/type_utils.hpp"
@@ -123,7 +132,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     }
 
     po::options_description general_options("General options");
-    general_options.add_options()("help,h", "Print help");
+    general_options.add_options()("help,h", "Print help")(
+            "experimental",
+            po::bool_switch(&m_experimental),
+            "Enable experimental features to be used."
+    );
 
     char command_input;
     po::options_description general_positional_options("General positional options");
@@ -272,12 +285,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description experimental_options("Experimental Options");
+            std::string log_surgeon_schema_path{};
+            experimental_options.add_options()(
+                    "schema-path",
+                    po::value<std::string>(&log_surgeon_schema_path)->value_name("PATH"),
+                    "Path to a log surgeon schema. See README-Schema.md for details."
+            );
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
             all_compression_options.add(compression_options);
+            all_compression_options.add(experimental_options);
             all_compression_options.add(compression_positional_options);
 
             std::vector<std::string> unrecognized_options
@@ -329,6 +351,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            if (false == log_surgeon_schema_path.empty()) {
+                m_log_surgeon_schema_path = get_path_object_for_raw_path(log_surgeon_schema_path);
+            }
+
+            validate_experimental();
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
@@ -707,6 +735,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_network_auth(auth, m_network_auth);
 
+            validate_experimental();
+
             if (m_query.empty()) {
                 throw std::invalid_argument("No query specified");
             }
@@ -939,5 +969,88 @@ void CommandLineArguments::print_search_usage() const {
               << " s [OPTIONS] ARCHIVES_DIR KQL_QUERY"
                  " [OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS]]"
               << std::endl;
+}
+
+auto CommandLineArguments::validate_experimental() const -> void {
+    if (m_experimental) {
+        return;
+    }
+    if (m_log_surgeon_schema_path.has_value()) {
+        throw std::invalid_argument("Set --experimental to parse text with log-surgeon.");
+    }
+    if (ExperimentalQueries::cLogTypeStatsQuery == m_query) {
+        throw std::invalid_argument("Set --experimental to access the logtype stats.");
+    }
+    if (ExperimentalQueries::cVariableStatsQuery == m_query) {
+        throw std::invalid_argument("Set --experimental to access the variable stats.");
+    }
+}
+
+auto CommandLineArguments::create_output_handler() const
+        -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>> {
+    std::unique_ptr<search::OutputHandler> output_handler;
+    try {
+        switch (get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::File:
+                output_handler
+                        = std::make_unique<clp_s::FileOutputHandler>(get_file_output_path(), true);
+                break;
+            case CommandLineArguments::OutputHandlerType::Network: {
+                output_handler = std::make_unique<NetworkOutputHandler>(
+                        get_network_dest_host(),
+                        get_network_dest_port()
+                );
+                break;
+            }
+            case CommandLineArguments::OutputHandlerType::Reducer: {
+                int reducer_socket_fd{-1};
+                if (get_output_handler_type() == CommandLineArguments::OutputHandlerType::Reducer) {
+                    reducer_socket_fd = reducer::connect_to_reducer(
+                            get_reducer_host(),
+                            get_reducer_port(),
+                            get_job_id()
+                    );
+                    if (-1 == reducer_socket_fd) {
+                        SPDLOG_ERROR("Failed to connect to reducer.");
+                        return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+                    }
+                }
+
+                if (do_count_results_aggregation()) {
+                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
+                } else if (do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            get_count_by_time_bucket_size()
+                    );
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+                }
+                break;
+            }
+            case CommandLineArguments::OutputHandlerType::ResultsCache: {
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                        get_mongodb_uri(),
+                        get_mongodb_collection(),
+                        get_batch_size(),
+                        get_max_num_results()
+                );
+                break;
+            }
+            case CommandLineArguments::OutputHandlerType::Stdout: {
+                output_handler = std::make_unique<StandardOutputHandler>();
+                break;
+            }
+            default: {
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+            }
+        }
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+    return output_handler;
 }
 }  // namespace clp_s
