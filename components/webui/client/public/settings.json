@@ -2,7 +2,6 @@
     "ClpStorageEngine": "clp-s",
     "ClpQueryEngine": "clp-s",
     "LogsInputType": "fs",
-    "LogsInputDir": "/",
     "LogsInputRootDir": "/",
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
     "SqlDbClpArchivesTableName": "clp_archives",

@@ -5,7 +5,6 @@ type Settings = {
     ClpStorageEngine: string;
     ClpQueryEngine: string;
     LogsInputType: string;
-    LogsInputDir: string | null;
     LogsInputRootDir: string | null;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;

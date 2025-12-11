@@ -743,13 +743,9 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoPort"] = None
 
         if StorageType.FS == self._clp_config.logs_input.type:
-            client_settings_json_updates["LogsInputDir"] = str(
-                container_clp_config.logs_input.directory
-            )
             client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
             server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
         else:
-            client_settings_json_updates["LogsInputDir"] = None
             client_settings_json_updates["LogsInputRootDir"] = None
             server_settings_json_updates["LogsInputRootDir"] = None
 
