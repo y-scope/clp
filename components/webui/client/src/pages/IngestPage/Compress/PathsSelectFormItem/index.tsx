@@ -15,12 +15,14 @@ import {
 
 import {listFiles} from "../../../../api/os";
 import SwitcherIcon from "./SwitcherIcon";
-import {ROOT_NODE} from "./typings";
+import {
+    ROOT_NODE,
+    TreeNode,
+} from "./typings";
 import {
     addServerPrefix,
     getListHeight,
     toTreeNode,
-    type TreeNode,
 } from "./utils";
 
 

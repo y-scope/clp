@@ -1,5 +1,13 @@
-import {type TreeNode} from "./utils";
-
+/**
+ * Tree node for Ant Design TreeSelect in simple mode (treeDataSimpleMode).
+ */
+interface TreeNode {
+    id: string;
+    isLeaf: boolean;
+    pId: string | null;
+    title: string;
+    value: string;
+}
 
 const ROOT_PATH = "/";
 
@@ -14,7 +22,7 @@ const ROOT_NODE: TreeNode = Object.freeze({
     value: ROOT_PATH,
 });
 
-
+export type {TreeNode};
 export {
     ROOT_NODE,
     ROOT_PATH,

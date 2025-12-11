@@ -1,19 +1,11 @@
 import {FileEntry} from "@webui/common/schemas/os";
-import {
-    GetProp,
-    TreeSelectProps,
-} from "antd";
 
 import {settings} from "../../../../settings";
-import {ROOT_PATH} from "./typings";
+import {
+    ROOT_PATH,
+    TreeNode,
+} from "./typings";
 
-
-/**
- * Tree node for Ant Design TreeSelect in simple mode (treeDataSimpleMode).
- */
-interface TreeNode extends Omit<GetProp<TreeSelectProps, "treeData">[number], "label"> {
-    id: string;
-}
 
 /**
  * Percentage of viewport height to use for the dropdown list.
@@ -106,7 +98,6 @@ const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
 };
 
 
-export type {TreeNode};
 export {
     addServerPrefix,
     getListHeight,
