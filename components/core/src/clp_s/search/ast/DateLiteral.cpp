@@ -18,7 +18,7 @@ DateLiteral::DateLiteral(epochtime_t v)
           m_double_timestamp{static_cast<double>(v) / cNanosecondsInSecond} {}
 
 std::shared_ptr<Literal> DateLiteral::create(epochtime_t v) {
-    return std::shared_ptr<Literal>(static_cast<Literal*>(new DateLiteral(v)));
+    return std::shared_ptr<Literal>(new DateLiteral(v));
 }
 
 void DateLiteral::print() const {

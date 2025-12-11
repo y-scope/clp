@@ -14,14 +14,16 @@ namespace clp_s::search::ast {
  */
 class SetDateLiteralPrecision : public Transformation {
 public:
-    // Constructors
     explicit SetDateLiteralPrecision(DateLiteral::Precision precision) : m_precision{precision} {}
 
-    // Methods inherited from Transformation
+    /**
+     * @param expr
+     * @return A mutated version of `expr` where all `DateLiteral`s have precision set to
+     * `m_precision`.
+     */
     auto run(std::shared_ptr<Expression>& expr) -> std::shared_ptr<Expression> override;
 
 private:
-    // Members
     DateLiteral::Precision m_precision{DateLiteral::Precision::Nanoseconds};
 };
 }  // namespace clp_s::search::ast
