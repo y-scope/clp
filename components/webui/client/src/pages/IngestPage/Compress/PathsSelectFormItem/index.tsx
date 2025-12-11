@@ -9,6 +9,7 @@ import {
     Form,
     message,
     TreeSelect,
+    TreeSelectProps,
 } from "antd";
 
 import {listFiles} from "../../../../api/os";
@@ -23,6 +24,8 @@ import {
 } from "../utils";
 import SwitcherIcon from "./SwitcherIcon";
 
+
+type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
 
 /**
  * Form item with TreeSelect for selecting file paths for compression.
@@ -65,7 +68,7 @@ const PathsSelectFormItem = () => {
         }
     }, [addNodes]);
 
-    const handleLoadData = useCallback(async ({value}: {value?: string | number}) => {
+    const handleLoadData = useCallback(async ({value}: LoadDataNode) => {
         if ("string" !== typeof value) {
             return;
         }
