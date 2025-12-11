@@ -96,7 +96,7 @@ def handle_extract_file_cmd(
 
     storage_type = clp_config.archive_output.storage.type
     storage_engine = clp_config.package.storage_engine
-    if StorageType.FS != storage_type or StorageEngine.CLP != storage_engine:
+    if StorageType.FS != storage_type:
         logger.error(
             f"File extraction is not supported for archive storage type `{storage_type}` with"
             f" storage engine `{storage_engine}`."
@@ -147,21 +147,61 @@ def handle_extract_file_cmd(
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
+
     if parsed_args.verbose:
         extract_cmd.append("--verbose")
-    for path in parsed_args.paths:
-        extract_cmd.append(path)
-    if container_paths_to_extract_file_path:
-        extract_cmd.append("--input-list")
-        extract_cmd.append(str(container_paths_to_extract_file_path))
+
+    if StorageEngine.CLP == storage_engine:
+        # Use either file list or explicit paths; prohibit --dataset flag
+        if parsed_args.dataset is not None:
+            logger.error(
+                f"The --dataset flag cannot be used with the {storage_engine} storage engine."
+            )
+            # Remove generated files
+            generated_config_path_on_host.unlink()
+            return -1
+        for path in parsed_args.paths:
+            extract_cmd.append(path)
+        if container_paths_to_extract_file_path:
+            extract_cmd.append("--files-from")
+            extract_cmd.append(str(container_paths_to_extract_file_path))
+    elif StorageEngine.CLP_S == storage_engine:
+        # Prohibit both file list and explicit paths
+        if parsed_args.files_from or parsed_args.paths:
+            logger.error(
+                "File paths cannot be specified when decompressing with the"
+                f" {storage_engine} storage engine."
+            )
+            # Remove generated files
+            generated_config_path_on_host.unlink()
+            return -1
+
+        dataset = parsed_args.dataset or CLP_DEFAULT_DATASET_NAME
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            # Remove generated files
+            generated_config_path_on_host.unlink()
+            return -1
+
+        extract_cmd.extend(["--dataset", dataset])
+    else:
+        logger.error(f"Unsupported storage engine: {storage_engine}")
+        # Remove generated files
+        generated_config_path_on_host.unlink()
+        return -1
 
     cmd = container_start_cmd + extract_cmd
 
     proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
-        logger.error("file extraction failed.")
+        logger.error("File extraction failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    else:
+        logger.info(f"File extraction successful. Decompressed file written to {extraction_dir!s}")
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(
@@ -269,7 +309,7 @@ def handle_extract_stream_cmd(
     proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
-        logger.error("stream extraction failed.")
+        logger.error("Stream extraction failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
@@ -314,6 +354,12 @@ def main(argv):
         metavar="DIR",
         default=".",
         help="Extract files into DIR.",
+    )
+    file_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="Dataset to decompress (required for clp-json; invalid for clp-text).",
     )
 
     # IR extraction command parser
