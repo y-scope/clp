@@ -4,7 +4,10 @@ import socket
 from dataclasses import dataclass
 from typing import Any
 
-from clp_py_utils.clp_config import ClpConfig
+from clp_py_utils.clp_config import (
+    ClpConfig,
+    REDUCER_COMPONENT_NAME,
+)
 
 # Port constants.
 MIN_NON_PRIVILEGED_PORT = 1024
@@ -100,7 +103,7 @@ def _discover_port_assignments(clp_config: ClpConfig) -> list[PortAssignment]:
             continue
 
         # Determine how many ports this component needs.
-        port_count = REDUCER_MAX_PORTS if component_name == "reducer" else 1
+        port_count = REDUCER_MAX_PORTS if component_name == REDUCER_COMPONENT_NAME else 1
 
         port_assignments.append(
             PortAssignment(
