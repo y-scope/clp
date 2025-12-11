@@ -58,7 +58,7 @@ public:
 
     /**
      * Sets the precision of the timestamp returned by `as_int`. The returned value from `as_int` is
-     * the same as the value obtained returned by calling `as_precision(precision)`.
+     * the same as the value returned from `as_precision(precision)`.
      * @param precision
      */
     void set_default_precision(Precision precision);
