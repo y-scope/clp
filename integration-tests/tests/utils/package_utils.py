@@ -331,7 +331,10 @@ def run_package_script(
     job_process = run_and_assert(cmd, capture_output=True, text=True)
 
     # Compare captured output with ground truth.
-    ground_truth_file_path = post_compression_job.output_ground_truth_file
+    ground_truth_file_path = (
+        resolve_path_env_var("TEST_GROUND_TRUTHS_DIR")
+        / post_compression_job.output_ground_truth_file
+    )
     if not _compare_output_with_ground_truth(
         output=job_process.stdout, ground_truth_file_path=ground_truth_file_path
     ):

@@ -166,8 +166,7 @@ class PackageCompressionJob:
     # Script path (relative to the CLP package).
     script_path: Path
 
-    # The path to the logs relative to integration-tests/tests/data/logs
-    # (either a file or directory).
+    # The path to the logs relative to tests/data/logs (either a file or directory).
     log_path: Path
 
     # Flags to specify in the command.
@@ -196,7 +195,7 @@ class PackagePostCompressionJob:
     # Arguments to specify in the command.
     args: list[str] | None
 
-    # The path to the file that holds output ground truth.
+    # The path to the file that holds output ground truth, relative to tests/data/ground-truths.
     output_ground_truth_file: Path
 
     # Special attribute for `del by-ids` admin command.
