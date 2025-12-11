@@ -15,7 +15,7 @@ type SwitcherIconProps = Parameters<NonNullable<SwitcherIconFn>>[0];
 /**
  * Icon component for tree node expand/collapse state.
  *
- * @param props Component props.
+ * @param props
  * @param props.expanded Whether the node is expanded (passed by Ant Design).
  * @return
  */
