@@ -12,8 +12,8 @@ from enum import auto
 
 import yaml
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     ClpConfig,
     CONTAINER_AWS_CONFIG_DIRECTORY,
