@@ -33,7 +33,9 @@ import SwitcherIcon from "./SwitcherIcon";
 const PathsSelectFormItem = () => {
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-    const loadedPaths = useRef(new Set<string>());
+
+    // Use a ref, instead of a state to pass to AntD's `treeLoadedKeys`, to dedupe load requests.
+    const loadedPathsRef = useRef(new Set<string>());
 
     const addNodes = useCallback((nodes: TreeNode[]) => {
         setTreeData((prev) => {
@@ -50,15 +52,15 @@ const PathsSelectFormItem = () => {
     }, []);
 
     const loadPath = useCallback(async (path: string) => {
-        if (loadedPaths.current.has(path)) {
+        if (loadedPathsRef.current.has(path)) {
             return;
         }
-        loadedPaths.current.add(path);
+        loadedPathsRef.current.add(path);
         try {
             const files: FileEntry[] = await listFiles(addServerPrefix(path));
             addNodes(files.map((f) => toTreeNode(f, path)));
         } catch (e) {
-            loadedPaths.current.delete(path);
+            loadedPathsRef.current.delete(path);
             throw e;
         }
     }, [addNodes]);
@@ -96,6 +98,7 @@ const PathsSelectFormItem = () => {
                 showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={false}
                 switcherIcon={SwitcherIcon}
+
                 treeCheckable={true}
                 treeData={treeData}
                 treeDataSimpleMode={true}
