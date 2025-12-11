@@ -1,40 +1,15 @@
-"""Thin Python wrapper for invoking the bundled clp_s executable."""
+"""Public entry points for the clp_core Python package."""
 
-import functools
-import subprocess
-import sys
-from importlib.resources import files
-from pathlib import Path
-from typing import Any
+from clp_core._api import compress, decompress, search
+from clp_core._bin import clp_s
+from clp_core._except import BadCompressionInputError, ClpCoreError, ClpCoreRuntimeError
 
-
-@functools.cache
-def _get_executable(name: str) -> Path:
-    exe = Path(str(files("clp_core") / f"bin/{name}"))
-    if exe.exists():
-        return exe
-    err_msg = f"No executable found for {name} at {exe}"
-    raise FileNotFoundError(err_msg)
-
-
-def _run(name: str, *args: Any) -> int:
-    command = [str(_get_executable(name))]
-    if args:
-        command += list(args)
-    else:
-        command += sys.argv[1:]
-    return subprocess.call(command)
-
-
-def _run_python(name: str, *args: Any) -> int:
-    command = [sys.executable, str(_get_executable(name))]
-    if args:
-        command += list(args)
-    else:
-        command += sys.argv[1:]
-    return subprocess.call(command)
-
-
-def clp_s() -> None:
-    """Entry point that dispatches to the clp_s executable."""
-    raise SystemExit(_run("clp-s"))
+__all__ = [
+    "BadCompressionInputError",
+    "ClpCoreError",
+    "ClpCoreRuntimeError",
+    "clp_s",
+    "compress",
+    "decompress",
+    "search",
+]
