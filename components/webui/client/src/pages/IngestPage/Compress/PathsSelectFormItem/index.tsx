@@ -1,4 +1,4 @@
-import React, {
+import {
     useCallback,
     useRef,
     useState,
@@ -26,6 +26,8 @@ import SwitcherIcon from "./SwitcherIcon";
 
 
 type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
+
+type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0];
 
 /**
  * Form item with TreeSelect for selecting file paths for compression.
@@ -82,7 +84,7 @@ const PathsSelectFormItem = () => {
         }
     }, [loadPath]);
 
-    const handleTreeExpand = useCallback((keys: React.Key[]) => {
+    const handleTreeExpand = useCallback((keys: TreeExpandKeys) => {
         setExpandedKeys(keys as string[]);
     }, []);
 
