@@ -34,7 +34,7 @@ const PathsSelectFormItem = () => {
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 
-    // Use a ref, instead of a state to pass to AntD's `treeLoadedKeys`, to dedupe load requests.
+    // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
 
     const addNodes = useCallback((nodes: TreeNode[]) => {
