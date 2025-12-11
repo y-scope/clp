@@ -4,6 +4,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::s3::ObjectMetadata;
 use log_ingestor::compression::{Buffer, BufferSubmitter, DEFAULT_LISTENER_CAPACITY, Listener};
+use non_empty_string::NonEmptyString;
 use tokio::sync::{Mutex, mpsc};
 
 const TEST_OBJECT_SIZE: u64 = 1024;
@@ -50,8 +51,9 @@ async fn send_to_listener(objects: Vec<ObjectMetadata>, sender: mpsc::Sender<Obj
 fn create_test_objects(bucket_name: &str, count: usize) -> Vec<ObjectMetadata> {
     (0..count)
         .map(|i| ObjectMetadata {
-            bucket: bucket_name.to_string(),
-            key: format!("object-{i}"),
+            bucket: NonEmptyString::new(bucket_name.to_string())
+                .expect("bucket name should be non-empty"),
+            key: NonEmptyString::new(format!("object-{i}")).unwrap(),
             size: TEST_OBJECT_SIZE,
         })
         .collect()

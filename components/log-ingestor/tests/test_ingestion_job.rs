@@ -12,6 +12,7 @@ use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     ingestion_job::SqsListener,
 };
+use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -87,15 +88,15 @@ async fn receive_object_metadata(
 /// * A vector of received S3 object metadata.
 async fn upload_and_receive(
     s3_client: aws_sdk_s3::Client,
-    bucket: String,
-    prefix: String,
+    bucket: NonEmptyString,
+    prefix: NonEmptyString,
     num_objects_to_create: usize,
     receiver: mpsc::Receiver<ObjectMetadata>,
 ) -> (Vec<ObjectMetadata>, Vec<ObjectMetadata>) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|idx| ObjectMetadata {
             bucket: bucket.clone(),
-            key: format!("{prefix}/{idx:05}.log"),
+            key: NonEmptyString::new(format!("{prefix}/{idx:05}.log")).unwrap(),
             size: 16,
         })
         .collect();
@@ -124,13 +125,13 @@ async fn upload_and_receive(
 /// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
 async fn upload_noise_objects(
     s3_client: aws_sdk_s3::Client,
-    bucket: String,
+    bucket: NonEmptyString,
     num_objects_to_create: usize,
 ) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|_| ObjectMetadata {
             bucket: bucket.clone(),
-            key: format!("{}.log", Uuid::new_v4()),
+            key: NonEmptyString::new(format!("{}.log", Uuid::new_v4())).unwrap(),
             size: 16,
         })
         .collect();
@@ -143,8 +144,8 @@ async fn upload_noise_objects(
 /// # Returns
 ///
 /// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}/`.
-fn get_testing_prefix(job_id: &Uuid) -> String {
-    format!("test-{job_id}")
+fn get_testing_prefix(job_id: &Uuid) -> NonEmptyString {
+    NonEmptyString::new(format!("test-{job_id}")).unwrap()
 }
 
 #[tokio::test]
@@ -165,12 +166,13 @@ async fn test_sqs_listener() -> Result<()> {
     .await;
 
     let sqs_listener_config = SqsListenerConfig {
-        queue_url: format!(
+        queue_url: NonEmptyString::new(format!(
             "{}/{}/{}",
             aws_config.endpoint.as_str(),
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
-        ),
+        ))
+        .unwrap(),
         base: BaseConfig {
             region: aws_config.region.clone(),
             bucket_name: aws_config.bucket_name.clone(),
