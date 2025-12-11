@@ -4,7 +4,7 @@ import type {
     TreeSelectProps,
 } from "antd";
 
-import {settings} from "../../../settings";
+import {settings} from "../../../../settings";
 import {ROOT_PATH} from "./typings";
 
 

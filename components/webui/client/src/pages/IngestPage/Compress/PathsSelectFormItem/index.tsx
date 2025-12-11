@@ -13,16 +13,16 @@ import {
 } from "antd";
 
 import {listFiles} from "../../../../api/os";
+import SwitcherIcon from "./SwitcherIcon";
 import {
     LIST_HEIGHT_PX,
     ROOT_NODE,
-} from "../typings";
+} from "./typings";
 import {
     addServerPrefix,
     toTreeNode,
     type TreeNode,
-} from "../utils";
-import SwitcherIcon from "./SwitcherIcon";
+} from "./utils";
 
 
 type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
