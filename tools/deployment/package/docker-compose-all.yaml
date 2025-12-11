@@ -39,6 +39,10 @@ x-volume-definitions:
     type: "bind"
     source: "${CLP_LOGS_DIR_HOST:-./var/log}"
     target: "/var/log"
+  clp-tmp: &volume_clp_tmp
+    type: "bind"
+    source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
+    target: "/var/tmp"
 
 services:
   database:
@@ -89,6 +93,8 @@ services:
       CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
+      SPIDER_DB_USER: "${SPIDER_DB_USER:?Please set a value.}"
     volumes:
       - *volume_clp_config_readonly
     depends_on:
@@ -144,7 +150,7 @@ services:
     volumes:
       - type: "bind"
         source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
-        target: "/usr/local/etc/redis/redis.conf"
+        target: "/etc/redis/redis.conf"
         read_only: true
       - type: "bind"
         source: "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}"
@@ -154,7 +160,7 @@ services:
         target: "/var/log/redis"
     command: [
       "redis-server",
-      "/usr/local/etc/redis/redis.conf",
+      "/etc/redis/redis.conf",
       "--requirepass", "${CLP_REDIS_PASS:?Please set a value.}"
     ]
     healthcheck:
@@ -218,6 +224,28 @@ services:
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
+  spider-scheduler:
+    <<: *service_defaults
+    hostname: "spider_scheduler"
+    environment:
+      SPIDER_LOG_FILE: "/var/log/spider_scheduler.log"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+    ports:
+      - host_ip: "${SPIDER_SCHEDULER_HOST:-127.0.0.1}"
+        published: "${SPIDER_SCHEDULER_PORT:-6000}"
+        target: 6000
+    command: [
+      "/opt/clp/bin/spider_scheduler",
+      "--host", "spider_scheduler",
+      "--port", "6000",
+      "--storage_url", "jdbc:mariadb://database:3306/\
+        ${SPIDER_DB_NAME:-spider-db}?\
+        user=${SPIDER_DB_USER:?Please set a value.}\
+        &password=${SPIDER_DB_PASS:?Please set a value.}",
+    ]
+
   compression-scheduler:
     <<: *service_defaults
     hostname: "compression_scheduler"
@@ -236,7 +264,7 @@ services:
       - *volume_clp_config_readonly
       - *volume_clp_logs
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -268,13 +296,11 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
-      - type: "bind"
-        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
-        target: "/var/tmp"
     command: [
       "python3",
       "-u",
@@ -286,6 +312,39 @@ services:
       "-f", "/var/log/compression_worker/worker.log",
       "-Q", "compression",
       "-n", "compression-worker"
+    ]
+
+  spider-compression-worker:
+    <<: *service_defaults
+    hostname: "compression_worker"
+    environment:
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/compression_worker"
+      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      SPIDER_LOG_DIR: "/var/log/compression_worker"
+    volumes:
+      - *volume_clp_config_readonly
+      - *volume_clp_logs
+      - *volume_clp_tmp
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "python3", "-u",
+      "-m", "job_orchestration.executor.start-spider-worker",
+      "--host", "compression_worker",
+      "--num-workers", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
+      "--storage-url", "jdbc:mariadb://database:3306/\
+        ${SPIDER_DB_NAME:-spider-db}?\
+        user=${SPIDER_DB_USER:?Please set a value.}\
+        &password=${SPIDER_DB_PASS:?Please set a value.}",
     ]
 
   webui:
@@ -308,7 +367,7 @@ services:
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams:ro"
       - type: "bind"
         source: "./var/www/webui/client/settings.json"
         target: "/opt/clp/var/www/webui/client/settings.json"
@@ -422,7 +481,7 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives:ro"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
@@ -542,4 +601,40 @@ services:
         "curl",
         "-f",
         "http://api_server:3001/health"
+      ]
+
+  log-ingestor:
+    <<: *service_defaults
+    hostname: "log_ingestor"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable log-ingestor.
+      replicas: "${CLP_LOG_INGESTOR_ENABLED:-1}"
+    environment:
+      CLP_LOGS_DIR: "/var/log/log_ingestor"
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
+    ports:
+      - host_ip: "${CLP_LOG_INGESTOR_HOST:-127.0.0.1}"
+        published: "${CLP_LOG_INGESTOR_PORT:-3002}"
+        target: 3002
+    volumes:
+      - *volume_clp_config_readonly
+      - *volume_clp_logs
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "/opt/clp/bin/log-ingestor",
+      "--config", "/etc/clp-config.yaml",
+      "--host", "0.0.0.0",
+      "--port", "3002"
+    ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "curl",
+        "-f",
+        "http://log_ingestor:3002/health"
       ]

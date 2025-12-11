@@ -4,10 +4,13 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
-use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::{
+    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
+    s3::ObjectMetadata,
+};
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{S3ScannerConfig, SqsListener, SqsListenerConfig},
+    ingestion_job::SqsListener,
 };
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -153,13 +156,11 @@ async fn test_sqs_listener() -> Result<()> {
 
     let aws_config = AwsConfig::from_env()?;
 
-    let secret_access_key =
-        secrecy::SecretString::new(aws_config.secret_access_key.clone().into_boxed_str());
     let sqs_client = clp_rust_utils::sqs::create_new_client(
-        aws_config.endpoint.as_str(),
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
-        &secret_access_key,
+        aws_config.secret_access_key.as_str(),
+        Some(aws_config.endpoint.as_str()),
     )
     .await;
 
@@ -170,11 +171,15 @@ async fn test_sqs_listener() -> Result<()> {
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
         ),
-        bucket_name: aws_config.bucket_name.clone(),
-        prefix: prefix.clone(),
-        max_num_messages_to_fetch: 2,
-        init_polling_backoff_sec: 1,
-        max_polling_backoff_sec: 1,
+        base: BaseConfig {
+            region: aws_config.region.clone(),
+            bucket_name: aws_config.bucket_name.clone(),
+            key_prefix: prefix.clone(),
+            dataset: None,
+            timestamp_key: None,
+            unstructured: false,
+            tags: None,
+        },
     };
 
     let (sender, receiver) = mpsc::channel::<ObjectMetadata>(TEST_CHANNEL_CAPACITY);
@@ -187,10 +192,10 @@ async fn test_sqs_listener() -> Result<()> {
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.endpoint.as_str(),
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
-        &secret_access_key,
+        aws_config.secret_access_key.as_str(),
+        Some(aws_config.endpoint.as_str()),
     )
     .await;
 
@@ -232,20 +237,25 @@ async fn test_s3_scanner() -> Result<()> {
 
     let aws_config = AwsConfig::from_env()?;
 
-    let secret_access_key =
-        secrecy::SecretString::new(aws_config.secret_access_key.clone().into_boxed_str());
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.endpoint.as_str(),
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
-        &secret_access_key,
+        aws_config.secret_access_key.as_str(),
+        Some(aws_config.endpoint.as_str()),
     )
     .await;
 
     let s3_scanner_config = S3ScannerConfig {
-        bucket_name: aws_config.bucket_name.clone(),
-        prefix: prefix.clone(),
-        scanning_interval: Duration::from_millis(300),
+        base: BaseConfig {
+            region: aws_config.region.clone(),
+            bucket_name: aws_config.bucket_name.clone(),
+            key_prefix: prefix.clone(),
+            dataset: None,
+            timestamp_key: None,
+            unstructured: false,
+            tags: None,
+        },
+        scanning_interval_sec: 1,
         start_after: None,
     };
 

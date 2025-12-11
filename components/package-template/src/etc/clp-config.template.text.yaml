@@ -7,6 +7,9 @@ package:
 # API server config
 api_server: null
 
+# log-ingestor is not supported in clp-text
+log_ingestor: null
+
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
@@ -25,10 +28,18 @@ api_server: null
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
 #  port: 3306
-#  name: "clp-db"
+#  names:
+#    clp: "clp-db"
+#    spider: "spider-db"
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
+#  logging_level: "INFO"
+#  type: "celery"  # "celery" or "spider"
+#
+#spider_scheduler:
+#  host: "localhost"
+#  port: 6000
 #  logging_level: "INFO"
 #
 #query_scheduler:
