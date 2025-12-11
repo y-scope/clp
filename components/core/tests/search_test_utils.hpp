@@ -22,12 +22,12 @@
 using VarInfo = std::tuple<bool, bool, std::unordered_set<clp::variable_dictionary_id_t>>;
 
 /**
- * @param entries Vector of (id, value) pairs to populate the variable
- * dictionary.
+ * @param entries Vector of (id, value) pairs to populate the variable dictionary.
  * @return A `MockVariableDictionary` initialized with the given entries.
  */
-auto make_var_dict(std::vector<std::pair<size_t, std::string>> const& entries)
-        -> MockVariableDictionary;
+auto make_var_dict(
+        std::vector<std::pair<clp::variable_dictionary_id_t, std::string>> const& entries
+) -> MockVariableDictionary;
 
 /**
  * @param entries Vector of logtypes, where each logtype is represented by a vector of tokens. Each
