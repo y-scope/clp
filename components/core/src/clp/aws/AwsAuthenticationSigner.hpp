@@ -62,7 +62,7 @@ public:
     [[nodiscard]] auto get_scheme() const -> std::string_view { return m_scheme; }
 
 private:
-    Style m_style;
+    Style m_style{Style::VirtualHost};
     std::string m_region;
     std::string m_end_point;
     std::string m_bucket;
