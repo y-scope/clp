@@ -1,11 +1,6 @@
 import {type TreeNode} from "./utils";
 
 
-/**
- * Height of the dropdown list in pixels.
- */
-const LIST_HEIGHT_PX = 512;
-
 const ROOT_PATH = "/";
 
 /**
@@ -21,7 +16,6 @@ const ROOT_NODE: TreeNode = Object.freeze({
 
 
 export {
-    LIST_HEIGHT_PX,
     ROOT_NODE,
     ROOT_PATH,
 };

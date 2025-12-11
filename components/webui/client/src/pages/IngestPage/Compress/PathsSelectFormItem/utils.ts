@@ -15,6 +15,28 @@ interface TreeNode extends Omit<GetProp<TreeSelectProps, "treeData">[number], "l
     id: string;
 }
 
+/**
+ * Percentage of viewport height to use for the dropdown list.
+ */
+const LIST_HEIGHT_VIEWPORT_PERCENT = 0.5;
+
+const MIN_LIST_HEIGHT_PX = 200;
+const MAX_LIST_HEIGHT_PX = 600;
+
+
+/**
+ * Calculates list height based on window height.
+ *
+ * @return The calculated height clamped between min and max values.
+ */
+const getListHeight = (): number => {
+    const calculatedHeight = Math.round(window.innerHeight * LIST_HEIGHT_VIEWPORT_PERCENT);
+
+    return Math.max(
+        MIN_LIST_HEIGHT_PX,
+        Math.min(MAX_LIST_HEIGHT_PX, calculatedHeight)
+    );
+};
 
 /**
  * Joins path segments into a normalized POSIX path. Empty segments are ignored and consecutive
@@ -87,6 +109,7 @@ const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
 export type {TreeNode};
 export {
     addServerPrefix,
+    getListHeight,
     ROOT_PATH,
     toTreeNode,
 };

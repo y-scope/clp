@@ -1,5 +1,6 @@
 import {
     useCallback,
+    useEffect,
     useRef,
     useState,
 } from "react";
@@ -14,12 +15,10 @@ import {
 
 import {listFiles} from "../../../../api/os";
 import SwitcherIcon from "./SwitcherIcon";
-import {
-    LIST_HEIGHT_PX,
-    ROOT_NODE,
-} from "./typings";
+import {ROOT_NODE} from "./typings";
 import {
     addServerPrefix,
+    getListHeight,
     toTreeNode,
     type TreeNode,
 } from "./utils";
@@ -38,6 +37,19 @@ type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0
 const PathsSelectFormItem = () => {
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+    const [listHeight, setListHeight] = useState<number>(getListHeight);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setListHeight(getListHeight());
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
 
     // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
@@ -96,7 +108,7 @@ const PathsSelectFormItem = () => {
         >
             <TreeSelect
                 allowClear={true}
-                listHeight={LIST_HEIGHT_PX}
+                listHeight={listHeight}
                 loadData={handleLoadData}
                 multiple={true}
                 placeholder={"Select paths to compress"}
