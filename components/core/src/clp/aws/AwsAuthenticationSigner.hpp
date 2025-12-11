@@ -59,7 +59,7 @@ public:
 
     [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
 
-    [[nodiscard]] auto get_schema() const -> std::string_view { return m_schema; }
+    [[nodiscard]] auto get_scheme() const -> std::string_view { return m_scheme; }
 
 private:
     Style m_style;
@@ -68,7 +68,7 @@ private:
     std::string m_bucket;
     std::string m_key;
     std::string m_host;
-    std::string m_schema;
+    std::string m_scheme;
 };
 
 /**

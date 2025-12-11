@@ -174,7 +174,7 @@ S3Url::S3Url(string const& url) {
     // Virtual-hosted-style HTTP URL format: https://[bucket].s3.[region].[endpoint]/[key]
     boost::regex const host_style_url_regex{fmt::format(
             R"({}://(?<host>{}\.s3\.({}\.)?{})/{}.*)",
-            cSchemaRegex,
+            cSchemeRegex,
             cBucketRegex,
             cRegionRegex,
             cEndpointRegex,
@@ -183,7 +183,7 @@ S3Url::S3Url(string const& url) {
     // Path-style HTTP URL format: https://s3.[region].[endpoint]/[bucket]/[key]
     boost::regex const path_style_url_regex{fmt::format(
             R"({}://(?<host>(s3\.({}\.)?)?{})/{}/{}.*)",
-            cSchemaRegex,
+            cSchemeRegex,
             cRegionRegex,
             cEndpointRegex,
             cBucketRegex,
@@ -209,7 +209,7 @@ S3Url::S3Url(string const& url) {
     m_key = match["key"];
     m_end_point = match["endpoint"];
     m_host = match["host"];
-    m_schema = match["schema"];
+    m_scheme = match["scheme"];
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
@@ -249,7 +249,7 @@ AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& pre
         case S3Url::Style::VirtualHost:
             presigned_url = fmt::format(
                     "{}://{}/{}?{}&{}={}",
-                    s3_url.get_schema(),
+                    s3_url.get_scheme(),
                     s3_url.get_host(),
                     s3_url.get_key(),
                     canonical_query_string,
@@ -260,7 +260,7 @@ AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& pre
         case S3Url::Style::Path:
             presigned_url = fmt::format(
                     "{}://{}/{}/{}?{}&{}={}",
-                    s3_url.get_schema(),
+                    s3_url.get_scheme(),
                     s3_url.get_host(),
                     s3_url.get_bucket(),
                     s3_url.get_key(),

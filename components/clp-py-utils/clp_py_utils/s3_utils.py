@@ -36,7 +36,7 @@ AWS_ENV_VAR_SESSION_TOKEN: Final[str] = "AWS_SESSION_TOKEN"
 
 S3_OBJECT_DELETION_BATCH_SIZE_MAX: Final[int] = 1000
 
-SCHEMA_REGEXP = r"(?P<schema>(http|https))"
+SCHEME_REGEXP = r"(?P<scheme>(http|https))"
 ENDPOINT_REGEXP = r"(?P<endpoint>[a-z0-9.-]+(\:[0-9]+)?)"
 REGION_CODE_REGEXP = r"(?P<region_code>[a-z]+-[a-z]+-[0-9])"
 BUCKET_NAME_REGEXP = r"(?P<bucket_name>[a-z0-9.-]+)"
@@ -225,7 +225,7 @@ def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
     host_style_url_regex = re.compile(
         r"%s://%s\.s3\.(%s\.)?%s/%s.*"
         % (
-            SCHEMA_REGEXP,
+            SCHEME_REGEXP,
             BUCKET_NAME_REGEXP,
             REGION_CODE_REGEXP,
             ENDPOINT_REGEXP,
@@ -238,7 +238,7 @@ def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
         path_style_url_regex = re.compile(
             r"%s://(s3\.(%s\.)?)?%s/%s/%s.*"
             % (
-                SCHEMA_REGEXP,
+                SCHEME_REGEXP,
                 REGION_CODE_REGEXP,
                 ENDPOINT_REGEXP,
                 BUCKET_NAME_REGEXP,
@@ -250,12 +250,12 @@ def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
     if match is None:
         raise ValueError(f"Unsupported URL format: {s3_url}")
 
-    schema = match.group("schema")
+    scheme = match.group("scheme")
     endpoint = match.group("endpoint")
     region_code = match.group("region_code")
     bucket_name = match.group("bucket_name")
 
-    endpoint_url = f"{schema}://{endpoint}" if endpoint != AWS_ENDPOINT else None
+    endpoint_url = f"{scheme}://{endpoint}" if endpoint != AWS_ENDPOINT else None
     key_prefix = match.group("key_prefix")
 
     return endpoint_url, region_code, bucket_name, key_prefix
@@ -274,18 +274,18 @@ def generate_s3_url(
             return f"https://{bucket_name}.s3.{AWS_ENDPOINT}/{object_key}"
         return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
-    endpoint_url_regex = re.compile(r"%s://%s/?$" % (SCHEMA_REGEXP, ENDPOINT_REGEXP))
+    endpoint_url_regex = re.compile(r"%s://%s/?$" % (SCHEME_REGEXP, ENDPOINT_REGEXP))
     match = endpoint_url_regex.match(endpoint_url)
     if match is None:
         raise ValueError(f"Unsupported endpoint URL format: {endpoint_url}")
 
-    schema = match.group("schema")
+    scheme = match.group("scheme")
     endpoint = match.group("endpoint")
 
     if region_code is None:
-        return f"{schema}://{endpoint}/{bucket_name}/{object_key}"
+        return f"{scheme}://{endpoint}/{bucket_name}/{object_key}"
 
-    return f"{schema}://s3.{region_code}.{endpoint}/{bucket_name}/{object_key}"
+    return f"{scheme}://s3.{region_code}.{endpoint}/{bucket_name}/{object_key}"
 
 
 def s3_get_object_metadata(s3_input_config: S3InputConfig) -> list[FileMetadata]:
