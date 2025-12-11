@@ -1,5 +1,5 @@
 import {FileEntry} from "@webui/common/schemas/os";
-import type {
+import {
     GetProp,
     TreeSelectProps,
 } from "antd";
@@ -8,7 +8,12 @@ import {settings} from "../../../../settings";
 import {ROOT_PATH} from "./typings";
 
 
-type TreeNode = Omit<GetProp<TreeSelectProps, "treeData">[number], "label">;
+/**
+ * Tree node for Ant Design TreeSelect in simple mode (treeDataSimpleMode).
+ */
+interface TreeNode extends Omit<GetProp<TreeSelectProps, "treeData">[number], "label"> {
+    id: string;
+}
 
 
 /**

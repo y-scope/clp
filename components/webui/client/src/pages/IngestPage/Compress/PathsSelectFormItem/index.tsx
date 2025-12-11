@@ -44,8 +44,8 @@ const PathsSelectFormItem = () => {
 
     const addNodes = useCallback((nodes: TreeNode[]) => {
         setTreeData((prev) => {
-            const existingIds = new Set(prev.map((n) => n["id"] as string));
-            const newNodes = nodes.filter((n) => false === existingIds.has(n["id"] as string));
+            const existingIds = new Set(prev.map((n) => n.id));
+            const newNodes = nodes.filter((n) => false === existingIds.has(n.id));
 
             return 0 < newNodes.length ?
                 [
