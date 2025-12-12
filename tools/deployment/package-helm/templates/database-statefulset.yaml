@@ -48,7 +48,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
-                  key: "password"
+                  key: "root_password"
           ports:
             - name: "database"
               containerPort: 3306
