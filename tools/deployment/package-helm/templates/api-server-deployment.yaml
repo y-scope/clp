@@ -57,12 +57,12 @@ spec:
             - name: "api-server"
               containerPort: 3001
           volumeMounts:
+            - name: "api-server-logs"
+              mountPath: "/var/log/api_server"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "api-server-logs"
-              mountPath: "/var/log/api_server"
           command: [
             "/opt/clp/bin/api_server",
             "--host", "0.0.0.0",
