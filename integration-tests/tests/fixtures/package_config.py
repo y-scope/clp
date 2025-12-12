@@ -16,6 +16,8 @@ from tests.utils.clp_mode_utils import (
     get_clp_config_from_mode,
     get_required_component_list,
 )
+from tests.utils.config import PackageConfig, PackagePathConfig
+from tests.utils.port_utils import assign_ports_from_base
 from tests.utils.config import (
     PackageConfig,
     PackagePathConfig,
@@ -36,24 +38,22 @@ def fixt_package_config(
 
     :param request:
     :return: An iterator that yields the PackageConfig object for the specified mode.
+    :raise ValueError: if the CLP base port's value is invalid.
     """
     mode_name: str = request.param
     logger.debug("Creating a temporary config file for the %s package.", mode_name)
 
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
-    # Assign ports based on BASE_PORT from ini.
-    base_port_string = request.config.getini("BASE_PORT")
+    # Assign ports based on the clp base port CLI option.
+    base_port_string = request.config.getoption("--base-port")
     try:
         base_port = int(base_port_string)
     except ValueError as err:
-        err_msg = (
-            f"Invalid BASE_PORT value '{base_port_string}' in pytest.ini; expected an integer."
-        )
+        err_msg = f"Invalid value '{base_port_string}' for '--base-port'; expected an integer."
         raise ValueError(err_msg) from err
     assign_ports_from_base(base_port, clp_config_obj)
 
-    # Compute the list of required components for this mode.
     required_components = get_required_component_list(clp_config_obj)
 
     # Build the job list for this mode and the current job filter.
@@ -67,6 +67,7 @@ def fixt_package_config(
         mode_name=mode_name,
         component_list=required_components,
         clp_config=clp_config_obj,
+        base_port=base_port,
         package_job_list=package_job_list,
     )
 

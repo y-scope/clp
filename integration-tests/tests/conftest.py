@@ -17,10 +17,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
     :param parser:
     """
-    parser.addini(
-        "BASE_PORT",
-        "Base port for CLP package integration tests.",
+    parser.addoption(
+        "--base-port",
+        action="store",
         default="55000",
+        help="Base port for CLP package integration tests.",
     )
     parser.addoption(
         "--job-name-contains",

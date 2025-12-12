@@ -245,6 +245,9 @@ class PackageConfig:
     #: The ClpConfig instance that describes this package configuration.
     clp_config: ClpConfig
 
+    #: The base port from which all ports for the components are derived.
+    base_port: int
+
     #: The list of jobs that this package will run during the test.
     package_job_list: PackageJobList | None
 
