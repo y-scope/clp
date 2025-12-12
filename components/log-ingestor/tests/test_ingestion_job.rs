@@ -144,7 +144,7 @@ async fn upload_noise_objects(
 
 /// # Returns
 ///
-/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}/`.
+/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}`.
 fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
     NonEmptyString::from_string(format!("test-{job_id}"))
 }
