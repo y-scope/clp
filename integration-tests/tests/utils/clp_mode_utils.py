@@ -30,6 +30,7 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
             query_engine=QueryEngine.CLP,
         ),
         api_server=None,
+        log_ingestor=None,
     ),
     "clp-json": lambda: ClpConfig(
         package=Package(
@@ -69,30 +70,6 @@ CLP_BASE_COMPONENTS = [
 ]
 
 CLP_API_SERVER_COMPONENT = _to_docker_compose_service_name(API_SERVER_COMPONENT_NAME)
-
-
-def _match_objects_by_explicit_fields(intended_obj: Any, running_obj: Any) -> bool:
-    """
-    Compares `intended_obj` and `running_obj` using Pydantic's model_fields_set to recursively match
-    only the fields that were explicitly set when `intended_config` was initialized.
-
-    If both objects are Pydantic models, the function only inspects fields that were explicitly
-    set on the intended object. For other types, the function falls back to standard equality.
-    """
-    if isinstance(intended_obj, BaseModel):
-        for field_name in intended_obj.model_fields_set:
-            intended_field_value = getattr(intended_obj, field_name)
-            running_field_value = getattr(running_obj, field_name)
-
-            if not _match_objects_by_explicit_fields(
-                intended_field_value,
-                running_field_value,
-            ):
-                return False
-
-        return True
-
-    return bool(intended_obj == running_obj)
 
 
 def compare_mode_signatures(intended_config: ClpConfig, running_config: ClpConfig) -> bool:
@@ -137,3 +114,24 @@ def get_required_component_list(config: ClpConfig) -> list[str]:
         component_list.append(CLP_API_SERVER_COMPONENT)
 
     return component_list
+
+
+def _match_objects_by_explicit_fields(intended_obj: Any, running_obj: Any) -> bool:
+    """
+    Compares `intended_obj` and `running_obj` using Pydantic's `model_fields_set` to recursively
+    match only the fields that were explicitly set when `intended_obj` was initialized.
+
+    When both objects are Pydantic models, the function only inspects fields that were explicitly
+    set on the `intended_obj`. For other data types, the function uses standard equality.
+    """
+    if isinstance(intended_obj, BaseModel):
+        for field_name in intended_obj.model_fields_set:
+            intended_field_value = getattr(intended_obj, field_name)
+            running_field_value = getattr(running_obj, field_name)
+
+            if not _match_objects_by_explicit_fields(intended_field_value, running_field_value):
+                return False
+
+        return True
+
+    return bool(intended_obj == running_obj)
