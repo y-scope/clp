@@ -227,7 +227,7 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
 
 def _parse_and_validate_s3_object_urls(
     urls: list[str],
-) -> tuple[str, str, str, str, list[str]]:
+) -> tuple[str | None, str | None, str, str, list[str]]:
     """
     Parses and validates S3 object URLs.
 
@@ -238,6 +238,7 @@ def _parse_and_validate_s3_object_urls(
 
     :param urls:
     :return: A tuple containing:
+        - The endpoint url.
         - The region code.
         - The bucket.
         - The common key prefix.
