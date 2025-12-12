@@ -256,7 +256,7 @@ def run_package_compression_script(
     run_and_assert(compression_cmd)
 
     # Assert that the compression job was successful with package decompression.
-    if compression_job.mode in ("clp-json", "clp-json-presto"):
+    if compression_job.mode in ("clp-json", "clp-presto"):
         # TODO: Waiting for PR 1299 to be merged.
         assert True
     elif compression_job.mode == "clp-text":

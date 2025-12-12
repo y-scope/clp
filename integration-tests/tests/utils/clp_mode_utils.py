@@ -42,7 +42,7 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
             query_engine=QueryEngine.CLP_S,
         ),
     ),
-    "clp-json-presto": lambda: ClpConfig(
+    "clp-presto": lambda: ClpConfig(
         package=Package(
             storage_engine=StorageEngine.CLP_S,
             query_engine=QueryEngine.PRESTO,

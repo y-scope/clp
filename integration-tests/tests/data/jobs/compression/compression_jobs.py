@@ -16,6 +16,16 @@ PACKAGE_COMPRESSION_JOBS: dict[str, PackageCompressionJob] = {
         },
         args=None,
     ),
+    "compress-json-multifile-default-dataset": PackageCompressionJob(
+        job_name="compress-json-multifile-default-dataset",
+        mode="clp-json",
+        script_path=Path("sbin") / "compress.sh",
+        log_path=Path("json-multifile") / "logs",
+        flags={
+            "--timestamp-key": "timestamp",
+        },
+        args=None,
+    ),
     "compress-json-multifile-tagged": PackageCompressionJob(
         job_name="compress-json-multifile-tagged",
         mode="clp-json",
@@ -24,6 +34,7 @@ PACKAGE_COMPRESSION_JOBS: dict[str, PackageCompressionJob] = {
         flags={
             "--timestamp-key": "timestamp",
             "--dataset": "json_multifile_tagged",
+            "--tags": "tag1",
         },
         args=None,
     ),
@@ -40,7 +51,7 @@ PACKAGE_COMPRESSION_JOBS: dict[str, PackageCompressionJob] = {
     ),
     "compress-json-singlefile-2": PackageCompressionJob(
         job_name="compress-json-singlefile-2",
-        mode="clp-json-presto",
+        mode="clp-presto",
         script_path=Path("sbin") / "compress.sh",
         log_path=Path("json-singlefile-2") / "logs",
         flags={

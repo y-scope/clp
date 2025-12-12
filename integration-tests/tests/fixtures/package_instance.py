@@ -43,7 +43,7 @@ def fixt_package_instance(
         start_clp_package(fixt_package_config)
         instance = PackageInstance(package_config=fixt_package_config)
 
-        if mode_name == "clp-json-presto":
+        if mode_name == "clp-presto":
             start_presto_cluster(fixt_package_config)
 
         yield instance
@@ -55,7 +55,7 @@ def fixt_package_instance(
             " base_port with the '--base-port' flag."
         )
     finally:
-        if mode_name == "clp-json-presto":
+        if mode_name == "clp-presto":
             stop_presto_cluster()
 
         stop_clp_package(fixt_package_config)

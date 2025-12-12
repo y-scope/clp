@@ -35,7 +35,7 @@ def test_clp_package(fixt_package_instance: PackageInstance) -> None:
 
     # If running a Presto cluster as part of the test, validate that it is running properly.
     mode_name = fixt_package_instance.package_config.mode_name
-    if mode_name == "clp-json-presto":
+    if mode_name == "clp-presto":
         validate_presto_running()
 
     # Run all jobs.
