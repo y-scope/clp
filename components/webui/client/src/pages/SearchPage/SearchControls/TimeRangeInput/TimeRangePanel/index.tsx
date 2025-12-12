@@ -1,6 +1,9 @@
 import React from "react";
 
-import {ConfigProvider, Menu} from "antd";
+import {
+    ConfigProvider,
+    Menu,
+} from "antd";
 
 import useSearchStore from "../../../SearchState/index";
 import {
@@ -44,10 +47,10 @@ const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
 
     return (
         <div className={styles["panelContainer"]}>
-            <ConfigProvider theme={{ components: { Menu: { itemHeight: 28 } } }}>
+            <ConfigProvider theme={{components: {Menu: {itemHeight: 28}}}}>
                 <Menu
                     className={styles["presetList"]}
-                    mode="vertical"
+                    mode={"vertical"}
                     selectable={true}
                     selectedKeys={[timeRangeOption]}
                     onClick={({key}) => {
