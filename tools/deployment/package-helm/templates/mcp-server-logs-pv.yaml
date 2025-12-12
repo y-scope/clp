@@ -6,6 +6,6 @@
   "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/mcp-server" .Values.clpConfig.logs_directory)
+  "hostPath" (printf "%s/mcp_server" .Values.clpConfig.logs_directory)
 ) }}
 {{- end }}
