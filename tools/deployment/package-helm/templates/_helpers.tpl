@@ -204,7 +204,7 @@ Creates the RESULT_BACKEND env var for Celery workers.
 {{- $pass := .root.Values.credentials.redis.password -}}
 {{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
 - name: "RESULT_BACKEND"
-  value: {{ printf "redis://default:%s@%s:6379/%s" $pass $host .database | quote }}
+  value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
 {{- end }}
 
 {{/*

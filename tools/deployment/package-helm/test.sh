@@ -8,7 +8,8 @@ set -o pipefail
 
 kind delete cluster --name clp-test
 rm -rf /tmp/clp
-mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache,compression-scheduler,compression-worker,query-scheduler,query-worker,reducer,garbage-collector,api-server,mcp-server}
+mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results_cache}
+mkdir -p /tmp/clp/var/log/{compression_scheduler,compression_worker,query_scheduler,query_worker,reducer,garbage_collector,api_server,mcp_server}
 mkdir -p /tmp/clp/var/data/{archives,staged-archives,staged-streams,streams}
 mkdir -p /tmp/clp/var/log/user
 mkdir -p /tmp/clp/var/tmp
