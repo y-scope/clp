@@ -31,8 +31,11 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "BROKER_URL"
-              value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
+            {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 12 }}
+            {{- include "clp.celeryResultBackendEnvVar" (dict
+              "root" .
+              "database" .Values.clpConfig.redis.compression_backend_database
+            ) | nindent 12 }}
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yaml"
             - name: "CLP_HOME"
@@ -45,8 +48,6 @@ spec:
               value: "/var/log/compression_worker/worker.log"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
-            - name: "RESULT_BACKEND"
-              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.compression_backend_database }}"
           volumeMounts:
             - name: "compression-worker-logs"
               mountPath: "/var/log/compression_worker"

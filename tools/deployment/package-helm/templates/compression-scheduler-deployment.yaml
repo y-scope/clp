@@ -24,34 +24,47 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict "root" . "type" "job" "name" "db-table-creator") | nindent 8 }}
-        {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "queue") | nindent 8 }}
-        {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "redis") | nindent 8 }}
+        {{- include "clp.waitFor" (dict
+          "root" .
+          "type" "job"
+          "name" "db-table-creator"
+        ) | nindent 8 }}
+        {{- include "clp.waitFor" (dict
+          "root" .
+          "type" "service"
+          "name" "queue"
+        ) | nindent 8 }}
+        {{- include "clp.waitFor" (dict
+          "root" .
+          "type" "service"
+          "name" "redis"
+        ) | nindent 8 }}
       containers:
         - name: "compression-scheduler"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "BROKER_URL"
-              value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
+            {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 12 }}
+            {{- include "clp.celeryResultBackendEnvVar" (dict
+              "root" .
+              "database" .Values.clpConfig.redis.compression_backend_database
+            ) | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
               value: "/var/log/compression_scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
-            - name: "RESULT_BACKEND"
-              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.compression_backend_database }}"
           volumeMounts:
             - name: "compression-scheduler-logs"
               mountPath: "/var/log/compression_scheduler"

@@ -180,6 +180,34 @@ Creates a volume definition that references a PersistentVolumeClaim.
 {{- end }}
 
 {{/*
+Creates the BROKER_URL env var for Celery workers.
+
+@param {object} . Root template context
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryBrokerUrlEnvVar" -}}
+{{- $user := .Values.credentials.queue.username -}}
+{{- $pass := .Values.credentials.queue.password -}}
+{{- $host := printf "%s-queue" (include "clp.fullname" .) -}}
+- name: "BROKER_URL"
+  value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
+{{- end }}
+
+{{/*
+Creates the RESULT_BACKEND env var for Celery workers.
+
+@param {object} root Root template context
+@param {string} database Redis database number from config
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryResultBackendEnvVar" -}}
+{{- $pass := .root.Values.credentials.redis.password -}}
+{{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
+- name: "RESULT_BACKEND"
+  value: {{ printf "redis://default:%s@%s:6379/%s" $pass $host .database | quote }}
+{{- end }}
+
+{{/*
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context

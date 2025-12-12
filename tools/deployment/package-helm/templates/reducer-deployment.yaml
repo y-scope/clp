@@ -26,8 +26,16 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "query-scheduler") | nindent 8 }}
-        {{- include "clp.waitFor" (dict "root" . "type" "job" "name" "results-cache-indices-creator") | nindent 8 }}
+        {{- include "clp.waitFor" (dict
+          "root" .
+          "type" "service"
+          "name" "query-scheduler"
+        ) | nindent 8 }}
+        {{- include "clp.waitFor" (dict
+          "root" .
+          "type" "job"
+          "name" "results-cache-indices-creator"
+        ) | nindent 8 }}
       containers:
         - name: "reducer"
           image: "{{ include "clp.image.ref" . }}"
