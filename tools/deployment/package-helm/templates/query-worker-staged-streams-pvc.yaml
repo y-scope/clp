@@ -1,6 +1,7 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "staged-streams"
+  "component" "query-worker"
+  "name" "staged-streams"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteMany")
 ) }}

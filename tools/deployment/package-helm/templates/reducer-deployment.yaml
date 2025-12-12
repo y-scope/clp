@@ -56,9 +56,11 @@ spec:
             "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
           ]
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "reducer"
+          "name" "logs"
+        ) | nindent 8 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "reducer-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-reducer-logs

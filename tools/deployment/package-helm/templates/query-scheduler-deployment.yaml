@@ -70,9 +70,11 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "query-scheduler"
+          "name" "logs"
+        ) | nindent 8 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "query-scheduler-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-query-scheduler-logs

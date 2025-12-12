@@ -1,6 +1,7 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "staged-archives"
+  "component" "compression-worker"
+  "name" "staged-archives"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteMany")
 ) }}

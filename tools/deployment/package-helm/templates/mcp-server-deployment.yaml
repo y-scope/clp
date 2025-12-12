@@ -74,10 +74,12 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *mcp-server-health-check
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "mcp-server"
+          "name" "logs"
+        ) | nindent 8 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "mcp-server-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-mcp-server-logs
 {{- end }}

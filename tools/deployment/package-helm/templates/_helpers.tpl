@@ -98,8 +98,8 @@ failureThreshold: 3
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
-@param {string} name PV name
-@param {string} component Component label
+@param {string} component Component category (e.g., "shared-data", "database")
+@param {string} name Storage name (e.g., "archives", "logs", "data")
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
   "node-role.kubernetes.io/control-plane"
@@ -112,7 +112,7 @@ Creates a local PersistentVolume.
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ .component }}-{{ .name }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component | quote }}
@@ -139,7 +139,8 @@ spec:
 Creates a PersistentVolumeClaim for the given component.
 
 @param {object} root Root template context
-@param {string} component Component label
+@param {string} component Component category (e.g., "shared-data", "database")
+@param {string} name Storage name (e.g., "archives", "logs", "data")
 @param {string} capacity Storage capacity
 @param {string[]} accessModes Access modes
 @return {string} YAML-formatted PersistentVolumeClaim resource
@@ -148,7 +149,7 @@ Creates a PersistentVolumeClaim for the given component.
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
-  name: {{ include "clp.fullname" .root }}-{{ .component }}
+  name: {{ include "clp.fullname" .root }}-{{ .component }}-{{ .name }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component | quote }}
@@ -162,6 +163,20 @@ spec:
   resources:
     requests:
       storage: {{ .capacity }}
+{{- end }}
+
+{{/*
+Creates a volume definition that references a PersistentVolumeClaim.
+
+@param {object} root Root template context
+@param {string} component Component category (e.g., "shared-data", "database")
+@param {string} name Storage name (e.g., "archives", "logs", "data")
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.pvcVolume" -}}
+- name: {{ printf "%s-%s" .component .name | quote }}
+  persistentVolumeClaim:
+    claimName: {{ include "clp.fullname" .root }}-{{ .component }}-{{ .name }}
 {{- end }}
 
 {{/*

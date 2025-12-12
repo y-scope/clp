@@ -1,6 +1,7 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "archives"
+  "component" "shared-data"
+  "name" "archives"
   "capacity" "50Gi"
   "accessModes" (list "ReadWriteMany")
 ) }}

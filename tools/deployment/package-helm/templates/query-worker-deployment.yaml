@@ -54,11 +54,11 @@ spec:
               readOnly: true
             - name: "query-worker-logs"
               mountPath: "/var/log/query_worker"
-            - name: "archives"
-              mountPath: "/var/data/archives"
-            - name: "staged-streams"
+            - name: "query-worker-staged-streams"
               mountPath: "/var/data/staged-streams"
-            - name: "streams"
+            - name: "shared-data-archives"
+              mountPath: "/var/data/archives"
+            - name: "shared-data-streams"
               mountPath: "/var/data/streams"
           command: [
             "python3", "-u",
@@ -72,18 +72,26 @@ spec:
             "-n", "query-worker"
           ]
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "query-worker"
+          "name" "logs"
+        ) | nindent 8 }}
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "query-worker"
+          "name" "staged-streams"
+        ) | nindent 8 }}
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "shared-data"
+          "name" "archives"
+        ) | nindent 8 }}
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "shared-data"
+          "name" "streams"
+        ) | nindent 8 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "query-worker-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-query-worker-logs
-        - name: "archives"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-archives
-        - name: "staged-streams"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-staged-streams
-        - name: "streams"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-streams

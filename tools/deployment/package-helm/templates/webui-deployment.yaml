@@ -63,7 +63,7 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
-            - name: "streams"
+            - name: "shared-data-streams"
               mountPath: "/var/data/streams"
           command: [
             "/opt/clp/bin/node-22",
@@ -77,12 +77,14 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "shared-data"
+          "name" "streams"
+        ) | nindent 8 }}
         - name: "client-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "streams"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-streams

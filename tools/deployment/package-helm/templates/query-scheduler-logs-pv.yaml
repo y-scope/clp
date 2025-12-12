@@ -1,7 +1,7 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-query-scheduler-logs" (include "clp.fullname" .))
-  "component" "query-scheduler-logs"
+  "component" "query-scheduler"
+  "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")

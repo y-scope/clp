@@ -48,21 +48,21 @@ spec:
             - name: "RESULT_BACKEND"
               value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.compression_backend_database }}"
           volumeMounts:
+            - name: "compression-worker-logs"
+              mountPath: "/var/log/compression_worker"
+            - name: "compression-worker-staged-archives"
+              mountPath: "/var/data/staged-archives"
+            - name: "compression-worker-tmp"
+              mountPath: "/var/tmp"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "compression-worker-logs"
-              mountPath: "/var/log/compression_worker"
-            - name: "archives"
-              mountPath: "/var/data/archives"
             - name: "logs-input"
               mountPath: "/mnt/logs"
               readOnly: true
-            - name: "staged-archives"
-              mountPath: "/var/data/staged-archives"
-            - name: "tmp"
-              mountPath: "/var/tmp"
+            - name: "shared-data-archives"
+              mountPath: "/var/data/archives"
           command: [
             "python3", "-u",
             "/opt/clp/lib/python3/site-packages/bin/celery",
@@ -75,22 +75,30 @@ spec:
             "-n", "compression-worker"
           ]
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "compression-worker"
+          "name" "logs"
+        ) | nindent 8 }}
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "compression-worker"
+          "name" "staged-archives"
+        ) | nindent 8 }}
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "compression-worker"
+          "name" "tmp"
+        ) | nindent 8 }}
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "shared-data"
+          "name" "archives"
+        ) | nindent 8 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "compression-worker-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-compression-worker-logs
-        - name: "archives"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-archives
         - name: "logs-input"
           hostPath:
             path: "{{ .Values.clpConfig.logs_input.directory }}"
             type: "Directory"
-        - name: "staged-archives"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-staged-archives
-        - name: "tmp"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-tmp

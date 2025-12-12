@@ -1,9 +1,9 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-staged-archives" (include "clp.fullname" .))
-  "component" "staged-archives"
+  "component" "compression-worker"
+  "name" "staged-archives"
   "nodeRole" "control-plane"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteMany")
-  "hostPath" "/tmp/clp/var/data/staged-archives"
+  "hostPath" (printf "%s/staged-archives" .Values.clpConfig.data_directory)
 ) }}

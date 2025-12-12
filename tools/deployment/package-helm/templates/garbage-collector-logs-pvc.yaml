@@ -1,6 +1,7 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "garbage-collector-logs"
+  "component" "garbage-collector"
+  "name" "logs"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}

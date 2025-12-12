@@ -70,9 +70,11 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *api-server-health-check
       volumes:
+        {{- include "clp.pvcVolume" (dict
+          "root" .
+          "component" "api-server"
+          "name" "logs"
+        ) | nindent 8 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "api-server-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-api-server-logs

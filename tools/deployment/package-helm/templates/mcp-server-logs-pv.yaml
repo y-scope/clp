@@ -1,9 +1,11 @@
+{{- if .Values.clpConfig.mcp_server }}
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-mcp-server-logs" (include "clp.fullname" .))
-  "component" "mcp-server-logs"
+  "component" "mcp-server"
+  "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/mcp-server" .Values.clpConfig.logs_directory)
 ) }}
+{{- end }}
