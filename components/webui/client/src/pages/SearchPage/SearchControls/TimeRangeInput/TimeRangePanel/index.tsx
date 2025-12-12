@@ -65,12 +65,6 @@ const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
                             onClick={() => {
                                 handlePresetClick(option);
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = token.controlItemBgHover;
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "transparent";
-                            }}
                         >
                             {option}
                         </li>

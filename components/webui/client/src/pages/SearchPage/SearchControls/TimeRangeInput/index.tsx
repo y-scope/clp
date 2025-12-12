@@ -91,12 +91,6 @@ const TimeRangeInput = () => {
             isPickerOpen={isOpen}/>
     ), [isOpen]);
 
-    const handleCalendarChange = useCallback((
-        dates: RangePickerDates
-    ) => {
-        handleRangePickerChange(dates);
-    }, [handleRangePickerChange]);
-
     const renderFooter = useCallback(() => {
         if (false === isPrestoGuided) {
             return null;
@@ -123,7 +117,7 @@ const TimeRangeInput = () => {
                 }}
                 disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
-                onCalendarChange={handleCalendarChange}
+                onCalendarChange={handleRangePickerChange}
                 onOpenChange={handleOpenChange}/>
         </div>
     );
