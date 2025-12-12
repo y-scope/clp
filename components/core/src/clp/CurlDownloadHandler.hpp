@@ -93,25 +93,25 @@ public:
 
 private:
     /**
-     * Locate the certificate authority(CA) bundle file on the current host.
+     * Locate the certificate authority (CA) bundle file available on the current host.
      *
-     * This provides consistent CA bundle resolution for curl on Linux systems when the runtime
-     * environment differs from the build environment. MacOS and Windows rely on their
-     * native certificate stores and are not checked. See also: https://curl.se/docs/sslcerts.html
+     * This method performs a runtime lookup to provide a predictable CA bundle path for libcurl on
+     * Linux-based systems. It is intended to handle cases where the runtime environment differs
+     * from the build environment. macOS typically use their native system certificate stores and
+     * are not searched by this function.
      *
-     * Resolution order:
-     *   1. Environment variables CURL_CA_BUNDLE then SSL_CERT_FILE, if set.
-     *   2. Well-known CA bundle paths.
-     *   3. If nothing is found, return an empty string. The caller needs to check the output so as
-     *      not to override curl defaults and let it use the platform's own certificate store or
-     *      whatever it was built with.
+     * Resolution order (first match wins):
+     *   1. Environment variables, checked in order: `CURL_CA_BUNDLE`, then `SSL_CERT_FILE`. If the
+     *      variable is set and points to an existing, readable file, that path is returned.
+     *   2. Known distribution-specific default bundle locations (checked in order):
+     *      - Debian / Ubuntu: `/etc/ssl/certs/ca-certificates.crt`
+     *      - CentOS / RHEL / Fedora: `/etc/pki/tls/certs/ca-bundle.crt`
      *
-     * @return Absolute path to the CA bundle file.
+     * @return Absolute path to the discovered CA bundle file.
+     * @return std::nullopt if no CA bundle file could be located. The caller should handle this
+     * case by relying on libcurl's built-in defaults.
      */
-    static auto get_host_ca_bundle_path() -> std::string;
-
-    static constexpr std::string_view cDebianCaBundlePath = "/etc/ssl/certs/ca-certificates.crt";
-    static constexpr std::string_view cCentOsCaBundlePath = "/etc/pki/tls/certs/ca-bundle.crt";
+    [[nodiscard]] static auto get_host_ca_bundle_path() -> std::optional<std::string>;
 
     CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
