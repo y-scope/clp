@@ -37,6 +37,7 @@ AWS_ENV_VAR_SESSION_TOKEN: Final[str] = "AWS_SESSION_TOKEN"
 S3_OBJECT_DELETION_BATCH_SIZE_MAX: Final[int] = 1000
 
 SCHEME_REGEXP = r"(?P<scheme>(http|https))"
+S3_PREFIX_REGEXP = r"(?P<s3>s3)"
 ENDPOINT_REGEXP = r"(?P<endpoint>[a-z0-9.-]+(\:[0-9]+)?)"
 REGION_CODE_REGEXP = r"(?P<region_code>[a-z]+-[a-z]+-[0-9])"
 BUCKET_NAME_REGEXP = r"(?P<bucket_name>[a-z0-9.-]+)"
@@ -223,27 +224,17 @@ def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
     :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
     """
     host_style_url_regex = re.compile(
-        r"%s://%s\.s3\.(%s\.)?%s/%s.*"
-        % (
-            SCHEME_REGEXP,
-            BUCKET_NAME_REGEXP,
-            REGION_CODE_REGEXP,
-            ENDPOINT_REGEXP,
-            KEY_PREFIX_REGEXP,
-        )
+        rf"{SCHEME_REGEXP}://{BUCKET_NAME_REGEXP}\."
+        rf"{S3_PREFIX_REGEXP}\.({REGION_CODE_REGEXP}\.)?"
+        rf"{ENDPOINT_REGEXP}/{KEY_PREFIX_REGEXP}.*"
     )
     match = host_style_url_regex.match(s3_url)
 
     if match is None:
         path_style_url_regex = re.compile(
-            r"%s://(s3\.(%s\.)?)?%s/%s/%s.*"
-            % (
-                SCHEME_REGEXP,
-                REGION_CODE_REGEXP,
-                ENDPOINT_REGEXP,
-                BUCKET_NAME_REGEXP,
-                KEY_PREFIX_REGEXP,
-            )
+            rf"{SCHEME_REGEXP}://({S3_PREFIX_REGEXP}\."
+            rf"({REGION_CODE_REGEXP}\.)?)?{ENDPOINT_REGEXP}"
+            rf"/{BUCKET_NAME_REGEXP}/{KEY_PREFIX_REGEXP}.*"
         )
         match = path_style_url_regex.match(s3_url)
 
@@ -255,7 +246,8 @@ def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
     region_code = match.group("region_code")
     bucket_name = match.group("bucket_name")
 
-    endpoint_url = f"{scheme}://{endpoint}" if endpoint != AWS_ENDPOINT else None
+    s3_prefix = "s3." if match.group("s3") is not None else ""
+    endpoint_url = f"{scheme}://{s3_prefix}{endpoint}" if endpoint != AWS_ENDPOINT else None
     key_prefix = match.group("key_prefix")
 
     return endpoint_url, region_code, bucket_name, key_prefix
@@ -360,6 +352,7 @@ def s3_delete_by_key_prefix(
     """
     Deletes all objects under the S3 path `bucket_name`/`key_prefix`.
 
+    :param endpoint_url:
     :param region_code:
     :param bucket_name:
     :param key_prefix:
