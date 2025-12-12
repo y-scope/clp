@@ -34,6 +34,7 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
             query_engine=QueryEngine.CLP,
         ),
         api_server=None,
+        log_ingestor=None,
     ),
     "clp-json": lambda: ClpConfig(
         package=Package(
