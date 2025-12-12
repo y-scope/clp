@@ -135,6 +135,9 @@ class PackageConfig:
     #: The Pydantic representation of a CLP package configuration.
     clp_config: ClpConfig
 
+    #: The base port from which all ports for the components are derived.
+    base_port: int
+
     def __post_init__(self) -> None:
         """Write the temporary config file for this package."""
         self._write_temp_config_file()
