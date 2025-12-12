@@ -44,12 +44,14 @@ CurlDownloadHandler::CurlDownloadHandler(
     }
 
     // Set up src url
-    m_easy_handle.set_option(CURLOPT_URL, std::string(src_url).c_str());
+    m_easy_handle.set_option(CURLOPT_URL, std::string{src_url}.c_str());
 
     // Set up CA bundle path
-    auto const ca_bundle_path = get_host_ca_bundle_path();
-    if (false == ca_bundle_path.empty()) {
-        m_easy_handle.set_option(CURLOPT_CAINFO, ca_bundle_path.c_str());
+    if (auto const optional_ca_bundle_path{get_host_ca_bundle_path()};
+        optional_ca_bundle_path.has_value())
+    {
+        m_easy_handle.set_option(CURLOPT_CAINFO, optional_ca_bundle_path->c_str());
+        return;
     }
 
     // Set up progress callback
@@ -124,28 +126,27 @@ CurlDownloadHandler::CurlDownloadHandler(
     m_easy_handle.set_option(CURLOPT_FAILONERROR, static_cast<long>(true));
 }
 
-auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::string {
-#if defined(_WIN32) || defined(__APPLE__)
-    // Use the platform certificate store on Windows and macOS.
-    return {};
-#else
+auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::optional<std::string> {
+    if constexpr (Platform::MacOs == cCurrentPlatform) {
+        return std::nullopt;
+    }
+
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    if (auto* const path = std::getenv("CURL_CA_BUNDLE")) {
+    if (auto const* path{std::getenv("CURL_CA_BUNDLE")}; nullptr != path) {
         return path;
     }
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    if (auto* const path = std::getenv("SSL_CERT_FILE")) {
+    if (auto const* path{std::getenv("SSL_CERT_FILE")}; nullptr != path) {
         return path;
     }
     if (std::filesystem::exists(cDebianCaBundlePath)) {
-        return std::string(cDebianCaBundlePath);
+        return std::string{cDebianCaBundlePath};
     }
     if (std::filesystem::exists(cCentOsCaBundlePath)) {
-        return std::string(cCentOsCaBundlePath);
+        return std::string{cCentOsCaBundlePath};
     }
-    return {};
-#endif
+    return std::nullopt;
 }
 }  // namespace clp
