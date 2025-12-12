@@ -9,7 +9,7 @@ import pytest
 from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
-from tests.utils.clp_mode_utils import compute_mode_signature
+from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_services_in_compose_project
 from tests.utils.utils import load_yaml_to_dict
@@ -87,12 +87,5 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
 
     intended_config = package_instance.package_config.clp_config
 
-    running_signature = compute_mode_signature(running_config)
-    intended_signature = compute_mode_signature(intended_config)
-
-    if running_signature != intended_signature:
-        pytest.fail(
-            f"Mode mismatch: running configuration does not match intended configuration.\n"
-            f"Intended: '{intended_signature}'\n"
-            f"Running: '{running_signature}'"
-        )
+    if not compare_mode_signatures(intended_config, running_config):
+        pytest.fail("Mode mismatch: running configuration does not match intended configuration.\n")
