@@ -7,6 +7,7 @@ use aws_config::AwsConfig;
 use clp_rust_utils::{
     job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
     s3::ObjectMetadata,
+    types::non_empty_string::ExpectedNonEmpty,
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
@@ -96,7 +97,7 @@ async fn upload_and_receive(
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|idx| ObjectMetadata {
             bucket: bucket.clone(),
-            key: NonEmptyString::new(format!("{prefix}/{idx:05}.log")).unwrap(),
+            key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
         })
         .collect();
@@ -131,7 +132,7 @@ async fn upload_noise_objects(
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|_| ObjectMetadata {
             bucket: bucket.clone(),
-            key: NonEmptyString::new(format!("{}.log", Uuid::new_v4())).unwrap(),
+            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
         })
         .collect();
@@ -144,8 +145,8 @@ async fn upload_noise_objects(
 /// # Returns
 ///
 /// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}/`.
-fn get_testing_prefix(job_id: &Uuid) -> NonEmptyString {
-    NonEmptyString::new(format!("test-{job_id}")).unwrap()
+fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
+    NonEmptyString::from_string(format!("test-{job_id}"))
 }
 
 #[tokio::test]
@@ -153,7 +154,7 @@ fn get_testing_prefix(job_id: &Uuid) -> NonEmptyString {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_sqs_listener() -> Result<()> {
     let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix(&job_id);
+    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
@@ -166,13 +167,12 @@ async fn test_sqs_listener() -> Result<()> {
     .await;
 
     let sqs_listener_config = SqsListenerConfig {
-        queue_url: NonEmptyString::new(format!(
+        queue_url: NonEmptyString::from_string(format!(
             "{}/{}/{}",
             aws_config.endpoint.as_str(),
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
-        ))
-        .unwrap(),
+        )),
         base: BaseConfig {
             region: aws_config.region.clone(),
             bucket_name: aws_config.bucket_name.clone(),
@@ -235,7 +235,7 @@ async fn test_sqs_listener() -> Result<()> {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_s3_scanner() -> Result<()> {
     let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix(&job_id);
+    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
