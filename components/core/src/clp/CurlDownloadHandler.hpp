@@ -113,9 +113,6 @@ private:
      */
     [[nodiscard]] static auto get_host_ca_bundle_path() -> std::optional<std::string>;
 
-    static constexpr std::string_view cDebianCaBundlePath{"/etc/ssl/certs/ca-certificates.crt"};
-    static constexpr std::string_view cCentOsCaBundlePath{"/etc/pki/tls/certs/ca-bundle.crt"};
-
     CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
     std::shared_ptr<ErrorMsgBuf> m_error_msg_buf;

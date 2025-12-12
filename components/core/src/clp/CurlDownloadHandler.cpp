@@ -19,6 +19,7 @@
 #include <fmt/format.h>
 
 #include "ErrorCode.hpp"
+#include "Platform.hpp"
 
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
@@ -51,7 +52,6 @@ CurlDownloadHandler::CurlDownloadHandler(
         optional_ca_bundle_path.has_value())
     {
         m_easy_handle.set_option(CURLOPT_CAINFO, optional_ca_bundle_path->c_str());
-        return;
     }
 
     // Set up progress callback
@@ -130,6 +130,9 @@ auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::optional<std::string
     if constexpr (Platform::MacOs == cCurrentPlatform) {
         return std::nullopt;
     }
+
+    static constexpr std::string_view cDebianCaBundlePath{"/etc/ssl/certs/ca-certificates.crt"};
+    static constexpr std::string_view cCentOsCaBundlePath{"/etc/pki/tls/certs/ca-bundle.crt"};
 
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
