@@ -266,18 +266,21 @@ def generate_s3_url(
             return f"https://{bucket_name}.s3.{AWS_ENDPOINT}/{object_key}"
         return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
-    endpoint_url_regex = re.compile(r"%s://%s/?$" % (SCHEME_REGEXP, ENDPOINT_REGEXP))
+    endpoint_url_regex = re.compile(
+        rf"{SCHEME_REGEXP}://({S3_PREFIX_REGEXP}\.)?{ENDPOINT_REGEXP}/?$"
+    )
     match = endpoint_url_regex.match(endpoint_url)
     if match is None:
         raise ValueError(f"Unsupported endpoint URL format: {endpoint_url}")
 
+    s3_prefix = "s3." if match.group("s3") is not None else ""
     scheme = match.group("scheme")
     endpoint = match.group("endpoint")
 
     if region_code is None:
-        return f"{scheme}://{endpoint}/{bucket_name}/{object_key}"
+        return f"{scheme}://{s3_prefix}{endpoint}/{bucket_name}/{object_key}"
 
-    return f"{scheme}://s3.{region_code}.{endpoint}/{bucket_name}/{object_key}"
+    return f"{scheme}://{s3_prefix}{region_code}.{endpoint}/{bucket_name}/{object_key}"
 
 
 def s3_get_object_metadata(s3_input_config: S3InputConfig) -> list[FileMetadata]:

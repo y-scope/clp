@@ -7,8 +7,6 @@
 
 namespace clp::aws::test {
 TEST_CASE("s3_url_parsing", "[aws][AwsAuthenticationSigner]") {
-    AwsAuthenticationSigner signer("", "", "");
-
     clp::aws::S3Url virtual_hosted{"http://test-bucket.s3.us-west-1.amazonaws.com/logs/system.log"};
     REQUIRE("test-bucket" == virtual_hosted.get_bucket());
     REQUIRE("test-bucket.s3.us-west-1.amazonaws.com" == virtual_hosted.get_host());
