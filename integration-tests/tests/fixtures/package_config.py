@@ -18,11 +18,6 @@ from tests.utils.clp_mode_utils import (
 )
 from tests.utils.config import PackageConfig, PackagePathConfig
 from tests.utils.port_utils import assign_ports_from_base
-from tests.utils.config import (
-    PackageConfig,
-    PackagePathConfig,
-)
-from tests.utils.port_utils import assign_ports_from_base
 from tests.utils.utils import unlink
 
 logger = logging.getLogger(__name__)
