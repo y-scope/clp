@@ -3,20 +3,5 @@
 }
 
 .presetList {
-    min-width: 140px;
-    list-style: none;
-    overflow-y: auto;
-    margin: 0;
-}
-
-.presetItem {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.presetItem:hover {
-    background-color: var(--ant-control-item-bg-hover);
+    min-width: 150px;
 }

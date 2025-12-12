@@ -1,6 +1,6 @@
 import React from "react";
 
-import {theme} from "antd";
+import {ConfigProvider, Menu} from "antd";
 
 import useSearchStore from "../../../SearchState/index";
 import {
@@ -25,9 +25,9 @@ interface TimeRangePanelProps {
  * @return
  */
 const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
-    const {token} = theme.useToken();
     const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
     const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
+    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
 
     const handlePresetClick = (option: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(option);
@@ -44,32 +44,25 @@ const TimeRangePanel = ({panelNode, onClose}: TimeRangePanelProps) => {
 
     return (
         <div className={styles["panelContainer"]}>
-            <ul
-                className={styles["presetList"]}
-                style={{
-                    padding: token.paddingXS,
-                    borderInlineEnd: `${token.lineWidth}px ${token.lineType} ${token.colorSplit}`,
-                }}
-            >
-                {TIME_RANGE_OPTION_NAMES
-                    .filter((option) => option !== TIME_RANGE_OPTION.CUSTOM)
-                    .map((option) => (
-                        <li
-                            className={styles["presetItem"]}
-                            key={option}
-                            style={{
-                                borderRadius: token.borderRadiusSM,
-                                paddingInline: token.paddingXS,
-                                paddingBlock: token.paddingXXS,
-                            }}
-                            onClick={() => {
-                                handlePresetClick(option);
-                            }}
-                        >
-                            {option}
-                        </li>
-                    ))}
-            </ul>
+            <ConfigProvider theme={{ components: { Menu: { itemHeight: 28 } } }}>
+                <Menu
+                    className={styles["presetList"]}
+                    mode="vertical"
+                    selectable={true}
+                    selectedKeys={[timeRangeOption]}
+                    onClick={({key}) => {
+                        handlePresetClick(key as TIME_RANGE_OPTION);
+                    }}
+                >
+                    {TIME_RANGE_OPTION_NAMES
+                        .filter((option) => option !== TIME_RANGE_OPTION.CUSTOM)
+                        .map((option) => (
+                            <Menu.Item key={option}>
+                                {option}
+                            </Menu.Item>
+                        ))}
+                </Menu>
+            </ConfigProvider>
             {panelNode}
         </div>
     );
