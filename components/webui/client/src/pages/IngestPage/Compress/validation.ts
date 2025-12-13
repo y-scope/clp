@@ -1,33 +1,9 @@
 import {ValueErrorType} from "@sinclair/typebox/errors";
 import {Value} from "@sinclair/typebox/value";
 import {
-    AbsolutePathSchema,
     DATASET_NAME_MAX_LEN,
     DatasetNameSchema,
 } from "@webui/common/schemas/compression";
-import {Nullable} from "@webui/common/utility-types";
-
-
-/**
- * Validates that all non-empty lines in the input are absolute paths using AbsolutePathSchema.
- *
- * @param value The multiline string input containing paths.
- * @return An error message if validation fails, or null if validation passes.
- */
-const validateAbsolutePaths = (value: string): Nullable<string> => {
-    const lines = value.split("\n");
-    for (const [index, line] of lines.entries()) {
-        const trimmedLine = line.trim();
-        if (0 === trimmedLine.length) {
-            continue;
-        }
-        if (false === Value.Check(AbsolutePathSchema, trimmedLine)) {
-            return `Line ${index + 1}: Path must be absolute (start with "/").`;
-        }
-    }
-
-    return null;
-};
 
 
 /**
@@ -66,7 +42,4 @@ const validateDatasetName = (datasetName: string): string | null => {
 };
 
 
-export {
-    validateAbsolutePaths,
-    validateDatasetName,
-};
+export {validateDatasetName};

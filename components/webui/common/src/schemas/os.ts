@@ -15,6 +15,8 @@ const FileEntrySchema = Type.Object({
     parentPath: StringSchema,
 });
 
+type FileEntry = Static<typeof FileEntrySchema>;
+
 const FileListRequestSchema = Type.Object({
     path: Type.String({
         default: "/",
@@ -33,4 +35,7 @@ export {
     FileListingSchema,
     FileListRequestSchema,
 };
-export type {FileListing};
+export type {
+    FileEntry,
+    FileListing,
+};
