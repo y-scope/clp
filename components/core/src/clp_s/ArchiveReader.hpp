@@ -14,6 +14,7 @@
 #include "ReaderUtils.hpp"
 #include "SchemaReader.hpp"
 #include "search/Projection.hpp"
+#include "SingleFileArchiveDefs.hpp"
 #include "TimestampDictionaryReader.hpp"
 
 namespace clp_s {
@@ -118,6 +119,10 @@ public:
 
     auto get_range_index() const -> std::vector<RangeIndexEntry> const& {
         return m_archive_reader_adaptor->get_range_index();
+    }
+
+    [[nodiscard]] auto get_header() const -> ArchiveHeader const& {
+        return m_archive_reader_adaptor->get_header();
     }
 
     /**

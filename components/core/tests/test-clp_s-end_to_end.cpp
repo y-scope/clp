@@ -19,6 +19,7 @@
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/SchemaTree.hpp"
+#include "../src/clp_s/SingleFileArchiveDefs.hpp"
 #include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
@@ -48,6 +49,7 @@ void literallyCompare(
         std::filesystem::path const& extracted_json_path
 );
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types);
+void validate_archive_header();
 
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
         -> std::filesystem::path {
@@ -89,6 +91,37 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
                 continue;
             }
             REQUIRE(0 != types.count(cur_node.get_type()));
+        }
+
+        REQUIRE_NOTHROW(archive_reader.close());
+    }
+}
+
+void validate_archive_header() {
+    clp_s::ArchiveReader archive_reader;
+    for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
+        REQUIRE_NOTHROW(archive_reader.open(
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = entry.path().string()
+                },
+                clp_s::NetworkAuthOption{}
+        ));
+        auto const& archive_header{archive_reader.get_header()};
+        REQUIRE(clp_s::cArchiveVersion == archive_header.version);
+        auto const [major_version, minor_version, patch_version]
+                = clp_s::decompose_archive_version(archive_header.version);
+        REQUIRE(clp_s::cArchiveMajorVersion == major_version);
+        REQUIRE(clp_s::cArchiveMinorVersion == minor_version);
+        REQUIRE(clp_s::cArchivePatchVersion == patch_version);
+        REQUIRE(archive_header.compressed_size > 0);
+        REQUIRE(archive_header.uncompressed_size > 0);
+        REQUIRE(0 == archive_header.padding);
+        constexpr auto cReservedPaddingLength{
+                sizeof(archive_header.reserved_padding) / sizeof(archive_header.reserved_padding[0])
+        };
+        for (size_t i{0}; i < cReservedPaddingLength; ++i) {
+            REQUIRE(0ULL == archive_header.reserved_padding[i]);
         }
 
         REQUIRE_NOTHROW(archive_reader.close());
@@ -204,6 +237,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
                     structurize_arrays
             )
     );
+    validate_archive_header();
 
     auto extracted_json_path = extract();
 
@@ -234,6 +268,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
                     structurize_arrays
             )
     );
+    validate_archive_header();
 
     auto const expected_matching_types{
             structurize_arrays ? std::set<clp_s::NodeType>{clp_s::NodeType::FormattedFloat}
@@ -277,6 +312,7 @@ TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end
                     structurize_arrays
             )
     );
+    validate_archive_header();
 
     auto const expected_matching_types{
             structurize_arrays ? std::set<clp_s::NodeType>{clp_s::NodeType::DictionaryFloat}
