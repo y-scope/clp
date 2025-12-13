@@ -2,6 +2,7 @@
 #define CLP_AWS_AWSAUTHENTICATIONSIGNER_HPP
 
 #include <chrono>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -39,10 +40,17 @@ public:
         std::string m_message;
     };
 
+    enum class Style : uint8_t {
+        VirtualHost,
+        Path
+    };
+
     // Constructor
     explicit S3Url(std::string const& url);
 
     // Methods
+    [[nodiscard]] auto get_style() const -> Style { return m_style; }
+
     [[nodiscard]] auto get_region() const -> std::string_view { return m_region; }
 
     [[nodiscard]] auto get_bucket() const -> std::string_view { return m_bucket; }
@@ -51,12 +59,16 @@ public:
 
     [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
 
+    [[nodiscard]] auto get_scheme() const -> std::string_view { return m_scheme; }
+
 private:
+    Style m_style{Style::VirtualHost};
     std::string m_region;
     std::string m_end_point;
     std::string m_bucket;
     std::string m_key;
     std::string m_host;
+    std::string m_scheme;
 };
 
 /**
