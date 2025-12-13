@@ -40,6 +40,8 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
+        ../SchemaSearcher.cpp
+        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
