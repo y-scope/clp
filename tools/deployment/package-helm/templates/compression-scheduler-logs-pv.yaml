@@ -1,9 +1,9 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "redis"
+  "component" "compression-scheduler"
   "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/redis" .Values.clpConfig.logs_directory)
+  "hostPath" (printf "%s/compression_scheduler" .Values.clpConfig.logs_directory)
 ) }}

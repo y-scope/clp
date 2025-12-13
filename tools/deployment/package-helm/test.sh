@@ -8,7 +8,17 @@ set -o pipefail
 
 kind delete cluster --name clp-test
 rm -rf /tmp/clp
-mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache}
+mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results_cache}
+mkdir -p /tmp/clp/var/log/{compression_scheduler,compression_worker,query_scheduler,query_worker,reducer,garbage_collector,api_server,mcp_server}
+mkdir -p /tmp/clp/var/data/{archives,staged-archives,staged-streams,streams}
+mkdir -p /tmp/clp/var/log/user
+mkdir -p /tmp/clp/var/tmp
+mkdir -p /tmp/clp/samples
+
+# Download sample datasets in the background
+wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1 \
+  | tar xz -C /tmp/clp/samples &
+SAMPLE_DOWNLOAD_PID=$!
 
 cat <<EOF | kind create cluster --name clp-test --config=-
   kind: Cluster
@@ -16,6 +26,8 @@ cat <<EOF | kind create cluster --name clp-test --config=-
   nodes:
   - role: control-plane
     extraMounts:
+    - hostPath: /home
+      containerPath: /home
     - hostPath: /tmp/clp
       containerPath: /tmp/clp
     extraPortMappings:
@@ -25,8 +37,21 @@ cat <<EOF | kind create cluster --name clp-test --config=-
     - containerPort: 30017
       hostPort: 30017
       protocol: TCP
+    - containerPort: 30400
+      hostPort: 30400
+      protocol: TCP
+    - containerPort: 30301
+      hostPort: 30301
+      protocol: TCP
+    - containerPort: 30800
+      hostPort: 30800
+      protocol: TCP
 EOF
 
 helm uninstall test || true
 sleep 2
 helm install test .
+ls -l /tmp/clp/var/data/
+
+wait $SAMPLE_DOWNLOAD_PID
+echo "Sample download and extraction complete"

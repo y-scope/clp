@@ -98,8 +98,8 @@ failureThreshold: 3
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
-@param {string} name PV name
-@param {string} component Component label
+@param {string} component Component category (e.g., "shared-data", "database")
+@param {string} name Storage name (e.g., "archives", "logs", "data")
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
   "node-role.kubernetes.io/control-plane"
@@ -112,7 +112,7 @@ Creates a local PersistentVolume.
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ .component }}-{{ .name }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component | quote }}
@@ -133,4 +133,101 @@ spec:
         - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
+{{- end }}
+
+{{/*
+Creates a PersistentVolumeClaim for the given component.
+
+@param {object} root Root template context
+@param {string} component Component category (e.g., "shared-data", "database")
+@param {string} name Storage name (e.g., "archives", "logs", "data")
+@param {string} capacity Storage capacity
+@param {string[]} accessModes Access modes
+@return {string} YAML-formatted PersistentVolumeClaim resource
+*/}}
+{{- define "clp.createPvc" -}}
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp.fullname" .root }}-{{ .component }}-{{ .name }}
+  labels:
+    {{- include "clp.labels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component | quote }}
+spec:
+  accessModes: {{ .accessModes }}
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" .root | nindent 6 }}
+      app.kubernetes.io/component: {{ .component | quote }}
+  resources:
+    requests:
+      storage: {{ .capacity }}
+{{- end }}
+
+{{/*
+Creates a volume definition that references a PersistentVolumeClaim.
+
+@param {object} root Root template context
+@param {string} component Component category (e.g., "shared-data", "database")
+@param {string} name Storage name (e.g., "archives", "logs", "data")
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.pvcVolume" -}}
+- name: {{ printf "%s-%s" .component .name | quote }}
+  persistentVolumeClaim:
+    claimName: {{ include "clp.fullname" .root }}-{{ .component }}-{{ .name }}
+{{- end }}
+
+{{/*
+Creates the BROKER_URL env var for Celery workers.
+
+@param {object} . Root template context
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryBrokerUrlEnvVar" -}}
+{{- $user := .Values.credentials.queue.username -}}
+{{- $pass := .Values.credentials.queue.password -}}
+{{- $host := printf "%s-queue" (include "clp.fullname" .) -}}
+- name: "BROKER_URL"
+  value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
+{{- end }}
+
+{{/*
+Creates the RESULT_BACKEND env var for Celery workers.
+
+@param {object} root Root template context
+@param {string} database Redis database number from config
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryResultBackendEnvVar" -}}
+{{- $pass := .root.Values.credentials.redis.password -}}
+{{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
+- name: "RESULT_BACKEND"
+  value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
+{{- end }}
+
+{{/*
+Creates an initContainer that waits for a Kubernetes resource to be ready.
+
+@param {object} root Root template context
+@param {string} type Resource type: "service" (waits for pod readiness) or "job" (waits for completion)
+@param {string} name For "service": component name (used for pod label selector)
+                     For "job": job name suffix (appended to fullname)
+@return {string} YAML-formatted initContainer definition
+*/}}
+{{- define "clp.waitFor" -}}
+- name: "wait-for-{{ .name }}"
+  image: "bitnami/kubectl:latest"
+  command: [
+    "kubectl", "wait",
+    {{- if eq .type "service" }}
+    "--for=condition=ready",
+    "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
+    {{- else if eq .type "job" }}
+    "--for=condition=complete",
+    "job/{{ include "clp.fullname" .root }}-{{ .name }}",
+    {{- end }}
+    "--timeout=300s"
+  ]
 {{- end }}
