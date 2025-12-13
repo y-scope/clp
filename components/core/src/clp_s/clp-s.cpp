@@ -25,11 +25,13 @@
 #include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/ConvertToExists.hpp"
+#include "search/ast/DateLiteral.hpp"
 #include "search/ast/EmptyExpr.hpp"
 #include "search/ast/Expression.hpp"
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
+#include "search/ast/SetDateLiteralPrecision.hpp"
 #include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
@@ -180,6 +182,9 @@ bool search_archive(
         SPDLOG_INFO("No matching timestamp ranges for query '{}'", query);
         return true;
     }
+
+    ast::SetDateLiteralPrecision date_precision_pass{ast::DateLiteral::Precision::Milliseconds};
+    expr = date_precision_pass.run(expr);
 
     // Narrow against schemas
     auto match_pass = std::make_shared<SchemaMatch>(

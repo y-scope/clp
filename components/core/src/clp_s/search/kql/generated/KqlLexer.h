@@ -13,8 +13,8 @@ namespace clp_s::search::kql::generated {
 class  KqlLexer : public antlr4::Lexer {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, AND = 6, OR = 7, NOT = 8, 
-    DATE_LITERAL = 9, LITERAL = 10, QUOTED_STRING = 11, UNQUOTED_LITERAL = 12, 
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
+    AND = 8, OR = 9, NOT = 10, QUOTED_STRING = 11, UNQUOTED_LITERAL = 12, 
     RANGE_OPERATOR = 13, SPACE = 14
   };
 
