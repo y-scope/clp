@@ -1,4 +1,5 @@
 pub mod s3 {
+    use non_empty_string::NonEmptyString;
     use serde::{Deserialize, Serialize};
 
     /// Base configuration for ingesting logs from S3.
@@ -8,18 +9,18 @@ pub mod s3 {
         pub region: String,
 
         /// The S3 bucket to ingest from.
-        pub bucket_name: String,
+        pub bucket_name: NonEmptyString,
 
         /// The S3 key prefix to ingest from.
-        pub key_prefix: String,
+        pub key_prefix: NonEmptyString,
 
         /// The dataset to ingest into. Defaults to `None` (which uses the default dataset).
         #[serde(default)]
-        pub dataset: Option<String>,
+        pub dataset: Option<NonEmptyString>,
 
         /// The optional key for extracting timestamps from object metadata. Defaults to `None`.
         #[serde(default)]
-        pub timestamp_key: Option<String>,
+        pub timestamp_key: Option<NonEmptyString>,
 
         /// Whether to treat the ingested objects as unstructured logs. Defaults to `false`.
         #[serde(default = "default_unstructured")]
@@ -27,7 +28,7 @@ pub mod s3 {
 
         /// Tags to apply on the compressed archives. Defaults to `None`.
         #[serde(default)]
-        pub tags: Option<Vec<String>>,
+        pub tags: Option<Vec<NonEmptyString>>,
     }
 
     /// Configuration for a SQS listener job.
@@ -38,7 +39,7 @@ pub mod s3 {
 
         /// The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated
         /// to this ingestion job.
-        pub queue_url: String,
+        pub queue_url: NonEmptyString,
     }
 
     /// Configuration for a S3 scanner job.
@@ -54,7 +55,7 @@ pub mod s3 {
         /// The key to ingest after. If specified, only objects with keys lexicographically greater
         /// than this value will be ingested. Defaults to `None`.
         #[serde(default)]
-        pub start_after: Option<String>,
+        pub start_after: Option<NonEmptyString>,
     }
 
     const fn default_unstructured() -> bool {

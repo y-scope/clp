@@ -1,11 +1,12 @@
+use non_empty_string::NonEmptyString;
 use serde::{Deserialize, Serialize};
 
 /// Represents the configuration for connecting to an S3 bucket.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct S3Config {
-    pub bucket: String,
+    pub bucket: NonEmptyString,
     pub region_code: String,
-    pub key_prefix: String,
+    pub key_prefix: NonEmptyString,
     pub aws_authentication: AwsAuthentication,
 }
 
