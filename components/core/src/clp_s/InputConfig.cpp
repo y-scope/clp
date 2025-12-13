@@ -353,7 +353,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
 
 [[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
         -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
-    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     constexpr size_t cMaxNestedFormatDepth = 5;
     if (nullptr == reader) {
         return {{}, FileType::Unknown};
