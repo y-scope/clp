@@ -5,10 +5,12 @@
 #include <system_error>
 
 #include <fmt/format.h>
-#include <mongocxx/client.hpp>
-#include <mongocxx/collection.hpp>
-#include <mongocxx/exception/exception.hpp>
-#include <mongocxx/uri.hpp>
+#if !CLP_S_EXCLUDE_MONGOCXX
+    #include <mongocxx/client.hpp>
+    #include <mongocxx/collection.hpp>
+    #include <mongocxx/exception/exception.hpp>
+    #include <mongocxx/uri.hpp>
+#endif
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -80,6 +82,7 @@ void JsonConstructor::construct_in_order() {
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
+#if !CLP_S_EXCLUDE_MONGOCXX
     mongocxx::client client;
     mongocxx::collection collection;
 
@@ -94,6 +97,7 @@ void JsonConstructor::construct_in_order() {
     }
 
     std::vector<bsoncxx::document::value> results;
+#endif
     auto finalize_chunk = [&](bool open_new_writer) {
         // Add one to last_idx to match clp's behaviour of having the end index be exclusive
         ++last_idx;
@@ -107,6 +111,7 @@ void JsonConstructor::construct_in_order() {
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
         }
 
+#if !CLP_S_EXCLUDE_MONGOCXX
         if (m_option.metadata_db.has_value()) {
             results.emplace_back(
                     std::move(
@@ -135,6 +140,7 @@ void JsonConstructor::construct_in_order() {
                     )
             );
         }
+#endif
 
         if (m_option.print_ordered_chunk_stats) {
             nlohmann::json json_msg;
@@ -181,6 +187,7 @@ void JsonConstructor::construct_in_order() {
         }
     }
 
+#if !CLP_S_EXCLUDE_MONGOCXX
     if (false == results.empty()) {
         try {
             collection.insert_many(results);
@@ -188,5 +195,6 @@ void JsonConstructor::construct_in_order() {
             throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__, e.what());
         }
     }
+#endif
 }
 }  // namespace clp_s
