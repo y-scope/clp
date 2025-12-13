@@ -5,10 +5,12 @@ import os
 import pathlib
 import re
 import secrets
+import signal
 import socket
 import subprocess
 import uuid
 from enum import auto
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -50,6 +52,8 @@ EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
+DOCKER_RUN_DEFAULT_TIMEOUT = 10
+DOCKER_RUN_TERMINATE_GRACE_FACTOR = 1.5
 
 S3_KEY_PREFIX_COMPRESSION = "s3-key-prefix"
 S3_OBJECT_COMPRESSION = "s3-object"
@@ -759,6 +763,51 @@ def get_celery_connection_env_vars_list(container_clp_config: ClpConfig) -> list
     ]
 
     return env_vars
+
+
+def run_subprocess_with_signal_forward(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess:
+    """
+    Runs a subprocess in its own process group and forwards `SIGINT` and `SIGTERM` received on the
+    calling process to the entire child process group.
+
+    :return: The completed subprocess.
+    """
+    kwargs["start_new_session"] = True
+    proc = subprocess.Popen(*args, **kwargs)
+
+    # Save original handlers
+    original_handlers = {
+        signal.SIGINT: signal.signal(signal.SIGINT, signal.SIG_DFL),
+        signal.SIGTERM: signal.signal(signal.SIGTERM, signal.SIG_DFL),
+    }
+
+    def _signal_handler(signum: int, frame: Any) -> None:
+        """Run cleanup, then invoke the original handler."""
+        try:
+            # Terminate the entire process group to cascade termination to all children.
+            pgid = os.getpgid(proc.pid)
+            os.killpg(pgid, signum)
+        except ProcessLookupError:
+            # Child already terminated.
+            pass
+
+        # Restore and invoke original handler
+        original = original_handlers[signal.Signals(signum)]
+        signal.signal(signum, original)
+        if original not in (signal.SIG_DFL, signal.SIG_IGN):
+            original(signum, frame)
+
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+
+    try:
+        proc.wait()
+    finally:
+        # Restore original handlers
+        for sig, handler in original_handlers.items():
+            signal.signal(sig, handler)
+
+    return subprocess.CompletedProcess(proc.args, proc.returncode)
 
 
 def _is_docker_compose_project_running(project_name: str) -> bool:
