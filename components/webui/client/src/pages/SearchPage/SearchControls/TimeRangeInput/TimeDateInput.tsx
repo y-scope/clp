@@ -7,9 +7,10 @@ import {
 } from "./utils";
 
 
-interface TimeDateInputProps {
+interface TimeDateInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     value: string;
     [DATE_RANGE_PROP_KEY]: DATE_RANGE_POSITION;
+    isPickerOpen?: boolean;
 }
 
 /**
@@ -19,20 +20,35 @@ interface TimeDateInputProps {
  * @return
  */
 const TimeDateInput = (props: TimeDateInputProps) => {
-    const {value, [DATE_RANGE_PROP_KEY]: dateRange} = props;
-    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
+    const {
+        value,
+        [DATE_RANGE_PROP_KEY]: dateRange,
+        onChange,
+        isPickerOpen = false,
+        ...restProps
+    } = props;
 
-    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
+    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
+    const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
+    const displayText = (timeRangeOption === TIME_RANGE_OPTION.CUSTOM || isPickerOpen) ?
         value :
         TIME_RANGE_DISPLAY_TEXT_MAP[timeRangeOption][dateRange];
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
+            updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
+        }
+        onChange?.(e);
+    };
+
     return (
         <input
-            {...props}
-            readOnly={true}
-            value={displayText}/>
+            {...restProps}
+            value={displayText}
+            onChange={handleChange}/>
     );
 };
 
 
+export type {TimeDateInputProps};
 export default TimeDateInput;
