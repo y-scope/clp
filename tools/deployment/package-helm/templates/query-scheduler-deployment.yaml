@@ -1,0 +1,104 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-query-scheduler
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-scheduler"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "query-scheduler"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "query-scheduler"
+    spec:
+      hostname: {{ include "clp.fullname" . }}-query-scheduler
+      subdomain: {{ include "clp.fullname" . }}-query-scheduler
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-database"
+          image: "busybox:latest"
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-database 3306;
+                do echo Waiting for database to be ready...;
+                sleep 2;
+              done
+        - name: "wait-for-queue"
+          image: "busybox:latest"
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-queue 5672;
+                do echo Waiting for queue to be ready...;
+                sleep 2;
+              done
+        - name: "wait-for-redis"
+          image: "busybox:latest"
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-redis 6379;
+                do echo Waiting for redis to be ready...;
+                sleep 2;
+              done
+      containers:
+        - name: "query-scheduler"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "BROKER_URL"
+              value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/query_scheduler"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+            - name: "RESULT_BACKEND"
+              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.query_backend_database }}"
+          ports:
+            - name: "query-scheduler"
+              containerPort: 7000
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: "query-scheduler-logs"
+              mountPath: "/var/log/query_scheduler"
+          command: [
+            "python3", "-u",
+            "-m", "job_orchestration.scheduler.query.query_scheduler",
+            "--config", "/etc/clp-config.yaml"
+          ]
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "query-scheduler-logs"
+          persistentVolumeClaim:
+            claimName: {{ include "clp.fullname" . }}-query-scheduler-logs

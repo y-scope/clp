@@ -1,0 +1,9 @@
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-query-worker-logs" (include "clp.fullname" .))
+  "component" "query-worker-logs"
+  "nodeRole" "control-plane"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/query-worker" .Values.clpConfig.logs_directory)
+) }}
