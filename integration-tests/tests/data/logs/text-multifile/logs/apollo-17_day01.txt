@@ -1,0 +1,15 @@
+1972-12-07T05:33:00.000 apollo-17 d01 e000 countdown sequencer resumes after hold and verifies launch commit criteria; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T05:42:35.999 apollo-17 d01 e001 terminal countdown proceeds at launch complex 39A with all stations reporting go; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T05:52:11.998 apollo-17 d01 e002 Saturn V first stage ignition and liftoff from Kennedy Space Center; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:01:47.997 apollo-17 d01 e003 tower cleared and roll program places vehicle on proper azimuth; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:11:23.996 apollo-17 d01 e004 pitch program guides ascent trajectory toward planned parking orbit; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:20:59.995 apollo-17 d01 e005 first stage shutdown and staging event with clean separation; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:30:35.994 apollo-17 d01 e006 second stage ignition with stable thrust and guidance lock; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:40:11.993 apollo-17 d01 e007 parking orbit achieved around Earth after third stage cutoff; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:49:47.992 apollo-17 d01 e008 systems checkout in Earth orbit confirms command and service module health; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T06:59:23.991 apollo-17 d01 e009 translunar injection burn ignition on third stage SIVB; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T07:08:59.990 apollo-17 d01 e010 translunar injection burn complete with nominal velocity for lunar transfer; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T07:18:35.989 apollo-17 d01 e011 command and service module separates and performs transposition and docking; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T07:28:11.988 apollo-17 d01 e012 lunar module Challenger extraction from SIVB and tunnel pressurization; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T07:37:47.987 apollo-17 d01 e013 spacecraft stack confirmed on translunar trajectory departing Earth orbit; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-07T07:47:23.986 apollo-17 d01 e014 SIVB disposal maneuver targets heliocentric trajectory for spent stage; all primary systems nominal; communications lock; navigation solution within expected error

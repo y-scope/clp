@@ -1,0 +1,3 @@
+{"timestamp":1310139148373,"mission":"STS-135","mission_day_index":0,"event":"CLEAR_OF_TOWER","subsystem":"GUIDANCE","level":"INFO","detail":"Vehicle cleared tower, roll program initiated, tracking nominal trajectory","line_index":1}
+{"timestamp":1310139352746,"mission":"STS-135","mission_day_index":0,"event":"ROLL_PROGRAM_COMPLETE","subsystem":"GUIDANCE","level":"INFO","detail":"Roll program complete, heads down attitude achieved for ascent","line_index":2}
+{"timestamp":1310139965866,"mission":"STS-135","mission_day_index":0,"event":"PRESS_TO_MECO","subsystem":"GUIDANCE","level":"INFO","detail":"Performance marks indicate press to main engine cutoff achieved","line_index":5}

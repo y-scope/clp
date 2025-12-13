@@ -1,6 +1,7 @@
 """Provides utilities related to the user-level configurations of CLP's operating modes."""
 
 from collections.abc import Callable
+from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -12,6 +13,8 @@ from clp_py_utils.clp_config import (
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     Package,
+    Presto,
+    PRESTO_COORDINATOR_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
@@ -19,6 +22,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    ResultsCache,
     StorageEngine,
     WEBUI_COMPONENT_NAME,
 )
@@ -30,11 +34,25 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
             query_engine=QueryEngine.CLP,
         ),
         api_server=None,
+        log_ingestor=None,
     ),
     "clp-json": lambda: ClpConfig(
         package=Package(
             storage_engine=StorageEngine.CLP_S,
             query_engine=QueryEngine.CLP_S,
+        ),
+    ),
+    "clp-presto": lambda: ClpConfig(
+        package=Package(
+            storage_engine=StorageEngine.CLP_S,
+            query_engine=QueryEngine.PRESTO,
+        ),
+        results_cache=ResultsCache(
+            retention_period=None,
+        ),
+        presto=Presto(
+            host="localhost",
+            port=8889,
         ),
     ),
 }
@@ -51,13 +69,10 @@ def _to_docker_compose_service_name(name: str) -> str:
     return name.replace("_", "-")
 
 
-# TODO: Modify these component lists when the Presto Docker Compose project is integrated with the
-# CLP Docker compose project.
 CLP_BASE_COMPONENTS = [
     _to_docker_compose_service_name(DB_COMPONENT_NAME),
     _to_docker_compose_service_name(QUEUE_COMPONENT_NAME),
     _to_docker_compose_service_name(REDIS_COMPONENT_NAME),
-    _to_docker_compose_service_name(REDUCER_COMPONENT_NAME),
     _to_docker_compose_service_name(RESULTS_CACHE_COMPONENT_NAME),
     _to_docker_compose_service_name(COMPRESSION_SCHEDULER_COMPONENT_NAME),
     _to_docker_compose_service_name(COMPRESSION_WORKER_COMPONENT_NAME),
@@ -69,9 +84,35 @@ CLP_QUERY_COMPONENTS = [
     _to_docker_compose_service_name(QUERY_WORKER_COMPONENT_NAME),
 ]
 
+CLP_REDUCER_COMPONENT = _to_docker_compose_service_name(REDUCER_COMPONENT_NAME)
 CLP_API_SERVER_COMPONENT = _to_docker_compose_service_name(API_SERVER_COMPONENT_NAME)
 CLP_GARBAGE_COLLECTOR_COMPONENT = _to_docker_compose_service_name(GARBAGE_COLLECTOR_COMPONENT_NAME)
 CLP_MCP_SERVER_COMPONENT = _to_docker_compose_service_name(MCP_SERVER_COMPONENT_NAME)
+
+CLP_PRESTO_COMPONENTS = [
+    _to_docker_compose_service_name(PRESTO_COORDINATOR_COMPONENT_NAME),
+    "presto-worker",
+]
+
+
+def compute_mode_signature(config: ClpConfig) -> tuple[Any, ...]:
+    """
+    Constructs a signature that captures the mode-defining aspects of a ClpConfig object.
+
+    :param config:
+    :return: Tuple that encodes fields used to determine an operating mode.
+    """
+    return (
+        config.logs_input.type,
+        config.package.storage_engine.value,
+        config.package.query_engine.value,
+        config.mcp_server is not None,
+        config.presto is not None,
+        config.archive_output.storage.type,
+        config.stream_output.storage.type,
+        config.aws_config_directory is not None,
+        config.get_deployment_type(),
+    )
 
 
 def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
@@ -90,17 +131,19 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
 
 def get_required_component_list(config: ClpConfig) -> list[str]:
     """
-    Constructs the list of components required for the CLP package described in `config` to run
+    Constructs a list of the components that the CLP package described in `config` needs to run
     properly.
 
     :param config:
     :return: List of components required by the package.
     """
-    component_list: list[str] = list(CLP_BASE_COMPONENTS)
+    component_list: list[str] = []
+    component_list.extend(CLP_BASE_COMPONENTS)
 
     deployment_type = config.get_deployment_type()
-    if DeploymentType.FULL == deployment_type:
+    if deployment_type == DeploymentType.FULL:
         component_list.extend(CLP_QUERY_COMPONENTS)
+        component_list.append(CLP_REDUCER_COMPONENT)
 
     if config.api_server is not None:
         component_list.append(CLP_API_SERVER_COMPONENT)

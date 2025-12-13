@@ -43,6 +43,20 @@ def postgresql(
     )
 
 
+@pytest.fixture(scope="session")
+def spark_event_logs(
+    request: pytest.FixtureRequest,
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> IntegrationTestLogs:
+    """Provides shared `spark_event_logs` test logs."""
+    return _download_and_extract_dataset(
+        request=request,
+        integration_test_path_config=integration_test_path_config,
+        name="spark-event-logs",
+        tarball_url="https://zenodo.org/records/10516346/files/spark-event-logs.tar.gz?download=1",
+    )
+
+
 def _download_and_extract_dataset(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
