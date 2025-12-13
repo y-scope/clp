@@ -1,5 +1,5 @@
-import InputLabel from "../../../../../components/InputLabel";
-import DatasetSelect from "../../Dataset/DatasetSelect";
+import InputLabel from "../../../../../../components/InputLabel";
+import DatasetSelect from "../../../Dataset/DatasetSelect";
 import guidedGrid from "./index.module.css";
 import {LABEL_WIDTH} from "./typings";
 

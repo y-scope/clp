@@ -1,9 +1,9 @@
-import useTimestampKeyInit from "../../../SearchState/Presto/useTimestampKeyInit";
-import searchStyles from "../../index.module.css";
-import QueryStatus from "../../QueryStatus";
-import TimeRangeInput from "../../TimeRangeInput";
-import SqlInterfaceButton from "../SqlInterfaceButton";
-import SqlSearchButton from "../SqlSearchButton";
+import useTimestampKeyInit from "../../../../SearchState/Presto/useTimestampKeyInit";
+import searchStyles from "../../../index.module.css";
+import QueryStatus from "../../../QueryStatus";
+import TimeRangeInput from "../../../TimeRangeInput";
+import SqlInterfaceSelector from "../../SqlInterfaceSelector";
+import SqlSearchButton from "../../SqlSearchButton";
 import From from "./From";
 import guidedGrid from "./index.module.css";
 import OrderBy from "./OrderBy";
@@ -24,7 +24,7 @@ const GuidedControls = () => {
             {contextHolder}
             <div className={searchStyles["runRow"]}>
                 <div>
-                    <SqlInterfaceButton/>
+                    <SqlInterfaceSelector/>
                 </div>
                 <div className={searchStyles["buttons"]}>
                     <TimeRangeInput/>

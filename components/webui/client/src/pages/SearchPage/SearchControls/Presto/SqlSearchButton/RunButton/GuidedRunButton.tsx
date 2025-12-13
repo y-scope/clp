@@ -19,7 +19,7 @@ import {
 import {
     buildPrestoGuidedQueries,
     handlePrestoGuidedQuerySubmit,
-} from "../../presto-guided-search-requests";
+} from "../../Guided/presto-guided-search-requests";
 import styles from "./index.module.css";
 
 
