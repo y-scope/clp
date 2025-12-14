@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "compression-scheduler"
+  "component_category" "compression-scheduler"
   "name" "user-logs"
   "nodeRole" "control-plane"
   "capacity" "10Gi"

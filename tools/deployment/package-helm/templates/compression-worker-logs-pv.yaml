@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "compression-worker"
+  "component_category" "compression-worker"
   "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"

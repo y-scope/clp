@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "redis"
+  "component_category" "redis"
   "name" "data"
   "nodeRole" "control-plane"
   "capacity" "20Gi"

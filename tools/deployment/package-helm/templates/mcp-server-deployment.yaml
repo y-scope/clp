@@ -84,7 +84,7 @@ spec:
       volumes:
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "mcp-server"
+          "component_category" "mcp-server"
           "name" "logs"
         ) | nindent 8 }}
         - name: "config"

@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "shared-data"
+  "component_category" "shared-data"
   "name" "streams"
   "nodeRole" "control-plane"
   "capacity" "20Gi"

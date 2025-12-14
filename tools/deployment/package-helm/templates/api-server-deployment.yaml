@@ -80,7 +80,7 @@ spec:
       volumes:
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "api-server"
+          "component_category" "api-server"
           "name" "logs"
         ) | nindent 8 }}
         - name: "config"

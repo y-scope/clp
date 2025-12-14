@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "query-worker"
+  "component_category" "query-worker"
   "name" "staged-streams"
   "nodeRole" "control-plane"
   "capacity" "20Gi"

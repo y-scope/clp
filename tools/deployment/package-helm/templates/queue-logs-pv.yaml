@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "queue"
+  "component_category" "queue"
   "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"

@@ -78,22 +78,22 @@ spec:
       volumes:
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "compression-worker"
+          "component_category" "compression-worker"
           "name" "logs"
         ) | nindent 8 }}
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "compression-worker"
+          "component_category" "compression-worker"
           "name" "staged-archives"
         ) | nindent 8 }}
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "compression-worker"
+          "component_category" "compression-worker"
           "name" "tmp"
         ) | nindent 8 }}
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "shared-data"
+          "component_category" "shared-data"
           "name" "archives"
         ) | nindent 8 }}
         - name: "config"

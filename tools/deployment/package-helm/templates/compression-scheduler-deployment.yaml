@@ -85,12 +85,12 @@ spec:
       volumes:
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "compression-scheduler"
+          "component_category" "compression-scheduler"
           "name" "logs"
         ) | nindent 8 }}
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "compression-scheduler"
+          "component_category" "compression-scheduler"
           "name" "user-logs"
         ) | nindent 8 }}
         - name: "config"

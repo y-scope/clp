@@ -66,7 +66,7 @@ spec:
       volumes:
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "reducer"
+          "component_category" "reducer"
           "name" "logs"
         ) | nindent 8 }}
         - name: "config"

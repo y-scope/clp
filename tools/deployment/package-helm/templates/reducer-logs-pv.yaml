@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "reducer"
+  "component_category" "reducer"
   "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"

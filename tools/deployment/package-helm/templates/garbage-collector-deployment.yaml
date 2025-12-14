@@ -76,17 +76,17 @@ spec:
       volumes:
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "garbage-collector"
+          "component_category" "garbage-collector"
           "name" "logs"
         ) | nindent 8 }}
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "shared-data"
+          "component_category" "shared-data"
           "name" "archives"
         ) | nindent 8 }}
         {{- include "clp.pvcVolume" (dict
           "root" .
-          "component" "shared-data"
+          "component_category" "shared-data"
           "name" "streams"
         ) | nindent 8 }}
         - name: "config"

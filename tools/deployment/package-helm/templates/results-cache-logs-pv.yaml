@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "results-cache"
+  "component_category" "results-cache"
   "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"

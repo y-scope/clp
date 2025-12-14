@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "component" "database"
+  "component_category" "database"
   "name" "data"
   "nodeRole" "control-plane"
   "capacity" "20Gi"

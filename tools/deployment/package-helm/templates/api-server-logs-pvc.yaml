@@ -1,6 +1,6 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "api-server"
+  "component_category" "api-server"
   "name" "logs"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
