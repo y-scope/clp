@@ -24,31 +24,31 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "job"
-          "name" "db-table-creator"
-        ) | nindent 8 }}
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "service"
-          "name" "queue"
-        ) | nindent 8 }}
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "service"
-          "name" "redis"
-        ) | nindent 8 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "queue"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "redis"
+          ) | nindent 10 }}
       containers:
         - name: "compression-scheduler"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 12 }}
-            {{- include "clp.celeryResultBackendEnvVar" (dict
-              "root" .
-              "database" .Values.clpConfig.redis.compression_backend_database
-            ) | nindent 12 }}
+            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
+            - {{- include "clp.celeryResultBackendEnvVar" (dict
+                "root" .
+                "database" .Values.clpConfig.redis.compression_backend_database
+              ) | nindent 14 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -83,16 +83,16 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "compression-scheduler"
-          "name" "logs"
-        ) | nindent 8 }}
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "compression-scheduler"
-          "name" "user-logs"
-        ) | nindent 8 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-scheduler"
+            "name" "logs"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-scheduler"
+            "name" "user-logs"
+          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

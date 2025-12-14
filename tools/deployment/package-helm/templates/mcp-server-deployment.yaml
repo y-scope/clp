@@ -25,16 +25,16 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "job"
-          "name" "db-table-creator"
-        ) | nindent 8 }}
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "job"
-          "name" "results-cache-indices-creator"
-        ) | nindent 8 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
       containers:
         - name: "mcp-server"
           image: "{{ include "clp.image.ref" . }}"
@@ -82,11 +82,11 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *mcp-server-health-check
       volumes:
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "mcp-server"
-          "name" "logs"
-        ) | nindent 8 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "mcp-server"
+            "name" "logs"
+          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

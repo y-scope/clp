@@ -24,18 +24,18 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "queue") | nindent 8 }}
-        {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "redis") | nindent 8 }}
+        - {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "queue") | nindent 10 }}
+        - {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "redis") | nindent 10 }}
       containers:
         - name: "compression-worker"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 12 }}
-            {{- include "clp.celeryResultBackendEnvVar" (dict
+            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
+            - {{- include "clp.celeryResultBackendEnvVar" (dict
               "root" .
               "database" .Values.clpConfig.redis.compression_backend_database
-            ) | nindent 12 }}
+            ) | nindent 14 }}
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yaml"
             - name: "CLP_HOME"
@@ -76,26 +76,26 @@ spec:
             "-n", "compression-worker"
           ]
       volumes:
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "compression-worker"
-          "name" "logs"
-        ) | nindent 8 }}
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "compression-worker"
-          "name" "staged-archives"
-        ) | nindent 8 }}
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "compression-worker"
-          "name" "tmp"
-        ) | nindent 8 }}
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "shared-data"
-          "name" "archives"
-        ) | nindent 8 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-worker"
+            "name" "logs"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-worker"
+            "name" "staged-archives"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-worker"
+            "name" "tmp"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "archives"
+          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

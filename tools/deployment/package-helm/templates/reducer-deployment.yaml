@@ -26,16 +26,16 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "service"
-          "name" "query-scheduler"
-        ) | nindent 8 }}
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "job"
-          "name" "results-cache-indices-creator"
-        ) | nindent 8 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "query-scheduler"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
       containers:
         - name: "reducer"
           image: "{{ include "clp.image.ref" . }}"
@@ -64,11 +64,11 @@ spec:
             "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
           ]
       volumes:
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "reducer"
-          "name" "logs"
-        ) | nindent 8 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "reducer"
+            "name" "logs"
+          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

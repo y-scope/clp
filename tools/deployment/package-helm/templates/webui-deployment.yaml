@@ -24,16 +24,16 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "job"
-          "name" "db-table-creator"
-        ) | nindent 8 }}
-        {{- include "clp.waitFor" (dict
-          "root" .
-          "type" "job"
-          "name" "results-cache-indices-creator"
-        ) | nindent 8 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
       containers:
         - name: "webui"
           image: "{{ include "clp.image.ref" . }}"
@@ -85,11 +85,11 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
-        {{- include "clp.pvcVolume" (dict
-          "root" .
-          "component_category" "shared-data"
-          "name" "streams"
-        ) | nindent 8 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
         - name: "client-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config

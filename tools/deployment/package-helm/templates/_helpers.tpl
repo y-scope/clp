@@ -174,9 +174,9 @@ Creates a volume definition that references a PersistentVolumeClaim.
 @return {string} YAML-formatted volume definition
 */}}
 {{- define "clp.pvcVolume" -}}
-- name: {{ printf "%s-%s" .component_category .name | quote }}
-  persistentVolumeClaim:
-    claimName: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
+name: {{ printf "%s-%s" .component_category .name | quote }}
+persistentVolumeClaim:
+  claimName: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
 {{- end }}
 
 {{/*
@@ -189,8 +189,8 @@ Creates the BROKER_URL env var for Celery workers.
 {{- $user := .Values.credentials.queue.username -}}
 {{- $pass := .Values.credentials.queue.password -}}
 {{- $host := printf "%s-queue" (include "clp.fullname" .) -}}
-- name: "BROKER_URL"
-  value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
+name: "BROKER_URL"
+value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
 {{- end }}
 
 {{/*
@@ -203,8 +203,8 @@ Creates the RESULT_BACKEND env var for Celery workers.
 {{- define "clp.celeryResultBackendEnvVar" -}}
 {{- $pass := .root.Values.credentials.redis.password -}}
 {{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
-- name: "RESULT_BACKEND"
-  value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
+name: "RESULT_BACKEND"
+value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
 {{- end }}
 
 {{/*
@@ -217,17 +217,17 @@ Creates an initContainer that waits for a Kubernetes resource to be ready.
 @return {string} YAML-formatted initContainer definition
 */}}
 {{- define "clp.waitFor" -}}
-- name: "wait-for-{{ .name }}"
-  image: "bitnami/kubectl:latest"
-  command: [
-    "kubectl", "wait",
-    {{- if eq .type "service" }}
-    "--for=condition=ready",
-    "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
-    {{- else if eq .type "job" }}
-    "--for=condition=complete",
-    "job/{{ include "clp.fullname" .root }}-{{ .name }}",
-    {{- end }}
-    "--timeout=300s"
-  ]
+name: "wait-for-{{ .name }}"
+image: "bitnami/kubectl:latest"
+command: [
+  "kubectl", "wait",
+  {{- if eq .type "service" }}
+  "--for=condition=ready",
+  "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
+  {{- else if eq .type "job" }}
+  "--for=condition=complete",
+  "job/{{ include "clp.fullname" .root }}-{{ .name }}",
+  {{- end }}
+  "--timeout=300s"
+]
 {{- end }}
