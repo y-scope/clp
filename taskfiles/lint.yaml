@@ -245,8 +245,6 @@ tasks:
             - "clp/clp/utils.cpp"
             - "clp/clp/utils.hpp"
             - "clp/CommandLineArgumentsBase.hpp"
-            - "clp/CurlDownloadHandler.cpp"
-            - "clp/CurlDownloadHandler.hpp"
             - "clp/CurlEasyHandle.hpp"
             - "clp/CurlStringList.hpp"
             - "clp/database_utils.cpp"
