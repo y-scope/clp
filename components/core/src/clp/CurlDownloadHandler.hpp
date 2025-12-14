@@ -93,7 +93,7 @@ public:
 
 private:
     /**
-     * Locate the certificate authority (CA) bundle file available on the current host.
+     * Locates the certificate authority (CA) bundle file available on the current host.
      *
      * This method performs a runtime lookup to provide a predictable CA bundle path for libcurl on
      * Linux-based systems. It is intended to handle cases where the runtime environment differs
