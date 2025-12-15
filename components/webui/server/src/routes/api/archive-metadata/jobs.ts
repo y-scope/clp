@@ -4,7 +4,7 @@ import {
 } from "@fastify/type-provider-typebox";
 import {decode} from "@msgpack/msgpack";
 import {
-    CompressionJobMetadata,
+    CompressionJobBase,
     CompressionJobWithConfig,
     CompressionJobWithConfigSchema,
 } from "@webui/common/schemas/compression";
@@ -15,7 +15,7 @@ import {brotliDecompressSync} from "node:zlib";
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
-type CompressionJobBaseRow = CompressionJobMetadata;
+type CompressionJobBaseRow = CompressionJobBase;
 type CompressionJobRow = CompressionJobBaseRow & {
     clp_config?: Buffer | null;
 };

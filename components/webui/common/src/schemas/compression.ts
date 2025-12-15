@@ -75,7 +75,7 @@ type CompressionJob = Static<typeof CompressionJobSchema>;
 /**
  * Schema for compression job metadata without decoded config fields.
  */
-const CompressionJobSchemaBase = Type.Object({
+const CompressionJobBaseSchema = Type.Object({
     _id: Type.Number(),
     compressed_size: Type.Number(),
     duration: Type.Union([Type.Number(), Type.Null()]),
@@ -91,14 +91,14 @@ const CompressionJobSchemaBase = Type.Object({
  * Schema for compression job metadata with decoded config.
  */
 const CompressionJobWithConfigSchema = Type.Intersect([
-    CompressionJobSchemaBase,
+    CompressionJobBaseSchema,
     Type.Object({
         dataset: Type.Union([Type.String(), Type.Null()]),
         paths: Type.Array(Type.String()),
     }),
 ]);
 
-type CompressionJobMetadata = Static<typeof CompressionJobSchemaBase>;
+type CompressionJobBase = Static<typeof CompressionJobBaseSchema>;
 type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
 
 /**
@@ -146,6 +146,7 @@ type CompressionJobConfig = {
 
 export {
     AbsolutePathSchema,
+    CompressionJobBaseSchema,
     CompressionJobCreationSchema,
     CompressionJobSchema,
     CompressionJobWithConfigSchema,
@@ -157,8 +158,8 @@ export {
 export type {
     CompressionJob,
     CompressionJobCreation,
+    CompressionJobBase,
     CompressionJobWithConfig,
-    CompressionJobMetadata,
     CompressionJobConfig,
     CompressionJobFsInputConfig,
     CompressionJobS3InputConfig,
