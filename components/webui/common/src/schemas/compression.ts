@@ -72,10 +72,30 @@ const CompressionJobSchema = Type.Object({
 
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
+/**
+ * Schema for compression job metadata with decoded config.
+ */
+const CompressionJobWithConfigSchema = Type.Object({
+    _id: Type.Number(),
+    compressed_size: Type.Number(),
+    dataset: Type.Union([Type.String(), Type.Null()]),
+    duration: Type.Union([Type.Number(), Type.Null()]),
+    paths: Type.Array(Type.String()),
+    retrieval_time: Type.Number(),
+    start_time: Type.Union([Type.String(), Type.Null()]),
+    status: Type.Number(),
+    status_msg: Type.String(),
+    uncompressed_size: Type.Number(),
+    update_time: Type.String(),
+});
+
+type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
+
 export {
     AbsolutePathSchema,
     CompressionJobCreationSchema,
     CompressionJobSchema,
+    CompressionJobWithConfigSchema,
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
     DatasetNameSchema,
@@ -83,4 +103,5 @@ export {
 export type {
     CompressionJob,
     CompressionJobCreation,
+    CompressionJobWithConfig,
 };

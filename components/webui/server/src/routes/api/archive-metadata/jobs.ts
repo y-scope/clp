@@ -3,6 +3,10 @@ import {
     Type,
 } from "@fastify/type-provider-typebox";
 import {decode} from "@msgpack/msgpack";
+import {
+    CompressionJobWithConfig,
+    CompressionJobWithConfigSchema,
+} from "@webui/common/schemas/compression";
 import {constants} from "http2";
 import {RowDataPacket} from "mysql2";
 import {brotliDecompressSync} from "node:zlib";
@@ -27,20 +31,6 @@ type CompressionJobRow = RowDataPacket & {
 type DecodedJobConfig = {
     dataset: string | null;
     paths: string[];
-};
-
-type CompressionJobResponseItem = {
-    _id: number;
-    compressed_size: number;
-    dataset: string | null;
-    duration: number | null;
-    paths: string[];
-    retrieval_time: number;
-    start_time: string | null;
-    status: number;
-    status_msg: string;
-    uncompressed_size: number;
-    update_time: string;
 };
 
 /**
@@ -101,19 +91,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 }),
                 response: {
                     [constants.HTTP_STATUS_OK]: Type.Array(
-                        Type.Object({
-                            _id: Type.Number(),
-                            compressed_size: Type.Number(),
-                            dataset: Type.Union([Type.String(), Type.Null()]),
-                            duration: Type.Union([Type.Number(), Type.Null()]),
-                            paths: Type.Array(Type.String()),
-                            retrieval_time: Type.Number(),
-                            start_time: Type.Union([Type.String(), Type.Null()]),
-                            status: Type.Number(),
-                            status_msg: Type.String(),
-                            uncompressed_size: Type.Number(),
-                            update_time: Type.String(),
-                        })
+                        CompressionJobWithConfigSchema
                     ),
                 },
                 tags: ["Archive Metadata"],
@@ -156,7 +134,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     status_msg: statusMsg,
                     uncompressed_size: uncompressedSize,
                     update_time: updateTime,
-                }): CompressionJobResponseItem => {
+                }): CompressionJobWithConfig => {
                     const {dataset, paths} = decodeJobConfig(clpConfig);
 
                     return {
