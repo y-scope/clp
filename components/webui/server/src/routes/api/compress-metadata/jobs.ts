@@ -7,7 +7,7 @@ import {
     CompressionJobBase,
     CompressionJobWithDecodedIoConfig,
     CompressionJobWithDecodedIoConfigSchema,
-} from "@webui/common/schemas/compression";
+} from "@webui/common/schemas/compress-metadata";
 import {constants} from "http2";
 import {RowDataPacket} from "mysql2";
 import {brotliDecompressSync} from "node:zlib";
@@ -60,7 +60,7 @@ const decodeJobConfig = (
 };
 
 /**
- * Archive metadata - compression jobs routes.
+ * Compression metadata - jobs routes.
  *
  * @param fastify
  */
@@ -81,7 +81,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         CompressionJobWithDecodedIoConfigSchema
                     ),
                 },
-                tags: ["Archive Metadata"],
+                tags: ["Compression Metadata"],
             },
         },
         async (request) => {

@@ -4,7 +4,7 @@ import {
     CompressionJobStatus,
     JobData,
 } from "../Jobs/typings";
-import {CompressionJobWithDecodedIoConfig} from "@webui/common/schemas/compression";
+import {CompressionJobWithDecodedIoConfig} from "@webui/common/schemas/compress-metadata";
 import {formatSizeInBytes} from "./units";
 
 
