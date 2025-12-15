@@ -1,9 +1,0 @@
-{{- include "clp.createLocalPv" (dict
-  "root" .
-  "name" (printf "%s-streams" (include "clp.fullname" .))
-  "component" "streams"
-  "nodeRole" "control-plane"
-  "capacity" "20Gi"
-  "accessModes" (list "ReadWriteMany")
-  "hostPath" .Values.clpConfig.stream_output.storage.directory
-) }}
