@@ -68,7 +68,7 @@ def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
 
 def load_yaml_to_dict(path: Path) -> dict[str, Any]:
     """
-    Parses a UTF-8 YAML file into a dictionary.
+    Parses a YAML file into a dictionary.
 
     :param path:
     :return: Dictionary parsed from the file.
@@ -87,7 +87,7 @@ def load_yaml_to_dict(path: Path) -> dict[str, Any]:
         raise ValueError(err_msg) from err
 
     if not isinstance(target_dict, dict):
-        err_msg = f"Target file {path} must have a top-level mapping."
+        err_msg = f"Target file '{path}' must have a top-level mapping."
         raise TypeError(err_msg)
 
     return target_dict
