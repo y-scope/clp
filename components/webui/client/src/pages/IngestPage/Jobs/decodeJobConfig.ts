@@ -1,4 +1,5 @@
 import {decode as decodeMsgpack} from "@msgpack/msgpack";
+import brotliPromise from "brotli-wasm";
 
 import type {QueryJobsItem} from "./sql";
 
@@ -47,33 +48,6 @@ const toUint8Array = (clpConfig: unknown): Uint8Array | null => {
 };
 
 /**
- * Decompresses a brotli-compressed Uint8Array using the browser's built-in
- * DecompressionStream. Returns null if unsupported or on error.
- *
- * @param data
- * @return
- */
-const decompressBrotli = async (data: Uint8Array): Promise<Uint8Array | null> => {
-    const DecompressionStreamCtor =
-        (globalThis as unknown as {DecompressionStream?: typeof DecompressionStream}).DecompressionStream;
-    if ("function" !== typeof DecompressionStreamCtor) {
-        console.error("Brotli decompression is not supported in this browser");
-        return null;
-    }
-
-    try {
-        const stream = new Blob([data]).stream().pipeThrough(
-            new DecompressionStreamCtor("brotli")
-        );
-        const decompressed = await new Response(stream).arrayBuffer();
-        return new Uint8Array(decompressed);
-    } catch (err: unknown) {
-        console.error("Failed to brotli decompress job config", err);
-        return null;
-    }
-};
-
-/**
  * Turns a compressed job config blob into a decoded config object.
  *
  * @param clpConfig
@@ -85,8 +59,14 @@ const decodeJobConfigBytes = async (
     const buffer = toUint8Array(clpConfig);
     if (null === buffer) return null;
 
-    const decompressed = await decompressBrotli(buffer);
-    if (null === decompressed) return null;
+    let decompressed: Uint8Array;
+    try {
+        const brotli = await brotliPromise;
+        decompressed = new Uint8Array(brotli.decompress(buffer));
+    } catch (err: unknown) {
+        console.error("Failed to brotli decompress job config", err);
+        return null;
+    }
 
     try {
         const decoded = decodeMsgpack(decompressed);
