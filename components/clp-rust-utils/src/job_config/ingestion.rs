@@ -63,7 +63,7 @@ pub mod s3 {
         #[serde(flatten)]
         pub base: BaseConfig,
 
-        /// The Kafka broker to connect to.
+        /// The Kafka brokers to connect to.
         pub brokers: Vec<String>,
 
         /// The Kafka consumer group ID

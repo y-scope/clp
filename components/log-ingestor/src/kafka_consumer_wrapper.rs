@@ -20,12 +20,13 @@ pub struct KafkaConsumerWrapper {
     consumer: StreamConsumer,
 }
 
-impl KafkaConsumerWrapper {
-    #[must_use]
-    pub fn from(consumer: StreamConsumer) -> Self {
+impl From<StreamConsumer> for KafkaConsumerWrapper {
+    fn from(consumer: StreamConsumer) -> Self {
         Self { consumer }
     }
+}
 
+impl KafkaConsumerWrapper {
     /// Creates a new Kafka consumer wrapper.
     ///
     /// # Errors

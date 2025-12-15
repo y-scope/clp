@@ -44,8 +44,15 @@ impl<Consumer: KafkaMessageReceiver> Task<Consumer> {
 
                 // Receive the next Kafka message.
                 result = self.consumer.recv() => {
-                    let payload = result?;
-                    self.process_kafka_message(payload).await?;
+                    match result {
+                        Ok(payload) => {
+                            self.process_kafka_message(payload).await?;
+                        }
+                        Err(e) => {
+                            tracing::warn!(error = ?e, "Failed to receive Kafka message, retrying");
+                            continue;
+                        }
+                    }
                 }
             }
         }
