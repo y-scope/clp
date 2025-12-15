@@ -206,3 +206,28 @@ Creates the RESULT_BACKEND env var for Celery workers.
 name: "RESULT_BACKEND"
 value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
 {{- end }}
+
+{{/*
+Creates an initContainer that waits for a Kubernetes resource to be ready.
+
+@param {object} root Root template context
+@param {string} type "service" (waits for pod readiness) or "job" (waits for completion)
+@param {string} name For "service": component name
+                     For "job": job name suffix
+@return {string} YAML-formatted initContainer definition
+*/}}
+{{- define "clp.waitFor" -}}
+name: "wait-for-{{ .name }}"
+image: "bitnami/kubectl:latest"
+command: [
+  "kubectl", "wait",
+  {{- if eq .type "service" }}
+  "--for=condition=ready",
+  "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
+  {{- else if eq .type "job" }}
+  "--for=condition=complete",
+  "job/{{ include "clp.fullname" .root }}-{{ .name }}",
+  {{- end }}
+  "--timeout=300s"
+]
+{{- end }}

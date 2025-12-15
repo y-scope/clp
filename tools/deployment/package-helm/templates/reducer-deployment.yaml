@@ -17,6 +17,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "reducer"
     spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       hostname: {{ include "clp.fullname" . }}-reducer
       subdomain: {{ include "clp.fullname" . }}-reducer
       terminationGracePeriodSeconds: 10
@@ -25,26 +26,16 @@ spec:
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        - name: "wait-for-query-scheduler"
-          image: "busybox:latest"
-          command:
-            - "sh"
-            - "-c"
-            - >-
-              until nc -z {{ include "clp.fullname" . }}-query-scheduler 7000;
-                do echo Waiting for query-scheduler to be ready...;
-                sleep 2;
-              done
-        - name: "wait-for-results-cache"
-          image: "busybox:latest"
-          command:
-            - "sh"
-            - "-c"
-            - >-
-              until nc -z {{ include "clp.fullname" . }}-results-cache 27017;
-                do echo Waiting for results-cache to be ready...;
-                sleep 2;
-              done
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "query-scheduler"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
       containers:
         - name: "reducer"
           image: "{{ include "clp.image.ref" . }}"
