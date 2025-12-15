@@ -39,7 +39,7 @@ S3_OBJECT_DELETION_BATCH_SIZE_MAX: Final[int] = 1000
 SCHEME_REGEXP = r"(?P<scheme>(http|https))"
 S3_PREFIX_REGEXP = r"(?P<s3>s3)"
 ENDPOINT_REGEXP = r"(?P<endpoint>[a-z0-9.-]+(\:[0-9]+)?)"
-REGION_CODE_REGEXP = r"(?P<region_code>[a-z]+-[a-z]+-[0-9])"
+REGION_CODE_REGEXP = r"(?P<region_code>[a-z0-9\-]+)"
 BUCKET_NAME_REGEXP = r"(?P<bucket_name>[a-z0-9.-]+)"
 KEY_PREFIX_REGEXP = r"(?P<key_prefix>[^?]+)"
 
