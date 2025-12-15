@@ -1,15 +1,10 @@
 import {useQuery} from "@tanstack/react-query";
 import dayjs from "dayjs";
 
-import {querySql} from "../../../api/sql";
+import {fetchCompressionJobs} from "../../../api/archive-metadata/jobs";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
 import styles from "./index.module.css";
-import {
-    getQueryJobsSql,
-    QueryJobsResp,
-} from "./sql";
-import {decodeJobConfig} from "./decodeJobConfig";
 import {
     jobColumns,
     JobData,
@@ -30,12 +25,9 @@ const Jobs = () => {
         queryFn: async () => {
             const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
                 .unix();
-            const resp = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
-            const decoded = await Promise.all(
-                resp.data.map((item) => decodeJobConfig(item))
-            );
+            const resp = await fetchCompressionJobs(beginTimestamp);
 
-            return decoded.map((item): JobData => convertQueryJobsItemToJobData(item));
+            return resp.map((item): JobData => convertQueryJobsItemToJobData(item));
         },
     });
 

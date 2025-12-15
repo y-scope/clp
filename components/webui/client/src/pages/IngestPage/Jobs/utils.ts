@@ -4,7 +4,7 @@ import {
     CompressionJobStatus,
     JobData,
 } from "../Jobs/typings";
-import {DecodedQueryJobsItem} from "./decodeJobConfig";
+import {CompressionJobApiItem} from "../../../api/archive-metadata/jobs";
 import {formatSizeInBytes} from "./units";
 
 
@@ -31,7 +31,7 @@ const convertQueryJobsItemToJobData = ({
     start_time: startTime,
     status,
     uncompressed_size: uncompressedSize,
-}: DecodedQueryJobsItem): JobData => {
+}: CompressionJobApiItem): JobData => {
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";
