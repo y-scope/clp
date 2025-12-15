@@ -15,23 +15,24 @@ namespace clp_s::search::ast {
 class TimestampLiteral : public Literal {
 public:
     // Types
-    enum Precision : uint8_t {
+    enum class Precision : uint8_t {
         Seconds,
         Milliseconds,
         Microseconds,
         Nanoseconds
     };
 
-    // Delete copy constructor and assignment operator.
-    TimestampLiteral(TimestampLiteral const&) = delete;
-    TimestampLiteral& operator=(TimestampLiteral const&) = delete;
-
+    // Factory function
     /**
      * Creates a Date literal from a timestamp in epoch nanoseconds.
      * @param v The timestamp value.
      * @return A `shared_ptr` referencing the newly created date literal.
      */
     static std::shared_ptr<Literal> create(epochtime_t v);
+
+    // Delete copy constructor and assignment operator.
+    TimestampLiteral(TimestampLiteral const&) = delete;
+    TimestampLiteral& operator=(TimestampLiteral const&) = delete;
 
     // Methods inherited from Value
     void print() const override;
