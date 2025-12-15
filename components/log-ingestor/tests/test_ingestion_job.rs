@@ -180,6 +180,7 @@ async fn test_sqs_listener() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            endpoint_url: Some(aws_config.endpoint.clone()),
             tags: None,
         },
     };
@@ -255,6 +256,7 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            endpoint_url: Some(aws_config.endpoint),
             tags: None,
         },
         scanning_interval_sec: 1,
