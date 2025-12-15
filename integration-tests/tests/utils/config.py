@@ -175,8 +175,6 @@ class PackageInstance:
 
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
-        path_config = self.package_config.path_config
-
         # Validate that the temp config file exists.
         validate_file_exists(self.package_config.temp_config_file_path)
 

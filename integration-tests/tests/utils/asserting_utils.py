@@ -88,4 +88,4 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     intended_config = package_instance.package_config.clp_config
 
     if not compare_mode_signatures(intended_config, running_config):
-        pytest.fail("Mode mismatch: running configuration does not match intended configuration.\n")
+        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")

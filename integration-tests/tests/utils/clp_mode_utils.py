@@ -77,8 +77,8 @@ def compare_mode_signatures(intended_config: ClpConfig, running_config: ClpConfi
     Compares the running signatures of `intended_config` and `running_config` with
     `_match_objects_by_explicit_fields`.
 
-    :param intended_config:
-    :param running_config:
+    :param intended_config: The reference config object.
+    :param running_config: The config object to compare against.
     :return: True if config objects match, False otherwise.
     """
     return _match_objects_by_explicit_fields(intended_config, running_config)
@@ -123,8 +123,15 @@ def _match_objects_by_explicit_fields(intended_obj: Any, running_obj: Any) -> bo
 
     When both objects are Pydantic models, the function only inspects fields that were explicitly
     set on the `intended_obj`. For other data types, the function uses standard equality.
+
+    :param intended_obj:
+    :param running_obj:
+    :return: True if all explicitly set fields in intended_obj match running_obj, False otherwise.
     """
     if isinstance(intended_obj, BaseModel):
+        if not isinstance(running_obj, BaseModel):
+            return False
+
         for field_name in intended_obj.model_fields_set:
             intended_field_value = getattr(intended_obj, field_name)
             running_field_value = getattr(running_obj, field_name)
