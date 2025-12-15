@@ -80,57 +80,47 @@ const decompressBrotli = async (data: Uint8Array): Promise<Uint8Array | null> =>
  * @return
  */
 const decodeJobConfig = async (item: QueryJobsItem): Promise<DecodedQueryJobsItem> => {
+    const baseResult: DecodedQueryJobsItem = {
+        ...item,
+        dataset: null,
+        paths: [],
+    };
+
     const buffer = toUint8Array(item.clp_config);
-    if (null === buffer) {
-        return {
-            ...item,
-            dataset: null,
-            paths: [],
-        };
-    }
+    if (null === buffer) return baseResult;
 
     const decompressed = await decompressBrotli(buffer);
-    if (null === decompressed) {
-        return {
-            ...item,
-            dataset: null,
-            paths: [],
-        };
-    }
+    if (null === decompressed) return baseResult;
 
     try {
-        const decoded = decodeMsgpack(decompressed) as CompressionJobConfig;
-        const pathPrefixToRemove = decoded?.input?.path_prefix_to_remove;
-        const pathsToCompress = Array.isArray(decoded?.input?.paths_to_compress)
-            ? decoded.input.paths_to_compress
+        const decoded = decodeMsgpack(decompressed);
+        if ("object" !== typeof decoded || null === decoded) return baseResult;
+
+        const input = (decoded as CompressionJobConfig).input ?? {};
+        const pathsToCompress = Array.isArray(input.paths_to_compress)
+            ? input.paths_to_compress
             : [];
 
         const paths = pathsToCompress
             .filter((path): path is string => "string" === typeof path)
             .map((path) => {
-                if ("string" === typeof pathPrefixToRemove &&
-                    path.startsWith(pathPrefixToRemove)
+                if ("string" === typeof input.path_prefix_to_remove &&
+                    path.startsWith(input.path_prefix_to_remove)
                 ) {
-                    return path.slice(pathPrefixToRemove.length);
+                    return path.slice(input.path_prefix_to_remove.length);
                 }
                 return path;
             });
 
         return {
             ...item,
-            dataset: "string" === typeof decoded?.input?.dataset
-                ? decoded.input.dataset
-                : null,
+            dataset: "string" === typeof input.dataset ? input.dataset : null,
             paths,
         };
     } catch (err: unknown) {
         console.error("Failed to decode compression job config", err);
 
-        return {
-            ...item,
-            dataset: null,
-            paths: [],
-        };
+        return baseResult;
     }
 };
 
