@@ -1,7 +1,6 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-import shlex
 import subprocess
 from typing import Any
 
@@ -32,8 +31,6 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     :return: The completed process object, for inspection or further handling.
     :raise: pytest.fail if the command exits with a non-zero return code.
     """
-    logger.info("Running command: %s", shlex.join(cmd))
-
     try:
         proc = subprocess.run(cmd, check=True, **kwargs)
     except subprocess.CalledProcessError as e:
@@ -51,6 +48,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
+    logger.info("Validating that all components of the package are running...")
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
     project_name = f"clp-package-{instance_id}"
@@ -82,6 +80,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
 
     :param package_instance:
     """
+    logger.info("Validating that the package is running in the correct mode...")
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)
@@ -103,6 +102,7 @@ def validate_presto_running() -> None:
 
     :param package_instance:
     """
+    logger.info("Validating that all components of the Presto cluster are running...")
     required_components = CLP_PRESTO_COMPONENTS
 
     for component in required_components:

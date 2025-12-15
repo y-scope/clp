@@ -40,10 +40,12 @@ def fixt_package_instance(
         pytest.skip(f"No jobs to run for mode {mode_name} with current job filter.")
 
     try:
+        logger.info("Starting the package...")
         start_clp_package(fixt_package_config)
         instance = PackageInstance(package_config=fixt_package_config)
 
         if mode_name == "clp-presto":
+            logger.info("Starting the Presto cluster...")
             start_presto_cluster(fixt_package_config)
 
         yield instance
@@ -56,6 +58,8 @@ def fixt_package_instance(
         )
     finally:
         if mode_name == "clp-presto":
+            logger.info("Shutting down the Presto cluster...")
             stop_presto_cluster()
 
+        logger.info("Shutting down the package...")
         stop_clp_package(fixt_package_config)

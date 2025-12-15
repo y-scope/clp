@@ -165,16 +165,19 @@ def dispatch_test_jobs(package_instance: PackageInstance) -> None:
     # For each compression job, run it, then its dependent jobs, then cleanup.
     for package_compression_job in package_compression_jobs:
         # Run the compression job.
+        logger.info("Running job '%s'...", package_compression_job.job_name)
         run_package_compression_script(package_compression_job, package_instance)
 
         # Run the dependent package post-compression jobs.
         for package_post_compression_job in package_post_compression_jobs:
             if package_post_compression_job.compression_job is package_compression_job:
+                logger.info("Running job '%s'...", package_post_compression_job.job_name)
                 run_package_script(package_post_compression_job, package_instance)
 
         # Run the dependent Presto filter jobs.
         for presto_filter_job in presto_filter_jobs:
             if presto_filter_job.compression_job is package_compression_job:
+                logger.info("Running job '%s'...", presto_filter_job.job_name)
                 run_presto_filter(presto_filter_job)
 
         # Cleanup to prevent multiple compression jobs stored in archives.

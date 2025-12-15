@@ -36,11 +36,11 @@ def fixt_package_config(
     :raise ValueError: if the CLP base port's value is invalid.
     """
     mode_name: str = request.param
-    logger.debug("Creating a temporary config file for the %s package.", mode_name)
-
+    logger.info("Defining the '%s' package...", mode_name)
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
     # Assign ports based on the clp base port CLI option.
+    logger.info("Assigning ports...")
     base_port_string = request.config.getoption("--base-port")
     try:
         base_port = int(base_port_string)
@@ -49,9 +49,11 @@ def fixt_package_config(
         raise ValueError(err_msg) from err
     assign_ports_from_base(base_port, clp_config_obj)
 
+    logger.info("Constructing list of required package components...")
     required_components = get_required_component_list(clp_config_obj)
 
     # Build the job list for this mode and the current job filter.
+    logger.info("Building job list for this test run...")
     no_jobs: bool = bool(request.config.option.NO_JOBS)
     job_filter: str = request.config.option.JOB_NAME_CONTAINS or ""
     package_job_list = None if no_jobs else build_package_job_list(mode_name, job_filter)
@@ -69,7 +71,7 @@ def fixt_package_config(
     try:
         yield package_config
     finally:
-        logger.debug("Removing the temporary config file and var contents.")
+        logger.info("Cleaning up the package...")
         package_config.temp_config_file_path.unlink(missing_ok=True)
 
         data_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
