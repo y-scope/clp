@@ -20,7 +20,8 @@ SELECT
     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME},
     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.DURATION},
     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE},
-    ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE}
+    ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE},
+    ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.CLP_CONFIG}
 FROM ${settings.SqlDbCompressionJobsTableName}
 WHERE ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME} >= 
     FROM_UNIXTIME(${lastUpdateTimestampSeconds}) - 1
@@ -28,6 +29,7 @@ ORDER BY _id DESC;`;
 
 interface QueryJobsItem {
     compressed_size: number;
+    clp_config: unknown;
     duration: Nullable<number>;
     retrieval_time: number;
     start_time: Nullable<string>;

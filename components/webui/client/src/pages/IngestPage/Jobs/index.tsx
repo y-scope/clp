@@ -9,6 +9,7 @@ import {
     getQueryJobsSql,
     QueryJobsResp,
 } from "./sql";
+import {decodeJobConfig} from "./decodeJobConfig";
 import {
     jobColumns,
     JobData,
@@ -30,7 +31,11 @@ const Jobs = () => {
             const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
                 .unix();
             const resp = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
-            return resp.data.map((item): JobData => convertQueryJobsItemToJobData(item));
+            const decoded = await Promise.all(
+                resp.data.map((item) => decodeJobConfig(item))
+            );
+
+            return decoded.map((item): JobData => convertQueryJobsItemToJobData(item));
         },
     });
 

@@ -26,6 +26,8 @@ interface JobData {
     speed: string;
     dataIngested: string;
     compressedSize: string;
+    dataset: string;
+    paths: string[];
 }
 
 
@@ -83,6 +85,23 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
         title: "Speed",
         dataIndex: "speed",
         key: "speed",
+    },
+    {
+        title: "Dataset",
+        dataIndex: "dataset",
+        key: "dataset",
+    },
+    {
+        title: "Paths",
+        dataIndex: "paths",
+        key: "paths",
+        render: (paths: string[]) => (
+            <div>
+                {paths.map((path) => (
+                    <div key={path}>{path}</div>
+                ))}
+            </div>
+        ),
     },
     {
         title: "Data Ingested",

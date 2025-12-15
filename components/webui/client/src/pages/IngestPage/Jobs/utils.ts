@@ -4,7 +4,7 @@ import {
     CompressionJobStatus,
     JobData,
 } from "../Jobs/typings";
-import {QueryJobsItem} from "./sql";
+import {DecodedQueryJobsItem} from "./decodeJobConfig";
 import {formatSizeInBytes} from "./units";
 
 
@@ -14,7 +14,9 @@ import {formatSizeInBytes} from "./units";
  * @param props
  * @param props._id
  * @param props.compressed_size
+ * @param props.dataset
  * @param props.duration
+ * @param props.paths
  * @param props.start_time
  * @param props.status
  * @param props.uncompressed_size
@@ -23,11 +25,13 @@ import {formatSizeInBytes} from "./units";
 const convertQueryJobsItemToJobData = ({
     _id: id,
     compressed_size: compressedSize,
+    dataset,
     duration,
+    paths,
     start_time: startTime,
     status,
     uncompressed_size: uncompressedSize,
-}: QueryJobsItem): JobData => {
+}: DecodedQueryJobsItem): JobData => {
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";
@@ -59,8 +63,10 @@ const convertQueryJobsItemToJobData = ({
     return {
         compressedSize: compressedSizeText,
         dataIngested: uncompressedSizeText,
+        dataset: dataset ?? "N/A",
         jobId: String(id),
         key: String(id),
+        paths,
         speed: speedText,
         status: status as CompressionJobStatus,
     };
