@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_AST_SETDATELITERALPRECISION_HPP
-#define CLP_S_SEARCH_AST_SETDATELITERALPRECISION_HPP
+#ifndef CLP_S_SEARCH_AST_SETTIMESTAMPLITERALPRECISION_HPP
+#define CLP_S_SEARCH_AST_SETTIMESTAMPLITERALPRECISION_HPP
 
 #include <memory>
 
@@ -9,7 +9,7 @@
 
 namespace clp_s::search::ast {
 /**
- * Transformation pass that sets the precision of all date literals in the expression AST to a
+ * Transformation pass that sets the precision of all timestamp literals in the expression AST to a
  * given precision.
  */
 class SetTimestampLiteralPrecision : public Transformation {
@@ -29,4 +29,4 @@ private:
 };
 }  // namespace clp_s::search::ast
 
-#endif  // CLP_S_SEARCH_AST_SETDATELITERALPRECISION_HPP
+#endif  // CLP_S_SEARCH_AST_SETTIMESTAMPLITERALPRECISION_HPP

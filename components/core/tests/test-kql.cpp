@@ -358,10 +358,9 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(filter->get_column()->is_pure_wildcard());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE_FALSE(filter->get_column()->get_subtree_type().has_value());
-        int64_t tmp_int{};
-        auto date_literal{std::dynamic_pointer_cast<TimestampLiteral>(filter->get_operand())};
-        REQUIRE(nullptr != date_literal);
-        REQUIRE(1 == date_literal->as_precision(TimestampLiteral::Precision::Nanoseconds));
+        auto timestamp_literal{std::dynamic_pointer_cast<TimestampLiteral>(filter->get_operand())};
+        REQUIRE(nullptr != timestamp_literal);
+        REQUIRE(1 == timestamp_literal->as_precision(TimestampLiteral::Precision::Nanoseconds));
     }
 
     SECTION("Invalid timestamp expressions are rejected.") {

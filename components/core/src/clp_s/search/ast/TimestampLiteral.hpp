@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_DATELITERAL_HPP
-#define CLP_S_SEARCH_DATELITERAL_HPP
+#ifndef CLP_S_SEARCH_TIMESTAMPLITERAL_HPP
+#define CLP_S_SEARCH_TIMESTAMPLITERAL_HPP
 
 #include <cstdint>
 #include <memory>
@@ -9,7 +9,7 @@
 
 namespace clp_s::search::ast {
 /**
- * Class for Date literal in the search AST. Represents time
+ * Class for timestamp literal in the search AST. Represents time
  * in epoch time.
  */
 class TimestampLiteral : public Literal {
@@ -24,9 +24,9 @@ public:
 
     // Factory function
     /**
-     * Creates a Date literal from a timestamp in epoch nanoseconds.
+     * Creates a timestamp literal from a timestamp in epoch nanoseconds.
      * @param v The timestamp value.
-     * @return A `shared_ptr` referencing the newly created date literal.
+     * @return A `shared_ptr` referencing the newly created timestamp literal.
      */
     static std::shared_ptr<Literal> create(epochtime_t v);
 
@@ -80,4 +80,4 @@ private:
 };
 }  // namespace clp_s::search::ast
 
-#endif  // CLP_S_SEARCH_DATELITERAL_HPP
+#endif  // CLP_S_SEARCH_TIMESTAMPLITERAL_HPP

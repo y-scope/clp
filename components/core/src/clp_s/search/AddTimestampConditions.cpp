@@ -41,16 +41,17 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
 
     auto and_expr = AndExpr::create();
     if (m_begin_ts.has_value()) {
-        auto date_literal
+        auto timestamp_literal
                 = TimestampLiteral::create(m_begin_ts.value() * cNanosecondsInMillisecond);
         and_expr->add_operand(
-                FilterExpr::create(timestamp_column, FilterOperation::GTE, date_literal)
+                FilterExpr::create(timestamp_column, FilterOperation::GTE, timestamp_literal)
         );
     }
     if (m_end_ts.has_value()) {
-        auto date_literal = TimestampLiteral::create(m_end_ts.value() * cNanosecondsInMillisecond);
+        auto timestamp_literal
+                = TimestampLiteral::create(m_end_ts.value() * cNanosecondsInMillisecond);
         and_expr->add_operand(
-                FilterExpr::create(timestamp_column, FilterOperation::LTE, date_literal)
+                FilterExpr::create(timestamp_column, FilterOperation::LTE, timestamp_literal)
         );
     }
     and_expr->add_operand(expr);

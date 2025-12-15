@@ -22,10 +22,10 @@ auto SetTimestampLiteralPrecision::run(std::shared_ptr<Expression>& expr)
         }
 
         for (auto const& op : sub_expr->get_op_list()) {
-            if (auto date_literal{std::dynamic_pointer_cast<TimestampLiteral>(op)};
-                nullptr != date_literal)
+            if (auto timestamp_literal{std::dynamic_pointer_cast<TimestampLiteral>(op)};
+                nullptr != timestamp_literal)
             {
-                date_literal->set_default_precision(m_precision);
+                timestamp_literal->set_default_precision(m_precision);
             }
         }
     }
