@@ -9,6 +9,7 @@ import click
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 from clp_py_utils.core import resolve_host_path_in_container
 
+from clp_package_utils.cli_utils import RESTART_POLICY
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
     get_clp_home,
@@ -32,6 +33,12 @@ logger = logging.getLogger(__name__)
     help="CLP package configuration file.",
 )
 @click.option(
+    "--restart-policy",
+    default="on-failure:3",
+    type=RESTART_POLICY,
+    help=f"Docker restart policy ({RESTART_POLICY.VALID_POLICIES_STR}).",
+)
+@click.option(
     "--setup-only",
     is_flag=True,
     help="Validate configuration and prepare directories without starting services.",
@@ -44,6 +51,7 @@ logger = logging.getLogger(__name__)
 )
 def main(
     config: pathlib.Path,
+    restart_policy: str,
     setup_only: bool,
     verbose: bool,
 ) -> None:
@@ -94,7 +102,7 @@ def main(
 
     try:
         instance_id = get_or_create_instance_id(clp_config)
-        controller = DockerComposeController(clp_config, instance_id)
+        controller = DockerComposeController(clp_config, instance_id, restart_policy)
         controller.set_up_env()
         if setup_only:
             logger.info(

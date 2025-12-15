@@ -899,8 +899,9 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: ClpConfig, instance_id: str) -> None:
+    def __init__(self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3") -> None:
         self._project_name = f"clp-package-{instance_id}"
+        self._restart_policy = restart_policy
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
@@ -910,6 +911,11 @@ class DockerComposeController(BaseController):
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         env_vars = EnvVarsDict()
+
+        # Restart Policy
+        env_vars |= {
+            "CLP_RESTART_POLICY": self._restart_policy,
+        }
 
         # Credentials
         if self._clp_config.stream_output.storage.type == StorageType.S3:
