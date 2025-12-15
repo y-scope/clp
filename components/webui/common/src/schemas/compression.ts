@@ -73,14 +73,12 @@ const CompressionJobSchema = Type.Object({
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
 /**
- * Schema for compression job metadata with decoded config.
+ * Schema for compression job metadata without decoded config fields.
  */
-const CompressionJobWithConfigSchema = Type.Object({
+const CompressionJobSchemaBase = Type.Object({
     _id: Type.Number(),
     compressed_size: Type.Number(),
-    dataset: Type.Union([Type.String(), Type.Null()]),
     duration: Type.Union([Type.Number(), Type.Null()]),
-    paths: Type.Array(Type.String()),
     retrieval_time: Type.Number(),
     start_time: Type.Union([Type.String(), Type.Null()]),
     status: Type.Number(),
@@ -89,12 +87,19 @@ const CompressionJobWithConfigSchema = Type.Object({
     update_time: Type.String(),
 });
 
-type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
-
 /**
- * Compression job metadata without decoded config fields.
+ * Schema for compression job metadata with decoded config.
  */
-type CompressionJobMetadata = Omit<CompressionJobWithConfig, "dataset" | "paths">;
+const CompressionJobWithConfigSchema = Type.Intersect([
+    CompressionJobSchemaBase,
+    Type.Object({
+        dataset: Type.Union([Type.String(), Type.Null()]),
+        paths: Type.Array(Type.String()),
+    }),
+]);
+
+type CompressionJobMetadata = Static<typeof CompressionJobSchemaBase>;
+type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
 
 /**
  * Compression job config (mirrors `ClpIoConfig` in

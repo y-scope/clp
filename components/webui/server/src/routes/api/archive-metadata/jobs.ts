@@ -81,9 +81,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     ),
                 }),
                 response: {
-                    [constants.HTTP_STATUS_OK]: Type.Array(
-                        CompressionJobWithConfigSchema
-                    ),
+                    [constants.HTTP_STATUS_OK]: Type.Array(CompressionJobWithConfigSchema),
                 },
                 tags: ["Archive Metadata"],
             },
