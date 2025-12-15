@@ -220,7 +220,8 @@ def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
     """
     Parses the endpoint_url, region_code, bucket, and key_prefix from the given S3 URL.
     :param s3_url: A host-style URL or path-style URL.
-    :return: A tuple of (endpoint_url, region_code, bucket, key_prefix).
+    :return: A tuple of (endpoint_url, region_code, bucket, key_prefix). A value of None is returned
+    if the endpoint_url originates from AWS.
     :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
     """
     host_style_url_regex = re.compile(
