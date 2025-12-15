@@ -15,9 +15,7 @@ class RestartPolicyParamType(click.ParamType):
     # Human-readable string listing all valid policies for help text and error messages.
     VALID_POLICIES_STR = f"{', '.join(sorted(VALID_POLICIES))}, or on-failure:<max-retries>"
 
-    def convert(
-        self, value: str, param: click.Parameter | None, ctx: click.Context | None
-    ) -> str:
+    def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> str:
         """
         Validate and return the restart policy string.
 
