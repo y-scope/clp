@@ -92,6 +92,11 @@ const CompressionJobWithConfigSchema = Type.Object({
 type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
 
 /**
+ * Compression job metadata without decoded config fields.
+ */
+type CompressionJobMetadata = Omit<CompressionJobWithConfig, "dataset" | "paths">;
+
+/**
  * Compression job config (mirrors `ClpIoConfig` in
  * `components/job-orchestration/job_orchestration/scheduler/job_config.py`).
  */
@@ -148,6 +153,7 @@ export type {
     CompressionJob,
     CompressionJobCreation,
     CompressionJobWithConfig,
+    CompressionJobMetadata,
     CompressionJobConfig,
     CompressionJobFsInputConfig,
     CompressionJobS3InputConfig,

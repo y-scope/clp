@@ -4,6 +4,7 @@ import {
 } from "@fastify/type-provider-typebox";
 import {decode} from "@msgpack/msgpack";
 import {
+    CompressionJobMetadata,
     CompressionJobWithConfig,
     CompressionJobWithConfigSchema,
 } from "@webui/common/schemas/compression";
@@ -14,20 +15,12 @@ import {brotliDecompressSync} from "node:zlib";
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
-type QueryRow = RowDataPacket & {
+type CompressionJobBaseRow = CompressionJobMetadata;
+type CompressionJobRow = CompressionJobBaseRow & {
     clp_config?: Buffer | null;
-} & Pick<
-    CompressionJobWithConfig,
-    "_id" |
-    "compressed_size" |
-    "duration" |
-    "retrieval_time" |
-    "start_time" |
-    "status" |
-    "status_msg" |
-    "uncompressed_size" |
-    "update_time"
->;
+};
+type CompressionJobWithDecodedConfig = CompressionJobBaseRow &
+    Pick<CompressionJobWithConfig, "dataset" | "paths">;
 
 /**
  * Decodes a compressed job config stored in the database.
@@ -35,7 +28,9 @@ type QueryRow = RowDataPacket & {
  * @param jobConfig
  * @return
  */
-const decodeJobConfig = (jobConfig: unknown) => {
+const decodeJobConfig = (
+    jobConfig: unknown
+): Pick<CompressionJobWithConfig, "dataset" | "paths"> => {
     let dataset: string | null = null;
     let paths: string[] = [];
 
@@ -118,7 +113,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 [sinceSeconds]
             );
 
-            return (rows as QueryRow[]).map(
+            return (rows as Array<RowDataPacket & CompressionJobRow>).map(
                 ({
                     _id,
                     clp_config: clpConfig,
@@ -130,7 +125,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     status_msg: statusMsg,
                     uncompressed_size: uncompressedSize,
                     update_time: updateTime,
-                }): CompressionJobWithConfig => {
+                }): CompressionJobWithDecodedConfig => {
                     const {dataset, paths} = decodeJobConfig(clpConfig);
 
                     return {
