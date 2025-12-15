@@ -178,3 +178,17 @@ name: {{ printf "%s-%s" .component_category .name | quote }}
 persistentVolumeClaim:
   claimName: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
 {{- end }}
+
+{{/*
+Creates the BROKER_URL env var for Celery workers.
+
+@param {object} . Root template context
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryBrokerUrlEnvVar" -}}
+{{- $user := .Values.credentials.queue.username -}}
+{{- $pass := .Values.credentials.queue.password -}}
+{{- $host := printf "%s-queue" (include "clp.fullname" .) -}}
+name: "BROKER_URL"
+value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
+{{- end }}

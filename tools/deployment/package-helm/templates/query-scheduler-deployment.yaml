@@ -60,18 +60,17 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "BROKER_URL"
-              value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
+            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
             - name: "CLP_LOGS_DIR"

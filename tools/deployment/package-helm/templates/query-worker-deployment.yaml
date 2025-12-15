@@ -48,8 +48,7 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "BROKER_URL"
-              value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
+            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yaml"
             - name: "CLP_HOME"
