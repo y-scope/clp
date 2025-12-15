@@ -22,7 +22,8 @@ using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::TimestampLiteral;
 
 namespace clp_s::search {
-constexpr literal_type_bitmask_t cDateTypes = search::ast::cIntegralTypes | search::ast::EpochDateT;
+constexpr literal_type_bitmask_t cTimestampTypes
+        = search::ast::cIntegralTypes | search::ast::LiteralType::TimestampT;
 
 EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& expr) {
     if (std::dynamic_pointer_cast<OrExpr>(expr)) {
@@ -61,7 +62,7 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
         return expr->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
         auto column = filter->get_column();
-        if (false == column->matches_any(cDateTypes)) {
+        if (false == column->matches_any(cTimestampTypes)) {
             return EvaluatedValue::Unknown;
         }
 

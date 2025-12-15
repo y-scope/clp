@@ -45,7 +45,7 @@ public:
         return mask == cTimestampLiteralTypes;
     }
 
-    bool as_epoch_date() override { return true; }
+    bool as_timestamp() override { return true; }
 
     bool as_int(int64_t& ret, FilterOperation op) override;
 
@@ -67,7 +67,7 @@ public:
 
 private:
     // Types
-    static constexpr literal_type_bitmask_t cTimestampLiteralTypes{EpochDateT};
+    static constexpr literal_type_bitmask_t cTimestampLiteralTypes{TimestampT};
 
     // Constructors
     explicit TimestampLiteral(epochtime_t timestamp);
