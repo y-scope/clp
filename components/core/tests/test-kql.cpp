@@ -12,6 +12,7 @@
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../src/clp_s/search/ast/FilterExpr.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
+#include "../src/clp_s/search/ast/TimestampLiteral.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "LogSuppressor.hpp"
 
@@ -20,6 +21,7 @@ using clp_s::search::ast::DescriptorToken;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::TimestampLiteral;
 using clp_s::search::kql::parse_kql_expression;
 using std::string;
 using std::stringstream;
@@ -329,5 +331,51 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         auto it = filter->get_column()->descriptor_begin();
         auto const column_token = DescriptorToken::create_descriptor_from_escaped_token(column);
         REQUIRE(column_token == *it);
+    }
+
+    SECTION("Timestamp expressions are parsed correctly.") {
+        auto const [query, expected_operation] = GENERATE(
+                std::make_pair(
+                        R"(* : timestamp("1970-01-01 00:00:00.000000001"))",
+                        FilterOperation::EQ
+                ),
+                std::make_pair(R"(* : timestamp("1", "\N"))", FilterOperation::EQ),
+                std::make_pair(
+                        R"(* < timestamp("1970-01-01 00:00:00.000000001"))",
+                        FilterOperation::LT
+                ),
+                std::make_pair(R"(* < timestamp("1", "\N"))", FilterOperation::LT)
+        );
+
+        stringstream query_stream{query};
+        auto filter{std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query_stream))};
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_operand());
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(expected_operation == filter->get_operation());
+        REQUIRE_FALSE(filter->has_only_expression_operands());
+        REQUIRE_FALSE(filter->is_inverted());
+        REQUIRE(filter->get_column()->is_pure_wildcard());
+        REQUIRE(filter->get_column()->get_namespace().empty());
+        REQUIRE_FALSE(filter->get_column()->get_subtree_type().has_value());
+        auto timestamp_literal{std::dynamic_pointer_cast<TimestampLiteral>(filter->get_operand())};
+        REQUIRE(nullptr != timestamp_literal);
+        REQUIRE(1 == timestamp_literal->as_precision(TimestampLiteral::Precision::Nanoseconds));
+    }
+
+    SECTION("Invalid timestamp expressions are rejected.") {
+        auto invalid_query = GENERATE(
+                R"(a: timestamp()",
+                R"(a: timestamp())",
+                R"(a: timestamp(,))",
+                R"(a: timestamp("1",)",
+                R"(a: timestamp("1)",
+                R"(a: timestamp(1))",
+                R"(a: timestamp("a"))",
+                R"(a: timestamp("12345", "\Y-\m-\d"))",
+                R"(a: timestamp("12345", "\N))"
+        );
+        stringstream invalid_query_stream{invalid_query};
+        REQUIRE(nullptr == parse_kql_expression(invalid_query_stream));
     }
 }
