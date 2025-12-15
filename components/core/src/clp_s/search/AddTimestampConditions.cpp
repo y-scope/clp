@@ -4,19 +4,19 @@
 #include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
-#include "ast/DateLiteral.hpp"
 #include "ast/EmptyExpr.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
+#include "ast/TimestampLiteral.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;
-using clp_s::search::ast::DateLiteral;
 using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::TimestampLiteral;
 
 namespace clp_s::search {
 namespace {
@@ -41,13 +41,14 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
 
     auto and_expr = AndExpr::create();
     if (m_begin_ts.has_value()) {
-        auto date_literal = DateLiteral::create(m_begin_ts.value() * cNanosecondsInMillisecond);
+        auto date_literal
+                = TimestampLiteral::create(m_begin_ts.value() * cNanosecondsInMillisecond);
         and_expr->add_operand(
                 FilterExpr::create(timestamp_column, FilterOperation::GTE, date_literal)
         );
     }
     if (m_end_ts.has_value()) {
-        auto date_literal = DateLiteral::create(m_end_ts.value() * cNanosecondsInMillisecond);
+        auto date_literal = TimestampLiteral::create(m_end_ts.value() * cNanosecondsInMillisecond);
         and_expr->add_operand(
                 FilterExpr::create(timestamp_column, FilterOperation::LTE, date_literal)
         );

@@ -25,13 +25,13 @@
 #include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/ConvertToExists.hpp"
-#include "search/ast/DateLiteral.hpp"
 #include "search/ast/EmptyExpr.hpp"
 #include "search/ast/Expression.hpp"
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
-#include "search/ast/SetDateLiteralPrecision.hpp"
+#include "search/ast/SetTimestampLiteralPrecision.hpp"
+#include "search/ast/TimestampLiteral.hpp"
 #include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
@@ -183,7 +183,9 @@ bool search_archive(
         return true;
     }
 
-    ast::SetDateLiteralPrecision date_precision_pass{ast::DateLiteral::Precision::Milliseconds};
+    ast::SetTimestampLiteralPrecision date_precision_pass{
+            ast::TimestampLiteral::Precision::Milliseconds
+    };
     expr = date_precision_pass.run(expr);
 
     // Narrow against schemas

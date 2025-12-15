@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "DateLiteral.hpp"
 #include "Expression.hpp"
+#include "TimestampLiteral.hpp"
 #include "Transformation.hpp"
 
 namespace clp_s::search::ast {
@@ -12,19 +12,20 @@ namespace clp_s::search::ast {
  * Transformation pass that sets the precision of all date literals in the expression AST to a
  * given precision.
  */
-class SetDateLiteralPrecision : public Transformation {
+class SetTimestampLiteralPrecision : public Transformation {
 public:
-    explicit SetDateLiteralPrecision(DateLiteral::Precision precision) : m_precision{precision} {}
+    explicit SetTimestampLiteralPrecision(TimestampLiteral::Precision precision)
+            : m_precision{precision} {}
 
     /**
      * @param expr
-     * @return A mutated version of `expr` where all `DateLiteral`s have precision set to
+     * @return A mutated version of `expr` where all `TimestampLiteral`s have precision set to
      * `m_precision`.
      */
     auto run(std::shared_ptr<Expression>& expr) -> std::shared_ptr<Expression> override;
 
 private:
-    DateLiteral::Precision m_precision{DateLiteral::Precision::Nanoseconds};
+    TimestampLiteral::Precision m_precision{TimestampLiteral::Precision::Nanoseconds};
 };
 }  // namespace clp_s::search::ast
 

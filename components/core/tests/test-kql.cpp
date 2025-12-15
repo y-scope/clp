@@ -10,18 +10,18 @@
 
 #include "../src/clp_s/search/ast/AndExpr.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
-#include "../src/clp_s/search/ast/DateLiteral.hpp"
 #include "../src/clp_s/search/ast/FilterExpr.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
+#include "../src/clp_s/search/ast/TimestampLiteral.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "LogSuppressor.hpp"
 
 using clp_s::search::ast::AndExpr;
-using clp_s::search::ast::DateLiteral;
 using clp_s::search::ast::DescriptorToken;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::TimestampLiteral;
 using clp_s::search::kql::parse_kql_expression;
 using std::string;
 using std::stringstream;
@@ -359,9 +359,9 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE_FALSE(filter->get_column()->get_subtree_type().has_value());
         int64_t tmp_int{};
-        auto date_literal{std::dynamic_pointer_cast<DateLiteral>(filter->get_operand())};
+        auto date_literal{std::dynamic_pointer_cast<TimestampLiteral>(filter->get_operand())};
         REQUIRE(nullptr != date_literal);
-        REQUIRE(1 == date_literal->as_precision(DateLiteral::Precision::Nanoseconds));
+        REQUIRE(1 == date_literal->as_precision(TimestampLiteral::Precision::Nanoseconds));
     }
 
     SECTION("Invalid timestamp expressions are rejected.") {

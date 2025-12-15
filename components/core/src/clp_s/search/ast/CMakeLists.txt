@@ -13,8 +13,8 @@ set(
     ConstantProp.hpp
     ConvertToExists.cpp
     ConvertToExists.hpp
-    DateLiteral.cpp
-    DateLiteral.hpp
+    TimestampLiteral.cpp
+    TimestampLiteral.hpp
     EmptyExpr.cpp
     EmptyExpr.hpp
     Expression.cpp
@@ -35,8 +35,8 @@ set(
     OrOfAndForm.hpp
     SearchUtils.cpp
     SearchUtils.hpp
-    SetDateLiteralPrecision.cpp
-    SetDateLiteralPrecision.hpp
+    SetTimestampLiteralPrecision.cpp
+    SetTimestampLiteralPrecision.hpp
     StringLiteral.cpp
     StringLiteral.hpp
     Transformation.hpp

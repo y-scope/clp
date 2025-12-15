@@ -12,7 +12,7 @@ namespace clp_s::search::ast {
  * Class for Date literal in the search AST. Represents time
  * in epoch time.
  */
-class DateLiteral : public Literal {
+class TimestampLiteral : public Literal {
 public:
     // Types
     enum Precision : uint8_t {
@@ -23,8 +23,8 @@ public:
     };
 
     // Delete copy constructor and assignment operator.
-    DateLiteral(DateLiteral const&) = delete;
-    DateLiteral& operator=(DateLiteral const&) = delete;
+    TimestampLiteral(TimestampLiteral const&) = delete;
+    TimestampLiteral& operator=(TimestampLiteral const&) = delete;
 
     /**
      * Creates a Date literal from a timestamp in epoch nanoseconds.
@@ -37,11 +37,13 @@ public:
     void print() const override;
 
     // Methods inherited from Literal
-    bool matches_type(LiteralType type) override { return type & cDateLiteralTypes; }
+    bool matches_type(LiteralType type) override { return type & cTimestampLiteralTypes; }
 
-    bool matches_any(literal_type_bitmask_t mask) override { return mask & cDateLiteralTypes; }
+    bool matches_any(literal_type_bitmask_t mask) override { return mask & cTimestampLiteralTypes; }
 
-    bool matches_exactly(literal_type_bitmask_t mask) override { return mask == cDateLiteralTypes; }
+    bool matches_exactly(literal_type_bitmask_t mask) override {
+        return mask == cTimestampLiteralTypes;
+    }
 
     bool as_epoch_date() override { return true; }
 
@@ -65,10 +67,10 @@ public:
 
 private:
     // Types
-    static constexpr literal_type_bitmask_t cDateLiteralTypes{EpochDateT};
+    static constexpr literal_type_bitmask_t cTimestampLiteralTypes{EpochDateT};
 
     // Constructors
-    explicit DateLiteral(epochtime_t timestamp);
+    explicit TimestampLiteral(epochtime_t timestamp);
 
     // Variables
     epochtime_t m_timestamp{};

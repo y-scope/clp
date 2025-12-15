@@ -15,7 +15,6 @@
 #include "../ast/AndExpr.hpp"
 #include "../ast/BooleanLiteral.hpp"
 #include "../ast/ColumnDescriptor.hpp"
-#include "../ast/DateLiteral.hpp"
 #include "../ast/EmptyExpr.hpp"
 #include "../ast/FilterExpr.hpp"
 #include "../ast/FilterOperation.hpp"
@@ -24,6 +23,7 @@
 #include "../ast/OrExpr.hpp"
 #include "../ast/SearchUtils.hpp"
 #include "../ast/StringLiteral.hpp"
+#include "../ast/TimestampLiteral.hpp"
 #include "KqlBaseVisitor.h"
 #include "KqlLexer.h"
 #include "KqlParser.h"
@@ -34,7 +34,6 @@ using clp_s::search::antlr_common::ErrorListener;
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::BooleanLiteral;
 using clp_s::search::ast::ColumnDescriptor;
-using clp_s::search::ast::DateLiteral;
 using clp_s::search::ast::DescriptorList;
 using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
@@ -45,6 +44,7 @@ using clp_s::search::ast::Literal;
 using clp_s::search::ast::NullLiteral;
 using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::StringLiteral;
+using clp_s::search::ast::TimestampLiteral;
 
 namespace clp_s::search::kql {
 using generated::KqlBaseVisitor;
@@ -115,7 +115,7 @@ private:
                 );
                 return nullptr;
             }
-            return DateLiteral::create(timestamp_result.value().first);
+            return TimestampLiteral::create(timestamp_result.value().first);
         }
 
         auto const quoted_patterns_result{
@@ -142,7 +142,7 @@ private:
             );
             return nullptr;
         }
-        return DateLiteral::create(optional_timestamp->first);
+        return TimestampLiteral::create(optional_timestamp->first);
     }
 
 public:

@@ -1,13 +1,13 @@
-#include "SetDateLiteralPrecision.hpp"
+#include "SetTimestampLiteralPrecision.hpp"
 
 #include <memory>
 #include <vector>
 
-#include "DateLiteral.hpp"
 #include "Expression.hpp"
+#include "TimestampLiteral.hpp"
 
 namespace clp_s::search::ast {
-auto SetDateLiteralPrecision::run(std::shared_ptr<Expression>& expr)
+auto SetTimestampLiteralPrecision::run(std::shared_ptr<Expression>& expr)
         -> std::shared_ptr<Expression> {
     std::vector<std::shared_ptr<Expression>> work_list{expr};
     while (false == work_list.empty()) {
@@ -22,7 +22,7 @@ auto SetDateLiteralPrecision::run(std::shared_ptr<Expression>& expr)
         }
 
         for (auto const& op : sub_expr->get_op_list()) {
-            if (auto date_literal{std::dynamic_pointer_cast<DateLiteral>(op)};
+            if (auto date_literal{std::dynamic_pointer_cast<TimestampLiteral>(op)};
                 nullptr != date_literal)
             {
                 date_literal->set_default_precision(m_precision);

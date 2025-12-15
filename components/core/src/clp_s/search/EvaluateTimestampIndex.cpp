@@ -3,16 +3,15 @@
 #include <memory>
 
 #include "ast/AndExpr.hpp"
-#include "ast/DateLiteral.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
 #include "ast/Integral.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
+#include "ast/TimestampLiteral.hpp"
 
 using clp_s::search::ast::AndExpr;
-using clp_s::search::ast::DateLiteral;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
@@ -20,6 +19,7 @@ using clp_s::search::ast::Integral;
 using clp_s::search::ast::Integral64;
 using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::TimestampLiteral;
 
 namespace clp_s::search {
 constexpr literal_type_bitmask_t cDateTypes = search::ast::cIntegralTypes | search::ast::EpochDateT;
@@ -110,11 +110,14 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
                     ret = range_it->second->evaluate_filter(filter_op, float_literal);
                     break;
                 case TimestampEntry::TimestampEncoding::Epoch:
-                    if (auto const date_literal{std::dynamic_pointer_cast<DateLiteral>(literal)};
+                    if (auto const date_literal{
+                                std::dynamic_pointer_cast<TimestampLiteral>(literal)
+                        };
                         nullptr != date_literal)
                     {
-                        int_literal
-                                = date_literal->as_precision(DateLiteral::Precision::Milliseconds);
+                        int_literal = date_literal->as_precision(
+                                TimestampLiteral::Precision::Milliseconds
+                        );
                     } else if (false == literal->as_int(int_literal, filter_op)) {
                         return EvaluatedValue::Unknown;
                     }
