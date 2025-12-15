@@ -57,6 +57,22 @@ pub mod s3 {
         pub start_after: Option<String>,
     }
 
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct KafkaListenerConfig {
+        #[serde(flatten)]
+        pub base: BaseConfig,
+
+        /// The Kafka broker to connect to.
+        pub brokers: Vec<String>,
+
+        /// The Kafka consumer group ID
+        pub group_id: String,
+
+        /// The Kafka topics to listen to.
+        /// Each topic is expected to be dedicated to this ingestion job and receive S3 event notifications.
+        pub topics: Vec<String>,
+    }
+
     const fn default_unstructured() -> bool {
         false
     }

@@ -1,7 +1,9 @@
+mod kafka_listener;
 mod s3_scanner;
 mod sqs_listener;
 
 use anyhow::Result;
+pub use kafka_listener::*;
 pub use s3_scanner::*;
 pub use sqs_listener::*;
 
@@ -9,6 +11,7 @@ pub use sqs_listener::*;
 pub enum IngestionJob {
     S3Scanner(S3Scanner),
     SqsListener(SqsListener),
+    KafkaListener(KafkaListener),
 }
 
 impl IngestionJob {
@@ -28,6 +31,7 @@ impl IngestionJob {
         match self {
             Self::S3Scanner(s3_scanner) => s3_scanner.shutdown_and_join().await,
             Self::SqsListener(sqs_listener) => sqs_listener.shutdown_and_join().await,
+            Self::KafkaListener(kafka_listener) => kafka_listener.shutdown_and_join().await,
         }
     }
 
@@ -39,6 +43,7 @@ impl IngestionJob {
         match self {
             Self::S3Scanner(scanner) => scanner.get_id(),
             Self::SqsListener(listener) => listener.get_id(),
+            Self::KafkaListener(listener) => listener.get_id(),
         }
     }
 }
@@ -52,5 +57,11 @@ impl From<S3Scanner> for IngestionJob {
 impl From<SqsListener> for IngestionJob {
     fn from(listener: SqsListener) -> Self {
         Self::SqsListener(listener)
+    }
+}
+
+impl From<KafkaListener> for IngestionJob {
+    fn from(listener: KafkaListener) -> Self {
+        Self::KafkaListener(listener)
     }
 }
