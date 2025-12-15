@@ -88,7 +88,7 @@ need it for one OS since users can use the container on any OS.
 
 This workflow uses self-hosted runners with tags `["self-hosted", "X64", "ubuntu-noble"]` because it
 runs many parallel jobs, each of which is compute-intensive. Our self-hosted runner pool consists of
-machines with 8-16 cores and 128-256 GB of RAM.
+machines with 8–16 cores and 128–256 GB of RAM.
 
 **If you fork this project**, change the runner tags to `["ubuntu-24.04"]` to use GitHub-hosted
 runners. Note that GitHub-hosted runners have limited resources (e.g., 4 cores, limited RAM) and
