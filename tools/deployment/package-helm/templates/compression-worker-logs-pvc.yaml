@@ -1,6 +1,7 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "compression-worker-logs"
+  "component_category" "compression-worker"
+  "name" "logs"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}

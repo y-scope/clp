@@ -1,6 +1,7 @@
 {{- include "clp.createPvc" (dict
   "root" .
-  "component" "tmp"
-  "capacity" "10Gi"
+  "component_category" "shared-data"
+  "name" "streams"
+  "capacity" "20Gi"
   "accessModes" (list "ReadWriteMany")
 ) }}
