@@ -13,6 +13,8 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     ClpConfig,
+    ClpDbNameType,
+    ClpDbUserType,
     Database,
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
@@ -188,7 +190,7 @@ def validate_and_load_config_file(
     :return: clp_config on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(config_file_path)
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
@@ -241,14 +243,15 @@ def handle_extract_file_cmd(
         "--db-type", clp_db_connection_params["type"],
         "--db-host", clp_db_connection_params["host"],
         "--db-port", str(clp_db_connection_params["port"]),
-        "--db-name", clp_db_connection_params["name"],
+        "--db-name", clp_db_connection_params["names"][ClpDbNameType.CLP],
         "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
+    credentials = Database.model_validate(clp_db_connection_params).credentials
     extract_env = {
         **os.environ,
-        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
-        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
     }
 
     files_to_extract_list_path = None

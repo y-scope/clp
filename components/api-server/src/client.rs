@@ -2,9 +2,12 @@ use std::pin::Pin;
 
 use async_stream::stream;
 use clp_rust_utils::{
-    clp_config::package::{
-        config::{Config, StorageEngine, StreamOutputStorage},
-        credentials::Credentials,
+    clp_config::{
+        AwsAuthentication,
+        package::{
+            config::{Config, StorageEngine, StreamOutputStorage},
+            credentials::Credentials,
+        },
     },
     database::mysql::create_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
@@ -13,24 +16,39 @@ use futures::{Stream, StreamExt};
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
 
 /// Defines the request configuration for submitting a search query.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
+    /// The search query as a KQL string.
     pub query_string: String,
+
+    /// The dataset to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
     pub dataset: Option<String>,
+
+    /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
     pub max_num_results: u32,
+
+    /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
     pub begin_timestamp: Option<i64>,
+
+    /// The ending timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
     pub end_timestamp: Option<i64>,
+
+    /// Whether the string match should be case-insensitive.
     #[serde(default)]
     pub ignore_case: bool,
+
+    /// Whether to write the search results to files. If `false`, results will be stored in
+    /// `MongoDB`.
     #[serde(default)]
     pub write_to_file: bool,
 }
@@ -150,6 +168,7 @@ impl Client {
         SearchResultStream<
             impl Stream<Item = Result<String, ClientError>> + use<>,
             impl Stream<Item = Result<String, ClientError>> + use<>,
+            impl Stream<Item = Result<String, ClientError>> + use<>,
         >,
         ClientError,
     > {
@@ -171,11 +190,19 @@ impl Client {
         }
 
         let job_config = self.get_job_config(search_job_id).await?;
+
         if job_config.write_to_file {
-            return Ok(SearchResultStream::File {
-                inner: self.fetch_results_from_file(search_job_id),
-            });
+            let stream = match &self.config.stream_output.storage {
+                StreamOutputStorage::Fs { .. } => SearchResultStream::File {
+                    inner: self.fetch_results_from_file(search_job_id),
+                },
+                StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
+                    inner: self.fetch_results_from_s3(search_job_id).await,
+                },
+            };
+            return Ok(stream);
         }
+
         self.fetch_results_from_mongo(search_job_id)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
@@ -242,7 +269,7 @@ impl Client {
         search_job_id: u64,
     ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
         let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
-            todo!("Outputting query results to S3 is not supported for now.");
+            unreachable!();
         };
         let search_job_output_dir = std::path::Path::new("/")
             .join(directory)
@@ -260,6 +287,92 @@ impl Client {
             }
         };
         stream
+    }
+
+    /// Asynchronously fetches results of a completed search job from S3.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// The log message in string representation on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards the pagination stream's error returned from S3 list-object-v2 operation's
+    ///   paginator (i.e., from
+    ///   [`aws_smithy_async::future::pagination_stream::PaginationStream::next`]).
+    /// * Forwards S3 get-object operation's return values on failure (i.e., from
+    ///   [`aws_sdk_s3::operation::get_object::builders::GetObjectFluentBuilder::send`]).
+    /// * Forwards [`aws_smithy_types::byte_stream::ByteStream::collect`]'s return values on
+    ///   failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stream output storage is not S3.
+    async fn fetch_results_from_s3(
+        &self,
+        search_job_id: u64,
+    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
+        tracing::info!("Streaming results from S3");
+        let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
+            unreachable!();
+        };
+
+        let AwsAuthentication::Credentials { credentials } = &s3_config.aws_authentication;
+
+        let s3_config = s3_config.clone();
+        let credentials = credentials.clone();
+
+        let s3_client = clp_rust_utils::s3::create_new_client(
+            s3_config.region_code.as_str(),
+            credentials.access_key_id.as_str(),
+            credentials.secret_access_key.as_str(),
+            None,
+        )
+        .await;
+
+        let key_prefix = format!("{}{}/", s3_config.key_prefix, search_job_id);
+        tracing::info!("Streaming results from S3 prefix: {}", key_prefix);
+        let mut object_pages = s3_client
+            .list_objects_v2()
+            .bucket(s3_config.bucket.as_str())
+            .prefix(key_prefix)
+            .into_paginator()
+            .send();
+
+        stream! {
+            while let Some(object_page) = object_pages.next().await {
+                tracing::debug!("Received S3 object page: {:?}", object_page);
+                for object in object_page?.contents() {
+                    let Some(key) = object.key() else {
+                        tracing::info!("S3 object {:?} doesn't have a key", object);
+                        continue;
+                    };
+                    if key.ends_with('/') {
+                        tracing::info!("Skipping S3 object with key {} as it is a directory", key);
+                        continue;
+                    }
+                    tracing::info!("Streaming results from S3 object with key: {}", key);
+                    let obj = s3_client
+                        .get_object()
+                        .bucket(s3_config.bucket.as_str())
+                        .key(key)
+                        .send()
+                        .await?;
+                    let bytes = obj.body.collect().await?.into_bytes();
+                    let mut deserializer = rmp_serde::Deserializer::from_read_ref(bytes.as_ref());
+                    while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
+                        let event: (i64, String, String, String, i64) = event;
+                        yield Ok(event.1);
+                    }
+                }
+            }
+        }
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
@@ -318,21 +431,26 @@ pin_project! {
     ///
     /// * `FileStream`: Streaming from file system storage.
     /// * `MongoStream`: Streaming from MongoDB storage.
+    /// * `S3Stream`: Streaming from S3 storage.
     #[project = SearchResultStreamProj]
-    pub enum SearchResultStream<FileStream, MongoStream>
+    pub enum SearchResultStream<FileStream, MongoStream, S3Stream>
     where
         FileStream: Stream<Item = Result<String, ClientError>>,
-        MongoStream: Stream<Item = Result<String, ClientError>>
+        MongoStream: Stream<Item = Result<String, ClientError>>,
+        S3Stream: Stream<Item = Result<String, ClientError>>
     {
         File{#[pin] inner: FileStream},
         Mongo{#[pin] inner: MongoStream},
+        S3{#[pin] inner: S3Stream},
     }
 }
 
-impl<FileStream, MongoStream> Stream for SearchResultStream<FileStream, MongoStream>
+impl<FileStream, MongoStream, S3Stream> Stream
+    for SearchResultStream<FileStream, MongoStream, S3Stream>
 where
     FileStream: Stream<Item = Result<String, ClientError>>,
     MongoStream: Stream<Item = Result<String, ClientError>>,
+    S3Stream: Stream<Item = Result<String, ClientError>>,
 {
     type Item = Result<String, ClientError>;
 
@@ -343,6 +461,7 @@ where
         let poll = match self.project() {
             SearchResultStreamProj::File { inner } => inner.poll_next(cx),
             SearchResultStreamProj::Mongo { inner } => inner.poll_next(cx),
+            SearchResultStreamProj::S3 { inner } => inner.poll_next(cx),
         };
         if let std::task::Poll::Ready(Some(Err(err))) = &poll {
             tracing::error!("An error occurred when streaming results: {}", err);

@@ -1,11 +1,21 @@
-from datetime import date
+# ruff: noqa: INP001 The Sphinx config file is a standalone script rather than an importable module.
+"""Sphinx configuration file for CLP documentation."""
+
+from datetime import datetime, timezone
+
+from sphinx.application import Sphinx
+
+# Constants
+CLP_GIT_REF = "main"
+
 
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "CLP"
 # NOTE: We don't include a period after "Inc" since the theme adds one already.
-copyright = f"2021-{date.today().year} YScope Inc"
+# Ignore A001: Shadows built-in name 'copyright' for Sphinx config.
+copyright = f"2021-{datetime.now(tz=timezone.utc).year} YScope Inc"  # noqa: A001
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -79,7 +89,7 @@ html_theme_options = {
     "show_prev_next": False,
     "switcher": {
         "json_url": "https://docs.yscope.com/_static/clp-versions.json",
-        "version_match": "main",
+        "version_match": CLP_GIT_REF,
     },
     "use_edit_page_button": True,
 }
@@ -90,7 +100,7 @@ html_theme_options = {
 html_context = {
     "github_user": "y-scope",
     "github_repo": "clp",
-    "github_version": "main",
+    "github_version": CLP_GIT_REF,
     "doc_path": "docs/src",
 }
 
@@ -99,5 +109,27 @@ html_context = {
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/static_assets.html
 
 
-def setup(app):
+def setup(app: Sphinx) -> None:
+    """
+    Sets up Sphinx app with custom CSS.
+
+    :param app:
+    """
     app.add_css_file("custom.css")
+
+    app.connect("source-read", _replace_variable_placeholders)
+
+
+def _replace_variable_placeholders(_app: Sphinx, _docname: str, content: list[str]) -> None:
+    """
+    Replaces each variable placeholder in the docs with the relevant value.
+
+    :param _app:
+    :param _docname:
+    :param content: The content of the doc in a list with a single element.
+    """
+    placeholder_to_value = {
+        "DOCS_VAR_CLP_GIT_REF": CLP_GIT_REF,
+    }
+    for placeholder, value in placeholder_to_value.items():
+        content[0] = content[0].replace(placeholder, value)

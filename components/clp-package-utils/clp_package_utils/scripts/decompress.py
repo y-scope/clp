@@ -11,6 +11,7 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     ClpConfig,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
@@ -51,11 +52,7 @@ def validate_and_load_config(
     :return: The config object on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(
-            resolve_host_path_in_container(config_file_path),
-            resolve_host_path_in_container(default_config_file_path),
-            clp_home,
-        )
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
         clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
@@ -132,9 +129,10 @@ def handle_extract_file_cmd(
             )
         )
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -214,9 +212,10 @@ def handle_extract_stream_cmd(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
     necessary_mounts = [mounts.logs_dir]
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
