@@ -14,24 +14,20 @@ import {brotliDecompressSync} from "node:zlib";
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
-
-type CompressionJobRow = RowDataPacket & {
-    _id: number;
-    compressed_size: number;
-    duration: number | null;
-    retrieval_time: number;
-    start_time: string | null;
-    status: number;
-    status_msg: string;
-    uncompressed_size: number;
-    update_time: string;
+type QueryRow = RowDataPacket & {
     clp_config?: Buffer | null;
-};
-
-type DecodedJobConfig = {
-    dataset: string | null;
-    paths: string[];
-};
+} & Pick<
+    CompressionJobWithConfig,
+    "_id" |
+    "compressed_size" |
+    "duration" |
+    "retrieval_time" |
+    "start_time" |
+    "status" |
+    "status_msg" |
+    "uncompressed_size" |
+    "update_time"
+>;
 
 /**
  * Decodes a compressed job config stored in the database.
@@ -39,7 +35,7 @@ type DecodedJobConfig = {
  * @param jobConfig
  * @return
  */
-const decodeJobConfig = (jobConfig: unknown): DecodedJobConfig => {
+const decodeJobConfig = (jobConfig: unknown) => {
     let dataset: string | null = null;
     let paths: string[] = [];
 
@@ -122,7 +118,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 [sinceSeconds]
             );
 
-            return (rows as CompressionJobRow[]).map(
+            return (rows as QueryRow[]).map(
                 ({
                     _id,
                     clp_config: clpConfig,
