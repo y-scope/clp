@@ -12,6 +12,7 @@ use clp_rust_utils::{
     job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
     s3::ObjectMetadata,
 };
+use non_empty_string::NonEmptyString;
 use tokio::sync::{Mutex, mpsc};
 use uuid::Uuid;
 
@@ -293,9 +294,9 @@ struct IngestionJobTableEntry {
     ingestion_job: IngestionJob,
     listener: Listener,
     region: String,
-    bucket_name: String,
-    key_prefix: String,
-    dataset: Option<String>,
+    bucket_name: NonEmptyString,
+    key_prefix: NonEmptyString,
+    dataset: Option<NonEmptyString>,
 }
 
 /// # Returns:

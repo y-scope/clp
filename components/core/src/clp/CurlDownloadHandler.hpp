@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <curl/curl.h>
+#include <curl/system.h>
 
 #include "CurlEasyHandle.hpp"
 #include "CurlStringList.hpp"
@@ -91,6 +92,27 @@ public:
     [[nodiscard]] auto perform() -> CURLcode { return m_easy_handle.perform(); }
 
 private:
+    /**
+     * Locates the certificate authority (CA) bundle file available on the current host.
+     *
+     * This method performs a runtime lookup to provide a predictable CA bundle path for libcurl on
+     * Linux-based systems. It is intended to handle cases where the runtime environment differs
+     * from the build environment. macOS typically use their native system certificate stores and
+     * are not searched by this function.
+     *
+     * Resolution order (first match wins):
+     *   1. Environment variables, checked in order: `CURL_CA_BUNDLE`, then `SSL_CERT_FILE`. If the
+     *      variable is set and points to an existing, readable file, that path is returned.
+     *   2. Known distribution-specific default bundle locations (checked in order):
+     *      - Debian / Ubuntu: `/etc/ssl/certs/ca-certificates.crt`
+     *      - CentOS / RHEL / Fedora: `/etc/pki/tls/certs/ca-bundle.crt`
+     *
+     * @return Absolute path to the discovered CA bundle file.
+     * @return std::nullopt if no CA bundle file could be located. The caller should handle this
+     * case by relying on libcurl's built-in defaults.
+     */
+    [[nodiscard]] static auto get_host_ca_bundle_path() -> std::optional<std::string>;
+
     CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
     std::shared_ptr<ErrorMsgBuf> m_error_msg_buf;
