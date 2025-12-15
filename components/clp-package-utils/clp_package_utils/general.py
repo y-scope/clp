@@ -12,6 +12,7 @@ from enum import auto
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     ClpConfig,
@@ -424,19 +425,28 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def load_config_file(
-    config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
-):
+def load_config_file(config_file_path: pathlib.Path) -> ClpConfig:
+    """
+    Loads and validates a CLP configuration file.
+
+    :param config_file_path:
+    :return: The loaded and validated ClpConfig object.
+    :raise ValueError: If the specified config file does not exist, and the requested path is not
+    the path to the default config file.
+    """
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
     if config_file_path.exists():
         raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:
             clp_config = ClpConfig()
         else:
             clp_config = ClpConfig.model_validate(raw_clp_config)
+    elif config_file_path != default_config_file_path:
+        err_msg = f"Config file '{config_file_path}' does not exist."
+        raise ValueError(err_msg)
     else:
-        if config_file_path != default_config_file_path:
-            raise ValueError(f"Config file '{config_file_path}' does not exist.")
-
         clp_config = ClpConfig()
 
     clp_config.make_config_paths_absolute(clp_home)
