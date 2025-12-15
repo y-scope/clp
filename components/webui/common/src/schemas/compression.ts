@@ -90,7 +90,7 @@ const CompressionJobBaseSchema = Type.Object({
 /**
  * Schema for compression job metadata with decoded config.
  */
-const CompressionJobWithConfigSchema = Type.Intersect([
+const CompressionJobWithDecodedIoConfigSchema = Type.Intersect([
     CompressionJobBaseSchema,
     Type.Object({
         dataset: Type.Union([Type.String(), Type.Null()]),
@@ -99,7 +99,7 @@ const CompressionJobWithConfigSchema = Type.Intersect([
 ]);
 
 type CompressionJobBase = Static<typeof CompressionJobBaseSchema>;
-type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
+type CompressionJobWithDecodedIoConfig = Static<typeof CompressionJobWithDecodedIoConfigSchema>;
 
 /**
  * Compression job config (mirrors `ClpIoConfig` in
@@ -149,7 +149,7 @@ export {
     CompressionJobBaseSchema,
     CompressionJobCreationSchema,
     CompressionJobSchema,
-    CompressionJobWithConfigSchema,
+    CompressionJobWithDecodedIoConfigSchema,
     CompressionJobInputType,
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
@@ -159,7 +159,7 @@ export type {
     CompressionJob,
     CompressionJobCreation,
     CompressionJobBase,
-    CompressionJobWithConfig,
+    CompressionJobWithDecodedIoConfig,
     CompressionJobConfig,
     CompressionJobFsInputConfig,
     CompressionJobS3InputConfig,

@@ -5,8 +5,8 @@ import {
 import {decode} from "@msgpack/msgpack";
 import {
     CompressionJobBase,
-    CompressionJobWithConfig,
-    CompressionJobWithConfigSchema,
+    CompressionJobWithDecodedIoConfig,
+    CompressionJobWithDecodedIoConfigSchema,
 } from "@webui/common/schemas/compression";
 import {constants} from "http2";
 import {RowDataPacket} from "mysql2";
@@ -17,7 +17,6 @@ import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager
 
 type CompressionJobBaseRow = CompressionJobBase;
 type CompressionJobWithIoConfig = CompressionJobBaseRow & {clp_config?: Buffer | null};
-type CompressionJobWithDecodedIoConfig = CompressionJobWithConfig;
 
 /**
  * Decodes a compressed job config stored in the database.
@@ -27,7 +26,7 @@ type CompressionJobWithDecodedIoConfig = CompressionJobWithConfig;
  */
 const decodeJobConfig = (
     jobConfig: unknown
-): Pick<CompressionJobWithConfig, "dataset" | "paths"> => {
+): Pick<CompressionJobWithDecodedIoConfig, "dataset" | "paths"> => {
     let dataset: string | null = null;
     let paths: string[] = [];
 
@@ -78,7 +77,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     ),
                 }),
                 response: {
-                    [constants.HTTP_STATUS_OK]: Type.Array(CompressionJobWithConfigSchema),
+                    [constants.HTTP_STATUS_OK]: Type.Array(
+                        CompressionJobWithDecodedIoConfigSchema
+                    ),
                 },
                 tags: ["Archive Metadata"],
             },

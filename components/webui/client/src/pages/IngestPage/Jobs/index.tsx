@@ -1,6 +1,6 @@
 import {useQuery} from "@tanstack/react-query";
 import dayjs from "dayjs";
-import {CompressionJobWithConfig} from "@webui/common/schemas/compression";
+import {CompressionJobWithDecodedIoConfig} from "@webui/common/schemas/compression";
 
 import axios from "axios";
 import {DashboardCard} from "../../../components/DashboardCard";
@@ -26,7 +26,7 @@ const Jobs = () => {
         queryFn: async () => {
             const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
                 .unix();
-            const {data} = await axios.get<CompressionJobWithConfig[]>(
+            const {data} = await axios.get<CompressionJobWithDecodedIoConfig[]>(
                 "/api/archive-metadata/jobs",
                 {
                     params: {lastUpdateTimestampSeconds: beginTimestamp},
