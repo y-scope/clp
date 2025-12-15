@@ -192,3 +192,17 @@ Creates the BROKER_URL env var for Celery workers.
 name: "BROKER_URL"
 value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
 {{- end }}
+
+{{/*
+Creates the RESULT_BACKEND env var for Celery workers.
+
+@param {object} root Root template context
+@param {string} database Redis database number from config
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryResultBackendEnvVar" -}}
+{{- $pass := .root.Values.credentials.redis.password -}}
+{{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
+name: "RESULT_BACKEND"
+value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
+{{- end }}

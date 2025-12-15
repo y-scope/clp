@@ -49,6 +49,10 @@ spec:
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
+            - {{- include "clp.celeryResultBackendEnvVar" (dict
+                "root" .
+                "database" .Values.clpConfig.redis.compression_backend_database
+              ) | nindent 14 }}
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yaml"
             - name: "CLP_HOME"
@@ -61,8 +65,6 @@ spec:
               value: "/var/log/compression_worker/worker.log"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
-            - name: "RESULT_BACKEND"
-              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.compression_backend_database }}"
           volumeMounts:
             - name: "compression-worker-logs"
               mountPath: "/var/log/compression_worker"

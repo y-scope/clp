@@ -59,6 +59,10 @@ spec:
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
+            - {{- include "clp.celeryResultBackendEnvVar" (dict
+                "root" .
+                "database" .Values.clpConfig.redis.compression_backend_database
+              ) | nindent 14 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -75,8 +79,6 @@ spec:
               value: "/var/log/compression_scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
-            - name: "RESULT_BACKEND"
-              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.compression_backend_database }}"
           volumeMounts:
             - name: "compression-scheduler-logs"
               mountPath: "/var/log/compression_scheduler"
