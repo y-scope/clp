@@ -35,7 +35,7 @@ bool DateLiteral::as_float(double& ret, FilterOperation op) {
     return true;
 }
 
-auto DateLiteral::as_precision(Precision precision) -> epochtime_t {
+auto DateLiteral::as_precision(Precision precision) const -> epochtime_t {
     switch (precision) {
         case Precision::Seconds:
             return m_timestamp / cNanosecondsInSecond;
