@@ -29,6 +29,11 @@ def fixt_package_instance(fixt_package_config: PackageConfig) -> Iterator[Packag
         instance = PackageInstance(package_config=fixt_package_config)
         yield instance
     except RuntimeError:
-        pytest.fail(f"Failed to start the {mode_name} package.")
+        base_port = fixt_package_config.base_port
+        pytest.fail(
+            f"Failed to start the {mode_name} package. This could mean that one of the ports"
+            f" derived from base_port={base_port} was unavailable. You can specify a new value for"
+            " base_port with the '--base-port' flag."
+        )
     finally:
         stop_clp_package(fixt_package_config)
