@@ -139,9 +139,10 @@ spec:
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context
-@param {string} type "service" (waits for pod readiness) or "job" (waits for completion)
-@param {string} name For "service": component name
-                     For "job": job name suffix
+@param {string} type The resource type: "service" (waits for pod readiness) or "job" (waits for
+completion).
+@param {string} name For type="service", this should be the component name. For type="job", this
+should be the job name suffix.
 @return {string} YAML-formatted initContainer definition
 */}}
 {{- define "clp.waitFor" -}}
