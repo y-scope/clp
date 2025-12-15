@@ -164,3 +164,17 @@ spec:
     requests:
       storage: {{ .capacity }}
 {{- end }}
+
+{{/*
+Creates a volume definition that references a PersistentVolumeClaim.
+
+@param {object} root Root template context
+@param {string} component_category (e.g., "shared-data", "database")
+@param {string} name (e.g., "archives", "logs", "data")
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.pvcVolume" -}}
+name: {{ printf "%s-%s" .component_category .name | quote }}
+persistentVolumeClaim:
+  claimName: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
+{{- end }}

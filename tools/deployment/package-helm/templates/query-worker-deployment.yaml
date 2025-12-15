@@ -71,9 +71,9 @@ spec:
               readOnly: true
             - name: "query-worker-logs"
               mountPath: "/var/log/query_worker"
-            - name: "archives"
+            - name: "shared-data-archives"
               mountPath: "/var/data/archives"
-            - name: "streams"
+            - name: "shared-data-streams"
               mountPath: "/var/data/streams"
           command: [
             "python3", "-u",
@@ -87,15 +87,21 @@ spec:
             "-n", "query-worker"
           ]
       volumes:
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "query-worker"
+            "name" "logs"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "archives"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "query-worker-logs"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-query-worker-logs
-        - name: "archives"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-archives
-        - name: "streams"
-          persistentVolumeClaim:
-            claimName: {{ include "clp.fullname" . }}-streams
