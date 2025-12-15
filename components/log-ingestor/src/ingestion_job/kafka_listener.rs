@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use backoff::{backoff::Backoff, ExponentialBackoff};
 use crate::kafka_consumer_wrapper::KafkaMessageReceiver;
 use anyhow::Result;
 use clp_rust_utils::{
@@ -5,7 +8,7 @@ use clp_rust_utils::{
     s3::{ObjectMetadata, extract_object_metadata},
     s3_event::S3,
 };
-use tokio::{select, sync::mpsc};
+use tokio::{select, sync::mpsc, time::sleep};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -35,6 +38,13 @@ impl<Consumer: KafkaMessageReceiver> Task<Consumer> {
     /// * Forwards [`KafkaMessageReceiver::recv`]'s return values on failure.
     /// * Forwards [`Self::process_kafka_message`]'s return values on failure.
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
+        let mut backoff = ExponentialBackoff {
+            initial_interval: Duration::from_millis(100),
+            max_interval: Duration::from_secs(1),
+            max_elapsed_time: Some(Duration::from_secs(2)), 
+            ..ExponentialBackoff::default()
+        };
+
         loop {
             select! {
                 // Cancellation requested.
@@ -46,11 +56,33 @@ impl<Consumer: KafkaMessageReceiver> Task<Consumer> {
                 result = self.consumer.recv() => {
                     match result {
                         Ok(payload) => {
+                            backoff.reset();
                             self.process_kafka_message(payload).await?;
                         }
                         Err(e) => {
-                            tracing::warn!(error = ?e, "Failed to receive Kafka message, retrying");
-                            continue;
+                            let Some(delay) = backoff.next_backoff() else {
+                                tracing::error!(
+                                    error = ?e,
+                                    "Kafka receive errors exceeded max elapsed time, stopping listener"
+                                );
+                                return Err(e);
+                            };
+
+                            tracing::warn!(
+                                error = ?e,
+                                delay_ms = delay.as_millis(),
+                                "Failed to receive Kafka message, retrying with backoff"
+                            );
+
+                            // Sleep with cancellation support.
+                            select! {
+                                () = cancel_token.cancelled() => {
+                                    return Ok(());
+                                }
+                                () = sleep(delay) => {
+                                    continue;
+                                }
+                            }
                         }
                     }
                 }

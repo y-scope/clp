@@ -44,8 +44,11 @@ impl KafkaMessageReceiver for KafkaConsumerWrapper {
         let borrowed_message = self.consumer.recv().await?;
         let message = borrowed_message.detach();
         match message.payload() {
-            Some(payload) => Ok(String::from_utf8_lossy(payload).into_owned()),
+            Some(payload) => {
+                Ok(String::from_utf8(payload.to_vec())
+                    .map_err(|e| anyhow::anyhow!("Kafka message payload is not valid UTF-8: {}", e)))
+            }
             None => Err(anyhow::anyhow!("Received a Kafka message with no payload")),
-        }
+        }?
     }
 }
