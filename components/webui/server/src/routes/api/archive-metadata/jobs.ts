@@ -16,9 +16,8 @@ import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
 type CompressionJobBaseRow = CompressionJobBase;
-type CompressionJobRow = CompressionJobBaseRow & {
-    clp_config?: Buffer | null;
-};
+type CompressionJobWithIoConfig = CompressionJobBaseRow & {clp_config?: Buffer | null};
+type CompressionJobWithDecodedIoConfig = CompressionJobWithConfig;
 
 /**
  * Decodes a compressed job config stored in the database.
@@ -85,9 +84,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             },
         },
         async (request) => {
-            const {lastUpdateTimestampSeconds} = request.query;
-            const sinceSeconds = lastUpdateTimestampSeconds ??
-                Math.floor(Date.now() / 1000);
+        const {lastUpdateTimestampSeconds} = request.query;
+        const sinceSeconds = lastUpdateTimestampSeconds ??
+            Math.floor(Date.now() / 1000);
 
             const [rows] = await mysqlConnectionPool.query<RowDataPacket[]>(
                 `
@@ -109,7 +108,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 [sinceSeconds]
             );
 
-            return (rows as Array<RowDataPacket & CompressionJobRow>).map(
+            return (rows as Array<RowDataPacket & CompressionJobWithIoConfig>).map(
                 ({
                     _id,
                     clp_config: clpConfig,
@@ -121,7 +120,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     status_msg: statusMsg,
                     uncompressed_size: uncompressedSize,
                     update_time: updateTime,
-                }): CompressionJobWithConfig => {
+                }): CompressionJobWithDecodedIoConfig => {
                     const {dataset, paths} = decodeJobConfig(clpConfig);
 
                     return {
