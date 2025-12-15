@@ -7,5 +7,6 @@ pub mod s3;
 pub mod s3_event;
 pub mod serde;
 pub mod sqs;
+pub mod types;
 
 pub use error::Error;

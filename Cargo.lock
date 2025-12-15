@@ -892,6 +892,7 @@ dependencies = [
  "aws-sdk-sqs",
  "brotli",
  "hex",
+ "non-empty-string",
  "num_enum 0.7.5",
  "rdkafka",
  "rmp-serde",
@@ -1171,6 +1172,17 @@ name = "data-encoding"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
+
+[[package]]
+name = "delegate"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "082a24a9967533dc5d743c602157637116fc1b52806d694a5a45e6f32567fcdd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "der"
@@ -2154,6 +2166,8 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "const_format",
+ "log",
+ "non-empty-string",
  "rdkafka",
  "secrecy",
  "serde",
@@ -2366,6 +2380,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.111",
+]
+
+[[package]]
+name = "non-empty-string"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "260010741d90def3ca7c4b5ec0bbe28c26d0c775d3c7d291b38642514136677a"
+dependencies = [
+ "delegate",
+ "serde",
 ]
 
 [[package]]
