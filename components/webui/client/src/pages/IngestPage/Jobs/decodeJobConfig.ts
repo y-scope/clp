@@ -74,54 +74,68 @@ const decompressBrotli = async (data: Uint8Array): Promise<Uint8Array | null> =>
 };
 
 /**
+ * Turns a compressed job config blob into a decoded config object.
+ *
+ * @param clpConfig
+ * @return
+ */
+const decodeJobConfigBytes = async (
+    clpConfig: unknown
+): Promise<CompressionJobConfig | null> => {
+    const buffer = toUint8Array(clpConfig);
+    if (null === buffer) return null;
+
+    const decompressed = await decompressBrotli(buffer);
+    if (null === decompressed) return null;
+
+    try {
+        const decoded = decodeMsgpack(decompressed);
+        if ("object" !== typeof decoded || null === decoded) return null;
+
+        return decoded as CompressionJobConfig;
+    } catch (err: unknown) {
+        console.error("Failed to decode compression job config", err);
+        return null;
+    }
+};
+
+/**
  * Decodes the job config into dataset and user paths.
  *
  * @param item
  * @return
  */
 const decodeJobConfig = async (item: QueryJobsItem): Promise<DecodedQueryJobsItem> => {
-    const baseResult: DecodedQueryJobsItem = {
-        ...item,
-        dataset: null,
-        paths: [],
-    };
-
-    const buffer = toUint8Array(item.clp_config);
-    if (null === buffer) return baseResult;
-
-    const decompressed = await decompressBrotli(buffer);
-    if (null === decompressed) return baseResult;
-
-    try {
-        const decoded = decodeMsgpack(decompressed);
-        if ("object" !== typeof decoded || null === decoded) return baseResult;
-
-        const input = (decoded as CompressionJobConfig).input ?? {};
-        const pathsToCompress = Array.isArray(input.paths_to_compress)
-            ? input.paths_to_compress
-            : [];
-
-        const paths = pathsToCompress
-            .filter((path): path is string => "string" === typeof path)
-            .map((path) => {
-                if ("string" === typeof input.path_prefix_to_remove &&
-                    path.startsWith(input.path_prefix_to_remove)
-                ) {
-                    return path.slice(input.path_prefix_to_remove.length);
-                }
-                return path;
-            });
-
+    const decoded = await decodeJobConfigBytes(item.clp_config);
+    if (null === decoded) {
         return {
             ...item,
-            dataset: "string" === typeof input.dataset ? input.dataset : null,
-            paths,
+            dataset: null,
+            paths: [],
         };
-    } catch (err: unknown) {
-        console.error("Failed to decode compression job config", err);
-
-        return baseResult;
     }
+
+    const input = decoded.input ?? {};
+    const pathsToCompress = Array.isArray(input.paths_to_compress)
+        ? input.paths_to_compress
+        : [];
+
+    const paths = pathsToCompress
+        .filter((path): path is string => "string" === typeof path)
+        .map((path) => {
+            if ("string" === typeof input.path_prefix_to_remove &&
+                path.startsWith(input.path_prefix_to_remove)
+            ) {
+                return path.slice(input.path_prefix_to_remove.length);
+            }
+            return path;
+        });
+
+    return {
+        ...item,
+        dataset: "string" === typeof input.dataset ? input.dataset : null,
+        paths,
+    };
 };
 
 
