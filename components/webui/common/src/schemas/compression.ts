@@ -91,11 +91,55 @@ const CompressionJobWithConfigSchema = Type.Object({
 
 type CompressionJobWithConfig = Static<typeof CompressionJobWithConfigSchema>;
 
+/**
+ * Compression job config (mirrors `ClpIoConfig` in
+ * `components/job-orchestration/job_orchestration/scheduler/job_config.py`).
+ */
+enum CompressionJobInputType {
+    FS = "fs",
+    S3 = "s3",
+}
+
+type CompressionJobFsInputConfig = {
+    type: CompressionJobInputType.FS;
+    dataset?: string | null;
+    paths_to_compress: string[];
+    path_prefix_to_remove?: string | null;
+    timestamp_key?: string | null;
+    unstructured?: boolean;
+};
+
+type CompressionJobS3InputConfig = {
+    type: CompressionJobInputType.S3;
+    keys?: string[] | null;
+    dataset?: string | null;
+    timestamp_key?: string | null;
+    unstructured?: boolean;
+    // S3Config fields from Python `clp_py_utils.clp_config.S3Config` are not
+    // enumerated here; extend as needed when S3 ingestion is wired up.
+    [key: string]: unknown;
+};
+
+type CompressionJobOutputConfig = {
+    tags?: string[] | null;
+    target_archive_size: number;
+    target_dictionaries_size: number;
+    target_segment_size: number;
+    target_encoded_file_size: number;
+    compression_level: number;
+};
+
+type CompressionJobConfig = {
+    input: CompressionJobFsInputConfig | CompressionJobS3InputConfig;
+    output: CompressionJobOutputConfig;
+};
+
 export {
     AbsolutePathSchema,
     CompressionJobCreationSchema,
     CompressionJobSchema,
     CompressionJobWithConfigSchema,
+    CompressionJobInputType,
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
     DatasetNameSchema,
@@ -104,4 +148,8 @@ export type {
     CompressionJob,
     CompressionJobCreation,
     CompressionJobWithConfig,
+    CompressionJobConfig,
+    CompressionJobFsInputConfig,
+    CompressionJobS3InputConfig,
+    CompressionJobOutputConfig,
 };

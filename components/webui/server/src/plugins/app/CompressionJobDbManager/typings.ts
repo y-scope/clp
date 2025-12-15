@@ -1,18 +1,14 @@
-interface CompressionJobConfig {
-    input: {
-        paths_to_compress: string[];
-        path_prefix_to_remove: string;
-        dataset?: string;
-        timestamp_key?: string;
-    };
-    output: {
-        target_archive_size: number;
-        target_dictionaries_size: number;
-        target_segment_size: number;
-        target_encoded_file_size: number;
-        compression_level: number;
-    };
-}
+import type {
+    CompressionJobConfig,
+    CompressionJobFsInputConfig,
+    CompressionJobS3InputConfig,
+    CompressionJobOutputConfig,
+} from "@webui/common/schemas/compression";
 
 
-export type {CompressionJobConfig};
+export type {
+    CompressionJobConfig,
+    CompressionJobFsInputConfig,
+    CompressionJobS3InputConfig,
+    CompressionJobOutputConfig,
+};

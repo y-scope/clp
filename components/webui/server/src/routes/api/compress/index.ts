@@ -2,6 +2,7 @@ import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     CompressionJobCreationSchema,
+    CompressionJobInputType,
     CompressionJobSchema,
 } from "@webui/common/schemas/compression";
 import {ErrorSchema} from "@webui/common/schemas/error";
@@ -17,6 +18,7 @@ import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
  */
 const DEFAULT_COMPRESSION_JOB_CONFIG: CompressionJobConfig = Object.freeze({
     input: {
+        type: CompressionJobInputType.FS,
         paths_to_compress: [],
         path_prefix_to_remove: CONTAINER_INPUT_LOGS_ROOT_DIR,
     },
