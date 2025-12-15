@@ -34,7 +34,17 @@ pub async fn create_new_client(
         .region(region)
         .credentials_provider(credential)
         .force_path_style(true);
-    config_builder.set_endpoint_url(endpoint.map(std::borrow::ToOwned::to_owned));
+    if let Some(ep) = endpoint {
+        let normalised_endpoint = normalize_endpoint(ep);
+        config_builder = config_builder.endpoint_url(normalised_endpoint);
+    }
     let config = config_builder.build();
     Client::from_conf(config)
+}
+
+fn normalize_endpoint(endpoint: &str) -> String {
+    match endpoint {
+        e if e.starts_with("http://") || e.starts_with("https://") => e.into(),
+        e => format!("https://{e}"),
+    }
 }

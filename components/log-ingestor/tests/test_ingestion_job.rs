@@ -180,6 +180,7 @@ async fn test_sqs_listener() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            endpoint_url: Some(aws_config.endpoint.clone()),
             tags: None,
         },
     };
@@ -197,7 +198,7 @@ async fn test_sqs_listener() -> Result<()> {
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
-        Some(aws_config.endpoint.as_str()),
+        Some(aws_config.endpoint).as_deref(),
     )
     .await;
 
@@ -255,6 +256,7 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            endpoint_url: Some(aws_config.endpoint),
             tags: None,
         },
         scanning_interval_sec: 1,

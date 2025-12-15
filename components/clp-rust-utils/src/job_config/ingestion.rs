@@ -14,6 +14,9 @@ pub mod s3 {
         /// The S3 key prefix to ingest from.
         pub key_prefix: NonEmptyString,
 
+        // Endpoint url of s3 object store
+        pub endpoint_url: Option<String>,
+
         /// The dataset to ingest into. Defaults to `None` (which uses the default dataset).
         #[serde(default)]
         pub dataset: Option<NonEmptyString>,
