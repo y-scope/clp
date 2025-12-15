@@ -19,8 +19,6 @@ type CompressionJobBaseRow = CompressionJobBase;
 type CompressionJobRow = CompressionJobBaseRow & {
     clp_config?: Buffer | null;
 };
-type CompressionJobWithDecodedConfig = CompressionJobBaseRow &
-    Pick<CompressionJobWithConfig, "dataset" | "paths">;
 
 /**
  * Decodes a compressed job config stored in the database.
@@ -123,7 +121,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     status_msg: statusMsg,
                     uncompressed_size: uncompressedSize,
                     update_time: updateTime,
-                }): CompressionJobWithDecodedConfig => {
+                }): CompressionJobWithConfig => {
                     const {dataset, paths} = decodeJobConfig(clpConfig);
 
                     return {
