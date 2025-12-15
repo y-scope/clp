@@ -54,7 +54,7 @@ public:
      * @param precision
      * @return The literal timestamp as the given precision (rounded towards zero).
      */
-    auto as_precision(Precision precision) -> epochtime_t;
+    [[nodiscard]] auto as_precision(Precision precision) const -> epochtime_t;
 
     /**
      * Sets the precision of the timestamp returned by `as_int`. The returned value from `as_int` is
@@ -65,7 +65,7 @@ public:
 
 private:
     // Types
-    static constexpr literal_type_bitmask_t cDateLiteralTypes = EpochDateT;
+    static constexpr literal_type_bitmask_t cDateLiteralTypes{EpochDateT};
 
     // Constructors
     explicit DateLiteral(epochtime_t timestamp);

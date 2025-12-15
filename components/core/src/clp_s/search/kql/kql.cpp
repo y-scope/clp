@@ -88,12 +88,12 @@ private:
 
         auto const timestamp_str{ctx.timestamp->getText()};
         std::string generated_pattern;
-        if (ctx.pattern) {
+        if (nullptr != ctx.pattern) {
             auto const pattern_str{ctx.pattern->getText()};
             auto const pattern_result{timestamp_parser::TimestampPattern::create(pattern_str)};
             if (pattern_result.has_error()) {
                 SPDLOG_ERROR(
-                        "Invalid timestamp pattern {} - {}.",
+                        "Invalid timestamp pattern {} - {}",
                         pattern_str,
                         pattern_result.error().message()
                 );
@@ -142,7 +142,7 @@ private:
             );
             return nullptr;
         }
-        return DateLiteral::create(optional_timestamp.value().first);
+        return DateLiteral::create(optional_timestamp->first);
     }
 
 public:
