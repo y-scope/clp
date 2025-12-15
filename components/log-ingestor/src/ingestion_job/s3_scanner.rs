@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use aws_sdk_s3::Client;
 use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetadata};
+use non_empty_string::NonEmptyString;
 use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -20,6 +21,7 @@ struct Task<S3ClientManager: AwsClientManagerType<Client>> {
     scanning_interval: Duration,
     config: S3ScannerConfig,
     sender: mpsc::Sender<ObjectMetadata>,
+    start_after: Option<String>,
 }
 
 impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
@@ -89,13 +91,14 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
     /// * Forwards
     ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
     ///   return values on failure.
+    /// * Forwards [`NonEmptyString::new`]'s return values on failure.
     pub async fn scan_once(&mut self) -> Result<bool> {
         let client = self.s3_client_manager.get().await?;
         let response = client
             .list_objects_v2()
             .bucket(self.config.base.bucket_name.as_str())
             .prefix(self.config.base.key_prefix.as_str())
-            .set_start_after(self.config.start_after.clone())
+            .set_start_after(self.start_after.clone())
             .send()
             .await?;
         let Some(contents) = response.contents else {
@@ -111,12 +114,13 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
             }
             let object_metadata = ObjectMetadata {
                 bucket: self.config.base.bucket_name.clone(),
-                key: key.clone(),
+                key: NonEmptyString::new(key.clone())
+                    .map_err(|_| anyhow::anyhow!("An empty key is received."))?,
                 size: size.try_into()?,
             };
             tracing::info!(object = ? object_metadata, "Scanned new object metadata on S3.");
             self.sender.send(object_metadata).await?;
-            self.config.start_after = Some(key);
+            self.start_after = Some(key);
         }
 
         Ok(response.is_truncated.unwrap_or(false))
@@ -156,11 +160,13 @@ impl S3Scanner {
         sender: mpsc::Sender<ObjectMetadata>,
     ) -> Self {
         let scanning_interval = Duration::from_secs(u64::from(config.scanning_interval_sec));
+        let start_after = config.start_after.clone().map(Into::into);
         let task = Task {
             s3_client_manager,
             scanning_interval,
             config,
             sender,
+            start_after,
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
