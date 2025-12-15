@@ -84,6 +84,24 @@ to build and test an image for each Linux distro where we support building CLP n
 for the image containing CLP's binaries (built by the `ubuntu-jammy-binaries-image` job), we only
 need it for one OS since users can use the container on any OS.
 
+### Runner configuration
+
+This workflow uses self-hosted runners with tags `["self-hosted", "X64", "ubuntu-noble"]` because it
+runs many parallel jobs, each of which is compute-intensive. Our self-hosted runner pool consists of
+machines with 8-16 cores and 128-256 GB of RAM.
+
+**If you fork this project**, change the runner tags to `["ubuntu-24.04"]` to use GitHub-hosted
+runners. Note that GitHub-hosted runners have limited resources (e.g., 4 cores, limited RAM) and
+limited concurrency for free-tier organizations, so builds will take longer. For more details, see
+[GitHub-hosted runners][gh-hosted-runners].
+
+To check the tags associated with self-hosted runners for your organization or repository, see:
+
+* Organization-level runners: `https://github.com/organizations/<org>/settings/actions/runners`
+* Repository-specific runners: `https://github.com/<owner>/<repository>/settings/actions/runners`
+
+[gh-hosted-runners]: https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners
+
 ## clp-core-build-macos
 
 This workflow builds CLP-core on macOS and runs its unit tests.
