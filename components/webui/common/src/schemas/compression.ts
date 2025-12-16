@@ -73,7 +73,6 @@ const CompressionJobSchema = Type.Object({
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
 export {
-    AbsolutePathSchema,
     CompressionJobCreationSchema,
     CompressionJobSchema,
     DATASET_NAME_MAX_LEN,
