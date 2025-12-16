@@ -53,14 +53,14 @@ spec:
             - name: "database"
               containerPort: 3306
           volumeMounts:
-            - name: "database-data"
-              mountPath: "/var/lib/mysql"
-            - name: "database-logs"
-              mountPath: "/var/log/mysql"
             - name: "config"
               mountPath: "/etc/mysql/conf.d/logging.cnf"
               subPath: "mysql-logging.cnf"
               readOnly: true
+            - name: "database-data"
+              mountPath: "/var/lib/mysql"
+            - name: "database-logs"
+              mountPath: "/var/log/mysql"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &database-health-check

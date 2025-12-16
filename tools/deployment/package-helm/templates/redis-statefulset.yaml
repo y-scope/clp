@@ -41,14 +41,14 @@ spec:
             - name: "redis"
               containerPort: 6379
           volumeMounts:
-            - name: "redis-data"
-              mountPath: "/data"
-            - name: "redis-logs"
-              mountPath: "/var/log/redis"
             - name: "config"
               mountPath: "/etc/redis/redis.conf"
               subPath: "redis.conf"
               readOnly: true
+            - name: "redis-data"
+              mountPath: "/data"
+            - name: "redis-logs"
+              mountPath: "/var/log/redis"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &redis-health-check

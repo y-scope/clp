@@ -98,8 +98,8 @@ failureThreshold: 3
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
-@param {string} name PV name
-@param {string} component Component label
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
   "node-role.kubernetes.io/control-plane"
@@ -112,10 +112,10 @@ Creates a local PersistentVolume.
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
-    app.kubernetes.io/component: {{ .component | quote }}
+    app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
   capacity:
     storage: {{ .capacity }}
