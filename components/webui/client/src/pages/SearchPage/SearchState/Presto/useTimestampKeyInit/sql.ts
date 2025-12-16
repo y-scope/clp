@@ -13,7 +13,7 @@ enum CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES {
 }
 
 /**
- * Matching the `NodeType::DateString` value in
+ * Matching the `NodeType::DeprecatedDateString` value in
  * `clp/components/core/src/clp_s/SchemaTree.hpp`.
  */
 const TIMESTAMP_TYPE = 8;
