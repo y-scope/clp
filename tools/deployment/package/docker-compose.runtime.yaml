@@ -1,6 +1,5 @@
 services:
   clp-runtime:
-    hostname: "clp_runtime"
     image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
     logging:
       driver: "local"
