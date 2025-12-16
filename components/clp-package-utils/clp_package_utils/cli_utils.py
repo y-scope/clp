@@ -17,7 +17,7 @@ class RestartPolicyParamType(click.ParamType):
 
     def convert(self, value: str, param: click.Parameter | None, ctx: click.Context | None) -> str:
         """
-        Validate and return the restart policy string.
+        Validates and returns a restart policy string.
 
         :param value:
         :param param:
