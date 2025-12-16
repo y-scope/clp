@@ -37,25 +37,23 @@ def fixt_package_instance(
 
     # Do not start this mode if there are no jobs and the '--no-jobs' flag wasn't specified by user.
     if package_job_list is None and not no_jobs:
-        pytest.skip(f"No jobs to run for mode {mode_name} with current job filter.")
+        pytest.skip(f"No jobs to run for mode '{mode_name}' with current job filter.")
 
     try:
-        logger.info("Starting the package...")
+        logger.info("Starting the '%s' package...", mode_name)
         start_clp_package(fixt_package_config)
         instance = PackageInstance(package_config=fixt_package_config)
 
         if mode_name == "clp-presto":
-            logger.info("Starting the Presto cluster...")
+            logger.info("Starting the Presto cluster for the '%s' package...", mode_name)
             start_presto_cluster(fixt_package_config)
 
         yield instance
-    except RuntimeError:
-        base_port = fixt_package_config.base_port
-        pytest.fail(
-            f"Failed to start the {mode_name} package. This could mean that one of the ports"
-            f" derived from base_port={base_port} was unavailable. You can specify a new value for"
-            " base_port with the '--base-port' flag."
-        )
+    # except RuntimeError:
+    #     pytest.fail(
+    #         f"Failed to start the '{mode_name}' package. Check the test logs at <PATH> to see the"
+    #         " output from the start command."
+    #     )
     finally:
         if mode_name == "clp-presto":
             logger.info("Shutting down the Presto cluster...")

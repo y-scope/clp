@@ -124,7 +124,7 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
     :raise ValueError: If the mode is not supported.
     """
     if mode_name not in CLP_MODE_CONFIGS:
-        err_msg = f"Unsupported mode: {mode_name}"
+        err_msg = f"Unsupported mode: '{mode_name}'"
         raise ValueError(err_msg)
     return CLP_MODE_CONFIGS[mode_name]()
 

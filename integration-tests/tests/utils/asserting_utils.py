@@ -34,7 +34,11 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     try:
         proc = subprocess.run(cmd, check=True, **kwargs)
     except subprocess.CalledProcessError as e:
-        pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
+        err_msg = (
+            f"Command failed:\n{e}"
+        )
+        logger.exception(err_msg)
+        pytest.fail(err_msg, pytrace=False)
     except subprocess.TimeoutExpired as e:
         pytest.fail(f"Command timed out: {' '.join(cmd)}: {e}")
     return proc
