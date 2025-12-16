@@ -5,25 +5,74 @@ use axum::{
     Router,
     extract::{Path, State},
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::get,
 };
 use clp_rust_utils::job_config::ingestion::s3::{S3ScannerConfig, SqsListenerConfig};
 use serde::Serialize;
+use tower_http::cors::{Any, CorsLayer};
+use utoipa::{OpenApi, ToSchema};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState};
+
+// `utoipa::OpenApi` triggers `clippy::needless_for_each`
+#[allow(clippy::needless_for_each)]
+mod api_doc {
+    // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
+    // documentation. Importing the paths directly prevents this issue.
+    use super::{
+        __path_create_s3_scanner_job,
+        __path_create_sqs_listener_job,
+        __path_health,
+        __path_stop_and_delete_job,
+    };
+
+    #[derive(utoipa::OpenApi)]
+    #[openapi(
+        info(
+            title = "log-ingestor",
+            description = "log-ingestor for CLP",
+            contact(name = "YScope")
+        ),
+        paths(
+            health,
+            create_s3_scanner_job,
+            create_sqs_listener_job,
+            stop_and_delete_job
+        )
+    )]
+    pub struct ApiDoc;
+}
+pub use api_doc::*;
 
 /// Factory method to create an Axum router configured with all log ingestor routes.
 ///
 /// # Returns
 ///
 /// A newly created router instance configured without setting the state.
-pub fn create_router() -> Router<IngestionJobManagerState> {
-    Router::new()
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`OpenApi::to_json`]'s return values on failure.
+pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::Error> {
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
-        .route("/health", get(health))
-        .route("/s3_scanner", post(create_s3_scanner_job))
-        .route("/sqs_listener", post(create_sqs_listener_job))
-        .route("/job/{job_id}", delete(stop_and_delete_job))
+        .routes(routes!(health))
+        .routes(routes!(create_s3_scanner_job))
+        .routes(routes!(create_sqs_listener_job))
+        .routes(routes!(stop_and_delete_job))
+        .split_for_parts();
+
+    let api_json = api.to_json()?;
+    let router = router
+        .route(
+            "/openapi.json",
+            get(|| async { (axum::http::StatusCode::OK, api_json) }),
+        )
+        .layer(CorsLayer::new().allow_origin(Any));
+    Ok(router)
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -52,23 +101,58 @@ impl IntoResponse for Error {
             },
             Self::InvalidJobId(_) => (axum::http::StatusCode::BAD_REQUEST, self.to_string()),
         };
-        let body = serde_json::json!({
-            "error": error_message
-        });
+        let body = ErrorResponse {
+            error: error_message,
+        };
         (status_code, Json(body)).into_response()
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, ToSchema)]
 struct CreationResponse {
     /// The unique ID of the created ingestion job.
     id: String,
 }
 
+#[derive(Clone, Serialize, ToSchema)]
+struct ErrorResponse {
+    /// The error message.
+    error: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses((status = OK, body = String))
+)]
 async fn health() -> &'static str {
     "log-ingestor is running"
 }
 
+#[utoipa::path(
+    post,
+    path = "/s3_scanner",
+    description = "Creates an ingestion job that periodically scans the specified S3 bucket and \
+        key prefix for new objects to ingest.\n\n\
+        The scanner assumes that objects under the given prefix are immutable and are added in \
+        lexicographical order. Based on this assumption, the scanner ingests objects sequentially, \
+        ensuring that no eligible objects are skipped.",
+    responses(
+        (status = OK, body = CreationResponse, description = "The ID of the created job."),
+        (
+            status = CONFLICT,
+            body = ErrorResponse,
+            description = "A prefix conflict was detected. For the same bucket and dataset, only \
+                one ingestion job may monitor a given S3 prefix or any of its ancestor or \
+                descendant prefixes."
+        ),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            body = ErrorResponse,
+            description = "Internal server failure."
+        )
+    )
+)]
 async fn create_s3_scanner_job(
     State(ingestion_job_manager_state): State<IngestionJobManagerState>,
     Json(config): Json<S3ScannerConfig>,
@@ -87,6 +171,30 @@ async fn create_s3_scanner_job(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/sqs_listener",
+    description = "Creates an ingestion job that listens to an SQS queue for notifications about \
+        new objects to ingest from the specified S3 bucket and key prefix.\n\n\
+        The specified SQS queue must be dedicated to this ingestion job. After successfully \
+        processing a notification, the ingestor deletes the corresponding message from the queue \
+        to prevent duplicate ingestion.",
+    responses(
+        (status = OK, body = CreationResponse, description = "The ID of the created job."),
+        (
+            status = CONFLICT,
+            body = ErrorResponse,
+            description = "A prefix conflict was detected. For the same bucket and dataset, only \
+                one ingestion job may monitor a given S3 prefix or any of its ancestor or \
+                descendant prefixes."
+        ),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            body = ErrorResponse,
+            description = "Internal server failure."
+        )
+    )
+)]
 async fn create_sqs_listener_job(
     State(ingestion_job_manager_state): State<IngestionJobManagerState>,
     Json(config): Json<SqsListenerConfig>,
@@ -105,6 +213,30 @@ async fn create_sqs_listener_job(
     }))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/job",
+    description = "Deletes an existing ingestion job by its ID. This operation stops the job if it \
+        is currently running and removes all associated resources.",
+    responses(
+        (status = OK, body = ()),
+        (
+            status = NOT_FOUND,
+            body = ErrorResponse,
+            description = "The specified job ID does not correspond to any existing ingestion job."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "The provided job ID is not in a valid format."
+        ),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            body = ErrorResponse,
+            description = "Internal server failure."
+        )
+    )
+)]
 async fn stop_and_delete_job(
     State(ingestion_job_manager_state): State<IngestionJobManagerState>,
     Path(job_id): Path<String>,
