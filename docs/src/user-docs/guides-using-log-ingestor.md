@@ -105,8 +105,8 @@ prefix. Support for multiple buckets or prefixes will be added in future release
 :::
 
 :::{note}
-Currently, the SQS listener currently does not support custom S3 endpoint configurations. Support
-for custom endpoints will be added in future releases.
+Currently, the SQS listener does not support custom S3 endpoint configurations. Support for custom
+endpoints will be added in future releases.
 :::
 
 [aws-s3-event-notifications]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html#step2-enable-notification
