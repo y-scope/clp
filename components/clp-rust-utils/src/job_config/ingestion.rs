@@ -1,25 +1,31 @@
 pub mod s3 {
+    use non_empty_string::NonEmptyString;
     use serde::{Deserialize, Serialize};
+    use utoipa::ToSchema;
 
     /// Base configuration for ingesting logs from S3.
-    #[derive(Clone, Debug, Serialize, Deserialize)]
+    #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
     pub struct BaseConfig {
         /// AWS service region.
         pub region: String,
 
         /// The S3 bucket to ingest from.
-        pub bucket_name: String,
+        #[schema(value_type = String, min_length = 1)]
+        pub bucket_name: NonEmptyString,
 
         /// The S3 key prefix to ingest from.
-        pub key_prefix: String,
+        #[schema(value_type = String, min_length = 1)]
+        pub key_prefix: NonEmptyString,
 
         /// The dataset to ingest into. Defaults to `None` (which uses the default dataset).
         #[serde(default)]
-        pub dataset: Option<String>,
+        #[schema(value_type = String, min_length = 1)]
+        pub dataset: Option<NonEmptyString>,
 
         /// The optional key for extracting timestamps from object metadata. Defaults to `None`.
         #[serde(default)]
-        pub timestamp_key: Option<String>,
+        #[schema(value_type = String, min_length = 1)]
+        pub timestamp_key: Option<NonEmptyString>,
 
         /// Whether to treat the ingested objects as unstructured logs. Defaults to `false`.
         #[serde(default = "default_unstructured")]
@@ -27,22 +33,24 @@ pub mod s3 {
 
         /// Tags to apply on the compressed archives. Defaults to `None`.
         #[serde(default)]
-        pub tags: Option<Vec<String>>,
+        #[schema(value_type = Vec<String>, min_length = 1)]
+        pub tags: Option<Vec<NonEmptyString>>,
     }
 
     /// Configuration for a SQS listener job.
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
     pub struct SqsListenerConfig {
         #[serde(flatten)]
         pub base: BaseConfig,
 
         /// The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated
         /// to this ingestion job.
-        pub queue_url: String,
+        #[schema(value_type = String, min_length = 1)]
+        pub queue_url: NonEmptyString,
     }
 
     /// Configuration for a S3 scanner job.
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
     pub struct S3ScannerConfig {
         #[serde(flatten)]
         pub base: BaseConfig,
@@ -54,7 +62,8 @@ pub mod s3 {
         /// The key to ingest after. If specified, only objects with keys lexicographically greater
         /// than this value will be ingested. Defaults to `None`.
         #[serde(default)]
-        pub start_after: Option<String>,
+        #[schema(value_type = String, min_length = 1)]
+        pub start_after: Option<NonEmptyString>,
     }
 
     const fn default_unstructured() -> bool {

@@ -32,6 +32,7 @@ if(CLP_BUILD_CLP_S_SEARCH_KQL)
                 antlr4_static
                 clp::string_utils
                 clp_s::search::ast
+                clp_s::timestamp_parser
                 spdlog::spdlog
         )
 endif()

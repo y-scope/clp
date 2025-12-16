@@ -1,9 +1,9 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-results-cache-logs" (include "clp.fullname" .))
-  "component" "results-cache"
+  "component_category" "results-cache"
+  "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/results-cache" .Values.clpConfig.logs_directory)
+  "hostPath" (printf "%s/results_cache" .Values.clpConfig.logs_directory)
 ) }}

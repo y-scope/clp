@@ -2,15 +2,17 @@ use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials, S3Config},
     job_config::{ClpIoConfig, InputConfig, OutputConfig, S3InputConfig},
     serde::BrotliMsgpack,
+    types::non_empty_string::ExpectedNonEmpty,
 };
+use non_empty_string::NonEmptyString;
 use serde_json::Value;
 
 #[test]
 fn test_clp_io_config_serialization() {
     let s3_config = S3Config {
-        bucket: "yscope".into(),
+        bucket: NonEmptyString::from_static_str("yscope"),
         region_code: "us-east-2".into(),
-        key_prefix: "sample-logs/cockroachdb.clp.zst".into(),
+        key_prefix: NonEmptyString::from_static_str("sample-logs/cockroachdb.clp.zst"),
         aws_authentication: AwsAuthentication::Credentials {
             credentials: AwsCredentials {
                 access_key_id: "ACCESS_KEY_ID".into(),
@@ -23,8 +25,8 @@ fn test_clp_io_config_serialization() {
             config: S3InputConfig {
                 s3_config,
                 keys: None,
-                dataset: Some("test-dataset".into()),
-                timestamp_key: Some("timestamp".into()),
+                dataset: Some(NonEmptyString::from_static_str("test-dataset")),
+                timestamp_key: Some(NonEmptyString::from_static_str("timestamp")),
                 unstructured: false,
             },
         },

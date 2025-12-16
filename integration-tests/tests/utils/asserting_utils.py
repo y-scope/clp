@@ -6,9 +6,13 @@ import subprocess
 from typing import Any
 
 import pytest
+from clp_py_utils.clp_config import ClpConfig
+from pydantic import ValidationError
 
+from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_services_in_compose_project
+from tests.utils.utils import load_yaml_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -62,3 +66,26 @@ def validate_package_running(package_instance: PackageInstance) -> None:
         fail_msg += f"\nUnexpected services: {unexpected_components}."
 
     pytest.fail(fail_msg)
+
+
+def validate_running_mode_correct(package_instance: PackageInstance) -> None:
+    """
+    Validate that the mode described in the shared config of the instance matches the intended mode
+    defined by the instance configuration. Calls pytest.fail if the shared config fails validation
+    or if the running mode does not match the intended mode.
+
+    :param package_instance:
+    :raise: Propagates `load_yaml_to_dict`'s errors.
+    :raise pytest.fail: if the ClpConfig object cannot be validated.
+    :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
+    """
+    shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
+    try:
+        running_config = ClpConfig.model_validate(shared_config_dict)
+    except ValidationError as err:
+        pytest.fail(f"Shared config failed validation: {err}")
+
+    intended_config = package_instance.package_config.clp_config
+
+    if not compare_mode_signatures(intended_config, running_config):
+        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
