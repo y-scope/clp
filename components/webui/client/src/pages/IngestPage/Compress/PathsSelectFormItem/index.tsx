@@ -1,4 +1,4 @@
-import {
+import React, {
     useCallback,
     useEffect,
     useRef,
@@ -14,6 +14,7 @@ import {
 } from "antd";
 
 import {listFiles} from "../../../../api/os";
+import styles from "./index.module.css";
 import SwitcherIcon from "./SwitcherIcon";
 import {
     ROOT_NODE,
@@ -30,6 +31,7 @@ type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
 
 type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0];
 
+
 /**
  * Form item with TreeSelect for selecting file paths for compression.
  * Supports lazy loading and search with auto-expand.
@@ -40,18 +42,6 @@ const PathsSelectFormItem = () => {
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
     const [listHeight, setListHeight] = useState<number>(getListHeight);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setListHeight(getListHeight());
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
 
     // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
@@ -98,8 +88,63 @@ const PathsSelectFormItem = () => {
         }
     }, [loadPath]);
 
+    const handleTitleClick = useCallback((nodeData: TreeNode, ev: React.MouseEvent) => {
+        if (nodeData.isLeaf) {
+            // Propagate event to let TreeSelect handle selection.
+            return;
+        }
+        ev.stopPropagation();
+
+        const nodeValue = nodeData.value;
+        if (expandedKeys.includes(nodeValue)) {
+            setExpandedKeys(expandedKeys.filter((k) => k !== nodeValue));
+
+            return;
+        }
+
+        if (false === loadedPathsRef.current.has(nodeValue)) {
+            loadPath(nodeValue).catch((e: unknown) => {
+                console.error("Failed to load directory:", e);
+                message.error(e instanceof Error ?
+                    e.message :
+                    "Unknown error while loading paths");
+            });
+        }
+
+        setExpandedKeys([
+            ...expandedKeys,
+            nodeValue,
+        ]);
+    }, [
+        expandedKeys,
+        loadPath,
+    ]);
+
     const handleTreeExpand = useCallback((keys: TreeExpandKeys) => {
         setExpandedKeys(keys as string[]);
+    }, []);
+
+    const renderTreeTitle = useCallback((nodeData: TreeNode) => (
+        <span
+            className={styles["treeTitle"]}
+            onClick={(ev) => {
+                handleTitleClick(nodeData, ev);
+            }}
+        >
+            {nodeData.title}
+        </span>
+    ), [handleTitleClick]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setListHeight(getListHeight());
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
     }, []);
 
     return (
@@ -124,6 +169,7 @@ const PathsSelectFormItem = () => {
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
+                treeTitleRender={renderTreeTitle}
                 onTreeExpand={handleTreeExpand}/>
         </Form.Item>
     );
