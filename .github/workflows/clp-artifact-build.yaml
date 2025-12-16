@@ -182,7 +182,7 @@ jobs:
     name: "ubuntu-jammy-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: ["self-hosted", "X64", "ubuntu-noble"]
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
