@@ -389,7 +389,7 @@ jobs:
     # Run if the ancestor jobs were successful/skipped and building clp was successful.
     if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
-    runs-on: ["self-hosted", "X64", "ubuntu-noble"]
+    runs-on: *runner
     env:
       OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
