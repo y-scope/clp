@@ -95,7 +95,11 @@ async fn main() -> anyhow::Result<()> {
             tracing::error!(err = ? err, "Failed to create ingestion job manager from CLP config.");
         })?;
 
-    let log_ingestor_router = create_router().with_state(log_ingestor_manager_state);
+    let log_ingestor_router = create_router()
+        .inspect_err(|err| {
+            tracing::error!(err = ? err, "Failed to create router.");
+        })?
+        .with_state(log_ingestor_manager_state);
     tracing::info!("Server started at {addr}");
     axum::serve(listener, log_ingestor_router)
         .with_graceful_shutdown(shutdown_signal())
