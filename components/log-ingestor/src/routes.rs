@@ -34,6 +34,10 @@ mod api_doc {
             description = "log-ingestor for CLP",
             contact(name = "YScope")
         ),
+        tags(
+            (name = "Health", description = "Health check endpoint"),
+            (name = "IngestionJob", description = "Ingestion job orchestration endpoints")
+        ),
         paths(
             health,
             create_s3_scanner_job,
@@ -123,6 +127,7 @@ struct ErrorResponse {
 #[utoipa::path(
     get,
     path = "/health",
+    tags = ["Health"],
     responses((status = OK, body = String))
 )]
 async fn health() -> &'static str {
@@ -132,6 +137,7 @@ async fn health() -> &'static str {
 #[utoipa::path(
     post,
     path = "/s3_scanner",
+    tags = ["IngestionJob"],
     description = "Creates an ingestion job that periodically scans the specified S3 bucket and \
         key prefix for new objects to ingest.\n\n\
         The scanner assumes that objects under the given prefix are immutable and are added in \
@@ -174,6 +180,7 @@ async fn create_s3_scanner_job(
 #[utoipa::path(
     post,
     path = "/sqs_listener",
+    tags = ["IngestionJob"],
     description = "Creates an ingestion job that listens to an SQS queue for notifications about \
         new objects to ingest from the specified S3 bucket and key prefix.\n\n\
         The specified SQS queue must be dedicated to this ingestion job. After successfully \
@@ -216,6 +223,7 @@ async fn create_sqs_listener_job(
 #[utoipa::path(
     delete,
     path = "/job/{job_id}",
+    tags = ["IngestionJob"],
     description = "Deletes an existing ingestion job by its ID. This operation stops the job if it \
         is currently running and removes all associated resources.",
     params(
