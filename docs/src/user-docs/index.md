@@ -66,6 +66,7 @@ guides-using-the-api-server
 guides-external-database
 guides-multi-host
 guides-retention
+guides-using-log-ingestor
 guides-using-presto
 guides-using-spider
 :::
