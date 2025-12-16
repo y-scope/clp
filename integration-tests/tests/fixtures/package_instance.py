@@ -49,11 +49,6 @@ def fixt_package_instance(
             start_presto_cluster(fixt_package_config)
 
         yield instance
-    # except RuntimeError:
-    #     pytest.fail(
-    #         f"Failed to start the '{mode_name}' package. Check the test logs at <PATH> to see the"
-    #         " output from the start command."
-    #     )
     finally:
         if mode_name == "clp-presto":
             logger.info("Shutting down the Presto cluster...")

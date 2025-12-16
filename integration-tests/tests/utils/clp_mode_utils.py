@@ -26,6 +26,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     WEBUI_COMPONENT_NAME,
 )
+from pydantic import BaseModel
 
 CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
     "clp-text": lambda: ClpConfig(
@@ -69,6 +70,9 @@ def _to_docker_compose_service_name(name: str) -> str:
     return name.replace("_", "-")
 
 
+# These component lists should be maintained alongside the CLP_MODE_CONFIGS list.
+# TODO: Modify these component lists when the Presto Docker Compose project is integrated with the
+# CLP Docker compose project.
 CLP_BASE_COMPONENTS = [
     _to_docker_compose_service_name(DB_COMPONENT_NAME),
     _to_docker_compose_service_name(QUEUE_COMPONENT_NAME),
@@ -95,24 +99,16 @@ CLP_PRESTO_COMPONENTS = [
 ]
 
 
-def compute_mode_signature(config: ClpConfig) -> tuple[Any, ...]:
+def compare_mode_signatures(intended_config: ClpConfig, running_config: ClpConfig) -> bool:
     """
-    Constructs a signature that captures the mode-defining aspects of a ClpConfig object.
+    Compares the running signatures of `intended_config` and `running_config` with
+    `_match_objects_by_explicit_fields`.
 
-    :param config:
-    :return: Tuple that encodes fields used to determine an operating mode.
+    :param intended_config: The reference config object.
+    :param running_config: The config object to compare against.
+    :return: True if config objects match, False otherwise.
     """
-    return (
-        config.logs_input.type,
-        config.package.storage_engine.value,
-        config.package.query_engine.value,
-        config.mcp_server is not None,
-        config.presto is not None,
-        config.archive_output.storage.type,
-        config.stream_output.storage.type,
-        config.aws_config_directory is not None,
-        config.get_deployment_type(),
-    )
+    return _match_objects_by_explicit_fields(intended_config, running_config)
 
 
 def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
@@ -134,11 +130,12 @@ def get_required_component_list(config: ClpConfig) -> list[str]:
     Constructs a list of the components that the CLP package described in `config` needs to run
     properly.
 
+    This function should be maintained alongside the CLP_MODE_CONFIGS list.
+
     :param config:
     :return: List of components required by the package.
     """
-    component_list: list[str] = []
-    component_list.extend(CLP_BASE_COMPONENTS)
+    component_list: list[str] = list(CLP_BASE_COMPONENTS)
 
     deployment_type = config.get_deployment_type()
     if deployment_type == DeploymentType.FULL:
@@ -158,3 +155,31 @@ def get_required_component_list(config: ClpConfig) -> list[str]:
         component_list.append(CLP_MCP_SERVER_COMPONENT)
 
     return component_list
+
+
+def _match_objects_by_explicit_fields(intended_obj: Any, running_obj: Any) -> bool:
+    """
+    Compares `intended_obj` and `running_obj` using Pydantic's `model_fields_set` to recursively
+    match only the fields that were explicitly set when `intended_obj` was initialized.
+
+    When both objects are Pydantic models, the function only inspects fields that were explicitly
+    set on the `intended_obj`. For other data types, the function uses standard equality.
+
+    :param intended_obj:
+    :param running_obj:
+    :return: True if all explicitly set fields in intended_obj match running_obj, False otherwise.
+    """
+    if isinstance(intended_obj, BaseModel):
+        if not isinstance(running_obj, BaseModel):
+            return False
+
+        for field_name in intended_obj.model_fields_set:
+            intended_field_value = getattr(intended_obj, field_name)
+            running_field_value = getattr(running_obj, field_name)
+
+            if not _match_objects_by_explicit_fields(intended_field_value, running_field_value):
+                return False
+
+        return True
+
+    return bool(intended_obj == running_obj)
