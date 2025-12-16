@@ -2,8 +2,8 @@ use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
     job_config::ingestion::s3::SqsListenerConfig,
-    s3::ObjectMetadata,
-    sqs::event::{Record, S3},
+    s3::{ObjectMetadata, extract_object_metadata},
+    s3_event::S3,
 };
 use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
@@ -99,7 +99,11 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
             };
 
             for record in event.records {
-                if let Some(object_metadata) = self.extract_object_metadata(record) {
+                if let Some(object_metadata) = extract_object_metadata(
+                    record,
+                    self.config.base.bucket_name.as_str(),
+                    self.config.base.key_prefix.as_str(),
+                ) {
                     tracing::info!(
                         object = ? object_metadata,
                         "Received new object metadata from SQS."
@@ -120,37 +124,6 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
             }
         }
         Ok(ingested)
-    }
-
-    /// Extracts S3 object metadata from the given SQS record if it corresponds to a relevant
-    /// object.
-    ///
-    /// # Returns
-    ///
-    /// * `Some(ObjectMetadata)` if the record corresponds to a relevant object.
-    /// * `None` if:
-    ///   * The event is not an object creation event.
-    ///   * The bucket name does not match the listener's configuration.
-    ///   * [`Self::is_relevant_object`] evaluates to `false`.
-    fn extract_object_metadata(&self, record: Record) -> Option<ObjectMetadata> {
-        if !record.event_name.starts_with("ObjectCreated:")
-            || self.config.base.bucket_name != record.s3.bucket.name.as_str()
-            || !self.is_relevant_object(record.s3.object.key.as_str())
-        {
-            return None;
-        }
-        Some(ObjectMetadata {
-            bucket: record.s3.bucket.name,
-            key: record.s3.object.key,
-            size: record.s3.object.size,
-        })
-    }
-
-    /// # Returns:
-    ///
-    /// Whether the object key corresponds to a relevant object based on the listener's prefix.
-    fn is_relevant_object(&self, object_key: &str) -> bool {
-        !object_key.ends_with('/') && object_key.starts_with(self.config.base.key_prefix.as_str())
     }
 }
 

@@ -4,5 +4,7 @@ __pycache__/
 .lint-venv/
 .rustfmt.toml
 .task/
+.vscode/
 build/
 dist/
+target/

@@ -1,4 +1,4 @@
-use clp_rust_utils::sqs::event::S3;
+use clp_rust_utils::s3_event::S3;
 
 #[rustfmt::skip]
 /// Example S3 messages copied from AWS documentation:

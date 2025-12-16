@@ -2,14 +2,15 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use clp_rust_utils::{
     clp_config::{
-        AwsAuthentication,
-        AwsCredentials,
+        AwsAuthentication, AwsCredentials,
         package::{
             config::{ArchiveOutput, Config as ClpConfig, LogsInput},
             credentials::Credentials as ClpCredentials,
         },
     },
-    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
+    job_config::ingestion::s3::{
+        BaseConfig, KafkaListenerConfig, S3ScannerConfig, SqsListenerConfig,
+    },
     s3::ObjectMetadata,
 };
 use non_empty_string::NonEmptyString;
@@ -20,6 +21,7 @@ use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     compression::{Buffer, CompressionJobSubmitter, Listener},
     ingestion_job::{IngestionJob, S3Scanner},
+    kafka_consumer_wrapper::KafkaConsumerWrapper,
 };
 
 /// Errors for ingestion job manager operations.
@@ -117,6 +119,34 @@ impl IngestionJobManagerState {
         .await
     }
 
+    /// Creates a new Kafka listener ingestion job.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Uuid)` containing the job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
+    pub async fn create_kafka_listener_job(
+        &self,
+        config: KafkaListenerConfig,
+    ) -> Result<Uuid, Error> {
+        let consumer = KafkaConsumerWrapper::create(
+            config.brokers.clone(),
+            config.group_id.clone(),
+            config.topics.clone(),
+        )?;
+        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {
+            let listener =
+                crate::ingestion_job::KafkaListener::spawn(job_id, consumer, config, sender);
+            IngestionJob::KafkaListener(listener)
+        })
+        .await
+    }
+
     /// Creates a new SQS listener ingestion job.
     ///
     /// # Returns
@@ -210,7 +240,8 @@ impl IngestionJobManagerState {
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
-        JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
+        JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob,
+    {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
             if table_entry.region != ingestion_job_config.region

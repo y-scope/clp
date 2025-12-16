@@ -1,13 +1,14 @@
 use std::str::FromStr;
 
 use axum::{
-    Json,
-    Router,
+    Json, Router,
     extract::{Path, State},
     response::IntoResponse,
     routing::{delete, get, post},
 };
-use clp_rust_utils::job_config::ingestion::s3::{S3ScannerConfig, SqsListenerConfig};
+use clp_rust_utils::job_config::ingestion::s3::{
+    KafkaListenerConfig, S3ScannerConfig, SqsListenerConfig,
+};
 use serde::Serialize;
 
 use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState};
@@ -23,6 +24,7 @@ pub fn create_router() -> Router<IngestionJobManagerState> {
         .route("/health", get(health))
         .route("/s3_scanner", post(create_s3_scanner_job))
         .route("/sqs_listener", post(create_sqs_listener_job))
+        .route("/kafka_listener", post(create_kafka_listener_job))
         .route("/job/{job_id}", delete(stop_and_delete_job))
 }
 
@@ -100,6 +102,24 @@ async fn create_sqs_listener_job(
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "Created SQS listener ingestion job.");
+    Ok(Json(CreationResponse {
+        id: job_id.to_string(),
+    }))
+}
+
+async fn create_kafka_listener_job(
+    State(ingestion_job_manager_state): State<IngestionJobManagerState>,
+    Json(config): Json<KafkaListenerConfig>,
+) -> Result<Json<CreationResponse>, Error> {
+    tracing::info!(config = ? config, "Create Kafka listener ingestion job.");
+    let job_id = ingestion_job_manager_state
+        .create_kafka_listener_job(config)
+        .await
+        .map_err(|err| {
+            tracing::error!(err = ? err, "Failed to create Kafka listener ingestion job.");
+            Error::IngestionJobManagerError(err)
+        })?;
+    tracing::info!(job_id = ? job_id, "Created Kafka listener ingestion job.");
     Ok(Json(CreationResponse {
         id: job_id.to_string(),
     }))
