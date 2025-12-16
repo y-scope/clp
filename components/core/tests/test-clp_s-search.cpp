@@ -224,7 +224,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(idx: 0 AND NOT $_filename: "clp string")aa", {0}},
             {R"aa(idx: 0 AND NOT $*._filename.*: "clp string")aa", {0}},
             {R"aa(($_filename: file OR $_file_split_number: 1 OR $_archive_creator_id > 0) AND )aa"
-             R"aa(idx: 0 OR idx: 1)aa",
+             R"aa(idx: 0 OR idx: timestamp("1"))aa",
              {1}},
             {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
             {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
@@ -296,10 +296,12 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
 
 TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
-            {R"aa(timestamp < 1759417024.4)aa", {0, 1, 2}},
-            {R"aa(timestamp > 1759417023.1)aa", {0, 1, 2}},
-            {R"aa(timestamp > 1759417024)aa", {0, 1, 2}},
-            {R"aa(timestamp > 1759417024.1 AND timestamp < 1759417024.3)aa", {1}},
+            {R"aa(timestamp < timestamp("1759417024.4"))aa", {0, 1, 2}},
+            {R"aa(timestamp > timestamp("1759417023.1"))aa", {0, 1, 2}},
+            {R"aa(timestamp > timestamp("1759417024"))aa", {0, 1, 2}},
+            {R"aa(timestamp > timestamp("1759417024.1") AND )aa"
+             R"aa(timestamp < timestamp("1759417024.3"))aa",
+             {1}}
     };
     auto single_file_archive = GENERATE(true, false);
     auto retain_float_format = GENERATE(true, false);
@@ -325,11 +327,13 @@ TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
 
 TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
-            {R"aa(timestamp < 1759417024400)aa", {0, 1, 2}},
-            {R"aa(timestamp > 1759417023100)aa", {0, 1, 2}},
-            {R"aa(timestamp > 1759417024000)aa", {0, 1, 2}},
-            {R"aa(timestamp > 1759417024100 AND timestamp < 1759417024300)aa", {1}},
-            {R"aa(timestamp > 1759417024299.9)aa", {2}}
+            {R"aa(timestamp < timestamp("1759417024400"))aa", {0, 1, 2}},
+            {R"aa(timestamp > timestamp("1759417023100"))aa", {0, 1, 2}},
+            {R"aa(timestamp > timestamp("1759417024000"))aa", {0, 1, 2}},
+            {R"aa(timestamp > timestamp("1759417024100") AND )aa"
+             R"aa(timestamp < timestamp("1759417024300"))aa",
+             {1}},
+            {R"aa(timestamp > timestamp("1759417024.299"))aa", {2}}
     };
     auto single_file_archive = GENERATE(true, false);
 
