@@ -227,7 +227,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
         }
     }
 
-    if (column->matches_type(LiteralType::EpochDateT)) {
+    if (column->matches_type(LiteralType::TimestampT)) {
         for (auto entry : m_datestring_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
@@ -307,7 +307,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
                     get_cached_decompressed_unstructured_array(column_id),
                     literal
             );
-        case LiteralType::EpochDateT:
+        case LiteralType::TimestampT:
             return evaluate_epoch_date_filter(
                     expr->get_operation(),
                     m_datestring_readers[column_id],
@@ -1049,7 +1049,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             bool matches_clp_string = false;
             constexpr literal_type_bitmask_t other_types
                     = LiteralType::ArrayT | ast::cIntegralTypes | LiteralType::NullT
-                      | LiteralType::BooleanT | LiteralType::EpochDateT;
+                      | LiteralType::BooleanT | LiteralType::TimestampT;
             bool has_other = wildcard->matches_any(other_types);
             std::string filter_string;
             bool valid
