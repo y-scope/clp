@@ -215,7 +215,7 @@ async fn create_sqs_listener_job(
 
 #[utoipa::path(
     delete,
-    path = "/job",
+    path = "/job/{job_id}",
     description = "Deletes an existing ingestion job by its ID. This operation stops the job if it \
         is currently running and removes all associated resources.",
     responses(
