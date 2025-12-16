@@ -141,6 +141,7 @@ def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_pref
         archive_storage_key_prefix += "/"
 
     s3_delete_by_key_prefix(
+        s3_config.endpoint_url,
         s3_config.region_code,
         s3_config.bucket,
         archive_storage_key_prefix,
