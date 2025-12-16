@@ -1,3 +1,4 @@
+#![allow(clippy::needless_for_each)]
 use std::str::FromStr;
 
 use axum::{
@@ -15,39 +16,25 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState};
 
-// `utoipa::OpenApi` triggers `clippy::needless_for_each`
-#[allow(clippy::needless_for_each)]
-mod api_doc {
-    // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
-    // documentation. Importing the paths directly prevents this issue.
-    use super::{
-        __path_create_s3_scanner_job,
-        __path_create_sqs_listener_job,
-        __path_health,
-        __path_stop_and_delete_job,
-    };
-
-    #[derive(utoipa::OpenApi)]
-    #[openapi(
-        info(
-            title = "log-ingestor",
-            description = "log-ingestor for CLP",
-            contact(name = "YScope")
-        ),
-        tags(
-            (name = "Health", description = "Health check endpoint"),
-            (name = "IngestionJob", description = "Ingestion job orchestration endpoints")
-        ),
-        paths(
-            health,
-            create_s3_scanner_job,
-            create_sqs_listener_job,
-            stop_and_delete_job
-        )
-    )]
-    pub struct ApiDoc;
-}
-pub use api_doc::*;
+#[derive(utoipa::OpenApi)]
+#[openapi(
+    info(
+        title = "log-ingestor",
+        description = "log-ingestor for CLP",
+        contact(name = "YScope")
+    ),
+    tags(
+        (name = "Health", description = "Health check endpoint"),
+        (name = "IngestionJob", description = "Ingestion job orchestration endpoints")
+    ),
+    paths(
+        health,
+        create_s3_scanner_job,
+        create_sqs_listener_job,
+        stop_and_delete_job
+    )
+)]
+pub struct ApiDoc;
 
 /// Factory method to create an Axum router configured with all log ingestor routes.
 ///
@@ -140,9 +127,14 @@ async fn health() -> &'static str {
     tags = ["IngestionJob"],
     description = "Creates an ingestion job that periodically scans the specified S3 bucket and \
         key prefix for new objects to ingest.\n\n\
-        The scanner assumes that objects under the given prefix are immutable and are added in \
-        lexicographical order. Based on this assumption, the scanner ingests objects sequentially, \
-        ensuring that no eligible objects are skipped.",
+        To ensure correct and efficient ingestion, the scanner relies on the following \
+        assumptions:\n\n\
+        1. Lexicographical Order: New objects are added in lexicographical order to the bucket \
+        based on their keys. For example, objects with keys `log1` and `log2` will be ingested \
+        sequentially. If a new object with key `log0` is added after `log2`, it will be ignored \
+        because it is not lexicographically greater than the last ingested key.\n\n\
+        2. Immutability: Objects under the specified prefix are immutable. Once an object is \
+        created, it is not modified or overwritten.",
     responses(
         (status = OK, body = CreationResponse, description = "The ID of the created job."),
         (
@@ -181,11 +173,14 @@ async fn create_s3_scanner_job(
     post,
     path = "/sqs_listener",
     tags = ["IngestionJob"],
-    description = "Creates an ingestion job that listens to an SQS queue for notifications about \
-        new objects to ingest from the specified S3 bucket and key prefix.\n\n\
-        The specified SQS queue must be dedicated to this ingestion job. After successfully \
-        processing a notification, the ingestor deletes the corresponding message from the queue \
-        to prevent duplicate ingestion.",
+    description = "Creates an ingestion job that monitors an SQS queue. The queue receives \
+        notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\n\
+        The specified SQS queue must be dedicated to this ingestion job. Upon successful \
+        ingestion, the job deletes the corresponding message from the queue to ensure objects are \
+        not ingested multiple times.\n\n\
+        To maintain correctness and avoid backpressure, the job may also delete messages that are \
+        irrelevant to this ingestion job (for example, messages referring to objects outside the \
+        configured bucket or key prefix).",
     responses(
         (status = OK, body = CreationResponse, description = "The ID of the created job."),
         (
