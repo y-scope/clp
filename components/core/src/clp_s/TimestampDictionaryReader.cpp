@@ -1,8 +1,15 @@
 #include "TimestampDictionaryReader.hpp"
 
+#include <cstdint>
+#include <optional>
+#include <string>
 #include <unordered_set>
+#include <utility>
+
+#include <clp_s/timestamp_parser/TimestampParser.hpp>
 
 #include "search/ast/SearchUtils.hpp"
+#include "TimestampPattern.hpp"
 
 namespace clp_s {
 ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
@@ -64,16 +71,42 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
         if (ErrorCodeSuccess != error) {
             return error;
         }
-        m_patterns[id] = TimestampPattern(0, pattern);
+        m_deprecated_patterns.emplace(id, TimestampPattern(0, pattern));
+        auto const timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+        if (timestamp_pattern_result.has_error()) {
+            m_timestamp_patterns.emplace(id, std::nullopt);
+        } else {
+            m_timestamp_patterns.emplace(id, std::move(timestamp_pattern_result.value()));
+        }
     }
     return ErrorCodeSuccess;
 }
 
-std::string
-TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t format_id) const {
+auto TimestampDictionaryReader::get_deprecated_timestamp_string_encoding(
+        epochtime_t epoch,
+        uint64_t format_id
+) const -> std::string {
     std::string ret;
-    m_patterns.at(format_id).insert_formatted_timestamp(epoch, ret);
+    m_deprecated_patterns.at(format_id).insert_formatted_timestamp(epoch, ret);
 
     return ret;
+}
+
+void TimestampDictionaryReader::append_timestamp_to_buffer(
+        epochtime_t timestamp,
+        uint64_t format_id,
+        std::string& buffer
+) const {
+    auto const& pattern{m_timestamp_patterns.at(format_id)};
+    if (false == pattern.has_value()) {
+        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
+    }
+
+    auto const marshal_result{
+            timestamp_parser::marshal_timestamp(timestamp, pattern.value(), buffer)
+    };
+    if (marshal_result.has_error()) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
 }
 }  // namespace clp_s
