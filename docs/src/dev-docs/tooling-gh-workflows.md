@@ -94,8 +94,8 @@ The workflow automatically selects runners based on the repository owner:
 * For forks, it automatically falls back to GitHub-hosted runners.
 
 Note that GitHub-hosted runners have limited resources (e.g., 4 cores, limited RAM) and limited
-concurrency for free-tier organizations, so builds are expected to take longer on forks. For more details, see
-[GitHub-hosted runners][gh-hosted-runners].
+concurrency for free-tier organizations, so builds are expected to take longer on forks. For more
+details, see [GitHub-hosted runners][gh-hosted-runners].
 
 ## clp-core-build-macos
 
