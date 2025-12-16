@@ -41,6 +41,7 @@ PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 API_SERVER_COMPONENT_NAME = "api_server"
+LOG_INGESTOR_COMPONENT_NAME = "log_ingestor"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
@@ -96,6 +97,15 @@ DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
+
+LoggingLevelRust = Literal[
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "TRACE",
+    "OFF",
+]
 
 
 class DeploymentType(KebabCaseStrEnum):
@@ -578,7 +588,8 @@ class AwsAuthentication(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_code: NonEmptyStr
+    endpoint_url: str | None = None
+    region_code: NonEmptyStr | None = None
     bucket: NonEmptyStr
     key_prefix: str
     aws_authentication: AwsAuthentication
@@ -758,6 +769,15 @@ class ApiServer(BaseModel):
     default_max_num_query_results: int = 1000
 
 
+class LogIngestor(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 3002
+    buffer_flush_timeout: PositiveInt = 300  # seconds
+    buffer_flush_threshold: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    channel_capacity: PositiveInt = 10
+    logging_level: LoggingLevelRust = "INFO"
+
+
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
 
@@ -802,6 +822,7 @@ class ClpConfig(BaseModel):
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
+    log_ingestor: LogIngestor | None = LogIngestor()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -997,6 +1018,15 @@ class ClpConfig(BaseModel):
             d[key] = None if value is None else value.dump_to_primitive_dict()
 
         return d
+
+    @model_validator(mode="after")
+    def validate_log_ingestor_config(self):
+        if self.log_ingestor is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def validate_presto_config(self):
