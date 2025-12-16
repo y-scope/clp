@@ -87,6 +87,7 @@ services:
 
   db-table-creator:
     <<: *service_defaults
+    restart: "on-failure:3"
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -211,6 +212,7 @@ services:
 
   results-cache-indices-creator:
     <<: *service_defaults
+    restart: "on-failure:3"
     hostname: "results_cache_indices_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
