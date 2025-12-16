@@ -151,19 +151,19 @@ graph LR
 | database                  | Database for archive metadata, compression jobs, and query jobs    |
 | queue                     | Task queue for schedulers                                          |
 | redis                     | Task result storage for workers                                    |
-| compression_scheduler     | Scheduler for compression jobs                                     |
-| query_scheduler           | Scheduler for search/aggregation jobs                              |
-| spider_scheduler          | Scheduler for Spider distributed task execution framework          |
-| results_cache             | Storage for the workers to return search results to the UI         |
-| compression_worker        | Worker processes for compression jobs using Celery                 |
-| spider_compression_worker | Worker processes for compression jobs using Spider                 |
-| query_worker              | Worker processes for search/aggregation jobs using Celery          |
+| compression-scheduler     | Scheduler for compression jobs                                     |
+| query-scheduler           | Scheduler for search/aggregation jobs                              |
+| spider-scheduler          | Scheduler for Spider distributed task execution framework          |
+| results-cache             | Storage for the workers to return search results to the UI         |
+| compression-worker        | Worker processes for compression jobs using Celery                 |
+| spider-compression-worker | Worker processes for compression jobs using Spider                 |
+| query-worker              | Worker processes for search/aggregation jobs using Celery          |
 | reducer                   | Reducers for performing the final stages of aggregation jobs       |
-| api_server                | API server for submitting queries                                  |
+| api-server                | API server for submitting queries                                  |
 | webui                     | Web server for the UI                                              |
-| mcp_server                | MCP server for AI agent to access CLP functionalities              |
-| garbage_collector         | Process to manage data retention                                   |
-| log_ingestor              | Server for orchestrating and running continuous log ingestion jobs |
+| mcp-server                | MCP server for AI agent to access CLP functionalities              |
+| garbage-collector         | Process to manage data retention                                   |
+| log-ingestor              | Server for orchestrating and running continuous log ingestion jobs |
 
 :::
 
