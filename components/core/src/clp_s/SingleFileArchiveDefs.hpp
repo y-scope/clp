@@ -33,9 +33,9 @@ constexpr auto decompose_archive_version(uint32_t archive_version)
         -> std::tuple<uint8_t, uint8_t, uint16_t> {
     constexpr uint32_t cMajorVersionOffset{24U};
     constexpr uint32_t cMinorVersionOffset{16U};
-    uint8_t const major_version{static_cast<uint8_t>(archive_version >> cMajorVersionOffset)};
-    uint8_t const minor_version{static_cast<uint8_t>(archive_version >> cMinorVersionOffset)};
-    uint16_t const patch_version{static_cast<uint16_t>(archive_version)};
+    auto const major_version{static_cast<uint8_t>(archive_version >> cMajorVersionOffset)};
+    auto const minor_version{static_cast<uint8_t>(archive_version >> cMinorVersionOffset)};
+    auto const patch_version{static_cast<uint16_t>(archive_version)};
     return std::make_tuple(major_version, minor_version, patch_version);
 }
 
