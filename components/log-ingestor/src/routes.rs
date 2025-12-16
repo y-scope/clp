@@ -218,6 +218,13 @@ async fn create_sqs_listener_job(
     path = "/job/{job_id}",
     description = "Deletes an existing ingestion job by its ID. This operation stops the job if it \
         is currently running and removes all associated resources.",
+    params(
+        (
+            "job_id" = String,
+            Path,
+            description = "The unique identifier of the ingestion job to delete."
+        )
+    ),
     responses(
         (status = OK, body = ()),
         (
