@@ -28,7 +28,12 @@ concurrency:
 jobs:
   filter-relevant-changes:
     name: "filter-relevant-changes"
-    runs-on: ["self-hosted", "X64", "ubuntu-noble"]
+    runs-on: &runner >-
+      ${{
+        github.repository_owner == 'y-scope'
+        && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
+        || 'ubuntu-24.04'
+      }}
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       manylinux_2_28_x86_64_image_changed: "${{steps.filter.outputs.manylinux_2_28_x86_64_image}}"
