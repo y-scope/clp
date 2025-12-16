@@ -31,6 +31,7 @@ public:
         EndArray,
         BeginUnnamedObject,
         BeginUnnamedArray,
+        AddLiteralField,
     };
 
     static int64_t const cReservedLength = 4096;
