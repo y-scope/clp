@@ -442,6 +442,7 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/aws/test/test_AwsAuthenticationSigner.cpp
         src/clp/BoundedReader.cpp
         src/clp/BoundedReader.hpp
         src/clp/BufferedReader.cpp
