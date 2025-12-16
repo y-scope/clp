@@ -1,7 +1,9 @@
 #ifndef CLP_S_ARCHIVEDEFS_HPP
 #define CLP_S_ARCHIVEDEFS_HPP
 
+#include <array>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -48,17 +50,38 @@ constexpr uint32_t cArchiveVersion{
 };
 
 // define the magic number
-constexpr uint8_t cStructuredSFAMagicNumber[] = {0xFD, 0x2F, 0xC5, 0x30};
+constexpr std::array<uint8_t, 4> cStructuredSFAMagicNumber{0xFD, 0x2F, 0xC5, 0x30};
 
 struct ArchiveHeader {
-    uint8_t magic_number[4];
-    uint32_t version;
-    uint64_t uncompressed_size;
-    uint64_t compressed_size;
-    uint64_t reserved_padding[4];
-    uint32_t metadata_section_size;
-    uint16_t compression_type;
-    uint16_t padding;
+    ArchiveHeader() = default;
+
+    ArchiveHeader(
+            uint32_t version,
+            uint64_t uncompressed_size,
+            uint64_t compressed_size,
+            uint32_t metadata_section_size,
+            uint16_t compression_type
+    )
+            : version{version},
+              uncompressed_size{uncompressed_size},
+              compressed_size{compressed_size},
+              metadata_section_size{metadata_section_size},
+              compression_type{compression_type} {
+        std::memcpy(
+                &magic_number,
+                cStructuredSFAMagicNumber.data(),
+                cStructuredSFAMagicNumber.size()
+        );
+    }
+
+    uint8_t magic_number[4]{};
+    uint32_t version{};
+    uint64_t uncompressed_size{};
+    uint64_t compressed_size{};
+    uint64_t reserved_padding[4]{};
+    uint32_t metadata_section_size{};
+    uint16_t compression_type{};
+    uint16_t padding{};
 };
 
 enum class ArchiveCompressionType : uint16_t {

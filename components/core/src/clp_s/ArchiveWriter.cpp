@@ -239,16 +239,12 @@ void ArchiveWriter::write_archive_files(
 
 void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t metadata_section_size) {
     ArchiveHeader header{
-            .magic_number{0},
-            .version = cArchiveVersion,
-            .uncompressed_size = m_uncompressed_size,
-            .compressed_size = m_compressed_size,
-            .reserved_padding{0},
-            .metadata_section_size = static_cast<uint32_t>(metadata_section_size),
-            .compression_type = static_cast<uint16_t>(ArchiveCompressionType::Zstd),
-            .padding = 0
+            cArchiveVersion,
+            m_uncompressed_size,
+            m_compressed_size,
+            static_cast<uint32_t>(metadata_section_size),
+            static_cast<uint16_t>(ArchiveCompressionType::Zstd)
     };
-    std::memcpy(&header.magic_number, cStructuredSFAMagicNumber, sizeof(header.magic_number));
     archive_writer.seek_from_begin(0);
     archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
