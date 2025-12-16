@@ -96,7 +96,6 @@ The workflow automatically selects runners based on the repository owner:
 Note that GitHub-hosted runners have limited resources (e.g., 4 cores, limited RAM) and limited
 concurrency for free-tier organizations, so builds are expected to take longer on forks. For more details, see
 [GitHub-hosted runners][gh-hosted-runners].
-[gh-hosted-runners]: https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners
 
 ## clp-core-build-macos
 
@@ -109,3 +108,5 @@ This workflow runs linting checks on the codebase.
 ## clp-uv-checks
 
 This workflow checks whether each UV Python project's lockfile matches the project metadata.
+
+[gh-hosted-runners]: https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners
