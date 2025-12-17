@@ -37,7 +37,7 @@
         "tags": [
           "IngestionJob"
         ],
-        "description": "deletes an existing ingestion job by its ID. This operation stops the job if it is currently running and removes all associated resources.",
+        "description": "Deletes an existing ingestion job by its ID. This operation stops the job if it is currently running and removes all associated resources.",
         "operationId": "stop_and_delete_job",
         "parameters": [
           {
