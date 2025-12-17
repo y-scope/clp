@@ -5,8 +5,39 @@ import {
     JobData,
 } from "../Jobs/typings";
 import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
 import {formatSizeInBytes} from "./units";
 
+/**
+ * Extracts dataset and paths from a decoded IO config.
+ *
+ * @param clpConfig
+ * @return
+ */
+const extractIoConfig = (
+    clpConfig?: ClpIoConfig | null
+): {dataset: string | null; paths: string[]} => {
+    if (undefined === clpConfig || null === clpConfig) {
+        return {dataset: null, paths: []};
+    }
+
+    const dataset = "string" === typeof clpConfig.input?.dataset
+        ? clpConfig.input.dataset
+        : null;
+    if (Array.isArray(clpConfig.input?.paths_to_compress)) {
+        const prefixToRemove = clpConfig.input.path_prefix_to_remove;
+        const paths = clpConfig.input.paths_to_compress.map((path) => {
+            if ("string" === typeof prefixToRemove && path.startsWith(prefixToRemove)) {
+                return path.substring(prefixToRemove.length);
+            }
+            return path;
+        });
+
+        return {dataset, paths};
+    }
+
+    return {dataset, paths: []};
+};
 
 /**
  * Convert a QueryJobsItem to JobData
@@ -14,9 +45,8 @@ import {formatSizeInBytes} from "./units";
  * @param props
  * @param props._id
  * @param props.compressed_size
- * @param props.dataset
  * @param props.duration
- * @param props.paths
+ * @param props.clp_config
  * @param props.start_time
  * @param props.status
  * @param props.uncompressed_size
@@ -25,13 +55,13 @@ import {formatSizeInBytes} from "./units";
 const convertQueryJobsItemToJobData = ({
     _id: id,
     compressed_size: compressedSize,
-    dataset,
     duration,
-    paths,
+    clp_config: clpConfig,
     start_time: startTime,
     status,
     uncompressed_size: uncompressedSize,
 }: CompressionMetadataDecoded): JobData => {
+    const {dataset, paths} = extractIoConfig(clpConfig);
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";

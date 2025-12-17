@@ -2,10 +2,11 @@ import {
     Static,
     Type,
 } from "@sinclair/typebox";
+import {ClpIoConfig} from "./compression.js";
 
 
 /**
- * Base compression metadata fields.
+ * Base compression metadata fields (internal only).
  */
 const CompressionMetadataBaseSchema = Type.Object({
     _id: Type.Number(),
@@ -19,55 +20,50 @@ const CompressionMetadataBaseSchema = Type.Object({
     update_time: Type.String(),
 });
 
-type CompressionMetadataBase = Static<typeof CompressionMetadataBaseSchema>;
-
 /**
- * Encoded IO config stored alongside compression metadata.
- */
-const CompressionMetadataEncodedConfigSchema = Type.Object({
-    clp_config: Type.Optional(Type.Any()),
-});
-
-/**
- * Compression metadata as stored, including the encoded IO config.
+ * Compression metadata as stored, including the encoded IO config blob.
  */
 const CompressionMetadataSchema = Type.Intersect([
     CompressionMetadataBaseSchema,
-    CompressionMetadataEncodedConfigSchema,
+    Type.Object({
+        clp_config: Type.Optional(Type.Any()),
+    }),
 ]);
 
-type CompressionMetadata = CompressionMetadataBase & {clp_config?: Buffer | null};
+type CompressionMetadata = Omit<
+    Static<typeof CompressionMetadataSchema>,
+    "clp_config"
+> & {clp_config?: Buffer | null};
 
 /**
  * Decoded IO config fields extracted from the encoded config.
  */
-const CompressionMetadataIoConfigSchema = Type.Object({
-    dataset: Type.Union([Type.String(), Type.Null()]),
-    paths: Type.Array(Type.String()),
+const DecodedIoConfigSchema = Type.Object({
+    clp_config: Type.Optional(Type.Any()),
 });
 
-type CompressionMetadataIoConfig = Static<typeof CompressionMetadataIoConfigSchema>;
+type DecodedIoConfig = {clp_config?: ClpIoConfig | null};
 
 /**
  * Compression metadata including decoded IO config but excluding the encoded blob.
  */
-const CompressionMetadataDecodedSchema = Type.Intersect([
-    CompressionMetadataBaseSchema,
-    CompressionMetadataIoConfigSchema,
-]);
+const CompressionMetadataDecodedSchema = Type.Intersect(
+    [
+        CompressionMetadataBaseSchema,
+        DecodedIoConfigSchema,
+    ]
+);
 
 type CompressionMetadataDecoded = Static<typeof CompressionMetadataDecodedSchema>;
 
 
 export {
-    CompressionMetadataBaseSchema,
     CompressionMetadataDecodedSchema,
-    CompressionMetadataIoConfigSchema,
     CompressionMetadataSchema,
+    DecodedIoConfigSchema,
 };
 export type {
     CompressionMetadata,
-    CompressionMetadataBase,
     CompressionMetadataDecoded,
-    CompressionMetadataIoConfig,
+    DecodedIoConfig,
 };

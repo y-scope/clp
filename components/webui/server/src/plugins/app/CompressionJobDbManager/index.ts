@@ -8,7 +8,7 @@ import {ResultSetHeader} from "mysql2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../../../typings/compression.js";
-import {CompressionJobConfig} from "./typings.js";
+import {ClpIoConfig} from "./typings.js";
 
 
 /**
@@ -41,7 +41,7 @@ class CompressionJobDbManager {
      * @return The job's ID.
      * @throws {Error} on error.
      */
-    async submitJob (jobConfig: CompressionJobConfig): Promise<number> {
+    async submitJob (jobConfig: ClpIoConfig): Promise<number> {
         const [result] = await this.#sqlPool.query<ResultSetHeader>(
             `
             INSERT INTO ${this.#tableName} (

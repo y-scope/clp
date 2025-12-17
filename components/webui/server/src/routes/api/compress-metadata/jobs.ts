@@ -7,14 +7,14 @@ import {
     CompressionMetadata,
     CompressionMetadataDecoded,
     CompressionMetadataDecodedSchema,
-    CompressionMetadataIoConfig,
+    DecodedIoConfig,
 } from "@webui/common/schemas/compress-metadata";
 import {constants} from "http2";
 import {RowDataPacket} from "mysql2";
 import {brotliDecompressSync} from "node:zlib";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
+import {ClpIoConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
 type CompressionMetadataRow = CompressionMetadata;
 
@@ -26,29 +26,15 @@ type CompressionMetadataRow = CompressionMetadata;
  */
 const decodeJobConfig = (
     jobConfig: unknown
-): CompressionMetadataIoConfig => {
-    let dataset: string | null = null;
-    let paths: string[] = [];
+): DecodedIoConfig => {
+    let clpConfig: ClpIoConfig | null = null;
 
     if (jobConfig instanceof Buffer) {
         try {
             const decodedConfig = decode(
                 brotliDecompressSync(jobConfig)
-            ) as CompressionJobConfig;
-            if ("string" === typeof decodedConfig?.input?.dataset) {
-                dataset = decodedConfig.input.dataset;
-            }
-            if (Array.isArray(decodedConfig?.input?.paths_to_compress)) {
-                const prefixToRemove = decodedConfig.input.path_prefix_to_remove;
-                paths = decodedConfig.input.paths_to_compress.map((path) => {
-                    if ("string" === typeof prefixToRemove &&
-                        path.startsWith(prefixToRemove)
-                    ) {
-                        return path.substring(prefixToRemove.length);
-                    }
-                    return path;
-                });
-            }
+            ) as ClpIoConfig;
+            clpConfig = decodedConfig;
         } catch (err: unknown) {
             // If decoding fails, fall back to empty dataset/paths but log for visibility.
             // eslint-disable-next-line no-console
@@ -56,7 +42,7 @@ const decodeJobConfig = (
         }
     }
 
-    return {dataset, paths};
+    return {clp_config: clpConfig};
 };
 
 /**
@@ -122,14 +108,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     uncompressed_size: uncompressedSize,
                     update_time: updateTime,
                 }): CompressionMetadataDecoded => {
-                    const {dataset, paths} = decodeJobConfig(clpConfig);
+                    const {clp_config} = decodeJobConfig(clpConfig);
 
                     return {
                         _id,
                         compressed_size: compressedSize,
-                        dataset,
+                        clp_config,
                         duration,
-                        paths,
                         retrieval_time: retrievalTime,
                         start_time: startTime,
                         status,

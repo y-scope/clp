@@ -110,7 +110,7 @@ type CompressionJobOutputConfig = {
     compression_level: number;
 };
 
-type CompressionJobConfig = {
+type ClpIoConfig = {
     input: CompressionJobFsInputConfig | CompressionJobS3InputConfig;
     output: CompressionJobOutputConfig;
 };
@@ -127,7 +127,7 @@ export {
 export type {
     CompressionJob,
     CompressionJobCreation,
-    CompressionJobConfig,
+    ClpIoConfig,
     CompressionJobFsInputConfig,
     CompressionJobS3InputConfig,
     CompressionJobOutputConfig,

@@ -9,14 +9,14 @@ import {ErrorSchema} from "@webui/common/schemas/error";
 import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
+import {ClpIoConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 
 
 /**
  * Default compression job configuration.
  */
-const DEFAULT_COMPRESSION_JOB_CONFIG: CompressionJobConfig = Object.freeze({
+const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
     input: {
         type: CompressionJobInputType.FS,
         paths_to_compress: [],
@@ -61,7 +61,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 timestampKey,
             } = request.body;
 
-            const jobConfig: CompressionJobConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
+            const jobConfig: ClpIoConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
             jobConfig.input.paths_to_compress = paths.map(
                 (path) => CONTAINER_INPUT_LOGS_ROOT_DIR + path
             );

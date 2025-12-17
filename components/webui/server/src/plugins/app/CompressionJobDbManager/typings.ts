@@ -1,5 +1,5 @@
 import type {
-    CompressionJobConfig,
+    ClpIoConfig,
     CompressionJobFsInputConfig,
     CompressionJobS3InputConfig,
     CompressionJobOutputConfig,
@@ -7,7 +7,7 @@ import type {
 
 
 export type {
-    CompressionJobConfig,
+    ClpIoConfig,
     CompressionJobFsInputConfig,
     CompressionJobS3InputConfig,
     CompressionJobOutputConfig,
