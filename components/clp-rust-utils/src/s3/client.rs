@@ -3,6 +3,7 @@ use aws_sdk_s3::{
     Client,
     config::{Builder, Credentials, Region},
 };
+use non_empty_string::NonEmptyString;
 
 /// Creates a new S3 client.
 ///
@@ -19,7 +20,7 @@ pub async fn create_new_client(
     region_id: &str,
     access_key_id: &str,
     secret_access_key: &str,
-    endpoint: Option<&str>,
+    endpoint: Option<&NonEmptyString>,
 ) -> Client {
     let credential = Credentials::new(
         access_key_id,
@@ -35,16 +36,8 @@ pub async fn create_new_client(
         .credentials_provider(credential)
         .force_path_style(true);
     if let Some(ep) = endpoint {
-        let normalised_endpoint = normalize_endpoint(ep);
-        config_builder = config_builder.endpoint_url(normalised_endpoint);
+        config_builder = config_builder.endpoint_url(ep.as_str().to_owned());
     }
     let config = config_builder.build();
     Client::from_conf(config)
-}
-
-fn normalize_endpoint(endpoint: &str) -> String {
-    match endpoint {
-        ep if ep.trim().starts_with("http://") || ep.trim().starts_with("https://") => ep.into(),
-        ep => format!("https://{ep}"),
-    }
 }

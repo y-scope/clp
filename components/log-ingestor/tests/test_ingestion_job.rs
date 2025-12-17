@@ -162,14 +162,14 @@ async fn test_sqs_listener() -> Result<()> {
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
-        Some(aws_config.endpoint.as_str()),
+        aws_config.endpoint.as_ref(),
     )
     .await;
 
     let sqs_listener_config = SqsListenerConfig {
         queue_url: NonEmptyString::from_string(format!(
             "{}/{}/{}",
-            aws_config.endpoint.as_str(),
+            aws_config.endpoint.as_ref().unwrap(),
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
         )),
@@ -180,7 +180,7 @@ async fn test_sqs_listener() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
-            endpoint_url: Some(aws_config.endpoint.clone()),
+            endpoint_url: aws_config.endpoint.clone(),
             tags: None,
         },
     };
@@ -198,7 +198,7 @@ async fn test_sqs_listener() -> Result<()> {
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
-        Some(aws_config.endpoint.as_str()),
+        aws_config.endpoint.as_ref(),
     )
     .await;
 
@@ -233,7 +233,7 @@ async fn test_sqs_listener() -> Result<()> {
 
 #[tokio::test]
 #[serial_test::serial]
-#[ignore = "Requires LocalStack or AWS environment"]
+//#[ignore = "Requires LocalStack or AWS environment"]
 async fn test_s3_scanner() -> Result<()> {
     let job_id = Uuid::new_v4();
     let prefix = get_testing_prefix_as_non_empty_string(&job_id);
@@ -244,7 +244,7 @@ async fn test_s3_scanner() -> Result<()> {
         aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
-        Some(aws_config.endpoint.as_str()),
+        aws_config.endpoint.as_ref(),
     )
     .await;
 
@@ -256,7 +256,7 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
-            endpoint_url: Some(aws_config.endpoint),
+            endpoint_url: aws_config.endpoint.clone(),
             tags: None,
         },
         scanning_interval_sec: 1,

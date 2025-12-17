@@ -108,7 +108,7 @@ impl IngestionJobManagerState {
             config.base.region.as_str(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
-            config.base.endpoint_url.as_deref(),
+            config.base.endpoint_url.as_ref(),
         )
         .await;
         self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {

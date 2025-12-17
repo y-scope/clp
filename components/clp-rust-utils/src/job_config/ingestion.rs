@@ -18,7 +18,9 @@ pub mod s3 {
         pub key_prefix: NonEmptyString,
 
         /// The endpoint URL for custom S3-compatible object stores (e.g., MinIO, LocalStack).
-        pub endpoint_url: Option<String>,
+        #[serde(default)]
+        #[schema(value_type = String, min_length = 1)]
+        pub endpoint_url: Option<NonEmptyString>,
 
         /// The dataset to ingest into. Defaults to `None` (which uses the default dataset).
         #[serde(default)]
