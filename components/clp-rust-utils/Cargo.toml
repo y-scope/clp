@@ -16,6 +16,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 thiserror = "2.0.17"
+utoipa = { version = "5.4.0" }
 
 [dev-dependencies]
 hex = "0.4.3"
