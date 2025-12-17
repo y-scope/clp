@@ -73,65 +73,41 @@ const CompressionJobSchema = Type.Object({
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
 /**
- * Compression job config (mirrors `ClpIoConfig` in
- * `components/job-orchestration/job_orchestration/scheduler/job_config.py`).
+ * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
  */
 enum CompressionJobInputType {
     FS = "fs",
     S3 = "s3",
 }
 
-type CompressionJobFsInputConfig = {
-    type: CompressionJobInputType.FS;
-    dataset?: string | null;
-    paths_to_compress: string[];
-    path_prefix_to_remove?: string | null;
-    timestamp_key?: string | null;
-    unstructured?: boolean;
-};
-
-type CompressionJobS3InputConfig = {
-    type: CompressionJobInputType.S3;
-    keys?: string[] | null;
-    dataset?: string | null;
-    timestamp_key?: string | null;
-    unstructured?: boolean;
-    // S3Config fields from Python `clp_py_utils.clp_config.S3Config` are not
-    // enumerated here; extend as needed when S3 ingestion is wired up.
-    [key: string]: unknown;
-};
-
-type CompressionJobOutputConfig = {
-    tags?: string[] | null;
-    target_archive_size: number;
-    target_dictionaries_size: number;
-    target_segment_size: number;
-    target_encoded_file_size: number;
-    compression_level: number;
-};
-
+/**
+ * Matching `FsInputConfig` in `job_orchestration.scheduler.job_config`.
+ */
 const ClpIoFsInputConfigSchema = Type.Object({
     type: Type.Literal(CompressionJobInputType.FS),
-    dataset: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    dataset: Type.Union([Type.String(), Type.Null()]),
     paths_to_compress: Type.Array(Type.String()),
-    path_prefix_to_remove: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    timestamp_key: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-    unstructured: Type.Optional(Type.Boolean()),
+    path_prefix_to_remove: Type.Union([Type.String(), Type.Null()]),
+    timestamp_key: Type.Union([Type.String(), Type.Null()]),
+    unstructured: Type.Boolean(),
 });
 
-const ClpIoS3InputConfigSchema = Type.Object(
-    {
-        type: Type.Literal(CompressionJobInputType.S3),
-        keys: Type.Optional(Type.Array(Type.String())),
-        dataset: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-        timestamp_key: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-        unstructured: Type.Optional(Type.Boolean()),
-    },
-    {additionalProperties: true}
-);
+/**
+ * Matching `S3InputConfig` in `job_orchestration.scheduler.job_config`.
+ */
+const ClpIoS3InputConfigSchema = Type.Object({
+    type: Type.Literal(CompressionJobInputType.S3),
+    keys: Type.Union([Type.Array(Type.String()), Type.Null()]),
+    dataset: Type.Union([Type.String(), Type.Null()]),
+    timestamp_key: Type.Union([Type.String(), Type.Null()]),
+    unstructured: Type.Boolean(),
+});
 
+/**
+ * Matching `OutputConfig` in `job_orchestration.scheduler.job_config`.
+ */
 const ClpIoOutputConfigSchema = Type.Object({
-    tags: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Null()])),
+    tags: Type.Union([Type.Array(Type.String()), Type.Null()]),
     target_archive_size: Type.Number(),
     target_dictionaries_size: Type.Number(),
     target_segment_size: Type.Number(),
@@ -139,11 +115,17 @@ const ClpIoOutputConfigSchema = Type.Object({
     compression_level: Type.Number(),
 });
 
+/**
+ * Matching `ClpIoConfig` in `job_orchestration.scheduler.job_config`.
+ */
 const ClpIoConfigSchema = Type.Object({
     input: Type.Union([ClpIoFsInputConfigSchema, ClpIoS3InputConfigSchema]),
     output: ClpIoOutputConfigSchema,
 });
 
+type CompressionJobFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
+type CompressionJobS3InputConfig = Static<typeof ClpIoS3InputConfigSchema>;
+type CompressionJobOutputConfig = Static<typeof ClpIoOutputConfigSchema>;
 type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
 
 export {

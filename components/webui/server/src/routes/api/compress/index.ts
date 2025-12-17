@@ -9,7 +9,7 @@ import {ErrorSchema} from "@webui/common/schemas/error";
 import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {ClpIoConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 
 
