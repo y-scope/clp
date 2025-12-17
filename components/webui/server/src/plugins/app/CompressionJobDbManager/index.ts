@@ -8,7 +8,7 @@ import {ResultSetHeader} from "mysql2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../../../typings/compression.js";
-import {ClpIoConfig} from "./typings.js";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
 
 
 /**
