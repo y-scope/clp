@@ -11,6 +11,10 @@ path = "src/lib.rs"
 name = "api_server"
 path  = "src/bin/api_server.rs"
 
+[[bin]]
+name = "api-server-openapi-codegen"
+path = "src/bin/openapi_codegen.rs"
+
 [dependencies]
 anyhow = "1.0.100"
 async-stream = "0.3.6"
