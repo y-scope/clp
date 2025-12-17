@@ -1,62 +1,77 @@
-# Using log-ingestor
+# Using `log-ingestor`
 
-`clp-json` includes a component called `log-ingestor` that enables users to ingest logs into CLP 
-archives by creating and managing ingestion jobs.
-
+`log-ingestor` is a CLP component that facilitates continuous log ingestion from a configured log
+source.
 
 :::{note}
-Currently, `log-ingestor` only supports [clp-json][release-choices] when configured with S3 log
-inputs. The following capabilities are not yet supported but are planned for future releases:
+Currently, `log-ingestor` can only be used by
+[`clp-json` CLP deployments](./quick-start/clp-json.md) that are configured for S3 object storage.
+To learn how to set up this configuration, check out the
+[object storage guide](./guides-using-object-storage/index.md).
 
-* One-time ingestion jobs (similar to the existing compression CLI workflows)
-* Ingesting from local filesystems
-* Ingestion using `clp-text`
+Support for ingestion from local filesystems and ingestion using `clp-text` is planned for a future
+release.
 :::
 
-## Starting log-ingestor
+---
 
-`clp-json` starts `log-ingestor` based on the `log_ingestor` section in `etc/clp-config.yaml` if
-`logs_input` is configured to be `"s3"` type. You can uncomment and modify this section to override
-the defaults.
+## Starting `log-ingestor`
+
+`clp-json` will spin up `log-ingestor` on startup as long as the `logs_input` field in the CLP
+package's config file (`clp-package/etc/clp-config.yaml`) is configured for object storage.
+
+If you'd like, you can further configure `log-ingestor` by modifying the `log_ingestor` field in
+the same file.
+
+---
 
 ## Ingestion jobs
 
-`log-ingestor` manages log ingestion through ingestion jobs. An ingestion job continuously monitors
-a configured log source, buffers incoming log data, and groups it into compression jobs. This
-buffering and batching strategy improves compression efficiency and reduces overall storage
-overhead.
-
-### Ingestion job orchestration
-
-`log-ingestor` exposes **RESTfuls APIs** for ingestion job orchestrations. You can explore all
-available endpoints and their schemas using [Swagger UI][swagger-ui-all].
+`log-ingestor` facilitates continuous log ingestion with **ingestion jobs**. An ingestion job
+continuously monitors a configured log source, buffers incoming log data, and groups it into
+compression jobs. This buffering and batching strategy improves compression efficiency and reduces
+overall storage overhead.
 
 :::{note}
-Currently, requests to `log-ingestor` must be sent directly to the log-ingestor service. In future
-releases, these requests will be routed through the API server.
+Support for one-time ingestion jobs (similar to the current CLP compression CLI workflows) is
+planned for a future release.
+:::
+
+### Interacting with `log-ingestor`
+
+`log-ingestor` exposes **RESTful APIs** that allow you to write ingestion jobs to configure what
+`log-ingestor` should ingest (for example, the S3 bucket and key prefix), manage ingestion jobs, and
+check `log-ingestor` health.
+
+You can explore all available endpoints and their schemas at the
+[Swagger UI `log-ingestor` page][swagger-ui-all].
+
+:::{note}
+Currently, requests to `log-ingestor` must be sent directly to the `log-ingestor` service. Requests
+will be routed through CLP's [API server](./guides-using-the-api-server.md) in a future release.
 :::
 
 ### Fault tolerance
 
 :::{warning}
-The current version of `log-ingestor` does **not provide fault tolerance**.
+**The current version of `log-ingestor` does not provide fault tolerance.**
 
 If `log-ingestor` crashes or is restarted, all in-progress ingestion jobs and their associated state
-are lost and must be recreated manually.
-
-Robust fault tolerance for the ingestion pipeline is planned and will be introduced in future
-releases.
+will be lost, and must be restored manually. Robust fault tolerance for the ingestion pipeline is
+planned for a future release.
 :::
+
+---
 
 ## Continuous ingestion from S3
 
 `log-ingestor` supports **continuous ingestion jobs** for ingesting logs from S3-compatible object
 storage. Currently, two types of ingestion jobs are available:
 
-* [S3 scanner](#s3-scanner): Periodically scans a specified S3 bucket and prefix for new log files
-  to ingest.
-* [SQS listener](#sqs-listener): Listens to an SQS queue for notifications about newly created log
-  files in S3.
+* [**S3 scanner**](#s3-scanner): Periodically scans a specified S3 bucket and prefix for new log
+  files to ingest.
+* [**SQS listener**](#sqs-listener): Listens to an SQS queue for notifications about newly created
+  log files in S3.
 
 ### S3 scanner
 
@@ -79,12 +94,9 @@ To ensure correct and efficient ingestion, the scanner relies on the following a
 
 ### SQS listener
 
-[AWS SQS][aws-sqs] can be configured to receive S3 event notifications when new objects are created.
-For details on configuring S3 event notifications for SQS, see the
+An SQS listener ingestion job listens to a specified AWS SQS queue and ingests S3 objects referenced
+by incoming notifications. For details on configuring S3 event notifications for SQS, see the
 [AWS documentation][aws-s3-event-notifications].
-
-An SQS listener ingestion job listens to a specified SQS queue and ingests S3 objects referenced
-by incoming notifications.
 
 For configuration details and request body, see the
 [API reference for creating SQS listener ingestion jobs][sqs-listener-api].
@@ -100,18 +112,15 @@ To ensure correct and efficient ingestion, the listener relies on the following 
 :::
 
 :::{note}
-Currently, an SQS listener ingestion job only supports ingesting objects from a single S3 bucket and
-prefix. Support for multiple buckets or prefixes will be added in future releases.
-:::
+SQS listener ingestion jobs carry the following limitations:
 
-:::{note}
-Currently, the SQS listener does not support custom S3 endpoint configurations. Support for custom
-endpoints will be added in future releases.
+* An SQS listener ingestion job can only ingest objects from a single S3 bucket and prefix. Support
+  for multiple buckets or prefixes is planned for a future release.
+* SQS listener ingestion jobs do not support custom S3 endpoint configurations. Support for custom
+  endpoints is planned for a future release.
 :::
 
 [aws-s3-event-notifications]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html#step2-enable-notification
-[aws-sqs]: https://aws.amazon.com/sqs/
-[release-choices]: ./quick-start/index.md#choosing-a-flavor
 [s3-scanner-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json#/IngestionJob/create_s3_scanner_job
 [sqs-listener-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json#/IngestionJob/create_sqs_listener_job
 [swagger-ui-all]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json
