@@ -55,12 +55,12 @@ wait_for_pods() {
 
 kind delete cluster --name clp-test
 rm -rf "$CLP_HOME"
-mkdir -p "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache}
-mkdir -p "$CLP_HOME/var/data/"{archives,streams}
-mkdir -p "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user}
-mkdir -p "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer}
-mkdir -p "$CLP_HOME/var/tmp"
-mkdir -p "$CLP_HOME/samples"
+mkdir -p  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache}
+          "$CLP_HOME/var/data/"{archives,streams}
+          "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user}
+          "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer}
+          "$CLP_HOME/var/tmp"
+          "$CLP_HOME/samples"
 
 # Download sample datasets in the background
 wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1 \
