@@ -2,7 +2,7 @@ import {
     Static,
     Type,
 } from "@sinclair/typebox";
-import {ClpIoConfig, ClpIoConfigSchema} from "./compression.js";
+import {ClpIoConfigSchema} from "./compression.js";
 
 
 /**
@@ -26,23 +26,11 @@ const CompressionMetadataBaseSchema = Type.Object({
 const CompressionMetadataSchema = Type.Intersect([
     CompressionMetadataBaseSchema,
     Type.Object({
-        clp_config: Type.Optional(ClpIoConfigSchema),
+        clp_config: Type.Unsafe<Buffer>({}),
     }),
 ]);
 
-type CompressionMetadata = Omit<
-    Static<typeof CompressionMetadataSchema>,
-    "clp_config"
-> & {clp_config?: Buffer | null};
-
-/**
- * Decoded IO config fields extracted from the encoded config.
- */
-const DecodedIoConfigSchema = Type.Object({
-    clp_config: Type.Optional(ClpIoConfigSchema),
-});
-
-type DecodedIoConfig = {clp_config?: ClpIoConfig | null};
+type CompressionMetadata = Static<typeof CompressionMetadataSchema>;
 
 /**
  * Compression metadata including decoded IO config but excluding the encoded blob.
@@ -50,7 +38,9 @@ type DecodedIoConfig = {clp_config?: ClpIoConfig | null};
 const CompressionMetadataDecodedSchema = Type.Intersect(
     [
         CompressionMetadataBaseSchema,
-        DecodedIoConfigSchema,
+        Type.Object({
+            clp_config: ClpIoConfigSchema,
+        }),
     ]
 );
 
@@ -60,10 +50,8 @@ type CompressionMetadataDecoded = Static<typeof CompressionMetadataDecodedSchema
 export {
     CompressionMetadataDecodedSchema,
     CompressionMetadataSchema,
-    DecodedIoConfigSchema,
 };
 export type {
     CompressionMetadata,
     CompressionMetadataDecoded,
-    DecodedIoConfig,
 };

@@ -15,12 +15,8 @@ import {formatSizeInBytes} from "./units";
  * @return
  */
 const extractIoConfig = (
-    clpConfig?: ClpIoConfig | null
+    clpConfig: ClpIoConfig
 ): {dataset: string | null; paths: string[]} => {
-    if (undefined === clpConfig || null === clpConfig) {
-        return {dataset: null, paths: []};
-    }
-
     const dataset = "string" === typeof clpConfig.input?.dataset
         ? clpConfig.input.dataset
         : null;

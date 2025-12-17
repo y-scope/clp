@@ -7,14 +7,13 @@ import {
     CompressionMetadata,
     CompressionMetadataDecoded,
     CompressionMetadataDecodedSchema,
-    DecodedIoConfig,
 } from "@webui/common/schemas/compress-metadata";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
 import {constants} from "http2";
 import {RowDataPacket} from "mysql2";
 import {brotliDecompressSync} from "node:zlib";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {ClpIoConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
 type CompressionMetadataRow = CompressionMetadata;
 
@@ -26,23 +25,20 @@ type CompressionMetadataRow = CompressionMetadata;
  */
 const decodeJobConfig = (
     jobConfig: unknown
-): DecodedIoConfig => {
-    let clpConfig: ClpIoConfig | null = null;
-
-    if (jobConfig instanceof Buffer) {
-        try {
-            const decodedConfig = decode(
-                brotliDecompressSync(jobConfig)
-            ) as ClpIoConfig;
-            clpConfig = decodedConfig;
-        } catch (err: unknown) {
-            // If decoding fails, fall back to empty dataset/paths but log for visibility.
-            // eslint-disable-next-line no-console
-            console.error(err);
-        }
+): {clp_config: ClpIoConfig} => {
+    if (!(jobConfig instanceof Buffer)) {
+        throw new Error("Missing clp_config buffer for compression metadata");
     }
 
-    return {clp_config: clpConfig};
+    try {
+        const clpConfig = decode(brotliDecompressSync(jobConfig)) as ClpIoConfig;
+
+        return {clp_config: clpConfig};
+    } catch (err: unknown) {
+        // eslint-disable-next-line no-console
+        console.error(err);
+        throw new Error("Failed to decode clp_config buffer");
+    }
 };
 
 /**
