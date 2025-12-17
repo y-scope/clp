@@ -12,7 +12,6 @@ const CompressionMetadataBaseSchema = Type.Object({
     _id: Type.Number(),
     compressed_size: Type.Number(),
     duration: Type.Union([Type.Number(), Type.Null()]),
-    retrieval_time: Type.Number(),
     start_time: Type.Union([Type.String(), Type.Null()]),
     status: Type.Number(),
     status_msg: Type.String(),

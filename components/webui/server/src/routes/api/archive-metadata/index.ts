@@ -12,8 +12,6 @@ import {constants} from "http2";
  * @param fastify
  */
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const mysqlConnectionPool = fastify.mysql.pool;
-
     fastify.post(
         "/sql",
         {
@@ -27,7 +25,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         async (req, reply) => {
             const {queryString} = req.body;
-            const [result] = await mysqlConnectionPool.query(queryString);
+            const [result] = await fastify.mysql.query(queryString);
             reply.code(constants.HTTP_STATUS_OK);
 
             return result;
