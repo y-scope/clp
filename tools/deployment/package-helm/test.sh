@@ -6,6 +6,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+CLP_HOME="/tmp/clp"
+
 # Waits for all jobs to complete and all non-job pods to be ready.
 #
 # @param {int} timeout_seconds Overall timeout in seconds
@@ -52,19 +54,17 @@ wait_for_pods() {
 }
 
 kind delete cluster --name clp-test
-rm -rf /tmp/clp
-mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results_cache}
-mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results_cache}
-mkdir -p /tmp/clp/var/log/{compression_scheduler,compression_worker,query_scheduler,query_worker,\
-  reducer}
-mkdir -p /tmp/clp/var/data/{archives,streams}
-mkdir -p /tmp/clp/var/log/user
-mkdir -p /tmp/clp/var/tmp
-mkdir -p /tmp/clp/samples
+rm -rf "$CLP_HOME"
+mkdir -p "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache}
+mkdir -p "$CLP_HOME/var/data/"{archives,streams}
+mkdir -p "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user}
+mkdir -p "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer}
+mkdir -p "$CLP_HOME/var/tmp"
+mkdir -p "$CLP_HOME/samples"
 
 # Download sample datasets in the background
 wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1 \
-  | tar xz -C /tmp/clp/samples &
+  | tar xz -C "$CLP_HOME/samples" &
 SAMPLE_DOWNLOAD_PID=$!
 
 cat <<EOF | kind create cluster --name clp-test --config=-
@@ -75,8 +75,8 @@ cat <<EOF | kind create cluster --name clp-test --config=-
     extraMounts:
     - hostPath: /home
       containerPath: /home
-    - hostPath: /tmp/clp
-      containerPath: /tmp/clp
+    - hostPath: $CLP_HOME
+      containerPath: $CLP_HOME
     extraPortMappings:
     - containerPort: 30306
       hostPort: 30306
