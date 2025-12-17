@@ -18,4 +18,5 @@ const submitCompressionJob = async (payload: CompressionJobCreation): Promise<Co
     return data;
 };
 
+
 export {submitCompressionJob};
