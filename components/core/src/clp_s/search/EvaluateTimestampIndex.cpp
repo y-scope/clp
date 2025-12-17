@@ -1,5 +1,7 @@
 #include "EvaluateTimestampIndex.hpp"
 
+#include <memory>
+
 #include "ast/AndExpr.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
@@ -7,6 +9,7 @@
 #include "ast/Integral.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
+#include "ast/TimestampLiteral.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::Expression;
@@ -16,9 +19,11 @@ using clp_s::search::ast::Integral;
 using clp_s::search::ast::Integral64;
 using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::TimestampLiteral;
 
 namespace clp_s::search {
-constexpr literal_type_bitmask_t cDateTypes = search::ast::cIntegralTypes | search::ast::EpochDateT;
+constexpr literal_type_bitmask_t cTimestampTypes
+        = search::ast::cIntegralTypes | search::ast::LiteralType::TimestampT;
 
 EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& expr) {
     if (std::dynamic_pointer_cast<OrExpr>(expr)) {
@@ -57,7 +62,7 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
         return expr->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
         auto column = filter->get_column();
-        if (false == column->matches_any(cDateTypes)) {
+        if (false == column->matches_any(cTimestampTypes)) {
             return EvaluatedValue::Unknown;
         }
 
@@ -106,7 +111,15 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
                     ret = range_it->second->evaluate_filter(filter_op, float_literal);
                     break;
                 case TimestampEntry::TimestampEncoding::Epoch:
-                    if (false == literal->as_int(int_literal, filter_op)) {
+                    if (auto const timestamp_literal{
+                                std::dynamic_pointer_cast<TimestampLiteral>(literal)
+                        };
+                        nullptr != timestamp_literal)
+                    {
+                        int_literal = timestamp_literal->as_precision(
+                                TimestampLiteral::Precision::Milliseconds
+                        );
+                    } else if (false == literal->as_int(int_literal, filter_op)) {
                         return EvaluatedValue::Unknown;
                     }
                     ret = range_it->second->evaluate_filter(filter_op, int_literal);

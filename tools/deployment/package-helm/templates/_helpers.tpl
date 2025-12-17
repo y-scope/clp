@@ -98,8 +98,8 @@ failureThreshold: 3
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
-@param {string} component_category (e.g., "shared-data", "database")
-@param {string} name (e.g., "archives", "logs", "data")
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
   "node-role.kubernetes.io/control-plane"
@@ -211,9 +211,10 @@ value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | q
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context
-@param {string} type "service" (waits for pod readiness) or "job" (waits for completion)
-@param {string} name For "service": component name
-                     For "job": job name suffix
+@param {string} type The resource type: "service" (waits for pod readiness) or "job" (waits for
+completion).
+@param {string} name For type="service", this should be the component name. For type="job", this
+should be the job name suffix.
 @return {string} YAML-formatted initContainer definition
 */}}
 {{- define "clp.waitFor" -}}
