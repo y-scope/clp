@@ -31,7 +31,7 @@ interface JobData {
     speed: string;
     dataIngested: string;
     compressedSize: string;
-    dataset: string;
+    dataset: string | null;
     paths: string[];
 }
 
@@ -39,97 +39,109 @@ interface JobData {
 /**
  * Columns configuration for the job table.
  */
-const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
-    {
-        title: "Job ID",
-        dataIndex: "jobId",
-        key: "jobId",
-    },
-    {
-        title: "Status",
-        dataIndex: "status",
-        key: "status",
-        render: (status: CompressionJobStatus) => {
-            switch (status) {
-                case CompressionJobStatus.PENDING:
-                    return (
-                        <Badge
-                            status={"warning"}
-                            text={"submitted"}/>
-                    );
-                case CompressionJobStatus.RUNNING:
-                    return (
-                        <Badge
-                            status={"processing"}
-                            text={"running"}/>
-                    );
-                case CompressionJobStatus.SUCCEEDED:
-                    return (
-                        <Badge
-                            status={"success"}
-                            text={"succeeded"}/>
-                    );
-                case CompressionJobStatus.FAILED:
-                    return (
-                        <Badge
-                            status={"error"}
-                            text={"failed"}/>
-                    );
-                case CompressionJobStatus.KILLED:
-                    return (
-                        <Badge
-                            color={"#000000"}
-                            text={"killed"}/>
-                    );
-                default:
-                    return null;
-            }
+const buildJobColumns = (
+    showDatasetColumn: boolean
+): NonNullable<TableProps<JobData>["columns"]> => {
+    const columns: NonNullable<TableProps<JobData>["columns"]> = [
+        {
+            title: "Job ID",
+            dataIndex: "jobId",
+            key: "jobId",
         },
-    },
-    {
-        title: "Speed",
-        dataIndex: "speed",
-        key: "speed",
-    },
-    {
-        title: "Dataset",
-        dataIndex: "dataset",
-        key: "dataset",
-    },
-    {
-        title: "Paths",
-        dataIndex: "paths",
-        key: "paths",
-        render: (paths: string[]) => (
-            <div>
-                {paths.map((path) => (
-                    <Text
-                        key={path}
-                        className={styles["pathText"] || ""}
-                        copyable={{text: path}}
-                        ellipsis={{tooltip: path}}
-                    >
-                        {path}
-                    </Text>
-                ))}
-            </div>
-        ),
-    },
-    {
-        title: "Data Ingested",
-        dataIndex: "dataIngested",
-        key: "dataIngested",
-    },
-    {
-        title: "Compressed Size",
-        dataIndex: "compressedSize",
-        key: "compressedSize",
-    },
-];
+        {
+            title: "Status",
+            dataIndex: "status",
+            key: "status",
+            render: (status: CompressionJobStatus) => {
+                switch (status) {
+                    case CompressionJobStatus.PENDING:
+                        return (
+                            <Badge
+                                status={"warning"}
+                                text={"submitted"}/>
+                        );
+                    case CompressionJobStatus.RUNNING:
+                        return (
+                            <Badge
+                                status={"processing"}
+                                text={"running"}/>
+                        );
+                    case CompressionJobStatus.SUCCEEDED:
+                        return (
+                            <Badge
+                                status={"success"}
+                                text={"succeeded"}/>
+                        );
+                    case CompressionJobStatus.FAILED:
+                        return (
+                            <Badge
+                                status={"error"}
+                                text={"failed"}/>
+                        );
+                    case CompressionJobStatus.KILLED:
+                        return (
+                            <Badge
+                                color={"#000000"}
+                                text={"killed"}/>
+                        );
+                    default:
+                        return null;
+                }
+            },
+        },
+        {
+            title: "Speed",
+            dataIndex: "speed",
+            key: "speed",
+        },
+    ];
+
+    if (showDatasetColumn) {
+        columns.push({
+            title: "Dataset",
+            dataIndex: "dataset",
+            key: "dataset",
+        });
+    }
+
+    columns.push(
+        {
+            title: "Paths",
+            dataIndex: "paths",
+            key: "paths",
+            render: (paths: string[]) => (
+                <div>
+                    {paths.map((path) => (
+                        <Text
+                            key={path}
+                            className={styles["pathText"] || ""}
+                            copyable={{text: path}}
+                            ellipsis={{tooltip: path}}
+                        >
+                            {path}
+                        </Text>
+                    ))}
+                </div>
+            ),
+        },
+        {
+            title: "Data Ingested",
+            dataIndex: "dataIngested",
+            key: "dataIngested",
+        },
+        {
+            title: "Compressed Size",
+            dataIndex: "compressedSize",
+            key: "compressedSize",
+        },
+    );
+
+    return columns;
+};
 
 export type {JobData};
 
 export {
     CompressionJobStatus,
-    jobColumns,
+    buildJobColumns,
 };

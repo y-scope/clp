@@ -1,11 +1,9 @@
 import dayjs from "dayjs";
 
-import {
-    CompressionJobStatus,
-    JobData,
-} from "../Jobs/typings";
-import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
-import {ClpIoConfig} from "@webui/common/schemas/compression";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import type {ClpIoConfig} from "@webui/common/schemas/compression";
+import {CompressionJobStatus, JobData} from "../Jobs/typings";
 import {formatSizeInBytes} from "./units";
 
 /**
@@ -14,29 +12,23 @@ import {formatSizeInBytes} from "./units";
  * @param clpConfig
  * @return
  */
-const extractIoConfig = (
-    clpConfig: ClpIoConfig
-): {dataset: string | null; paths: string[]} => {
-    const dataset = "string" === typeof clpConfig.input?.dataset
+const extractDataFromIoConfig = (clpConfig: ClpIoConfig): {
+    dataset: string | null;
+    paths: string[];
+} => {
+    const dataset = CLP_STORAGE_ENGINES.CLP_S === clpConfig.output?.storage?.engine &&
+        "string" === typeof clpConfig.input?.dataset
         ? clpConfig.input.dataset
         : null;
-    if (Array.isArray(clpConfig.input?.paths_to_compress)) {
-        const prefixToRemove = clpConfig.input.path_prefix_to_remove;
-        const paths = clpConfig.input.paths_to_compress.map((path) => {
-            if ("string" === typeof prefixToRemove && path.startsWith(prefixToRemove)) {
-                return path.substring(prefixToRemove.length);
-            }
-            return path;
-        });
+    const paths = Array.isArray(clpConfig.input?.paths_to_compress)
+        ? clpConfig.input.paths_to_compress
+        : [];
 
-        return {dataset, paths};
-    }
-
-    return {dataset, paths: []};
+    return {dataset, paths};
 };
 
 /**
- * Convert a QueryJobsItem to JobData
+ * Convert a compression job API item to JobData
  *
  * @param props
  * @param props._id
@@ -48,7 +40,7 @@ const extractIoConfig = (
  * @param props.uncompressed_size
  * @return
  */
-const convertQueryJobsItemToJobData = ({
+const mapCompressionJobToJobData = ({
     _id: id,
     compressed_size: compressedSize,
     duration,
@@ -57,7 +49,7 @@ const convertQueryJobsItemToJobData = ({
     status,
     uncompressed_size: uncompressedSize,
 }: CompressionMetadataDecoded): JobData => {
-    const {dataset, paths} = extractIoConfig(clpConfig);
+    const {dataset, paths} = extractDataFromIoConfig(clpConfig);
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";
@@ -89,7 +81,7 @@ const convertQueryJobsItemToJobData = ({
     return {
         compressedSize: compressedSizeText,
         dataIngested: uncompressedSizeText,
-        dataset: dataset ?? "N/A",
+        dataset,
         jobId: String(id),
         key: String(id),
         paths,
@@ -98,4 +90,4 @@ const convertQueryJobsItemToJobData = ({
     };
 };
 
-export {convertQueryJobsItemToJobData};
+export {mapCompressionJobToJobData};

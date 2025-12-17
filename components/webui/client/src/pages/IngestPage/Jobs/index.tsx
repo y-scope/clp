@@ -1,14 +1,15 @@
 import {useQuery} from "@tanstack/react-query";
+import {useMemo} from "react";
 import dayjs from "dayjs";
 import {fetchCompressionJobs} from "../../../api/compress-metadata";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
 import styles from "./index.module.css";
 import {
-    jobColumns,
+    buildJobColumns,
     JobData,
 } from "./typings";
-import {convertQueryJobsItemToJobData} from "./utils";
+import {mapCompressionJobToJobData} from "./utils";
 
 
 const DAYS_TO_SHOW: number = 30;
@@ -26,9 +27,15 @@ const Jobs = () => {
                 .unix();
             const data = await fetchCompressionJobs(beginTimestamp);
 
-            return data.map((item): JobData => convertQueryJobsItemToJobData(item));
+            return data.map((item): JobData => mapCompressionJobToJobData(item));
         },
     });
+
+    const showDatasetColumn = jobs.some((job) => null !== job.dataset);
+    const jobColumns = useMemo(
+        () => buildJobColumns(showDatasetColumn),
+        [showDatasetColumn]
+    );
 
     return (
         <DashboardCard

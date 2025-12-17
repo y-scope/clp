@@ -3,7 +3,6 @@ import {
     Type,
 } from "@fastify/type-provider-typebox";
 import {
-    CompressionMetadataDecoded,
     CompressionMetadataDecodedSchema,
 } from "@webui/common/schemas/compress-metadata";
 import {constants} from "http2";
