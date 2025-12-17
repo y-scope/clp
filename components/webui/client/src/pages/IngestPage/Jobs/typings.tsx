@@ -1,7 +1,12 @@
 import {
     Badge,
+    Typography,
     type TableProps,
 } from "antd";
+
+import styles from "./index.module.css";
+
+const {Text} = Typography;
 
 
 /**
@@ -98,7 +103,14 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
         render: (paths: string[]) => (
             <div>
                 {paths.map((path) => (
-                    <div key={path}>{path}</div>
+                    <Text
+                        key={path}
+                        className={styles["pathText"] || ""}
+                        copyable={{text: path}}
+                        ellipsis={{tooltip: path}}
+                    >
+                        {path}
+                    </Text>
                 ))}
             </div>
         ),

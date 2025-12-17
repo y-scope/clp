@@ -1,3 +1,8 @@
 .jobs {
     padding-top: 16px;
 }
+
+.pathText {
+    display: block;
+    max-width: 360px;
+}
