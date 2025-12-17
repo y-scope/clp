@@ -8,7 +8,6 @@ import React, {
 import {FileEntry} from "@webui/common/schemas/os";
 import {
     Form,
-    message,
     TreeSelect,
     TreeSelectProps,
 } from "antd";
@@ -24,6 +23,7 @@ import {
 import {
     addServerPrefix,
     getListHeight,
+    handleLoadError,
     toTreeNode,
 } from "./utils";
 
@@ -81,26 +81,14 @@ const PathsSelectFormItem = () => {
             .then(() => {
                 setExpandedKeys([ROOT_PATH]);
             })
-            .catch((e: unknown) => {
-                console.error("Failed to load root directory:", e);
-                message.error(e instanceof Error ?
-                    e.message :
-                    "Failed to load root directory");
-            });
+            .catch(handleLoadError);
     }, [loadPath]);
 
     const handleLoadData = useCallback(async ({value}: LoadDataNode) => {
         if ("string" !== typeof value) {
             return;
         }
-        try {
-            await loadPath(value);
-        } catch (e) {
-            console.error("Failed to load directory:", e);
-            message.error(e instanceof Error ?
-                e.message :
-                "Unknown error while loading paths");
-        }
+        await loadPath(value).catch(handleLoadError);
     }, [loadPath]);
 
     const handleTitleClick = useCallback((nodeData: TreeNode, ev: React.MouseEvent) => {
@@ -118,12 +106,7 @@ const PathsSelectFormItem = () => {
         }
 
         if (false === loadedPathsRef.current.has(nodeValue)) {
-            loadPath(nodeValue).catch((e: unknown) => {
-                console.error("Failed to load directory:", e);
-                message.error(e instanceof Error ?
-                    e.message :
-                    "Unknown error while loading paths");
-            });
+            loadPath(nodeValue).catch(handleLoadError);
         }
 
         setExpandedKeys([

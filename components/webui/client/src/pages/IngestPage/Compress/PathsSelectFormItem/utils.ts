@@ -1,4 +1,5 @@
 import {FileEntry} from "@webui/common/schemas/os";
+import {message} from "antd";
 
 import {settings} from "../../../../settings";
 import {
@@ -98,9 +99,23 @@ const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
 };
 
 
+/**
+ * Logs and displays an error message for path loading failures.
+ *
+ * @param e
+ */
+const handleLoadError = (e: unknown): void => {
+    console.error("Failed to load path:", e);
+    message.error(e instanceof Error ?
+        e.message :
+        "Failed to load path");
+};
+
+
 export {
     addServerPrefix,
     getListHeight,
+    handleLoadError,
     ROOT_PATH,
     toTreeNode,
 };
