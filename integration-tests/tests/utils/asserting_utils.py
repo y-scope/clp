@@ -58,20 +58,26 @@ def validate_package_running(package_instance: PackageInstance) -> None:
 
     # Compare with list of required components.
     required_components = set(package_instance.package_config.component_list)
-    if required_components == running_services:
-        return
+    required_components.add("Quinn")
+    assert required_components == running_services, (
+        "Component mismatch.",
+        f" Missing components: {required_components - running_services}." if required_components - running_services else "",
+        f" Unexpected services: {running_services - required_components}." if running_services - required_components else "",
+    )
+    # if required_components == running_services:
+    #     return
 
-    fail_msg = "Component mismatch."
+    # fail_msg = "Component mismatch."
 
-    missing_components = required_components - running_services
-    if missing_components:
-        fail_msg += f"\nMissing components: {missing_components}."
+    # missing_components = required_components - running_services
+    # if missing_components:
+    #     fail_msg += f"\nMissing components: {missing_components}."
 
-    unexpected_components = running_services - required_components
-    if unexpected_components:
-        fail_msg += f"\nUnexpected services: {unexpected_components}."
+    # unexpected_components = running_services - required_components
+    # if unexpected_components:
+    #     fail_msg += f"\nUnexpected services: {unexpected_components}."
 
-    pytest.fail(fail_msg)
+    # pytest.fail(fail_msg)
 
 
 def validate_running_mode_correct(package_instance: PackageInstance) -> None:
@@ -85,6 +91,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the ClpConfig object cannot be validated.
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
+    logger.info("Validating that the package is running in the correct configuration...")
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)
@@ -92,9 +99,9 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
         pytest.fail(f"Shared config failed validation: {err}")
 
     intended_config = package_instance.package_config.clp_config
-
-    if not compare_mode_signatures(intended_config, running_config):
-        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
+    assert compare_mode_signatures(intended_config, running_config)
+    # if not compare_mode_signatures(intended_config, running_config):
+    #     pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
 
 
 def validate_presto_running() -> None:
