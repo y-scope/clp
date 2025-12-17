@@ -85,7 +85,7 @@ For configuration details and request body, see the
 To ensure correct and efficient ingestion, the scanner relies on the following assumptions:
 
 * **Lexicographical order**: New objects are added in lexicographical order based on their keys. For
-  example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with 
+  example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with
   key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater
   than the last ingested key.
 * **Immutability**: Objects under the specified prefix are immutable. Once an object is created, it
