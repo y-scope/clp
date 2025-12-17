@@ -3,7 +3,9 @@ import {
     Typography,
     type TableProps,
 } from "antd";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import styles from "./index.module.css";
 
 const {Text} = Typography;
@@ -35,113 +37,104 @@ interface JobData {
     paths: string[];
 }
 
-
 /**
  * Columns configuration for the job table.
  */
-const buildJobColumns = (
-    showDatasetColumn: boolean
-): NonNullable<TableProps<JobData>["columns"]> => {
-    const columns: NonNullable<TableProps<JobData>["columns"]> = [
-        {
-            title: "Job ID",
-            dataIndex: "jobId",
-            key: "jobId",
-        },
-        {
-            title: "Status",
-            dataIndex: "status",
-            key: "status",
-            render: (status: CompressionJobStatus) => {
-                switch (status) {
-                    case CompressionJobStatus.PENDING:
-                        return (
-                            <Badge
-                                status={"warning"}
-                                text={"submitted"}/>
-                        );
-                    case CompressionJobStatus.RUNNING:
-                        return (
-                            <Badge
-                                status={"processing"}
-                                text={"running"}/>
-                        );
-                    case CompressionJobStatus.SUCCEEDED:
-                        return (
-                            <Badge
-                                status={"success"}
-                                text={"succeeded"}/>
-                        );
-                    case CompressionJobStatus.FAILED:
-                        return (
-                            <Badge
-                                status={"error"}
-                                text={"failed"}/>
-                        );
-                    case CompressionJobStatus.KILLED:
-                        return (
-                            <Badge
-                                color={"#000000"}
-                                text={"killed"}/>
-                        );
-                    default:
-                        return null;
-                }
-            },
-        },
-        {
-            title: "Speed",
-            dataIndex: "speed",
-            key: "speed",
-        },
-    ];
+const showDatasetColumn = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
 
-    if (showDatasetColumn) {
-        columns.push({
+const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
+    {
+        title: "Job ID",
+        dataIndex: "jobId",
+        key: "jobId",
+    },
+    {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        render: (status: CompressionJobStatus) => {
+            switch (status) {
+                case CompressionJobStatus.PENDING:
+                    return (
+                        <Badge
+                            status={"warning"}
+                            text={"submitted"}/>
+                    );
+                case CompressionJobStatus.RUNNING:
+                    return (
+                        <Badge
+                            status={"processing"}
+                            text={"running"}/>
+                    );
+                case CompressionJobStatus.SUCCEEDED:
+                    return (
+                        <Badge
+                            status={"success"}
+                            text={"succeeded"}/>
+                    );
+                case CompressionJobStatus.FAILED:
+                    return (
+                        <Badge
+                            status={"error"}
+                            text={"failed"}/>
+                    );
+                case CompressionJobStatus.KILLED:
+                    return (
+                        <Badge
+                            color={"#000000"}
+                            text={"killed"}/>
+                    );
+                default:
+                    return null;
+            }
+        },
+    },
+    {
+        title: "Speed",
+        dataIndex: "speed",
+        key: "speed",
+    },
+    ...(showDatasetColumn
+        ? [{
             title: "Dataset",
             dataIndex: "dataset",
             key: "dataset",
-        });
-    }
-
-    columns.push(
-        {
-            title: "Paths",
-            dataIndex: "paths",
-            key: "paths",
-            render: (paths: string[]) => (
-                <div>
-                    {paths.map((path) => (
-                        <Text
-                            key={path}
-                            className={styles["pathText"] || ""}
-                            copyable={{text: path}}
-                            ellipsis={{tooltip: path}}
-                        >
-                            {path}
-                        </Text>
-                    ))}
-                </div>
-            ),
-        },
-        {
-            title: "Data Ingested",
-            dataIndex: "dataIngested",
-            key: "dataIngested",
-        },
-        {
-            title: "Compressed Size",
-            dataIndex: "compressedSize",
-            key: "compressedSize",
-        },
-    );
-
-    return columns;
-};
+        }]
+        : []),
+    {
+        title: "Paths",
+        dataIndex: "paths",
+        key: "paths",
+        render: (paths: string[]) => (
+            <div>
+                {paths.map((path) => (
+                    <Text
+                        key={path}
+                        className={styles["pathText"] || ""}
+                        copyable={{text: path}}
+                        ellipsis={{tooltip: path}}
+                    >
+                        {path}
+                    </Text>
+                ))}
+            </div>
+        ),
+    },
+    {
+        title: "Data Ingested",
+        dataIndex: "dataIngested",
+        key: "dataIngested",
+    },
+    {
+        title: "Compressed Size",
+        dataIndex: "compressedSize",
+        key: "compressedSize",
+    },
+];
 
 export type {JobData};
 
 export {
     CompressionJobStatus,
-    buildJobColumns,
+    jobColumns,
 };

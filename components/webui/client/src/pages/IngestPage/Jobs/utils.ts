@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import type {ClpIoConfig} from "@webui/common/schemas/compression";
 import {CompressionJobStatus, JobData} from "../Jobs/typings";
@@ -16,7 +17,7 @@ const extractDataFromIoConfig = (clpConfig: ClpIoConfig): {
     dataset: string | null;
     paths: string[];
 } => {
-    const dataset = CLP_STORAGE_ENGINES.CLP_S === clpConfig.output?.storage?.engine &&
+    const dataset = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE &&
         "string" === typeof clpConfig.input?.dataset
         ? clpConfig.input.dataset
         : null;
