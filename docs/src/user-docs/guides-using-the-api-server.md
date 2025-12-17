@@ -67,4 +67,4 @@ following commands to submit a query to clp-json and stream the results.
 [OpenAPI]: https://swagger.io/specification/
 [release-choices]: ./quick-start/index.md#choosing-a-flavor
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
-[swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/api-server-openapi.json
+[swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json
