@@ -110,10 +110,41 @@ type CompressionJobOutputConfig = {
     compression_level: number;
 };
 
-type ClpIoConfig = {
-    input: CompressionJobFsInputConfig | CompressionJobS3InputConfig;
-    output: CompressionJobOutputConfig;
-};
+const ClpIoFsInputConfigSchema = Type.Object({
+    type: Type.Literal(CompressionJobInputType.FS),
+    dataset: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    paths_to_compress: Type.Array(Type.String()),
+    path_prefix_to_remove: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    timestamp_key: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+    unstructured: Type.Optional(Type.Boolean()),
+});
+
+const ClpIoS3InputConfigSchema = Type.Object(
+    {
+        type: Type.Literal(CompressionJobInputType.S3),
+        keys: Type.Optional(Type.Array(Type.String())),
+        dataset: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+        timestamp_key: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+        unstructured: Type.Optional(Type.Boolean()),
+    },
+    {additionalProperties: true}
+);
+
+const ClpIoOutputConfigSchema = Type.Object({
+    tags: Type.Optional(Type.Union([Type.Array(Type.String()), Type.Null()])),
+    target_archive_size: Type.Number(),
+    target_dictionaries_size: Type.Number(),
+    target_segment_size: Type.Number(),
+    target_encoded_file_size: Type.Number(),
+    compression_level: Type.Number(),
+});
+
+const ClpIoConfigSchema = Type.Object({
+    input: Type.Union([ClpIoFsInputConfigSchema, ClpIoS3InputConfigSchema]),
+    output: ClpIoOutputConfigSchema,
+});
+
+type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
 
 export {
     AbsolutePathSchema,
@@ -123,6 +154,10 @@ export {
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
     DatasetNameSchema,
+    ClpIoConfigSchema,
+    ClpIoFsInputConfigSchema,
+    ClpIoOutputConfigSchema,
+    ClpIoS3InputConfigSchema,
 };
 export type {
     CompressionJob,

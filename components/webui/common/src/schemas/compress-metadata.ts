@@ -2,7 +2,7 @@ import {
     Static,
     Type,
 } from "@sinclair/typebox";
-import {ClpIoConfig} from "./compression.js";
+import {ClpIoConfig, ClpIoConfigSchema} from "./compression.js";
 
 
 /**
@@ -26,7 +26,7 @@ const CompressionMetadataBaseSchema = Type.Object({
 const CompressionMetadataSchema = Type.Intersect([
     CompressionMetadataBaseSchema,
     Type.Object({
-        clp_config: Type.Optional(Type.Any()),
+        clp_config: Type.Optional(ClpIoConfigSchema),
     }),
 ]);
 
@@ -39,7 +39,7 @@ type CompressionMetadata = Omit<
  * Decoded IO config fields extracted from the encoded config.
  */
 const DecodedIoConfigSchema = Type.Object({
-    clp_config: Type.Optional(Type.Any()),
+    clp_config: Type.Optional(ClpIoConfigSchema),
 });
 
 type DecodedIoConfig = {clp_config?: ClpIoConfig | null};
