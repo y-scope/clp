@@ -4,7 +4,7 @@ import {
     CompressionJobStatus,
     JobData,
 } from "../Jobs/typings";
-import {CompressionJobWithDecodedIoConfig} from "@webui/common/schemas/compress-metadata";
+import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import {formatSizeInBytes} from "./units";
 
 
@@ -31,7 +31,7 @@ const convertQueryJobsItemToJobData = ({
     start_time: startTime,
     status,
     uncompressed_size: uncompressedSize,
-}: CompressionJobWithDecodedIoConfig): JobData => {
+}: CompressionMetadataDecoded): JobData => {
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";

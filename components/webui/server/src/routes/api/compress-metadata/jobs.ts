@@ -4,9 +4,10 @@ import {
 } from "@fastify/type-provider-typebox";
 import {decode} from "@msgpack/msgpack";
 import {
-    CompressionJobBase,
-    CompressionJobWithDecodedIoConfig,
-    CompressionJobWithDecodedIoConfigSchema,
+    CompressionMetadata,
+    CompressionMetadataDecoded,
+    CompressionMetadataDecodedSchema,
+    CompressionMetadataIoConfig,
 } from "@webui/common/schemas/compress-metadata";
 import {constants} from "http2";
 import {RowDataPacket} from "mysql2";
@@ -15,8 +16,7 @@ import {brotliDecompressSync} from "node:zlib";
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 
-type CompressionJobBaseRow = CompressionJobBase;
-type CompressionJobWithIoConfig = CompressionJobBaseRow & {clp_config?: Buffer | null};
+type CompressionMetadataRow = CompressionMetadata;
 
 /**
  * Decodes a compressed job config stored in the database.
@@ -26,7 +26,7 @@ type CompressionJobWithIoConfig = CompressionJobBaseRow & {clp_config?: Buffer |
  */
 const decodeJobConfig = (
     jobConfig: unknown
-): Pick<CompressionJobWithDecodedIoConfig, "dataset" | "paths"> => {
+): CompressionMetadataIoConfig => {
     let dataset: string | null = null;
     let paths: string[] = [];
 
@@ -78,7 +78,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 }),
                 response: {
                     [constants.HTTP_STATUS_OK]: Type.Array(
-                        CompressionJobWithDecodedIoConfigSchema
+                        CompressionMetadataDecodedSchema
                     ),
                 },
                 tags: ["Compression Metadata"],
@@ -109,7 +109,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 [sinceSeconds]
             );
 
-            return (rows as Array<RowDataPacket & CompressionJobWithIoConfig>).map(
+            return (rows as Array<RowDataPacket & CompressionMetadataRow>).map(
                 ({
                     _id,
                     clp_config: clpConfig,
@@ -121,7 +121,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     status_msg: statusMsg,
                     uncompressed_size: uncompressedSize,
                     update_time: updateTime,
-                }): CompressionJobWithDecodedIoConfig => {
+                }): CompressionMetadataDecoded => {
                     const {dataset, paths} = decodeJobConfig(clpConfig);
 
                     return {

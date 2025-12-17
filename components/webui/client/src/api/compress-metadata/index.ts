@@ -1,4 +1,4 @@
-import {CompressionJobWithDecodedIoConfig} from "@webui/common/schemas/compress-metadata";
+import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import axios from "axios";
 
 
@@ -10,8 +10,8 @@ import axios from "axios";
  */
 const fetchCompressionJobs = async (
     lastUpdateTimestampSeconds: number
-): Promise<CompressionJobWithDecodedIoConfig[]> => {
-    const {data} = await axios.get<CompressionJobWithDecodedIoConfig[]>(
+): Promise<CompressionMetadataDecoded[]> => {
+    const {data} = await axios.get<CompressionMetadataDecoded[]>(
         "/api/compress-metadata/jobs",
         {params: {lastUpdateTimestampSeconds}}
     );
