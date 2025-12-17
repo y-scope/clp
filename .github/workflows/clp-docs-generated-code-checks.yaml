@@ -32,8 +32,8 @@ jobs:
         run:
           |
           git status --porcelain \
-            components/docs/src/_static/generated \
-            components/docs/src/_static/generated \
+            docs/src/_static/generated \
+            docs/src/_static/generated \
             | grep . > /dev/null \
               && exit 1 \
               || exit 0
