@@ -2,6 +2,7 @@ import {
     Static,
     Type,
 } from "@sinclair/typebox";
+
 import {ClpIoConfigSchema} from "./compression.js";
 
 
@@ -11,8 +12,10 @@ import {ClpIoConfigSchema} from "./compression.js";
 const CompressionMetadataBaseSchema = Type.Object({
     _id: Type.Number(),
     compressed_size: Type.Number(),
-    duration: Type.Union([Type.Number(), Type.Null()]),
-    start_time: Type.Union([Type.String(), Type.Null()]),
+    duration: Type.Union([Type.Number(),
+        Type.Null()]),
+    start_time: Type.Union([Type.String(),
+        Type.Null()]),
     status: Type.Number(),
     status_msg: Type.String(),
     uncompressed_size: Type.Number(),

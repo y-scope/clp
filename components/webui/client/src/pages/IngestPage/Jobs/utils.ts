@@ -1,11 +1,15 @@
-import dayjs from "dayjs";
-
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import type {ClpIoConfig} from "@webui/common/schemas/compression";
-import {CompressionJobStatus, JobData} from "../Jobs/typings";
+import dayjs from "dayjs";
+
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
+import {
+    CompressionJobStatus,
+    JobData,
+} from "../Jobs/typings";
 import {formatSizeInBytes} from "./units";
+
 
 /**
  * Extracts dataset and paths from a decoded IO config.
@@ -18,12 +22,13 @@ const extractDataFromIoConfig = (clpConfig: ClpIoConfig): {
     paths: string[];
 } => {
     const dataset = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE &&
-        "string" === typeof clpConfig.input?.dataset
-        ? clpConfig.input.dataset
-        : null;
-    const paths = Array.isArray(clpConfig.input?.paths_to_compress)
-        ? clpConfig.input.paths_to_compress
-        : [];
+        "string" === typeof clpConfig.input.dataset ?
+        clpConfig.input.dataset :
+        null;
+    const paths = "paths_to_compress" in clpConfig.input &&
+        Array.isArray(clpConfig.input.paths_to_compress) ?
+        clpConfig.input.paths_to_compress :
+        [];
 
     return {dataset, paths};
 };
@@ -41,7 +46,7 @@ const extractDataFromIoConfig = (clpConfig: ClpIoConfig): {
  * @param props.uncompressed_size
  * @return
  */
-const mapCompressionJobToJobData = ({
+const mapCompressionJobResponseToTableData = ({
     _id: id,
     compressed_size: compressedSize,
     duration,
@@ -82,13 +87,13 @@ const mapCompressionJobToJobData = ({
     return {
         compressedSize: compressedSizeText,
         dataIngested: uncompressedSizeText,
-        dataset,
+        dataset: dataset,
         jobId: String(id),
         key: String(id),
-        paths,
+        paths: paths,
         speed: speedText,
         status: status as CompressionJobStatus,
     };
 };
 
-export {mapCompressionJobToJobData};
+export {mapCompressionJobResponseToTableData};

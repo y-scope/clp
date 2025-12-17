@@ -2,6 +2,7 @@ import {RowDataPacket} from "mysql2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 
+
 enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
     ID = "_id",
     STATUS = "status",
@@ -26,6 +27,11 @@ interface CompressionMetadataQueryRow extends RowDataPacket {
     [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.CLP_CONFIG]: Buffer;
 }
 
+/**
+ * Builds the SQL query to fetch recent compression metadata.
+ *
+ * @return Compression metadata query string.
+ */
 const getCompressionMetadataQuery = () => `
     SELECT
         id as ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.ID},

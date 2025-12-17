@@ -2,13 +2,15 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
-import {
-    CompressionMetadataDecodedSchema,
-} from "@webui/common/schemas/compress-metadata";
+import {CompressionMetadataDecodedSchema} from "@webui/common/schemas/compress-metadata";
 import {constants} from "http2";
 
+import {
+    CompressionMetadataQueryRow,
+    getCompressionMetadataQuery,
+} from "./sql.js";
 import {mapCompressionMetadataRows} from "./utils.js";
-import {CompressionMetadataQueryRow, getCompressionMetadataQuery} from "./sql.js";
+
 
 /**
  * Compression metadata - jobs routes.

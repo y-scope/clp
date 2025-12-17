@@ -1,5 +1,6 @@
 import {useQuery} from "@tanstack/react-query";
 import dayjs from "dayjs";
+
 import {fetchCompressionJobs} from "../../../api/compress-metadata";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
@@ -8,7 +9,7 @@ import {
     jobColumns,
     JobData,
 } from "./typings";
-import {mapCompressionJobToJobData} from "./utils";
+import {mapCompressionJobResponseToTableData} from "./utils";
 
 
 const DAYS_TO_SHOW: number = 30;
@@ -26,7 +27,7 @@ const Jobs = () => {
                 .unix();
             const data = await fetchCompressionJobs(beginTimestamp);
 
-            return data.map((item): JobData => mapCompressionJobToJobData(item));
+            return data.map((item): JobData => mapCompressionJobResponseToTableData(item));
         },
     });
 

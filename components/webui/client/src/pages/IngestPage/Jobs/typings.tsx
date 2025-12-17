@@ -1,12 +1,13 @@
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     Badge,
-    Typography,
     type TableProps,
+    Typography,
 } from "antd";
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import styles from "./index.module.css";
+
 
 const {Text} = Typography;
 
@@ -94,13 +95,13 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
         dataIndex: "speed",
         key: "speed",
     },
-    ...(showDatasetColumn
-        ? [{
+    ...(showDatasetColumn ?
+        [{
             title: "Dataset",
             dataIndex: "dataset",
             key: "dataset",
-        }]
-        : []),
+        }] :
+        []),
     {
         title: "Paths",
         dataIndex: "paths",
@@ -109,10 +110,10 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
             <div>
                 {paths.map((path) => (
                     <Text
-                        key={path}
                         className={styles["pathText"] || ""}
                         copyable={{text: path}}
                         ellipsis={{tooltip: path}}
+                        key={path}
                     >
                         {path}
                     </Text>

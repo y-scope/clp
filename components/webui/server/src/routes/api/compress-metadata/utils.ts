@@ -1,15 +1,18 @@
-import {decode} from "@msgpack/msgpack";
-import {ClpIoConfig} from "@webui/common/schemas/compression";
-import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import {brotliDecompressSync} from "node:zlib";
 
+import {decode} from "@msgpack/msgpack";
+import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
+
 import {CompressionMetadataQueryRow} from "./sql.js";
+
 
 /**
  * Decodes a compressed job config stored in the database.
  *
  * @param jobConfig
  * @return
+ * @throws {Error} When the buffer is missing or cannot be decoded.
  */
 export const decodeJobConfig = (
     jobConfig: unknown
@@ -19,11 +22,12 @@ export const decodeJobConfig = (
     }
 
     try {
-        const clpConfig = decode(brotliDecompressSync(jobConfig)) as ClpIoConfig;
+        const decodedClpConfig = decode(
+            brotliDecompressSync(jobConfig)
+        ) as ClpIoConfig;
 
-        return {clp_config: clpConfig};
+        return {clp_config: decodedClpConfig};
     } catch (err: unknown) {
-        // eslint-disable-next-line no-console
         console.error(err);
         throw new Error("Failed to decode clp_config buffer");
     }
@@ -31,6 +35,9 @@ export const decodeJobConfig = (
 
 /**
  * Maps compression metadata rows from the database to decoded payloads.
+ *
+ * @param rows
+ * @return
  */
 export const mapCompressionMetadataRows = (
     rows: CompressionMetadataQueryRow[]
@@ -47,15 +54,15 @@ export const mapCompressionMetadataRows = (
             uncompressed_size: uncompressedSize,
             update_time: updateTime,
         }): CompressionMetadataDecoded => {
-            const {clp_config} = decodeJobConfig(clpConfig);
+            const {clp_config: decodedClpConfig} = decodeJobConfig(clpConfig);
 
             return {
-                _id,
+                _id: _id,
+                clp_config: decodedClpConfig,
                 compressed_size: compressedSize,
-                clp_config,
-                duration,
+                duration: duration,
                 start_time: startTime,
-                status,
+                status: status,
                 status_msg: statusMsg,
                 uncompressed_size: uncompressedSize,
                 update_time: updateTime,
