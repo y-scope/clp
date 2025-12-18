@@ -67,6 +67,7 @@ spec:
               mountPath: "/opt/clp/var/www/webui/client/settings.json"
               subPath: "webui-client-settings.json"
               readOnly: true
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "server-settings"
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
@@ -99,3 +100,4 @@ spec:
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}

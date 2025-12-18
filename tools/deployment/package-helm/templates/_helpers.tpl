@@ -224,6 +224,30 @@ value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | q
 {{- end }}
 
 {{/*
+Creates a volumeMount for the logs input directory.
+
+@return {string} YAML-formatted volumeMount definition
+*/}}
+{{- define "clp.logsInputVolumeMount" -}}
+name: "logs-input"
+mountPath: "/mnt/logs"
+readOnly: true
+{{- end }}
+
+{{/*
+Creates a volume for the logs input directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.logsInputVolume" -}}
+name: "logs-input"
+hostPath:
+  path: {{ .Values.clpConfig.logs_input.directory | quote }}
+  type: "Directory"
+{{- end }}
+
+{{/*
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context

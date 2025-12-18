@@ -70,9 +70,7 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "logs-input"
-              mountPath: "/mnt/logs"
-              readOnly: true
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-scheduler"
                 "name" "logs"
@@ -89,6 +87,7 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "compression-scheduler"
@@ -102,7 +101,3 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "logs-input"
-          hostPath:
-            path: "{{ .Values.clpConfig.logs_input.directory }}"
-            type: "Directory"
