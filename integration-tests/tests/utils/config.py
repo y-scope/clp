@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -118,6 +119,29 @@ class PackagePathConfig:
     def stop_script_path(self) -> Path:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
+
+
+@dataclass(frozen=True)
+class PackageCompressionJob:
+    """A compression job for a package test."""
+
+    # The name of the job.
+    job_name: str
+
+    # The mode the job should be running in.
+    mode: str
+
+    # Script path (relative to the CLP package).
+    script_path: Path
+
+    # The path to the logs relative to tests/data/logs (either a file or directory).
+    log_path: Path
+
+    # Flags to specify in the command.
+    flags: dict[str, Any] | None
+
+    # Arguments to specify in the command.
+    args: list[str] | None
 
 
 @dataclass(frozen=True)
