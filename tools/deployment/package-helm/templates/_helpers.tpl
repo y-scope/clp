@@ -139,7 +139,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ .hostPath }}
+    path: {{ .hostPath | quote }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
