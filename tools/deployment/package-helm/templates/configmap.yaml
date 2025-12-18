@@ -114,7 +114,7 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
-      "LogsInputRootDir": "/",
+      "LogsInputRootDir": "/mnt/logs",
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
@@ -140,6 +140,7 @@ data:
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+      "LogsInputRootDir": "/mnt/logs",
       "StreamFilesDir": "/var/data/streams",
       "StreamTargetUncompressedSize":
         {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
