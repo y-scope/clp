@@ -1,5 +1,6 @@
 import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
 import {
+    Checkbox,
     Form,
     Input,
     Typography,
@@ -27,6 +28,24 @@ const TIMESTAMP_KEY_HELPER_TEXT = (
 );
 const TIMESTAMP_KEY_PLACEHOLDER_TEXT =
     "The path (e.g. x.y) for the field containing the log event's timestamp";
+const UNSTRUCTURED_HELPER_TEXT = (
+    <>
+        Enable this to compress unstructured text logs by converting them into JSON first.
+        When enabled, each log event is parsed to extract the timestamp and message into separate
+        fields. See the
+        {" "}
+        <Typography.Link
+            href={"https://docs.yscope.com/clp/main/user-docs/quick-start/clp-json.html#compressing-unstructured-text-logs"}
+            rel={"noopener"}
+            target={"_blank"}
+        >
+            documentation
+        </Typography.Link>
+        {" "}
+        for more details.
+    </>
+);
+
 
 /**
  * Renders additional compression job submission form items for CLP-S storage engine.
@@ -59,6 +78,13 @@ const ClpSFormItems = () => (
             tooltip={TIMESTAMP_KEY_HELPER_TEXT}
         >
             <Input placeholder={TIMESTAMP_KEY_PLACEHOLDER_TEXT}/>
+        </Form.Item>
+        <Form.Item
+            name={"unstructured"}
+            tooltip={UNSTRUCTURED_HELPER_TEXT}
+            valuePropName={"checked"}
+        >
+            <Checkbox>Unstructured</Checkbox>
         </Form.Item>
     </>
 );

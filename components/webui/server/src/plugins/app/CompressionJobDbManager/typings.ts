@@ -4,6 +4,7 @@ interface CompressionJobConfig {
         path_prefix_to_remove: string;
         dataset?: string;
         timestamp_key?: string;
+        unstructured?: boolean;
     };
     output: {
         target_archive_size: number;
