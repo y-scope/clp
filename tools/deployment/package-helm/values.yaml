@@ -70,7 +70,7 @@ clpConfig:
     logging_level: "INFO"
 
   webui:
-    port: 30400
+    port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 

@@ -84,8 +84,8 @@ cat <<EOF | kind create cluster --name clp-test --config=-
     - containerPort: 30017
       hostPort: 30017
       protocol: TCP
-    - containerPort: 30400
-      hostPort: 30400
+    - containerPort: 30000
+      hostPort: 30000
       protocol: TCP
 EOF
 
