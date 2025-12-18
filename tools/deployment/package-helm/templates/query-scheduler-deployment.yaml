@@ -48,9 +48,9 @@ spec:
           env:
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
-              "root" .
-              "database" .Values.clpConfig.redis.query_backend_database
-            ) | nindent 14 }}
+                "root" .
+                "database" .Values.clpConfig.redis.query_backend_database
+              ) | nindent 14 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -75,7 +75,10 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "query-scheduler-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "query-scheduler"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/query_scheduler"
           command: [
             "python3", "-u",

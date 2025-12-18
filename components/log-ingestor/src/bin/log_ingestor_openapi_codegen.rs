@@ -13,7 +13,7 @@ struct Args {
 
 fn main() -> Result<()> {
     let mut file = std::fs::File::create(Args::parse().path)?;
-    let api = api_server::routes::ApiDoc::openapi();
+    let api = log_ingestor::routes::ApiDoc::openapi();
     write!(file, "{}", to_string_pretty(&api)?)?;
     Ok(())
 }

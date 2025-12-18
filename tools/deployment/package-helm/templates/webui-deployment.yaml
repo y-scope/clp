@@ -45,16 +45,16 @@ spec:
             - name: "AWS_SECRET_ACCESS_KEY"
               value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.secret_access_key | quote }}
             {{- end }}
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "HOST"
               value: "0.0.0.0"
             - name: "NODE_ENV"
@@ -69,6 +69,7 @@ spec:
             - name: "webui"
               containerPort: 4000
           volumeMounts:
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "client-settings"
               mountPath: "/opt/clp/var/www/webui/client/settings.json"
               subPath: "webui-client-settings.json"
@@ -78,9 +79,11 @@ spec:
               subPath: "webui-server-settings.json"
               readOnly: true
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-            - name: "shared-data-streams"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
               mountPath: "/var/data/streams"
-              readOnly: true
             {{- end }}
             {{- if .Values.clpConfig.aws_config_directory }}
             - name: "aws-config"
@@ -99,6 +102,7 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .

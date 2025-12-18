@@ -41,8 +41,8 @@ data:
             profile: {{ .Values.clpConfig.archive_output.storage.s3_config.aws_authentication.profile | quote }}
             {{- end }}
         {{- else }}
-        directory: "/var/data/archives"
         type: "fs"
+        directory: "/var/data/archives"
         {{- end }}
       target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
       target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
@@ -88,10 +88,9 @@ data:
         profile: {{ .Values.clpConfig.logs_input.aws_authentication.profile | quote }}
         {{- end }}
       {{- else }}
-      directory: "/mnt/logs"
       type: "fs"
+      directory: "/mnt/logs"
       {{- end }}
-    mcp_server: {{ .Values.clpConfig.mcp_server }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
@@ -196,7 +195,7 @@ data:
       "LogsInputRootDir": null,
       {{- end }}
       "MongoDbSearchResultsMetadataCollectionName":
-        {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
       "SqlDbClpDatasetsTableName": "clp_datasets",
       "SqlDbClpFilesTableName": "clp_files",
@@ -215,8 +214,9 @@ data:
       "MongoDbPort": 27017,
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
       "MongoDbSearchResultsMetadataCollectionName":
+        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
+      "MongoDbStreamFilesCollectionName":
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
-      "MongoDbStreamFilesCollectionName": "stream-files",
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -226,23 +226,20 @@ data:
       {{- end }}
       {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
       "StreamFilesDir": null,
-      "StreamTargetUncompressedSize":
-        {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
       "StreamFilesS3Region": {{ .Values.clpConfig.stream_output.storage.s3_config.region_code | quote }},
       "StreamFilesS3PathPrefix": "{{ .Values.clpConfig.stream_output.storage.s3_config.bucket }}/{{ .Values.clpConfig.stream_output.storage.s3_config.key_prefix }}",
+      {{- else }}
+      "StreamFilesDir": "/var/data/streams",
+      "StreamFilesS3Region": null,
+      "StreamFilesS3PathPrefix": null,
+      {{- end }}
       {{- if eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "profile" }}
       "StreamFilesS3Profile": {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.profile | quote }},
       {{- else }}
       "StreamFilesS3Profile": null,
       {{- end }}
-      {{- else }}
-      "StreamFilesDir": "/var/data/streams",
       "StreamTargetUncompressedSize":
         {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
-      "StreamFilesS3Region": null,
-      "StreamFilesS3PathPrefix": null,
-      "StreamFilesS3Profile": null,
-      {{- end }}
       "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
       "ArchiveOutputTargetArchiveSize":
         {{ .Values.clpConfig.archive_output.target_archive_size | int }},

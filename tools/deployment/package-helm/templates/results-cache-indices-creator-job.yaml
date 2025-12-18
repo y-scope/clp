@@ -36,8 +36,8 @@ spec:
             "python3", "-u",
             "-m", "clp_py_utils.initialize-results-cache",
             "--uri",
-            "mongodb://{{ include "clp.fullname" . }}-results-cache:27017/{{
-              .Values.clpConfig.results_cache.db_name }}",
-            "--stream-collection", {{ .Values.clpConfig.results_cache.stream_collection_name
-              | quote }}
+            "mongodb://{{ include "clp.fullname" . }}-results-cache:27017\
+            /{{ .Values.clpConfig.results_cache.db_name }}",
+            "--stream-collection",
+            {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
           ]

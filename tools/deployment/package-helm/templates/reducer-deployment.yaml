@@ -54,7 +54,10 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "reducer-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "reducer"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/reducer"
           command: [
             "python3", "-u",

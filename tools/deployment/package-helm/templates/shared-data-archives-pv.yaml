@@ -5,5 +5,5 @@
   "nodeRole" "control-plane"
   "capacity" "50Gi"
   "accessModes" (list "ReadWriteMany")
-  "hostPath" (printf "%s/archives" .Values.clpConfig.data_directory)
+  "hostPath" .Values.clpConfig.archive_output.storage.directory
 ) }}

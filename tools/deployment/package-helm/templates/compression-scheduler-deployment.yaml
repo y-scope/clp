@@ -66,22 +66,26 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "compression-scheduler-logs"
-              mountPath: "/var/log/compression_scheduler"
-            - name: "compression-scheduler-user-logs"
-              mountPath: "/var/log/user"
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            {{- end }}
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-scheduler"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/compression_scheduler"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-scheduler"
+                "name" "user-logs"
+              ) | quote }}
+              mountPath: "/var/log/user"
             {{- if .Values.clpConfig.aws_config_directory }}
             - name: "aws-config"
               mountPath: "/opt/clp/.aws"
-              readOnly: true
-            {{- end }}
-            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-            - name: "logs-input"
-              mountPath: "/mnt/logs"
               readOnly: true
             {{- end }}
           command: [
@@ -90,6 +94,7 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "compression-scheduler"

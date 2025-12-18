@@ -17,15 +17,11 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "query-worker"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       terminationGracePeriodSeconds: 60
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
-      initContainers:
-        - {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "queue") | nindent 10 }}
-        - {{- include "clp.waitFor" (dict "root" . "type" "service" "name" "redis") | nindent 10 }}
       containers:
         - name: "query-worker"
           image: "{{ include "clp.image.ref" . }}"
@@ -33,9 +29,9 @@ spec:
           env:
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
-              "root" .
-              "database" .Values.clpConfig.redis.query_backend_database
-            ) | nindent 14 }}
+                "root" .
+                "database" .Values.clpConfig.redis.query_backend_database
+              ) | nindent 14 }}
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yaml"
             - name: "CLP_HOME"
@@ -53,17 +49,23 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "query-worker-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "query-worker"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/query_worker"
-            - name: "query-worker-staged-streams"
-              mountPath: "/var/data/staged-streams"
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
-            - name: "shared-data-archives"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
               mountPath: "/var/data/archives"
-              readOnly: true
             {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-            - name: "shared-data-streams"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
               mountPath: "/var/data/streams"
             {{- end }}
             {{- if .Values.clpConfig.aws_config_directory }}
