@@ -1,0 +1,96 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-query-scheduler
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-scheduler"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "query-scheduler"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "query-scheduler"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      hostname: {{ include "clp.fullname" . }}-query-scheduler
+      subdomain: {{ include "clp.fullname" . }}-query-scheduler
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "queue"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "redis"
+          ) | nindent 10 }}
+      containers:
+        - name: "query-scheduler"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
+            - {{- include "clp.celeryResultBackendEnvVar" (dict
+                "root" .
+                "database" .Values.clpConfig.redis.query_backend_database
+              ) | nindent 14 }}
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/query_scheduler"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          ports:
+            - name: "query-scheduler"
+              containerPort: 7000
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "query-scheduler"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/query_scheduler"
+          command: [
+            "python3", "-u",
+            "-m", "job_orchestration.scheduler.query.query_scheduler",
+            "--config", "/etc/clp-config.yaml"
+          ]
+      volumes:
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "query-scheduler"
+            "name" "logs"
+          ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
