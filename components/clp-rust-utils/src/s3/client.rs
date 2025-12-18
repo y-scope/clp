@@ -35,7 +35,7 @@ pub async fn create_new_client(
         .region(region)
         .credentials_provider(credential)
         .force_path_style(true);
-    config_builder.set_endpoint_url(endpoint.map(|ep| ep.to_string()));
+    config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     let config = config_builder.build();
     Client::from_conf(config)
 }

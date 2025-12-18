@@ -33,6 +33,9 @@ pub enum Error {
 
     #[error("Prefix conflict: {0}")]
     PrefixConflict(String),
+
+    #[error("Custom endpoint URL not supported: {0}")]
+    CustomEndpointUrlNotSupported(String),
 }
 
 /// An async-safe state for creating and managing ingestion jobs.
@@ -131,6 +134,12 @@ impl IngestionJobManagerState {
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
         let ingestion_job_config = config.base.clone();
+        if let Some(endpoint_url) = &ingestion_job_config.endpoint_url {
+            return Err(Error::CustomEndpointUrlNotSupported(format!(
+                "SQS listener ingestion jobs do not support custom endpoint URLs yet. Endpoint \
+                 URL: {endpoint_url}"
+            )));
+        }
         let sqs_client_manager = SqsClientWrapper::create(
             config.base.region.as_str(),
             self.inner.aws_credentials.access_key_id.as_str(),
@@ -214,7 +223,10 @@ impl IngestionJobManagerState {
         JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
-            if table_entry.region != ingestion_job_config.region
+            // TODO: We should avoid being verbose for checking each field one by one (tracked by
+            // #1805)
+            if table_entry.endpoint_url != ingestion_job_config.endpoint_url
+                || table_entry.region != ingestion_job_config.region
                 || table_entry.bucket_name != ingestion_job_config.bucket_name
                 || table_entry.dataset != ingestion_job_config.dataset
                 || is_mutually_prefix_free(
@@ -253,6 +265,7 @@ impl IngestionJobManagerState {
                 bucket_name: ingestion_job_config.bucket_name,
                 region: ingestion_job_config.region,
                 key_prefix: ingestion_job_config.key_prefix,
+                endpoint_url: ingestion_job_config.endpoint_url,
                 dataset: ingestion_job_config.dataset,
             },
         );
@@ -297,6 +310,7 @@ struct IngestionJobTableEntry {
     region: String,
     bucket_name: NonEmptyString,
     key_prefix: NonEmptyString,
+    endpoint_url: Option<NonEmptyString>,
     dataset: Option<NonEmptyString>,
 }
 

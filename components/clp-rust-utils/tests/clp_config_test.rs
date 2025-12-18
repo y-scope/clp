@@ -13,6 +13,7 @@ fn test_clp_io_config_serialization() {
         bucket: NonEmptyString::from_static_str("yscope"),
         region_code: "us-east-2".into(),
         key_prefix: NonEmptyString::from_static_str("sample-logs/cockroachdb.clp.zst"),
+        endpoint_url: None,
         aws_authentication: AwsAuthentication::Credentials {
             credentials: AwsCredentials {
                 access_key_id: "ACCESS_KEY_ID".into(),
@@ -42,13 +43,13 @@ fn test_clp_io_config_serialization() {
 
     let brotli_compressed_msgpack = BrotliMsgpack::serialize(&config)
         .expect("Brotli-compressed MessagePack serialized config.");
-    let expected = "1ba00100e4ffdf9f43284b650e496850ba5f1eeefb53844a05d074faa66eb23ebef2dc45638\
-                275e9c24cb3bccba29c9bfc9d95db42175d52eecc81793cb3bc3c4ed0bf604c56e5c9a24581d9e65080\
-                1fd7263a8fb774fa362adf02eecc5b9d99532b8be8be173f6b659a9538c6c56a15571bc9856e20d0267\
-                b1591599975a75cdeb2aea30b83c8b486f3a2b3a74b419d6f99db0742a1482603a9480912e1336f2780\
-                dd9c3391503a9205a89a755bfe2c0d3a6be4c98ef0489c0b7e7f2d50b85f8f6e671a54d5dc6fa16d1ac\
-                cbaaffc5c3f1fb140f21ba0dce6ff0e8bc5f2da3c58426a9947046ca3cf9a06c7c8219e25a6ad0c4c67\
-                b6aceb8c88c782293b";
+    let expected = "1baa0100e4ffdf9f43284b650e496850ba5f9ceefb53044b04d074faa66eb23ebef21c2d1a\
+            13ac8bda98699677599cea99df896ea49db84ad29e0393f1ccf2f23841ef82315895278b2605669b4301be5\
+            b1b68dfded8eed9a87c13b8336f750676ad24a2f35cfca9966856e21807ab951d2d242bbec8bd2d3ff95ce8\
+            3a026df0981399155cb7174eb6acffe8a248645ac37edade13a760c56f99dbfb0281502a0589500162c1338\
+            32780dd9c53a140329406a89ad55df2595a75d6c8931de191d807fcfe80a070bf6ef5ce28925670bf85ca71\
+            7f5687d9e7fa0d8905badf00e516ffb7994ca6d7e4c11c52c83c22600bbde03478470ef12c312d6aa03fb32\
+            55d712401964e5901";
     assert_eq!(expected, hex::encode(brotli_compressed_msgpack));
 
     let json_serialized_result = serde_json::to_string_pretty(&config);
@@ -60,6 +61,7 @@ fn test_clp_io_config_serialization() {
         "bucket": "yscope",
         "region_code": "us-east-2",
         "key_prefix": "sample-logs/cockroachdb.clp.zst",
+        "endpoint": null,
         "aws_authentication": {
           "type": "credentials",
           "credentials": {

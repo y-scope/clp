@@ -7,6 +7,7 @@ pub struct S3Config {
     pub bucket: NonEmptyString,
     pub region_code: String,
     pub key_prefix: NonEmptyString,
+    pub endpoint_url: Option<NonEmptyString>,
     pub aws_authentication: AwsAuthentication,
 }
 
