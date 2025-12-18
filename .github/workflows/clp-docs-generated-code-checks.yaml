@@ -1,0 +1,39 @@
+name: "clp-docs-generated-code-checks"
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  check-generated:
+    # Runs only on Ubuntu Jammy (22.04) since the Rust components are only built on this platform.
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli@3.44.0"
+
+      - name: "Generate OpenAPI docs"
+        shell: "bash"
+        run: "task codegen:openapi"
+
+      - name: "Check if the generated code is the latest"
+        shell: "bash"
+        run:
+          |
+          git status --porcelain \
+            docs/src/_static/generated \
+            docs/src/_static/generated \
+            | grep . > /dev/null \
+              && exit 1 \
+              || exit 0

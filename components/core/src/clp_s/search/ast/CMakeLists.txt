@@ -13,8 +13,8 @@ set(
     ConstantProp.hpp
     ConvertToExists.cpp
     ConvertToExists.hpp
-    DateLiteral.cpp
-    DateLiteral.hpp
+    TimestampLiteral.cpp
+    TimestampLiteral.hpp
     EmptyExpr.cpp
     EmptyExpr.hpp
     Expression.cpp
@@ -35,6 +35,8 @@ set(
     OrOfAndForm.hpp
     SearchUtils.cpp
     SearchUtils.hpp
+    SetTimestampLiteralPrecision.cpp
+    SetTimestampLiteralPrecision.hpp
     StringLiteral.cpp
     StringLiteral.hpp
     Transformation.hpp
@@ -62,7 +64,7 @@ if(CLP_BUILD_CLP_S_SEARCH_AST)
     target_link_libraries(
         clp_s_search_ast
         PUBLIC
-        clp_s::timestamp_pattern
+        ystdlib::error_handling
         PRIVATE
         simdjson::simdjson
     )

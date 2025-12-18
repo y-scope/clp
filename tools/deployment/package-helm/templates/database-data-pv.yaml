@@ -1,7 +1,7 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-database-data" (include "clp.fullname" .))
-  "component" "database"
+  "component_category" "database"
+  "name" "data"
   "nodeRole" "control-plane"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")

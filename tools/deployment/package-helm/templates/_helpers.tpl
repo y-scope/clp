@@ -98,8 +98,8 @@ failureThreshold: 3
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
-@param {string} name PV name
-@param {string} component Component label
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
 @param {string} nodeRole Node role for affinity. Targets nodes with label
   "node-role.kubernetes.io/<nodeRole>". Always falls back to
   "node-role.kubernetes.io/control-plane"
@@ -112,10 +112,10 @@ Creates a local PersistentVolume.
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
-    app.kubernetes.io/component: {{ .component | quote }}
+    app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
   capacity:
     storage: {{ .capacity }}
@@ -133,4 +133,30 @@ spec:
         - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
+{{- end }}
+
+{{/*
+Creates an initContainer that waits for a Kubernetes resource to be ready.
+
+@param {object} root Root template context
+@param {string} type The resource type: "service" (waits for pod readiness) or "job" (waits for
+completion).
+@param {string} name For type="service", this should be the component name. For type="job", this
+should be the job name suffix.
+@return {string} YAML-formatted initContainer definition
+*/}}
+{{- define "clp.waitFor" -}}
+name: "wait-for-{{ .name }}"
+image: "bitnami/kubectl:latest"
+command: [
+  "kubectl", "wait",
+  {{- if eq .type "service" }}
+  "--for=condition=ready",
+  "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
+  {{- else if eq .type "job" }}
+  "--for=condition=complete",
+  "job/{{ include "clp.fullname" .root }}-{{ .name }}",
+  {{- end }}
+  "--timeout=300s"
+]
 {{- end }}
