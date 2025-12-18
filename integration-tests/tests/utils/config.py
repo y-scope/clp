@@ -145,6 +145,13 @@ class PackageCompressionJob:
 
 
 @dataclass(frozen=True)
+class PackageJobList:
+    """List of jobs to run during a package test."""
+
+    package_compression_jobs: list[PackageCompressionJob]
+
+
+@dataclass(frozen=True)
 class PackageConfig:
     """Metadata for a specific configuration of the CLP package."""
 
@@ -162,6 +169,9 @@ class PackageConfig:
 
     #: The base port from which all ports for the components are derived.
     base_port: int
+
+    #: The list of jobs that this package will run during the test.
+    package_job_list: PackageJobList | None
 
     def __post_init__(self) -> None:
         """Write the temporary config file for this package."""

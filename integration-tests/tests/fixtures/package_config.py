@@ -1,15 +1,21 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
+import logging
 from collections.abc import Iterator
 
 import pytest
 
+from tests.utils.clp_job_utils import (
+    build_package_job_list,
+)
 from tests.utils.clp_mode_utils import (
     get_clp_config_from_mode,
     get_required_component_list,
 )
 from tests.utils.config import PackageConfig, PackagePathConfig
 from tests.utils.port_utils import assign_ports_from_base
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -39,6 +45,11 @@ def fixt_package_config(
 
     required_components = get_required_component_list(clp_config_obj)
 
+    # Build the job list for this mode and the current job filter.
+    no_jobs: bool = bool(request.config.option.NO_JOBS)
+    job_filter: str = request.config.option.JOB_NAME_CONTAINS or ""
+    package_job_list = None if no_jobs else build_package_job_list(mode_name, job_filter)
+
     # Construct PackageConfig.
     package_config = PackageConfig(
         path_config=fixt_package_path_config,
@@ -46,6 +57,7 @@ def fixt_package_config(
         component_list=required_components,
         clp_config=clp_config_obj,
         base_port=base_port,
+        package_job_list=package_job_list,
     )
 
     try:
