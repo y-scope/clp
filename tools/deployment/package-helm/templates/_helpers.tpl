@@ -139,8 +139,8 @@ spec:
 Creates a PersistentVolumeClaim for the given component.
 
 @param {object} root Root template context
-@param {string} component_category (e.g., "shared-data", "database")
-@param {string} name (e.g., "archives", "logs", "data")
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
 @param {string} capacity Storage capacity
 @param {string[]} accessModes Access modes
 @return {string} YAML-formatted PersistentVolumeClaim resource
@@ -166,11 +166,12 @@ spec:
 {{- end }}
 
 {{/*
-Creates a volume definition that references a PersistentVolumeClaim.
+Creates a volume definition `{{ .component_category }}-{{ .name }}` that references a
+PersistentVolumeClaim.
 
 @param {object} root Root template context
-@param {string} component_category (e.g., "shared-data", "database")
-@param {string} name (e.g., "archives", "logs", "data")
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
 @return {string} YAML-formatted volume definition
 */}}
 {{- define "clp.pvcVolume" -}}
@@ -180,7 +181,7 @@ persistentVolumeClaim:
 {{- end }}
 
 {{/*
-Creates the BROKER_URL env var for Celery workers.
+Gets the BROKER_URL env var for Celery workers.
 
 @param {object} . Root template context
 @return {string} YAML-formatted env var definition
@@ -194,7 +195,7 @@ value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
 {{- end }}
 
 {{/*
-Creates the RESULT_BACKEND env var for Celery workers.
+Gets the RESULT_BACKEND env var for Celery workers.
 
 @param {object} root Root template context
 @param {string} database Redis database number from config
