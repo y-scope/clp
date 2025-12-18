@@ -20,7 +20,6 @@ const Jobs = () => {
         queryKey: ["jobs"],
         queryFn: async () => {
             const data = await fetchCompressionJobs();
-
             return data.map((item): JobData => mapCompressionJobResponseToTableData(item));
         },
     });
@@ -35,7 +34,9 @@ const Jobs = () => {
                 columns={jobColumns}
                 dataSource={jobs}
                 pagination={false}
-                scroll={{y: 400}}/>
+                rowKey={(record) => record.key}
+                scroll={{y: 400, x: true}}
+                tableLayout={"fixed"}/>
         </DashboardCard>
     );
 };

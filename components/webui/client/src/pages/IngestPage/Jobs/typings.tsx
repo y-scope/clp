@@ -42,6 +42,7 @@ interface JobData {
  * Columns configuration for the job table.
  */
 const showDatasetColumn = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
+const PATHS_COLUMN_WIDTH = 360;
 
 const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
     {
@@ -90,11 +91,6 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
             }
         },
     },
-    {
-        title: "Speed",
-        dataIndex: "speed",
-        key: "speed",
-    },
     ...(showDatasetColumn ?
         [{
             title: "Dataset",
@@ -106,20 +102,24 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
         title: "Paths",
         dataIndex: "paths",
         key: "paths",
-        render: (paths: string[]) => (
-            <div>
-                {paths.map((path) => (
-                    <Text
-                        className={styles["pathText"] || ""}
-                        copyable={{text: path}}
-                        ellipsis={{tooltip: path}}
-                        key={path}
-                    >
-                        {path}
-                    </Text>
-                ))}
-            </div>
-        ),
+        width: PATHS_COLUMN_WIDTH,
+        render: (paths: string[]) => {
+            const joinedPaths = paths.join(", ");
+            return (
+                <Text
+                    className={styles["pathText"] || ""}
+                    copyable={{text: joinedPaths}}
+                    ellipsis={{tooltip: joinedPaths}}
+                >
+                    {joinedPaths}
+                </Text>
+            );
+        },
+    },
+    {
+        title: "Speed",
+        dataIndex: "speed",
+        key: "speed",
     },
     {
         title: "Data Ingested",

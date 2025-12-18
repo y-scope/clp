@@ -3,7 +3,7 @@ import {
     Type,
 } from "@sinclair/typebox";
 
-import {ClpIoConfigSchema} from "./compression.js";
+import {ClpIoPartialConfigSchema} from "./compression.js";
 
 
 /**
@@ -41,7 +41,7 @@ const CompressionMetadataDecodedSchema = Type.Intersect(
     [
         CompressionMetadataBaseSchema,
         Type.Object({
-            clp_config: ClpIoConfigSchema,
+            clp_config: ClpIoPartialConfigSchema,
         }),
     ]
 );

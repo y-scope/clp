@@ -82,60 +82,59 @@ enum CompressionJobInputType {
 
 /**
  * Matching `FsInputConfig` in `job_orchestration.scheduler.job_config`.
- * NOTE: Type.Partial keeps previous versions of CLP compression job metadata valid
- * when fields were missing.
  */
-const ClpIoFsInputConfigSchema = Type.Partial(
-    Type.Object({
-        dataset: Type.Union([Type.String(), Type.Null()]),
-        path_prefix_to_remove: Type.Union([Type.String(), Type.Null()]),
-        paths_to_compress: Type.Array(Type.String()),
-        timestamp_key: Type.Union([Type.String(), Type.Null()]),
-        type: Type.Literal(CompressionJobInputType.FS),
-        unstructured: Type.Boolean(),
-    })
-);
-
+const ClpIoFsInputConfigSchema = Type.Object({
+    dataset: Type.Union([Type.String(), Type.Null()]),
+    path_prefix_to_remove: Type.Union([Type.String(), Type.Null()]),
+    paths_to_compress: Type.Array(Type.String()),
+    timestamp_key: Type.Union([Type.String(), Type.Null()]),
+    type: Type.Literal(CompressionJobInputType.FS),
+    unstructured: Type.Boolean(),
+});
 
 /**
  * Matching `S3InputConfig` in `job_orchestration.scheduler.job_config`.
- * NOTE: Type.Partial keeps previous versions of CLP compression job metadata valid
- * when fields were missing.
  */
-const ClpIoS3InputConfigSchema = Type.Partial(
-    Type.Object({
-        dataset: Type.Union([Type.String(), Type.Null()]),
-        keys: Type.Union([Type.Array(Type.String()), Type.Null()]),
-        timestamp_key: Type.Union([Type.String(), Type.Null()]),
-        type: Type.Literal(CompressionJobInputType.S3),
-        unstructured: Type.Boolean(),
-    })
-);
+const ClpIoS3InputConfigSchema = Type.Object({
+    dataset: Type.Union([Type.String(), Type.Null()]),
+    keys: Type.Union([Type.Array(Type.String()), Type.Null()]),
+    timestamp_key: Type.Union([Type.String(), Type.Null()]),
+    type: Type.Literal(CompressionJobInputType.S3),
+    unstructured: Type.Boolean(),
+});
 
 /**
  * Matching `OutputConfig` in `job_orchestration.scheduler.job_config`.
- * NOTE: Type.Partial keeps previous versions of CLP compression job metadata valid
- * when fields were missing.
  */
-const ClpIoOutputConfigSchema = Type.Partial(
-    Type.Object({
+const ClpIoOutputConfigSchema = Type.Object({
         compression_level: Type.Number(),
         tags: Type.Union([Type.Array(Type.String()), Type.Null()]),
         target_archive_size: Type.Number(),
         target_dictionaries_size: Type.Number(),
         target_encoded_file_size: Type.Number(),
         target_segment_size: Type.Number(),
-    })
-);
+    });
 
 /**
  * Matching `ClpIoConfig` in `job_orchestration.scheduler.job_config`.
  */
-const ClpIoConfigSchema = Type.Object({
-    input: Type.Union([ClpIoFsInputConfigSchema,
-        ClpIoS3InputConfigSchema]),
-    output: ClpIoOutputConfigSchema,
-});
+const ClpIoConfigSchema =
+    Type.Object({
+        input: Type.Union([ClpIoFsInputConfigSchema,
+           (ClpIoS3InputConfigSchema)]),
+        output: ClpIoOutputConfigSchema,
+    });
+
+/**
+ * Less strict version of `ClpIoConfigSchema` to prevent Fastify validation errors
+ * for compression metadata from older CLP releases with missing data.
+ */
+const ClpIoPartialConfigSchema =
+    Type.Object({
+        input: Type.Union([ Type.Partial(ClpIoFsInputConfigSchema),
+           Type.Partial(ClpIoS3InputConfigSchema)]),
+        output: Type.Partial(ClpIoOutputConfigSchema),
+    });
 
 type CompressionJobFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
 
@@ -146,6 +145,7 @@ type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
 export {
     AbsolutePathSchema,
     ClpIoConfigSchema,
+    ClpIoPartialConfigSchema,
     ClpIoFsInputConfigSchema,
     ClpIoOutputConfigSchema,
     CompressionJobCreationSchema,
