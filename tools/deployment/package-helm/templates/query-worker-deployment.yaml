@@ -53,11 +53,20 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "query-worker-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "query-worker"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/query_worker"
-            - name: "shared-data-archives"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
               mountPath: "/var/data/archives"
-            - name: "shared-data-streams"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
               mountPath: "/var/data/streams"
           command: [
             "python3", "-u",

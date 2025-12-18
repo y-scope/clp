@@ -49,10 +49,6 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "compression-worker-logs"
-              mountPath: "/var/log/compression_worker"
-            - name: "compression-worker-tmp"
-              mountPath: "/var/tmp"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
@@ -60,7 +56,20 @@ spec:
             - name: "logs-input"
               mountPath: "/mnt/logs"
               readOnly: true
-            - name: "shared-data-archives"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/compression_worker"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
+                "name" "tmp"
+              ) | quote }}
+              mountPath: "/var/tmp"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
               mountPath: "/var/data/archives"
           command: [
             "python3", "-u",

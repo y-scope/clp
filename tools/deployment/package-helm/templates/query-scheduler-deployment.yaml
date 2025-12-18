@@ -75,7 +75,10 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "query-scheduler-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "query-scheduler"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/query_scheduler"
           command: [
             "python3", "-u",

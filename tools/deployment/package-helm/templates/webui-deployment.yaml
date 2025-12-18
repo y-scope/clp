@@ -71,7 +71,10 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
-            - name: "shared-data-streams"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
               mountPath: "/var/data/streams"
           command: [
             "/opt/clp/bin/node-22",

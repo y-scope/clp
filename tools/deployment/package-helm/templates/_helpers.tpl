@@ -95,6 +95,22 @@ failureThreshold: 3
 {{- end }}
 
 {{/*
+Creates a volume name for persistent storage resources.
+
+Used for:
+- Pod volume names (standalone)
+- PV/PVC resource names (combined with fullname)
+- StatefulSet volumeClaimTemplate names
+
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
+@return {string} Volume name in the format "{component_category}-{name}"
+*/}}
+{{- define "clp.volumeName" -}}
+{{- printf "%s-%s" .component_category .name -}}
+{{- end }}
+
+{{/*
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
@@ -112,7 +128,7 @@ Creates a local PersistentVolume.
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component_category | quote }}
@@ -149,7 +165,7 @@ Creates a PersistentVolumeClaim for the given component.
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
-  name: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component_category | quote }}
@@ -166,8 +182,7 @@ spec:
 {{- end }}
 
 {{/*
-Creates a volume definition `{{ .component_category }}-{{ .name }}` that references a
-PersistentVolumeClaim.
+Creates a volume definition that references a PersistentVolumeClaim.
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
@@ -175,9 +190,9 @@ PersistentVolumeClaim.
 @return {string} YAML-formatted volume definition
 */}}
 {{- define "clp.pvcVolume" -}}
-name: {{ printf "%s-%s" .component_category .name | quote }}
+name: {{ include "clp.volumeName" . | quote }}
 persistentVolumeClaim:
-  claimName: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
+  claimName: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
 {{- end }}
 
 {{/*
