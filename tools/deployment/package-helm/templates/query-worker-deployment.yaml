@@ -57,10 +57,20 @@ spec:
               mountPath: "/var/log/query_worker"
             - name: "query-worker-staged-streams"
               mountPath: "/var/data/staged-streams"
+            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: "shared-data-archives"
               mountPath: "/var/data/archives"
+              readOnly: true
+            {{- end }}
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: "shared-data-streams"
               mountPath: "/var/data/streams"
+            {{- end }}
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
+            {{- end }}
           command: [
             "python3", "-u",
             "/opt/clp/lib/python3/site-packages/bin/celery",
@@ -83,16 +93,26 @@ spec:
             "component_category" "query-worker"
             "name" "staged-streams"
           ) | nindent 10 }}
+        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "archives"
           ) | nindent 10 }}
+        {{- end }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "streams"
           ) | nindent 10 }}
+        {{- end }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: "{{ .Values.clpConfig.aws_config_directory }}"
+            type: "Directory"
+        {{- end }}

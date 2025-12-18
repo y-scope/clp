@@ -59,11 +59,20 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
+            {{- end }}
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
             - name: "logs-input"
               mountPath: "/mnt/logs"
               readOnly: true
+            {{- end }}
+            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: "shared-data-archives"
               mountPath: "/var/data/archives"
+            {{- end }}
           command: [
             "python3", "-u",
             "/opt/clp/lib/python3/site-packages/bin/celery",
@@ -91,15 +100,25 @@ spec:
             "component_category" "compression-worker"
             "name" "tmp"
           ) | nindent 10 }}
+        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "archives"
           ) | nindent 10 }}
+        {{- end }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
         - name: "logs-input"
           hostPath:
             path: "{{ .Values.clpConfig.logs_input.directory }}"
             type: "Directory"
+        {{- end }}
+        {{- if .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: "{{ .Values.clpConfig.aws_config_directory }}"
+            type: "Directory"
+        {{- end }}

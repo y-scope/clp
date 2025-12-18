@@ -63,6 +63,13 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+            - name: "api-server-staged-streams"
+              mountPath: "/var/data/staged-streams"
+            {{- else }}
+            - name: "shared-data-streams"
+              mountPath: "/var/data/streams"
+            {{- end }}
           command: [
             "/opt/clp/bin/api_server",
             "--host", "0.0.0.0",
@@ -83,6 +90,19 @@ spec:
             "component_category" "api-server"
             "name" "logs"
           ) | nindent 10 }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "api-server"
+            "name" "staged-streams"
+          ) | nindent 10 }}
+        {{- else }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
+        {{- end }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

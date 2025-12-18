@@ -39,6 +39,12 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            {{- if and (eq .Values.clpConfig.stream_output.storage.type "s3") (eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "credentials") }}
+            - name: "AWS_ACCESS_KEY_ID"
+              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.access_key_id | quote }}
+            - name: "AWS_SECRET_ACCESS_KEY"
+              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.secret_access_key | quote }}
+            {{- end }}
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
@@ -71,8 +77,16 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: "shared-data-streams"
               mountPath: "/var/data/streams"
+              readOnly: true
+            {{- end }}
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
+            {{- end }}
           command: [
             "/opt/clp/bin/node-22",
             "/opt/clp/var/www/webui/server/dist/src/main.js"
@@ -85,14 +99,22 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "streams"
           ) | nindent 10 }}
+        {{- end }}
         - name: "client-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: "{{ .Values.clpConfig.aws_config_directory }}"
+            type: "Directory"
+        {{- end }}
