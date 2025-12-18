@@ -115,7 +115,7 @@ data:
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
       "MongoDbSearchResultsMetadataCollectionName":
-        {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
       "SqlDbClpDatasetsTableName": "clp_datasets",
       "SqlDbClpFilesTableName": "clp_files",
@@ -134,8 +134,9 @@ data:
       "MongoDbPort": 27017,
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
       "MongoDbSearchResultsMetadataCollectionName":
+        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
+      "MongoDbStreamFilesCollectionName":
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
-      "MongoDbStreamFilesCollectionName": "stream-files",
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
       "StreamFilesDir": "/var/data/streams",
