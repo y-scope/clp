@@ -114,6 +114,7 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+      "LogsInputRootDir": "/",
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
