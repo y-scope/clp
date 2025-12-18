@@ -39,16 +39,16 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "HOST"
               value: "0.0.0.0"
             - name: "NODE_ENV"
@@ -63,11 +63,11 @@ spec:
             - name: "webui"
               containerPort: 4000
           volumeMounts:
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "client-settings"
               mountPath: "/opt/clp/var/www/webui/client/settings.json"
               subPath: "webui-client-settings.json"
               readOnly: true
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "server-settings"
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
@@ -89,6 +89,7 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
@@ -100,4 +101,3 @@ spec:
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - {{- include "clp.logsInputVolume" . | nindent 10 }}

@@ -66,11 +66,11 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-scheduler"
                 "name" "logs"
