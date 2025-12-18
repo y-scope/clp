@@ -14,5 +14,4 @@ spec:
     {{- range $i := until (int .Values.workerConcurrency) }}
     - name: "reducer-{{ $i }}"
       port: {{ add 14009 $i }}
-      targetPort: {{ add 14009 $i }}
     {{- end }}
