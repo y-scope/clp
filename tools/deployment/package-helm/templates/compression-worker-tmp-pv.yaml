@@ -4,6 +4,6 @@
   "name" "tmp"
   "nodeRole" "control-plane"
   "capacity" "10Gi"
-  "accessModes" (list "ReadWriteMany")
+  "accessModes" (list "ReadWriteOnce")
   "hostPath" .Values.clpConfig.tmp_directory
 ) }}

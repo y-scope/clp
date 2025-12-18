@@ -3,5 +3,5 @@
   "component_category" "compression-worker"
   "name" "tmp"
   "capacity" "10Gi"
-  "accessModes" (list "ReadWriteMany")
+  "accessModes" (list "ReadWriteOnce")
 ) }}
