@@ -160,7 +160,7 @@ def _validate_port_range_bounds(port_range: range) -> None:
         required_range_str = _format_port_range(port_range)
         valid_range_str = _format_port_range(VALID_PORT_RANGE)
         err_msg = (
-            f"The port range derived from --base-port ({required_range_str}) must fall within"
+            f"The port range derived from '--base-port' ({required_range_str}) must fall within"
             f" the range of valid ports ({valid_range_str})."
         )
         raise ValueError(err_msg)

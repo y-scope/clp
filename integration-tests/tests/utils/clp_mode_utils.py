@@ -1,5 +1,6 @@
 """Provides utilities related to the user-level configurations of CLP's operating modes."""
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -22,6 +23,9 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
 )
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
+
 
 CLP_MODE_CONFIGS: dict[str, Callable[[], ClpConfig]] = {
     "clp-text": lambda: ClpConfig(
@@ -93,7 +97,12 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
     :raise ValueError: If the mode is not supported.
     """
     if mode_name not in CLP_MODE_CONFIGS:
-        err_msg = f"Unsupported mode: {mode_name}"
+        err_msg = f"Unsupported mode: '{mode_name}'"
+        err_log_msg = (
+            err_msg +
+            "\nCheck the full output log for more information (see test header for file path)."
+        )
+        logger.error(err_log_msg)
         raise ValueError(err_msg)
     return CLP_MODE_CONFIGS[mode_name]()
 

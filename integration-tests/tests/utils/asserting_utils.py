@@ -1,8 +1,8 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-import shlex
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -17,7 +17,7 @@ from tests.utils.utils import load_yaml_to_dict
 logger = logging.getLogger(__name__)
 
 
-def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+def run_and_assert(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
     """
     Runs a command with subprocess and asserts that it succeeds with pytest.
 
@@ -26,15 +26,29 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     :return: The completed process object, for inspection or further handling.
     :raise: pytest.fail if the command exits with a non-zero return code.
     """
-    logger.info("Running command: %s", shlex.join(cmd))
-
-    try:
-        proc = subprocess.run(cmd, check=True, **kwargs)
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
-    except subprocess.TimeoutExpired as e:
-        pytest.fail(f"Command timed out: {' '.join(cmd)}: {e}")
-    return proc
+    log_file_path = Path(request.config.getini("log_file_path"))
+    with open(log_file_path, "ab") as log_file:
+        try:
+            proc = subprocess.run(
+                cmd,
+                stdout=log_file,
+                stderr=log_file,
+                check=True,
+                **kwargs
+            )
+        except subprocess.CalledProcessError:
+            fail_msg = (
+                "Called process failed. Check error summary at the end of the test for more information."
+            )
+            logger.error(fail_msg)
+            pytest.fail(fail_msg)
+        except subprocess.TimeoutExpired:
+            fail_msg = (
+                "Called process timed out. Check error summary at the end of the test for more information."
+            )
+            logger.error(fail_msg)
+            pytest.fail(fail_msg)
+        return proc
 
 
 def validate_package_running(package_instance: PackageInstance) -> None:
@@ -45,6 +59,9 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
+    mode_name = package_instance.package_config.mode_name
+    logger.info("Validating that all components of the '%s' package are running...", mode_name)
+
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
     project_name = f"clp-package-{instance_id}"
@@ -55,17 +72,17 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     if required_components == running_services:
         return
 
-    fail_msg = "Component mismatch."
+    cmd_fail_msg = "Component mismatch."
 
     missing_components = required_components - running_services
     if missing_components:
-        fail_msg += f"\nMissing components: {missing_components}."
+        cmd_fail_msg += f"\nMissing components: {missing_components}."
 
     unexpected_components = running_services - required_components
     if unexpected_components:
-        fail_msg += f"\nUnexpected services: {unexpected_components}."
+        cmd_fail_msg += f"\nUnexpected services: {unexpected_components}."
 
-    pytest.fail(fail_msg)
+    pytest.fail(cmd_fail_msg)
 
 
 def validate_running_mode_correct(package_instance: PackageInstance) -> None:
@@ -79,6 +96,9 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the ClpConfig object cannot be validated.
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
+    mode_name = package_instance.package_config.mode_name
+    logger.info("Validating that the '%s' package is running in the correct configuration...", mode_name)
+
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)

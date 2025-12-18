@@ -1,5 +1,6 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
+import logging
 from collections.abc import Iterator
 
 import pytest
@@ -10,6 +11,8 @@ from tests.utils.clp_mode_utils import (
 )
 from tests.utils.config import PackageConfig, PackagePathConfig
 from tests.utils.port_utils import assign_ports_from_base
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -25,6 +28,7 @@ def fixt_package_config(
     :raise ValueError: if the CLP base port's value is invalid.
     """
     mode_name: str = request.param
+    logger.info("Setting up the '%s' package...", mode_name)
 
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
@@ -34,6 +38,7 @@ def fixt_package_config(
         base_port = int(base_port_string)
     except ValueError as err:
         err_msg = f"Invalid value '{base_port_string}' for '--base-port'; expected an integer."
+        logger.error(err_msg)
         raise ValueError(err_msg) from err
     assign_ports_from_base(base_port, clp_config_obj)
 
@@ -51,4 +56,5 @@ def fixt_package_config(
     try:
         yield package_config
     finally:
+        logger.info("Cleaning up the '%s' package...", mode_name)
         package_config.temp_config_file_path.unlink(missing_ok=True)
