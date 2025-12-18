@@ -30,8 +30,6 @@ pub async fn create_new_client(
     let mut config_builder = Builder::from(&base_config)
         .credentials_provider(credential)
         .region(region);
-    if let Some(ep) = endpoint {
-        config_builder = config_builder.endpoint_url(ep.as_str().to_owned());
-    }
+    config_builder.set_endpoint_url(endpoint.map(|ep| ep.to_string()));
     Client::from_conf(config_builder.build())
 }

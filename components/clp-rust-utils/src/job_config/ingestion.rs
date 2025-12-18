@@ -17,7 +17,7 @@ pub mod s3 {
         #[schema(value_type = String, min_length = 1)]
         pub key_prefix: NonEmptyString,
 
-        /// The endpoint URL for custom S3-compatible object stores (e.g., MinIO, LocalStack).
+        /// The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).
         #[serde(default)]
         #[schema(value_type = String, min_length = 1)]
         pub endpoint_url: Option<NonEmptyString>,
