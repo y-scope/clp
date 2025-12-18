@@ -3,17 +3,11 @@ import axios from "axios";
 
 
 /**
- * Retrieves compression jobs updated after the given timestamp.
- *
- * @param lastUpdateTimestampSeconds
- * @return
+ * Retrieves recent compression jobs (last 30 days).
  */
-const fetchCompressionJobs = async (
-    lastUpdateTimestampSeconds: number
-): Promise<CompressionMetadataDecoded[]> => {
+const fetchCompressionJobs = async (): Promise<CompressionMetadataDecoded[]> => {
     const {data} = await axios.get<CompressionMetadataDecoded[]>(
-        "/api/compress-metadata/jobs",
-        {params: {lastUpdateTimestampSeconds}}
+        "/api/compress-metadata"
     );
 
     return data;

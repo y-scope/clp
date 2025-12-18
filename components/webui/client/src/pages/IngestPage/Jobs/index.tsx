@@ -1,5 +1,4 @@
 import {useQuery} from "@tanstack/react-query";
-import dayjs from "dayjs";
 
 import {fetchCompressionJobs} from "../../../api/compress-metadata";
 import {DashboardCard} from "../../../components/DashboardCard";
@@ -11,9 +10,6 @@ import {
 } from "./typings";
 import {mapCompressionJobResponseToTableData} from "./utils";
 
-
-const DAYS_TO_SHOW: number = 30;
-
 /**
  * Renders table with ingestion jobs inside a card.
  *
@@ -23,9 +19,7 @@ const Jobs = () => {
     const {data: jobs = [], isPending} = useQuery({
         queryKey: ["jobs"],
         queryFn: async () => {
-            const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
-                .unix();
-            const data = await fetchCompressionJobs(beginTimestamp);
+            const data = await fetchCompressionJobs();
 
             return data.map((item): JobData => mapCompressionJobResponseToTableData(item));
         },

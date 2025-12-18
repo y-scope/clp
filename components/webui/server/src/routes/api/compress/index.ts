@@ -19,11 +19,15 @@ import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
     input: {
         type: CompressionJobInputType.FS,
-        paths_to_compress: [],
+        dataset: null,
         path_prefix_to_remove: CONTAINER_INPUT_LOGS_ROOT_DIR,
+        paths_to_compress: [],
+        timestamp_key: null,
+        unstructured: true,
     },
     output: {
         compression_level: settings.ArchiveOutputCompressionLevel,
+        tags: null,
         target_archive_size: settings.ArchiveOutputTargetArchiveSize,
         target_dictionaries_size: settings.ArchiveOutputTargetDictionariesSize,
         target_encoded_file_size: settings.ArchiveOutputTargetEncodedFileSize,
@@ -67,6 +71,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             );
 
             if (CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine as CLP_STORAGE_ENGINES) {
+                jobConfig.input.unstructured = false;
                 if ("string" !== typeof dataset || 0 === dataset.length) {
                     request.log.error("Unable to submit compression job to the SQL database");
                 } else {
