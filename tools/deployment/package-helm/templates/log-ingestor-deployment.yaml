@@ -1,0 +1,88 @@
+{{- if eq .Values.clpConfig.logs_input.type "s3" }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-log-ingestor
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "log-ingestor"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "log-ingestor"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "log-ingestor"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+      containers:
+        - name: "log-ingestor"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/log_ingestor"
+            - name: "RUST_LOG"
+              value: {{ .Values.clpConfig.log_ingestor.logging_level | quote }}
+          ports:
+            - name: "log-ingestor"
+              containerPort: 3002
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "log-ingestor"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/log_ingestor"
+          command: [
+            "/opt/clp/bin/log-ingestor",
+            "--config", "/etc/clp-config.yaml",
+            "--host", "0.0.0.0",
+            "--port", "3002"
+          ]
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: &log-ingestor-health-check
+              path: "/health"
+              port: 3002
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *log-ingestor-health-check
+      volumes:
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "log-ingestor"
+            "name" "logs"
+          ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+{{- end }}
