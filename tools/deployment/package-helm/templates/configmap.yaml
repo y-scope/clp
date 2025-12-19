@@ -66,7 +66,7 @@ data:
     database:
       auto_commit: false
       compress: true
-      host: {{ include "clp.fullname" . }}-database
+      host: "{{ include "clp.fullname" . }}-database"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
       port: 3306
@@ -121,7 +121,7 @@ data:
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     presto: {{ .Values.clpConfig.presto }}
     query_scheduler:
-      host: {{ include "clp.fullname" . }}-query-scheduler
+      host: "{{ include "clp.fullname" . }}-query-scheduler"
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
       num_archives_to_search_per_sub_job: {{
@@ -130,21 +130,21 @@ data:
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
-      host: {{ include "clp.fullname" . }}-queue
+      host: "{{ include "clp.fullname" . }}-queue"
       port: 5672
     redis:
       compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
-      host: {{ include "clp.fullname" . }}-redis
+      host: "{{ include "clp.fullname" . }}-redis"
       port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
     reducer:
       base_port: 14009
-      host: {{ include "clp.fullname" . }}-reducer
+      host: "{{ include "clp.fullname" . }}-reducer"
       logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
       upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
-      host: {{ include "clp.fullname" . }}-results-cache
+      host: "{{ include "clp.fullname" . }}-results-cache"
       port: 27017
       retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
