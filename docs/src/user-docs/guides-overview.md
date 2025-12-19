@@ -44,7 +44,7 @@ How to use the API server to interact with CLP.
 :link: guides-using-log-ingestor
 Using `log-ingestor`
 ^^^
-How to use `log-ingestor` to create ingestion jobs for continuous log ingestion.
+How to use `log-ingestor` to continuously ingest logs.
 :::
 
 :::{grid-item-card}
