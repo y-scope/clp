@@ -53,7 +53,6 @@ tasks:
           --keep-going \
           --builder html \
           src "{{.OUTPUT_DIR}}"
-      - task: "api-server-openapi-json"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
@@ -112,16 +111,3 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  api-server-openapi-json:
-    vars:
-      OUTPUT_FILE: "{{.G_DOCS_BUILD_DIR}}/_static/api-server-openapi.json"
-    sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.OUTPUT_FILE}}"]
-    deps: [":toolchains:rust"]
-    dir: "{{.ROOT_DIR}}"
-    cmd: |-
-      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-      cargo run --bin openapi_codegen -- {{.OUTPUT_FILE}}

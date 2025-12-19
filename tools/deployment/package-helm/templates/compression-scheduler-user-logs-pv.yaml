@@ -1,0 +1,9 @@
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "compression-scheduler"
+  "name" "user-logs"
+  "nodeRole" "control-plane"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/user" .Values.clpConfig.logs_directory)
+) }}

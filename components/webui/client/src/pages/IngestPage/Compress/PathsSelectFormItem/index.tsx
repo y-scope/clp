@@ -17,6 +17,7 @@ import {listFiles} from "../../../../api/os";
 import SwitcherIcon from "./SwitcherIcon";
 import {
     ROOT_NODE,
+    ROOT_PATH,
     TreeNode,
 } from "./typings";
 import {
@@ -83,6 +84,20 @@ const PathsSelectFormItem = () => {
             throw e;
         }
     }, [addNodes]);
+
+    // On initialization, load root directory contents.
+    useEffect(() => {
+        loadPath(ROOT_PATH)
+            .then(() => {
+                setExpandedKeys([ROOT_PATH]);
+            })
+            .catch((e: unknown) => {
+                console.error("Failed to load root directory:", e);
+                message.error(e instanceof Error ?
+                    e.message :
+                    "Failed to load root directory");
+            });
+    }, [loadPath]);
 
     const handleLoadData = useCallback(async ({value}: LoadDataNode) => {
         if ("string" !== typeof value) {
