@@ -12,7 +12,6 @@ import {
     SETTINGS_LOGS_INPUT_TYPE,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../config";
-import styles from "./index.module.css";
 
 
 const {Text} = Typography;

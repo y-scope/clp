@@ -7,11 +7,13 @@ use aws_config::AwsConfig;
 use clp_rust_utils::{
     job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
     s3::ObjectMetadata,
+    types::non_empty_string::ExpectedNonEmpty,
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     ingestion_job::SqsListener,
 };
+use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -87,15 +89,15 @@ async fn receive_object_metadata(
 /// * A vector of received S3 object metadata.
 async fn upload_and_receive(
     s3_client: aws_sdk_s3::Client,
-    bucket: String,
-    prefix: String,
+    bucket: NonEmptyString,
+    prefix: NonEmptyString,
     num_objects_to_create: usize,
     receiver: mpsc::Receiver<ObjectMetadata>,
 ) -> (Vec<ObjectMetadata>, Vec<ObjectMetadata>) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|idx| ObjectMetadata {
             bucket: bucket.clone(),
-            key: format!("{prefix}/{idx:05}.log"),
+            key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
         })
         .collect();
@@ -124,13 +126,13 @@ async fn upload_and_receive(
 /// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
 async fn upload_noise_objects(
     s3_client: aws_sdk_s3::Client,
-    bucket: String,
+    bucket: NonEmptyString,
     num_objects_to_create: usize,
 ) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|_| ObjectMetadata {
             bucket: bucket.clone(),
-            key: format!("{}.log", Uuid::new_v4()),
+            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
         })
         .collect();
@@ -142,9 +144,9 @@ async fn upload_noise_objects(
 
 /// # Returns
 ///
-/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}/`.
-fn get_testing_prefix(job_id: &Uuid) -> String {
-    format!("test-{job_id}")
+/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}`.
+fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
+    NonEmptyString::from_string(format!("test-{job_id}"))
 }
 
 #[tokio::test]
@@ -152,7 +154,7 @@ fn get_testing_prefix(job_id: &Uuid) -> String {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_sqs_listener() -> Result<()> {
     let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix(&job_id);
+    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
@@ -165,12 +167,12 @@ async fn test_sqs_listener() -> Result<()> {
     .await;
 
     let sqs_listener_config = SqsListenerConfig {
-        queue_url: format!(
+        queue_url: NonEmptyString::from_string(format!(
             "{}/{}/{}",
             aws_config.endpoint.as_str(),
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
-        ),
+        )),
         base: BaseConfig {
             region: aws_config.region.clone(),
             bucket_name: aws_config.bucket_name.clone(),
@@ -233,7 +235,7 @@ async fn test_sqs_listener() -> Result<()> {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_s3_scanner() -> Result<()> {
     let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix(&job_id);
+    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
     let aws_config = AwsConfig::from_env()?;
 

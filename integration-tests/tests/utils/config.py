@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_SHARED_CONFIG_FILENAME,
     ClpConfig,
 )
 
@@ -135,6 +136,9 @@ class PackageConfig:
     #: The Pydantic representation of a CLP package configuration.
     clp_config: ClpConfig
 
+    #: The base port from which all ports for the components are derived.
+    base_port: int
+
     def __post_init__(self) -> None:
         """Write the temporary config file for this package."""
         self._write_temp_config_file()
@@ -166,6 +170,9 @@ class PackageInstance:
     #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
 
+    #: The path to the .clp-config.yaml file constructed by the package during spin up.
+    shared_config_file_path: Path = field(init=False, repr=True)
+
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the temp config file exists.
@@ -177,6 +184,11 @@ class PackageInstance:
         validate_file_exists(clp_instance_id_file_path)
         clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
         object.__setattr__(self, "clp_instance_id", clp_instance_id)
+
+        # Set shared_config_file_path and validate it exists.
+        shared_config_file_path = path_config.clp_log_dir / CLP_SHARED_CONFIG_FILENAME
+        validate_file_exists(shared_config_file_path)
+        object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
 
     @staticmethod
     def _get_clp_instance_id(clp_instance_id_file_path: Path) -> str:

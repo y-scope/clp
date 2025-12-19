@@ -76,7 +76,7 @@ impl CompressionJobSubmitter {
                 ingestion_job_config
                     .dataset
                     .clone()
-                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.to_string()),
+                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.clone()),
             ),
             timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,

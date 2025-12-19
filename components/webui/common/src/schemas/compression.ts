@@ -143,17 +143,14 @@ const ClpIoPartialConfigSchema =
         output: Type.Partial(ClpIoOutputConfigSchema),
     });
 
-type CompressionJobFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
-
-type CompressionJobOutputConfig = Static<typeof ClpIoOutputConfigSchema>;
-
 type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
 
+type ClpIoS3InputConfig = Static<typeof ClpIoS3InputConfigSchema>;
+
+type ClpIoFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
+
 export {
-    AbsolutePathSchema,
     ClpIoConfigSchema,
-    ClpIoFsInputConfigSchema,
-    ClpIoOutputConfigSchema,
     ClpIoPartialConfigSchema,
     CompressionJobCreationSchema,
     CompressionJobInputType,
@@ -164,8 +161,8 @@ export {
 };
 export type {
     ClpIoConfig,
+    ClpIoFsInputConfig,
+    ClpIoS3InputConfig,
     CompressionJob,
     CompressionJobCreation,
-    CompressionJobFsInputConfig,
-    CompressionJobOutputConfig,
 };

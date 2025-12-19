@@ -13,22 +13,18 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "results-cache-indices-creator"
     spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       restartPolicy: "OnFailure"
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
-        - name: "wait-for-results-cache"
-          image: "busybox:latest"
-          command:
-            - "sh"
-            - "-c"
-            - >-
-              until nc -z {{ include "clp.fullname" . }}-results-cache 27017;
-                do echo Waiting for results-cache to be ready...;
-                sleep 2;
-              done
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "results-cache"
+          ) | nindent 10 }}
       containers:
         - name: "results-cache-indices-creator"
           image: "{{ include "clp.image.ref" . }}"
@@ -39,6 +35,9 @@ spec:
           command: [
             "python3", "-u",
             "-m", "clp_py_utils.initialize-results-cache",
-            "--uri", "mongodb://{{ include "clp.fullname" . }}-results-cache:27017/{{ .Values.clpConfig.results_cache.db_name }}",
-            "--stream-collection", {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+            "--uri",
+            "mongodb://{{ include "clp.fullname" . }}-results-cache:27017\
+            /{{ .Values.clpConfig.results_cache.db_name }}",
+            "--stream-collection",
+            {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
           ]
