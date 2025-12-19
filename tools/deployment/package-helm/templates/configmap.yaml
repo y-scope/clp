@@ -86,6 +86,8 @@ data:
       host: {{ include "clp.fullname" $ }}-mcp-server
       port: 8000
       logging_level: {{ .logging_level | quote }}
+    {{- else }}
+    mcp_server: null
     {{- end }}
 
   mysql-logging.cnf: |
