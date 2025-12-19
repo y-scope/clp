@@ -68,14 +68,13 @@ pub struct Database {
 
 impl Default for Database {
     fn default() -> Self {
-        let mut names = HashMap::new();
-        names.insert(ClpDbNameType::Clp, "clp-db".to_owned());
-        names.insert(ClpDbNameType::Spider, "spider-db".to_owned());
-
         Self {
             host: "localhost".to_owned(),
             port: 3306,
-            names,
+            names: HashMap::from([
+                (ClpDbNameType::Clp, "clp-db".to_owned()),
+                (ClpDbNameType::Spider, "spider-db".to_owned()),
+            ]),
         }
     }
 }
