@@ -80,7 +80,7 @@ spec:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet: &mcp-server-health-check
               path: "/health"
-              port: 8000
+              port: "mcp"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *mcp-server-health-check
