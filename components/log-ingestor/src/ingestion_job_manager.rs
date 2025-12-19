@@ -36,6 +36,9 @@ pub enum Error {
 
     #[error("Custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
+
+    #[error("A region code must be specified when using the default AWS endpoint")]
+    MissingRegionCode,
 }
 
 /// An async-safe state for creating and managing ingestion jobs.
@@ -105,8 +108,12 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::MissingRegionCode`] if both the endpoint URL and region are unspecified.
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
+        if config.base.endpoint_url.is_none() && config.base.region.is_none() {
+            return Err(Error::MissingRegionCode);
+        }
         let s3_client_manager = S3ClientWrapper::create(
             config.base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),

@@ -5,8 +5,6 @@ use aws_sdk_s3::{
 };
 use non_empty_string::NonEmptyString;
 
-use crate::aws::AWS_DEFAULT_REGION;
-
 /// Creates a new S3 client.
 ///
 /// # Notes
@@ -21,7 +19,7 @@ use crate::aws::AWS_DEFAULT_REGION;
 pub async fn create_new_client(
     access_key_id: &str,
     secret_access_key: &str,
-    region_id: Option<&NonEmptyString>,
+    region_id: &str,
     endpoint: Option<&NonEmptyString>,
 ) -> Client {
     let credential = Credentials::new(
@@ -34,15 +32,8 @@ pub async fn create_new_client(
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let mut config_builder = Builder::from(&base_config)
         .credentials_provider(credential)
+        .region(Some(Region::new(region_id.to_string())))
         .force_path_style(true);
-    if endpoint.is_none() && region_id.is_none() {
-        // Use the default region from the base config if neither endpoint nor region is provided.
-        return Client::from_conf(config_builder.build());
-    }
-    config_builder.set_region(Some(Region::new(region_id.map_or_else(
-        || AWS_DEFAULT_REGION.to_owned(),
-        std::string::ToString::to_string,
-    ))));
     config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     let config = config_builder.build();
     Client::from_conf(config)

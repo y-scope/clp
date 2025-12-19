@@ -89,7 +89,8 @@ impl IntoResponse for Error {
                 IngestionJobManagerError::PrefixConflict(_) => {
                     (axum::http::StatusCode::CONFLICT, self.to_string())
                 }
-                IngestionJobManagerError::CustomEndpointUrlNotSupported(_) => {
+                IngestionJobManagerError::CustomEndpointUrlNotSupported(_)
+                | IngestionJobManagerError::MissingRegionCode => {
                     (axum::http::StatusCode::BAD_REQUEST, self.to_string())
                 }
             },
@@ -151,6 +152,11 @@ async fn health() -> &'static str {
             status = INTERNAL_SERVER_ERROR,
             body = ErrorResponse,
             description = "Internal server failure."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "A region code is not provided when using the default AWS S3 endpoint."
         )
     )
 )]

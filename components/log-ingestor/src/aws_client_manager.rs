@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
+use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use non_empty_string::NonEmptyString;
 
 /// A marker trait for AWS client types.
@@ -88,7 +89,7 @@ impl S3ClientWrapper {
         let s3_client = clp_rust_utils::s3::create_new_client(
             access_key_id,
             secret_access_key,
-            region,
+            region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str),
             endpoint_url,
         )
         .await;
