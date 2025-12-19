@@ -121,9 +121,9 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- with .Values.clpConfig.aws_config_directory }}
         - name: "aws-config"
           hostPath:
-            path: "{{ .Values.clpConfig.aws_config_directory }}"
+            path: {{ . | quote }}
             type: "Directory"
         {{- end }}
