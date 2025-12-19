@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,6 +22,7 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/Token.hpp>
+#include <log_surgeon/types.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
@@ -39,10 +41,10 @@
 #include <clp/ReaderInterface.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
-#include <clp_s/CommandLineArguments.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/experimental_helpers.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/JsonFileIterator.hpp>
@@ -368,10 +370,6 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     if (m_archive_options.experimental) {
-                        // TODO clpsls: check if any delim from schema exists
-                        // Doesn't seem possible to get through the parser atm (could store
-                        // separately...  after parsing schema file).
-
                         node_id = m_archive_writer->add_node(
                                 node_id_stack.top(),
                                 NodeType::LogMessage,
@@ -380,8 +378,6 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                         if (auto const result{parse_log_message(node_id, value)};
                             result.has_error())
                         {
-                            // TODO clpsls: if parsing fails we could try to treat the string as a
-                            // VarString
                             throw(std::runtime_error(
                                     "parse_log_message failed with: " + result.error().message()
                             ));
@@ -498,17 +494,11 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     if (m_archive_options.experimental) {
-                        // TODO clpsls: check if any delim from schema exists
-                        // Doesn't seem possible to get through the parser atm (could store
-                        // separately...  after parsing schema file).
-
                         node_id = m_archive_writer
                                           ->add_node(parent_node_id, NodeType::LogMessage, "");
                         if (auto const result{parse_log_message(node_id, value)};
                             result.has_error())
                         {
-                            // TODO clpsls: if parsing fails we could try to treat the string as a
-                            // VarString
                             throw(std::runtime_error(
                                     "parse_log_message failed with: " + result.error().message()
                             ));
@@ -683,10 +673,6 @@ void JsonParser::parse_line(
                     m_current_schema.insert_ordered(node_id);
                 } else if (value.find(' ') != std::string::npos) {
                     if (m_archive_options.experimental) {
-                        // TODO clpsls: check if any delim from schema exists
-                        // Doesn't seem possible to get through the parser atm (could store
-                        // separately...  after parsing schema file).
-
                         node_id = m_archive_writer->add_node(
                                 node_id_stack.top(),
                                 NodeType::LogMessage,
@@ -695,8 +681,6 @@ void JsonParser::parse_line(
                         if (auto const result{parse_log_message(node_id, value)};
                             result.has_error())
                         {
-                            // TODO clpsls: if parsing fails we could try to treat the string as a
-                            // VarString
                             throw(std::runtime_error(
                                     "parse_log_message failed with: " + result.error().message()
                             ));
@@ -1472,54 +1456,12 @@ bool JsonParser::check_and_log_curl_error(
     return false;
 }
 
-// TODO clpsls: variable repetition inside a log message
-// It is possible to find multiple variables of the same type (therefore having the same name)
-// inside the a single log event. This would result in the same node id in the clps schema tree. It
-// is invalid JSON to have the same key in an object meaning we either need to create an array of
-// values for the key or append to the key (variable type name / token name) to make it unique.
-// Storing as an array complicates (named) search as the type of a variable's node would now be
-// T|Array[T] (rather than just T).
-//
-// If it is possible to efficiently search all keys starting with a prefix, we could uniquely store
-// each variable instance by appending to the key name (e.g. a node in a log message with no
-// repetition would be named "var" while nodes in a message with repetition would be named var.0
-// var.1, ..., var.n).
-//
-//
-// TODO clpsls: capture group repetition
-// Similarly, to variable repetition storing the capture group variable node as an array in cases
-// with repetition creates a node type of T|Array[T].
-//
-// TODO clpsls:
-// Storing both the full match and capture groups creates potential duplication of the capture
-// group's substring.
-// One option is to re-write the full match similar to a logtype where the capture groups are
-// replaced with encoded placeholders. The full match would need to be rebuilt using its capture
-// groups to display.
-// Additionally wildcard search must know to avoid searching both the full match and capture groups.
-// Using placeholders allows for rebuilding the variable (and log message) through node
-// position/ordering as the placeholders in the full match enable you to know how many subsequent
-// nodes are captures. Otherwise we either need to specially type the node (e.g. VarString and
-// CaptureString) or do some other indexing/checking.
-//
-// ... Storing as a separate type seems the most sensible.
-// There is a possible trade-off where de-duplicating the capture group string using placeholders in
-// the full match node improves compression ration, but slows down search in certain cases as you
-// maybe need to rebuild the full match's value.
-
-// Because the variable dictionary is shared between unstructured and structured logs, but the
-// variable stats are only for unstructured logs it is possible to have "holes" in the variable
-// stats array.
-
-// TODO clpsls: probably want string view API to ls
 auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
         -> ystdlib::error_handling::Result<void> {
-    static constexpr std::string_view cFullMatch{"FullMatch"};
     static constexpr std::string_view cLogType{"LogType"};
 
-    m_log_surgeon_parser->reset();
+    (*m_log_surgeon_parser).reset();
     size_t offset{};
-    // TODO clpsls: add string_view api to log surgeon
     std::string str{view};
     if (log_surgeon::ErrorCode::Success
         != m_log_surgeon_parser->parse_next_event(str.data(), str.size(), offset, true))
@@ -1533,35 +1475,32 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
     auto const& event{log_parser.get_log_event_view()};
     auto const& log_buf = event.get_log_output_buffer();
 
-    clp_s::LogTypeDictionaryEntry logtype_dict_entry{};
-    logtype_dict_entry.reserve_constant_length(view.size());
+    clp_s::LogTypeDictionaryEntry logtype_entry{};
+    logtype_entry.reserve_constant_length(view.size());
     auto starting_token_idx{log_buf->has_timestamp() ? 0 : 1};
     for (auto token_idx{starting_token_idx}; token_idx < log_buf->pos(); token_idx++) {
         auto token_view{log_buf->get_token(token_idx)};
         auto const token_type{token_view.get_type_ids()->at(0)};
-        // TODO clpsls: if we've seen the token_name already we either need to append to it or store
-        // as an array...
         auto const token_name{log_parser.get_id_symbol(token_type)};
-
-        // handle delim before token (TODO clpsls: fix/hide this in log surgeon)
-        if (log_buf->has_delimiters() && (log_buf->has_timestamp() || token_idx > 1)
-            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
-            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
-        {
-            logtype_dict_entry.encode_constant(token_view.get_delimiter());
-            token_view.increment_start_pos();
-        }
-
-        SPDLOG_INFO(
+        SPDLOG_DEBUG(
                 "[clpsls] token name: {} ({}) value: {}",
                 token_name,
                 token_type,
                 token_view.to_string()
         );
+
+        if (log_buf->has_delimiters() && token_idx != starting_token_idx
+            && static_cast<int>(log_surgeon::SymbolId::TokenNewline) != token_type
+            && static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString) != token_type)
+        {
+            logtype_entry.encode_constant(token_view.get_delimiter());
+            token_view.increment_start_pos();
+        }
+
         switch (token_type) {
             case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
             case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-                logtype_dict_entry.encode_constant(token_view.to_string());
+                logtype_entry.encode_constant(token_view.to_string());
                 break;
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
@@ -1581,7 +1520,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                     m_current_parsed_message.add_unordered_value(token_view.to_string());
                 }
                 m_current_schema.insert_unordered(node_id);
-                logtype_dict_entry.add_int_var();
+                logtype_entry.add_int_var();
                 break;
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
@@ -1613,14 +1552,14 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                     );
                 }
                 m_current_schema.insert_unordered(node_id);
-                logtype_dict_entry.add_float_var();
+                logtype_entry.add_float_var();
                 break;
             }
             default: {
                 auto const& lexer{event.get_log_parser().m_lexer};
-                auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
-                if (false == capture_ids.has_value()) {
-                    logtype_dict_entry.add_dictionary_var();
+                auto opt_capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
+                if (false == opt_capture_ids.has_value()) {
+                    logtype_entry.add_dictionary_var();
                     m_current_parsed_message.add_unordered_value(token_view.to_string());
                     m_current_schema.insert_unordered(m_archive_writer->add_node(
                             parent_node_id,
@@ -1634,79 +1573,94 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                     break;
                 }
 
-                auto capture_node_id{
-                        m_archive_writer->add_node(parent_node_id, NodeType::CaptureVar, token_name)
-                };
-                auto capture_start{m_current_schema.start_unordered_object(NodeType::CaptureVar)};
-
-                // TODO clpsls: switch to only storing leaf capture groups
-                // logtype_dict_entry.add_schema_var();
-                // logtype_dict_entry.encode_constant(token_view.to_string());
-
-                // TODO clpsls: remove full match completely? rebuild on demand?
-                m_current_parsed_message.add_unordered_value(token_view.to_string());
-                m_current_schema.insert_unordered(
-                        m_archive_writer->add_node(capture_node_id, NodeType::VarString, cFullMatch)
-                );
-                YSTDLIB_ERROR_HANDLING_TRYV(
-                        m_archive_writer->update_var_stats(token_view.to_string_view(), cFullMatch)
-                );
-
-                for (auto const capture_id : capture_ids.value()) {
-                    auto const register_ids{lexer.get_reg_ids_from_capture_id(capture_id)};
-                    if (false == register_ids.has_value()) {
-                        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
-                    }
-
-                    auto const [start_reg_id, end_reg_id]{register_ids.value()};
-                    auto const start_positions{token_view.get_reversed_reg_positions(start_reg_id)};
-                    auto const end_positions{token_view.get_reversed_reg_positions(end_reg_id)};
-
-                    // TODO clpsls: change to store as an array?
-                    auto capture_name{lexer.m_id_symbol.at(capture_id)};
-                    if (false == start_positions.empty() && -1 < start_positions[0]
-                        && false == end_positions.empty() && -1 < end_positions[0])
-                    {
-                        auto capture_view{token_view};
-                        capture_view.set_start_pos(start_positions[0]);
-                        capture_view.set_end_pos(end_positions[0]);
-
-                        logtype_dict_entry.add_dictionary_var();
-                        m_current_parsed_message.add_unordered_value(capture_view.to_string());
-                        m_current_schema.insert_unordered(m_archive_writer->add_node(
-                                capture_node_id,
-                                NodeType::VarString,
-                                capture_name
-                        ));
-                        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                                token_view.to_string_view(),
-                                capture_name
-                        ));
-                        SPDLOG_INFO(
-                                "[clpsls]\tcapture name: {} value: {}",
-                                capture_name,
-                                capture_view.to_string()
-                        );
-                    }
-                }
-
-                m_current_schema.end_unordered_object(capture_start);
-                m_current_schema.insert_unordered(capture_node_id);
+                auto var_node_id{m_archive_writer->add_node(
+                        parent_node_id,
+                        NodeType::CompositeVar,
+                        token_name
+                )};
+                YSTDLIB_ERROR_HANDLING_TRYV(store_capture_groups(
+                        event,
+                        token_view,
+                        opt_capture_ids.value(),
+                        var_node_id,
+                        logtype_entry
+                ));
+                m_current_schema.insert_unordered(var_node_id);
                 break;
             }
         }
     }
 
-    if (logtype_dict_entry.get_value().empty()) {
-        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
-    }
-
-    m_current_parsed_message.add_unordered_value(logtype_dict_entry);
+    m_current_parsed_message.add_unordered_value(logtype_entry);
     m_current_schema.insert_unordered(
             m_archive_writer->add_node(parent_node_id, NodeType::LogType, cLogType)
     );
-    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(logtype_dict_entry));
+    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(logtype_entry));
     m_current_schema.end_unordered_object(msg_start);
+    return ystdlib::error_handling::success();
+}
+
+auto JsonParser::store_capture_groups(
+        log_surgeon::LogEvent const& event,
+        log_surgeon::Token root_var,
+        std::vector<log_surgeon::capture_id_t>& capture_ids,
+        int32_t root_var_node_id,
+        clp_s::LogTypeDictionaryEntry& logtype_entry
+) -> ystdlib::error_handling::Result<void> {
+    static constexpr std::string_view cFullMatch{"FullMatch"};
+
+    auto capture_start{m_current_schema.start_unordered_object(NodeType::CompositeVar)};
+
+    m_current_parsed_message.add_unordered_value(root_var.to_string());
+    m_current_schema.insert_unordered(
+            m_archive_writer->add_node(root_var_node_id, NodeType::VarString, cFullMatch)
+    );
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            m_archive_writer->update_var_stats(root_var.to_string_view(), cFullMatch)
+    );
+
+    sort_capture_ids(event, root_var, capture_ids);
+    auto prev_leaf_end_pos{root_var.get_start_pos()};
+    for (auto i{0}; i < capture_ids.size(); i++) {
+        auto const capture_id{capture_ids[i]};
+        auto const [start_pos, end_pos]{
+                YSTDLIB_ERROR_HANDLING_TRYX(get_capture_positions(event, root_var, capture_id))
+        };
+
+        auto const& lexer{event.get_log_parser().m_lexer};
+        auto const capture_name{lexer.m_id_symbol.at(capture_id)};
+        auto capture_view{root_var};
+        capture_view.set_start_pos(start_pos);
+        capture_view.set_end_pos(end_pos);
+
+        m_current_parsed_message.add_unordered_value(capture_view.to_string());
+        m_current_schema.insert_unordered(
+                m_archive_writer->add_node(root_var_node_id, NodeType::VarString, capture_name)
+        );
+        YSTDLIB_ERROR_HANDLING_TRYV(
+                m_archive_writer->update_var_stats(root_var.to_string_view(), capture_name)
+        );
+        SPDLOG_DEBUG(
+                "[clpsls]\tcapture name: {} value: {}",
+                capture_name,
+                capture_view.to_string()
+        );
+
+        if (is_leaf_capture(event, root_var, capture_ids, i, end_pos)) {
+            auto static_text{root_var};
+            static_text.set_start_pos(prev_leaf_end_pos);
+            static_text.set_end_pos(capture_view.get_start_pos());
+            logtype_entry.encode_constant(static_text.to_string());
+            logtype_entry.add_dictionary_var();
+            prev_leaf_end_pos = capture_view.get_end_pos();
+        }
+    }
+    auto remaining_static_text{root_var};
+    remaining_static_text.set_start_pos(prev_leaf_end_pos);
+    remaining_static_text.set_end_pos(root_var.get_end_pos());
+    logtype_entry.encode_constant(remaining_static_text.to_string());
+
+    m_current_schema.end_unordered_object(capture_start);
     return ystdlib::error_handling::success();
 }
 }  // namespace clp_s

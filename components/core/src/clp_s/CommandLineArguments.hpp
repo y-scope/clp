@@ -267,7 +267,6 @@ private:
 
     OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
 
-    // clpsls Prototype
     bool m_experimental{false};
     std::optional<Path> m_log_surgeon_schema_path;
 };

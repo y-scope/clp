@@ -368,7 +368,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::Object:
             case NodeType::StructuredArray:
             case NodeType::LogMessage:
-            case NodeType::CaptureVar:
+            case NodeType::CompositeVar:
             case NodeType::Unknown:
                 break;
         }

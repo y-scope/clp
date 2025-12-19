@@ -5,7 +5,9 @@
 #include <string>
 #include <variant>
 
-#include "../clp/EncodedVariableInterpreter.hpp"
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+
 #include "BufferViewReader.hpp"
 #include "ColumnWriter.hpp"
 #include "FloatFormatEncoding.hpp"
@@ -213,8 +215,6 @@ auto
 LogTypeColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
         -> void {
     auto const value{m_logtypes[cur_message]};
-    // auto const logtype_id{LogTypeColumnWriter::get_encoded_log_dict_id(value)};
-    // auto& entry{m_log_dict->get_entry(logtype_id)};
     auto& entry{m_log_dict->get_entry(static_cast<clp::logtype_dictionary_id_t>(value))};
 
     if (false == entry.initialized()) {
@@ -228,7 +228,6 @@ auto LogTypeColumnReader::extract_escaped_string_value_into_buffer(
         uint64_t cur_message,
         std::string& buffer
 ) -> void {
-    // TODO: escape while decoding instead of after.
     std::string tmp;
     extract_string_value_into_buffer(cur_message, tmp);
     StringUtils::escape_json_string(buffer, tmp);

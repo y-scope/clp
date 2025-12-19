@@ -242,6 +242,8 @@ set(
         DictionaryWriter.hpp
         ErrorCode.cpp
         ErrorCode.hpp
+        experimental_helpers.cpp
+        experimental_helpers.hpp
         FloatFormatEncoding.cpp
         FloatFormatEncoding.hpp
         JsonFileIterator.cpp

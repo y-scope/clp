@@ -1,6 +1,7 @@
 #include "SchemaReader.hpp"
 
 #include <stack>
+#include <stdexcept>
 #include <string>
 
 #include <fmt/core.h>
@@ -701,9 +702,9 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_special_key(key);
                 break;
             }
-            case NodeType::CaptureVar: {
+            case NodeType::CompositeVar: {
                 throw(std::runtime_error(
-                        "generate_json_template found CaptureVar outside of LogMessage."
+                        "generate_json_template found CompositeVar outside of LogMessage."
                 ));
             }
             case NodeType::Metadata:
@@ -729,7 +730,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
     for (size_t schema_idx{0}; schema_idx < schema.size(); schema_idx++) {
         auto const global_column_id{schema[schema_idx]};
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
-            if (Schema::get_unordered_object_type(global_column_id) != NodeType::CaptureVar) {
+            if (Schema::get_unordered_object_type(global_column_id) != NodeType::CompositeVar) {
                 return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
             }
 
@@ -738,9 +739,9 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
             auto const capture_id{m_global_schema_tree->find_matching_subtree_root_in_subtree(
                     log_msg_id,
                     get_first_column_in_span(sub_object_schema),
-                    NodeType::CaptureVar
+                    NodeType::CompositeVar
             )};
-            column_idx = YSTDLIB_ERROR_HANDLING_TRYX(generate_capture_var_template(capture_id));
+            column_idx = YSTDLIB_ERROR_HANDLING_TRYX(generate_composite_var_template(capture_id));
             schema_idx += length;
         } else {
             auto const& node{m_global_schema_tree->get_node(global_column_id)};
@@ -778,7 +779,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                     column_idx++;
                     break;
                 }
-                case NodeType::CaptureVar:
+                case NodeType::CompositeVar:
                 case NodeType::LogMessage:
                 case NodeType::Object:
                 case NodeType::StructuredArray:
@@ -797,26 +798,26 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
     return column_idx;
 }
 
-auto SchemaReader::generate_capture_var_template(int32_t capture_id)
+/**
+ * Nested capture groups are currently flattened into the same unordered object. This makes finding
+ * a nested unordered object unsupported until the nested capture group implementation is revisited.
+ */
+auto SchemaReader::generate_composite_var_template(int32_t var_id)
         -> ystdlib::error_handling::Result<size_t> {
-    auto capture_it{m_global_id_to_unordered_object.find(capture_id)};
-    if (m_global_id_to_unordered_object.end() == capture_it) {
+    auto var_it{m_global_id_to_unordered_object.find(var_id)};
+    if (m_global_id_to_unordered_object.end() == var_it) {
         return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
     }
 
     m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
-    m_json_serializer.add_special_key(m_global_schema_tree->get_node(capture_id).get_key_name());
+    m_json_serializer.add_special_key(m_global_schema_tree->get_node(var_id).get_key_name());
 
-    auto column_idx{capture_it->second.first};
-    auto const schema{capture_it->second.second};
+    auto column_idx{var_it->second.first};
+    auto const schema{var_it->second.second};
     for (size_t schema_idx{0}; schema_idx < schema.size(); schema_idx++) {
         auto const global_column_id{schema[schema_idx]};
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
-            // TODO clpsls support nested capture groups
-            // if (Schema::get_unordered_object_type(global_column_id) != NodeType::CaptureVar) {
-            //     return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
-            // }
         }
         auto const& node{m_global_schema_tree->get_node(global_column_id)};
         switch (node.get_type()) {
@@ -853,7 +854,7 @@ auto SchemaReader::generate_capture_var_template(int32_t capture_id)
                 column_idx++;
                 break;
             }
-            case NodeType::CaptureVar:
+            case NodeType::CompositeVar:
             case NodeType::LogMessage:
             case NodeType::Object:
             case NodeType::StructuredArray:
