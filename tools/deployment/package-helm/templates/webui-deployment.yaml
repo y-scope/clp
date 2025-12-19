@@ -59,11 +59,18 @@ spec:
               value: "4000"
             - name: "RATE_LIMIT"
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
+            {{- with .Values.clpConfig.stream_output.storage }}
+            {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
+            - name: "AWS_ACCESS_KEY_ID"
+              value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
+            - name: "AWS_SECRET_ACCESS_KEY"
+              value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: "webui"
               containerPort: 4000
           volumeMounts:
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "client-settings"
               mountPath: "/opt/clp/var/www/webui/client/settings.json"
               subPath: "webui-client-settings.json"
@@ -72,11 +79,21 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
+            {{- end }}
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            {{- end }}
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "streams"
               ) | quote }}
               mountPath: "/var/data/streams"
+            {{- end }}
           command: [
             "/opt/clp/bin/node-22",
             "/opt/clp/var/www/webui/server/dist/src/main.js"
@@ -89,15 +106,25 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
-        - {{- include "clp.logsInputVolume" . | nindent 10 }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "shared-data"
-            "name" "streams"
-          ) | nindent 10 }}
         - name: "client-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- with .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: {{ . | quote }}
+            type: "Directory"
+        {{- end }}
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
+        {{- end }}

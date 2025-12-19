@@ -6,78 +6,196 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
 data:
   clp-config.yaml: |
+    {{- with .Values.clpConfig.api_server }}
+    api_server:
+      default_max_num_query_results: {{ .default_max_num_query_results | int }}
+      host: "localhost"
+      port: 3001
+      query_job_polling:
+        initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
+        max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
+    {{- else }}
+    api_server: null
+    {{- end }}
+    {{- with .Values.clpConfig.archive_output }}
     archive_output:
-      compression_level: {{ .Values.clpConfig.archive_output.compression_level }}
+      compression_level: {{ .compression_level | int }}
+      {{ with .retention_period }}
+      retention_period: {{ . | int }}
+      {{ else }}
+      retention_period: null
+      {{ end }}
       storage:
-        directory: "/var/data/archives"
+        {{- if eq .storage.type "fs" }}
         type: "fs"
-      target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
-      target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
-        | int }}
-      target_encoded_file_size: {{ .Values.clpConfig.archive_output.target_encoded_file_size
-        | int }}
-      target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
-        | int }}
+        directory: "/var/data/archives"
+        {{- else }}
+        type: "s3"
+        staging_directory: "/var/data/staged-archives"
+        {{- with .storage.s3_config }}
+        s3_config:
+          endpoint_url: {{ .endpoint_url | default "null" }}
+          region_code: {{ .region_code | quote }}
+          bucket: {{ .bucket | quote }}
+          key_prefix: {{ .key_prefix | quote }}
+          {{- with .aws_authentication }}
+          aws_authentication:
+            type: {{ .type | quote }}
+            {{- if eq .type "credentials" }}
+            credentials:
+              access_key_id: {{ .credentials.access_key_id | quote }}
+              secret_access_key: {{ .credentials.secret_access_key | quote }}
+            {{- end }}
+            {{- if eq .type "profile" }}
+            profile: {{ .profile | quote }}
+            {{- end }}
+          {{- end }}{{/* with .aws_authentication */}}
+        {{- end }}{{/* with .storage.s3_config */}}
+        {{- end }}{{/* if eq .storage.type "fs" */}}
+      target_archive_size: {{ .target_archive_size | int }}
+      target_dictionaries_size: {{ .target_dictionaries_size | int }}
+      target_encoded_file_size: {{ .target_encoded_file_size | int }}
+      target_segment_size: {{ .target_segment_size | int }}
+    {{- end }}{{/* with .Values.clpConfig.archive_output */}}
+    {{- with .Values.clpConfig.aws_config_directory }}
+    aws_config_directory: {{ . | quote }}
+    {{- else }}
+    aws_config_directory: null
+    {{- end }}
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
       max_concurrent_tasks_per_job: {{
-        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
+        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
+      type: {{ .Values.clpConfig.compression_scheduler.type | quote }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
     database:
       auto_commit: false
       compress: true
-      host: {{ include "clp.fullname" . }}-database
-      name: {{ .Values.clpConfig.database.name | quote }}
+      host: "{{ include "clp.fullname" . }}-database"
+      names:
+        clp: {{ .Values.clpConfig.database.names.clp | quote }}
       port: 3306
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
+    garbage_collector:
+      logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
+      sweep_interval:
+        archive: {{ .Values.clpConfig.garbage_collector.sweep_interval.archive | int }}
+        search_result: {{ .Values.clpConfig.garbage_collector.sweep_interval.search_result | int }}
     logs_directory: "/var/log"
+    {{- with .Values.clpConfig.logs_input }}
     logs_input:
-      directory: "/mnt/logs"
+      {{- if eq .type "fs" }}
       type: "fs"
+      directory: "/mnt/logs"
+      {{- else }}
+      type: "s3"
+      {{- with .aws_authentication }}
+      aws_authentication:
+        type: {{ .type | quote }}
+        {{- if eq .type "credentials" }}
+        credentials:
+          access_key_id: {{ .credentials.access_key_id | quote }}
+          secret_access_key: {{ .credentials.secret_access_key | quote }}
+        {{- end }}
+        {{- if eq .type "profile" }}
+        profile: {{ .profile | quote }}
+        {{- end }}
+      {{- end }}{{/* with .aws_authentication */}}
+      {{- end }}{{/* if eq .type "fs" */}}
+    {{- end }}{{/* with .Values.clpConfig.logs_input */}}
+    {{- with .Values.clpConfig.log_ingestor }}
+    log_ingestor:
+      buffer_flush_threshold: {{ .buffer_flush_threshold | int }}
+      buffer_flush_timeout: {{ .buffer_flush_timeout | int }}
+      channel_capacity: {{ .channel_capacity | int }}
+      host: "localhost"
+      logging_level: {{ .logging_level | quote }}
+      port: 3002
+    {{- end }}
+    {{- with .Values.clpConfig.mcp_server }}
+    mcp_server:
+      host: "localhost"
+      logging_level: {{ .logging_level | quote }}
+      port: 8000
+    {{- else }}
+    mcp_server: null
+    {{- end }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    presto: {{ .Values.clpConfig.presto }}
     query_scheduler:
-      host: {{ include "clp.fullname" . }}-query-scheduler
+      host: "{{ include "clp.fullname" . }}-query-scheduler"
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
       num_archives_to_search_per_sub_job: {{
-        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
+        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job | int }}
       port: 7000
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
-      host: {{ include "clp.fullname" . }}-queue
+      host: "{{ include "clp.fullname" . }}-queue"
       port: 5672
     redis:
-      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
-      host: {{ include "clp.fullname" . }}-redis
+      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database | int }}
+      host: "{{ include "clp.fullname" . }}-redis"
       port: 6379
-      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
+      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
     reducer:
       base_port: 14009
-      host: {{ include "clp.fullname" . }}-reducer
+      host: "{{ include "clp.fullname" . }}-reducer"
       logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
-      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
+      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval | int }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
-      host: {{ include "clp.fullname" . }}-results-cache
+      host: "{{ include "clp.fullname" . }}-results-cache"
       port: 27017
+      {{ with .Values.clpConfig.results_cache.retention_period }}
+      retention_period: {{ . | int }}
+      {{ else }}
+      retention_period: null
+      {{ end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    {{- with .Values.clpConfig.stream_output }}
     stream_output:
       storage:
-        directory: "/var/data/streams"
+        {{- if eq .storage.type "fs" }}
         type: "fs"
-      target_uncompressed_size: {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }}
+        directory: "/var/data/streams"
+        {{- else }}
+        type: "s3"
+        staging_directory: "/var/data/staged-streams"
+        {{- with .storage.s3_config }}
+        s3_config:
+          endpoint_url: {{ .endpoint_url | default "null" }}
+          region_code: {{ .region_code | quote }}
+          bucket: {{ .bucket | quote }}
+          key_prefix: {{ .key_prefix | quote }}
+          {{- with .aws_authentication }}
+          aws_authentication:
+            type: {{ .type | quote }}
+            {{- if eq .type "credentials" }}
+            credentials:
+              access_key_id: {{ .credentials.access_key_id | quote }}
+              secret_access_key: {{ .credentials.secret_access_key | quote }}
+            {{- end }}
+            {{- if eq .type "profile" }}
+            profile: {{ .profile | quote }}
+            {{- end }}
+          {{- end }}{{/* with .aws_authentication */}}
+        {{- end }}{{/* with .storage.s3_config */}}
+        {{- end }}{{/* if eq .storage.type "fs" */}}
+      target_uncompressed_size: {{ .target_uncompressed_size | int }}
+    {{- end }}{{/* with .Values.clpConfig.stream_output */}}
     tmp_directory: "/var/tmp"
     webui:
       host: "localhost"
       port: 4000
-      rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
+      rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
 
@@ -114,7 +232,11 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+      {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
+      {{- else }}
+      "LogsInputRootDir": null,
+      {{- end }}
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
@@ -128,7 +250,7 @@ data:
     {
       "SqlDbHost": "{{ include "clp.fullname" . }}-database",
       "SqlDbPort": 3306,
-      "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
+      "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
       "SqlDbQueryJobsTableName": "query_jobs",
       "SqlDbCompressionJobsTableName": "compression_jobs",
       "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
@@ -140,14 +262,31 @@ data:
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+      {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
+      {{- else }}
+      "LogsInputRootDir": null,
+      {{- end }}
+      {{- with .Values.clpConfig.stream_output.storage }}
+      {{- if eq .type "fs" }}
       "StreamFilesDir": "/var/data/streams",
-      "StreamTargetUncompressedSize":
-        {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
-      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
+      {{- else }}
+      "StreamFilesDir": null,
+      "StreamFilesS3Region": {{ .s3_config.region_code | quote }},
+      "StreamFilesS3PathPrefix": "{{ .s3_config.bucket }}/{{ .s3_config.key_prefix }}",
+      {{- if eq .s3_config.aws_authentication.type "profile" }}
+      "StreamFilesS3Profile": {{ .s3_config.aws_authentication.profile | quote }},
+      {{- else }}
+      "StreamFilesS3Profile": null,
+      {{- end }}
+      {{- end }}{{/* if eq .type "fs" */}}
+      {{- end }}{{/* with .Values.clpConfig.stream_output.storage */}}
+      "StreamTargetUncompressedSize":
+        {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
+      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level | int }},
       "ArchiveOutputTargetArchiveSize":
         {{ .Values.clpConfig.archive_output.target_archive_size | int }},
       "ArchiveOutputTargetDictionariesSize":
@@ -158,6 +297,11 @@ data:
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      {{- with .Values.clpConfig.presto }}
+      "PrestoHost": {{ .host | quote }},
+      "PrestoPort": {{ .port | int }}
+      {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
+      {{- end }}
     }

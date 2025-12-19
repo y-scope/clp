@@ -1,26 +1,25 @@
+{{- if eq .Values.clpConfig.logs_input.type "s3" }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp.fullname" . }}-query-scheduler
+  name: {{ include "clp.fullname" . }}-log-ingestor
   labels:
     {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "query-scheduler"
+    app.kubernetes.io/component: "log-ingestor"
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "query-scheduler"
+      app.kubernetes.io/component: "log-ingestor"
   template:
     metadata:
       labels:
         {{- include "clp.labels" . | nindent 8 }}
-        app.kubernetes.io/component: "query-scheduler"
+        app.kubernetes.io/component: "log-ingestor"
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
-      hostname: {{ include "clp.fullname" . }}-query-scheduler
-      subdomain: {{ include "clp.fullname" . }}-query-scheduler
-      terminationGracePeriodSeconds: 10
+      terminationGracePeriodSeconds: 60
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
@@ -31,26 +30,11 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "service"
-            "name" "queue"
-          ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "service"
-            "name" "redis"
-          ) | nindent 10 }}
       containers:
-        - name: "query-scheduler"
+        - name: "log-ingestor"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
-            - {{- include "clp.celeryResultBackendEnvVar" (dict
-                "root" .
-                "database" .Values.clpConfig.redis.query_backend_database
-              ) | nindent 14 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -61,44 +45,44 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
-            - name: "CLP_LOGGING_LEVEL"
-              value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
-              value: "/var/log/query_scheduler"
-            - name: "PYTHONPATH"
-              value: "/opt/clp/lib/python3/site-packages"
+              value: "/var/log/log_ingestor"
+            - name: "RUST_LOG"
+              value: {{ .Values.clpConfig.log_ingestor.logging_level | quote }}
           ports:
-            - name: "query-scheduler"
-              containerPort: 7000
+            - name: "log-ingestor"
+              containerPort: 3002
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
-                "component_category" "query-scheduler"
+                "component_category" "log-ingestor"
                 "name" "logs"
               ) | quote }}
-              mountPath: "/var/log/query_scheduler"
+              mountPath: "/var/log/log_ingestor"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
           command: [
-            "python3", "-u",
-            "-m", "job_orchestration.scheduler.query.query_scheduler",
-            "--config", "/etc/clp-config.yaml"
+            "/opt/clp/bin/log-ingestor",
+            "--config", "/etc/clp-config.yaml",
+            "--host", "0.0.0.0",
+            "--port", "3002"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            tcpSocket:
-              port: 7000
+            httpGet: &log-ingestor-health-check
+              path: "/health"
+              port: 3002
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            tcpSocket:
-              port: 7000
+            httpGet: *log-ingestor-health-check
       volumes:
         - {{- include "clp.pvcVolume" (dict
             "root" .
-            "component_category" "query-scheduler"
+            "component_category" "log-ingestor"
             "name" "logs"
           ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+{{- end }}
