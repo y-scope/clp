@@ -9,8 +9,8 @@ import {
 import useSearchStore from "../../../../SearchState/index";
 import usePrestoSearchState from "../../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
-import {handlePrestoGuidedQueryCancel} from "../../presto-guided-search-requests";
-import {handlePrestoQueryCancel} from "../../presto-search-requests";
+import {handlePrestoQueryCancel} from "../../Freeform/presto-search-requests";
+import {handlePrestoGuidedQueryCancel} from "../../Guided/presto-guided-search-requests";
 import styles from "./index.module.css";
 
 

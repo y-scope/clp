@@ -33,7 +33,7 @@ spec:
           imagePullPolicy: "Always"
           env:
             - name: "MYSQL_DATABASE"
-              value: {{ .Values.clpConfig.database.name | quote }}
+              value: {{ .Values.clpConfig.database.names.clp | quote }}
             - name: "MYSQL_USER"
               valueFrom:
                 secretKeyRef:
@@ -57,9 +57,15 @@ spec:
               mountPath: "/etc/mysql/conf.d/logging.cnf"
               subPath: "mysql-logging.cnf"
               readOnly: true
-            - name: "database-data"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "database"
+                "name" "data"
+              ) | quote }}
               mountPath: "/var/lib/mysql"
-            - name: "database-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "database"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/mysql"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
@@ -82,7 +88,10 @@ spec:
     whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
-        name: "database-data"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "database"
+            "name" "data"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"
@@ -94,7 +103,10 @@ spec:
           requests:
             storage: "20Gi"
     - metadata:
-        name: "database-logs"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "database"
+            "name" "logs"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"
