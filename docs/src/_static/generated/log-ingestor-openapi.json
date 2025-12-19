@@ -249,7 +249,7 @@
           },
           "region": {
             "type": "string",
-            "description": "AWS service region. Use the default region if not provided.",
+            "description": "AWS service region. Must be provided if using the default AWS S3 endpoint.",
             "minLength": 1
           },
           "tags": {

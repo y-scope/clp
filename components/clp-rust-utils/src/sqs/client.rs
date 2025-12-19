@@ -5,8 +5,6 @@ use aws_sdk_sqs::{
 };
 use non_empty_string::NonEmptyString;
 
-use crate::aws::AWS_DEFAULT_REGION;
-
 /// Creates a new SQS client.
 /// The client is configured using the latest AWS SDK behavior version.
 ///
@@ -17,7 +15,7 @@ use crate::aws::AWS_DEFAULT_REGION;
 pub async fn create_new_client(
     access_key_id: &str,
     secret_access_key: &str,
-    region_id: Option<&NonEmptyString>,
+    region_id: &str,
     endpoint: Option<&NonEmptyString>,
 ) -> Client {
     let credential = Credentials::new(
@@ -28,11 +26,9 @@ pub async fn create_new_client(
         "clp-credential-provider",
     );
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let mut config_builder = Builder::from(&base_config).credentials_provider(credential);
-    config_builder.set_region(Some(Region::new(region_id.map_or_else(
-        || AWS_DEFAULT_REGION.to_owned(),
-        std::string::ToString::to_string,
-    ))));
+    let mut config_builder = Builder::from(&base_config)
+        .credentials_provider(credential)
+        .region(Some(Region::new(region_id.to_string())));
     config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     Client::from_conf(config_builder.build())
 }

@@ -14,7 +14,7 @@ pub mod s3 {
         #[schema(value_type = String, min_length = 1)]
         pub key_prefix: NonEmptyString,
 
-        /// AWS service region. Use the default region if not provided.
+        /// AWS service region. Must be provided if using the default AWS S3 endpoint.
         #[serde(default)]
         #[schema(value_type = String, min_length = 1)]
         pub region: Option<NonEmptyString>,

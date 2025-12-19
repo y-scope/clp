@@ -55,9 +55,13 @@ impl SqsClientWrapper {
         access_key_id: &str,
         secret_access_key: &str,
     ) -> Self {
-        let sqs_client =
-            clp_rust_utils::sqs::create_new_client(access_key_id, secret_access_key, region, None)
-                .await;
+        let sqs_client = clp_rust_utils::sqs::create_new_client(
+            access_key_id,
+            secret_access_key,
+            region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str),
+            None,
+        )
+        .await;
         Self::from(sqs_client)
     }
 }
