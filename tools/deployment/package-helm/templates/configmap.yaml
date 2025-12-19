@@ -41,7 +41,8 @@ data:
       auto_commit: false
       compress: true
       host: {{ include "clp.fullname" . }}-database
-      name: {{ .Values.clpConfig.database.name | quote }}
+      names:
+        clp: {{ .Values.clpConfig.database.names.clp | quote }}
       port: 3306
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
@@ -139,7 +140,7 @@ data:
     {
       "SqlDbHost": "{{ include "clp.fullname" . }}-database",
       "SqlDbPort": 3306,
-      "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
+      "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
       "SqlDbQueryJobsTableName": "query_jobs",
       "SqlDbCompressionJobsTableName": "compression_jobs",
       "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
