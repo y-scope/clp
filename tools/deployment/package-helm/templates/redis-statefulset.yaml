@@ -45,9 +45,15 @@ spec:
               mountPath: "/etc/redis/redis.conf"
               subPath: "redis.conf"
               readOnly: true
-            - name: "redis-data"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "redis"
+                "name" "data"
+              ) | quote }}
               mountPath: "/data"
-            - name: "redis-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "redis"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/redis"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
@@ -70,7 +76,10 @@ spec:
     whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
-        name: "redis-data"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "redis"
+            "name" "data"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"
@@ -82,7 +91,10 @@ spec:
           requests:
             storage: "10Gi"
     - metadata:
-        name: "redis-logs"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "redis"
+            "name" "logs"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"

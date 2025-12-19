@@ -14,17 +14,17 @@ import useSearchStore from "../../../SearchState";
 import usePrestoSearchState from "../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
-import {handleSwitchToFreeform} from "../presto-guided-search-requests";
-import {handleSwitchToGuided} from "../presto-search-requests";
+import {handleSwitchToGuided} from "../Freeform/presto-search-requests";
+import {handleSwitchToFreeform} from "../Guided/presto-guided-search-requests";
 import styles from "./index.module.css";
 
 
 /**
- * Renders the button to switch Presto SQL interface.
+ * Renders the SQL interface selector.
  *
  * @return
  */
-const SqlInterfaceButton = () => {
+const SqlInterfaceSelector = () => {
     const {token} = theme.useToken();
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
     const searchUiState = useSearchStore((state) => state.searchUiState);
@@ -82,4 +82,4 @@ const SqlInterfaceButton = () => {
     );
 };
 
-export default SqlInterfaceButton;
+export default SqlInterfaceSelector;
