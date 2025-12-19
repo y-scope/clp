@@ -83,7 +83,7 @@ data:
         | quote }}
     {{- with .Values.clpConfig.mcp_server }}
     mcp_server:
-      host: {{ include "clp.fullname" $ }}-mcp-server
+      host: "localhost"
       port: 8000
       logging_level: {{ .logging_level | quote }}
     {{- else }}
