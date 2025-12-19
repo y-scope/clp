@@ -244,7 +244,8 @@ data:
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       {{- end }}
-      {{- if eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "profile" }}
+      {{- if and (eq .Values.clpConfig.stream_output.storage.type "s3")
+                 (eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "profile") }}
       "StreamFilesS3Profile": {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.profile | quote }},
       {{- else }}
       "StreamFilesS3Profile": null,
