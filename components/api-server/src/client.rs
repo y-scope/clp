@@ -2,7 +2,6 @@ use std::pin::Pin;
 
 use async_stream::stream;
 use clp_rust_utils::{
-    aws::AWS_DEFAULT_REGION,
     clp_config::{
         AwsAuthentication,
         package::{
@@ -332,11 +331,8 @@ impl Client {
         let s3_client = clp_rust_utils::s3::create_new_client(
             credentials.access_key_id.as_str(),
             credentials.secret_access_key.as_str(),
-            s3_config
-                .region_code
-                .as_ref()
-                .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
-            None,
+            s3_config.region_code.as_ref(),
+            s3_config.endpoint_url.as_ref(),
         )
         .await;
 
