@@ -49,7 +49,6 @@ clpConfig:
     type: "celery"  # "celery" or "spider"
 
   query_scheduler:
-    port: 7000
     jobs_poll_delay: 0.1  # seconds
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
