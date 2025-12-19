@@ -7,7 +7,7 @@ import {ClpIoPartialConfigSchema} from "./compression.js";
 
 
 /**
- * Base compression metadata fields (internal only).
+ * Base compression metadata fields.
  */
 const CompressionMetadataBaseSchema = Type.Object({
     _id: Type.Number(),
@@ -35,7 +35,7 @@ const CompressionMetadataSchema = Type.Intersect([
 type CompressionMetadata = Static<typeof CompressionMetadataSchema>;
 
 /**
- * Compression metadata including decoded IO config but excluding the encoded blob.
+ * Compression metadata including decoded IO config.
  */
 const CompressionMetadataDecodedSchema = Type.Intersect(
     [
