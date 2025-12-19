@@ -1,3 +1,5 @@
+{{- if or .Values.clpConfig.archive_output.retention_period
+          .Values.clpConfig.results_cache.retention_period }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -120,3 +122,4 @@ spec:
             path: "{{ .Values.clpConfig.aws_config_directory }}"
             type: "Directory"
         {{- end }}
+{{- end }}

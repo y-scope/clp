@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.api_server }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -115,3 +116,4 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+{{- end }}

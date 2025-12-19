@@ -1,4 +1,5 @@
-{{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+{{- if and .Values.clpConfig.api_server
+           (eq .Values.clpConfig.stream_output.storage.type "s3") }}
 {{- include "clp.createLocalPv" (dict
   "root" .
   "component_category" "api-server"
