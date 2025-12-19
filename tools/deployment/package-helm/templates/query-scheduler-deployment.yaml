@@ -85,6 +85,14 @@ spec:
             "-m", "job_orchestration.scheduler.query.query_scheduler",
             "--config", "/etc/clp-config.yaml"
           ]
+          readinessProbe:
+            tcpSocket:
+              port: 7000
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: 7000
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
       volumes:
         - {{- include "clp.pvcVolume" (dict
             "root" .
