@@ -6,6 +6,25 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
 data:
   clp-config.yaml: |
+    archive_output:
+      compression_level: {{ .Values.clpConfig.archive_output.compression_level }}
+      storage:
+        directory: "/var/data/archives"
+        type: "fs"
+      target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
+      target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
+        | int }}
+      target_encoded_file_size: {{ .Values.clpConfig.archive_output.target_encoded_file_size
+        | int }}
+      target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
+        | int }}
+    compression_scheduler:
+      jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
+      logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
+      max_concurrent_tasks_per_job: {{
+        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
+    compression_worker:
+      logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
     database:
       auto_commit: false
@@ -16,9 +35,21 @@ data:
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
     logs_directory: "/var/log"
+    logs_input:
+      directory: "/mnt/logs"
+      type: "fs"
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    query_scheduler:
+      host: {{ include "clp.fullname" . }}-query-scheduler
+      jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
+      logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+      num_archives_to_search_per_sub_job: {{
+        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
+      port: 7000
+    query_worker:
+      logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
       host: {{ include "clp.fullname" . }}-queue
       port: 5672
@@ -27,11 +58,28 @@ data:
       host: {{ include "clp.fullname" . }}-redis
       port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
+    reducer:
+      base_port: 14009
+      host: {{ include "clp.fullname" . }}-reducer
+      logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
+      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: {{ include "clp.fullname" . }}-results-cache
       port: 27017
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    stream_output:
+      storage:
+        directory: "/var/data/streams"
+        type: "fs"
+      target_uncompressed_size: {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }}
+    tmp_directory: "/var/tmp"
+    webui:
+      host: "localhost"
+      port: 4000
+      rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
+      results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
+        | quote }}
 
   mysql-logging.cnf: |
     [mysqld]
@@ -60,3 +108,56 @@ data:
       path: /var/log/mongodb/mongod.log
       logAppend: true
       timeStampFormat: iso8601-local
+
+  webui-client-settings.json: |
+    {
+      "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+      "LogsInputRootDir": "/mnt/logs",
+      "MongoDbSearchResultsMetadataCollectionName":
+        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
+      "SqlDbClpArchivesTableName": "clp_archives",
+      "SqlDbClpDatasetsTableName": "clp_datasets",
+      "SqlDbClpFilesTableName": "clp_files",
+      "SqlDbClpTablePrefix": "clp_",
+      "SqlDbCompressionJobsTableName": "compression_jobs"
+    }
+
+  webui-server-settings.json: |
+    {
+      "SqlDbHost": "{{ include "clp.fullname" . }}-database",
+      "SqlDbPort": 3306,
+      "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
+      "SqlDbQueryJobsTableName": "query_jobs",
+      "SqlDbCompressionJobsTableName": "compression_jobs",
+      "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
+      "MongoDbPort": 27017,
+      "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
+      "MongoDbSearchResultsMetadataCollectionName":
+        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
+      "MongoDbStreamFilesCollectionName":
+        {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+      "ClientDir": "/opt/clp/var/www/webui/client",
+      "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+      "LogsInputRootDir": "/mnt/logs",
+      "StreamFilesDir": "/var/data/streams",
+      "StreamTargetUncompressedSize":
+        {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
+      "StreamFilesS3Region": null,
+      "StreamFilesS3PathPrefix": null,
+      "StreamFilesS3Profile": null,
+      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
+      "ArchiveOutputTargetArchiveSize":
+        {{ .Values.clpConfig.archive_output.target_archive_size | int }},
+      "ArchiveOutputTargetDictionariesSize":
+        {{ .Values.clpConfig.archive_output.target_dictionaries_size | int }},
+      "ArchiveOutputTargetEncodedFileSize":
+        {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
+      "ArchiveOutputTargetSegmentSize":
+        {{ .Values.clpConfig.archive_output.target_segment_size | int }},
+      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      "PrestoHost": null,
+      "PrestoPort": null
+    }
