@@ -1,15 +1,14 @@
 # External database setup
 
-This guide explains how to set up external databases for CLP instead of using the Docker Compose
-managed databases. If the host(s) on which you're running CLP are ephemeral, you should use external
-databases for metadata storage, and [object storage](guides-using-object-storage/index.md) for CLP's
-archives and streams; this will ensure data is persisted even if a host is replaced.
+This guide explains how to set up external databases for CLP instead of using the bundled databases.
+If the host(s) on which you're running CLP are ephemeral, you should use external databases for
+metadata storage, and [object storage](guides-using-object-storage/index.md) for CLP's archives and
+streams; this will ensure data is persisted even if a host is replaced.
 
 :::{warning}
-The [CLP Docker Compose project][docker-compose-orchestration] includes MariaDB/MongoDB databases by
-default. This guide is only for users who want to customize their deployment by using their own
-database servers or cloud-managed databases (e.g., [AWS RDS][aws-rds], [Azure
-Database][azure-databases]).
+Both the [Docker Compose project and Helm chart][orchestration-design] include MariaDB/MongoDB
+databases by default. This guide is only for users who want to use their own database servers or
+cloud-managed databases (e.g., [AWS RDS][aws-rds], [Azure Database][azure-databases]).
 :::
 
 CLP requires two databases:
@@ -205,7 +204,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 [aws-rds]: https://aws.amazon.com/rds/
 [azure-databases]: https://azure.microsoft.com/en-us/products/category/databases
-[docker-compose-orchestration]: ../dev-docs/design-deployment-orchestration.md#docker-compose-orchestration
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
 [multi-host-guide]: guides-multi-host.md#starting-clp
+[orchestration-design]: ../dev-docs/design-deployment-orchestration.md
