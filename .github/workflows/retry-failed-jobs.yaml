@@ -20,6 +20,9 @@ on:
     types:
       - "completed"
 
+permissions:
+  actions: "write"
+
 jobs:
   retry:
     name: "retry-failed-jobs"
@@ -31,11 +34,20 @@ jobs:
       && github.event.workflow_run.run_attempt == 1
     runs-on: "ubuntu-24.04"
     steps:
+      - name: "Log retry information"
+        run: |
+          echo "Retrying failed jobs for workflow run: ${{github.event.workflow_run.id}}"
+          echo "Original workflow: ${{github.event.workflow_run.name}}"
+          echo "Triggered by: ${{github.event.workflow_run.event}}"
+          echo "Conclusion: ${{github.event.workflow_run.conclusion}}"
+        shell: "bash"
+
       - name: "Re-run failed jobs"
         env:
           GH_TOKEN: "${{secrets.GITHUB_TOKEN}}"
         run: >-
           gh run rerun ${{github.event.workflow_run.id}}
           --failed
-          --repo ${{github.repository}}
+          --repo ${{github.repository}} ||
+          (echo "Failed to rerun workflow run ${{github.event.workflow_run.id}}" && exit 1)
         shell: "bash"
