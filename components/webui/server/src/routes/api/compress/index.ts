@@ -2,6 +2,7 @@ import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     ClpIoConfig,
+    CompressionJobFsInputConfig,
     CompressionJobCreationSchema,
     CompressionJobInputType,
     CompressionJobSchema,
@@ -66,7 +67,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             } = request.body;
 
             const jobConfig: ClpIoConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
-            jobConfig.input.paths_to_compress = paths.map(
+            // eslint-disable-next-line no-warning-comments
+            //TODO: Add support for S3 input
+            (jobConfig.input as CompressionJobFsInputConfig).paths_to_compress = paths.map(
                 (path) => CONTAINER_INPUT_LOGS_ROOT_DIR + path
             );
 

@@ -116,7 +116,6 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
                     const joinedPaths = paths.join(", ");
                     return (
                         <Text
-                            className={styles["pathText"] || ""}
                             copyable={{text: joinedPaths}}
                             ellipsis={{tooltip: joinedPaths}}
                         >
