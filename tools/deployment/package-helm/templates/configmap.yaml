@@ -26,6 +26,11 @@ data:
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
+    garbage_collector:
+      logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
+      sweep_interval:
+        archive: {{ .Values.clpConfig.garbage_collector.sweep_interval.archive | int }}
+        search_result: {{ .Values.clpConfig.garbage_collector.sweep_interval.search_result | int }}
     database:
       auto_commit: false
       compress: true
@@ -67,6 +72,7 @@ data:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: {{ include "clp.fullname" . }}-results-cache
       port: 27017
+      retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
     stream_output:
       storage:
