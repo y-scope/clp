@@ -13,9 +13,9 @@
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
 #include <log_surgeon/BufferParser.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/Token.hpp>
-#include <log_surgeon/types.hpp>
 #include <simdjson.h>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -246,9 +246,9 @@ private:
     /**
      * Store the components of all the capture groups within `root_var` in the current parsed
      * message, clp-s schema, and dictionaries.
-     * @param event The log event containing the `root_var` and the `capture_ids`.
-     * @param root_var The root log surgeon variable token for the `capture_ids`.
-     * @param capture_ids The IDs of the capture group matches within `root_var`.
+     * @param event The log event containing the `root_var` and the `captures`.
+     * @param root_var The root log surgeon variable token for the `captures`.
+     * @param captures The capture group matches within `root_var`.
      * @param root_var_node_id The clp-s node ID representing the `root_var` of the capture groups.
      * @param logtype_entry The logtype dictionary entry being built for `event`.
      * @return A result containing an error code indicating the failure:
@@ -258,7 +258,7 @@ private:
     auto store_capture_groups(
             log_surgeon::LogEvent const& event,
             log_surgeon::Token root_var,
-            std::vector<log_surgeon::capture_id_t>& capture_ids,
+            std::vector<log_surgeon::finite_automata::Capture const*>& captures,
             int32_t root_var_node_id,
             clp_s::LogTypeDictionaryEntry& logtype_entry
     ) -> ystdlib::error_handling::Result<void>;

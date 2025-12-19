@@ -19,10 +19,10 @@
 #include <fmt/format.h>
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Constants.hpp>
+#include <log_surgeon/finite_automata/Capture.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/Token.hpp>
-#include <log_surgeon/types.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
@@ -1477,7 +1477,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
 
     clp_s::LogTypeDictionaryEntry logtype_entry{};
     logtype_entry.reserve_constant_length(view.size());
-    auto starting_token_idx{log_buf->has_timestamp() ? 0 : 1};
+    auto starting_token_idx{log_buf->has_header() ? 0 : 1};
     for (auto token_idx{starting_token_idx}; token_idx < log_buf->pos(); token_idx++) {
         auto token_view{log_buf->get_token(token_idx)};
         auto const token_type{token_view.get_type_ids()->at(0)};
@@ -1557,8 +1557,8 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             }
             default: {
                 auto const& lexer{event.get_log_parser().m_lexer};
-                auto opt_capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
-                if (false == opt_capture_ids.has_value()) {
+                auto opt_captures{lexer.get_captures_from_rule_id(token_type)};
+                if (false == opt_captures.has_value()) {
                     logtype_entry.add_dictionary_var();
                     m_current_parsed_message.add_unordered_value(token_view.to_string());
                     m_current_schema.insert_unordered(m_archive_writer->add_node(
@@ -1581,7 +1581,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 YSTDLIB_ERROR_HANDLING_TRYV(store_capture_groups(
                         event,
                         token_view,
-                        opt_capture_ids.value(),
+                        opt_captures.value(),
                         var_node_id,
                         logtype_entry
                 ));
@@ -1603,7 +1603,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
 auto JsonParser::store_capture_groups(
         log_surgeon::LogEvent const& event,
         log_surgeon::Token root_var,
-        std::vector<log_surgeon::capture_id_t>& capture_ids,
+        std::vector<log_surgeon::finite_automata::Capture const*>& captures,
         int32_t root_var_node_id,
         clp_s::LogTypeDictionaryEntry& logtype_entry
 ) -> ystdlib::error_handling::Result<void> {
@@ -1619,37 +1619,34 @@ auto JsonParser::store_capture_groups(
             m_archive_writer->update_var_stats(root_var.to_string_view(), cFullMatch)
     );
 
-    sort_capture_ids(event, root_var, capture_ids);
+    sort_capture_ids(event, root_var, captures);
     auto prev_leaf_end_pos{root_var.get_start_pos()};
-    for (auto i{0}; i < capture_ids.size(); i++) {
-        auto const capture_id{capture_ids[i]};
+    for (auto i{0}; i < captures.size(); i++) {
+        auto const* const capture{captures[i]};
         auto const [start_pos, end_pos]{
-                YSTDLIB_ERROR_HANDLING_TRYX(get_capture_positions(event, root_var, capture_id))
+                YSTDLIB_ERROR_HANDLING_TRYX(get_capture_positions(event, root_var, capture))
         };
 
-        auto const& lexer{event.get_log_parser().m_lexer};
-        auto const capture_name{lexer.m_id_symbol.at(capture_id)};
-        auto capture_view{root_var};
-        capture_view.set_start_pos(start_pos);
-        capture_view.set_end_pos(end_pos);
-
+        auto capture_view{root_var.get_sub_token(start_pos, end_pos)};
         m_current_parsed_message.add_unordered_value(capture_view.to_string());
-        m_current_schema.insert_unordered(
-                m_archive_writer->add_node(root_var_node_id, NodeType::VarString, capture_name)
-        );
+        m_current_schema.insert_unordered(m_archive_writer->add_node(
+                root_var_node_id,
+                NodeType::VarString,
+                capture->get_name()
+        ));
         YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_var_stats(root_var.to_string_view(), capture_name)
+                m_archive_writer->update_var_stats(root_var.to_string_view(), capture->get_name())
         );
         SPDLOG_DEBUG(
                 "[clpsls]\tcapture name: {} value: {}",
-                capture_name,
+                capture->get_name(),
                 capture_view.to_string()
         );
 
-        if (is_leaf_capture(event, root_var, capture_ids, i, end_pos)) {
-            auto static_text{root_var};
-            static_text.set_start_pos(prev_leaf_end_pos);
-            static_text.set_end_pos(capture_view.get_start_pos());
+        if (is_leaf_capture(event, root_var, captures, i, end_pos)) {
+            auto static_text{
+                    root_var.get_sub_token(prev_leaf_end_pos, capture_view.get_start_pos())
+            };
             logtype_entry.encode_constant(static_text.to_string());
             logtype_entry.add_dictionary_var();
             prev_leaf_end_pos = capture_view.get_end_pos();
