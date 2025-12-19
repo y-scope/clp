@@ -156,7 +156,8 @@ clpConfig:
 
   # Presto client config
   presto: null
-  #   port: 30889
+  #   host: "localhost"
+  #   port: 8080
 
   # Location where other data (besides archives) are stored. It will be created if
   # it doesn't exist.

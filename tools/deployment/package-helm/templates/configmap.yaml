@@ -271,6 +271,11 @@ data:
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      {{- if .Values.clpConfig.presto }}
+      "PrestoHost": {{ .Values.clpConfig.presto.host | quote }},
+      "PrestoPort": {{ .Values.clpConfig.presto.port }}
+      {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
+      {{- end }}
     }
