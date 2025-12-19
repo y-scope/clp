@@ -59,11 +59,13 @@ spec:
               value: "4000"
             - name: "RATE_LIMIT"
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
-            {{- if and (eq .Values.clpConfig.stream_output.storage.type "s3") (eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "credentials") }}
+            {{- with .Values.clpConfig.stream_output.storage }}
+            {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
             - name: "AWS_ACCESS_KEY_ID"
-              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.access_key_id | quote }}
+              value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
             - name: "AWS_SECRET_ACCESS_KEY"
-              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.secret_access_key | quote }}
+              value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
+            {{- end }}
             {{- end }}
           ports:
             - name: "webui"
