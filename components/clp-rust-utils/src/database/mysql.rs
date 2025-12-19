@@ -1,7 +1,7 @@
 use secrecy::ExposeSecret;
 
 use crate::clp_config::package::{
-    config::{Database as DatabaseConfig, DatabaseNameType},
+    config::{Database as DatabaseConfig, ClpDbNameType},
     credentials::Database as DatabaseCredentials,
 };
 
@@ -25,7 +25,7 @@ pub async fn create_mysql_pool(
     let mysql_options = sqlx::mysql::MySqlConnectOptions::new()
         .host(&config.host)
         .port(config.port)
-        .database(&config.names[&DatabaseNameType::Clp])
+        .database(&config.names[&ClpDbNameType::Clp])
         .username(&credentials.user)
         .password(credentials.password.expose_secret());
 

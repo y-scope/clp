@@ -46,7 +46,7 @@ impl Default for Config {
 /// Database name types used by CLP components (mirror of `ClpDbNameType`).
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-pub enum DatabaseNameType {
+pub enum ClpDbNameType {
     Clp,
     Spider,
 }
@@ -63,14 +63,14 @@ pub enum DatabaseNameType {
 pub struct Database {
     pub host: String,
     pub port: u16,
-    pub names: HashMap<DatabaseNameType, String>,
+    pub names: HashMap<ClpDbNameType, String>,
 }
 
 impl Default for Database {
     fn default() -> Self {
         let mut names = HashMap::new();
-        names.insert(DatabaseNameType::Clp, "clp-db".to_owned());
-        names.insert(DatabaseNameType::Spider, "spider-db".to_owned());
+        names.insert(ClpDbNameType::Clp, "clp-db".to_owned());
+        names.insert(ClpDbNameType::Spider, "spider-db".to_owned());
 
         Self {
             host: "localhost".to_owned(),
