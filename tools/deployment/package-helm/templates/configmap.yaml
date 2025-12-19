@@ -53,7 +53,11 @@ data:
       target_encoded_file_size: {{ .target_encoded_file_size | int }}
       target_segment_size: {{ .target_segment_size | int }}
     {{- end }}{{/* with .Values.clpConfig.archive_output */}}
-    aws_config_directory: {{ .Values.clpConfig.aws_config_directory }}
+    {{- with .Values.clpConfig.aws_config_directory }}
+    aws_config_directory: {{ . | quote }}
+    {{- else }}
+    aws_config_directory: null
+    {{- end }}
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
