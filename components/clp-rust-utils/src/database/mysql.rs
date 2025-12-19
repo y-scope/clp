@@ -25,7 +25,14 @@ pub async fn create_mysql_pool(
     let mysql_options = sqlx::mysql::MySqlConnectOptions::new()
         .host(&config.host)
         .port(config.port)
-        .database(&config.names[&ClpDbNameType::Clp])
+        .database(
+            config
+                .names
+                .get(&ClpDbNameType::Clp)
+                .ok_or_else(|| {
+                    crate::Error::Config("Missing 'clp' database name in config".to_owned())
+                })?,
+        )
         .username(&credentials.user)
         .password(credentials.password.expose_secret());
 

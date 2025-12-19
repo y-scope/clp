@@ -2,6 +2,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("{0}")]
+    Config(String),
+
     #[error("`rmp_serde::encode::Error`: {0}")]
     MsgpackEncode(#[from] rmp_serde::encode::Error),
 
