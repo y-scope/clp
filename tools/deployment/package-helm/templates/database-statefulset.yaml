@@ -33,7 +33,7 @@ spec:
           imagePullPolicy: "Always"
           env:
             - name: "MYSQL_DATABASE"
-              value: {{ .Values.clpConfig.database.name | quote }}
+              value: {{ .Values.clpConfig.database.names.clp | quote }}
             - name: "MYSQL_USER"
               valueFrom:
                 secretKeyRef:
