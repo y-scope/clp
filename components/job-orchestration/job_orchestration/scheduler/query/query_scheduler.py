@@ -369,7 +369,11 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 job_id,
                 QueryJobStatus.CANCELLED,
                 QueryJobStatus.CANCELLING,
-                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+                **(
+                    {"duration": (datetime.datetime.now() - job.start_time).total_seconds()}
+                    if job.start_time is not None
+                    else {}
+                ),
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:
