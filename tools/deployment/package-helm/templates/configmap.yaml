@@ -80,6 +80,12 @@ data:
       rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
+    {{- with .Values.clpConfig.mcp_server }}
+    mcp_server:
+      host: {{ include "clp.fullname" $ }}-mcp-server
+      port: 8000
+      logging_level: {{ .logging_level | quote }}
+    {{- end }}
 
   mysql-logging.cnf: |
     [mysqld]
