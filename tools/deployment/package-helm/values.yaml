@@ -45,6 +45,7 @@ clpConfig:
     jobs_poll_delay: 0.1  # seconds
     logging_level: "INFO"
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+    type: "celery"  # "celery" or "spider"
 
   query_scheduler:
     port: 7000
