@@ -67,13 +67,7 @@ spec:
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/api_server"
-            {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "api-server"
-                "name" "staged-streams"
-              ) | quote }}
-              mountPath: "/var/data/staged-streams"
-            {{- else }}
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "streams"
@@ -100,13 +94,7 @@ spec:
             "component_category" "api-server"
             "name" "logs"
           ) | nindent 10 }}
-        {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "api-server"
-            "name" "staged-streams"
-          ) | nindent 10 }}
-        {{- else }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
