@@ -1,6 +1,5 @@
 """Fixtures that start and stop CLP package instances for integration tests."""
 
-import logging
 from collections.abc import Iterator
 
 import pytest
@@ -13,8 +12,6 @@ from tests.utils.package_utils import (
     start_clp_package,
     stop_clp_package,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture

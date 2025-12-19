@@ -1,6 +1,5 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
-import logging
 from collections.abc import Iterator
 
 import pytest
@@ -14,8 +13,6 @@ from tests.utils.clp_mode_utils import (
 )
 from tests.utils.config import PackageConfig, PackagePathConfig
 from tests.utils.port_utils import assign_ports_from_base
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture

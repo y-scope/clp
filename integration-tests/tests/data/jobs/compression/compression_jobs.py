@@ -9,7 +9,7 @@ PACKAGE_COMPRESSION_JOBS: dict[str, PackageCompressionJob] = {
         job_name="compress-json-multifile",
         mode="clp-json",
         script_path=Path("sbin") / "compress.sh",
-        log_path=Path("json-multifile") / "datasets",
+        log_path=Path("json-multifile") / "logs",
         flags={
             "--timestamp-key": "timestamp",
             "--dataset": "json_multifile",

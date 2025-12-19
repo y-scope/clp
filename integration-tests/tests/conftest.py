@@ -26,7 +26,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--job-name-contains",
         dest="JOB_NAME_CONTAINS",
-        help="Filter CLP jobs by their name.",
+        help="Filter CLP jobs by their name (case-insensitive substring match).",
     )
     parser.addoption(
         "--no-jobs",

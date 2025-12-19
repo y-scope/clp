@@ -134,7 +134,7 @@ class PackageCompressionJob:
     # Script path (relative to the CLP package).
     script_path: Path
 
-    # The path to the logs relative to tests/data/logs (either a file or directory).
+    # The path to the logs relative to tests/data/datasets (either a file or directory).
     log_path: Path
 
     # Flags to specify in the command.
