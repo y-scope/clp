@@ -38,9 +38,15 @@ spec:
               mountPath: "/etc/mongo/mongod.conf"
               subPath: "mongod.conf"
               readOnly: true
-            - name: "results-cache-data"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "results-cache"
+                "name" "data"
+              ) | quote }}
               mountPath: "/data/db"
-            - name: "results-cache-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "results-cache"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/mongodb"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
@@ -62,7 +68,10 @@ spec:
     whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
-        name: "results-cache-data"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "results-cache"
+            "name" "data"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"
@@ -74,7 +83,10 @@ spec:
           requests:
             storage: "20Gi"
     - metadata:
-        name: "results-cache-logs"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "results-cache"
+            "name" "logs"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"
