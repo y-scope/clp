@@ -1,8 +1,9 @@
 # Deployment orchestration
 
-The CLP package is composed of several components that are currently designed to be deployed in a
-set of containers that are orchestrated using a framework like [Docker Compose][docker-compose].
-This document explains the architecture of that orchestration and any associated nuances.
+The CLP package is composed of several components that are designed to be deployed in a set of
+containers that are orchestrated using a framework like [Docker Compose][docker-compose] or
+[Kubernetes][kubernetes] (via [Helm][helm]). This document explains the architecture of that
+orchestration and any associated nuances.
 
 ## Architecture
 
@@ -21,120 +22,120 @@ one-time initialization jobs and their functions.
 
 :::{mermaid}
 %%{
-    init: {
-        "theme": "base",
-        "themeVariables": {
-            "primaryColor": "#0066cc",
-            "primaryTextColor": "#fff",
-            "primaryBorderColor": "transparent",
-            "lineColor": "#007fff",
-            "secondaryColor": "#007fff",
-            "tertiaryColor": "#fff"
-        }
-    }
+init: {
+"theme": "base",
+"themeVariables": {
+"primaryColor": "#0066cc",
+"primaryTextColor": "#fff",
+"primaryBorderColor": "transparent",
+"lineColor": "#007fff",
+"secondaryColor": "#007fff",
+"tertiaryColor": "#fff"
+}
+}
 }%%
 graph LR
-  %% Services
-  database["database (MySQL)"]
-  queue["queue (RabbitMQ)"]
-  redis["redis (Redis)"]
-  results_cache["results-cache (MongoDB)"]
-  compression_scheduler["compression-scheduler"]
-  query_scheduler["query-scheduler"]
-  spider_scheduler["spider-scheduler"]
-  compression_worker["compression-worker"]
-  spider_compression_worker["spider-compression-worker"]
-  query_worker["query-worker"]
-  reducer["reducer"]
-  api_server["api-server"]
-  garbage_collector["garbage-collector"]
-  webui["webui"]
-  mcp_server["mcp-server"]
-  log_ingestor["log-ingestor"]
+%% Services
+database["database (MySQL)"]
+queue["queue (RabbitMQ)"]
+redis["redis (Redis)"]
+results_cache["results-cache (MongoDB)"]
+compression_scheduler["compression-scheduler"]
+query_scheduler["query-scheduler"]
+spider_scheduler["spider-scheduler"]
+compression_worker["compression-worker"]
+spider_compression_worker["spider-compression-worker"]
+query_worker["query-worker"]
+reducer["reducer"]
+api_server["api-server"]
+garbage_collector["garbage-collector"]
+webui["webui"]
+mcp_server["mcp-server"]
+log_ingestor["log-ingestor"]
 
-  %% One-time jobs
-  db_table_creator["db-table-creator"]
-  results_cache_indices_creator["results-cache-indices-creator"]
+%% One-time jobs
+db_table_creator["db-table-creator"]
+results_cache_indices_creator["results-cache-indices-creator"]
 
-  %% Dependencies
-  %% Link 0-1: Database --> Database initialization jobs
-  database -->|healthy| db_table_creator
-  results_cache -->|healthy| results_cache_indices_creator
-  linkStyle 0,1 stroke:#ffa500
+%% Dependencies
+%% Link 0-1: Database --> Database initialization jobs
+database -->|healthy| db_table_creator
+results_cache -->|healthy| results_cache_indices_creator
+linkStyle 0,1 stroke:#ffa500
 
-  %% Link 2-5: Celery dependencies --> Schedulers
-  queue -->|healthy| compression_scheduler
-  redis -->|healthy| compression_scheduler
-  queue -->|healthy| query_scheduler
-  redis -->|healthy| query_scheduler
-  linkStyle 2,3,4,5 stroke:#ff0000
+%% Link 2-5: Celery dependencies --> Schedulers
+queue -->|healthy| compression_scheduler
+redis -->|healthy| compression_scheduler
+queue -->|healthy| query_scheduler
+redis -->|healthy| query_scheduler
+linkStyle 2,3,4,5 stroke:#ff0000
 
-  %% Link 6: Schedulers --> Workers
-  query_scheduler -->|healthy| reducer
-  linkStyle 6 stroke:#800080
+%% Link 6: Schedulers --> Workers
+query_scheduler -->|healthy| reducer
+linkStyle 6 stroke:#800080
 
-  %% Link 7-15: Database initialization job --> Services
-  db_table_creator -->|completed_successfully| api_server
-  db_table_creator -->|completed_successfully| compression_scheduler
-  db_table_creator -->|completed_successfully| garbage_collector
-  db_table_creator -->|completed_successfully| log_ingestor
-  db_table_creator -->|completed_successfully| mcp_server
-  db_table_creator -->|completed_successfully| query_scheduler
-  db_table_creator -->|completed_successfully| spider_compression_worker
-  db_table_creator -->|completed_successfully| spider_scheduler
-  db_table_creator -->|completed_successfully| webui
-  linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
+%% Link 7-15: Database initialization job --> Services
+db_table_creator -->|completed_successfully| api_server
+db_table_creator -->|completed_successfully| compression_scheduler
+db_table_creator -->|completed_successfully| garbage_collector
+db_table_creator -->|completed_successfully| log_ingestor
+db_table_creator -->|completed_successfully| mcp_server
+db_table_creator -->|completed_successfully| query_scheduler
+db_table_creator -->|completed_successfully| spider_compression_worker
+db_table_creator -->|completed_successfully| spider_scheduler
+db_table_creator -->|completed_successfully| webui
+linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
 
-  %% Link 16-20: Results cache initialization job --> Services
-  results_cache_indices_creator -->|completed_successfully| api_server
-  results_cache_indices_creator -->|completed_successfully| garbage_collector
-  results_cache_indices_creator -->|completed_successfully| mcp_server
-  results_cache_indices_creator -->|completed_successfully| reducer
-  results_cache_indices_creator -->|completed_successfully| webui
-  linkStyle 16,17,18,19,20 stroke:#008000
+%% Link 16-20: Results cache initialization job --> Services
+results_cache_indices_creator -->|completed_successfully| api_server
+results_cache_indices_creator -->|completed_successfully| garbage_collector
+results_cache_indices_creator -->|completed_successfully| mcp_server
+results_cache_indices_creator -->|completed_successfully| reducer
+results_cache_indices_creator -->|completed_successfully| webui
+linkStyle 16,17,18,19,20 stroke:#008000
 
-  subgraph Databases
-    database
-    results_cache
-    subgraph celery_dependencies[Celery Dependencies]
-        queue
-        redis
-    end
-  end
+subgraph Databases
+database
+results_cache
+subgraph celery_dependencies[Celery Dependencies]
+queue
+redis
+end
+end
 
-  subgraph Initialization jobs
-    db_table_creator
-    results_cache_indices_creator
-  end
+subgraph Initialization jobs
+db_table_creator
+results_cache_indices_creator
+end
 
-  subgraph Schedulers
-    compression_scheduler
-    query_scheduler
-    spider_scheduler
-  end
+subgraph Schedulers
+compression_scheduler
+query_scheduler
+spider_scheduler
+end
 
-  subgraph Workers
-    compression_worker
-    spider_compression_worker
-    query_worker
-    reducer
-  end
+subgraph Workers
+compression_worker
+spider_compression_worker
+query_worker
+reducer
+end
 
-  subgraph Management & UI
-    api_server
-    log_ingestor
-    garbage_collector
-    webui
-  end
+subgraph Management & UI
+api_server
+log_ingestor
+garbage_collector
+webui
+end
 
-  subgraph AI
-    mcp_server
-  end
+subgraph AI
+mcp_server
+end
 
-  %% Subgraph styles
-  style celery_dependencies fill:#ffffe0
-  style spider_compression_worker fill:#008080
-  style spider_scheduler fill:#008080
+%% Subgraph styles
+style celery_dependencies fill:#ffffe0
+style spider_compression_worker fill:#008080
+style spider_scheduler fill:#008080
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -188,102 +189,110 @@ graph LR
 **Table 2**: One-time initialization jobs in the CLP package.
 ::::
 
-## Code structure
+## Orchestration methods
 
-The orchestration code is split up into:
+CLP supports two orchestration methods: Docker Compose for single-host or manual multi-host
+deployments, and Helm for Kubernetes deployments. Both methods share the same configuration
+interface (`clp-config.yaml` and `credentials.yaml`) and support the same deployment types.
 
-* `BaseController` that defines:
-  * common logic for preparing the environment variables, configuration files, and directories
-    necessary for each service.
-  * abstract methods that orchestrator-specific derived classes must implement in order to
-    orchestrate a deployment.
-* `<Orchestrator>Controller` that implements (and/or overrides) any of the methods in
-  `BaseController` (`<Orchestrator>` is a placeholder for the specific orchestrator for which the
-  class is being implemented).
+### Configuration
 
-## Docker Compose orchestration
+Each service requires configuration values passed through config files, environment variables,
+and/or command line arguments. Since services run in containers, some values must be adapted for the
+orchestration environment—specifically, host paths must be converted to container paths, and
+hostnames/ports must use service discovery mechanisms.
 
-This section explains how we use Docker Compose to orchestrate the CLP package and is broken into
-the following subsections:
+The orchestration controller (e.g., `DockerComposeController`) reads `etc/clp-config.yaml` and
+`etc/credentials.yaml`, then generates:
+* A container-specific CLP config file with adapted paths and service names
+* Runtime configuration (environment variables or ConfigMaps)
+* Required directories (e.g., data output directories)
 
-* [Setting up the Docker Compose project's environment](#setting-up-the-environment)
-* [Starting and stoping the Docker Compose project](#starting-and-stopping-the-project)
-* [Deployment types](#deployment-types)
-* [Implementation details](#implementation-details)
-* [Troubleshooting](#troubleshooting)
+For Docker Compose, this generates `var/log/.clp-config.yaml` and `.env`. For Kubernetes, the Helm
+chart generates a ConfigMap and Secrets from `values.yaml`.
 
-### Setting up the environment
+:::{note}
+A `KubernetesController` is also planned that will read `clp-config.yaml` and `credentials.yaml`
+like `DockerComposeController`, then set up the Helm release accordingly. This will unify the
+configuration experience across both orchestration methods.
+:::
 
-Several services require configuration values to be passed in through the CLP package's config file,
-environment variables, and/or command line arguments. Since the services are running in containers,
-some of these configuration values need to be modified for the orchestration environment.
-Specifically:
+### Secrets
 
-1. Paths on the host must be converted to appropriate paths in the container.
-2. Component hostnames must be converted to service names, and component ports must be converted to the component's default ports.
-    * This ensures that in the Docker Compose configuration, services can communicate over fixed, predictable hostnames and ports rather than relying on configurable variables.
+Sensitive credentials (database passwords, API keys) are stored in `etc/credentials.yaml` and
+require special handling to avoid exposure.
 
-To achieve this, before starting the deployment, `DockerComposeController.start` generates:
+* **Docker Compose**: Credentials are written to `.env` and passed as environment variables
+* **Kubernetes**: Credentials are stored in Kubernetes Secrets
 
-* a CLP configuration file (`<clp-package>/var/log/.clp-config.yaml` on the host) specific to the
-  Docker Compose project environment.
-* an environment variable file (`<clp-package>/.env`) for any other configuration values.
-* any necessary directories (e.g., data output directories).
+### Dependencies
 
-The Docker Compose project then passes those environment variables to the relevant services, either
-as environment variables or command line arguments, as necessary.
+As shown in [Figure 1](#figure-1), services have complex interdependencies. Both orchestrators
+ensure services start only after their dependencies are healthy.
 
-### Starting and stopping the project
+* **Docker Compose**: Uses `depends_on` with `condition: service_healthy` and container healthchecks
+* **Kubernetes**: Uses init containers (via the `clp.waitFor` helper) and readiness/liveness probes
 
-To start and stop the project, `DockerComposeController` simply invokes `docker compose up` or
-`docker compose down` as appropriate. However, to allow multiple CLP packages to be run on the same
-host, we explicitly specify a project name for the project, where the name is based on the package's
-instance ID.
+### Storage
 
-### Deployment Types
+Services require persistent storage for logs, data, archives, and streams.
 
-CLP supports four deployment types determined by the `compression_scheduler.type` and
-`package.query_engine` configuration setting.
+* **Docker Compose**: Uses bind mounts for host directories and named volumes for database data.
+  Conditional mounts use variable interpolation to mount empty tmpfs when not needed.
+* **Kubernetes**: Uses PersistentVolumeClaims per component, with shared PVCs (`ReadWriteMany`) for
+  archives and streams. Uses `local-storage` StorageClass by default.
 
-| Deployment Type | Compression Scheduler | Query Engine                 | Docker Compose File                |
-|-----------------|-----------------------|------------------------------|------------------------------------|
-| Base            | Celery                | [Presto][presto-integration] | `docker-compose-base.yaml`         |
-| Full            | Celery                | Native                       | `docker-compose.yaml`              |
-| Spider Base     | Spider                | [Presto][presto-integration] | `docker-compose-spider-base.yaml`  |
-| Spider Full     | Spider                | Native                       | `docker-compose-spider.yaml`       |
+### Deployment types
 
-### Implementation details
+CLP supports multiple deployment configurations based on the compression scheduler and query engine.
 
-One notable implementation detail is in how we handle mounts that are only necessary under certain
-configurations. For instance, the input logs mount is only necessary when the `logs_input.type` is
-`fs`. If `logs_input.type` is `s3`, we shouldn't mount some random directory from the user's
-host filesystem into the container. However, Docker doesn't provide a mechanism to perform
-conditional mounts. Instead, we use Docker's variable interpolation to conditionally mount an empty
-tmpfs mount into the container. This strategy is used wherever we need a conditional mount.
+| Deployment Type | Compression Scheduler | Query Engine                 |
+|-----------------|-----------------------|------------------------------|
+| Base            | Celery                | [Presto][presto-integration] |
+| Full            | Celery                | Native                       |
+| Spider Base     | Spider                | [Presto][presto-integration] |
+| Spider Full     | Spider                | Native                       |
 
-### Troubleshooting
+:::{note}
+Spider support is not yet available for Helm.
+:::
 
-If you encounter issues with the Docker Compose deployment, first determine the instance ID for your
-deployment by checking the content of `<clp-package>/var/log/instance-id`. Then run one of the
-commands below as necessary.
+Docker Compose selects the appropriate compose file (e.g., `docker-compose.yaml` for Full,
+`docker-compose-spider.yaml` for Spider Full) and uses `deploy.replicas` with environment
+variables (e.g., `CLP_MCP_SERVER_ENABLED`) to toggle optional services. Helm uses conditional
+templating to include/exclude resources.
 
-1. Check service status:
+## Troubleshooting
 
-   ```bash
-   docker compose --project-name clp-package-<instance-id> ps
-   ```
+When issues arise, use the appropriate commands for your orchestration method.
 
-2. View service logs:
+### Docker Compose
 
-   ```bash
-   docker compose --project-name clp-package-<instance-id> logs <service-name>
-   ```
+First, determine your instance ID from `<clp-package>/var/log/instance-id`.
 
-3. Validate configuration:
+```bash
+# Check service status
+docker compose --project-name clp-package-<instance-id> ps
 
-   ```bash
-   docker compose config
-   ```
+# View service logs
+docker compose --project-name clp-package-<instance-id> logs <service-name>
+
+# Validate configuration
+docker compose config
+```
+
+### Kubernetes Helm
+
+See the [Kubernetes deployment guide][kubernetes-guide].
+
+## User guides
+
+* [Kubernetes deployment][kubernetes-guide]: Deploying CLP with Helm
+* [Multi-host deployment][multi-host]: Manual Docker Compose across multiple hosts
 
 [docker-compose]: https://docs.docker.com/compose/
+[helm]: https://helm.sh/
+[kubernetes]: https://kubernetes.io/
+[kubernetes-guide]: ../user-docs/guides-kubernetes.md
+[multi-host]: ../user-docs/guides-multi-host.md
 [presto-integration]: ../user-docs/guides-using-presto.md
