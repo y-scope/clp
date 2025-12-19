@@ -3,5 +3,5 @@
   "component_category" "compression-worker"
   "name" "staged-archives"
   "capacity" "20Gi"
-  "accessModes" (list "ReadWriteMany")
+  "accessModes" (list "ReadWriteOnce")
 ) }}

@@ -4,6 +4,6 @@
   "name" "staged-archives"
   "nodeRole" "control-plane"
   "capacity" "20Gi"
-  "accessModes" (list "ReadWriteMany")
+  "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/staged-archives" .Values.clpConfig.data_directory)
 ) }}

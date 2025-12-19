@@ -6,7 +6,7 @@
   "name" "staged-streams"
   "nodeRole" "control-plane"
   "capacity" "20Gi"
-  "accessModes" (list "ReadWriteMany")
+  "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/staged-streams" .Values.clpConfig.data_directory)
 ) }}
 {{- end }}
