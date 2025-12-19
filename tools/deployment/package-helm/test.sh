@@ -67,6 +67,12 @@ wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1
   | tar xz -C "$CLP_HOME/samples" &
 SAMPLE_DOWNLOAD_PID=$!
 
+# Generate sample log file for garbage collector testing.
+cat <<EOF > /tmp/clp/samples/test-gc.jsonl
+{"timestamp": $(date +%s%3N), "level": "INFO", "message": "User login successful"}
+{"timestamp": $(date +%s%3N), "level": "ERROR", "message": "Database connection failed"}
+EOF
+
 cat <<EOF | kind create cluster --name clp-test --config=-
   kind: Cluster
   apiVersion: kind.x-k8s.io/v1alpha4
