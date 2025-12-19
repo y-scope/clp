@@ -60,26 +60,26 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "garbage-collector"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/garbage_collector"
-            {{- if .Values.clpConfig.aws_config_directory }}
-            - name: "aws-config"
-              mountPath: "/opt/clp/.aws"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
               readOnly: true
-            {{- end }}
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "archives"
               ) | quote }}
               mountPath: "/var/data/archives"
+            {{- end }}
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
             {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
@@ -99,6 +99,9 @@ spec:
             "component_category" "garbage-collector"
             "name" "logs"
           ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
         {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
@@ -106,20 +109,17 @@ spec:
             "name" "archives"
           ) | nindent 10 }}
         {{- end }}
+        {{- with .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: {{ . | quote }}
+            type: "Directory"
+        {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "streams"
           ) | nindent 10 }}
-        {{- end }}
-        - name: "config"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
-        {{- with .Values.clpConfig.aws_config_directory }}
-        - name: "aws-config"
-          hostPath:
-            path: {{ . | quote }}
-            type: "Directory"
         {{- end }}
 {{- end }}

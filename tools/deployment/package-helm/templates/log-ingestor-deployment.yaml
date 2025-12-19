@@ -53,15 +53,15 @@ spec:
             - name: "log-ingestor"
               containerPort: 3002
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "log-ingestor"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/log_ingestor"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
           command: [
             "/opt/clp/bin/log-ingestor",
             "--config", "/etc/clp-config.yaml",

@@ -66,10 +66,6 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-scheduler"
                 "name" "logs"
@@ -80,6 +76,10 @@ spec:
                 "name" "user-logs"
               ) | quote }}
               mountPath: "/var/log/user"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
             {{- if .Values.clpConfig.aws_config_directory }}
             - name: "aws-config"
               mountPath: "/opt/clp/.aws"

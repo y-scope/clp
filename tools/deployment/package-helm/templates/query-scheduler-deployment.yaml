@@ -71,15 +71,15 @@ spec:
             - name: "query-scheduler"
               containerPort: 7000
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "query-scheduler"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/query_scheduler"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
           command: [
             "python3", "-u",
             "-m", "job_orchestration.scheduler.query.query_scheduler",

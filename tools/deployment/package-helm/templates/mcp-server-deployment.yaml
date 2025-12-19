@@ -60,15 +60,15 @@ spec:
             - name: "mcp-server"
               containerPort: 8000
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "mcp-server"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/mcp_server"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
           command: [
             "python3", "-u",
             "-m", "clp_mcp_server.clp_mcp_server",

@@ -58,15 +58,15 @@ spec:
             - name: "api-server"
               containerPort: 3001
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "api-server"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/api_server"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -94,6 +94,9 @@ spec:
             "component_category" "api-server"
             "name" "logs"
           ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
@@ -101,7 +104,4 @@ spec:
             "name" "streams"
           ) | nindent 10 }}
         {{- end }}
-        - name: "config"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
 {{- end }}
