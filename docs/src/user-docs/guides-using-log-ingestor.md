@@ -1,15 +1,13 @@
 # Using `log-ingestor`
 
-`log-ingestor` is a CLP component that facilitates continuous log ingestion from a configured log
-source.
+`log-ingestor` is a CLP component that facilitates continuous log ingestion from a given log source.
 
 :::{note}
-Currently, `log-ingestor` can only be used by
-[`clp-json` CLP deployments](./quick-start/clp-json.md) that are configured for S3 object storage.
-To learn how to set up this configuration, check out the
+Currently, `log-ingestor` can only be used by [`clp-json`](./quick-start/clp-json.md) deployments
+that are configured for S3 object storage. To set up this configuration, check out the
 [object storage guide](./guides-using-object-storage/index.md).
 
-Support for ingestion from local filesystems and ingestion using `clp-text` is planned for a future
+Support for ingestion from local filesystems, or for using `clp-text`, is planned for a future
 release.
 :::
 
@@ -18,9 +16,10 @@ release.
 ## Starting `log-ingestor`
 
 `clp-json` will spin up `log-ingestor` on startup as long as the `logs_input` field in the CLP
-package's config file (`clp-package/etc/clp-config.yaml`) is configured for object storage.
+package's config file (`clp-package/etc/clp-config.yaml`) is
+[configured for object storage][clp-s3-logs-input-config].
 
-If you'd like, you can further configure `log-ingestor` by modifying the `log_ingestor` field in
+You can specify a custom configuration for `log-ingestor` by modifying the `log_ingestor` field in
 the same file.
 
 ---
@@ -39,9 +38,8 @@ planned for a future release.
 
 ### Interacting with `log-ingestor`
 
-`log-ingestor` exposes **RESTful APIs** that allow you to write ingestion jobs to configure what
-`log-ingestor` should ingest (for example, the S3 bucket and key prefix), manage ingestion jobs, and
-check `log-ingestor` health.
+`log-ingestor` exposes **RESTful APIs** that allow you to submit ingestion jobs, manage ingestion
+jobs, and check `log-ingestor`'s health.
 
 You can explore all available endpoints and their schemas at the
 [Swagger UI `log-ingestor` page][swagger-ui-all].
@@ -68,26 +66,26 @@ planned for a future release.
 `log-ingestor` supports **continuous ingestion jobs** for ingesting logs from S3-compatible object
 storage. Currently, two types of ingestion jobs are available:
 
-* [**S3 scanner**](#s3-scanner): Periodically scans a specified S3 bucket and prefix for new log
-  files to ingest.
-* [**SQS listener**](#sqs-listener): Listens to an SQS queue for notifications about newly created
-  log files in S3.
+* [**S3 scanner**](#s3-scanner): Periodically scans an S3 bucket and prefix for new log files to
+  ingest.
+* [**SQS listener**](#sqs-listener): Listens to an [SQS queue][sqs] for notifications about newly
+  created log files in S3.
 
 ### S3 scanner
 
 An S3 scanner ingestion job periodically scans a specified S3 bucket and key prefix for new log
 files to ingest. The scan interval and other parameters can be configured when creating the job.
 
-For configuration details and request body, see the
+For configuration details and the request body, see the
 [API reference for creating S3 scanner ingestion jobs][s3-scanner-api].
 
 :::{important}
 To ensure correct and efficient ingestion, the scanner relies on the following assumptions:
 
-* **Lexicographical order**: New objects are added in lexicographical order based on their keys. For
-  example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with
-  key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater
-  than the last ingested key.
+* **Lexicographical order**: Every new object added to the S3 bucket has a key that is
+  lexicographically greater than the previously added object. For example, objects with keys `log1`
+  and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`,
+  it will be ignored because it is not lexicographically greater than the last ingested key.
 * **Immutability**: Objects under the specified prefix are immutable. Once an object is created, it
   is not modified or overwritten.
 :::
@@ -98,7 +96,7 @@ An SQS listener ingestion job listens to a specified AWS SQS queue and ingests S
 by incoming notifications. For details on configuring S3 event notifications for SQS, see the
 [AWS documentation][aws-s3-event-notifications].
 
-For configuration details and request body, see the
+For configuration details and the request body, see the
 [API reference for creating SQS listener ingestion jobs][sqs-listener-api].
 
 :::{important}
@@ -121,6 +119,8 @@ SQS listener ingestion jobs carry the following limitations:
 :::
 
 [aws-s3-event-notifications]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html#step2-enable-notification
+[clp-s3-logs-input-config]: ./guides-using-object-storage/clp-config.md#configuration-for-input-logs
 [s3-scanner-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json#/IngestionJob/create_s3_scanner_job
+[sqs]: https://docs.aws.amazon.com/sqs/
 [sqs-listener-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json#/IngestionJob/create_sqs_listener_job
 [swagger-ui-all]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json
