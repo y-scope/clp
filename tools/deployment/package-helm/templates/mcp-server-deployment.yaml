@@ -40,16 +40,16 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
@@ -64,7 +64,10 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "mcp-server-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "mcp-server"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/mcp_server"
           command: [
             "python3", "-u",

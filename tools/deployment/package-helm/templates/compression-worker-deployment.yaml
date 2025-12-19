@@ -45,9 +45,10 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
-            {{- end }}
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
                 "name" "logs"
@@ -55,13 +56,19 @@ spec:
               mountPath: "/var/log/compression_worker"
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
+                "name" "staged-archives"
+              ) | quote }}
+              mountPath: "/var/data/staged-archives"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
                 "name" "tmp"
               ) | quote }}
               mountPath: "/var/tmp"
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
               readOnly: true
+            {{- end }}
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -69,12 +76,8 @@ spec:
               ) | quote }}
               mountPath: "/var/data/archives"
             {{- end }}
-            - name: "compression-worker-staged-archives"
-              mountPath: "/var/data/staged-archives"
-            {{- if .Values.clpConfig.aws_config_directory }}
-            - name: "aws-config"
-              mountPath: "/opt/clp/.aws"
-              readOnly: true
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- end }}
           command: [
             "python3", "-u",

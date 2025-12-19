@@ -39,16 +39,16 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "CLP_LOGS_DIR"
               value: "/var/log/api_server"
             - name: "RUST_LOG"
@@ -57,17 +57,26 @@ spec:
             - name: "api-server"
               containerPort: 3001
           volumeMounts:
-            - name: "api-server-logs"
-              mountPath: "/var/log/api_server"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "api-server"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/api_server"
             {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-            - name: "api-server-staged-streams"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "api-server"
+                "name" "staged-streams"
+              ) | quote }}
               mountPath: "/var/data/staged-streams"
             {{- else }}
-            - name: "shared-data-streams"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
               mountPath: "/var/data/streams"
             {{- end }}
           command: [

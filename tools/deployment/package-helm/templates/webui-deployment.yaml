@@ -39,12 +39,6 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            {{- if and (eq .Values.clpConfig.stream_output.storage.type "s3") (eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "credentials") }}
-            - name: "AWS_ACCESS_KEY_ID"
-              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.access_key_id | quote }}
-            - name: "AWS_SECRET_ACCESS_KEY"
-              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.secret_access_key | quote }}
-            {{- end }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -65,11 +59,16 @@ spec:
               value: "4000"
             - name: "RATE_LIMIT"
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
+            {{- if and (eq .Values.clpConfig.stream_output.storage.type "s3") (eq .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.type "credentials") }}
+            - name: "AWS_ACCESS_KEY_ID"
+              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.access_key_id | quote }}
+            - name: "AWS_SECRET_ACCESS_KEY"
+              value: {{ .Values.clpConfig.stream_output.storage.s3_config.aws_authentication.credentials.secret_access_key | quote }}
+            {{- end }}
           ports:
             - name: "webui"
               containerPort: 4000
           volumeMounts:
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: "client-settings"
               mountPath: "/opt/clp/var/www/webui/client/settings.json"
               subPath: "webui-client-settings.json"
@@ -78,17 +77,18 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
+            {{- end }}
+            {{- include "clp.logsInputVolumeMount" . | nindent 12 }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "streams"
               ) | quote }}
               mountPath: "/var/data/streams"
-            {{- end }}
-            {{- if .Values.clpConfig.aws_config_directory }}
-            - name: "aws-config"
-              mountPath: "/opt/clp/.aws"
-              readOnly: true
             {{- end }}
           command: [
             "/opt/clp/bin/node-22",

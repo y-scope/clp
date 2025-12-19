@@ -39,16 +39,16 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
             - name: "CLP_HOME"
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
@@ -62,20 +62,29 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "garbage-collector-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "garbage-collector"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/garbage_collector"
-            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
-            - name: "shared-data-archives"
-              mountPath: "/var/data/archives"
-            {{- end }}
-            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-            - name: "shared-data-streams"
-              mountPath: "/var/data/streams"
-            {{- end }}
             {{- if .Values.clpConfig.aws_config_directory }}
             - name: "aws-config"
               mountPath: "/opt/clp/.aws"
               readOnly: true
+            {{- end }}
+            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
+              mountPath: "/var/data/archives"
+            {{- end }}
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
+              mountPath: "/var/data/streams"
             {{- end }}
           command: [
             "python3", "-u",
