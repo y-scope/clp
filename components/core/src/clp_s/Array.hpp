@@ -11,6 +11,10 @@
 #include <clp_s/ZstdDecompressor.hpp>
 
 namespace clp_s {
+/**
+ * An array that can be compressed and decompressed with Zstd. Useful for writing separate data to
+ * files when a dictionary is unnecessary.
+ */
 template <typename Element, typename Index = size_t>
 class Array {
 public:
