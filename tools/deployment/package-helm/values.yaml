@@ -74,6 +74,14 @@ clpConfig:
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
+
   # Where archives should be output to
   archive_output:
     storage:
