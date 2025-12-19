@@ -1,0 +1,9 @@
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "reducer"
+  "name" "logs"
+  "nodeRole" "control-plane"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/reducer" .Values.clpConfig.logs_directory)
+) }}

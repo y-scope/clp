@@ -1,0 +1,77 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-reducer
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "reducer"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "reducer"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "reducer"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      hostname: {{ include "clp.fullname" . }}-reducer
+      subdomain: {{ include "clp.fullname" . }}-reducer
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "query-scheduler"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
+      containers:
+        - name: "reducer"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "CLP_HOME"
+              value: "/opt/clp"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.reducer.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/reducer"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "reducer"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/reducer"
+          command: [
+            "python3", "-u",
+            "-m", "job_orchestration.reducer.reducer",
+            "--config", "/etc/clp-config.yaml",
+            "--concurrency", "{{ .Values.workerConcurrency }}",
+            "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
+          ]
+      volumes:
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "reducer"
+            "name" "logs"
+          ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
