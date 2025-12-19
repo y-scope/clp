@@ -18,11 +18,11 @@ import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
  */
 const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
     input: {
-        type: CompressionJobInputType.FS,
         dataset: null,
         path_prefix_to_remove: CONTAINER_INPUT_LOGS_ROOT_DIR,
         paths_to_compress: [],
         timestamp_key: null,
+        type: CompressionJobInputType.FS,
         unstructured: true,
     },
     output: {

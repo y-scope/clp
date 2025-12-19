@@ -1,7 +1,9 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
-import type {ClpIoConfig} from "@webui/common/schemas/compression";
-import {CompressionJobInputType} from "@webui/common/schemas/compression";
+import {
+    type ClpIoConfig,
+    CompressionJobInputType,
+} from "@webui/common/schemas/compression";
 import dayjs from "dayjs";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
@@ -25,7 +27,7 @@ const stripPrefix = (path: string, prefix: string): string => {
     }
 
     const trimmedPath = path.slice(prefix.length);
-    return trimmedPath
+    return trimmedPath;
 };
 
 /**
@@ -43,17 +45,16 @@ const extractPathsFromInput = (clpConfig: ClpIoConfig): string[] => {
     }
 
     if (CompressionJobInputType.FS === input.type) {
-        let prefixToRemove = input.path_prefix_to_remove;
+        const prefixToRemove = input.path_prefix_to_remove;
         if (prefixToRemove) {
-            return input.paths_to_compress.map((path) =>
-                stripPrefix(path, prefixToRemove));
+            return input.paths_to_compress.map((path) => stripPrefix(path, prefixToRemove));
         }
+
         return input.paths_to_compress;
     }
 
-    if (CompressionJobInputType.S3 === input.type) {
-        return input.keys??[];
-    }
+    // eslint-disable-next-line no-warning-comments
+    // TODO: Add support to parse S3 paths; may need a bucket prefix from the CLP config.
 
     return [];
 };
@@ -69,7 +70,8 @@ const extractDataFromIoConfig = (clpConfig: ClpIoConfig): {
     paths: string[];
 } => {
     const dataset = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ?
-        clpConfig.input.dataset : null
+        clpConfig.input.dataset :
+        null;
     const paths = extractPathsFromInput(clpConfig);
     return {dataset, paths};
 };

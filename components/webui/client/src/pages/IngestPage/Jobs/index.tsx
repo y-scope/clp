@@ -10,6 +10,7 @@ import {
 } from "./typings";
 import {mapCompressionJobResponseToTableData} from "./utils";
 
+
 /**
  * Renders table with ingestion jobs inside a card.
  *
