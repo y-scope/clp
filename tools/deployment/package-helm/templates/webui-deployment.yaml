@@ -82,7 +82,7 @@ spec:
               mountPath: "/opt/clp/.aws"
               readOnly: true
             {{- end }}
-            {{- include "clp.logsInputVolumeMount" . | nindent 12 }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
