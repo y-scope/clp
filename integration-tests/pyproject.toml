@@ -43,6 +43,9 @@ show_error_end = true
 [tool.ruff]
 extend = "../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
 
+[tool.ruff.lint]
+ignore = ["TRY400"]
+
 [tool.uv]
 default-groups = ["clp", "dev"]
 

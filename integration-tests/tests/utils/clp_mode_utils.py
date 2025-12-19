@@ -24,6 +24,8 @@ from clp_py_utils.clp_config import (
 )
 from pydantic import BaseModel
 
+from tests.utils.logging_utils import construct_log_err_msg
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,11 +100,7 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
     """
     if mode_name not in CLP_MODE_CONFIGS:
         err_msg = f"Unsupported mode: '{mode_name}'"
-        err_log_msg = (
-            err_msg +
-            "\nCheck the full output log for more information (see test header for file path)."
-        )
-        logger.error(err_log_msg)
+        logger.error(construct_log_err_msg(err_msg))
         raise ValueError(err_msg)
     return CLP_MODE_CONFIGS[mode_name]()
 

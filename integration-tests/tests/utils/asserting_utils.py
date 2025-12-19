@@ -12,12 +12,15 @@ from pydantic import ValidationError
 from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_services_in_compose_project
+from tests.utils.logging_utils import construct_log_err_msg
 from tests.utils.utils import load_yaml_to_dict
 
 logger = logging.getLogger(__name__)
 
 
-def run_and_assert(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+def run_and_assert(
+    request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any
+) -> subprocess.CompletedProcess[Any]:
     """
     Runs a command with subprocess and asserts that it succeeds with pytest.
 
@@ -27,27 +30,20 @@ def run_and_assert(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any
     :raise: pytest.fail if the command exits with a non-zero return code.
     """
     log_file_path = Path(request.config.getini("log_file_path"))
-    with open(log_file_path, "ab") as log_file:
+    with log_file_path.open("ab") as log_file:
         try:
-            proc = subprocess.run(
-                cmd,
-                stdout=log_file,
-                stderr=log_file,
-                check=True,
-                **kwargs
-            )
-        except subprocess.CalledProcessError:
-            fail_msg = (
-                "Called process failed. Check error summary at the end of the test for more information."
-            )
-            logger.error(fail_msg)
-            pytest.fail(fail_msg)
-        except subprocess.TimeoutExpired:
-            fail_msg = (
-                "Called process timed out. Check error summary at the end of the test for more information."
-            )
-            logger.error(fail_msg)
-            pytest.fail(fail_msg)
+            log_debug_msg = f"Now running command: {cmd}"
+            logger.debug(log_debug_msg)
+            proc = subprocess.run(cmd, stdout=log_file, stderr=log_file, check=True, **kwargs)
+        except subprocess.CalledProcessError as error:
+            err_msg = f"Called process failed: {error}"
+            logger.debug(err_msg)
+            pytest.fail(err_msg)
+        except subprocess.TimeoutExpired as error:
+            err_msg = f"Called process timed out: {error}"
+            logger.debug(err_msg)
+            pytest.fail(err_msg)
+
         return proc
 
 
@@ -69,20 +65,22 @@ def validate_package_running(package_instance: PackageInstance) -> None:
 
     # Compare with list of required components.
     required_components = set(package_instance.package_config.component_list)
+
     if required_components == running_services:
         return
 
-    cmd_fail_msg = "Component mismatch."
+    err_msg = f"Component validation failed for the {mode_name} package test."
 
     missing_components = required_components - running_services
     if missing_components:
-        cmd_fail_msg += f"\nMissing components: {missing_components}."
+        err_msg += f" Missing components: {missing_components}."
 
     unexpected_components = running_services - required_components
     if unexpected_components:
-        cmd_fail_msg += f"\nUnexpected services: {unexpected_components}."
+        err_msg += f" Unexpected services: {unexpected_components}."
 
-    pytest.fail(cmd_fail_msg)
+    logger.error(construct_log_err_msg(err_msg))
+    pytest.fail(err_msg)
 
 
 def validate_running_mode_correct(package_instance: PackageInstance) -> None:
@@ -97,15 +95,21 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
     mode_name = package_instance.package_config.mode_name
-    logger.info("Validating that the '%s' package is running in the correct configuration...", mode_name)
+    logger.info(
+        "Validating that the '%s' package is running in the correct configuration...", mode_name
+    )
 
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)
     except ValidationError as err:
-        pytest.fail(f"Shared config failed validation: {err}")
+        err_msg = f"The shared config file could not be validated: {err}"
+        logger.error(construct_log_err_msg(err_msg))
+        pytest.fail(err_msg)
 
     intended_config = package_instance.package_config.clp_config
 
     if not compare_mode_signatures(intended_config, running_config):
-        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
+        err_msg = f"Mode validation failed for the {mode_name} package test."
+        logger.error(construct_log_err_msg(err_msg))
+        pytest.fail(err_msg)

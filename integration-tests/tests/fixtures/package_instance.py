@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def fixt_package_instance(request: pytest.FixtureRequest, fixt_package_config: PackageConfig) -> Iterator[PackageInstance]:
+def fixt_package_instance(
+    request: pytest.FixtureRequest, fixt_package_config: PackageConfig
+) -> Iterator[PackageInstance]:
     """
     Starts a CLP package instance for the given configuration and stops it during teardown.
 
