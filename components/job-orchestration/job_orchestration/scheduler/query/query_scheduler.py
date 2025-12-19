@@ -323,9 +323,9 @@ def set_job_or_task_status(
 
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
+        row_changed = cursor.rowcount != 0
         db_conn.commit()
-        rval = cursor.rowcount != 0
-    return rval
+    return row_changed
 
 
 async def handle_cancelling_search_jobs(db_conn_pool) -> None:
