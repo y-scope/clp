@@ -8,6 +8,8 @@ on:
       - "components/core/tools/scripts/lib_install/macos/**"
       - "docs/**"
   push:
+    branches:
+      - "main"
     paths-ignore: *ignored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
