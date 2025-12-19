@@ -102,6 +102,14 @@ data:
       logging_level: {{ .Values.clpConfig.log_ingestor.logging_level | quote }}
       port: 3002
     {{- end }}
+    {{- if .Values.clpConfig.mcp_server }}
+    mcp_server:
+      host: "localhost"
+      logging_level: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
+      port: 8000
+    {{- else }}
+    mcp_server: null
+    {{- end }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
