@@ -63,6 +63,7 @@ pub enum ClpDbNameType {
 pub struct Database {
     pub host: String,
     pub port: u16,
+    #[serde(default = "default_db_names")]
     pub names: HashMap<ClpDbNameType, String>,
 }
 
@@ -71,12 +72,16 @@ impl Default for Database {
         Self {
             host: "localhost".to_owned(),
             port: 3306,
-            names: HashMap::from([
-                (ClpDbNameType::Clp, "clp-db".to_owned()),
-                (ClpDbNameType::Spider, "spider-db".to_owned()),
-            ]),
+            names: default_db_names(),
         }
     }
+}
+
+fn default_db_names() -> HashMap<ClpDbNameType, String> {
+    HashMap::from([
+        (ClpDbNameType::Clp, "clp-db".to_owned()),
+        (ClpDbNameType::Spider, "spider-db".to_owned()),
+    ])
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
