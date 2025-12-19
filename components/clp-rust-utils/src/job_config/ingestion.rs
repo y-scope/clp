@@ -14,13 +14,13 @@ pub mod s3 {
         #[schema(value_type = String, min_length = 1)]
         pub key_prefix: NonEmptyString,
 
-        /// AWS service region. Defaults to `None` which uses the default region.
+        /// AWS service region. Use the default region if not provided.
         #[serde(default)]
         #[schema(value_type = String, min_length = 1)]
         pub region: Option<NonEmptyString>,
 
         /// The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).
-        /// Defaults to `None` which uses the default AWS S3 endpoint.
+        /// Use the default AWS S3 endpoint if not provided.
         #[serde(default)]
         #[schema(value_type = String, min_length = 1)]
         pub endpoint_url: Option<NonEmptyString>,

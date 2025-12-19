@@ -229,7 +229,7 @@
           },
           "endpoint_url": {
             "type": "string",
-            "description": "The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).\nDefaults to `None` which uses the default AWS S3 endpoint.",
+            "description": "The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).\nUse the default AWS S3 endpoint if not provided.",
             "minLength": 1
           },
           "key_prefix": {
@@ -239,7 +239,7 @@
           },
           "region": {
             "type": "string",
-            "description": "AWS service region. Defaults to `None` which uses the default region.",
+            "description": "AWS service region. Use the default region if not provided.",
             "minLength": 1
           },
           "tags": {
