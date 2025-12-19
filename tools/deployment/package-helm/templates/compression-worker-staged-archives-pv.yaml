@@ -1,3 +1,4 @@
+{{- if eq .Values.clpConfig.archive_output.storage.type "s3" }}
 {{- include "clp.createLocalPv" (dict
   "root" .
   "component_category" "compression-worker"
@@ -7,3 +8,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/staged-archives" .Values.clpConfig.data_directory)
 ) }}
+{{- end }}

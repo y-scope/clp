@@ -1,3 +1,4 @@
+{{- if eq .Values.clpConfig.archive_output.storage.type "s3" }}
 {{- include "clp.createPvc" (dict
   "root" .
   "component_category" "compression-worker"
@@ -5,3 +6,4 @@
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}
+{{- end }}

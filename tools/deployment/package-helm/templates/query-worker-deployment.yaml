@@ -45,15 +45,15 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "query-worker"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/query_worker"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -61,12 +61,10 @@ spec:
               ) | quote }}
               mountPath: "/var/data/archives"
             {{- end }}
-            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "shared-data"
-                "name" "streams"
-              ) | quote }}
-              mountPath: "/var/data/streams"
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: "/opt/clp/.aws"
+              readOnly: true
             {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
             - name: {{ include "clp.volumeName" (dict
@@ -75,10 +73,12 @@ spec:
               ) | quote }}
               mountPath: "/var/data/staged-streams"
             {{- end }}
-            {{- if .Values.clpConfig.aws_config_directory }}
-            - name: "aws-config"
-              mountPath: "/opt/clp/.aws"
-              readOnly: true
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
+              mountPath: "/var/data/streams"
             {{- end }}
           command: [
             "python3", "-u",
@@ -97,18 +97,27 @@ spec:
             "component_category" "query-worker"
             "name" "logs"
           ) | nindent 10 }}
-        {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "query-worker"
-            "name" "staged-streams"
-          ) | nindent 10 }}
-        {{- end }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
         {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "archives"
+          ) | nindent 10 }}
+        {{- end }}
+        {{- with .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: {{ . | quote }}
+            type: "Directory"
+        {{- end }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "query-worker"
+            "name" "staged-streams"
           ) | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
@@ -117,13 +126,4 @@ spec:
             "component_category" "shared-data"
             "name" "streams"
           ) | nindent 10 }}
-        {{- end }}
-        - name: "config"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
-        {{- with .Values.clpConfig.aws_config_directory }}
-        - name: "aws-config"
-          hostPath:
-            path: {{ . | quote }}
-            type: "Directory"
         {{- end }}
