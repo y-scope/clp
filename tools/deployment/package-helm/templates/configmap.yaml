@@ -91,6 +91,15 @@ data:
       type: "fs"
       directory: "/mnt/logs"
       {{- end }}
+    {{- if eq .Values.clpConfig.logs_input.type "s3" }}
+    log_ingestor:
+      buffer_flush_threshold: {{ .Values.clpConfig.log_ingestor.buffer_flush_threshold }}
+      buffer_flush_timeout: {{ .Values.clpConfig.log_ingestor.buffer_flush_timeout }}
+      channel_capacity: {{ .Values.clpConfig.log_ingestor.channel_capacity }}
+      host: "localhost"
+      logging_level: {{ .Values.clpConfig.log_ingestor.logging_level | quote }}
+      port: 3002
+    {{- end }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
