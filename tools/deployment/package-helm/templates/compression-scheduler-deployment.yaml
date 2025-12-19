@@ -94,9 +94,6 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
-        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-        - {{- include "clp.logsInputVolume" . | nindent 10 }}
-        {{- end }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "compression-scheduler"
@@ -115,4 +112,7 @@ spec:
           hostPath:
             path: {{ . | quote }}
             type: "Directory"
+        {{- end }}
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- end }}

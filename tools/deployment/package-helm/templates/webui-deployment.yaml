@@ -106,16 +106,6 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
       volumes:
-        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-        - {{- include "clp.logsInputVolume" . | nindent 10 }}
-        {{- end }}
-        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "shared-data"
-            "name" "streams"
-          ) | nindent 10 }}
-        {{- end }}
         - name: "client-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
@@ -127,4 +117,14 @@ spec:
           hostPath:
             path: {{ . | quote }}
             type: "Directory"
+        {{- end }}
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
         {{- end }}
