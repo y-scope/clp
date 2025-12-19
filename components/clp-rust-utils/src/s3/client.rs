@@ -35,6 +35,10 @@ pub async fn create_new_client(
     let mut config_builder = Builder::from(&base_config)
         .credentials_provider(credential)
         .force_path_style(true);
+    if endpoint.is_none() && region_id.is_none() {
+        // Use the default region from the base config if neither endpoint nor region is provided.
+        return Client::from_conf(config_builder.build());
+    }
     config_builder.set_region(Some(Region::new(region_id.map_or_else(
         || AWS_DEFAULT_REGION.to_owned(),
         std::string::ToString::to_string,
