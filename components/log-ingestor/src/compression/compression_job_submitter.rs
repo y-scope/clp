@@ -122,7 +122,6 @@ async fn submit_clp_compression_job_and_wait_for_completion(
         formatcp!("SELECT status, status_msg FROM {CLP_COMPRESSION_JOB_TABLE_NAME} WHERE id = ?");
     const MAX_SLEEP_DURATION_SEC: u32 = 30;
 
-    tracing::debug!(clp_io_config = ? io_config, "Compression job IO config.");
     let serialized_io_config = match clp_rust_utils::serde::BrotliMsgpack::serialize(&io_config) {
         Ok(data) => data,
         Err(e) => {

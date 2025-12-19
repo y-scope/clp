@@ -7,7 +7,9 @@ pub mod s3 {
     #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
     pub struct BaseConfig {
         /// AWS service region.
-        pub region: String,
+        #[serde(default)]
+        #[schema(value_type = String, min_length = 1)]
+        pub region: Option<NonEmptyString>,
 
         /// The S3 bucket to ingest from.
         #[schema(value_type = String, min_length = 1)]

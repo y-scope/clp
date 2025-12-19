@@ -108,7 +108,7 @@ impl IngestionJobManagerState {
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
         let s3_client_manager = S3ClientWrapper::create(
-            config.base.region.as_str(),
+            config.base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
             config.base.endpoint_url.as_ref(),
@@ -141,7 +141,7 @@ impl IngestionJobManagerState {
             )));
         }
         let sqs_client_manager = SqsClientWrapper::create(
-            config.base.region.as_str(),
+            config.base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
         )
@@ -307,7 +307,7 @@ struct IngestionJobManager {
 struct IngestionJobTableEntry {
     ingestion_job: IngestionJob,
     listener: Listener,
-    region: String,
+    region: Option<NonEmptyString>,
     bucket_name: NonEmptyString,
     key_prefix: NonEmptyString,
     endpoint_url: Option<NonEmptyString>,

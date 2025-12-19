@@ -159,7 +159,7 @@ async fn test_sqs_listener() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
 
     let sqs_client = clp_rust_utils::sqs::create_new_client(
-        aws_config.region.as_str(),
+        Some(&aws_config.region),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
         Some(&aws_config.endpoint),
@@ -174,7 +174,7 @@ async fn test_sqs_listener() -> Result<()> {
             aws_config.queue_name.as_str()
         )),
         base: BaseConfig {
-            region: aws_config.region.clone(),
+            region: Some(aws_config.region.clone()),
             bucket_name: aws_config.bucket_name.clone(),
             key_prefix: prefix.clone(),
             endpoint_url: Some(aws_config.endpoint.clone()),
@@ -195,7 +195,7 @@ async fn test_sqs_listener() -> Result<()> {
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.region.as_str(),
+        Some(&aws_config.region),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
         Some(&aws_config.endpoint),
@@ -241,7 +241,7 @@ async fn test_s3_scanner() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.region.as_str(),
+        Some(&aws_config.region),
         aws_config.access_key_id.as_str(),
         aws_config.secret_access_key.as_str(),
         Some(&aws_config.endpoint),
@@ -250,7 +250,7 @@ async fn test_s3_scanner() -> Result<()> {
 
     let s3_scanner_config = S3ScannerConfig {
         base: BaseConfig {
-            region: aws_config.region.clone(),
+            region: Some(aws_config.region.clone()),
             bucket_name: aws_config.bucket_name.clone(),
             key_prefix: prefix.clone(),
             endpoint_url: Some(aws_config.endpoint.clone()),

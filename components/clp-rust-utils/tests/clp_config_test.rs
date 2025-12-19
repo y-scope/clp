@@ -11,7 +11,7 @@ use serde_json::Value;
 fn test_clp_io_config_serialization() {
     let s3_config = S3Config {
         bucket: NonEmptyString::from_static_str("yscope"),
-        region_code: "us-east-2".into(),
+        region_code: Some(NonEmptyString::from_static_str("us-east-2")),
         key_prefix: NonEmptyString::from_static_str("sample-logs/cockroachdb.clp.zst"),
         endpoint_url: None,
         aws_authentication: AwsAuthentication::Credentials {
@@ -43,13 +43,12 @@ fn test_clp_io_config_serialization() {
 
     let brotli_compressed_msgpack = BrotliMsgpack::serialize(&config)
         .expect("Brotli-compressed MessagePack serialized config.");
-    let expected = "1baa0100e4ffdf9f43284b650e496850ba5f9ceefb53044b04d074faa66eb23ebef21c2d1a\
-            13ac8bda98699677599cea99df896ea49db84ad29e0393f1ccf2f23841ef82315895278b2605669b4301be5\
-            b1b68dfded8eed9a87c13b8336f750676ad24a2f35cfca9966856e21807ab951d2d242bbec8bd2d3ff95ce8\
-            3a026df0981399155cb7174eb6acffe8a248645ac37edade13a760c56f99dbfb0281502a0589500162c1338\
-            32780dd9c53a140329406a89ad55df2595a75d6c8931de191d807fcfe80a070bf6ef5ce28925670bf85ca71\
-            7f5687d9e7fa0d8905badf00e516ffb7994ca6d7e4c11c52c83c22600bbde03478470ef12c312d6aa03fb32\
-            55d712401964e5901";
+    let expected = "1bae0100e4ffdf9f43284b650e496850ba5f98ef7b53044b04d074faa66eb23ebef25c0d1a13ac\
+        4b17669ac5cbe254cffc4e7423edc455d2f61c988e679697db09ba171ce575912c9a14986d0e05f87e4dd1babda\
+        9d5b5d1c5267067deea8cacf9928cf673f1a75a627945e06c7cbe6c6b21d98945e16df94ba0d5fce7c2d61158ca\
+        6541545e74dd5e3cddf21ea4832251d93cf6b3f69e3c05ab7eabc2dee3f305120988057210f19f59dc01ece49c0\
+        8f8e2812440d5acf6d2cfd2ae334791ec8888c43ae0f7870485fb756b76b4485c29fc164a27fd592de69feb5724\
+        16287f03545be2df6230185e931b8348a98a88804df492d3e01fd9c4b3c4b4b081e1cc970aaa2319b07cca0c";
     assert_eq!(expected, hex::encode(brotli_compressed_msgpack));
 
     let json_serialized_result = serde_json::to_string_pretty(&config);
@@ -61,7 +60,7 @@ fn test_clp_io_config_serialization() {
         "bucket": "yscope",
         "region_code": "us-east-2",
         "key_prefix": "sample-logs/cockroachdb.clp.zst",
-        "endpoint": null,
+        "endpoint_url": null,
         "aws_authentication": {
           "type": "credentials",
           "credentials": {

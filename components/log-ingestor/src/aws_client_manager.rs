@@ -49,7 +49,11 @@ impl SqsClientWrapper {
         Self { client }
     }
 
-    pub async fn create(region: &str, access_key_id: &str, secret_access_key: &str) -> Self {
+    pub async fn create(
+        region: Option<&NonEmptyString>,
+        access_key_id: &str,
+        secret_access_key: &str,
+    ) -> Self {
         let sqs_client =
             clp_rust_utils::sqs::create_new_client(region, access_key_id, secret_access_key, None)
                 .await;
@@ -76,7 +80,7 @@ impl S3ClientWrapper {
     }
 
     pub async fn create(
-        region: &str,
+        region: Option<&NonEmptyString>,
         access_key_id: &str,
         secret_access_key: &str,
         endpoint_url: Option<&NonEmptyString>,

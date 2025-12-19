@@ -13,7 +13,7 @@ use non_empty_string::NonEmptyString;
 /// A newly created SQS client.
 #[must_use]
 pub async fn create_new_client(
-    region_id: &str,
+    region_id: Option<&NonEmptyString>,
     access_key_id: &str,
     secret_access_key: &str,
     endpoint: Option<&NonEmptyString>,
@@ -25,11 +25,10 @@ pub async fn create_new_client(
         None,
         "clp-credential-provider",
     );
-    let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let mut config_builder = Builder::from(&base_config)
         .credentials_provider(credential)
-        .region(region);
+        .region(region_id.map(|region| Region::new(region.to_string())));
     config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     Client::from_conf(config_builder.build())
 }

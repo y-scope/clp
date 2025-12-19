@@ -329,7 +329,7 @@ impl Client {
         let credentials = credentials.clone();
 
         let s3_client = clp_rust_utils::s3::create_new_client(
-            s3_config.region_code.as_str(),
+            s3_config.region_code.as_ref(),
             credentials.access_key_id.as_str(),
             credentials.secret_access_key.as_str(),
             None,
