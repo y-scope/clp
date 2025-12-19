@@ -8,19 +8,23 @@ data:
   clp-config.yaml: |
     {{- with .Values.clpConfig.api_server }}
     api_server:
-      default_max_num_query_results: {{ .default_max_num_query_results }}
+      default_max_num_query_results: {{ .default_max_num_query_results | int }}
       host: "localhost"
       port: 3001
       query_job_polling:
-        initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms }}
-        max_backoff_ms: {{ .query_job_polling.max_backoff_ms }}
+        initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
+        max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
     {{- else }}
     api_server: null
     {{- end }}
     {{- with .Values.clpConfig.archive_output }}
     archive_output:
-      compression_level: {{ .compression_level }}
-      retention_period: {{ .retention_period }}
+      compression_level: {{ .compression_level | int }}
+      {{ with .retention_period }}
+      retention_period: {{ . | int }}
+      {{ else }}
+      retention_period: null
+      {{ end }}
       storage:
         {{- if eq .storage.type "fs" }}
         type: "fs"
@@ -62,7 +66,7 @@ data:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
       max_concurrent_tasks_per_job: {{
-        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
+        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
       type: {{ .Values.clpConfig.compression_scheduler.type | quote }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
@@ -79,8 +83,8 @@ data:
     garbage_collector:
       logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
       sweep_interval:
-        archive: {{ .Values.clpConfig.garbage_collector.sweep_interval.archive }}
-        search_result: {{ .Values.clpConfig.garbage_collector.sweep_interval.search_result }}
+        archive: {{ .Values.clpConfig.garbage_collector.sweep_interval.archive | int }}
+        search_result: {{ .Values.clpConfig.garbage_collector.sweep_interval.search_result | int }}
     logs_directory: "/var/log"
     {{- with .Values.clpConfig.logs_input }}
     logs_input:
@@ -105,9 +109,9 @@ data:
     {{- end }}{{/* with .Values.clpConfig.logs_input */}}
     {{- with .Values.clpConfig.log_ingestor }}
     log_ingestor:
-      buffer_flush_threshold: {{ .buffer_flush_threshold }}
-      buffer_flush_timeout: {{ .buffer_flush_timeout }}
-      channel_capacity: {{ .channel_capacity }}
+      buffer_flush_threshold: {{ .buffer_flush_threshold | int }}
+      buffer_flush_timeout: {{ .buffer_flush_timeout | int }}
+      channel_capacity: {{ .channel_capacity | int }}
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002
@@ -129,7 +133,7 @@ data:
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
       num_archives_to_search_per_sub_job: {{
-        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
+        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job | int }}
       port: 7000
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
@@ -137,20 +141,24 @@ data:
       host: "{{ include "clp.fullname" . }}-queue"
       port: 5672
     redis:
-      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
+      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database | int }}
       host: "{{ include "clp.fullname" . }}-redis"
       port: 6379
-      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
+      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
     reducer:
       base_port: 14009
       host: "{{ include "clp.fullname" . }}-reducer"
       logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
-      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
+      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval | int }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: "{{ include "clp.fullname" . }}-results-cache"
       port: 27017
-      retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
+      {{ with .Values.clpConfig.results_cache.retention_period }}
+      retention_period: {{ . | int }}
+      {{ else }}
+      retention_period: null
+      {{ end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:
@@ -187,7 +195,7 @@ data:
     webui:
       host: "localhost"
       port: 4000
-      rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
+      rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
 
@@ -278,7 +286,7 @@ data:
       {{- end }}{{/* with .Values.clpConfig.stream_output.storage */}}
       "StreamTargetUncompressedSize":
         {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
-      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
+      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level | int }},
       "ArchiveOutputTargetArchiveSize":
         {{ .Values.clpConfig.archive_output.target_archive_size | int }},
       "ArchiveOutputTargetDictionariesSize":
@@ -291,7 +299,7 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       {{- with .Values.clpConfig.presto }}
       "PrestoHost": {{ .host | quote }},
-      "PrestoPort": {{ .port }}
+      "PrestoPort": {{ .port | int }}
       {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
