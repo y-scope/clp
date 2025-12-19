@@ -115,6 +115,8 @@ data:
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002
+    {{- else }}
+    log_ingestor: null
     {{- end }}
     {{- with .Values.clpConfig.mcp_server }}
     mcp_server:
