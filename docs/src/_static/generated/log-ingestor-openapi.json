@@ -213,7 +213,6 @@
         "type": "object",
         "description": "Base configuration for ingesting logs from S3.",
         "required": [
-          "region",
           "bucket_name",
           "key_prefix"
         ],
@@ -230,7 +229,7 @@
           },
           "endpoint_url": {
             "type": "string",
-            "description": "The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).",
+            "description": "The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).\nDefaults to `None` which uses the default AWS S3 endpoint.",
             "minLength": 1
           },
           "key_prefix": {
@@ -240,7 +239,8 @@
           },
           "region": {
             "type": "string",
-            "description": "AWS service region."
+            "description": "AWS service region. Defaults to `None` which uses the default region.",
+            "minLength": 1
           },
           "tags": {
             "type": "array",

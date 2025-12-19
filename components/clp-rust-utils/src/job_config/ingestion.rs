@@ -6,11 +6,6 @@ pub mod s3 {
     /// Base configuration for ingesting logs from S3.
     #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
     pub struct BaseConfig {
-        /// AWS service region.
-        #[serde(default)]
-        #[schema(value_type = String, min_length = 1)]
-        pub region: Option<NonEmptyString>,
-
         /// The S3 bucket to ingest from.
         #[schema(value_type = String, min_length = 1)]
         pub bucket_name: NonEmptyString,
@@ -19,7 +14,13 @@ pub mod s3 {
         #[schema(value_type = String, min_length = 1)]
         pub key_prefix: NonEmptyString,
 
+        /// AWS service region. Defaults to `None` which uses the default region.
+        #[serde(default)]
+        #[schema(value_type = String, min_length = 1)]
+        pub region: Option<NonEmptyString>,
+
         /// The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).
+        /// Defaults to `None` which uses the default AWS S3 endpoint.
         #[serde(default)]
         #[schema(value_type = String, min_length = 1)]
         pub endpoint_url: Option<NonEmptyString>,
