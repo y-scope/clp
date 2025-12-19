@@ -52,7 +52,7 @@ spec:
             - name: "CLP_LOGS_DIR"
               value: "/var/log/api_server"
             - name: "RUST_LOG"
-              value: "DEBUG"
+              value: "INFO"
           ports:
             - name: "api-server"
               containerPort: 3001
