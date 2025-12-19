@@ -45,7 +45,6 @@ clpConfig:
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 
   query_scheduler:
-    port: 7000
     jobs_poll_delay: 0.1  # seconds
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
