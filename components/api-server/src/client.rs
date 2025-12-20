@@ -338,7 +338,7 @@ impl Client {
         if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
             return Err(ClientError::Aws {
                 description: "a region code must be given when using the default AWS S3 endpoint"
-                    .to_string(),
+                    .to_owned(),
             });
         }
 
