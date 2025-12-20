@@ -73,7 +73,7 @@ spec:
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             tcpSocket: &query-scheduler-health-check
-              port: 7000
+              port: "query-scheduler"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *query-scheduler-health-check
