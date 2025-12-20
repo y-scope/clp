@@ -8,8 +8,6 @@ on:
       - "components/core/tools/scripts/lib_install/macos/**"
       - "docs/**"
   push:
-    branches:
-      - "main"
     paths-ignore: *ignored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
@@ -28,8 +26,25 @@ concurrency:
   cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
 
 jobs:
+  skip-duplicate-check:
+    name: "skip-duplicate-check"
+    runs-on: "ubuntu-24.04"
+    outputs:
+      should_skip: "${{steps.skip_check.outputs.should_skip}}"
+    steps:
+      - id: "skip_check"
+        uses: "step-security/skip-duplicate-actions@v5"
+        with:
+          # Skip duplicate runs for the same content (e.g., when both push and pull_request trigger)
+          concurrent_skipping: "same_content"
+          skip_after_successful_duplicate: "true"
+          # Always run for scheduled builds and manual triggers
+          do_not_skip: '["schedule", "workflow_dispatch"]'
+
   filter-relevant-changes:
     name: "filter-relevant-changes"
+    needs: "skip-duplicate-check"
+    if: "needs.skip-duplicate-check.outputs.should_skip != 'true'"
     # This job only performs git operations to detect changed paths, so we use a GitHub-hosted
     # runner to avoid consuming self-hosted runner resources needed for heavier build jobs.
     runs-on: "ubuntu-24.04"
