@@ -38,8 +38,10 @@ jobs:
           # Skip duplicate runs for the same content (e.g., when both push and pull_request trigger)
           concurrent_skipping: "same_content"
           skip_after_successful_duplicate: "true"
-          # Always run for scheduled builds and manual triggers
-          do_not_skip: '["schedule", "workflow_dispatch"]'
+          # Always run for scheduled builds and manual triggers.
+          # NOTE: This is a JSON array string (required by the action), with escaped quotes for
+          # yamllint compliance.
+          do_not_skip: "[\"schedule\", \"workflow_dispatch\"]"
 
   filter-relevant-changes:
     name: "filter-relevant-changes"
