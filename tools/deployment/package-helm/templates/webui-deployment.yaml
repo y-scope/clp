@@ -84,7 +84,7 @@ spec:
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             tcpSocket: &webui-health-check
-              port: 4000
+              port: "webui"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *webui-health-check
