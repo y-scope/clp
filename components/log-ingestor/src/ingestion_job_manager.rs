@@ -33,6 +33,12 @@ pub enum Error {
 
     #[error("Prefix conflict: {0}")]
     PrefixConflict(String),
+
+    #[error("Custom endpoint URL not supported: {0}")]
+    CustomEndpointUrlNotSupported(String),
+
+    #[error("A region code must be specified when using the default AWS endpoint")]
+    MissingRegionCode,
 }
 
 /// An async-safe state for creating and managing ingestion jobs.
@@ -102,12 +108,17 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::MissingRegionCode`] if both the endpoint URL and region are unspecified.
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
+        if config.base.endpoint_url.is_none() && config.base.region.is_none() {
+            return Err(Error::MissingRegionCode);
+        }
         let s3_client_manager = S3ClientWrapper::create(
-            config.base.region.as_str(),
+            config.base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
+            config.base.endpoint_url.as_ref(),
         )
         .await;
         self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {
@@ -130,8 +141,14 @@ impl IngestionJobManagerState {
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
         let ingestion_job_config = config.base.clone();
+        if let Some(endpoint_url) = &ingestion_job_config.endpoint_url {
+            return Err(Error::CustomEndpointUrlNotSupported(format!(
+                "SQS listener ingestion jobs do not support custom endpoint URLs yet. Endpoint \
+                 URL: {endpoint_url}"
+            )));
+        }
         let sqs_client_manager = SqsClientWrapper::create(
-            config.base.region.as_str(),
+            config.base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
         )
@@ -213,7 +230,10 @@ impl IngestionJobManagerState {
         JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
-            if table_entry.region != ingestion_job_config.region
+            // TODO: We should avoid being verbose for checking each field one by one (tracked by
+            // #1805)
+            if table_entry.endpoint_url != ingestion_job_config.endpoint_url
+                || table_entry.region != ingestion_job_config.region
                 || table_entry.bucket_name != ingestion_job_config.bucket_name
                 || table_entry.dataset != ingestion_job_config.dataset
                 || is_mutually_prefix_free(
@@ -252,6 +272,7 @@ impl IngestionJobManagerState {
                 bucket_name: ingestion_job_config.bucket_name,
                 region: ingestion_job_config.region,
                 key_prefix: ingestion_job_config.key_prefix,
+                endpoint_url: ingestion_job_config.endpoint_url,
                 dataset: ingestion_job_config.dataset,
             },
         );
@@ -293,9 +314,10 @@ struct IngestionJobManager {
 struct IngestionJobTableEntry {
     ingestion_job: IngestionJob,
     listener: Listener,
-    region: String,
+    region: Option<NonEmptyString>,
     bucket_name: NonEmptyString,
     key_prefix: NonEmptyString,
+    endpoint_url: Option<NonEmptyString>,
     dataset: Option<NonEmptyString>,
 }
 
