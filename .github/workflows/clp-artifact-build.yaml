@@ -33,7 +33,7 @@ jobs:
       should_skip: "${{steps.skip_check.outputs.should_skip}}"
     steps:
       - id: "skip_check"
-        uses: "step-security/skip-duplicate-actions@v5"
+        uses: "fkirc/skip-duplicate-actions@v5"
         with:
           # Skip duplicate runs for the same content (e.g., when both push and pull_request trigger)
           concurrent_skipping: "same_content"
