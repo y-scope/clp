@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
 use crate::clp_config::{AwsAuthentication, S3Config};
@@ -41,6 +43,14 @@ impl Default for Config {
     }
 }
 
+/// Database name types used by CLP components (mirror of `ClpDbNameType`).
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ClpDbNameType {
+    Clp,
+    Spider,
+}
+
 /// Mirror of `clp_py_utils.clp_config.Database`.
 ///
 /// # NOTE
@@ -53,7 +63,8 @@ impl Default for Config {
 pub struct Database {
     pub host: String,
     pub port: u16,
-    pub name: String,
+    #[serde(default = "default_db_names")]
+    pub names: HashMap<ClpDbNameType, String>,
 }
 
 impl Default for Database {
@@ -61,9 +72,16 @@ impl Default for Database {
         Self {
             host: "localhost".to_owned(),
             port: 3306,
-            name: "clp-db".to_owned(),
+            names: default_db_names(),
         }
     }
+}
+
+fn default_db_names() -> HashMap<ClpDbNameType, String> {
+    HashMap::from([
+        (ClpDbNameType::Clp, "clp-db".to_owned()),
+        (ClpDbNameType::Spider, "spider-db".to_owned()),
+    ])
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
