@@ -45,7 +45,6 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
                 "name" "logs"
@@ -60,11 +59,25 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "archives"
               ) | quote }}
               mountPath: "/var/data/archives"
+            {{- else if eq .Values.clpConfig.archive_output.storage.type "s3" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
+                "name" "staged-archives"
+              ) | quote }}
+              mountPath: "/var/data/staged-archives"
+            {{- end }}
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
+            {{- end }}
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            {{- end }}
           command: [
             "python3", "-u",
             "/opt/clp/lib/python3/site-packages/bin/celery",
@@ -77,7 +90,6 @@ spec:
             "-n", "compression-worker"
           ]
       volumes:
-        - {{- include "clp.logsInputVolume" . | nindent 10 }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "compression-worker"
@@ -88,11 +100,25 @@ spec:
             "component_category" "compression-worker"
             "name" "tmp"
           ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
             "name" "archives"
           ) | nindent 10 }}
-        - name: "config"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
+        {{- else if eq .Values.clpConfig.archive_output.storage.type "s3" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-worker"
+            "name" "staged-archives"
+          ) | nindent 10 }}
+        {{- end }}
+        {{- if .Values.clpConfig.aws_config_directory }}
+        - {{- include "clp.awsConfigVolume" . | nindent 10 }}
+        {{- end }}
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}

@@ -63,6 +63,9 @@ clpConfig:
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"
 
+    # Retention period for search results, in minutes. Set to null to disable automatic deletion.
+    retention_period: 60
+
   compression_worker:
     logging_level: "INFO"
 
@@ -73,6 +76,14 @@ clpConfig:
     port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
+
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
 
   # Where archives should be output to
   archive_output:
@@ -113,6 +124,14 @@ clpConfig:
     # How large each stream file should be before being split into a new stream file
     target_uncompressed_size: 134217728  # 128 MB
 
+  garbage_collector:
+    logging_level: "INFO"
+
+    # Interval (in minutes) at which garbage collector jobs run
+    sweep_interval:
+      archive: 60
+      search_result: 30
+
   # Location where other data (besides archives) are stored. It will be created if
   # it doesn't exist.
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
@@ -129,6 +148,9 @@ clpConfig:
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
   tmp_directory: "/tmp/clp/var/tmp"
+
+  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
+  aws_config_directory: null
 
 credentials:
   database:

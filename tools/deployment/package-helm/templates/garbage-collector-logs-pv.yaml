@@ -1,0 +1,13 @@
+{{- $archiveRetention := .Values.clpConfig.archive_output.retention_period }}
+{{- $cacheRetention := .Values.clpConfig.results_cache.retention_period }}
+{{- if or $archiveRetention $cacheRetention }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "garbage-collector"
+  "name" "logs"
+  "nodeRole" "control-plane"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/garbage_collector" .Values.clpConfig.logs_directory)
+) }}
+{{- end }}
