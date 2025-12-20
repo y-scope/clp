@@ -710,6 +710,16 @@ class BaseController(ABC):
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
+            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
+            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
+            "ArchiveOutputTargetDictionariesSize": (
+                self._clp_config.archive_output.target_dictionaries_size
+            ),
+            "ArchiveOutputTargetEncodedFileSize": (
+                self._clp_config.archive_output.target_encoded_file_size
+            ),
+            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
         }
 
