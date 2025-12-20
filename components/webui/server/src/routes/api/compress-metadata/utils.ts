@@ -1,0 +1,72 @@
+import {brotliDecompressSync} from "node:zlib";
+
+import {decode} from "@msgpack/msgpack";
+import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
+
+import {CompressionMetadataQueryRow} from "./sql.js";
+
+
+/**
+ * Decodes a compressed job config stored in the database.
+ *
+ * @param jobConfig
+ * @return
+ * @throws {Error} When the buffer is missing or cannot be decoded.
+ */
+export const decodeJobConfig = (
+    jobConfig: unknown
+): {clp_config: ClpIoConfig} => {
+    if (!(jobConfig instanceof Buffer)) {
+        throw new Error("Missing clp_config buffer for compression metadata");
+    }
+
+    try {
+        const decodedClpConfig = decode(
+            brotliDecompressSync(jobConfig)
+        ) as ClpIoConfig;
+
+        return {clp_config: decodedClpConfig};
+    } catch (err: unknown) {
+        console.error(err);
+        throw new Error("Failed to decode clp_config buffer");
+    }
+};
+
+/**
+ * Maps compression metadata rows from the database to decoded payloads.
+ *
+ * @param rows
+ * @return
+ */
+export const mapCompressionMetadataRows = (
+    rows: CompressionMetadataQueryRow[]
+): CompressionMetadataDecoded[] => {
+    return rows.map(
+        ({
+            _id,
+            clp_config: clpConfig,
+            compressed_size: compressedSize,
+            duration,
+            start_time: startTime,
+            status,
+            status_msg: statusMsg,
+            uncompressed_size: uncompressedSize,
+            update_time: updateTime,
+        }): CompressionMetadataDecoded => {
+            const {clp_config: decodedClpConfig} = decodeJobConfig(clpConfig);
+
+            return {
+                _id: _id,
+                clp_config: decodedClpConfig,
+                compressed_size: compressedSize,
+                duration: duration,
+                start_time: startTime,
+                status: status,
+                status_msg: statusMsg,
+                uncompressed_size: uncompressedSize,
+                update_time: updateTime,
+            };
+        }
+    );
+};
