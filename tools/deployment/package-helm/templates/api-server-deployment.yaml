@@ -82,7 +82,7 @@ spec:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet: &api-server-health-check
               path: "/health"
-              port: 3001
+              port: "api-server"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *api-server-health-check
