@@ -27,21 +27,7 @@ concurrency:
 
 jobs:
   skip-duplicate-check:
-    name: "skip-duplicate-check"
-    runs-on: "ubuntu-24.04"
-    outputs:
-      should_skip: "${{steps.skip_check.outputs.should_skip}}"
-    steps:
-      - id: "skip_check"
-        uses: "fkirc/skip-duplicate-actions@v5"
-        with:
-          # Skip duplicate runs for the same content (e.g., when both push and pull_request trigger)
-          concurrent_skipping: "same_content"
-          skip_after_successful_duplicate: "true"
-          # Always run for scheduled builds and manual triggers.
-          # NOTE: This is a JSON array string (required by the action), with escaped quotes for
-          # yamllint compliance.
-          do_not_skip: "[\"schedule\", \"workflow_dispatch\"]"
+    uses: "./.github/workflows/skip-duplicate-check.yaml"
 
   filter-relevant-changes:
     name: "filter-relevant-changes"
