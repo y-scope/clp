@@ -13,6 +13,20 @@
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
 
+## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+#log_ingestor:
+#  host: "localhost"
+#  port: 3002
+#  # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
+#  # arrives.
+#  buffer_flush_timeout: 300
+#  # The log buffer size (in bytes) that triggers a flush for compression.
+#  buffer_flush_threshold: 268435456 # 256 MiB
+#  # The capacity of the internal channel used for communication between an ingestion job and the
+#  # log buffer.
+#  channel_capacity: 10
+#  logging_level: "INFO"
+
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
@@ -31,11 +45,19 @@
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
 #  port: 3306
-#  name: "clp-db"
+#  names:
+#    clp: "clp-db"
+#    spider: "spider-db"
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+#  logging_level: "INFO"
+#  type: "celery"  # "celery" or "spider"
+#
+#spider_scheduler:
+#  host: "localhost"
+#  port: 6000
 #  logging_level: "INFO"
 #
 #query_scheduler:

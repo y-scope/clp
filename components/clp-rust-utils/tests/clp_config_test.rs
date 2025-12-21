@@ -2,15 +2,18 @@ use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials, S3Config},
     job_config::{ClpIoConfig, InputConfig, OutputConfig, S3InputConfig},
     serde::BrotliMsgpack,
+    types::non_empty_string::ExpectedNonEmpty,
 };
+use non_empty_string::NonEmptyString;
 use serde_json::Value;
 
 #[test]
 fn test_clp_io_config_serialization() {
     let s3_config = S3Config {
-        bucket: "yscope".into(),
-        region_code: "us-east-2".into(),
-        key_prefix: "sample-logs/cockroachdb.clp.zst".into(),
+        bucket: NonEmptyString::from_static_str("yscope"),
+        region_code: Some(NonEmptyString::from_static_str("us-east-2")),
+        key_prefix: NonEmptyString::from_static_str("sample-logs/cockroachdb.clp.zst"),
+        endpoint_url: None,
         aws_authentication: AwsAuthentication::Credentials {
             credentials: AwsCredentials {
                 access_key_id: "ACCESS_KEY_ID".into(),
@@ -23,8 +26,8 @@ fn test_clp_io_config_serialization() {
             config: S3InputConfig {
                 s3_config,
                 keys: None,
-                dataset: Some("test-dataset".into()),
-                timestamp_key: Some("timestamp".into()),
+                dataset: Some(NonEmptyString::from_static_str("test-dataset")),
+                timestamp_key: Some(NonEmptyString::from_static_str("timestamp")),
                 unstructured: false,
             },
         },
@@ -40,13 +43,12 @@ fn test_clp_io_config_serialization() {
 
     let brotli_compressed_msgpack = BrotliMsgpack::serialize(&config)
         .expect("Brotli-compressed MessagePack serialized config.");
-    let expected = "1ba00100e4ffdf9f43284b650e496850ba5f1eeefb53844a05d074faa66eb23ebef2dc45638\
-                275e9c24cb3bccba29c9bfc9d95db42175d52eecc81793cb3bc3c4ed0bf604c56e5c9a24581d9e65080\
-                1fd7263a8fb774fa362adf02eecc5b9d99532b8be8be173f6b659a9538c6c56a15571bc9856e20d0267\
-                b1591599975a75cdeb2aea30b83c8b486f3a2b3a74b419d6f99db0742a1482603a9480912e1336f2780\
-                dd9c3391503a9205a89a755bfe2c0d3a6be4c98ef0489c0b7e7f2d50b85f8f6e671a54d5dc6fa16d1ac\
-                cbaaffc5c3f1fb140f21ba0dce6ff0e8bc5f2da3c58426a9947046ca3cf9a06c7c8219e25a6ad0c4c67\
-                b6aceb8c88c782293b";
+    let expected = "1bae0100e4ffdf9f43284b650e496850ba5f98ef7b53044b04d074faa66eb23ebef25c0d1a13ac\
+        4b17669ac5cbe254cffc4e7423edc455d2f61c988e679697db09ba171ce575912c9a14986d0e05f87e4dd1babda\
+        9d5b5d1c5267067deea8cacf9928cf673f1a75a627945e06c7cbe6c6b21d98945e16df94ba0d5fce7c2d61158ca\
+        6541545e74dd5e3cddf21ea4832251d93cf6b3f69e3c05ab7eabc2dee3f305120988057210f19f59dc01ece49c0\
+        8f8e2812440d5acf6d2cfd2ae334791ec8888c43ae0f7870485fb756b76b4485c29fc164a27fd592de69feb5724\
+        16287f03545be2df6230185e931b8348a98a88804df492d3e01fd9c4b3c4b4b081e1cc970aaa2319b07cca0c";
     assert_eq!(expected, hex::encode(brotli_compressed_msgpack));
 
     let json_serialized_result = serde_json::to_string_pretty(&config);
@@ -58,6 +60,7 @@ fn test_clp_io_config_serialization() {
         "bucket": "yscope",
         "region_code": "us-east-2",
         "key_prefix": "sample-logs/cockroachdb.clp.zst",
+        "endpoint_url": null,
         "aws_authentication": {
           "type": "credentials",
           "credentials": {

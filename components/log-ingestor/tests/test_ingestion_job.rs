@@ -4,11 +4,16 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
-use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::{
+    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
+    s3::ObjectMetadata,
+    types::non_empty_string::ExpectedNonEmpty,
+};
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{S3ScannerConfig, SqsListener, SqsListenerConfig},
+    ingestion_job::SqsListener,
 };
+use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -84,15 +89,15 @@ async fn receive_object_metadata(
 /// * A vector of received S3 object metadata.
 async fn upload_and_receive(
     s3_client: aws_sdk_s3::Client,
-    bucket: String,
-    prefix: String,
+    bucket: NonEmptyString,
+    prefix: NonEmptyString,
     num_objects_to_create: usize,
     receiver: mpsc::Receiver<ObjectMetadata>,
 ) -> (Vec<ObjectMetadata>, Vec<ObjectMetadata>) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|idx| ObjectMetadata {
             bucket: bucket.clone(),
-            key: format!("{prefix}/{idx:05}.log"),
+            key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
         })
         .collect();
@@ -121,13 +126,13 @@ async fn upload_and_receive(
 /// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
 async fn upload_noise_objects(
     s3_client: aws_sdk_s3::Client,
-    bucket: String,
+    bucket: NonEmptyString,
     num_objects_to_create: usize,
 ) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|_| ObjectMetadata {
             bucket: bucket.clone(),
-            key: format!("{}.log", Uuid::new_v4()),
+            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
         })
         .collect();
@@ -139,9 +144,9 @@ async fn upload_noise_objects(
 
 /// # Returns
 ///
-/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}/`.
-fn get_testing_prefix(job_id: &Uuid) -> String {
-    format!("test-{job_id}")
+/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}`.
+fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
+    NonEmptyString::from_string(format!("test-{job_id}"))
 }
 
 #[tokio::test]
@@ -149,32 +154,35 @@ fn get_testing_prefix(job_id: &Uuid) -> String {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_sqs_listener() -> Result<()> {
     let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix(&job_id);
+    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
-    let secret_access_key =
-        secrecy::SecretString::new(aws_config.secret_access_key.clone().into_boxed_str());
     let sqs_client = clp_rust_utils::sqs::create_new_client(
-        aws_config.endpoint.as_str(),
-        aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
-        &secret_access_key,
+        aws_config.secret_access_key.as_str(),
+        aws_config.region.as_str(),
+        Some(&aws_config.endpoint),
     )
     .await;
 
     let sqs_listener_config = SqsListenerConfig {
-        queue_url: format!(
+        queue_url: NonEmptyString::from_string(format!(
             "{}/{}/{}",
-            aws_config.endpoint.as_str(),
+            aws_config.endpoint,
             aws_config.account_id.as_str(),
             aws_config.queue_name.as_str()
-        ),
-        bucket_name: aws_config.bucket_name.clone(),
-        prefix: prefix.clone(),
-        max_num_messages_to_fetch: 2,
-        init_polling_backoff_sec: 1,
-        max_polling_backoff_sec: 1,
+        )),
+        base: BaseConfig {
+            region: Some(aws_config.region.clone()),
+            bucket_name: aws_config.bucket_name.clone(),
+            key_prefix: prefix.clone(),
+            endpoint_url: Some(aws_config.endpoint.clone()),
+            dataset: None,
+            timestamp_key: None,
+            unstructured: false,
+            tags: None,
+        },
     };
 
     let (sender, receiver) = mpsc::channel::<ObjectMetadata>(TEST_CHANNEL_CAPACITY);
@@ -187,10 +195,10 @@ async fn test_sqs_listener() -> Result<()> {
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.endpoint.as_str(),
-        aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
-        &secret_access_key,
+        aws_config.secret_access_key.as_str(),
+        aws_config.region.as_str(),
+        Some(&aws_config.endpoint),
     )
     .await;
 
@@ -228,24 +236,30 @@ async fn test_sqs_listener() -> Result<()> {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_s3_scanner() -> Result<()> {
     let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix(&job_id);
+    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
-    let secret_access_key =
-        secrecy::SecretString::new(aws_config.secret_access_key.clone().into_boxed_str());
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.endpoint.as_str(),
-        aws_config.region.as_str(),
         aws_config.access_key_id.as_str(),
-        &secret_access_key,
+        aws_config.secret_access_key.as_str(),
+        aws_config.region.as_str(),
+        Some(&aws_config.endpoint),
     )
     .await;
 
     let s3_scanner_config = S3ScannerConfig {
-        bucket_name: aws_config.bucket_name.clone(),
-        prefix: prefix.clone(),
-        scanning_interval: Duration::from_millis(300),
+        base: BaseConfig {
+            region: Some(aws_config.region.clone()),
+            bucket_name: aws_config.bucket_name.clone(),
+            key_prefix: prefix.clone(),
+            endpoint_url: Some(aws_config.endpoint.clone()),
+            dataset: None,
+            timestamp_key: None,
+            unstructured: false,
+            tags: None,
+        },
+        scanning_interval_sec: 1,
         start_after: None,
     };
 

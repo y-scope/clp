@@ -7,9 +7,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "boto3>=1.40.55",
-    # mariadb version must be compatible with libmariadev installed in runtime env.
-    # See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
-    "mariadb>=1.0.11,<1.1.dev0",
+    "mariadb>=1.1.14",
     "mysql-connector-python>=9.4.0",
     "pydantic>=2.12.3",
     "python-Levenshtein>=0.27.1",
@@ -43,7 +41,7 @@ show_error_context = true
 show_error_end = true
 
 [tool.ruff]
-extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
+extend = "../../ruff.toml"
 
 [tool.uv]
 default-groups = ["clp", "dev"]

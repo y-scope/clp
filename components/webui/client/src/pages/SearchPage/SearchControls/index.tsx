@@ -3,9 +3,9 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {SETTINGS_QUERY_ENGINE} from "../../../config";
 import usePrestoSearchState from "../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
-import NativeControls from "./NativeControls";
-import FreeformControls from "./Presto/FreeformControls";
-import GuidedControls from "./Presto/GuidedControls";
+import NativeControls from "./Native/NativeControls";
+import FreeformControls from "./Presto/Freeform/FreeformControls";
+import GuidedControls from "./Presto/Guided/GuidedControls";
 
 
 /**

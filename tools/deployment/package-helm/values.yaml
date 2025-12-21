@@ -15,19 +15,114 @@ securityContext:
 image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
-    pullPolicy: "IfNotPresent"
-    tag: "nightly"
+    pullPolicy: "Always"
+    tag: "main"
+
+workerConcurrency: 8
 
 clpConfig:
   package:
     storage_engine: "clp-s"
     query_engine: "clp-s"
 
+  # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
+  # workers.
+  logs_input:
+    type: "fs"
+
+    # NOTE: This directory will be exposed inside the container, so symbolic links to files outside
+    # this directory will be ignored.
+    directory: "/"
+
   database:
     type: "mariadb"  # "mariadb" or "mysql"
-    host: "localhost"
     port: 30306
-    name: "clp-db"
+    names:
+      clp: "clp-db"
+
+  compression_scheduler:
+    jobs_poll_delay: 0.1  # seconds
+    logging_level: "INFO"
+    max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+
+  query_scheduler:
+    jobs_poll_delay: 0.1  # seconds
+    num_archives_to_search_per_sub_job: 16
+    logging_level: "INFO"
+
+  redis:
+    query_backend_database: 0
+    compression_backend_database: 1
+
+  reducer:
+    logging_level: "INFO"
+    upsert_interval: 100  # milliseconds
+
+  results_cache:
+    port: 30017
+    db_name: "clp-query-results"
+    stream_collection_name: "stream-files"
+
+    # Retention period for search results, in minutes. Set to null to disable automatic deletion.
+    retention_period: 60
+
+  compression_worker:
+    logging_level: "INFO"
+
+  query_worker:
+    logging_level: "INFO"
+
+  webui:
+    port: 30000
+    results_metadata_collection_name: "results-metadata"
+    rate_limit: 1000
+
+  # Where archives should be output to
+  archive_output:
+    storage:
+      type: "fs"
+      # NOTE: This directory must not overlap with any path used in CLP's execution container. An
+      # error will be raised if so.
+      directory: "/tmp/clp/var/data/archives"
+
+    # Retention period for archives, in minutes. Set to null to disable automatic deletion.
+    retention_period: null
+
+    # How much data CLP should try to compress into each archive
+    target_archive_size: 268435456  # 256 MB
+
+    # How large the dictionaries should be allowed to get before the archive is
+    # closed and a new one is created
+    target_dictionaries_size: 33554432  # 32 MB
+
+    # How large each encoded file should be before being split into a new encoded
+    # file
+    target_encoded_file_size: 268435456  # 256 MB
+
+    # How much data CLP should try to fit into each segment within an archive
+    target_segment_size: 268435456  # 256 MB
+
+    # How much archives should be compressed: 1 (fast/low compression) to 19 (slow/high compression)
+    compression_level: 3
+
+  # Where CLP stream files (e.g., IR streams) should be output
+  stream_output:
+    storage:
+      type: "fs"
+      # NOTE: This directory must not overlap with any path used in CLP's execution container. An
+      # error will be raised if so.
+      directory: "/tmp/clp/var/data/streams"
+
+    # How large each stream file should be before being split into a new stream file
+    target_uncompressed_size: 134217728  # 128 MB
+
+  garbage_collector:
+    logging_level: "INFO"
+
+    # Interval (in minutes) at which garbage collector jobs run
+    sweep_interval:
+      archive: 60
+      search_result: 30
 
   # Location where other data (besides archives) are stored. It will be created if
   # it doesn't exist.
@@ -40,8 +135,22 @@ clpConfig:
   # will be raised if so.
   logs_directory: "/tmp/clp/var/log"
 
+  # Location where temporary runtime data are stored. It will be created if
+  # it doesn't exist.
+  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
+  # will be raised if so.
+  tmp_directory: "/tmp/clp/var/tmp"
+
 credentials:
-  # Database credentials
   database:
     username: "clp-user"
+    password: "pass"
+    root_username: "root"
+    root_password: "root-pass"
+
+  queue:
+    username: "clp-user"
+    password: "pass"
+
+  redis:
     password: "pass"

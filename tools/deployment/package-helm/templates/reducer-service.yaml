@@ -1,0 +1,17 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp.fullname" . }}-reducer
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "reducer"
+spec:
+  clusterIP: "None"
+  selector:
+    {{- include "clp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "reducer"
+  ports:
+    {{- range $i := until (int .Values.workerConcurrency) }}
+    - name: "reducer-{{ $i }}"
+      port: {{ add 14009 $i }}
+    {{- end }}

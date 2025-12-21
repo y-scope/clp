@@ -5,7 +5,22 @@ import shutil
 import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import IO
+from typing import Any, IO
+
+import yaml
+
+
+def get_binary_path(name: str) -> str:
+    """
+    :param name: Name of the program binary to locate.
+    :return: Absolute path to the program binary.
+    :raise RuntimeError: if the program binary is not found on $PATH.
+    """
+    program_binary = shutil.which(name)
+    if program_binary is None:
+        err_msg = f"'{name}' not found in PATH"
+        raise RuntimeError(err_msg)
+    return program_binary
 
 
 def get_env_var(var_name: str) -> str:
@@ -49,6 +64,33 @@ def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
         _sort_json_keys_and_rows(json_fp2) as temp_file_2,
     ):
         return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
+
+
+def load_yaml_to_dict(path: Path) -> dict[str, Any]:
+    """
+    Parses a YAML file into a dictionary.
+
+    :param path:
+    :return: Dictionary parsed from the file.
+    :raise ValueError: if the file contains invalid YAML.
+    :raise ValueError: if the file cannot be read.
+    :raise TypeError: if the file does not have a top-level mapping.
+    """
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            target_dict = yaml.safe_load(file)
+    except yaml.YAMLError as err:
+        err_msg = f"Invalid YAML in target file '{path}'"
+        raise ValueError(err_msg) from err
+    except OSError as err:
+        err_msg = f"Cannot read target file '{path}'"
+        raise ValueError(err_msg) from err
+
+    if not isinstance(target_dict, dict):
+        err_msg = f"Target file '{path}' must have a top-level mapping."
+        raise TypeError(err_msg)
+
+    return target_dict
 
 
 def resolve_path_env_var(var_name: str) -> Path:

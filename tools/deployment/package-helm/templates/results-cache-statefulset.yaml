@@ -1,0 +1,99 @@
+apiVersion: "apps/v1"
+kind: "StatefulSet"
+metadata:
+  name: {{ include "clp.fullname" . }}-results-cache
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "results-cache"
+spec:
+  serviceName: {{ include "clp.fullname" . }}-results-cache
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "results-cache"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "results-cache"
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
+        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
+        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
+      containers:
+        - name: "results-cache"
+          image: "mongo:7.0.1"
+          imagePullPolicy: "Always"
+          args: [
+            "--config", "/etc/mongo/mongod.conf",
+            "--bind_ip", "0.0.0.0"
+          ]
+          ports:
+            - name: "results-cache"
+              containerPort: 27017
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/mongo/mongod.conf"
+              subPath: "mongod.conf"
+              readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "results-cache"
+                "name" "data"
+              ) | quote }}
+              mountPath: "/data/db"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "results-cache"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/mongodb"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec: &results-cache-health-check
+              command:
+                - "mongosh"
+                - "127.0.0.1:27017/test"
+                - "--quiet"
+                - "--eval"
+                - "db.runCommand('ping').ok"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            exec: *results-cache-health-check
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: "Delete"
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "results-cache"
+            "name" "data"
+          ) | quote }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "local-storage"
+        selector:
+          matchLabels:
+            {{- include "clp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: "results-cache"
+        resources:
+          requests:
+            storage: "20Gi"
+    - metadata:
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "results-cache"
+            "name" "logs"
+          ) | quote }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "local-storage"
+        selector:
+          matchLabels:
+            {{- include "clp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: "results-cache"
+        resources:
+          requests:
+            storage: "5Gi"

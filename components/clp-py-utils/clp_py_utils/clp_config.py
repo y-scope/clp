@@ -1,8 +1,11 @@
 import os
 import pathlib
 from enum import auto
+from types import MappingProxyType
 from typing import Annotated, Any, ClassVar, Literal
+from urllib.parse import urlencode
 
+import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -29,6 +32,7 @@ from clp_py_utils.serialization_utils import serialize_path, serialize_str_enum
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
@@ -37,6 +41,7 @@ PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 API_SERVER_COMPONENT_NAME = "api_server"
+LOG_INGESTOR_COMPONENT_NAME = "log_ingestor"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
@@ -76,6 +81,8 @@ CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
+SPIDER_DB_USER_ENV_VAR_NAME = "SPIDER_DB_USER"
+SPIDER_DB_PASS_ENV_VAR_NAME = "SPIDER_DB_PASS"
 
 # Serializer
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
@@ -91,10 +98,21 @@ Port = Annotated[int, Field(gt=0, lt=2**16)]
 SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 
+LoggingLevelRust = Literal[
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "TRACE",
+    "OFF",
+]
+
 
 class DeploymentType(KebabCaseStrEnum):
     BASE = auto()
     FULL = auto()
+    SPIDER_BASE = auto()
+    SPIDER_FULL = auto()
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -121,6 +139,14 @@ class DatabaseEngine(KebabCaseStrEnum):
 
 
 DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
+
+
+class OrchestrationType(KebabCaseStrEnum):
+    CELERY = auto()
+    SPIDER = auto()
+
+
+OrchestrationTypeStr = Annotated[OrchestrationType, StrEnumSerializer]
 
 
 class QueryEngine(KebabCaseStrEnum):
@@ -179,6 +205,29 @@ class ClpDbUserType(KebabCaseStrEnum):
 
     CLP = auto()
     ROOT = auto()
+    SPIDER = auto()
+
+
+class ClpDbNameType(KebabCaseStrEnum):
+    """Database name types used by CLP components."""
+
+    CLP = auto()
+    SPIDER = auto()
+
+
+_DB_USER_TYPE_TO_DB_NAME_TYPE: MappingProxyType[ClpDbUserType, ClpDbNameType] = MappingProxyType(
+    {
+        ClpDbUserType.CLP: ClpDbNameType.CLP,
+        ClpDbUserType.ROOT: ClpDbNameType.CLP,
+        ClpDbUserType.SPIDER: ClpDbNameType.SPIDER,
+    }
+)
+
+
+yaml.SafeDumper.add_multi_representer(
+    KebabCaseStrEnum,
+    yaml.representer.SafeRepresenter.represent_str,
+)
 
 
 class DbUserCredentials(BaseModel):
@@ -194,7 +243,10 @@ class Database(BaseModel):
     type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
-    name: NonEmptyStr = "clp-db"
+    names: dict[ClpDbNameType, NonEmptyStr] = {
+        ClpDbNameType.CLP: "clp-db",
+        ClpDbNameType.SPIDER: "spider-db",
+    }
     ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
     compress: bool = True
@@ -237,7 +289,7 @@ class Database(BaseModel):
             "port": self.port,
             "user": self.credentials[user_type].username,
             "password": self.credentials[user_type].password,
-            "database": self.name,
+            "database": self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]],
             "compress": self.compress,
             "autocommit": self.auto_commit,
         }
@@ -274,6 +326,22 @@ class Database(BaseModel):
 
         return d
 
+    def get_container_url(self, user_type: ClpDbUserType = ClpDbUserType.CLP) -> str:
+        """
+        Returns a JDBC URL for connecting to the database from within a container.
+        """
+        self.ensure_credentials_loaded(user_type)
+        query = urlencode(
+            {
+                "user": self.credentials[user_type].username,
+                "password": self.credentials[user_type].password,
+            }
+        )
+        return (
+            f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
+            f"{self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
+        )
+
     def dump_to_primitive_dict(self) -> dict[str, Any]:
         """:return: A dictionary representation of this model, excluding credentials."""
         return self.model_dump(exclude={"credentials"})
@@ -297,6 +365,10 @@ class Database(BaseModel):
                 username=get_config_value(config, f"{DB_COMPONENT_NAME}.root_username"),
                 password=get_config_value(config, f"{DB_COMPONENT_NAME}.root_password"),
             )
+            self.credentials[ClpDbUserType.SPIDER] = DbUserCredentials(
+                username=get_config_value(config, f"{DB_COMPONENT_NAME}.spider_username"),
+                password=get_config_value(config, f"{DB_COMPONENT_NAME}.spider_password"),
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
@@ -316,6 +388,9 @@ class Database(BaseModel):
         elif user_type == ClpDbUserType.ROOT:
             user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
             pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.SPIDER:
+            user_env_var = SPIDER_DB_USER_ENV_VAR_NAME
+            pass_env_var = SPIDER_DB_PASS_ENV_VAR_NAME
         else:
             err_msg = f"Unsupported user type '{user_type}'."
             raise ValueError(err_msg)
@@ -330,12 +405,24 @@ class Database(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
+class SpiderScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6000
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+
+    def transform_for_container(self):
+        self.host = SPIDER_SCHEDULER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
+
 class CompressionScheduler(BaseModel):
     UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
 
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
+    type: OrchestrationTypeStr = OrchestrationType.CELERY
 
 
 class QueryScheduler(BaseModel):
@@ -501,7 +588,8 @@ class AwsAuthentication(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_code: NonEmptyStr
+    endpoint_url: str | None = None
+    region_code: NonEmptyStr | None = None
     bucket: NonEmptyStr
     key_prefix: str
     aws_authentication: AwsAuthentication
@@ -510,9 +598,6 @@ class S3Config(BaseModel):
 class S3IngestionConfig(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     aws_authentication: AwsAuthentication
-
-    def dump_to_primitive_dict(self):
-        return self.model_dump()
 
     def transform_for_container(self):
         pass
@@ -684,6 +769,15 @@ class ApiServer(BaseModel):
     default_max_num_query_results: int = 1000
 
 
+class LogIngestor(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 3002
+    buffer_flush_timeout: PositiveInt = 300  # seconds
+    buffer_flush_threshold: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    channel_capacity: PositiveInt = 10
+    logging_level: LoggingLevelRust = "INFO"
+
+
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
 
@@ -715,17 +809,20 @@ class ClpConfig(BaseModel):
 
     package: Package = Package()
     database: Database = Database()
-    queue: Queue = Queue()
-    redis: Redis = Redis()
+    # Default to use celery backend
+    queue: Queue | None = Queue()
+    redis: Redis | None = Redis()
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
+    spider_scheduler: SpiderScheduler | None = None
     query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
+    log_ingestor: LogIngestor | None = LogIngestor()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -905,21 +1002,31 @@ class ClpConfig(BaseModel):
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
     def get_deployment_type(self) -> DeploymentType:
+        if OrchestrationType.SPIDER == self.compression_scheduler.type:
+            if QueryEngine.PRESTO == self.package.query_engine:
+                return DeploymentType.SPIDER_BASE
+            return DeploymentType.SPIDER_FULL
         if QueryEngine.PRESTO == self.package.query_engine:
             return DeploymentType.BASE
         return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = {
-            "database",
-            "queue",
-            "redis",
-        }
+        custom_serialized_fields = {"database", "queue", "redis"}
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
-            d[key] = getattr(self, key).dump_to_primitive_dict()
+            value = getattr(self, key)
+            d[key] = None if value is None else value.dump_to_primitive_dict()
 
         return d
+
+    @model_validator(mode="after")
+    def validate_log_ingestor_config(self):
+        if self.log_ingestor is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def validate_presto_config(self):
@@ -929,6 +1036,30 @@ class ClpConfig(BaseModel):
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_spider_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.SPIDER:
+            return self
+        if self.spider_scheduler is None:
+            raise ValueError(
+                "`spider_scheduler` must be configured when using Spider orchestration."
+            )
+        if self.database.type != DatabaseEngine.MARIADB:
+            raise ValueError("Spider only supports MariaDB for the metadata database.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_celery_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.CELERY:
+            return self
+        if self.queue is None:
+            raise ValueError("`queue` must be configured when using Celery orchestration.")
+        if self.redis is None:
+            raise ValueError("`redis` must be configured when using Celery orchestration.")
         return self
 
     def transform_for_container(self):
@@ -946,8 +1077,12 @@ class ClpConfig(BaseModel):
         self.stream_output.storage.transform_for_container()
 
         self.database.transform_for_container()
-        self.queue.transform_for_container()
-        self.redis.transform_for_container()
+        if self.queue is not None:
+            self.queue.transform_for_container()
+        if self.redis is not None:
+            self.redis.transform_for_container()
+        if self.spider_scheduler is not None:
+            self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
