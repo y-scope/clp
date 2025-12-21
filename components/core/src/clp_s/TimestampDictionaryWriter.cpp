@@ -4,131 +4,245 @@
 #include <sstream>
 #include <string_view>
 
-namespace clp_s {
-void TimestampDictionaryWriter::write_timestamp_entries(
-        std::map<std::string, TimestampEntry> const& ranges,
-        std::stringstream& stream
-) {
-    write_numeric_value<uint64_t>(stream, ranges.size());
+#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
-    for (auto const& range : ranges) {
+#include <clp_s/timestamp_parser/TimestampParser.hpp>
+
+namespace clp_s {
+void TimestampDictionaryWriter::write(std::stringstream& stream) {
+    write_numeric_value<uint64_t>(stream, m_column_id_to_range.size());
+    for (auto const& range : m_column_id_to_range) {
         range.second.write_to_stream(stream);
     }
-}
 
-void TimestampDictionaryWriter::write(std::stringstream& stream) {
-    merge_range();
-    write_timestamp_entries(m_column_key_to_range, stream);
+    write_numeric_value<uint64_t>(
+            stream,
+            m_string_patterns_and_ids.size() + m_numeric_pattern_to_id.size()
+    );
+    for (auto const& [quoted_pattern, unquoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+        write_numeric_value<uint64_t>(stream, pattern_id);
 
-    write_numeric_value<uint64_t>(stream, m_pattern_to_id.size());
-    for (auto& it : m_pattern_to_id) {
-        // write pattern ID
-        write_numeric_value<uint64_t>(stream, it.second);
+        auto const raw_pattern{quoted_pattern.get_pattern()};
+        write_numeric_value<uint64_t>(stream, raw_pattern.length());
+        stream.write(raw_pattern.data(), raw_pattern.size());
+    }
 
-        std::string const& pattern = it.first->get_format();
-        write_numeric_value<uint64_t>(stream, pattern.length());
-        stream.write(pattern.data(), pattern.size());
+    for (auto const& [raw_pattern, pattern_and_id] : m_numeric_pattern_to_id) {
+        write_numeric_value<uint64_t>(stream, pattern_and_id.second);
+
+        write_numeric_value<uint64_t>(stream, raw_pattern.size());
+        stream.write(raw_pattern.data(), raw_pattern.size());
     }
 }
 
-uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* pattern) {
-    auto it = m_pattern_to_id.find(pattern);
-    if (m_pattern_to_id.end() == it) {
-        uint64_t id = m_next_id++;
-        m_pattern_to_id.emplace(pattern, id);
-        return id;
-    }
-    return it->second;
-}
-
-epochtime_t TimestampDictionaryWriter::ingest_entry(
+auto TimestampDictionaryWriter::ingest_json_string_timestamp(
         std::string_view key,
         int32_t node_id,
-        std::string_view timestamp,
-        uint64_t& pattern_id
-) {
-    epochtime_t ret;
-    size_t timestamp_begin_pos = 0, timestamp_end_pos = 0;
-    TimestampPattern const* pattern{nullptr};
+        std::string_view timestamp
+) -> std::pair<epochtime_t, uint64_t> {
+    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
+    if (m_column_id_to_range.end() == timestamp_entry_it) {
+        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
+    }
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
-    for (auto it : m_pattern_to_id) {
-        if (it.first->parse_timestamp(timestamp, ret, timestamp_begin_pos, timestamp_end_pos)) {
-            pattern = it.first;
-            pattern_id = it.second;
-            break;
+    std::string generated_pattern;
+    for (auto const& [quoted_pattern, unquoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+        auto const parsing_result{timestamp_parser::parse_timestamp(
+                timestamp,
+                quoted_pattern,
+                true,
+                generated_pattern
+        )};
+        if (parsing_result.has_error()) {
+            continue;
         }
+        auto const epoch_timestamp{parsing_result.value().first};
+        timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+        return {epoch_timestamp, pattern_id};
     }
 
     // Fall back to consulting all known timestamp patterns
-    if (nullptr == pattern) {
-        pattern = TimestampPattern::search_known_ts_patterns(
-                timestamp,
-                ret,
-                timestamp_begin_pos,
-                timestamp_end_pos
-        );
-        pattern_id = get_pattern_id(pattern);
-    }
-
-    if (nullptr == pattern) {
+    auto const parsing_result{timestamp_parser::search_known_timestamp_patterns(
+            timestamp,
+            m_quoted_timestamp_patterns,
+            true,
+            generated_pattern
+    )};
+    if (false == parsing_result.has_value()) {
+        SPDLOG_ERROR("Failed to parse timestamp {} against known timestamp patterns.", timestamp);
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
-    auto entry = m_column_id_to_range.find(node_id);
-    if (entry == m_column_id_to_range.end()) {
-        TimestampEntry new_entry(key);
-        new_entry.ingest_timestamp(ret);
-        m_column_id_to_range.emplace(node_id, std::move(new_entry));
-    } else {
-        entry->second.ingest_timestamp(ret);
+    auto const [epoch_timestamp, pattern] = parsing_result.value();
+    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+    auto const quoted_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+    auto const unquoted_pattern_result{
+            timestamp_parser::TimestampPattern::create(pattern.substr(1ULL, pattern.size() - 2ULL))
+    };
+    if (quoted_pattern_result.has_error() || unquoted_pattern_result.has_error()) {
+        SPDLOG_ERROR("Failed to create timestamp pattern.");
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
-    return ret;
+    auto const new_pattern_id{m_next_id++};
+    m_string_patterns_and_ids.emplace_back(
+            std::move(quoted_pattern_result.value()),
+            std::move(unquoted_pattern_result.value()),
+            new_pattern_id
+    );
+    return {epoch_timestamp, new_pattern_id};
 }
 
-void
-TimestampDictionaryWriter::ingest_entry(std::string_view key, int32_t node_id, double timestamp) {
-    auto entry = m_column_id_to_range.find(node_id);
-    if (entry == m_column_id_to_range.end()) {
-        TimestampEntry new_entry(key);
-        new_entry.ingest_timestamp(timestamp);
-        m_column_id_to_range.emplace(node_id, std::move(new_entry));
-    } else {
-        entry->second.ingest_timestamp(timestamp);
+auto TimestampDictionaryWriter::ingest_utf8_string_timestamp(
+        std::string_view key,
+        int32_t node_id,
+        std::string_view timestamp
+) -> std::pair<epochtime_t, uint64_t> {
+    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
+    if (m_column_id_to_range.end() == timestamp_entry_it) {
+        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
     }
-}
 
-void
-TimestampDictionaryWriter::ingest_entry(std::string_view key, int32_t node_id, int64_t timestamp) {
-    auto entry = m_column_id_to_range.find(node_id);
-    if (entry == m_column_id_to_range.end()) {
-        TimestampEntry new_entry(key);
-        new_entry.ingest_timestamp(timestamp);
-        m_column_id_to_range.emplace(node_id, std::move(new_entry));
-    } else {
-        entry->second.ingest_timestamp(timestamp);
-    }
-}
-
-void TimestampDictionaryWriter::merge_range() {
-    for (auto const& it : m_column_id_to_range) {
-        std::string key = it.second.get_key_name();
-        auto entry = m_column_key_to_range.find(key);
-        if (entry == m_column_key_to_range.end()) {
-            TimestampEntry new_entry = it.second;
-            new_entry.insert_column_id(it.first);
-            m_column_key_to_range.emplace(key, std::move(new_entry));
-        } else {
-            entry->second.merge_range(it.second);
-            entry->second.insert_column_id(it.first);
+    // Try parsing the timestamp as one of the previously seen timestamp patterns
+    std::string generated_pattern;
+    for (auto const& [quoted_pattern, unquoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+        auto const parsing_result{timestamp_parser::parse_timestamp(
+                timestamp,
+                quoted_pattern,
+                false,
+                generated_pattern
+        )};
+        if (parsing_result.has_error()) {
+            continue;
         }
+        auto const epoch_timestamp{parsing_result.value().first};
+        timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+        return {epoch_timestamp, pattern_id};
     }
+
+    // Fall back to consulting all known timestamp patterns
+    auto const parsing_result{timestamp_parser::search_known_timestamp_patterns(
+            timestamp,
+            m_unquoted_timestamp_patterns,
+            false,
+            generated_pattern
+    )};
+    if (false == parsing_result.has_value()) {
+        SPDLOG_ERROR("Failed to parse timestamp {} against known timestamp patterns.", timestamp);
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+    }
+
+    auto const [epoch_timestamp, pattern] = parsing_result.value();
+    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+    auto const quoted_pattern{fmt::format(R"("{}")", pattern)};
+    auto const quoted_pattern_result{timestamp_parser::TimestampPattern::create(quoted_pattern)};
+    auto const unquoted_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+    if (quoted_pattern_result.has_error() || unquoted_pattern_result.has_error()) {
+        SPDLOG_ERROR("Failed to create timestamp pattern.");
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+    }
+
+    auto const new_pattern_id{m_next_id++};
+    m_string_patterns_and_ids.emplace_back(
+            std::move(quoted_pattern_result.value()),
+            std::move(unquoted_pattern_result.value()),
+            new_pattern_id
+    );
+    return {epoch_timestamp, new_pattern_id};
+}
+
+auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
+        std::string_view key,
+        int32_t node_id,
+        std::string_view timestamp
+) -> std::pair<epochtime_t, uint64_t> {
+    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
+    if (m_column_id_to_range.end() == timestamp_entry_it) {
+        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
+    }
+
+    std::string generated_pattern;
+    for (auto const& [raw_pattern, pattern_and_id] : m_numeric_pattern_to_id) {
+        auto const parsing_result{timestamp_parser::parse_timestamp(
+                timestamp,
+                pattern_and_id.first,
+                true,
+                generated_pattern
+        )};
+        if (parsing_result.has_error()) {
+            continue;
+        }
+        auto const epoch_timestamp{parsing_result.value().first};
+        timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+        return {epoch_timestamp, pattern_and_id.second};
+    }
+
+    auto const parsing_result{timestamp_parser::search_known_timestamp_patterns(
+            timestamp,
+            m_numeric_timestamp_patterns,
+            true,
+            generated_pattern
+    )};
+    if (false == parsing_result.has_value()) {
+        SPDLOG_ERROR("Failed to parse timestamp {} against known timestamp patterns.", timestamp);
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+    }
+
+    auto const [epoch_timestamp, pattern] = parsing_result.value();
+    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+    auto const pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+    if (pattern_result.has_error()) {
+        SPDLOG_ERROR("Failed to create timestamp pattern.");
+        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+    }
+
+    auto const new_pattern_id{m_next_id++};
+    m_numeric_pattern_to_id.emplace(
+            std::string{pattern},
+            std::make_pair(std::move(pattern_result.value()), new_pattern_id)
+    );
+    return {epoch_timestamp, new_pattern_id};
+}
+
+auto TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp(
+        std::string_view key,
+        int32_t node_id,
+        int64_t timestamp
+) -> std::pair<epochtime_t, uint64_t> {
+    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
+    if (m_column_id_to_range.end() == timestamp_entry_it) {
+        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
+    }
+
+    auto const [factor, precision] = timestamp_parser::estimate_timestamp_precision(timestamp);
+    auto const epoch_timestamp{timestamp * factor};
+    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+    auto const pattern{fmt::format("\\{}", precision)};
+
+    auto pattern_it{m_numeric_pattern_to_id.find(pattern)};
+    if (m_numeric_pattern_to_id.end() == pattern_it) {
+        auto const pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+        if (pattern_result.has_error()) {
+            SPDLOG_ERROR("Failed to create timestamp pattern.");
+            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+        }
+        auto const new_pattern_id{m_next_id++};
+        pattern_it
+                = m_numeric_pattern_to_id
+                          .emplace(
+                                  std::move(pattern),
+                                  std::make_pair(std::move(pattern_result.value()), new_pattern_id)
+                          )
+                          .first;
+    }
+    return {epoch_timestamp, pattern_it->second.second};
 }
 
 epochtime_t TimestampDictionaryWriter::get_begin_timestamp() const {
-    auto it = m_column_key_to_range.begin();
-    if (m_column_key_to_range.end() == it) {
+    auto it = m_column_id_to_range.begin();
+    if (m_column_id_to_range.end() == it) {
         // replicate behaviour of CLP
         return 0;
     }
@@ -137,8 +251,8 @@ epochtime_t TimestampDictionaryWriter::get_begin_timestamp() const {
 }
 
 epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
-    auto it = m_column_key_to_range.begin();
-    if (m_column_key_to_range.end() == it) {
+    auto it = m_column_id_to_range.begin();
+    if (m_column_id_to_range.end() == it) {
         // replicate behaviour of CLP
         return 0;
     }
@@ -148,8 +262,7 @@ epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
 
 void TimestampDictionaryWriter::clear() {
     m_next_id = 0;
-    m_pattern_to_id.clear();
-    m_column_key_to_range.clear();
+    m_string_patterns_and_ids.clear();
     m_column_id_to_range.clear();
 }
 }  // namespace clp_s

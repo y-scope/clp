@@ -56,13 +56,6 @@ public:
      * @param timestamp the timestamp to be ingested
      */
     void ingest_timestamp(epochtime_t timestamp);
-    void ingest_timestamp(double timestamp);
-
-    /**
-     * Merge a timestamp range potentially adjusting the start and end bounds for this
-     * @param timestamp the timestamp to be ingested
-     */
-    void merge_range(TimestampEntry const& entry);
 
     /**
      * Write the timestamp entry to a buffered stream.

@@ -38,12 +38,13 @@ enum class NodeType : uint8_t {
     Object,
     UnstructuredArray,
     NullValue,
-    DateString,
+    DeprecatedDateString,
     StructuredArray,
     Metadata,
     DeltaInteger,
     FormattedFloat,
     DictionaryFloat,
+    Timestamp,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
