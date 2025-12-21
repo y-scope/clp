@@ -1,8 +1,8 @@
-import styles from "../index.module.css";
-import QueryStatus from "../QueryStatus";
-import SqlInterfaceButton from "./SqlInterfaceButton";
+import styles from "../../index.module.css";
+import QueryStatus from "../../QueryStatus";
+import SqlInterfaceSelector from "../SqlInterfaceSelector";
+import SqlSearchButton from "../SqlSearchButton";
 import SqlQueryInput from "./SqlQueryInput";
-import SqlSearchButton from "./SqlSearchButton";
 
 
 /**
@@ -13,7 +13,7 @@ import SqlSearchButton from "./SqlSearchButton";
 const FreeformControls = () => (
     <div className={styles["searchControlsContainer"]}>
         <div className={styles["runRow"]}>
-            <SqlInterfaceButton/>
+            <SqlInterfaceSelector/>
             <SqlSearchButton/>
         </div>
         <SqlQueryInput/>
