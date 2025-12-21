@@ -1,3 +1,35 @@
+include(CMakeDependentOption)
+
+option(
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        "Build clp-s as a simplified statically linked executable with reduced dependencies."
+        OFF
+)
+
+cmake_dependent_option(
+        CLP_S_EXCLUDE_LIBCURL
+        "Exclude libcurl support from the simplified static clp-s executable."
+        ON
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        OFF
+)
+
+cmake_dependent_option(
+        CLP_S_EXCLUDE_MONGOCXX
+        "Exclude mongocxx support from the simplified static clp-s executable."
+        ON
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        OFF
+)
+
+cmake_dependent_option(
+        CLP_S_STATIC_GCC_RUNTIME
+        "Link the simplified static clp-s executable against static libgcc and libstdc++."
+        ON
+        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
+        OFF
+)
+
 add_subdirectory(indexer)
 add_subdirectory(log_converter)
 add_subdirectory(search)
@@ -133,14 +165,26 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
-                OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
         )
+        if(NOT CLP_S_EXCLUDE_LIBCURL)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PRIVATE
+                        ${CURL_LIBRARIES}
+                )
+        endif()
+        if(NOT CLP_S_EXCLUDE_MONGOCXX)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PRIVATE
+                        OpenSSL::Crypto
+                )
+        endif()
 endif()
 
 set(
@@ -210,6 +254,11 @@ if(CLP_BUILD_CLP_S_IO)
                 ${CLP_S_IO_SOURCES}
         )
         add_library(clp_s::io ALIAS clp_s_io)
+        target_compile_definitions(
+                clp_s_io
+                PRIVATE
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+        )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
@@ -271,6 +320,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
         )
         add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+        target_compile_definitions(
+                clp_s_archive_writer
+                PRIVATE
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+        )
         target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_writer PUBLIC ../)
         target_link_libraries(
@@ -286,10 +340,16 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 PRIVATE
                 Boost::url
                 clp_s::timestamp_pattern
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
+        if(NOT CLP_S_EXCLUDE_LIBCURL)
+                target_link_libraries(
+                        clp_s_archive_writer
+                        PRIVATE
+                        ${CURL_LIBRARIES}
+                )
+        endif()
 endif()
 
 set(
@@ -335,6 +395,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 ${CLP_S_ARCHIVE_READER_SOURCES}
         )
         add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+        target_compile_definitions(
+                clp_s_archive_reader
+                PRIVATE
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+        )
         target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_reader PUBLIC ../)
         target_link_libraries(
@@ -350,10 +415,16 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 Boost::url
                 clp_s::clp_dependencies
                 clp_s::timestamp_pattern
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
+        if(NOT CLP_S_EXCLUDE_LIBCURL)
+                target_link_libraries(
+                        clp_s_archive_reader
+                        PRIVATE
+                        ${CURL_LIBRARIES}
+                )
+        endif()
 endif()
 
 set(
@@ -370,6 +441,11 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
         )
         add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
+        target_compile_definitions(
+                clp_s_json_constructor
+                PRIVATE
+                CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
+        )
         target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
         target_include_directories(clp_s_json_constructor PUBLIC ../)
         target_link_libraries(
@@ -379,9 +455,15 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
-                ${MONGOCXX_TARGET}
                 spdlog::spdlog
         )
+        if(NOT CLP_S_EXCLUDE_MONGOCXX)
+                target_link_libraries(
+                        clp_s_json_constructor
+                        PRIVATE
+                        ${MONGOCXX_TARGET}
+                )
+        endif()
 endif()
 
 set(
@@ -428,6 +510,12 @@ if(CLP_BUILD_EXECUTABLES)
                 clp-s.cpp
                 ${CLP_S_EXE_SOURCES}
         )
+        target_compile_definitions(
+                clp-s
+                PRIVATE
+                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+                CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
+        )
         target_compile_features(clp-s PRIVATE cxx_std_20)
         target_link_libraries(
                 clp-s
@@ -442,14 +530,28 @@ if(CLP_BUILD_EXECUTABLES)
                 clp_s::search
                 clp_s::search::ast
                 clp_s::search::kql
-                ${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
         )
+        if(NOT CLP_S_EXCLUDE_MONGOCXX)
+                target_link_libraries(
+                        clp-s
+                        PRIVATE
+                        ${MONGOCXX_TARGET}
+                )
+        endif()
         set_target_properties(
                 clp-s
                 PROPERTIES
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
         )
+        if(CLP_S_STATIC_GCC_RUNTIME)
+                target_link_options(
+                        clp-s
+                        PRIVATE
+                        -static-libgcc
+                        -static-libstdc++
+                )
+        endif()
 endif()
