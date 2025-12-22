@@ -67,6 +67,7 @@ from clp_package_utils.general import (
     generate_docker_compose_container_config,
     get_clp_home,
     is_retention_period_configured,
+    run_subprocess_with_signal_forward,
     validate_db_config,
     validate_mcp_server_config,
     validate_queue_config,
@@ -1022,11 +1023,12 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
         cmd += ["up", "--detach", "--wait"]
-        subprocess.run(
+        proc = run_subprocess_with_signal_forward(
             cmd,
             cwd=self._clp_home,
-            check=True,
         )
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, proc.args)
         logger.info("Started CLP.")
 
     def stop(self) -> None:
@@ -1054,11 +1056,12 @@ class DockerComposeController(BaseController):
         else:
             logger.info("Stopping all CLP containers using Docker Compose...")
 
-        subprocess.run(
+        proc = run_subprocess_with_signal_forward(
             ["docker", "compose", "--project-name", self._project_name, "down"],
             cwd=self._clp_home,
-            check=True,
         )
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, proc.args)
         logger.info("Stopped CLP.")
 
     @staticmethod
@@ -1123,7 +1126,9 @@ def _chown_recursively(
     :param group_id:
     """
     chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
-    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+    result = run_subprocess_with_signal_forward(chown_cmd, stdout=subprocess.DEVNULL)
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(result.returncode, chown_cmd)
 
 
 def _get_ip_from_hostname(hostname: str) -> str:
