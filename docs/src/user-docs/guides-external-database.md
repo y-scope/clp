@@ -208,4 +208,4 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 [docker-compose-orchestration]: ../dev-docs/design-deployment-orchestration.md#docker-compose-orchestration
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
-[multi-host-guide]: guides-multi-host.md#starting-clp
+[multi-host-guide]: guides-docker-compose-deployment.md#starting-clp

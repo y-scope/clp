@@ -1,12 +1,28 @@
-# Multi-host deployment
+# Docker Compose deployment
+
+This guide explains how to deploy CLP using Docker Compose. Docker Compose provides a
+straightforward way to orchestrate CLP's services, suitable for both development and production
+environments.
+
+## Deployment options
+
+Docker Compose can be used for:
+
+* **Single-host deployment**: Run all CLP services on a single machine. This is the simplest setup,
+  covered in the [quick-start guides](quick-start/index.md).
+* **Multi-host deployment**: Distribute CLP services across multiple machines for higher throughput
+  and scalability. This is covered in detail below.
+
+---
+
+## Multi-host deployment
 
 A multi-host deployment allows you to run CLP across a distributed set of hosts.
 
-:::{warning}
-The instructions below provide a temporary solution for multi-host deployment and may change as we
-actively work to improve ease of deployment. The present solution uses *manual* Docker Compose
-orchestration; however, Kubernetes Helm support will be available in a future release, which will
-simplify multi-host deployments significantly.
+:::{note}
+The instructions below use *manual* Docker Compose orchestration, which is more lightweight and
+provides fine-grained control over service placement, but requires more configuration than
+Helm-based deployments.
 :::
 
 ## Requirements
@@ -305,9 +321,11 @@ sbin/stop-clp.sh
 
 This will stop all CLP services managed by Docker Compose on the current host.
 
-## Monitoring services
+## Monitoring and debugging
 
-To check the status of services on a host:
+First, determine your instance ID from `<clp-package>/var/log/instance-id`.
+
+To check the status of services:
 
 ```bash
 docker compose --project-name clp-package-<instance-id> ps
@@ -318,6 +336,20 @@ To view logs for a specific service:
 ```bash
 docker compose --project-name clp-package-<instance-id> logs -f <service-name>
 ```
+
+To execute commands in a running container:
+
+```bash
+docker compose --project-name clp-package-<instance-id> exec <service-name> /bin/bash
+```
+
+To validate your Docker Compose configuration:
+
+```bash
+docker compose config
+```
+
+---
 
 ## Setting up SeaweedFS
 

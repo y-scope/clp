@@ -57,15 +57,33 @@ quick-start/clp-text
 :::{toctree}
 :hidden:
 :caption: Guides
-:glob:
 
 guides-overview
-guides-mcp-server/index
+:::
+
+:::{toctree}
+:hidden:
+:caption: Deployment
+
+guides-docker-compose-deployment
+guides-k8s-deployment
+:::
+
+:::{toctree}
+:hidden:
+:caption: Input & storage
+
 guides-using-object-storage/index
-guides-using-the-api-server
 guides-external-database
-guides-multi-host
 guides-retention
+:::
+
+:::{toctree}
+:hidden:
+:caption: Package services
+
+guides-using-the-api-server
+guides-mcp-server/index
 guides-using-presto
 guides-using-spider
 :::

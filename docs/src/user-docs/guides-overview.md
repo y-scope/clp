@@ -1,6 +1,41 @@
 # Overview
 
-The guides below describe how to use CLP in different use cases.
+These guides cover deploying, configuring, and integrating CLP for various use cases.
+
+---
+
+## Deployment
+
+Guides for deploying CLP in production environments.
+
+:::{tip}
+For single-host deployments, see the [quick-start guide](quick-start/index), which includes tabs
+for both Docker Compose and Kubernetes (kind) orchestration.
+:::
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: guides-docker-compose-deployment
+Docker Compose deployment
+^^^
+Deploy CLP using Docker Compose for single or multi-host setups.
+:::
+
+:::{grid-item-card}
+:link: guides-k8s-deployment
+Kubernetes deployment
+^^^
+Deploy CLP on a Kubernetes cluster using Helm.
+:::
+::::
+
+---
+
+## Input & storage
+
+Guides for configuring data sources and storage backends.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -9,41 +44,58 @@ The guides below describe how to use CLP in different use cases.
 :link: guides-using-object-storage/index
 Using object storage
 ^^^
-Using CLP to ingest logs from object storage and store archives on object storage.
+Ingest logs from and store archives on S3-compatible object storage.
 :::
 
 :::{grid-item-card}
 :link: guides-external-database
 External database setup
 ^^^
-Guide for setting up external databases for CLP package components.
+Use external MariaDB/MySQL and MongoDB databases.
 :::
 
 :::{grid-item-card}
 :link: guides-retention
 Configuring retention periods
 ^^^
-How to configure retention periods for CLP archives and search results.
+Configure retention periods for archives and search results.
 :::
+::::
 
-:::{grid-item-card}
-:link: guides-multi-host
-Multi-host deployment
-^^^
-How to deploy CLP across multiple hosts.
-:::
+---
+
+## Package services
+
+Guides for using services included in the CLP package.
+
+::::{grid} 1 1 2 2
+:gutter: 2
 
 :::{grid-item-card}
 :link: guides-using-the-api-server
 Using the API server
 ^^^
-How to use the API server to interact with CLP.
+Submit queries, view results, and manage jobs programmatically.
+:::
+
+:::{grid-item-card}
+:link: guides-mcp-server/index
+MCP server
+^^^
+Integrate CLP with AI assistants using the Model Context Protocol.
 :::
 
 :::{grid-item-card}
 :link: guides-using-presto
-Using Presto with CLP
+Using Presto
 ^^^
-How to use Presto to query compressed logs in CLP.
+Use Presto for distributed SQL queries on compressed logs.
+:::
+
+:::{grid-item-card}
+:link: guides-using-spider
+Using Spider
+^^^
+Use Spider for compression and query job task distribution.
 :::
 ::::
