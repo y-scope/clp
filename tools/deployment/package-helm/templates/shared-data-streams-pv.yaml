@@ -2,7 +2,7 @@
   "root" .
   "component_category" "shared-data"
   "name" "streams"
-  "nodeRole" "control-plane"
+  "nodeRole" "worker"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteMany")
   "hostPath" .Values.clpConfig.stream_output.storage.directory

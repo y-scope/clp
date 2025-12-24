@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "query-worker"
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas.queryWorker }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -17,6 +17,13 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "query-worker"
     spec:
+      affinity:
+        {{- include "clp.preferWorkerNodeAffinity" . | nindent 8 }}
+      topologySpreadConstraints:
+        - {{- include "clp.uniquePodPerNodeConstraint" (dict
+            "root" .
+            "component" "query-worker"
+          ) | nindent 10 }}
       terminationGracePeriodSeconds: 60
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}

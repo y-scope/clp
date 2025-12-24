@@ -2,7 +2,7 @@
   "root" .
   "component_category" "shared-data"
   "name" "archives"
-  "nodeRole" "control-plane"
+  "nodeRole" "worker"
   "capacity" "50Gi"
   "accessModes" (list "ReadWriteMany")
   "hostPath" .Values.clpConfig.archive_output.storage.directory

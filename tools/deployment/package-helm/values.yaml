@@ -20,6 +20,10 @@ image:
 
 workerConcurrency: 8
 
+replicas:
+  compressionWorker: 1
+  queryWorker: 1
+
 clpConfig:
   package:
     storage_engine: "clp"

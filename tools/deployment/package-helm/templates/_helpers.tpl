@@ -248,6 +248,38 @@ hostPath:
 {{- end }}
 
 {{/*
+Creates a nodeAffinity that prefers scheduling on worker nodes.
+
+@return {string} YAML-formatted nodeAffinity definition
+*/}}
+{{- define "clp.preferWorkerNodeAffinity" -}}
+nodeAffinity:
+  preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      preference:
+        matchExpressions:
+          - key: "node-role.kubernetes.io/worker"
+            operator: "Exists"
+{{- end }}
+
+{{/*
+Creates a topologySpreadConstraint to ensure at most one pod per node.
+
+@param {object} root Root template context
+@param {string} component The component name (e.g., "compression-worker", "query-worker")
+@return {string} YAML-formatted topologySpreadConstraint definition
+*/}}
+{{- define "clp.uniquePodPerNodeConstraint" -}}
+maxSkew: 1
+topologyKey: "kubernetes.io/hostname"
+whenUnsatisfiable: "DoNotSchedule"
+labelSelector:
+  matchLabels:
+    {{- include "clp.selectorLabels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component | quote }}
+{{- end }}
+
+{{/*
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context

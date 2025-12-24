@@ -2,7 +2,7 @@
   "root" .
   "component_category" "compression-worker"
   "name" "logs"
-  "nodeRole" "control-plane"
+  "nodeRole" "worker"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/compression_worker" .Values.clpConfig.logs_directory)

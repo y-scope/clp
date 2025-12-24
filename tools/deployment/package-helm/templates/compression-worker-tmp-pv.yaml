@@ -2,7 +2,7 @@
   "root" .
   "component_category" "compression-worker"
   "name" "tmp"
-  "nodeRole" "control-plane"
+  "nodeRole" "worker"
   "capacity" "10Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" .Values.clpConfig.tmp_directory

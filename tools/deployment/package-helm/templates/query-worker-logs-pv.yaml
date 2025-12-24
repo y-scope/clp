@@ -2,7 +2,7 @@
   "root" .
   "component_category" "query-worker"
   "name" "logs"
-  "nodeRole" "control-plane"
+  "nodeRole" "worker"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/query_worker" .Values.clpConfig.logs_directory)
