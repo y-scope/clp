@@ -21,6 +21,10 @@ inputs:
     description: "Platform VERSION_ID / VERSION_CODENAME of the container
       (e.g. jammy, focal, etc.)"
     required: false
+  arch:
+    description: "Target architecture (amd64 or arm64)"
+    default: "amd64"
+    required: false
 
 runs:
   using: "composite"
@@ -68,6 +72,7 @@ runs:
       with:
         context: "./"
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
+        platforms: "linux/${{inputs.arch}}"
         push: true
-        tags: "${{steps.extract-gh-meta.outputs.tags}}"
+        tags: "${{steps.extract-gh-meta.outputs.tags}}-${{inputs.arch}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"

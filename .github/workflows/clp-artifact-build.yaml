@@ -16,7 +16,8 @@ on:
 
 env:
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
-  DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
+  DEPS_IMAGE_NAME_PREFIX_AMD64: "clp-core-dependencies-x86-"
+  DEPS_IMAGE_NAME_PREFIX_ARM64: "clp-core-dependencies-arm64-"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -28,7 +29,7 @@ concurrency:
 jobs:
   filter-relevant-changes:
     name: "filter-relevant-changes"
-    runs-on: &runner >-
+    runs-on: &runner-amd64 >-
       ${{
         github.repository_owner == 'y-scope'
         && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
@@ -104,7 +105,7 @@ jobs:
     name: "centos-stream-9-deps-image"
     if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -118,7 +119,7 @@ jobs:
         env:
           OS_NAME: "centos-stream-9"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
@@ -130,7 +131,7 @@ jobs:
     name: "manylinux_2_28-x86_64-deps-image"
     if: "needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -144,7 +145,7 @@ jobs:
         env:
           OS_NAME: "manylinux_2_28"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
             /Dockerfile"
@@ -156,7 +157,7 @@ jobs:
     name: "musllinux_1_2-x86_64-deps-image"
     if: "needs.filter-relevant-changes.outputs.musllinux_1_2_x86_64_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -170,7 +171,7 @@ jobs:
         env:
           OS_NAME: "musllinux_1_2"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
             /Dockerfile"
@@ -178,11 +179,11 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
-  ubuntu-jammy-deps-image:
-    name: "ubuntu-jammy-deps-image"
+  ubuntu-jammy-amd64-deps-image:
+    name: "ubuntu-jammy-amd64-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -196,7 +197,38 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-jammy-arm64-deps-image:
+    name: "ubuntu-jammy-arm64-deps-image"
+    if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: &runner-arm64 >-
+      ${{
+        github.repository_owner == 'y-scope'
+        && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+        || 'ubuntu-24.04-arm'
+      }}
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_ARM64}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
@@ -217,7 +249,7 @@ jobs:
         use_shared_libs: [true, false]
     name: "centos-stream-9-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -231,7 +263,7 @@ jobs:
         env:
           OS_NAME: "centos-stream-9"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -257,7 +289,7 @@ jobs:
     name: >-
       manylinux_2_28-x86_64-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins
     continue-on-error: true
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -271,7 +303,7 @@ jobs:
         env:
           OS_NAME: "manylinux_2_28"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -297,7 +329,7 @@ jobs:
     name: >-
       musllinux_1_2-x86_64-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins
     continue-on-error: true
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -311,7 +343,7 @@ jobs:
         env:
           OS_NAME: "musllinux_1_2"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.musllinux_1_2_x86_64_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -330,7 +362,7 @@ jobs:
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
+      - "ubuntu-jammy-amd64-deps-image"
     strategy:
       matrix:
         include:
@@ -342,7 +374,7 @@ jobs:
       OS_NAME: "ubuntu-jammy"
     name: "ubuntu-jammy-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
-    runs-on: *runner
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -354,7 +386,7 @@ jobs:
 
       - uses: "./.github/actions/run-on-image"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -389,7 +421,7 @@ jobs:
     # Run if the ancestor jobs were successful/skipped and building clp was successful.
     if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
-    runs-on: *runner
+    runs-on: *runner-amd64
     env:
       OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
@@ -455,8 +487,8 @@ jobs:
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
-    runs-on: *runner
+      - "ubuntu-jammy-amd64-deps-image"
+    runs-on: *runner-amd64
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -491,7 +523,7 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AMD64}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -524,16 +556,36 @@ jobs:
             )}}
 
   package-image:
-    name: "package-image"
+    name: "package-image-${{matrix.arch}}"
     if: >-
       !cancelled() && !failure() && (
         needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
-        needs.ubuntu-jammy-deps-image.result == 'success'
+        (needs.ubuntu-jammy-amd64-deps-image.result == 'success'
+        && needs.ubuntu-jammy-arm64-deps-image.result == 'success')
       )
     needs:
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
-    runs-on: *runner
+      - "ubuntu-jammy-amd64-deps-image"
+      - "ubuntu-jammy-arm64-deps-image"
+    strategy:
+      matrix:
+        include:
+          - arch: "amd64"
+            runner: "runner-amd64"
+            deps_image_prefix_env: "DEPS_IMAGE_NAME_PREFIX_AMD64"
+          - arch: "arm64"
+            runner: "runner-arm64"
+            deps_image_prefix_env: "DEPS_IMAGE_NAME_PREFIX_ARM64"
+    runs-on: >-
+      ${{
+        matrix.arch == 'amd64'
+        && (github.repository_owner == 'y-scope'
+            && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
+            || 'ubuntu-24.04')
+        || (github.repository_owner == 'y-scope'
+            && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+            || 'ubuntu-24.04-arm')
+      }}
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -548,7 +600,10 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: >-
+            ${{matrix.arch == 'amd64'
+            && format('{0}{1}', env.DEPS_IMAGE_NAME_PREFIX_AMD64, 'ubuntu-jammy')
+            || format('{0}{1}', env.DEPS_IMAGE_NAME_PREFIX_ARM64, 'ubuntu-jammy')}}
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -562,3 +617,36 @@ jobs:
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          arch: "${{matrix.arch}}"
+
+  package-image-multiarch-manifest:
+    name: "package-image-multiarch-manifest"
+    if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+    needs: "package-image"
+    runs-on: *runner-amd64
+    steps:
+      - name: "Login to Image Registry"
+        uses: "docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772"
+        with:
+          registry: "ghcr.io"
+          username: "${{github.actor}}"
+          password: "${{secrets.GITHUB_TOKEN}}"
+
+      - name: "Sanitize Repository Name"
+        id: "sanitization"
+        shell: "bash"
+        run: |
+          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: "Create and Push Multi-arch Manifest"
+        shell: "bash"
+        run: |
+          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
+          tag="${{github.ref_name}}"
+
+          docker manifest create "${image_base}:${tag}" \
+            "${image_base}:${tag}-amd64" \
+            "${image_base}:${tag}-arm64"
+
+          docker manifest push "${image_base}:${tag}"
