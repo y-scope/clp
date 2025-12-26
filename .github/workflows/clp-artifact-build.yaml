@@ -209,7 +209,7 @@ jobs:
     name: "ubuntu-jammy-arm64-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: &runner-arm64 >-
+    runs-on: >-
       ${{
         github.repository_owner == 'y-scope'
         && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
@@ -569,13 +569,7 @@ jobs:
       - "ubuntu-jammy-arm64-deps-image"
     strategy:
       matrix:
-        include:
-          - arch: "amd64"
-            runner: "runner-amd64"
-            deps_image_prefix_env: "DEPS_IMAGE_NAME_PREFIX_AMD64"
-          - arch: "arm64"
-            runner: "runner-arm64"
-            deps_image_prefix_env: "DEPS_IMAGE_NAME_PREFIX_ARM64"
+        arch: ["amd64", "arm64"]
     runs-on: >-
       ${{
         matrix.arch == 'amd64'
