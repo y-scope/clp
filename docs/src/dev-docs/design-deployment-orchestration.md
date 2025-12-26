@@ -22,120 +22,120 @@ one-time initialization jobs and their functions.
 
 :::{mermaid}
 %%{
-init: {
-"theme": "base",
-"themeVariables": {
-"primaryColor": "#0066cc",
-"primaryTextColor": "#fff",
-"primaryBorderColor": "transparent",
-"lineColor": "#007fff",
-"secondaryColor": "#007fff",
-"tertiaryColor": "#fff"
-}
-}
+    init: {
+        "theme": "base",
+        "themeVariables": {
+            "primaryColor": "#0066cc",
+            "primaryTextColor": "#fff",
+            "primaryBorderColor": "transparent",
+            "lineColor": "#007fff",
+            "secondaryColor": "#007fff",
+            "tertiaryColor": "#fff"
+        }
+    }
 }%%
 graph LR
-%% Services
-database["database (MySQL)"]
-queue["queue (RabbitMQ)"]
-redis["redis (Redis)"]
-results_cache["results-cache (MongoDB)"]
-compression_scheduler["compression-scheduler"]
-query_scheduler["query-scheduler"]
-spider_scheduler["spider-scheduler"]
-compression_worker["compression-worker"]
-spider_compression_worker["spider-compression-worker"]
-query_worker["query-worker"]
-reducer["reducer"]
-api_server["api-server"]
-garbage_collector["garbage-collector"]
-webui["webui"]
-mcp_server["mcp-server"]
-log_ingestor["log-ingestor"]
+  %% Services
+  database["database (MySQL)"]
+  queue["queue (RabbitMQ)"]
+  redis["redis (Redis)"]
+  results_cache["results-cache (MongoDB)"]
+  compression_scheduler["compression-scheduler"]
+  query_scheduler["query-scheduler"]
+  spider_scheduler["spider-scheduler"]
+  compression_worker["compression-worker"]
+  spider_compression_worker["spider-compression-worker"]
+  query_worker["query-worker"]
+  reducer["reducer"]
+  api_server["api-server"]
+  garbage_collector["garbage-collector"]
+  webui["webui"]
+  mcp_server["mcp-server"]
+  log_ingestor["log-ingestor"]
 
-%% One-time jobs
-db_table_creator["db-table-creator"]
-results_cache_indices_creator["results-cache-indices-creator"]
+  %% One-time jobs
+  db_table_creator["db-table-creator"]
+  results_cache_indices_creator["results-cache-indices-creator"]
 
-%% Dependencies
-%% Link 0-1: Database --> Database initialization jobs
-database -->|healthy| db_table_creator
-results_cache -->|healthy| results_cache_indices_creator
-linkStyle 0,1 stroke:#ffa500
+  %% Dependencies
+  %% Link 0-1: Database --> Database initialization jobs
+  database -->|healthy| db_table_creator
+  results_cache -->|healthy| results_cache_indices_creator
+  linkStyle 0,1 stroke:#ffa500
 
-%% Link 2-5: Celery dependencies --> Schedulers
-queue -->|healthy| compression_scheduler
-redis -->|healthy| compression_scheduler
-queue -->|healthy| query_scheduler
-redis -->|healthy| query_scheduler
-linkStyle 2,3,4,5 stroke:#ff0000
+  %% Link 2-5: Celery dependencies --> Schedulers
+  queue -->|healthy| compression_scheduler
+  redis -->|healthy| compression_scheduler
+  queue -->|healthy| query_scheduler
+  redis -->|healthy| query_scheduler
+  linkStyle 2,3,4,5 stroke:#ff0000
 
-%% Link 6: Schedulers --> Workers
-query_scheduler -->|healthy| reducer
-linkStyle 6 stroke:#800080
+  %% Link 6: Schedulers --> Workers
+  query_scheduler -->|healthy| reducer
+  linkStyle 6 stroke:#800080
 
-%% Link 7-15: Database initialization job --> Services
-db_table_creator -->|completed_successfully| api_server
-db_table_creator -->|completed_successfully| compression_scheduler
-db_table_creator -->|completed_successfully| garbage_collector
-db_table_creator -->|completed_successfully| log_ingestor
-db_table_creator -->|completed_successfully| mcp_server
-db_table_creator -->|completed_successfully| query_scheduler
-db_table_creator -->|completed_successfully| spider_compression_worker
-db_table_creator -->|completed_successfully| spider_scheduler
-db_table_creator -->|completed_successfully| webui
-linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
+  %% Link 7-15: Database initialization job --> Services
+  db_table_creator -->|completed_successfully| api_server
+  db_table_creator -->|completed_successfully| compression_scheduler
+  db_table_creator -->|completed_successfully| garbage_collector
+  db_table_creator -->|completed_successfully| log_ingestor
+  db_table_creator -->|completed_successfully| mcp_server
+  db_table_creator -->|completed_successfully| query_scheduler
+  db_table_creator -->|completed_successfully| spider_compression_worker
+  db_table_creator -->|completed_successfully| spider_scheduler
+  db_table_creator -->|completed_successfully| webui
+  linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
 
-%% Link 16-20: Results cache initialization job --> Services
-results_cache_indices_creator -->|completed_successfully| api_server
-results_cache_indices_creator -->|completed_successfully| garbage_collector
-results_cache_indices_creator -->|completed_successfully| mcp_server
-results_cache_indices_creator -->|completed_successfully| reducer
-results_cache_indices_creator -->|completed_successfully| webui
-linkStyle 16,17,18,19,20 stroke:#008000
+  %% Link 16-20: Results cache initialization job --> Services
+  results_cache_indices_creator -->|completed_successfully| api_server
+  results_cache_indices_creator -->|completed_successfully| garbage_collector
+  results_cache_indices_creator -->|completed_successfully| mcp_server
+  results_cache_indices_creator -->|completed_successfully| reducer
+  results_cache_indices_creator -->|completed_successfully| webui
+  linkStyle 16,17,18,19,20 stroke:#008000
 
-subgraph Databases
-database
-results_cache
-subgraph celery_dependencies[Celery Dependencies]
-queue
-redis
-end
-end
+  subgraph Databases
+    database
+    results_cache
+    subgraph celery_dependencies[Celery Dependencies]
+        queue
+        redis
+    end
+  end
 
-subgraph Initialization jobs
-db_table_creator
-results_cache_indices_creator
-end
+  subgraph Initialization jobs
+    db_table_creator
+    results_cache_indices_creator
+  end
 
-subgraph Schedulers
-compression_scheduler
-query_scheduler
-spider_scheduler
-end
+  subgraph Schedulers
+    compression_scheduler
+    query_scheduler
+    spider_scheduler
+  end
 
-subgraph Workers
-compression_worker
-spider_compression_worker
-query_worker
-reducer
-end
+  subgraph Workers
+    compression_worker
+    spider_compression_worker
+    query_worker
+    reducer
+  end
 
-subgraph Management & UI
-api_server
-log_ingestor
-garbage_collector
-webui
-end
+  subgraph Management & UI
+    api_server
+    log_ingestor
+    garbage_collector
+    webui
+  end
 
-subgraph AI
-mcp_server
-end
+  subgraph AI
+    mcp_server
+  end
 
-%% Subgraph styles
-style celery_dependencies fill:#ffffe0
-style spider_compression_worker fill:#008080
-style spider_scheduler fill:#008080
+  %% Subgraph styles
+  style celery_dependencies fill:#ffffe0
+  style spider_compression_worker fill:#008080
+  style spider_scheduler fill:#008080
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -272,7 +272,7 @@ When issues arise, use the appropriate commands for your orchestration method:
 ## User guides
 
 * [Kubernetes deployment][kubernetes-guide]: Deploying CLP with Helm
-* [Multi-host deployment][multi-host]: Manual Docker Compose across multiple hosts
+* [Multi-host deployment][docker-compose-multi-host]: Manual Docker Compose across multiple hosts
 
 [docker-compose]: https://docs.docker.com/compose/
 [docker-compose-debugging]: ../user-docs/guides-docker-compose-deployment.md#monitoring-and-debugging
@@ -280,5 +280,5 @@ When issues arise, use the appropriate commands for your orchestration method:
 [kubernetes]: https://kubernetes.io/
 [kubernetes-debugging]: ../user-docs/guides-k8s-deployment.md#monitoring-and-debugging
 [kubernetes-guide]: ../user-docs/guides-k8s-deployment.md
-[multi-host]: ../user-docs/guides-docker-compose-deployment.md
+[docker-compose-multi-host]: ../user-docs/guides-docker-compose-deployment.md#multi-host-deployment
 [presto-integration]: ../user-docs/guides-using-presto.md
