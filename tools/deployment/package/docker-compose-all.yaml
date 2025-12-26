@@ -94,7 +94,7 @@ services:
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
-      SPIDER_DB_USER: "${SPIDER_DB_USER:?Please set a value.}"
+      SPIDER_DB_USER: "${SPIDER_DB_USER:-spider-user}"
     volumes:
       - *volume_clp_config_readonly
     depends_on:
@@ -242,7 +242,7 @@ services:
       "--port", "6000",
       "--storage_url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
-        user=${SPIDER_DB_USER:?Please set a value.}\
+        user=${SPIDER_DB_USER:-spider-user}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
     ]
 
@@ -343,7 +343,7 @@ services:
       "--num-workers", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
-        user=${SPIDER_DB_USER:?Please set a value.}\
+        user=${SPIDER_DB_USER:-spider-user}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
     ]
 
