@@ -202,7 +202,7 @@ async def archive_garbage_collector(
     validate_storage_type(archive_output_config, storage_engine)
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.archive * MIN_TO_SECONDS
-    recovery_file = clp_config.logs_directory / f"{ARCHIVE_GARBAGE_COLLECTOR_NAME}.tmp"
+    recovery_file = clp_config.tmp_directory / f"{ARCHIVE_GARBAGE_COLLECTOR_NAME}.tmp"
 
     logger.info(f"{ARCHIVE_GARBAGE_COLLECTOR_NAME} started.")
     try:

@@ -64,7 +64,7 @@ spec:
               subPath: "clp-config.yaml"
               readOnly: true
             - name: "tmp"
-              mountPath: "/var/log"
+              mountPath: "/var/tmp"
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "garbage-collector"
                 "name" "logs"
