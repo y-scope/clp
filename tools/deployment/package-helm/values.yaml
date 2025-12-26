@@ -77,6 +77,10 @@ clpConfig:
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
+  mcp_server: null
+  #   port: 30800
+  #   logging_level: "INFO"
+
   # Where archives should be output to
   archive_output:
     storage:
