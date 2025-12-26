@@ -18,6 +18,7 @@ image:
     pullPolicy: "Always"
     tag: "main"
 
+# Number of concurrent processes per worker pod.
 workerConcurrency: 8
 
 replicas:
@@ -26,8 +27,8 @@ replicas:
 
 clpConfig:
   package:
-    storage_engine: "clp"
-    query_engine: "clp"
+    storage_engine: "clp-s"
+    query_engine: "clp-s"
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
