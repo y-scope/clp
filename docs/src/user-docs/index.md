@@ -74,7 +74,6 @@ guides-k8s-deployment
 :caption: Input & storage
 
 guides-using-object-storage/index
-guides-using-the-api-server
 guides-using-log-ingestor
 guides-external-database
 guides-retention
