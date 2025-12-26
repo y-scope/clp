@@ -1,7 +1,7 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-queue-logs" (include "clp.fullname" .))
-  "component" "queue"
+  "component_category" "queue"
+  "name" "logs"
   "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")

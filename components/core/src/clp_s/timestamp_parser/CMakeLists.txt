@@ -17,10 +17,11 @@ if(CLP_BUILD_CLP_S_TIMESTAMP_PARSER)
         target_include_directories(clp_s_timestamp_parser PUBLIC ../../)
         target_link_libraries(
                 clp_s_timestamp_parser
+                PUBLIC
+                ystdlib::error_handling
                 PRIVATE
                 clp::string_utils
                 date::date
                 fmt::fmt
-                ystdlib::error_handling
         )
 endif()

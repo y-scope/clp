@@ -27,7 +27,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import (
-    generate_s3_virtual_hosted_style_url,
+    generate_s3_url,
     get_credential_env_vars,
     s3_put,
 )
@@ -165,10 +165,13 @@ def _generate_s3_logs_list(
     object_keys = paths_to_compress.file_paths
     with open(output_file_path, "w") as file:
         for object_key in object_keys:
-            s3_virtual_hosted_style_url = generate_s3_virtual_hosted_style_url(
-                s3_input_config.region_code, s3_input_config.bucket, object_key
+            s3_url = generate_s3_url(
+                s3_input_config.endpoint_url,
+                s3_input_config.region_code,
+                s3_input_config.bucket,
+                object_key,
             )
-            file.write(s3_virtual_hosted_style_url)
+            file.write(s3_url)
             file.write("\n")
 
 
