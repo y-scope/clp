@@ -264,35 +264,21 @@ templating to include/exclude resources.
 
 ## Troubleshooting
 
-When issues arise, use the appropriate commands for your orchestration method.
+When issues arise, use the appropriate commands for your orchestration method:
 
-### Docker Compose
-
-First, determine your instance ID from `<clp-package>/var/log/instance-id`.
-
-```bash
-# Check service status
-docker compose --project-name clp-package-<instance-id> ps
-
-# View service logs
-docker compose --project-name clp-package-<instance-id> logs <service-name>
-
-# Validate configuration
-docker compose config
-```
-
-### Kubernetes Helm
-
-See the [Kubernetes deployment guide][kubernetes-guide].
+* [Docker Compose debugging][docker-compose-debugging]
+* [Kubernetes Helm debugging][kubernetes-debugging]
 
 ## User guides
 
 * [Kubernetes deployment][kubernetes-guide]: Deploying CLP with Helm
-* [Multi-host deployment][multi-host]: Manual Docker Compose across multiple hosts
+* [Multi-host deployment][docker-compose-multi-host]: Manual Docker Compose across multiple hosts
 
 [docker-compose]: https://docs.docker.com/compose/
+[docker-compose-debugging]: ../user-docs/guides-docker-compose-deployment.md#monitoring-and-debugging
 [helm]: https://helm.sh/
 [kubernetes]: https://kubernetes.io/
-[kubernetes-guide]: ../user-docs/guides-kubernetes.md
-[multi-host]: ../user-docs/guides-multi-host.md
+[kubernetes-debugging]: ../user-docs/guides-k8s-deployment.md#monitoring-and-debugging
+[kubernetes-guide]: ../user-docs/guides-k8s-deployment.md
+[docker-compose-multi-host]: ../user-docs/guides-docker-compose-deployment.md#multi-host-deployment
 [presto-integration]: ../user-docs/guides-using-presto.md

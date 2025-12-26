@@ -4,35 +4,72 @@ This guide describes the following:
 
 * [CLP's system requirements](#system-requirements)
 * [How to choose a CLP flavor](#choosing-a-flavor)
-* [How to use CLP](#using-clp).
+* [How to use CLP](#using-clp)
 
 ---
 
 ## System Requirements
 
-To run a CLP release, you'll need:
+This quick start guide covers **single-host** deployment using Docker Compose or Kubernetes with 
+Helm. For deployments that scale across multiple machines for higher throughput, see:
 
-* [Docker](#docker)
+* [Docker Compose deployment][docker-compose-deployment] for advanced Docker Compose configurations
+* [Kubernetes deployment][k8s-deployment] for production Kubernetes clusters
+
+Choose the requirements below based on your preferred orchestration method.
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+* [Docker][Docker]
   * `containerd.io` >= 1.7.18
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
   * `docker-compose-plugin` >= 2.28.1
 
-### Docker
-
-To check whether Docker is installed on your system, run:
+To check whether the required tools are installed on your system, run:
 
 ```bash
-docker version
+containerd --version
+docker version --format '{{.Server.Version}}'
+docker compose version --short
 ```
 
-If Docker isn't installed, follow [these instructions][Docker] to install it.
-
-NOTE:
-
+```{note}
 * If you're not running as root, ensure Docker can be run
   [without superuser privileges][docker-non-root].
 * If you're using Docker Desktop, ensure version 4.34 or higher is installed.
+```
+
+:::
+
+:::{tab-item} Kubernetes (kind)
+:sync: kind
+
+[kind] (Kubernetes in Docker) runs a Kubernetes cluster inside Docker containers, making it ideal
+for local Kubernetes testing and development.
+
+* [Docker][Docker] (required for kind)
+  * `containerd.io` >= 1.7.18
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
+* [kubectl][kubectl] >= 1.30
+* [Helm][Helm] >= 4.0
+* [kind][kind] >= 0.23
+
+To check whether the tools are installed on your system, run:
+
+```bash
+containerd --version
+docker version --format '{{.Server.Version}}'
+kubectl version --client --output=yaml | grep gitVersion
+helm version --short
+kind version
+```
+
+:::
+::::
 
 ---
 
@@ -73,7 +110,7 @@ The log file above contains two log events represented by two JSON objects print
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
 If you're using JSON logs, download and extract the `clp-json` release from the
-[Releases][clp-releases] page, then proceed to the [clp-json quick-start](./clp-json.md) guide.
+[Releases][clp-releases] page, then proceed to the [clp-json quick-start][clp-json] guide.
 
 ### clp-text
 
@@ -101,7 +138,7 @@ The log file above contains two log events, both beginning with a timestamp. The
 line, while the second contains multiple lines.
 
 If you're using unstructured text logs, download and extract the `clp-text` release from the
-[Releases][clp-releases] page, then proceed to the [clp-text quick-start](./clp-text.md) guide.
+[Releases][clp-releases] page, then proceed to the [clp-text quick-start][clp-text] guide.
 
 ---
 
@@ -128,6 +165,13 @@ How to compress and search unstructured text logs.
 :::
 ::::
 
+[clp-json]: ./clp-json.md
 [clp-releases]: https://github.com/y-scope/clp/releases
+[clp-text]: ./clp-text.md
 [Docker]: https://docs.docker.com/engine/install/
+[docker-compose-deployment]: ../guides-docker-compose-deployment.md
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
+[Helm]: https://helm.sh/docs/intro/install/
+[k8s-deployment]: ../guides-k8s-deployment.md
+[kind]: https://kind.sigs.k8s.io/docs/user/quick-start/#installation
+[kubectl]: https://kubernetes.io/docs/tasks/tools/
