@@ -221,53 +221,6 @@ helm install clp . \
   --set queryWorker.replicas=3
 ```
 
-#### Worker scheduling
-
-You can control where compression and query workers are scheduled using standard Kubernetes
-scheduling primitives (`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
-
-First, label your nodes:
-
-```bash
-kubectl label nodes <node-name> yscope.io/nodeType=compute
-```
-
-Then configure worker scheduling:
-
-```{code-block} yaml
-:caption: worker-scheduling.yaml
-
-compressionWorker:
-  replicas: 2
-  scheduling:
-    nodeSelector:
-      yscope.io/nodeType: compute
-    tolerations:
-      - key: "yscope.io/dedicated"
-        operator: "Equal"
-        value: "compression"
-        effect: "NoSchedule"
-    topologySpreadConstraints:
-      - maxSkew: 1
-        topologyKey: "kubernetes.io/hostname"
-        whenUnsatisfiable: "DoNotSchedule"
-        labelSelector:
-          matchLabels:
-            app.kubernetes.io/component: compression-worker
-
-queryWorker:
-  replicas: 2
-  scheduling:
-    nodeSelector:
-      yscope.io/nodeType: compute
-```
-
-Install with the scheduling configuration:
-
-```bash
-helm install clp . -f worker-scheduling.yaml --set distributed=true
-```
-
 ### Installation with custom values
 
 For highly customized deployments, create a values file instead of using many `--set` flags:
@@ -335,6 +288,90 @@ To preview the generated Kubernetes manifests before installing, use `helm templ
 helm template clp . -f custom-values.yaml
 ```
 ::::
+
+### Worker scheduling
+
+You can control where workers are scheduled using standard Kubernetes scheduling primitives
+(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+
+#### Dedicated node pools
+
+To run compression and query workers on separate node pools:
+
+1. Label your nodes:
+
+   ```bash
+   # Label compression nodes
+   kubectl label nodes node1 node2 yscope.io/nodeType=compression
+
+   # Label query nodes
+   kubectl label nodes node3 node4 yscope.io/nodeType=query
+   ```
+
+2. Configure scheduling:
+
+   ```{code-block} yaml
+   :caption: dedicated-scheduling.yaml
+
+   compressionWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: compression
+
+   queryWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: query
+   ```
+
+3. Install:
+
+   ```bash
+   helm install clp . -f dedicated-scheduling.yaml --set distributed=true
+   ```
+
+#### Shared node pool
+
+To run both worker types on the same node pool:
+
+1. Label your nodes:
+
+   ```bash
+   kubectl label nodes node1 node2 node3 node4 yscope.io/nodeType=compute
+   ```
+
+2. Configure scheduling:
+
+   ```{code-block} yaml
+   :caption: shared-scheduling.yaml
+
+   compressionWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: compute
+       topologySpreadConstraints:
+         - maxSkew: 1
+           topologyKey: "kubernetes.io/hostname"
+           whenUnsatisfiable: "DoNotSchedule"
+           labelSelector:
+             matchLabels:
+               app.kubernetes.io/component: compression-worker
+
+   queryWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: compute
+   ```
+
+3. Install:
+
+   ```bash
+   helm install clp . -f shared-scheduling.yaml --set distributed=true
+   ```
 
 ### Common configuration options
 
