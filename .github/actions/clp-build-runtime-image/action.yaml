@@ -73,6 +73,9 @@ runs:
         context: "./"
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
         platforms: "linux/${{inputs.arch}}"
+        # Disable provenance to create a simple image instead of a manifest list.
+        # This allows `docker manifest create` to combine the per-arch images.
+        provenance: false
         push: true
         tags: "${{steps.extract-gh-meta.outputs.tags}}-${{inputs.arch}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
