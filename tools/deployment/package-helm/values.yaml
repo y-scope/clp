@@ -18,12 +18,53 @@ image:
     pullPolicy: "Always"
     tag: "main"
 
+# Deployment mode:
+# - false: Single-node deployment. PVs use local volumes bound to one node. Pods automatically
+#          tolerate control-plane taints. Only works with worker replicas=1.
+# - true: Multi-node deployment. PVs use hostPath without node affinity, assuming unmanaged
+#         shared storage (e.g., NFS/CephFS mounted via /etc/fstab) at the same path on all nodes.
+distributed: false
+
 # Number of concurrent processes per worker pod.
 workerConcurrency: 8
 
-replicas:
-  compressionWorker: 1
-  queryWorker: 1
+compressionWorker:
+  replicas: 1
+  # Controls which nodes run compression workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "compression"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+queryWorker:
+  replicas: 1
+  # Controls which nodes run query workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "query"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+storage:
+  # Name of the StorageClass for PVs and PVCs.
+  # - If "local-storage" (default), the chart creates a StorageClass with WaitForFirstConsumer
+  # - If a different name, the StorageClass must already exist in your cluster
+  storageClassName: "local-storage"
 
 clpConfig:
   package:

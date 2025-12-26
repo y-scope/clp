@@ -102,36 +102,6 @@ and kubeadm on all nodes.
    If you lost the command, regenerate it on the control-plane node with
    `kubeadm token create --print-join-command`.
 
-4. **Label worker nodes** (on the control-plane node):
-
-   CLP's Helm chart uses node affinity to schedule PersistentVolumes. Worker nodes must be labeled
-   so that storage can be properly allocated:
-
-   ```bash
-   # List nodes to get their names
-   kubectl get nodes
-
-   # Label each worker node
-   kubectl label node <worker-node-name> node-role.kubernetes.io/worker=
-
-   # Verify labels
-   kubectl get nodes --show-labels
-   ```
-
-5. **Allow scheduling on control-plane**:
-
-   By default, kubeadm taints the control-plane node to prevent workloads from running on it. You
-   must remove this taint so CLP pods can be scheduled:
-
-   ```bash
-   kubectl taint nodes --selector node-role.kubernetes.io/control-plane= node-role.kubernetes.io/control-plane-
-   ```
-
-   :::{note}
-   The CLP Helm chart currently requires some pods (database, queue, redis) to run on the
-   control-plane node. We plan to address this limitation in a future release.
-   :::
-
 ---
 
 ## Installing the Helm chart
@@ -235,8 +205,67 @@ helm install clp . \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
   --set credentials.redis.password="$CLP_REDIS_PASS" \
-  --set replicas.compressionWorker="$CLP_COMPRESSION_WORKER_REPLICAS" \
-  --set replicas.queryWorker="$CLP_QUERY_WORKER_REPLICAS"
+  --set compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
+  --set queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS"
+```
+
+### Multi-node deployment
+
+For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/CephFS via
+`/etc/fstab`), enable distributed storage mode and configure multiple worker replicas:
+
+```bash
+helm install clp . \
+  --set distributed=true \
+  --set compressionWorker.replicas=3 \
+  --set queryWorker.replicas=3
+```
+
+#### Worker scheduling
+
+You can control where compression and query workers are scheduled using standard Kubernetes
+scheduling primitives (`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+
+First, label your nodes:
+
+```bash
+kubectl label nodes <node-name> yscope.io/nodeType=compute
+```
+
+Then configure worker scheduling:
+
+```{code-block} yaml
+:caption: worker-scheduling.yaml
+
+compressionWorker:
+  replicas: 2
+  scheduling:
+    nodeSelector:
+      yscope.io/nodeType: compute
+    tolerations:
+      - key: "yscope.io/dedicated"
+        operator: "Equal"
+        value: "compression"
+        effect: "NoSchedule"
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: "kubernetes.io/hostname"
+        whenUnsatisfiable: "DoNotSchedule"
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: compression-worker
+
+queryWorker:
+  replicas: 2
+  scheduling:
+    nodeSelector:
+      yscope.io/nodeType: compute
+```
+
+Install with the scheduling configuration:
+
+```bash
+helm install clp . -f worker-scheduling.yaml --set distributed=true
 ```
 
 ### Installation with custom values
@@ -317,6 +346,12 @@ chart directory.
 | `image.clpPackage.repository`                | CLP package image repository                 | `ghcr.io/y-scope/clp/clp-package` |
 | `image.clpPackage.tag`                       | Image tag                                    | `main`                            |
 | `workerConcurrency`                          | Number of worker processes                   | `8`                               |
+| `distributed`                                | Distributed/multi-node deployment mode       | `false`                           |
+| `compressionWorker.replicas`                 | Number of compression worker replicas        | `1`                               |
+| `compressionWorker.scheduling`               | Scheduling config for compression workers    | `{}`                              |
+| `queryWorker.replicas`                       | Number of query worker replicas              | `1`                               |
+| `queryWorker.scheduling`                     | Scheduling config for query workers          | `{}`                              |
+| `storage.storageClassName`                   | StorageClass name (created if "local-storage") | `local-storage`                 |
 | `allowHostAccessForSbinScripts`              | Expose database/cache for sbin scripts       | `true`                            |
 | `clpConfig.package.storage_engine`           | Storage engine (`clp-s` or `clp`)            | `clp-s`                           |
 | `clpConfig.package.query_engine`             | Query engine (`clp-s`, `clp`, or `presto`)   | `clp-s`                           |

@@ -23,9 +23,9 @@ used as a full name.
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- end }}{{/* if contains $name .Release.Name */}}
+{{- end }}{{/* if .Values.fullnameOverride */}}
+{{- end }}{{/* define "clp.fullname" */}}
 
 {{/*
 Creates chart name and version as used by the chart label.
@@ -111,20 +111,17 @@ Used for:
 {{- end }}
 
 {{/*
-Creates a local PersistentVolume.
+Creates a PersistentVolume that does not use dynamic provisioning.
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
 @param {string} name (e.g., "archives", "data", "logs")
-@param {string} nodeRole Node role for affinity. Targets nodes with label
-  "node-role.kubernetes.io/<nodeRole>". Always falls back to
-  "node-role.kubernetes.io/control-plane"
 @param {string} capacity Storage capacity
 @param {string[]} accessModes Access modes
 @param {string} hostPath Absolute path on host
 @return {string} YAML-formatted PersistentVolume resource
 */}}
-{{- define "clp.createLocalPv" -}}
+{{- define "clp.createStaticPv" -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
@@ -137,19 +134,22 @@ spec:
     storage: {{ .capacity }}
   accessModes: {{ .accessModes }}
   persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
+  storageClassName: {{ .root.Values.storage.storageClassName | quote }}
+  {{- if .root.Values.distributed }}
+  hostPath:
+    path: {{ .hostPath | quote }}
+    type: "DirectoryOrCreate"
+  {{- else }}
   local:
     path: {{ .hostPath | quote }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: {{ printf "node-role.kubernetes.io/%s" .nodeRole | quote }}
-              operator: "Exists"
-        - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
-{{- end }}
+  {{- end }}{{/* if .root.Values.distributed */}}
+{{- end }}{{/* define "clp.createStaticPv" */}}
 
 {{/*
 Creates a PersistentVolumeClaim for the given component.
@@ -171,7 +171,7 @@ metadata:
     app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
   accessModes: {{ .accessModes }}
-  storageClassName: "local-storage"
+  storageClassName: {{ .root.Values.storage.storageClassName | quote }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" .root | nindent 6 }}
@@ -248,36 +248,45 @@ hostPath:
 {{- end }}
 
 {{/*
-Creates a nodeAffinity that prefers scheduling on worker nodes.
+Creates scheduling configuration (nodeSelector, affinity, tolerations, topologySpreadConstraints)
+for a component.
 
-@return {string} YAML-formatted nodeAffinity definition
-*/}}
-{{- define "clp.preferWorkerNodeAffinity" -}}
-nodeAffinity:
-  preferredDuringSchedulingIgnoredDuringExecution:
-    - weight: 100
-      preference:
-        matchExpressions:
-          - key: "node-role.kubernetes.io/worker"
-            operator: "Exists"
-{{- end }}
-
-{{/*
-Creates a topologySpreadConstraint to ensure at most one pod per node.
+When distributed is false (single-node mode), a control-plane toleration is automatically added
+so pods can be scheduled on tainted control-plane nodes without manual untainting.
 
 @param {object} root Root template context
-@param {string} component The component name (e.g., "compression-worker", "query-worker")
-@return {string} YAML-formatted topologySpreadConstraint definition
+@param {string} component Top-level values key (e.g., "compressionWorker", "queryWorker")
+@return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
+  topologySpreadConstraints)
 */}}
-{{- define "clp.uniquePodPerNodeConstraint" -}}
-maxSkew: 1
-topologyKey: "kubernetes.io/hostname"
-whenUnsatisfiable: "DoNotSchedule"
-labelSelector:
-  matchLabels:
-    {{- include "clp.selectorLabels" .root | nindent 4 }}
-    app.kubernetes.io/component: {{ .component | quote }}
+{{- define "clp.createSchedulingConfigs" -}}
+{{- $componentConfig := index .root.Values .component | default dict -}}
+{{- $scheduling := $componentConfig.scheduling | default dict -}}
+{{- $tolerations := $scheduling.tolerations | default list -}}
+{{- if not .root.Values.distributed -}}
+{{- $tolerations = append $tolerations (dict
+    "key" "node-role.kubernetes.io/control-plane"
+    "operator" "Exists"
+    "effect" "NoSchedule"
+) -}}
+{{- end -}}
+{{- with $scheduling.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
 {{- end }}
+{{- with $scheduling.affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $scheduling.topologySpreadConstraints }}
+topologySpreadConstraints:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}{{/* define "clp.createSchedulingConfigs" */}}
 
 {{/*
 Creates an initContainer that waits for a Kubernetes resource to be ready.
