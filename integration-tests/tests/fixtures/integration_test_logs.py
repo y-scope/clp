@@ -10,7 +10,6 @@ from tests.utils.config import (
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
-from tests.utils.utils import unlink
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,18 @@ def _download_and_extract_dataset(
     integration_test_path_config: IntegrationTestPathConfig,
     name: str,
     tarball_url: str,
+    has_leading_directory_component: bool = True,
 ) -> IntegrationTestLogs:
+    """
+    :param request:
+    :param integration_test_path_config:
+    "param name:
+    :param tarball_url:
+    :param has_leading_directory_component: Whether all files inside the tarball are stored under a
+    single top level directory. Defaults to True.
+    :return: The IntegrationTestPathConfig object with its associated logs properly downloaded,
+    extracted, and permission changed to be overritable.
+    """
     integration_test_logs = IntegrationTestLogs(
         name=name,
         tarball_url=tarball_url,
@@ -58,38 +68,56 @@ def _download_and_extract_dataset(
         logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
         return integration_test_logs
 
+    integration_test_logs.tarball_path.unlink(missing_ok=True)
+    shutil.rmtree(integration_test_logs.extraction_dir)
+    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
+
+    tarball_path_str = str(integration_test_logs.tarball_path)
+    extract_path_str = str(integration_test_logs.extraction_dir)
+
     curl_bin = shutil.which("curl")
     if curl_bin is None:
         err_msg = "curl executable not found"
         raise RuntimeError(err_msg)
 
-    try:
-        # fmt: off
-        curl_cmds = [
-            curl_bin,
-            "--fail",
-            "--location",
-            "--output", str(integration_test_logs.tarball_path),
-            "--show-error",
-            tarball_url,
-        ]
-        # fmt: on
-        subprocess.run(curl_cmds, check=True)
+    # fmt: off
+    curl_cmd = [
+        curl_bin,
+        "--fail",
+        "--location",
+        "--output", tarball_path_str,
+        "--show-error",
+        tarball_url,
+    ]
+    # fmt: on
+    subprocess.run(curl_cmd, check=True)
 
-        unlink(integration_test_logs.extraction_dir)
-        shutil.unpack_archive(
-            integration_test_logs.tarball_path, integration_test_logs.extraction_dir
-        )
-    except Exception as e:
-        err_msg = f"Failed to download and extract dataset `{name}`."
-        raise RuntimeError(err_msg) from e
+    tar_bin = shutil.which("tar")
+    if tar_bin is None:
+        err_msg = "tar executable not found"
+        raise RuntimeError(err_msg)
 
-    # Allow the extracted content to be deletable or overwritable
+    # fmt: off
+    extract_cmd = [
+        tar_bin,
+        "--extract",
+        "--gzip",
+        "--file", tarball_path_str,
+        "-C", extract_path_str,
+    ]
+    # fmt: on
+    if has_leading_directory_component:
+        extract_cmd.extend(["--strip-components", "1"])
+    subprocess.run(extract_cmd, check=True)
+
     chmod_bin = shutil.which("chmod")
     if chmod_bin is None:
         err_msg = "chmod executable not found"
         raise RuntimeError(err_msg)
-    subprocess.run([chmod_bin, "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
+
+    # Allow the downloaded and extracted contents to be deletable or overwritable
+    subprocess.run([chmod_bin, "-R", "gu+w", tarball_path_str], check=True)
+    subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)
