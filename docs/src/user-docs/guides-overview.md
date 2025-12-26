@@ -48,6 +48,13 @@ Ingest logs from and store archives on S3-compatible object storage.
 :::
 
 :::{grid-item-card}
+:link: guides-using-log-ingestor
+Using `log-ingestor`
+^^^
+How to use `log-ingestor` to continuously ingest logs.
+:::
+
+:::{grid-item-card}
 :link: guides-external-database
 External database setup
 ^^^
@@ -83,13 +90,6 @@ Submit queries, view results, and manage jobs programmatically.
 MCP server
 ^^^
 Integrate CLP with AI assistants using the Model Context Protocol.
-:::
-
-:::{grid-item-card}
-:link: guides-using-log-ingestor
-Using `log-ingestor`
-^^^
-How to use `log-ingestor` to continuously ingest logs.
 :::
 
 :::{grid-item-card}
