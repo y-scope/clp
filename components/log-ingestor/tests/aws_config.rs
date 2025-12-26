@@ -10,10 +10,10 @@ const DEFAULT_AWS_REGION: &str = "us-east-1";
 
 /// AWS service configuration for tests.
 pub struct AwsConfig {
-    pub endpoint: String,
+    pub endpoint: NonEmptyString,
     pub access_key_id: String,
     pub secret_access_key: String,
-    pub region: String,
+    pub region: NonEmptyString,
     pub account_id: String,
     pub bucket_name: NonEmptyString,
     pub queue_name: NonEmptyString,
@@ -64,10 +64,11 @@ impl AwsConfig {
         })?;
 
         Ok(Self {
-            endpoint,
+            endpoint: NonEmptyString::new(endpoint)
+                .map_err(|_| anyhow!("endpoint must not be empty"))?,
             access_key_id,
             secret_access_key,
-            region,
+            region: NonEmptyString::new(region).map_err(|_| anyhow!("region must not be empty"))?,
             account_id,
             bucket_name: NonEmptyString::new(bucket_name)
                 .map_err(|_| anyhow!("bucket name must not be empty"))?,

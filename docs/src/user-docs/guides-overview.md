@@ -86,6 +86,13 @@ Integrate CLP with AI assistants using the Model Context Protocol.
 :::
 
 :::{grid-item-card}
+:link: guides-using-log-ingestor
+Using `log-ingestor`
+^^^
+How to use `log-ingestor` to continuously ingest logs.
+:::
+
+:::{grid-item-card}
 :link: guides-using-presto
 Using Presto
 ^^^

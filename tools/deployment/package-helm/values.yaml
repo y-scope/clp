@@ -46,7 +46,6 @@ clpConfig:
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 
   query_scheduler:
-    port: 7000
     jobs_poll_delay: 0.1  # seconds
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
@@ -63,6 +62,9 @@ clpConfig:
     port: 30017
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"
+
+    # Retention period for search results, in minutes. Set to null to disable automatic deletion.
+    retention_period: 60
 
   compression_worker:
     logging_level: "INFO"
@@ -113,6 +115,14 @@ clpConfig:
 
     # How large each stream file should be before being split into a new stream file
     target_uncompressed_size: 134217728  # 128 MB
+
+  garbage_collector:
+    logging_level: "INFO"
+
+    # Interval (in minutes) at which garbage collector jobs run
+    sweep_interval:
+      archive: 60
+      search_result: 30
 
   # Location where other data (besides archives) are stored. It will be created if
   # it doesn't exist.
