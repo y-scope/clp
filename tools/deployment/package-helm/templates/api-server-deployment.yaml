@@ -1,24 +1,22 @@
-{{- $archiveRetention := .Values.clpConfig.archive_output.retention_period }}
-{{- $cacheRetention := .Values.clpConfig.results_cache.retention_period }}
-{{- if or $archiveRetention $cacheRetention }}
+{{- if .Values.clpConfig.api_server }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp.fullname" . }}-garbage-collector
+  name: {{ include "clp.fullname" . }}-api-server
   labels:
     {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "garbage-collector"
+    app.kubernetes.io/component: "api-server"
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "garbage-collector"
+      app.kubernetes.io/component: "api-server"
   template:
     metadata:
       labels:
         {{- include "clp.labels" . | nindent 8 }}
-        app.kubernetes.io/component: "garbage-collector"
+        app.kubernetes.io/component: "api-server"
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       terminationGracePeriodSeconds: 10
@@ -38,7 +36,7 @@ spec:
             "name" "results-cache-indices-creator"
           ) | nindent 10 }}
       containers:
-        - name: "garbage-collector"
+        - name: "api-server"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
@@ -52,36 +50,23 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
-            - name: "CLP_HOME"
-              value: "/opt/clp"
-            - name: "CLP_LOGGING_LEVEL"
-              value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
-              value: "/var/log/garbage_collector"
-            - name: "PYTHONPATH"
-              value: "/opt/clp/lib/python3/site-packages"
+              value: "/var/log/api_server"
+            - name: "RUST_LOG"
+              value: "INFO"
+          ports:
+            - name: "api-server"
+              containerPort: 3001
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
-                "component_category" "garbage-collector"
+                "component_category" "api-server"
                 "name" "logs"
               ) | quote }}
-              mountPath: "/var/log/garbage_collector"
+              mountPath: "/var/log/api_server"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "tmp"
-              mountPath: "/var/log"
-            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "shared-data"
-                "name" "archives"
-              ) | quote }}
-              mountPath: "/var/data/archives"
-            {{- end }}
-            {{- if .Values.clpConfig.aws_config_directory }}
-            - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
-            {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -90,31 +75,28 @@ spec:
               mountPath: "/var/data/streams"
             {{- end }}
           command: [
-            "python3", "-u",
-            "-m", "job_orchestration.garbage_collector.garbage_collector",
+            "/opt/clp/bin/api_server",
+            "--host", "0.0.0.0",
+            "--port", "3001",
             "--config", "/etc/clp-config.yaml"
           ]
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: &api-server-health-check
+              path: "/health"
+              port: 3001
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *api-server-health-check
       volumes:
         - {{- include "clp.pvcVolume" (dict
             "root" .
-            "component_category" "garbage-collector"
+            "component_category" "api-server"
             "name" "logs"
           ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "tmp"
-          emptyDir: {}
-        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "shared-data"
-            "name" "archives"
-          ) | nindent 10 }}
-        {{- end }}
-        {{- if .Values.clpConfig.aws_config_directory }}
-        - {{- include "clp.awsConfigVolume" . | nindent 10 }}
-        {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .

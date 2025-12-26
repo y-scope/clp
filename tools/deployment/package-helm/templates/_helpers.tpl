@@ -111,20 +111,21 @@ Used for:
 {{- end }}
 
 {{/*
-Creates a local PersistentVolume.
+Creates a PersistentVolume that does not use dynamic provisioning.
+
+Behavior depends on the `distributed` value:
+- distributed=false: Uses local volume type with node affinity targeting control-plane nodes
+- distributed=true: Uses hostPath without node affinity (assumes shared storage like NFS)
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
 @param {string} name (e.g., "archives", "data", "logs")
-@param {string} nodeRole Node role for affinity. Targets nodes with label
-  "node-role.kubernetes.io/<nodeRole>". Always falls back to
-  "node-role.kubernetes.io/control-plane"
 @param {string} capacity Storage capacity
 @param {string[]} accessModes Access modes
 @param {string} hostPath Absolute path on host
 @return {string} YAML-formatted PersistentVolume resource
 */}}
-{{- define "clp.createLocalPv" -}}
+{{- define "clp.createStaticPv" -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
@@ -137,19 +138,22 @@ spec:
     storage: {{ .capacity }}
   accessModes: {{ .accessModes }}
   persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
+  storageClassName: {{ .root.Values.storage.storageClassName | quote }}
+  {{- if .root.Values.distributed }}
+  hostPath:
+    path: {{ .hostPath | quote }}
+    type: "DirectoryOrCreate"
+  {{- else }}
   local:
     path: {{ .hostPath | quote }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
         - matchExpressions:
-            - key: {{ printf "node-role.kubernetes.io/%s" .nodeRole | quote }}
-              operator: "Exists"
-        - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
-{{- end }}
+  {{- end }}{{/* if .root.Values.distributed */}}
+{{- end }}{{/* define "clp.createStaticPv" */}}
 
 {{/*
 Creates a PersistentVolumeClaim for the given component.
@@ -171,7 +175,7 @@ metadata:
     app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
   accessModes: {{ .accessModes }}
-  storageClassName: "local-storage"
+  storageClassName: {{ .root.Values.storage.storageClassName | quote }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" .root | nindent 6 }}
@@ -248,6 +252,31 @@ hostPath:
 {{- end }}
 
 {{/*
+Creates a volumeMount for the AWS config directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volumeMount definition
+*/}}
+{{- define "clp.awsConfigVolumeMount" -}}
+name: "aws-config"
+mountPath: {{ .Values.clpConfig.aws_config_directory | quote }}
+readOnly: true
+{{- end }}
+
+{{/*
+Creates a volume for the AWS config directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.awsConfigVolume" -}}
+name: "aws-config"
+hostPath:
+  path: {{ .Values.clpConfig.aws_config_directory | quote }}
+  type: "Directory"
+{{- end }}
+
+{{/*
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context
@@ -272,3 +301,44 @@ command: [
   "--timeout=300s"
 ]
 {{- end }}
+
+{{/*
+Creates scheduling configuration (nodeSelector, affinity, tolerations, topologySpreadConstraints)
+for a component.
+
+When distributed is false (single-node mode), a control-plane toleration is automatically added
+so pods can be scheduled on tainted control-plane nodes without manual untainting.
+
+@param {object} root Root template context
+@param {string} component Top-level values key (e.g., "compressionWorker", "queryWorker")
+@return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
+  topologySpreadConstraints)
+*/}}
+{{- define "clp.createSchedulingConfigs" -}}
+{{- $componentConfig := index .root.Values .component | default dict -}}
+{{- $scheduling := $componentConfig.scheduling | default dict -}}
+{{- $tolerations := $scheduling.tolerations | default list -}}
+{{- if not .root.Values.distributed -}}
+{{- $tolerations = append $tolerations (dict
+    "key" "node-role.kubernetes.io/control-plane"
+    "operator" "Exists"
+    "effect" "NoSchedule"
+) -}}
+{{- end -}}
+{{- with $scheduling.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $scheduling.affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $scheduling.topologySpreadConstraints }}
+topologySpreadConstraints:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}{{/* define "clp.createSchedulingConfigs" */}}
