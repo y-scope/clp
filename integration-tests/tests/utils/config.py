@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -121,6 +122,36 @@ class PackagePathConfig:
 
 
 @dataclass(frozen=True)
+class PackageCompressionJob:
+    """A compression job for a package test."""
+
+    # The name of the job.
+    job_name: str
+
+    # The mode the job should be running in.
+    mode: str
+
+    # Script path (relative to the CLP package).
+    script_path: Path
+
+    # The path to the logs relative to tests/data/datasets (either a file or directory).
+    log_path: Path
+
+    # Flags to specify in the command.
+    flags: dict[str, Any] | None
+
+    # Arguments to specify in the command.
+    args: list[str] | None
+
+
+@dataclass(frozen=True)
+class PackageJobList:
+    """List of jobs to run during a package test."""
+
+    package_compression_jobs: list[PackageCompressionJob]
+
+
+@dataclass(frozen=True)
 class PackageConfig:
     """Metadata for a specific configuration of the CLP package."""
 
@@ -138,6 +169,9 @@ class PackageConfig:
 
     #: The base port from which all ports for the components are derived.
     base_port: int
+
+    #: The list of jobs that this package will run during the test.
+    package_job_list: PackageJobList | None
 
     def __post_init__(self) -> None:
         """Write the temporary config file for this package."""
