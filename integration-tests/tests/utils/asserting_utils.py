@@ -1,7 +1,6 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-import shlex
 import subprocess
 from typing import Any
 
@@ -9,9 +8,15 @@ import pytest
 from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
-from tests.utils.clp_mode_utils import compare_mode_signatures
+from tests.utils.clp_mode_utils import (
+    CLP_PRESTO_COMPONENTS,
+    compare_mode_signatures,
+)
 from tests.utils.config import PackageInstance
-from tests.utils.docker_utils import list_running_services_in_compose_project
+from tests.utils.docker_utils import (
+    list_running_containers_with_prefix,
+    list_running_services_in_compose_project,
+)
 from tests.utils.utils import load_yaml_to_dict
 
 logger = logging.getLogger(__name__)
@@ -26,12 +31,12 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     :return: The completed process object, for inspection or further handling.
     :raise: pytest.fail if the command exits with a non-zero return code.
     """
-    logger.info("Running command: %s", shlex.join(cmd))
-
     try:
         proc = subprocess.run(cmd, check=True, **kwargs)
     except subprocess.CalledProcessError as e:
-        pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
+        err_msg = f"Command failed:\n{e}"
+        logger.exception(err_msg)
+        pytest.fail(err_msg, pytrace=False)
     except subprocess.TimeoutExpired as e:
         pytest.fail(f"Command timed out: {' '.join(cmd)}: {e}")
     return proc
@@ -45,6 +50,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
+    logger.info("Validating that all components of the package are running...")
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
     project_name = f"clp-package-{instance_id}"
@@ -52,20 +58,26 @@ def validate_package_running(package_instance: PackageInstance) -> None:
 
     # Compare with list of required components.
     required_components = set(package_instance.package_config.component_list)
-    if required_components == running_services:
-        return
+    required_components.add("Quinn")
+    assert required_components == running_services, (
+        "Component mismatch.",
+        f" Missing components: {required_components - running_services}." if required_components - running_services else "",
+        f" Unexpected services: {running_services - required_components}." if running_services - required_components else "",
+    )
+    # if required_components == running_services:
+    #     return
 
-    fail_msg = "Component mismatch."
+    # fail_msg = "Component mismatch."
 
-    missing_components = required_components - running_services
-    if missing_components:
-        fail_msg += f"\nMissing components: {missing_components}."
+    # missing_components = required_components - running_services
+    # if missing_components:
+    #     fail_msg += f"\nMissing components: {missing_components}."
 
-    unexpected_components = running_services - required_components
-    if unexpected_components:
-        fail_msg += f"\nUnexpected services: {unexpected_components}."
+    # unexpected_components = running_services - required_components
+    # if unexpected_components:
+    #     fail_msg += f"\nUnexpected services: {unexpected_components}."
 
-    pytest.fail(fail_msg)
+    # pytest.fail(fail_msg)
 
 
 def validate_running_mode_correct(package_instance: PackageInstance) -> None:
@@ -79,6 +91,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the ClpConfig object cannot be validated.
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
+    logger.info("Validating that the package is running in the correct configuration...")
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)
@@ -86,6 +99,25 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
         pytest.fail(f"Shared config failed validation: {err}")
 
     intended_config = package_instance.package_config.clp_config
+    assert compare_mode_signatures(intended_config, running_config)
+    # if not compare_mode_signatures(intended_config, running_config):
+    #     pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
 
-    if not compare_mode_signatures(intended_config, running_config):
-        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
+
+def validate_presto_running() -> None:
+    """
+    Validate that a Presto cluster is running.
+
+    :param package_instance:
+    """
+    logger.info("Validating that all components of the Presto cluster are running...")
+    required_components = CLP_PRESTO_COMPONENTS
+
+    for component in required_components:
+        prefix = f"presto-clp-{component}-"
+        running_matches = list_running_containers_with_prefix(prefix)
+        if len(running_matches) == 0:
+            pytest.fail(
+                f"No running container found for component '{component}' "
+                f"(expected name prefix '{prefix}')."
+            )
