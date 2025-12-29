@@ -47,6 +47,7 @@ set(
     CLP_S_CORE_SOURCES
     ../../archive_constants.hpp
     ../../Defs.hpp
+    ../../ErrorCode.cpp
     ../../ErrorCode.hpp
     ../../TraceableException.hpp
 )
@@ -62,6 +63,8 @@ if(CLP_BUILD_CLP_S_SEARCH_AST)
     target_include_directories(clp_s_search_ast PUBLIC ../../../)
     target_link_libraries(
         clp_s_search_ast
+        PUBLIC
+        ystdlib::error_handling
         PRIVATE
         simdjson::simdjson
     )

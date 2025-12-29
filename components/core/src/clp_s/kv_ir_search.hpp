@@ -28,7 +28,6 @@ using KvIrSearchError = ystdlib::error_handling::ErrorCode<KvIrSearchErrorEnum>;
  * @param stream_path The path to the kv-pair IR stream.
  * @param command_line_arguments
  * @param query
- * @param reducer_socket_fd
  * @return A void result on success, or an error code indicating the failure:
  * - KvIrSearchErrorEnum::ClpLegacyError if a `clp::TraceableException` is caught.
  * - KvIrSearchErrorEnum::CountSupportNotImplemented if count-related features are enabled.
@@ -40,8 +39,7 @@ using KvIrSearchError = ystdlib::error_handling::ErrorCode<KvIrSearchErrorEnum>;
 [[nodiscard]] auto search_kv_ir_stream(
         Path const& stream_path,
         CommandLineArguments const& command_line_arguments,
-        std::shared_ptr<search::ast::Expression> query,
-        int reducer_socket_fd
+        std::shared_ptr<search::ast::Expression> query
 ) -> ystdlib::error_handling::Result<void>;
 }  // namespace clp_s
 

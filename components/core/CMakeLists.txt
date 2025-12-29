@@ -343,8 +343,11 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/ArchiveReader.hpp
     src/clp_s/ArchiveReaderAdaptor.cpp
     src/clp_s/ArchiveReaderAdaptor.hpp
+    src/clp_s/ArchiveStats.cpp
+    src/clp_s/ArchiveStats.hpp
     src/clp_s/ArchiveWriter.cpp
     src/clp_s/ArchiveWriter.hpp
+    src/clp_s/Array.hpp
     src/clp_s/ColumnReader.cpp
     src/clp_s/ColumnReader.hpp
     src/clp_s/ColumnWriter.cpp
@@ -353,6 +356,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/DictionaryEntry.hpp
     src/clp_s/DictionaryWriter.cpp
     src/clp_s/DictionaryWriter.hpp
+    src/clp_s/experimental_helpers.cpp
+    src/clp_s/experimental_helpers.hpp
     src/clp_s/FileReader.cpp
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
