@@ -18,7 +18,54 @@ image:
     pullPolicy: "Always"
     tag: "main"
 
+# Deployment mode:
+# - distributed=false: Single-node deployment. PVs use local volumes bound to one node. Pods
+#   automatically tolerate control-plane taints. Only works with worker replicas=1.
+# - distributed=true: Multi-node deployment. PVs use hostPath without node affinity, assuming
+#   unmanaged shared storage (e.g., NFS/CephFS mounted via /etc/fstab) at the same path on all
+#   nodes.
+distributed: false
+
+# Number of concurrent processes per worker pod.
 workerConcurrency: 8
+
+compressionWorker:
+  replicas: 1
+  # Controls which nodes run compression workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "compression"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+queryWorker:
+  replicas: 1
+  # Controls which nodes run query workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "query"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+storage:
+  # Name of the StorageClass for PVs and PVCs.
+  # - If "local-storage" (default), the chart creates a StorageClass with WaitForFirstConsumer
+  # - If a different name, the StorageClass must already exist in your cluster
+  storageClassName: "local-storage"
 
 clpConfig:
   package:
@@ -76,6 +123,14 @@ clpConfig:
     port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
+
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
 
   # Where archives should be output to
   archive_output:
@@ -140,6 +195,9 @@ clpConfig:
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
   tmp_directory: "/tmp/clp/var/tmp"
+
+  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
+  aws_config_directory: null
 
 credentials:
   database:

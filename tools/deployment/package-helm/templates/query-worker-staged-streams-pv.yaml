@@ -1,0 +1,10 @@
+{{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+{{- include "clp.createStaticPv" (dict
+  "root" .
+  "component_category" "query-worker"
+  "name" "staged-streams"
+  "capacity" "50Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/var/data/staged-streams" .Values.clpConfig.data_directory)
+) }}
+{{- end }}
