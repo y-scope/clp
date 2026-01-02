@@ -96,6 +96,6 @@ resources-datasets
 reference-overview
 reference-json-search-syntax
 reference-text-search-syntax
-reference-admin-tools
+reference-sbin-scripts/index
 reference-unstructured-schema-file
 :::
