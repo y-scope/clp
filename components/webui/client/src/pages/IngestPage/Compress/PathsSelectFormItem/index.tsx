@@ -1,4 +1,4 @@
-import {
+import React, {
     useCallback,
     useEffect,
     useRef,
@@ -8,12 +8,12 @@ import {
 import {FileEntry} from "@webui/common/schemas/os";
 import {
     Form,
-    message,
     TreeSelect,
     TreeSelectProps,
 } from "antd";
 
 import {listFiles} from "../../../../api/os";
+import styles from "./index.module.css";
 import SwitcherIcon from "./SwitcherIcon";
 import {
     ROOT_NODE,
@@ -23,6 +23,7 @@ import {
 import {
     addServerPrefix,
     getListHeight,
+    handleLoadError,
     toTreeNode,
 } from "./utils";
 
@@ -30,6 +31,7 @@ import {
 type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
 
 type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0];
+
 
 /**
  * Form item with TreeSelect for selecting file paths for compression.
@@ -41,18 +43,6 @@ const PathsSelectFormItem = () => {
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
     const [listHeight, setListHeight] = useState<number>(getListHeight);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setListHeight(getListHeight());
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
 
     // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
@@ -91,30 +81,68 @@ const PathsSelectFormItem = () => {
             .then(() => {
                 setExpandedKeys([ROOT_PATH]);
             })
-            .catch((e: unknown) => {
-                console.error("Failed to load root directory:", e);
-                message.error(e instanceof Error ?
-                    e.message :
-                    "Failed to load root directory");
-            });
+            .catch(handleLoadError);
     }, [loadPath]);
 
     const handleLoadData = useCallback(async ({value}: LoadDataNode) => {
         if ("string" !== typeof value) {
             return;
         }
-        try {
-            await loadPath(value);
-        } catch (e) {
-            console.error("Failed to load directory:", e);
-            message.error(e instanceof Error ?
-                e.message :
-                "Unknown error while loading paths");
-        }
+        await loadPath(value).catch(handleLoadError);
     }, [loadPath]);
+
+    const handleTitleClick = useCallback((nodeData: TreeNode, ev: React.MouseEvent) => {
+        if (nodeData.isLeaf) {
+            // Propagate event to let TreeSelect handle selection.
+            return;
+        }
+        ev.stopPropagation();
+
+        const nodeValue = nodeData.value;
+        if (expandedKeys.includes(nodeValue)) {
+            setExpandedKeys(expandedKeys.filter((k) => k !== nodeValue));
+
+            return;
+        }
+
+        if (false === loadedPathsRef.current.has(nodeValue)) {
+            loadPath(nodeValue).catch(handleLoadError);
+        }
+
+        setExpandedKeys([
+            ...expandedKeys,
+            nodeValue,
+        ]);
+    }, [
+        expandedKeys,
+        loadPath,
+    ]);
 
     const handleTreeExpand = useCallback((keys: TreeExpandKeys) => {
         setExpandedKeys(keys as string[]);
+    }, []);
+
+    const renderTreeTitle = useCallback((nodeData: TreeNode) => (
+        <span
+            className={styles["treeTitle"]}
+            onClick={(ev) => {
+                handleTitleClick(nodeData, ev);
+            }}
+        >
+            {nodeData.title}
+        </span>
+    ), [handleTitleClick]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setListHeight(getListHeight());
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+        };
     }, []);
 
     return (
@@ -139,6 +167,7 @@ const PathsSelectFormItem = () => {
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
+                treeTitleRender={renderTreeTitle}
                 onTreeExpand={handleTreeExpand}/>
         </Form.Item>
     );
