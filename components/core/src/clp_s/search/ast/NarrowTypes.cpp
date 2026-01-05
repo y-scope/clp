@@ -76,8 +76,8 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
             if (false == literal->as_null(op)) {
                 column->remove_matching_type(LiteralType::NullT);
             }
-            if (false == literal->as_epoch_date()) {
-                column->remove_matching_type(LiteralType::EpochDateT);
+            if (false == literal->as_timestamp()) {
+                column->remove_matching_type(LiteralType::TimestampT);
             }
         }
 

@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.s3_utils import (
-    generate_s3_virtual_hosted_style_url,
+    generate_s3_url,
     get_credential_env_vars,
     s3_put,
 )
@@ -77,8 +77,8 @@ def _make_core_clp_s_command_and_env_vars(
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
         try:
-            s3_url = generate_s3_virtual_hosted_style_url(
-                s3_config.region_code, s3_config.bucket, s3_object_key
+            s3_url = generate_s3_url(
+                s3_config.endpoint_url, s3_config.region_code, s3_config.bucket, s3_object_key
             )
         except ValueError as ex:
             logger.error(f"Encountered error while generating S3 url: {ex}")

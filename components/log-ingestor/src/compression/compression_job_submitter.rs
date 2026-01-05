@@ -66,6 +66,7 @@ impl CompressionJobSubmitter {
                 bucket: ingestion_job_config.bucket_name.clone(),
                 region_code: ingestion_job_config.region.clone(),
                 key_prefix: ingestion_job_config.key_prefix.clone(),
+                endpoint_url: ingestion_job_config.endpoint_url.clone(),
                 aws_authentication: Credentials {
                     credentials: aws_credentials,
                 },
@@ -76,7 +77,7 @@ impl CompressionJobSubmitter {
                 ingestion_job_config
                     .dataset
                     .clone()
-                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.to_string()),
+                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.clone()),
             ),
             timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,

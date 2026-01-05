@@ -172,9 +172,12 @@ def _generate_clp_io_config(
     urls = logs_to_compress[1:]
 
     if s3_compress_subcommand == S3_OBJECT_COMPRESSION:
-        region_code, bucket, key_prefix, keys = _parse_and_validate_s3_object_urls(urls)
+        endpoint_url, region_code, bucket, key_prefix, keys = _parse_and_validate_s3_object_urls(
+            urls
+        )
         return S3InputConfig(
             dataset=parsed_args.dataset,
+            endpoint_url=endpoint_url,
             region_code=region_code,
             bucket=bucket,
             key_prefix=key_prefix,
@@ -188,9 +191,10 @@ def _generate_clp_io_config(
             raise ValueError(
                 f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
             )
-        region_code, bucket, key_prefix = parse_s3_url(urls[0])
+        endpoint_url, region_code, bucket, key_prefix = parse_s3_url(urls[0])
         return S3InputConfig(
             dataset=parsed_args.dataset,
+            endpoint_url=endpoint_url,
             region_code=region_code,
             bucket=bucket,
             key_prefix=key_prefix,
@@ -223,7 +227,7 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
 
 def _parse_and_validate_s3_object_urls(
     urls: list[str],
-) -> tuple[str, str, str, list[str]]:
+) -> tuple[str | None, str | None, str, str, list[str]]:
     """
     Parses and validates S3 object URLs.
 
@@ -234,6 +238,7 @@ def _parse_and_validate_s3_object_urls(
 
     :param urls:
     :return: A tuple containing:
+        - The endpoint url.
         - The region code.
         - The bucket.
         - The common key prefix.
@@ -243,24 +248,25 @@ def _parse_and_validate_s3_object_urls(
     if len(urls) == 0:
         raise ValueError("No URLs provided.")
 
-    region_code: str | None = None
-    bucket_name: str | None = None
-    keys = set()
+    endpoint_url, region_code, bucket_name, key = parse_s3_url(urls[0])
+    keys = {key}
 
-    for url in urls:
-        parsed_region_code, parsed_bucket_name, key = parse_s3_url(url)
+    for url in urls[1:]:
+        parsed_endpoint_url, parsed_region_code, parsed_bucket_name, key = parse_s3_url(url)
 
-        if region_code is None:
-            region_code = parsed_region_code
-        elif region_code != parsed_region_code:
+        if endpoint_url != parsed_endpoint_url:
+            raise ValueError(
+                "All S3 URLs must have the same endpoint."
+                f" Found {endpoint_url} and {parsed_endpoint_url}."
+            )
+
+        if region_code != parsed_region_code:
             raise ValueError(
                 "All S3 URLs must be in the same region."
                 f" Found {region_code} and {parsed_region_code}."
             )
 
-        if bucket_name is None:
-            bucket_name = parsed_bucket_name
-        elif bucket_name != parsed_bucket_name:
+        if bucket_name != parsed_bucket_name:
             raise ValueError(
                 "All S3 URLs must be in the same bucket."
                 f" Found {bucket_name} and {parsed_bucket_name}."
@@ -276,7 +282,7 @@ def _parse_and_validate_s3_object_urls(
     if len(key_prefix) == 0:
         raise ValueError("The given S3 URLs have no common prefix.")
 
-    return region_code, bucket_name, key_prefix, key_list
+    return endpoint_url, region_code, bucket_name, key_prefix, key_list
 
 
 def _get_aws_authentication_from_config(clp_config: ClpConfig) -> AwsAuthentication:
