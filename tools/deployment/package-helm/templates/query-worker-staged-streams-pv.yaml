@@ -6,6 +6,6 @@
   "nodeRole" "worker"
   "capacity" "50Gi"
   "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/var/data/staged-streams" .Values.clpConfig.data_directory)
+  "hostPath" .Values.clpConfig.stream_output.storage.staging_directory
 ) }}
 {{- end }}

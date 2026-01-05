@@ -6,6 +6,6 @@
   "nodeRole" "worker"
   "capacity" "50Gi"
   "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/var/data/staged-archives" .Values.clpConfig.data_directory)
+  "hostPath" .Values.clpConfig.archive_output.storage.staging_directory
 ) }}
 {{- end }}
