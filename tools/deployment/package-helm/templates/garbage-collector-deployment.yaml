@@ -1,0 +1,109 @@
+{{- if or .Values.clpConfig.archive_output.retention_period .Values.clpConfig.results_cache.retention_period }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-garbage-collector
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "garbage-collector"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "garbage-collector"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "garbage-collector"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
+      containers:
+        - name: "garbage-collector"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "CLP_HOME"
+              value: "/opt/clp"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/garbage_collector"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          volumeMounts:
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "garbage-collector"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/garbage_collector"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
+              mountPath: "/var/data/archives"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
+              mountPath: "/var/data/streams"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: "tmp"
+              mountPath: "/var/log"
+          command: [
+            "python3", "-u",
+            "-m", "job_orchestration.garbage_collector.garbage_collector",
+            "--config", "/etc/clp-config.yaml"
+          ]
+      volumes:
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "garbage-collector"
+            "name" "logs"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "archives"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "tmp"
+          emptyDir: {}
+{{- end }}
