@@ -301,9 +301,18 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       {{- with .Values.clpConfig.presto }}
       "PrestoHost": {{ .host | quote }},
-      "PrestoPort": {{ .port | int }}
+      "PrestoPort": {{ .port | int }},
       {{- else }}
       "PrestoHost": null,
-      "PrestoPort": null
+      "PrestoPort": null,
+      {{- end }}
+      {{- if .Values.clpConfig.fluent_bit }}
+      {{- if .Values.clpConfig.fluent_bit.enabled }}
+      "OperationalLogsDir": "/var/log/clp"
+      {{- else }}
+      "OperationalLogsDir": null
+      {{- end }}
+      {{- else }}
+      "OperationalLogsDir": null
       {{- end }}
     }

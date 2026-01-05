@@ -1,0 +1,11 @@
+{{- if .Values.clpConfig.fluent_bit }}
+{{- if .Values.clpConfig.fluent_bit.enabled }}
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component_category" "fluent-bit"
+  "name" "operational-logs"
+  "capacity" (printf "%s" (.Values.clpConfig.fluent_bit.storage_size | default "10Gi"))
+  "accessModes" (list "ReadWriteOnce")
+) }}
+{{- end }}
+{{- end }}

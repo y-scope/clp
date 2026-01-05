@@ -2,6 +2,20 @@
   min-height: 100vh;
 }
 
+.mainLayout :global(.ant-layout-sider) {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.siderContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: calc(100vh - 48px); /* Fill viewport height minus collapse trigger */
+}
+
 .siderLogoContainer {
   display: flex;
   justify-content: center;

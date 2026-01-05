@@ -94,6 +94,16 @@ spec:
               ) | quote }}
               mountPath: "/var/data/streams"
             {{- end }}
+            {{- if .Values.clpConfig.fluent_bit }}
+            {{- if .Values.clpConfig.fluent_bit.enabled }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "fluent-bit"
+                "name" "operational-logs"
+              ) | quote }}
+              mountPath: "/var/log/clp"
+              readOnly: true
+            {{- end }}
+            {{- end }}
           command: [
             "/opt/clp/bin/node-22",
             "/opt/clp/var/www/webui/server/dist/src/main.js"
@@ -127,4 +137,13 @@ spec:
             "component_category" "shared-data"
             "name" "streams"
           ) | nindent 10 }}
+        {{- end }}
+        {{- if .Values.clpConfig.fluent_bit }}
+        {{- if .Values.clpConfig.fluent_bit.enabled }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "fluent-bit"
+            "name" "operational-logs"
+          ) | nindent 10 }}
+        {{- end }}
         {{- end }}

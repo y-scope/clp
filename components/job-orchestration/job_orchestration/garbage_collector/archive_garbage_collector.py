@@ -192,10 +192,8 @@ def _collect_and_sweep_expired_archives(
             raise ValueError(f"Unsupported Storage engine: {storage_engine}.")
 
 
-async def archive_garbage_collector(
-    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
-) -> None:
-    configure_logger(logger, logging_level, log_directory, ARCHIVE_GARBAGE_COLLECTOR_NAME)
+async def archive_garbage_collector(clp_config: ClpConfig, logging_level: str) -> None:
+    configure_logger(logger, logging_level)
 
     archive_output_config = clp_config.archive_output
     storage_engine = clp_config.package.storage_engine

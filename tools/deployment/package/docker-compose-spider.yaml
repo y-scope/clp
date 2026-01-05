@@ -85,3 +85,8 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "log-ingestor"
+
+  fluent-bit:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "fluent-bit"

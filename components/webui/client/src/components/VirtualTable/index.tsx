@@ -3,13 +3,33 @@ import React, {
     useRef,
 } from "react";
 
-import {Table} from "antd";
+import {Empty, Table} from "antd";
 
 import {
     SCROLL_INCREMENT,
     VIRTUAL_TABLE_HOLDER_SELECTOR,
     type VirtualTableProps,
 } from "./typings";
+
+interface FullHeightEmptyProps {
+    height: number;
+}
+
+/**
+ * Empty component that fills the specified height.
+ */
+const FullHeightEmpty = ({height}: FullHeightEmptyProps) => (
+    <div
+        style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: height,
+        }}
+    >
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE}/>
+    </div>
+);
 
 
 /**
@@ -20,6 +40,8 @@ import {
  * @return
  */
 const VirtualTable = <RecordType extends object = Record<string, unknown>>({
+    scroll,
+    locale,
     ...tableProps
 }: VirtualTableProps<RecordType>) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +92,17 @@ const VirtualTable = <RecordType extends object = Record<string, unknown>>({
         e.preventDefault();
     }, []);
 
+    // Use scroll.y height for the empty state if available
+    const emptyHeight = "number" === typeof scroll?.y ? scroll.y : undefined;
+
+    // Build locale with full-height empty state
+    const fullHeightLocale = emptyHeight ?
+        {
+            ...locale,
+            emptyText: <FullHeightEmpty height={emptyHeight}/>,
+        } :
+        locale;
+
     return (
         <div
             ref={containerRef}
@@ -79,7 +112,9 @@ const VirtualTable = <RecordType extends object = Record<string, unknown>>({
         >
             <Table<RecordType>
                 virtual={true}
-                {...tableProps}/>
+                {...tableProps}
+                {...(scroll && {scroll})}
+                {...(fullHeightLocale && {locale: fullHeightLocale})}/>
         </div>
     );
 };

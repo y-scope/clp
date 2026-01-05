@@ -18,13 +18,8 @@ from clp_py_utils.s3_utils import s3_delete_objects
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS
 
 
-def configure_logger(
-    logger: logging.Logger, logging_level: str, log_directory: pathlib.Path, handler_name: str
-):
-    log_file = log_directory / f"{handler_name}.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
+def configure_logger(logger: logging.Logger, logging_level: str):
+    """Configure the logging level for a logger (logs go to stdout, captured by Docker)."""
     set_logging_level(logger, logging_level)
 
 

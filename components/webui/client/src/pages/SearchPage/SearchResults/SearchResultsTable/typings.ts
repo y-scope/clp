@@ -1,7 +1,7 @@
 /**
  * Padding for the table to the bottom of the page.
  */
-const TABLE_BOTTOM_PADDING = 95;
+const TABLE_BOTTOM_PADDING = 24;
 
 /**
  * The maximum number of results to retrieve for a search.

@@ -1147,13 +1147,7 @@ async def main(argv: list[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup logging to file
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "query_scheduler.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
+    # Set logging level from environment
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     # Load configuration

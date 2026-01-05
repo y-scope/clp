@@ -138,6 +138,39 @@ clpConfig:
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor: null
 
+  # Fluent Bit config for centralized operational logging.
+  # When enabled, Fluent Bit collects logs from all CLP components and:
+  # - Stores them in organized file storage (hot tier) for real-time access
+  # - Optionally uploads to S3 (cold tier) for archival with CLP compression
+  fluent_bit: null
+  #   enabled: true
+  #   image:
+  #     repository: "fluent/fluent-bit"
+  #     tag: "3.2"
+  #     pullPolicy: "IfNotPresent"
+  #   logging_level: "info"  # error, warning, info, debug, trace
+  #   flush_interval: 5  # seconds
+  #   refresh_interval: 10  # seconds (how often to check for new log files)
+  #   storage_size: "10Gi"  # size of operational logs PVC
+  #   resources:
+  #     limits:
+  #       cpu: "100m"
+  #       memory: "50Mi"
+  #     requests:
+  #       cpu: "50m"
+  #       memory: "25Mi"
+  #   debug_output: false  # enable stdout output for debugging
+  #   s3_output: null  # optional S3 output for cold tier archival
+  #     # enabled: true
+  #     # bucket: "my-operational-logs-bucket"
+  #     # region: "us-east-1"
+  #     # key_prefix: "operational-logs"
+  #     # endpoint: null  # optional custom S3 endpoint
+  #     # total_file_size: "10M"  # size before uploading to S3
+  #     # upload_timeout: "5m"  # max time before uploading to S3
+  #     # auth_type: "profile"  # or "credentials"
+  #     # profile: "default"  # AWS profile name (if auth_type is "profile")
+
   # Presto client config
   presto: null
   #   host: "localhost"

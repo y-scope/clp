@@ -29,5 +29,7 @@
     "ClpQueryEngine": "clp-s",
     "ClpStorageEngine": "clp-s",
     "PrestoHost": "localhost",
-    "PrestoPort": 8889
+    "PrestoPort": 8889,
+
+    "OperationalLogsDir": "/var/log/clp"
 }

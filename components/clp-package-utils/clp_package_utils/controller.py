@@ -32,6 +32,7 @@ from clp_py_utils.clp_config import (
     DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
+    FLUENT_BIT_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
@@ -711,6 +712,7 @@ class BaseController(ABC):
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "OperationalLogsDir": "/var/log/clp",
         }
 
         stream_storage = self._clp_config.stream_output.storage
@@ -848,6 +850,28 @@ class BaseController(ABC):
         # Logging config
         env_vars |= {
             "CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level
+        }
+
+        return env_vars
+
+    def _set_up_env_for_fluent_bit(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the Fluent Bit component.
+
+        Fluent Bit receives logs from Docker's fluentd logging driver and writes
+        them to the logs directory for hot tier access.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = FLUENT_BIT_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        fluent_bit_conf_dir = self._conf_dir / "fluent-bit"
+        env_vars |= {
+            "CLP_FLUENT_BIT_CONF_DIR_HOST": str(fluent_bit_conf_dir),
         }
 
         return env_vars
@@ -997,6 +1021,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
+        env_vars |= self._set_up_env_for_fluent_bit()
 
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:

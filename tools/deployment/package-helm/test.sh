@@ -60,6 +60,7 @@ mkdir -p  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
           "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
           "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
           "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
+          "$CLP_HOME/var/log/operational" \
           "$CLP_HOME/var/tmp" \
           "$CLP_HOME/samples"
 

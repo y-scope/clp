@@ -1,0 +1,287 @@
+{{- if .Values.clpConfig.fluent_bit }}
+{{- if .Values.clpConfig.fluent_bit.enabled }}
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: {{ include "clp.fullname" . }}-fluent-bit-config
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "fluent-bit"
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Daemon Off
+        Flush {{ .Values.clpConfig.fluent_bit.flush_interval | default 5 }}
+        Log_Level ${FLUENT_BIT_LOG_LEVEL}
+        Parsers_File /fluent-bit/etc/parsers.conf
+        HTTP_Server On
+        HTTP_Listen 0.0.0.0
+        HTTP_Port 2020
+        Health_Check On
+        storage.path /var/log/clp-operational/buffer
+        storage.sync normal
+        storage.checksum off
+        storage.backlog.mem_limit 5M
+
+    @INCLUDE inputs.conf
+    @INCLUDE filters.conf
+    @INCLUDE outputs.conf
+
+  inputs.conf: |
+    # Kubernetes container logs (stdout/stderr captured by container runtime)
+    [INPUT]
+        Name tail
+        Tag kube.*
+        Path /var/log/containers/*{{ include "clp.fullname" . }}*.log
+        Parser cri
+        Mem_Buf_Limit 5MB
+        Skip_Long_Lines On
+        Refresh_Interval {{ .Values.clpConfig.fluent_bit.refresh_interval | default 10 }}
+        DB /var/log/clp-operational/buffer/kube-tail.db
+
+    # Forward input for receiving logs from other Fluent Bit instances
+    [INPUT]
+        Name forward
+        Listen 0.0.0.0
+        Port 24224
+
+  filters.conf: |
+    # Kubernetes metadata enrichment
+    [FILTER]
+        Name kubernetes
+        Match kube.*
+        Kube_URL https://kubernetes.default.svc:443
+        Kube_CA_File /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File /var/run/secrets/kubernetes.io/serviceaccount/token
+        Merge_Log On
+        Keep_Log Off
+        K8S-Logging.Parser On
+        K8S-Logging.Exclude On
+        Labels Off
+        Annotations Off
+
+    # Extract component name from Kubernetes labels
+    [FILTER]
+        Name rewrite_tag
+        Match kube.*
+        Rule $kubernetes['labels']['app.kubernetes.io/component'] ^(.+)$ component.$1 false
+
+    # Add common metadata
+    [FILTER]
+        Name modify
+        Match *
+        Add clp_deployment {{ include "clp.fullname" . }}
+        Add node ${NODE_NAME}
+
+    # Nest record under 'log' key for consistent structure
+    [FILTER]
+        Name nest
+        Match component.*
+        Operation nest
+        Wildcard *
+        Nest_under body
+        Remove_prefix body_
+
+  outputs.conf: |
+    # Hot tier: Write to organized file storage for real-time access
+    [OUTPUT]
+        Name file
+        Match component.*
+        Path /var/log/clp-operational/hot
+        Mkdir On
+        Format out_file
+        Template {time} {component} {log}
+
+    # Write all logs to daily rotating files organized by component
+    [OUTPUT]
+        Name file
+        Match component.compression-scheduler
+        Path /var/log/clp-operational/hot/compression_scheduler
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.compression-worker
+        Path /var/log/clp-operational/hot/compression_worker
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.query-scheduler
+        Path /var/log/clp-operational/hot/query_scheduler
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.query-worker
+        Path /var/log/clp-operational/hot/query_worker
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.reducer
+        Path /var/log/clp-operational/hot/reducer
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.webui
+        Path /var/log/clp-operational/hot/webui
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.api-server
+        Path /var/log/clp-operational/hot/api_server
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.log-ingestor
+        Path /var/log/clp-operational/hot/log_ingestor
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.mcp-server
+        Path /var/log/clp-operational/hot/mcp_server
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.garbage-collector
+        Path /var/log/clp-operational/hot/garbage_collector
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.database
+        Path /var/log/clp-operational/hot/database
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.queue
+        Path /var/log/clp-operational/hot/queue
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.redis
+        Path /var/log/clp-operational/hot/redis
+        Mkdir On
+
+    [OUTPUT]
+        Name file
+        Match component.results-cache
+        Path /var/log/clp-operational/hot/results_cache
+        Mkdir On
+
+    {{- if .Values.clpConfig.fluent_bit.s3_output }}
+    {{- if .Values.clpConfig.fluent_bit.s3_output.enabled }}
+    # Cold tier: Upload to S3 for archival with CLP compression
+    [OUTPUT]
+        Name s3
+        Match component.*
+        bucket {{ .Values.clpConfig.fluent_bit.s3_output.bucket }}
+        region {{ .Values.clpConfig.fluent_bit.s3_output.region }}
+        {{- if .Values.clpConfig.fluent_bit.s3_output.endpoint }}
+        endpoint {{ .Values.clpConfig.fluent_bit.s3_output.endpoint }}
+        {{- end }}
+        s3_key_format /{{ .Values.clpConfig.fluent_bit.s3_output.key_prefix | default
+          "operational-logs" }}/$TAG[1]/%Y/%m/%d/%H/$UUID.log
+        total_file_size {{ .Values.clpConfig.fluent_bit.s3_output.total_file_size | default "10M" }}
+        upload_timeout {{ .Values.clpConfig.fluent_bit.s3_output.upload_timeout | default "5m" }}
+        use_put_object On
+        compression gzip
+        store_dir /var/log/clp-operational/s3-buffer
+        static_file_path Off
+        {{- if eq .Values.clpConfig.fluent_bit.s3_output.auth_type "profile" }}
+        {{- if .Values.clpConfig.fluent_bit.s3_output.profile }}
+        profile {{ .Values.clpConfig.fluent_bit.s3_output.profile }}
+        {{- end }}
+        {{- end }}
+    {{- end }}
+    {{- end }}
+
+    # Debug output (can be enabled for troubleshooting)
+    {{- if .Values.clpConfig.fluent_bit.debug_output }}
+    [OUTPUT]
+        Name stdout
+        Match *
+        Format json_lines
+    {{- end }}
+
+  parsers.conf: |
+    # CRI log format (containerd/CRI-O)
+    [PARSER]
+        Name cri
+        Format regex
+        Regex ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+
+    # Docker JSON log format (fallback)
+    [PARSER]
+        Name docker
+        Format json
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep On
+
+    # CLP Python service log format
+    [PARSER]
+        Name clp_python
+        Format regex
+        Regex ^(?<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) (?<module>[^ ]+) \[(?<level>[^\]]+)\] (?<message>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%d %H:%M:%S,%L
+
+    # CLP Rust service log format (tracing)
+    [PARSER]
+        Name clp_rust
+        Format regex
+        Regex ^(?<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?<level>\w+)\s+(?<target>[^:]+):\s+(?<message>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%LZ
+
+    # MySQL/MariaDB log format
+    [PARSER]
+        Name mysql
+        Format regex
+        Regex ^(?<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?<thread_id>\d+)\s+\[(?<level>[^\]]+)\]\s+(?<message>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%LZ
+
+    # MongoDB log format (JSON)
+    [PARSER]
+        Name mongodb
+        Format json
+        Time_Key t
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+
+    # Redis log format
+    [PARSER]
+        Name redis
+        Format regex
+        Regex ^(?<pid>\d+):(?<role>[A-Z]) (?<time>\d{2} [A-Za-z]+ \d{4} \d{2}:\d{2}:\d{2}\.\d{3}) (?<level>[*.#-]) (?<message>.*)$
+        Time_Key time
+        Time_Format %d %b %Y %H:%M:%S.%L
+
+    # RabbitMQ log format
+    [PARSER]
+        Name rabbitmq
+        Format regex
+        Regex ^(?<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \[(?<level>[^\]]+)\] <(?<pid>[^>]+)> (?<message>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%d %H:%M:%S.%L
+
+    # Generic syslog format
+    [PARSER]
+        Name syslog
+        Format regex
+        Regex ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+        Time_Key time
+        Time_Format %b %d %H:%M:%S
+{{- end }}{{/* if .Values.clpConfig.fluent_bit.enabled */}}
+{{- end }}{{/* if .Values.clpConfig.fluent_bit */}}

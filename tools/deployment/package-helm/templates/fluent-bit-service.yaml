@@ -1,0 +1,25 @@
+{{- if .Values.clpConfig.fluent_bit }}
+{{- if .Values.clpConfig.fluent_bit.enabled }}
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp.fullname" . }}-fluent-bit
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "fluent-bit"
+spec:
+  type: "ClusterIP"
+  selector:
+    {{- include "clp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "fluent-bit"
+  ports:
+    - name: "http"
+      port: 2020
+      targetPort: "http"
+      protocol: "TCP"
+    - name: "forward"
+      port: 24224
+      targetPort: "forward"
+      protocol: "TCP"
+{{- end }}
+{{- end }}

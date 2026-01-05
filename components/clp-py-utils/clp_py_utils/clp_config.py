@@ -45,6 +45,7 @@ LOG_INGESTOR_COMPONENT_NAME = "log_ingestor"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
+FLUENT_BIT_COMPONENT_NAME = "fluent_bit"
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"

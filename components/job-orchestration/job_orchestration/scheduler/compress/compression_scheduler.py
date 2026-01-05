@@ -426,13 +426,7 @@ def main(argv) -> int | None:
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args = args_parser.parse_args(argv[1:])
 
-    # Setup logging
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_scheduler.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
+    # Set logging level from environment
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     # Register the SIGTERM handler

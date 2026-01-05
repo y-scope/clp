@@ -1,11 +1,7 @@
 use anyhow::Context;
 use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
-use tracing_appender::{
-    non_blocking::WorkerGuard,
-    rolling::{RollingFileAppender, Rotation},
-};
-use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
+use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
@@ -42,13 +38,8 @@ fn read_config_and_credentials(
     Ok((config, credentials))
 }
 
-fn set_up_logging() -> anyhow::Result<WorkerGuard> {
-    let logs_directory =
-        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
-    let logs_directory = std::path::Path::new(logs_directory.as_str());
-    let file_appender =
-        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "api_server.log");
-    let (non_blocking_writer, guard) = tracing_appender::non_blocking(file_appender);
+fn set_up_logging() {
+    // Logs to stdout only - Docker's fluentd driver captures and forwards to Fluent Bit
     tracing_subscriber::fmt()
         .event_format(
             tracing_subscriber::fmt::format()
@@ -60,9 +51,8 @@ fn set_up_logging() -> anyhow::Result<WorkerGuard> {
         )
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_ansi(false)
-        .with_writer(std::io::stdout.and(non_blocking_writer))
+        .with_writer(std::io::stdout)
         .init();
-    Ok(guard)
 }
 
 async fn shutdown_signal() {
@@ -81,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let (config, credentials) = read_config_and_credentials(&args)?;
-    let _guard = set_up_logging()?;
+    set_up_logging();
 
     let addr = format!(
         "{}:{}",

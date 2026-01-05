@@ -199,10 +199,8 @@ def search(
 ) -> dict[str, Any]:
     task_name = "search"
 
-    # Setup logging to file
-    clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
-    clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
-    set_logging_level(logger, clp_logging_level)
+    # Set logging level from environment
+    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     logger.info(f"Started {task_name} task for job {job_id}")
 
@@ -242,7 +240,6 @@ def search(
     task_results, _ = run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
-        clp_logs_dir=clp_logs_dir,
         task_command=task_command,
         env_vars=core_clp_env_vars,
         task_name=task_name,
@@ -268,7 +265,7 @@ def search(
         except Exception as err:
             logger.error(f"Failed to upload query results {dest_path}: {err}")
             task_results.status = QueryTaskStatus.FAILED
-            task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
+            task_results.error_log_path = "See worker logs (captured by Fluent Bit)"
 
         src_file.unlink()
 

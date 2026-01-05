@@ -1,0 +1,128 @@
+{{- if .Values.clpConfig.fluent_bit }}
+{{- if .Values.clpConfig.fluent_bit.enabled }}
+apiVersion: "apps/v1"
+kind: "DaemonSet"
+metadata:
+  name: {{ include "clp.fullname" . }}-fluent-bit
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "fluent-bit"
+spec:
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "fluent-bit"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "fluent-bit"
+      annotations:
+        # Force pod restart when ConfigMap changes
+        checksum/config: {{ include (print $.Template.BasePath "/fluent-bit-configmap.yaml") . |
+          sha256sum }}
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-fluent-bit
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+        - name: "fluent-bit"
+          image: {{ .Values.clpConfig.fluent_bit.image.repository }}:{{
+            .Values.clpConfig.fluent_bit.image.tag }}
+          imagePullPolicy: {{ .Values.clpConfig.fluent_bit.image.pullPolicy | default "IfNotPresent"
+            | quote }}
+          env:
+            - name: "FLUENT_BIT_LOG_LEVEL"
+              value: {{ .Values.clpConfig.fluent_bit.logging_level | default "info" | quote }}
+            - name: "NODE_NAME"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "spec.nodeName"
+          ports:
+            - name: "http"
+              containerPort: 2020
+              protocol: "TCP"
+            - name: "forward"
+              containerPort: 24224
+              protocol: "TCP"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet:
+              path: "/api/v1/health"
+              port: "http"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet:
+              path: "/api/v1/health"
+              port: "http"
+          resources:
+            {{- with .Values.clpConfig.fluent_bit.resources }}
+            limits:
+              cpu: {{ .limits.cpu | default "100m" | quote }}
+              memory: {{ .limits.memory | default "50Mi" | quote }}
+            requests:
+              cpu: {{ .requests.cpu | default "50m" | quote }}
+              memory: {{ .requests.memory | default "25Mi" | quote }}
+            {{- else }}
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
+            requests:
+              cpu: "50m"
+              memory: "25Mi"
+            {{- end }}
+          volumeMounts:
+            - name: "config"
+              mountPath: "/fluent-bit/etc/"
+            - name: "var-log"
+              mountPath: "/var/log"
+              readOnly: true
+            - name: "var-lib-docker-containers"
+              mountPath: "/var/lib/docker/containers"
+              readOnly: true
+            - name: "run-log-journal"
+              mountPath: "/run/log/journal"
+              readOnly: true
+            - name: "operational-logs"
+              mountPath: "/var/log/clp-operational"
+            {{- if .Values.clpConfig.fluent_bit.s3_output }}
+            {{- if .Values.clpConfig.fluent_bit.s3_output.enabled }}
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - name: "aws-config"
+              mountPath: {{ .Values.clpConfig.aws_config_directory | quote }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-fluent-bit-config
+        - name: "var-log"
+          hostPath:
+            path: "/var/log"
+        - name: "var-lib-docker-containers"
+          hostPath:
+            path: "/var/lib/docker/containers"
+        - name: "run-log-journal"
+          hostPath:
+            path: "/run/log/journal"
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "fluent-bit"
+            "name" "operational-logs"
+          ) | nindent 10 }}
+        {{- if .Values.clpConfig.fluent_bit.s3_output }}
+        {{- if .Values.clpConfig.fluent_bit.s3_output.enabled }}
+        {{- if .Values.clpConfig.aws_config_directory }}
+        - name: "aws-config"
+          hostPath:
+            path: {{ .Values.clpConfig.aws_config_directory | quote }}
+            type: "Directory"
+        {{- end }}
+        {{- end }}
+        {{- end }}
+{{- end }}{{/* if .Values.clpConfig.fluent_bit.enabled */}}
+{{- end }}{{/* if .Values.clpConfig.fluent_bit */}}

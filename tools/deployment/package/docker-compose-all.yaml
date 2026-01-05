@@ -8,6 +8,18 @@ x-service-defaults: &service_defaults
   stop_grace_period: "60s"
   user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
 
+# First-party service defaults with fluentd logging driver.
+# Services using this will forward logs to Fluent Bit via Docker's fluentd driver.
+x-first-party-service-defaults: &first_party_service_defaults
+  <<: *service_defaults
+  logging:
+    driver: "fluentd"
+    options:
+      fluentd-address: "localhost:24224"
+      fluentd-async: "true"
+      fluentd-retry-wait: "1s"
+      fluentd-max-retries: "3"
+
 # Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
   # Avoid lowering to prevent excessive resource usage.
@@ -247,22 +259,26 @@ services:
     ]
 
   compression-scheduler:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "compression_scheduler"
     stop_grace_period: "300s"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.compression-scheduler"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/compression_scheduler"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}@redis:6379\
         /${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     depends_on:
@@ -280,22 +296,25 @@ services:
     ]
 
   compression-worker:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "compression_worker"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.compression-worker"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/compression_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}@redis:6379\
         /${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
       - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
@@ -308,26 +327,27 @@ services:
       "-A", "job_orchestration.executor.compress",
       "worker",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--loglevel", "WARNING",
-      "-f", "/var/log/compression_worker/worker.log",
+      "--loglevel", "INFO",
       "-Q", "compression",
       "-n", "compression-worker"
     ]
 
   spider-compression-worker:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "compression_worker"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.spider-compression-worker"
     environment:
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/compression_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
-      SPIDER_LOG_DIR: "/var/log/compression_worker"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
       - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
@@ -369,6 +389,10 @@ services:
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams:ro"
       - type: "bind"
+        source: "./var/log"
+        target: "/var/log/clp"
+        read_only: true
+      - type: "bind"
         source: "./var/www/webui/client/settings.json"
         target: "/opt/clp/var/www/webui/client/settings.json"
         read_only: true
@@ -395,22 +419,26 @@ services:
       ]
 
   garbage-collector:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "garbage_collector"
     stop_grace_period: "10s"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the garbage collector.
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.garbage-collector"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/garbage_collector"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
@@ -426,22 +454,26 @@ services:
     ]
 
   query-scheduler:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "query_scheduler"
     stop_grace_period: "10s"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.query-scheduler"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/query_scheduler"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}@redis:6379\
         /${CLP_REDIS_BACKEND_DB_QUERY:-0}"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -465,22 +497,25 @@ services:
       ]
 
   query-worker:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "query_worker"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.query-worker"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/query_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}@redis:6379\
         /${CLP_REDIS_BACKEND_DB_QUERY:-0}"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives:ro"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
@@ -492,24 +527,27 @@ services:
       "-A", "job_orchestration.executor.query",
       "worker",
       "--concurrency", "${CLP_QUERY_WORKER_CONCURRENCY:-1}",
-      "--loglevel", "WARNING",
-      "-f", "/var/log/query_worker/worker.log",
+      "--loglevel", "INFO",
       "-Q", "query",
       "-n", "query-worker"
     ]
 
   reducer:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "reducer"
     stop_grace_period: "10s"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.reducer"
     environment:
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/reducer"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
     depends_on:
       query-scheduler:
         condition: "service_healthy"
@@ -524,14 +562,19 @@ services:
     ]
 
   mcp-server:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "mcp_server"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the MCP server.
       replicas: "${CLP_MCP_SERVER_ENABLED:-0}"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.mcp-server"
     environment:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/mcp_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -541,7 +584,6 @@ services:
         target: 8000
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -564,13 +606,18 @@ services:
       ]
 
   api-server:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "api_server"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the API server.
       replicas: "${CLP_API_SERVER_ENABLED:-1}"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.api-server"
     environment:
-      CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       RUST_LOG: "INFO"
@@ -580,7 +627,6 @@ services:
         target: 3001
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
@@ -604,13 +650,18 @@ services:
       ]
 
   log-ingestor:
-    <<: *service_defaults
+    <<: *first_party_service_defaults
     hostname: "log_ingestor"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable log-ingestor.
       replicas: "${CLP_LOG_INGESTOR_ENABLED:-1}"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "clp.log-ingestor"
     environment:
-      CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
@@ -620,7 +671,6 @@ services:
         target: 3002
     volumes:
       - *volume_clp_config_readonly
-      - *volume_clp_logs
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -638,3 +688,40 @@ services:
         "-f",
         "http://log_ingestor:3002/health"
       ]
+
+  # Fluent Bit for centralized operational logging.
+  # Receives logs from all CLP services via Docker's fluentd logging driver.
+  # Writes logs to organized file storage for hot tier access.
+  # Optionally uploads to S3 for archival (cold tier).
+  fluent-bit:
+    image: "${CLP_FLUENT_BIT_IMAGE:-fluent/fluent-bit:3.2}"
+    hostname: "fluent_bit"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable Fluent Bit.
+      replicas: "${CLP_FLUENT_BIT_ENABLED:-1}"
+    logging:
+      driver: "local"
+    user: "0:0"
+    ports:
+      # HTTP monitoring endpoint
+      - host_ip: "${CLP_FLUENT_BIT_HTTP_HOST:-127.0.0.1}"
+        published: "${CLP_FLUENT_BIT_HTTP_PORT:-2020}"
+        target: 2020
+      # Forward protocol for receiving logs from Docker fluentd driver
+      - host_ip: "${CLP_FLUENT_BIT_FORWARD_HOST:-0.0.0.0}"
+        published: "${CLP_FLUENT_BIT_FORWARD_PORT:-24224}"
+        target: 24224
+    environment:
+      FLUENT_BIT_LOG_LEVEL: "${CLP_FLUENT_BIT_LOG_LEVEL:-info}"
+    volumes:
+      - type: "bind"
+        source: "${CLP_FLUENT_BIT_CONF_DIR_HOST:-./etc/fluent-bit}"
+        target: "/fluent-bit/etc"
+        read_only: true
+      # Hot tier: Fluent Bit writes logs here for real-time access
+      - type: "bind"
+        source: "${CLP_LOGS_DIR_HOST:-./var/log}"
+        target: "/var/log/clp"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/root/.aws:ro"
+    # Note: No healthcheck - fluent-bit distroless image doesn't have curl/wget.
+    # Fluent Bit is a logging sidecar and doesn't need to be healthy for CLP to work.

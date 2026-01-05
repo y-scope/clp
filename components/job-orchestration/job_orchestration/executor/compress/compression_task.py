@@ -347,7 +347,6 @@ def run_clp(
     worker_config: WorkerConfig,
     clp_config: ClpIoConfig,
     clp_home: pathlib.Path,
-    logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
     tag_ids: list[int],
@@ -362,7 +361,6 @@ def run_clp(
     :param worker_config: WorkerConfig
     :param clp_config: ClpIoConfig
     :param clp_home:
-    :param logs_dir:
     :param job_id:
     :param task_id:
     :param tag_ids:
@@ -444,17 +442,22 @@ def run_clp(
         if converted_inputs_dir is not None:
             shutil.rmtree(converted_inputs_dir)
 
-    # Open stderr log file
-    stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
-    stderr_log_file = open(stderr_log_path, "w")
+    def log_stderr(stderr_data: bytes, process_name: str):
+        """Log stderr content through the logger (captured by Docker's fluentd driver)."""
+        stderr_text = stderr_data.decode("utf-8").strip()
+        if stderr_text:
+            for line in stderr_text.split("\n"):
+                logger.info(f"[{process_name} stderr] {line}")
 
     conversion_return_code = 0
     if conversion_cmd is not None:
         logger.debug("Execute log-converter with command: %s", conversion_cmd)
         conversion_proc = subprocess.Popen(
-            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
+            conversion_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=conversion_env
         )
-        conversion_return_code = conversion_proc.wait()
+        _, stderr_data = conversion_proc.communicate()
+        conversion_return_code = conversion_proc.returncode
+        log_stderr(stderr_data, "log-converter")
 
     if conversion_return_code != 0:
         cleanup_temporary_files()
@@ -464,16 +467,15 @@ def run_clp(
         worker_output = {
             "total_uncompressed_size": 0,
             "total_compressed_size": 0,
-            "error_message": f"Check logs in {stderr_log_path}",
+            "error_message": "See worker logs (captured by Fluent Bit)",
         }
-        stderr_log_file.close()
         return CompressionTaskStatus.FAILED, worker_output
 
     # Start compression
     logger.debug("Compressing...")
     compression_successful = False
     proc = subprocess.Popen(
-        compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file, env=compression_env
+        compression_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=compression_env
     )
 
     # Compute the total amount of data compressed
@@ -550,14 +552,16 @@ def run_clp(
                     )
 
                     try:
-                        subprocess.run(
+                        result = subprocess.run(
                             indexer_cmd,
                             stdout=subprocess.DEVNULL,
-                            stderr=stderr_log_file,
+                            stderr=subprocess.PIPE,
                             check=True,
                             env=indexer_env,
                         )
-                    except subprocess.CalledProcessError:
+                        log_stderr(result.stderr, "indexer")
+                    except subprocess.CalledProcessError as e:
+                        log_stderr(e.stderr if e.stderr else b"", "indexer")
                         logger.exception("Failed to index archive.")
 
             if enable_s3_write:
@@ -565,8 +569,10 @@ def run_clp(
 
         last_archive_stats = stats
 
-    # Wait for compression to finish
+    # Wait for compression to finish and capture stderr
+    compression_stderr = proc.stderr.read()
     return_code = proc.wait()
+    log_stderr(compression_stderr, "compression")
 
     if 0 != return_code:
         logger.error(f"Failed to compress, return_code={return_code!s}")
@@ -575,9 +581,6 @@ def run_clp(
         cleanup_temporary_files()
 
     logger.debug("Compressed.")
-
-    # Close stderr log file
-    stderr_log_file.close()
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,
@@ -588,7 +591,7 @@ def run_clp(
         return CompressionTaskStatus.SUCCEEDED, worker_output
     error_msgs = []
     if compression_successful is False:
-        error_msgs.append(f"See logs {stderr_log_path}")
+        error_msgs.append("See worker logs (captured by Fluent Bit)")
     if s3_error is not None:
         error_msgs.append(s3_error)
     worker_output["error_message"] = "\n".join(error_msgs)
@@ -606,10 +609,8 @@ def compression_entry_point(
 ):
     clp_home = pathlib.Path(os.getenv("CLP_HOME"))
 
-    # Set logging level
-    logs_dir = pathlib.Path(os.getenv("CLP_LOGS_DIR"))
-    clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
-    set_logging_level(logger, clp_logging_level)
+    # Set logging level from environment
+    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     # Load configuration
     try:
@@ -637,7 +638,6 @@ def compression_entry_point(
         worker_config,
         clp_io_config,
         clp_home,
-        logs_dir,
         job_id,
         task_id,
         tag_ids,

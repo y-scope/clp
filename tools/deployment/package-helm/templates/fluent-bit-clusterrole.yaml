@@ -1,0 +1,20 @@
+{{- if .Values.clpConfig.fluent_bit }}
+{{- if .Values.clpConfig.fluent_bit.enabled }}
+apiVersion: "rbac.authorization.k8s.io/v1"
+kind: "ClusterRole"
+metadata:
+  name: {{ include "clp.fullname" . }}-fluent-bit
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "fluent-bit"
+rules:
+  - apiGroups: [""]
+    resources:
+      - "namespaces"
+      - "pods"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+{{- end }}
+{{- end }}

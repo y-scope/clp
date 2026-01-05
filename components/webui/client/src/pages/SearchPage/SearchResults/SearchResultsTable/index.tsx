@@ -8,6 +8,7 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 
 import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import usePrestoSearchState from "../../SearchState/Presto";
+import styles from "./index.module.css";
 import SearchResultsVirtualTable from "./Native/SearchResultsVirtualTable";
 import PrestoResultsVirtualTable from "./Presto/PrestoResultsVirtualTable";
 import {TABLE_BOTTOM_PADDING} from "./typings";
@@ -45,7 +46,8 @@ const SearchResultsTable = () => {
     return (
         <div
             ref={containerRef}
-            style={{outline: "none"}}
+            className={styles["tableContainer"] ?? ""}
+            style={{outline: "none", height: tableHeight > 0 ? tableHeight : undefined}}
         >
             {CLP_QUERY_ENGINES.PRESTO === SETTINGS_QUERY_ENGINE ?
                 (

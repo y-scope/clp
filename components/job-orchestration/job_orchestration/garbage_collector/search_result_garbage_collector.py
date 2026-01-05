@@ -70,10 +70,8 @@ def _collect_and_sweep_expired_search_results(
         logger.debug("No search results matched the expiry criteria.")
 
 
-async def search_result_garbage_collector(
-    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
-) -> None:
-    configure_logger(logger, logging_level, log_directory, SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
+async def search_result_garbage_collector(clp_config: ClpConfig, logging_level: str) -> None:
+    configure_logger(logger, logging_level)
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.search_result * MIN_TO_SECONDS
 

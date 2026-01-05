@@ -1,0 +1,13 @@
+{{- if .Values.clpConfig.fluent_bit }}
+{{- if .Values.clpConfig.fluent_bit.enabled }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "fluent-bit"
+  "name" "operational-logs"
+  "nodeRole" "control-plane"
+  "capacity" (printf "%s" (.Values.clpConfig.fluent_bit.storage_size | default "10Gi"))
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/operational" .Values.clpConfig.logs_directory)
+) }}
+{{- end }}
+{{- end }}

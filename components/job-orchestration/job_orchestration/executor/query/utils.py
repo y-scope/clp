@@ -3,21 +3,13 @@ import os
 import signal
 import subprocess
 import sys
-from contextlib import closing
 from logging import Logger
-from pathlib import Path
 from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
-
-
-def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
-    worker_logs_dir = clp_logs_dir / job_id
-    worker_logs_dir.mkdir(exist_ok=True, parents=True)
-    return worker_logs_dir / f"{task_id}-clo.log"
 
 
 def report_task_failure(
@@ -42,7 +34,6 @@ def report_task_failure(
 def run_query_task(
     sql_adapter: SqlAdapter,
     logger: Logger,
-    clp_logs_dir: Path,
     task_command: list[str],
     env_vars: dict[str, str] | None,
     task_name: str,
@@ -50,9 +41,6 @@ def run_query_task(
     task_id: int,
     start_time: datetime.datetime,
 ) -> tuple[QueryTaskResult, str]:
-    clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
-    clo_log_file = open(clo_log_path, "w")
-
     task_status = QueryTaskStatus.RUNNING
     update_query_task_metadata(
         sql_adapter, task_id, dict(status=task_status, start_time=start_time)
@@ -64,7 +52,7 @@ def run_query_task(
         preexec_fn=os.setpgrp,
         close_fds=True,
         stdout=subprocess.PIPE,
-        stderr=clo_log_file,
+        stderr=subprocess.PIPE,
         env=env_vars,
     )
 
@@ -86,8 +74,15 @@ def run_query_task(
     logger.info(f"Waiting for {task_name} to finish")
     # `communicate` is equivalent to `wait` in this case, but avoids deadlocks when piping to
     # stdout/stderr.
-    stdout_data, _ = task_proc.communicate()
+    stdout_data, stderr_data = task_proc.communicate()
     return_code = task_proc.returncode
+
+    # Log stderr content (captured by Docker's fluentd driver)
+    stderr_text = stderr_data.decode("utf-8").strip()
+    if stderr_text:
+        for line in stderr_text.split("\n"):
+            logger.info(f"[{task_name} stderr] {line}")
+
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
         logger.error(
@@ -97,7 +92,6 @@ def run_query_task(
         task_status = QueryTaskStatus.SUCCEEDED
         logger.info(f"{task_name} task {task_id} completed for job {job_id}")
 
-    clo_log_file.close()
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(
@@ -111,7 +105,7 @@ def run_query_task(
     )
 
     if QueryTaskStatus.FAILED == task_status:
-        task_result.error_log_path = str(clo_log_path)
+        task_result.error_log_path = "See worker logs (captured by Fluent Bit)"
 
     return task_result, stdout_data.decode("utf-8")
 

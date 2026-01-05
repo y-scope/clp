@@ -319,6 +319,49 @@ To view logs for a specific service:
 docker compose --project-name clp-package-<instance-id> logs -f <service-name>
 ```
 
+## Operational logging
+
+CLP uses [Fluent Bit][fluent-bit] to collect and aggregate operational logs from all services. Logs
+are written to `var/log/<component>/` on each host.
+
+### Current limitations in multi-host deployments
+
+:::{warning}
+In multi-host deployments, operational logs are currently stored locally on each host. This means:
+
+* Each host runs its own Fluent Bit instance that collects logs from containers on that host.
+* Logs are written to the local filesystem (`var/log/<component>/`) and are not automatically
+  aggregated across hosts.
+* To view logs from a specific host, you must access that host directly.
+:::
+
+### Workarounds
+
+Until centralized log aggregation is implemented, you can:
+
+1. **Use a shared filesystem**: Mount `var/log/` to a shared filesystem (e.g., NFS, SeaweedFS) so
+   all hosts write logs to the same location. Note that you may need to include the hostname in the
+   log path to avoid conflicts.
+
+2. **Use `docker compose logs`**: View real-time logs for a service using:
+
+   ```bash
+   docker compose --project-name clp-package-<instance-id> logs -f <service-name>
+   ```
+
+3. **Manual log collection**: Periodically copy logs from each host to a central location for
+   analysis.
+
+### Future improvements
+
+A future release will add support for shipping logs to S3 or other centralized storage, enabling:
+
+* Centralized log aggregation across all hosts
+* Log viewing through the webui regardless of which host generated the logs
+* Long-term log retention with tiered storage (hot/warm/cold)
+
+[fluent-bit]: https://fluentbit.io/
+
 ## Setting up SeaweedFS
 
 The instructions below are for running a simple SeaweedFS cluster on a set of hosts. For other use

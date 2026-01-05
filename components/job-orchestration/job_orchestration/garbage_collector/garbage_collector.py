@@ -35,10 +35,9 @@ async def main(argv: list[str]) -> int:
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup logging to file
-    logs_directory = Path(os.getenv("CLP_LOGS_DIR"))
+    # Set logging level from environment
     logging_level = os.getenv("CLP_LOGGING_LEVEL")
-    configure_logger(logger, logging_level, logs_directory, GARBAGE_COLLECTOR_COMPONENT_NAME)
+    configure_logger(logger, logging_level)
 
     # Load configuration
     config_path = Path(parsed_args.config)
@@ -71,9 +70,7 @@ async def main(argv: list[str]) -> int:
             continue
         logger.info(f"Creating {gc_name} with retention period = {retention_period} minutes")
         gc_tasks.append(
-            asyncio.create_task(
-                task_method(clp_config, logs_directory, logging_level), name=gc_name
-            )
+            asyncio.create_task(task_method(clp_config, logging_level), name=gc_name)
         )
 
     # Poll and report any task that finished unexpectedly

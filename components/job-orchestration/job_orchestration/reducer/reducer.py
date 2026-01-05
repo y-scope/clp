@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 
 from clp_py_utils.clp_config import ClpConfig
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import get_logger, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
@@ -29,14 +28,7 @@ def main(argv: list[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup logging to file
-    logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "reducer.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
+    # Set logging level from environment
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     # Load configuration
@@ -68,15 +60,11 @@ def main(argv: list[str]) -> int:
     for i in range(concurrency):
         reducer_instance_cmd = reducer_cmd + [str(clp_config.reducer.base_port + i)]
 
-        log_file_path = logs_dir / ("reducer-" + str(i) + ".log")
-        log_file = open(log_file_path, "a")
-
+        # Let subprocess inherit stdout/stderr - Docker captures these via fluentd driver
         reducers.append(
             subprocess.Popen(
                 reducer_instance_cmd,
                 close_fds=True,
-                stdout=log_file,
-                stderr=log_file,
             )
         )
 
@@ -92,9 +80,6 @@ def main(argv: list[str]) -> int:
         logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
 
     logger.error("All reducers terminated")
-
-    logger.removeHandler(logging_file_handler)
-    logging_file_handler.close()
 
     return 0
 
