@@ -55,7 +55,11 @@ data:
         {{- end }}{{/* with .s3_config */}}
         {{- end }}{{/* if eq .type "fs" */}}
       {{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
+      {{- if .Values.clpConfig.archive_output.retention_period }}
       retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
+      {{- else }}
+      retention_period: null
+      {{- end }}
       target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
       target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
         | int }}
@@ -139,7 +143,11 @@ data:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: {{ include "clp.fullname" . }}-results-cache
       port: 27017
+      {{- if .Values.clpConfig.results_cache.retention_period }}
       retention_period: {{ .Values.clpConfig.results_cache.retention_period | int }}
+      {{- else }}
+      retention_period: null
+      {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:

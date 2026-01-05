@@ -19,7 +19,7 @@ spec:
         app.kubernetes.io/component: "api-server"
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
-      terminationGracePeriodSeconds: 10
+      terminationGracePeriodSeconds: 60
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
@@ -84,7 +84,7 @@ spec:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet: &api-server-health-check
               path: "/health"
-              port: 3001
+              port: "api-server"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *api-server-health-check
