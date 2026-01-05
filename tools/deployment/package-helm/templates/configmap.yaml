@@ -6,6 +6,17 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
 data:
   clp-config.yaml: |
+    {{- with .Values.clpConfig.api_server }}
+    api_server:
+      default_max_num_query_results: {{ .default_max_num_query_results | int }}
+      host: "localhost"
+      port: 3001
+      query_job_polling:
+        initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
+        max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
+    {{- else }}
+    api_server: null
+    {{- end }}
     archive_output:
       compression_level: {{ .Values.clpConfig.archive_output.compression_level | int }}
       storage:
@@ -96,6 +107,14 @@ data:
       rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
+    {{- with .Values.clpConfig.mcp_server }}
+    mcp_server:
+      host: "localhost"
+      port: 8000
+      logging_level: {{ .logging_level | quote }}
+    {{- else }}
+    mcp_server: null
+    {{- end }}
 
   mysql-logging.cnf: |
     [mysqld]
