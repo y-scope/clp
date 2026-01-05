@@ -122,6 +122,16 @@
               }
             }
           },
+          "400": {
+            "description": "A region code is not provided when using the default AWS S3 endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "A prefix conflict was detected. For the same bucket and dataset, only one ingestion job may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
@@ -173,6 +183,16 @@
               }
             }
           },
+          "400": {
+            "description": "Custom endpoint URLs are not supported for SQS listener jobs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "A prefix conflict was detected. For the same bucket and dataset, only one ingestion job may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
@@ -203,7 +223,6 @@
         "type": "object",
         "description": "Base configuration for ingesting logs from S3.",
         "required": [
-          "region",
           "bucket_name",
           "key_prefix"
         ],
@@ -218,6 +237,11 @@
             "description": "The dataset to ingest into. Defaults to `None` (which uses the default dataset).",
             "minLength": 1
           },
+          "endpoint_url": {
+            "type": "string",
+            "description": "The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).\nUse the default AWS S3 endpoint if not provided.",
+            "minLength": 1
+          },
           "key_prefix": {
             "type": "string",
             "description": "The S3 key prefix to ingest from.",
@@ -225,7 +249,8 @@
           },
           "region": {
             "type": "string",
-            "description": "AWS service region."
+            "description": "AWS service region. Must be provided if using the default AWS S3 endpoint.",
+            "minLength": 1
           },
           "tags": {
             "type": "array",

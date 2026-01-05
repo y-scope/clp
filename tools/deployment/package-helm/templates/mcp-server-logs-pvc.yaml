@@ -1,0 +1,9 @@
+{{- if .Values.clpConfig.mcp_server }}
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component_category" "mcp-server"
+  "name" "logs"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+) }}
+{{- end }}

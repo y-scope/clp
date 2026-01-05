@@ -1,0 +1,98 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-compression-worker
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "compression-worker"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "compression-worker"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "compression-worker"
+    spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      containers:
+        - name: "compression-worker"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
+            - {{- include "clp.celeryResultBackendEnvVar" (dict
+                "root" .
+                "database" .Values.clpConfig.redis.compression_backend_database
+              ) | nindent 14 }}
+            - name: "CLP_CONFIG_PATH"
+              value: "/etc/clp-config.yaml"
+            - name: "CLP_HOME"
+              value: "/opt/clp"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/compression_worker"
+            - name: "CLP_WORKER_LOG_PATH"
+              value: "/var/log/compression_worker/worker.log"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          volumeMounts:
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/compression_worker"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
+                "name" "tmp"
+              ) | quote }}
+              mountPath: "/var/tmp"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
+              mountPath: "/var/data/archives"
+          command: [
+            "python3", "-u",
+            "/opt/clp/lib/python3/site-packages/bin/celery",
+            "-A", "job_orchestration.executor.compress",
+            "worker",
+            "--concurrency", "{{ .Values.workerConcurrency }}",
+            "--loglevel", "WARNING",
+            "-f", "/var/log/compression_worker/worker.log",
+            "-Q", "compression",
+            "-n", "compression-worker"
+          ]
+      volumes:
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-worker"
+            "name" "logs"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "compression-worker"
+            "name" "tmp"
+          ) | nindent 10 }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "archives"
+          ) | nindent 10 }}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
