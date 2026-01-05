@@ -64,6 +64,11 @@ spec:
               containerPort: 4000
           volumeMounts:
             - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
+              mountPath: "/var/data/streams"
             - name: "client-settings"
               mountPath: "/opt/clp/var/www/webui/client/settings.json"
               subPath: "webui-client-settings.json"
@@ -72,11 +77,6 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "shared-data"
-                "name" "streams"
-              ) | quote }}
-              mountPath: "/var/data/streams"
           command: [
             "/opt/clp/bin/node-22",
             "/opt/clp/var/www/webui/server/dist/src/main.js"
