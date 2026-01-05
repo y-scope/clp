@@ -25,7 +25,7 @@ static constexpr size_t cNumAlphabets = 'z' - 'a' + 1;
 
 TEST_CASE("Test reading data", "[BufferedReader]") {
     // Initialize data for testing
-    size_t const test_data_size = 4L * 1024 * 1024 + 1;  // 4MiB + 1
+    size_t const test_data_size = 4L * 1024 * 1024 + 1;  // 4 MiB + 1
     auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& test_data = *test_data_uniq_ptr;
     for (size_t i = 0; i < test_data.size(); ++i) {
@@ -270,7 +270,7 @@ TEST_CASE("Test delimiter", "[BufferedReader]") {
     std::uniform_int_distribution<> uniformly_distributed_alphabet('a', 'a' + cNumAlphabets - 1);
 
     // Initialize data for testing
-    size_t const test_data_size = 1L * 1024 * 1024 + 1;  // 1MiB
+    size_t const test_data_size = 1L * 1024 * 1024 + 1;  // 1 MiB
     auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& test_data = *test_data_uniq_ptr;
 

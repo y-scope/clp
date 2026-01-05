@@ -50,7 +50,7 @@ bool RecordReceiverContext::read_record_groups_packet() {
         }
         memcpy(&record_size, read_head, sizeof(record_size));
 
-        // terminate if record group size is over 16MiB
+        // terminate if record group size is over 16 MiB
         if (record_size >= cMaxRecordSize) {
             SPDLOG_ERROR("Record too large: {}B", record_size);
             return false;

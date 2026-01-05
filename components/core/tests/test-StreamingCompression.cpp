@@ -34,7 +34,7 @@ using ystdlib::containers::Array;
 
 namespace {
 constexpr string_view cCompressedFilePath{"test_streaming_compressed_file.bin"};
-constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128MiB
+constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128 MiB
 constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
         {0,
          cBufferSize / 100,
