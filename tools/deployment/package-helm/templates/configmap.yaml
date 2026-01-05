@@ -278,7 +278,7 @@ data:
       {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
       {{- with .Values.clpConfig.stream_output.storage.s3_config }}
       "StreamFilesS3Region": {{ .region_code | default "null" | quote }},
-      "StreamFilesS3PathPrefix": {{ printf "s3://%s/%s" .bucket .key_prefix | quote }},
+      "StreamFilesS3PathPrefix": {{ printf "%s/%s" .bucket .key_prefix | quote }},
       {{- if eq .aws_authentication.type "profile" }}
       "StreamFilesS3Profile": {{ .aws_authentication.profile | quote }},
       {{- else }}
