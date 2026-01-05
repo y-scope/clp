@@ -11,6 +11,11 @@ data:
       storage:
         directory: "/var/data/archives"
         type: "fs"
+      {{- if .Values.clpConfig.archive_output.retention_period }}
+      retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
+      {{- else }}
+      retention_period: null
+      {{- end }}
       target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
       target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
         | int }}
@@ -26,6 +31,11 @@ data:
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
+    garbage_collector:
+      logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
+      sweep_interval:
+        archive: {{ .Values.clpConfig.garbage_collector.sweep_interval.archive | int }}
+        search_result: {{ .Values.clpConfig.garbage_collector.sweep_interval.search_result | int }}
     database:
       auto_commit: false
       compress: true
@@ -68,6 +78,11 @@ data:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: {{ include "clp.fullname" . }}-results-cache
       port: 27017
+      {{- if .Values.clpConfig.results_cache.retention_period }}
+      retention_period: {{ .Values.clpConfig.results_cache.retention_period | int }}
+      {{- else }}
+      retention_period: null
+      {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
     stream_output:
       storage:

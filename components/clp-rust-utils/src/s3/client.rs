@@ -3,6 +3,7 @@ use aws_sdk_s3::{
     Client,
     config::{Builder, Credentials, Region},
 };
+use non_empty_string::NonEmptyString;
 
 /// Creates a new S3 client.
 ///
@@ -16,10 +17,10 @@ use aws_sdk_s3::{
 /// A newly created S3 client.
 #[must_use]
 pub async fn create_new_client(
-    region_id: &str,
     access_key_id: &str,
     secret_access_key: &str,
-    endpoint: Option<&str>,
+    region_id: &str,
+    endpoint: Option<&NonEmptyString>,
 ) -> Client {
     let credential = Credentials::new(
         access_key_id,
@@ -28,13 +29,12 @@ pub async fn create_new_client(
         None,
         "clp-credential-provider",
     );
-    let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let mut config_builder = Builder::from(&base_config)
-        .region(region)
         .credentials_provider(credential)
+        .region(Some(Region::new(region_id.to_string())))
         .force_path_style(true);
-    config_builder.set_endpoint_url(endpoint.map(std::borrow::ToOwned::to_owned));
+    config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     let config = config_builder.build();
     Client::from_conf(config)
 }
