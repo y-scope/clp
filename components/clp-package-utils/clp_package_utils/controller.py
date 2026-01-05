@@ -698,6 +698,7 @@ class BaseController(ABC):
             "SqlDbPort": container_clp_config.database.port,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
@@ -719,8 +720,8 @@ class BaseController(ABC):
                 self._clp_config.archive_output.target_encoded_file_size
             ),
             "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
-            "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
         }
 
         stream_storage = self._clp_config.stream_output.storage
