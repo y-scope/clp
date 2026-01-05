@@ -9,6 +9,7 @@ use axum::{
     },
     routing::get,
 };
+use clp_rust_utils::clp_config::package::config::{Config, LogsInput};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -29,7 +30,11 @@ use crate::client::{Client, ClientError, QueryConfig};
 /// Returns an error if:
 ///
 /// * Forwards [`OpenApi::to_json`]'s return values on failure.
-pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
+///
+/// # Panics
+///
+/// Panics if the log ingestor is enabled but failes to install `aws_lc_rs` as the crypto provider.
+pub fn from_client(client: Client, config: &Config) -> Result<axum::Router, serde_json::Error> {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
@@ -44,6 +49,20 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
             get(|| async { (StatusCode::OK, api_json) }),
         )
         .layer(CorsLayer::new().allow_origin(Any));
+
+    let LogsInput::S3 { .. } = &config.logs_input else {
+        return Ok(router);
+    };
+
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("Failed to install default crypto provider");
+    let port = &config.log_ingestor.port;
+    let proxy = axum_reverse_proxy::ReverseProxy::new(
+        "/log_ingestor",
+        &format!("http://log_ingestor:{port}"),
+    );
+    let router = router.merge(proxy);
     Ok(router)
 }
 
