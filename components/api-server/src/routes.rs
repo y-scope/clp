@@ -3,8 +3,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{
-        IntoResponse,
-        Sse,
+        IntoResponse, Sse,
         sse::{Event, KeepAlive},
     },
     routing::get,
@@ -33,7 +32,7 @@ use crate::client::{Client, ClientError, QueryConfig};
 ///
 /// # Panics
 ///
-/// Panics if the log ingestor is enabled but failes to install `aws_lc_rs` as the crypto provider.
+/// Panics if the log ingestor is enabled but fails to install `aws_lc_rs` as the crypto provider.
 pub fn from_client(client: Client, config: &Config) -> Result<axum::Router, serde_json::Error> {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
