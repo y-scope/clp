@@ -59,12 +59,6 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
-            - name: "tmp"
-              mountPath: "/var/log"
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "garbage-collector"
                 "name" "logs"
@@ -80,6 +74,12 @@ spec:
                 "name" "streams"
               ) | quote }}
               mountPath: "/var/data/streams"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+            - name: "tmp"
+              mountPath: "/var/log"
           command: [
             "python3", "-u",
             "-m", "job_orchestration.garbage_collector.garbage_collector",
