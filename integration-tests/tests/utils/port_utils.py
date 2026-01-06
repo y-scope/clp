@@ -65,8 +65,6 @@ def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
         setattr(assignment.component, assignment.attr_name, current_port)
         current_port += assignment.port_count
 
-    clp_config.database.port = 3306
-
 
 def _check_ports_available(host: str, port_range: range) -> None:
     """
