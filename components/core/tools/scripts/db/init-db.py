@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Initializes the global MySQL metadata database for CLP."""
+
 import argparse
 import logging
 import os
