@@ -50,8 +50,8 @@ if [[ -s "$temp_iid_file" ]]; then
     echo "$new_image_id" > "$iid_file"
 
     user="${USER:-$(whoami 2>/dev/null)}" \
-        || user=$(id --user --name 2>/dev/null) \
-        || user=$(id --user 2>/dev/null) \
+        || user=$(id -un 2>/dev/null) \
+        || user=$(id -u 2>/dev/null) \
         || user="unknown";
     short_id="${new_image_id#sha256:}"
     short_id="${short_id:0:4}"
