@@ -3,7 +3,8 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{
-        IntoResponse, Sse,
+        IntoResponse,
+        Sse,
         sse::{Event, KeepAlive},
     },
     routing::get,
