@@ -350,9 +350,6 @@ def main(argv):
         action="store_true",
         help="Treat all inputs as unstructured text logs.",
     )
-    args_parser.add_argument(
-        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
-    )
     parsed_args = args_parser.parse_args(argv[1:])
     if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
@@ -381,10 +378,6 @@ def main(argv):
         return -1
 
     clp_output_config = OutputConfig.model_validate(clp_config.archive_output.model_dump())
-    if parsed_args.tags:
-        tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]
-        if len(tag_list) > 0:
-            clp_output_config.tags = tag_list
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     mysql_adapter = SqlAdapter(clp_config.database)

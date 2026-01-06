@@ -32,7 +32,6 @@ fn test_clp_io_config_serialization() {
             },
         },
         output: OutputConfig {
-            tags: None,
             compression_level: 3,
             target_archive_size: 268_435_456,
             target_dictionaries_size: 33_554_432,
@@ -74,7 +73,6 @@ fn test_clp_io_config_serialization() {
         "unstructured": false
       },
       "output": {
-        "tags": null,
         "target_archive_size": 268_435_456,
         "target_dictionaries_size": 33_554_432,
         "target_encoded_file_size": 268_435_456,
