@@ -794,6 +794,7 @@ tasks:
           uv run --directory "{{.ITEM}}" mypy . || true
       - for:
           - "components/core/tools/scripts"
+          - "docs/conf"
           - "tools/deployment"
           - "tools/scripts"
         cmd: |-
