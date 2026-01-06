@@ -14,7 +14,8 @@
 namespace clp_s::search {
 /**
  * Transformation pass which takes optional begin and end filters on a timestamp column and augments
- * the AST with additional filters on the provided timestamp column.
+ * the AST with additional filters on the provided timestamp column. The begin and end timestamps
+ * are assumed to be in epoch milliseconds.
  *
  * Providing an empty option for begin_ts and end_ts always results in no change to the AST.
  *

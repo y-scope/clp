@@ -9,7 +9,7 @@ If CLP is already running, shut it down, update its configuration, and then star
 ## Configuration for input logs
 
 To configure CLP to compress logs from S3, update the `logs_input` key in
-`<package>/etc/clp-config.yml` with the values in the code block below, replacing the fields in
+`<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
 ```yaml
@@ -26,7 +26,7 @@ logs_input:
 ## Configuration for archive storage
 
 To configure CLP to store archives on S3, update the `archive_output.storage` key in
-`<package>/etc/clp-config.yml` with the values in the code block below, replacing the fields in
+`<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
 ```yaml
@@ -59,7 +59,7 @@ archive_output:
 ## Configuration for stream storage
 
 To configure CLP to cache stream files on S3, update the `stream_output.storage` key in
-`<package>/etc/clp-config.yml` with the values in the code block below, replacing the fields in
+`<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
 ```yaml

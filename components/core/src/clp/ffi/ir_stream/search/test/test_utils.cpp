@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_range.hpp>
@@ -22,9 +23,9 @@
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../../clp_s/search/ast/StringLiteral.hpp"
 #include "../../../../ir/types.hpp"
+#include "../../../EncodedTextAst.hpp"
 #include "../../../Value.hpp"
 #include "../utils.hpp"
-#include "utils.hpp"
 
 namespace clp::ffi::ir_stream::search::test {
 namespace {
@@ -282,8 +283,10 @@ auto check_filter_evaluation_against_encoded_text_asts(
     std::string const matched{"The test ID=" + std::string{cRefTestString}};
     std::string const unmatched{"This is an unmatched string."};
     std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
-            {Value{get_encoded_text_ast<encoded_variable_t>(matched)}, {FilterOperation::EQ}},
-            {Value{get_encoded_text_ast<encoded_variable_t>(unmatched)}, {FilterOperation::NEQ}},
+            {Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(matched)},
+             {FilterOperation::EQ}},
+            {Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(unmatched)},
+             {FilterOperation::NEQ}},
     };
 
     return assert_filter_evaluation_results_on_values(

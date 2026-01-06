@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
@@ -20,6 +21,7 @@
 #include "../../../../../clp_s/search/kql/kql.hpp"
 #include "../../../../ir/types.hpp"
 #include "../../../../time_types.hpp"
+#include "../../../EncodedTextAst.hpp"
 #include "../../../KeyValuePairLogEvent.hpp"
 #include "../../../SchemaTree.hpp"
 #include "../../../Value.hpp"
@@ -248,12 +250,8 @@ auto get_matchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value
             std::vector<Value> matchable_values;
             matchable_values.emplace_back(fmt::format("ThisIs{}", cRefTestStr));
             auto const long_str{fmt::format("This is {}", cRefTestStr)};
-            matchable_values.emplace_back(
-                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(long_str)
-            );
-            matchable_values.emplace_back(
-                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(long_str)
-            );
+            matchable_values.emplace_back(FourByteEncodedTextAst::parse_and_encode_from(long_str));
+            matchable_values.emplace_back(EightByteEncodedTextAst::parse_and_encode_from(long_str));
             return matchable_values;
         }
         default:
@@ -280,10 +278,10 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
             constexpr std::string_view cUnmatchableLongStr{"This is a static message: ID=0"};
             REQUIRE((cUnmatchableLongStr.find(cRefTestStr) == std::string::npos));
             unmatchable_values.emplace_back(
-                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(cUnmatchableLongStr)
+                    FourByteEncodedTextAst::parse_and_encode_from(cUnmatchableLongStr)
             );
             unmatchable_values.emplace_back(
-                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(cUnmatchableLongStr)
+                    EightByteEncodedTextAst::parse_and_encode_from(cUnmatchableLongStr)
             );
             return unmatchable_values;
         }
@@ -904,9 +902,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                 schema_tree,
                 {},
                 {{cArrayNodeId,
-                  Value{
-                          get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unstructured_array)
-                  }}},
+                  Value{FourByteEncodedTextAst::parse_and_encode_from(unstructured_array)}}},
                 query_handler_impl
         )};
         CAPTURE(evaluation_result);

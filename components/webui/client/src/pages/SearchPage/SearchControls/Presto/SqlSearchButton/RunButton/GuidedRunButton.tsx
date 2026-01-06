@@ -19,7 +19,7 @@ import {
 import {
     buildPrestoGuidedQueries,
     handlePrestoGuidedQuerySubmit,
-} from "../../presto-guided-search-requests";
+} from "../../Guided/presto-guided-search-requests";
 import styles from "./index.module.css";
 
 
@@ -34,9 +34,9 @@ const GuidedRunButton = () => {
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const timeRange = useSearchStore((state) => state.timeRange);
+    const {selectDataset: from} = useSearchStore.getState();
 
     const select = usePrestoSearchState((state) => state.select);
-    const from = usePrestoSearchState((state) => state.from);
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
     const updateCachedGuidedSearchQueryString =
         usePrestoSearchState((state) => state.updateCachedGuidedSearchQueryString);
@@ -89,6 +89,7 @@ const GuidedRunButton = () => {
             <Button
                 className={styles["runButton"] || ""}
                 color={"green"}
+                htmlType={"submit"}
                 icon={<CaretRightOutlined/>}
                 size={"middle"}
                 variant={"solid"}

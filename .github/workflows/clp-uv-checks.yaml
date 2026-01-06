@@ -1,0 +1,52 @@
+name: "clp-uv-checks"
+
+on:
+  pull_request:
+    paths: &monitored_paths
+      - ".github/workflows/clp-uv-checks.yaml"
+      - "components/clp-mcp-server/pyproject.toml"
+      - "components/clp-mcp-server/uv.lock"
+      - "components/clp-package-utils/pyproject.toml"
+      - "components/clp-package-utils/uv.lock"
+      - "components/clp-py-utils/pyproject.toml"
+      - "components/clp-py-utils/uv.lock"
+      - "components/job-orchestration/pyproject.toml"
+      - "components/job-orchestration/uv.lock"
+      - "integration-tests/pyproject.toml"
+      - "integration-tests/uv.lock"
+  push:
+    paths: *monitored_paths
+  schedule:
+    # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  uv-checks:
+    strategy:
+      matrix:
+        os:
+          - "macos-15"
+          - "ubuntu-22.04"
+          - "ubuntu-24.04"
+    runs-on: "${{matrix.os}}"
+    steps:
+      - uses: "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8"  # v5.0.0
+        with:
+          submodules: "recursive"
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli@3.44.0"
+
+      - name: "Install the latest version of uv"
+        uses: "astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41"  # v7.1.2
+
+      - name: "Validate lock files"
+        shell: "bash"
+        run: "task deps:lock:check-uv"

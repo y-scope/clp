@@ -5,9 +5,12 @@
 #include <string>
 #include <vector>
 
+#include <boost/outcome/std_result.hpp>
+
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
+#include "../EncodedTextAst.hpp"
 #include "../encoding_methods.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -110,6 +113,22 @@ auto deserialize_encoded_text_ast(
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars
 ) -> IRErrorCode;
+
+/**
+ * Deserializes an encoded text AST from the given reader.
+ * @tparam encoded_variable_t
+ * @param reader
+ * @param encoded_tag
+ * @return A result containing the deserialized encoded text AST on success, or an error code
+ * indicating the failure:
+ * - IRErrorCode_Corrupted_IR: if IR stream is invalid.
+ * - IRErrorCode_Incomplete_IR: if IR stream is incomplete.
+ * - Forwards `deserialize_and_append_logtype`'s return values on failure.
+ * - Forwards `deserialize_and_append_dict_var`'s return values on failure.
+ */
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+[[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode>;
 
 /**
  * Decodes the IR message calls the given methods to handle each component of the message

@@ -95,6 +95,7 @@ tooling-gh-workflows
 :hidden:
 
 design-project-structure
+design-deployment-orchestration
 
 design-kv-ir-streams/index
 design-metadata-db

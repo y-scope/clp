@@ -1,1 +1,3 @@
+# Generated config files
+/.env
 /worker/config-template/clp.properties

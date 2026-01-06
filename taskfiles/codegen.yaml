@@ -1,5 +1,14 @@
 version: "3"
 
+includes:
+  toolchains: "toolchains.yaml"
+
+vars:
+  # Paths
+  G_DOCS_SRC_DIR: "{{.ROOT_DIR}}/docs/src"
+  G_DOCS_SRC_STATIC_DIR: "{{.G_DOCS_SRC_DIR}}/_static"
+  G_DOCS_SRC_STATIC_GENERATED_DIR: "{{.G_DOCS_SRC_DIR}}/_static/generated"
+
 tasks:
   clp-s-generate-parsers:
     vars:
@@ -86,3 +95,13 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  openapi:
+    deps: ["toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    cmd: |-
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo run --bin api-server-openapi-codegen --release \
+        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json"
+      cargo run --bin log-ingestor-openapi-codegen --release \
+        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/log-ingestor-openapi.json"

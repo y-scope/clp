@@ -11,11 +11,10 @@ const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
     cachedGuidedSearchQueryString: "",
     errorMsg: null,
     errorName: null,
-    from: null,
     orderBy: "",
     queryDrawerOpen: false,
     select: "*",
-    sqlInterface: PRESTO_SQL_INTERFACE.FREEFORM,
+    sqlInterface: PRESTO_SQL_INTERFACE.GUIDED,
     timestampKey: null,
     where: "",
 });
@@ -35,11 +34,6 @@ interface PrestoSearchState {
      * Presto error name if query failed.
      */
     errorName: Nullable<string>;
-
-    /**
-     * FROM input.
-     */
-    from: Nullable<string>;
 
     /**
      * ORDER BY input.
@@ -75,7 +69,6 @@ interface PrestoSearchState {
     updateCachedGuidedSearchQueryString: (query: string) => void;
     updateErrorMsg: (msg: Nullable<string>) => void;
     updateErrorName: (name: Nullable<string>) => void;
-    updateFrom: (database: Nullable<string>) => void;
     updateOrderBy: (items: string) => void;
     updateQueryDrawerOpen: (open: boolean) => void;
     updateSelect: (items: string) => void;
@@ -96,9 +89,6 @@ const usePrestoSearchState = create<PrestoSearchState>((set) => ({
     },
     updateErrorName: (name) => {
         set({errorName: name});
-    },
-    updateFrom: (database) => {
-        set({from: database});
     },
     updateOrderBy: (items) => {
         set({orderBy: items});

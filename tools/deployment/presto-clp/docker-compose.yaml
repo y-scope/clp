@@ -11,7 +11,7 @@ services:
       - "./coordinator/scripts:/scripts:ro"
       - "coordinator-config:/opt/presto-server/etc"
     networks:
-      - "presto"
+      - "clp-package"
     ports:
       - "8889:8080"
     healthcheck:
@@ -34,17 +34,22 @@ services:
       - "coordinator-common.env"
       - "worker.env"
     volumes:
+      - "${CLP_ARCHIVES_DIR:-empty}:/var/data/archives:ro"
+      - "${CLP_STAGED_ARCHIVES_DIR:-empty}:/var/data/staged-archives:ro"
       - "./worker/config-template:/configs:ro"
       - "./worker/scripts:/scripts:ro"
-      - "${CLP_ARCHIVES_DIR}:${CLP_ARCHIVES_DIR}"
       - "worker-config:/opt/presto-server/etc"
     networks:
-      - "presto"
+      - "clp-package"
 
 volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+
   coordinator-config:
   worker-config:
 
 networks:
-  presto:
-    driver: "bridge"
+  clp-package:
+    name: "${CLP_PACKAGE_NETWORK_NAME:-clp-package_default}"
+    external: true

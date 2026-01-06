@@ -1,0 +1,9 @@
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "results-cache"
+  "name" "data"
+  "nodeRole" "control-plane"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/results_cache" .Values.clpConfig.data_directory)
+) }}

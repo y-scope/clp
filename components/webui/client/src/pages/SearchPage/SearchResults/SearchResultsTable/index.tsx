@@ -4,12 +4,12 @@ import {
     useState,
 } from "react";
 
-import {
-    CLP_QUERY_ENGINES,
-    SETTINGS_QUERY_ENGINE,
-} from "../../../../config";
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
+
+import {SETTINGS_QUERY_ENGINE} from "../../../../config";
+import usePrestoSearchState from "../../SearchState/Presto";
+import SearchResultsVirtualTable from "./Native/SearchResultsVirtualTable";
 import PrestoResultsVirtualTable from "./Presto/PrestoResultsVirtualTable";
-import SearchResultsVirtualTable from "./SearchResultsVirtualTable";
 import {TABLE_BOTTOM_PADDING} from "./typings";
 
 
@@ -21,6 +21,7 @@ import {TABLE_BOTTOM_PADDING} from "./typings";
 const SearchResultsTable = () => {
     const [tableHeight, setTableHeight] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
+    const {sqlInterface} = usePrestoSearchState();
 
     // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
     // based on the window height, container top, and fixed padding.
@@ -39,7 +40,7 @@ const SearchResultsTable = () => {
         return () => {
             window.removeEventListener("resize", updateHeight);
         };
-    }, []);
+    }, [sqlInterface]);
 
     return (
         <div

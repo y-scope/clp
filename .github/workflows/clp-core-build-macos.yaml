@@ -45,7 +45,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - "macos-14"
           - "macos-15"
         use_shared_libs:
           - true

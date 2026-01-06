@@ -28,7 +28,12 @@ concurrency:
 jobs:
   filter-relevant-changes:
     name: "filter-relevant-changes"
-    runs-on: "ubuntu-24.04"
+    runs-on: &runner >-
+      ${{
+        github.repository_owner == 'y-scope'
+        && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
+        || 'ubuntu-24.04'
+      }}
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       manylinux_2_28_x86_64_image_changed: "${{steps.filter.outputs.manylinux_2_28_x86_64_image}}"
@@ -99,7 +104,7 @@ jobs:
     name: "centos-stream-9-deps-image"
     if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -125,7 +130,7 @@ jobs:
     name: "manylinux_2_28-x86_64-deps-image"
     if: "needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -151,7 +156,7 @@ jobs:
     name: "musllinux_1_2-x86_64-deps-image"
     if: "needs.filter-relevant-changes.outputs.musllinux_1_2_x86_64_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -177,7 +182,7 @@ jobs:
     name: "ubuntu-jammy-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -212,7 +217,7 @@ jobs:
         use_shared_libs: [true, false]
     name: "centos-stream-9-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -252,7 +257,7 @@ jobs:
     name: >-
       manylinux_2_28-x86_64-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins
     continue-on-error: true
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -292,7 +297,7 @@ jobs:
     name: >-
       musllinux_1_2-x86_64-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins
     continue-on-error: true
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -337,7 +342,7 @@ jobs:
       OS_NAME: "ubuntu-jammy"
     name: "ubuntu-jammy-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -384,7 +389,7 @@ jobs:
     # Run if the ancestor jobs were successful/skipped and building clp was successful.
     if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     env:
       OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
@@ -451,7 +456,7 @@ jobs:
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-deps-image"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -528,7 +533,7 @@ jobs:
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-deps-image"
-    runs-on: "ubuntu-24.04"
+    runs-on: *runner
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -538,7 +543,7 @@ jobs:
         shell: "bash"
         run: "chown $(id -u):$(id -g) -R ."
 
-      - name: "Build the package"
+      - name: "Build the package without the package image"
         uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
@@ -548,7 +553,9 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task package
+            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            HOME=/tmp
+            task package-build-deps
 
       - uses: "./.github/actions/clp-build-runtime-image"
         with:

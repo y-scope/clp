@@ -1,15 +1,14 @@
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {Typography} from "antd";
 
-import {
-    CLP_QUERY_ENGINES,
-    SETTINGS_QUERY_ENGINE,
-} from "../../../../config";
+import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
 import usePrestoSearchState from "../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import OpenQueryDrawerButton from "./OpenQueryDrawerButton";
 import QueryDrawer from "./QueryDrawer";
+import QuerySpeed from "./QuerySpeed";
 import Results from "./Results";
 
 
@@ -90,6 +89,7 @@ const QueryStatus = () => {
                     <Results/>
                     {" "}
                     <Text type={"secondary"}>results</Text>
+                    {CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE && <QuerySpeed/>}
                 </>
             )}
             {searchUiState === SEARCH_UI_STATE.FAILED && (

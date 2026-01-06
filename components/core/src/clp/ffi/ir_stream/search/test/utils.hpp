@@ -12,15 +12,11 @@
 #include <utility>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
 #include <msgpack.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"
-#include "../../../../ir/EncodedTextAst.hpp"
-#include "../../../../ir/types.hpp"
 #include "../../../../type_utils.hpp"
-#include "../../../encoding_methods.hpp"
 #include "../../../SchemaTree.hpp"
 #include "../../Serializer.hpp"
 #include "../utils.hpp"
@@ -99,18 +95,6 @@ private:
 ) -> std::ostream&;
 
 /**
- * Parses and encodes the given string as an instance of `EncodedTextAst`.
- * @tparam encoded_variable_t
- * @param text
- * @return The encoded result.
- */
-template <typename encoded_variable_t>
-requires std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
-         || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
-[[nodiscard]] auto get_encoded_text_ast(std::string_view text)
-        -> clp::ir::EncodedTextAst<encoded_variable_t>;
-
-/**
  * Unpacks and serializes the given msgpack bytes using the given serializer.
  * @tparam encoded_variable_t
  * @param auto_gen_msgpack_bytes
@@ -124,26 +108,6 @@ template <typename encoded_variable_t>
         std::vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool;
-
-template <typename encoded_variable_t>
-requires std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
-         || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
-auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<encoded_variable_t> {
-    std::string logtype;
-    std::vector<encoded_variable_t> encoded_vars;
-    std::vector<int32_t> dict_var_bounds;
-    REQUIRE(clp::ffi::encode_message(text, logtype, encoded_vars, dict_var_bounds));
-    REQUIRE(((dict_var_bounds.size() % 2) == 0));
-
-    std::vector<std::string> dict_vars;
-    for (size_t i{0}; i < dict_var_bounds.size(); i += 2) {
-        auto const begin_pos{static_cast<size_t>(dict_var_bounds[i])};
-        auto const end_pos{static_cast<size_t>(dict_var_bounds[i + 1])};
-        dict_vars.emplace_back(text.cbegin() + begin_pos, text.cbegin() + end_pos);
-    }
-
-    return clp::ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars};
-}
 
 template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(

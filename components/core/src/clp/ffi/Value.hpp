@@ -10,9 +10,9 @@
 #include <variant>
 
 #include "../ErrorCode.hpp"
-#include "../ir/EncodedTextAst.hpp"
 #include "../TraceableException.hpp"
 #include "../type_utils.hpp"
+#include "EncodedTextAst.hpp"
 
 // NOTE: In this file, "primitive" doesn't refer to a C++ fundamental type (e.g. int) but instead
 // refers to a value in a kv-pair that has no children (i.e. not an object/array).
@@ -30,8 +30,8 @@ using PrimitiveValueTypes = std::
               value_float_t,
               value_bool_t,
               std::string,
-              clp::ir::EightByteEncodedTextAst,
-              clp::ir::FourByteEncodedTextAst>;
+              FourByteEncodedTextAst,
+              EightByteEncodedTextAst>;
 
 /**
  * Variant for all primitive value types.
@@ -85,19 +85,19 @@ struct ImmutableViewTypeConverter<std::string> {
 };
 
 /**
- * Specializes `clp::ir::EightByteEncodedTextAst`'s immutable view type as its const reference.
+ * Specializes `EightByteEncodedTextAst`'s immutable view type as its const reference.
  */
 template <>
-struct ImmutableViewTypeConverter<clp::ir::EightByteEncodedTextAst> {
-    using Type = clp::ir::EightByteEncodedTextAst const&;
+struct ImmutableViewTypeConverter<EightByteEncodedTextAst> {
+    using Type = EightByteEncodedTextAst const&;
 };
 
 /**
- * Specializes `clp::ir::FourByteEncodedTextAst`'s immutable view type as its const reference.
+ * Specializes `FourByteEncodedTextAst`'s immutable view type as its const reference.
  */
 template <>
-struct ImmutableViewTypeConverter<clp::ir::FourByteEncodedTextAst> {
-    using Type = clp::ir::FourByteEncodedTextAst const&;
+struct ImmutableViewTypeConverter<FourByteEncodedTextAst> {
+    using Type = FourByteEncodedTextAst const&;
 };
 
 /**

@@ -60,10 +60,15 @@ quick-start/clp-text
 :glob:
 
 guides-overview
+guides-mcp-server/index
 guides-using-object-storage/index
+guides-using-the-api-server
+guides-using-log-ingestor
+guides-external-database
+guides-multi-host
 guides-retention
-guides-multi-node
 guides-using-presto
+guides-using-spider
 :::
 
 :::{toctree}
