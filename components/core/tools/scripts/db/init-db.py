@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Initializes the global MySQL metadata database for CLP."""
 import argparse
 import logging
 import os
@@ -17,7 +18,13 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
+    """
+    Main.
+
+    :param argv:
+    :return: Exit code
+    """
     args_parser = argparse.ArgumentParser(
         description="Setup a global MySQL metadata database for CLP."
     )
@@ -37,30 +44,31 @@ def main(argv):
         username = os.environ["CLP_DB_USER"]
         password = os.environ["CLP_DB_PASS"]
     except KeyError as e:
-        raise Exception(f"Environment variable {e} hasn't been set.")
+        msg = f"Environment variable {e} hasn't been set."
+        raise OSError(msg) from e
 
     try:
         mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password)
         mysql_cursor = mysql_conn.cursor()
     except mariadb.Error as err:
-        logger.error("Failed to connect - {}".format(err.msg))
+        logger.exception("Failed to connect - %s", err.msg)
         return -1
 
     try:
         # Create database
         try:
             mysql_cursor.execute(
-                "CREATE DATABASE IF NOT EXISTS `{}` DEFAULT CHARACTER SET 'utf8'".format(db_name)
+                f"CREATE DATABASE IF NOT EXISTS `{db_name}` DEFAULT CHARACTER SET 'utf8'"
             )
         except mariadb.Error as err:
-            logger.error("Failed to create database - {}".format(err.msg))
+            logger.exception("Failed to create database - %s", err.msg)
             return -1
 
         # Use database
         try:
-            mysql_cursor.execute("USE `{}`".format(db_name))
+            mysql_cursor.execute(f"USE `{db_name}`")
         except mariadb.Error as err:
-            logger.error("Failed to use database - {}".format(err.msg))
+            logger.exception("Failed to use database - %s", err.msg)
             return -1
 
         # Create tables
@@ -98,7 +106,7 @@ def main(argv):
             ) ROW_FORMAT=DYNAMIC"""
             )
         except mariadb.Error as err:
-            logger.error("Failed to create table - {}".format(err.msg))
+            logger.exception("Failed to create table - %s", err.msg)
             return -1
 
         mysql_conn.commit()
