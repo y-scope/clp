@@ -37,7 +37,26 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     return proc
 
 
-def validate_package_running(package_instance: PackageInstance) -> None:
+def validate_package_instance(package_instance: PackageInstance) -> None:
+    """
+    Validate that the given package instance is running by performing two checks: validate that the
+    instance has exactly the set of running components that it should have, and validate that the
+    instance is running in the correct mode.
+
+    :param package_instance:
+    """
+    if not package_instance.instance_validated:
+        # Ensure that all package components are running.
+        _validate_package_running(package_instance)
+
+        # Ensure that the package is running in the correct mode.
+        _validate_running_mode_correct(package_instance)
+
+        # Switch validation indicator to True.
+        object.__setattr__(package_instance, "instance_validated", True)
+
+
+def _validate_package_running(package_instance: PackageInstance) -> None:
     """
     Validate that the given package instance is running by checking that the set of services running
     in the Compose project exactly matches the list of required components.
@@ -51,7 +70,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     running_services = set(list_running_services_in_compose_project(project_name))
 
     # Compare with list of required components.
-    required_components = set(package_instance.package_config.component_list)
+    required_components = set(package_instance.package_test_config.mode_config.component_list)
     if required_components == running_services:
         return
 
@@ -68,7 +87,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     pytest.fail(fail_msg)
 
 
-def validate_running_mode_correct(package_instance: PackageInstance) -> None:
+def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
     """
     Validate that the mode described in the shared config of the instance matches the intended mode
     defined by the instance configuration. Calls pytest.fail if the shared config fails validation
@@ -85,7 +104,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     except ValidationError as err:
         pytest.fail(f"Shared config failed validation: {err}")
 
-    intended_config = package_instance.package_config.clp_config
+    intended_config = package_instance.package_test_config.mode_config.clp_config
 
     if not compare_mode_signatures(intended_config, running_config):
         pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
