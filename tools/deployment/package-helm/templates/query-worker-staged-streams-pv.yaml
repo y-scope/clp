@@ -4,7 +4,7 @@
   "component_category" "query-worker"
   "name" "staged-streams"
   "nodeRole" "worker"
-  "capacity" "50Gi"
+  "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" .Values.clpConfig.stream_output.storage.staging_directory
 ) }}

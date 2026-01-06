@@ -4,7 +4,7 @@
   "component_category" "compression-worker"
   "name" "staged-archives"
   "nodeRole" "worker"
-  "capacity" "50Gi"
+  "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" .Values.clpConfig.archive_output.storage.staging_directory
 ) }}
