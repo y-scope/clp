@@ -54,16 +54,35 @@ def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
 
 
 @pytest.mark.compression
-def test_clp_json_compression_multifile(fixt_package_instance: PackageInstance) -> None:
+def test_clp_json_compression(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
+    Validate that the `clp-json` package successfully compresses some dataset.
 
     :param fixt_package_instance:
     """
     validate_package_instance(fixt_package_instance)
 
-    # TODO: compress the json-multifile dataset and check the correctness of compression.
+    # TODO: compress some dataset and check the correctness of compression.
     assert True
 
-    log_msg = "test_clp_json_compression_multifile was successful."
+    log_msg = "test_clp_json_compression was successful."
+    logger.info(log_msg)
+
+
+@pytest.mark.search
+def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
+    """
+    Validate that the `clp-json` package successfully searches some dataset.
+
+    :param fixt_package_instance:
+    """
+    validate_package_instance(fixt_package_instance)
+
+    # TODO: compress some dataset and check the correctness of compression.
+
+    # TODO: search through that dataset and check the correctness of the search results.
+
+    assert True
+
+    log_msg = "test_clp_json_search was successful."
     logger.info(log_msg)

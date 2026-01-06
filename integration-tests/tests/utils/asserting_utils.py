@@ -53,7 +53,7 @@ def validate_package_instance(package_instance: PackageInstance) -> None:
         _validate_running_mode_correct(package_instance)
 
         # Switch validation indicator to True.
-        object.__setattr__(package_instance, "instance_validated", True)
+        package_instance.instance_validated = True
 
 
 def _validate_package_running(package_instance: PackageInstance) -> None:
