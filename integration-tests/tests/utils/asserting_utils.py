@@ -18,33 +18,20 @@ from tests.utils.utils import load_yaml_to_dict
 logger = logging.getLogger(__name__)
 
 
-def run_and_assert(
-    request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any
-) -> subprocess.CompletedProcess[Any]:
+def run_and_assert(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> None:
     """
-    Runs a command with subprocess and asserts that it succeeds with pytest.
+    Runs a command with subprocess.
 
+    :param request: Pytest fixture request.
     :param cmd: Command and arguments to execute.
     :param kwargs: Additional keyword arguments passed through to the subprocess.
-    :return: The completed process object, for inspection or further handling.
-    :raise: pytest.fail if the command exits with a non-zero return code.
+    :raise: Propagates `subprocess.run`'s errors.
     """
     log_file_path = Path(request.config.getini("log_file_path"))
     with log_file_path.open("ab") as log_file:
-        try:
-            log_debug_msg = f"Now running command: {cmd}"
-            logger.debug(log_debug_msg)
-            proc = subprocess.run(cmd, stdout=log_file, stderr=log_file, check=True, **kwargs)
-        except subprocess.CalledProcessError as error:
-            err_msg = f"Called process failed: {error}"
-            logger.debug(err_msg)
-            pytest.fail(err_msg)
-        except subprocess.TimeoutExpired as error:
-            err_msg = f"Called process timed out: {error}"
-            logger.debug(err_msg)
-            pytest.fail(err_msg)
-
-        return proc
+        log_debug_msg = f"Now running command: {cmd}"
+        logger.debug(log_debug_msg)
+        subprocess.run(cmd, stdout=log_file, stderr=log_file, check=True, **kwargs)
 
 
 def validate_package_running(package_instance: PackageInstance) -> None:

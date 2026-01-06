@@ -19,6 +19,7 @@ def start_clp_package(request: pytest.FixtureRequest, package_config: PackageCon
     """
     Starts an instance of the CLP package.
 
+    :param request:
     :param package_config:
     :raise: Propagates `run_and_assert`'s errors.
     """
@@ -46,6 +47,7 @@ def stop_clp_package(request: pytest.FixtureRequest, package_config: PackageConf
     """
     Stops the running instance of the CLP package.
 
+    :param request:
     :param package_config:
     :raise: Propagates `run_and_assert`'s errors.
     """
