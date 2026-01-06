@@ -1,5 +1,6 @@
 import {FileEntry} from "@webui/common/schemas/os";
 import {message} from "antd";
+import type {TreeDataNode} from "antd/es";
 
 import {settings} from "../../../../settings";
 import {
@@ -111,9 +112,48 @@ const handleLoadError = (e: unknown): void => {
         "Failed to load path");
 };
 
+/**
+ * Converts flat tree data (simple mode) to hierarchical format for DirectoryTree.
+ *
+ * @param flatData Array of flat tree nodes with pId references
+ * @return Hierarchical tree structure with children arrays.
+ */
+const flatToHierarchy = (flatData: TreeNode[]): TreeDataNode[] => {
+    const nodeMap = new Map<string, TreeDataNode>();
+    const roots: TreeDataNode[] = [];
+
+    // Create all nodes
+    for (const node of flatData) {
+        nodeMap.set(node.id, {
+            key: node.value,
+            title: node.title,
+            isLeaf: node.isLeaf,
+            children: [],
+        });
+    }
+
+    // Build hierarchy
+    for (const node of flatData) {
+        const treeNode = nodeMap.get(node.id);
+        if (null === node.pId) {
+            if (treeNode) {
+                roots.push(treeNode);
+            }
+        } else {
+            const parent = nodeMap.get(node.pId);
+            if (parent?.children && treeNode) {
+                parent.children.push(treeNode);
+            }
+        }
+    }
+
+    return roots;
+};
+
 
 export {
     addServerPrefix,
+    flatToHierarchy,
     getListHeight,
     handleLoadError,
     ROOT_PATH,

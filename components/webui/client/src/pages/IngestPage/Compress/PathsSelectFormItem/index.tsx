@@ -1,4 +1,4 @@
-import React, {
+import {
     useCallback,
     useEffect,
     useRef,
@@ -6,15 +6,10 @@ import React, {
 } from "react";
 
 import {FileEntry} from "@webui/common/schemas/os";
-import {
-    Form,
-    TreeSelect,
-    TreeSelectProps,
-} from "antd";
+import {Form} from "antd";
 
 import {listFiles} from "../../../../api/os";
-import styles from "./index.module.css";
-import SwitcherIcon from "./SwitcherIcon";
+import DirectoryTreeSelect from "./DirectoryTreeSelect";
 import {
     ROOT_NODE,
     ROOT_PATH,
@@ -22,27 +17,22 @@ import {
 } from "./typings";
 import {
     addServerPrefix,
-    getListHeight,
     handleLoadError,
     toTreeNode,
 } from "./utils";
 
 
-type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
-
-type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0];
-
-
 /**
  * Form item with TreeSelect for selecting file paths for compression.
- * Supports lazy loading and search with auto-expand.
+ * Uses DirectoryTree for intuitive folder/file navigation.
  *
  * @return
+ * @see https://ant.design/components/tree#tree-demo-directory
  */
 const PathsSelectFormItem = () => {
+    const form = Form.useFormInstance();
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-    const [listHeight, setListHeight] = useState<number>(getListHeight);
 
     // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
@@ -75,6 +65,18 @@ const PathsSelectFormItem = () => {
         }
     }, [addNodes]);
 
+    const handleChange = useCallback((values: string[]) => {
+        form.setFieldValue("paths", values);
+    }, [form]);
+
+    const handleExpand = useCallback((keys: string[]) => {
+        setExpandedKeys(keys);
+    }, []);
+
+    const handleLoadData = useCallback(async (path: string) => {
+        await loadPath(path).catch(handleLoadError);
+    }, [loadPath]);
+
     // On initialization, load root directory contents.
     useEffect(() => {
         loadPath(ROOT_PATH)
@@ -84,91 +86,18 @@ const PathsSelectFormItem = () => {
             .catch(handleLoadError);
     }, [loadPath]);
 
-    const handleLoadData = useCallback(async ({value}: LoadDataNode) => {
-        if ("string" !== typeof value) {
-            return;
-        }
-        await loadPath(value).catch(handleLoadError);
-    }, [loadPath]);
-
-    const handleTitleClick = useCallback((nodeData: TreeNode, ev: React.MouseEvent) => {
-        if (nodeData.isLeaf) {
-            // Propagate event to let TreeSelect handle selection.
-            return;
-        }
-        ev.stopPropagation();
-
-        const nodeValue = nodeData.value;
-        if (expandedKeys.includes(nodeValue)) {
-            setExpandedKeys(expandedKeys.filter((k) => k !== nodeValue));
-
-            return;
-        }
-
-        if (false === loadedPathsRef.current.has(nodeValue)) {
-            loadPath(nodeValue).catch(handleLoadError);
-        }
-
-        setExpandedKeys([
-            ...expandedKeys,
-            nodeValue,
-        ]);
-    }, [
-        expandedKeys,
-        loadPath,
-    ]);
-
-    const handleTreeExpand = useCallback((keys: TreeExpandKeys) => {
-        setExpandedKeys(keys as string[]);
-    }, []);
-
-    const renderTreeTitle = useCallback((nodeData: TreeNode) => (
-        <span
-            className={styles["treeTitle"]}
-            onClick={(ev) => {
-                handleTitleClick(nodeData, ev);
-            }}
-        >
-            {nodeData.title}
-        </span>
-    ), [handleTitleClick]);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setListHeight(getListHeight());
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
-
     return (
         <Form.Item
             label={"Paths"}
             name={"paths"}
             rules={[{required: true, message: "Please select at least one path"}]}
         >
-            <TreeSelect
-                allowClear={true}
-                listHeight={listHeight}
-                loadData={handleLoadData}
-                multiple={true}
-                placeholder={"Select paths to compress"}
-                showCheckedStrategy={TreeSelect.SHOW_PARENT}
-                showSearch={false}
-                switcherIcon={SwitcherIcon}
-
-                treeCheckable={true}
+            <DirectoryTreeSelect
+                expandedKeys={expandedKeys}
                 treeData={treeData}
-                treeDataSimpleMode={true}
-                treeExpandedKeys={expandedKeys}
-                treeLine={true}
-                treeNodeLabelProp={"value"}
-                treeTitleRender={renderTreeTitle}
-                onTreeExpand={handleTreeExpand}/>
+                onChange={handleChange}
+                onDataLoad={handleLoadData}
+                onExpand={handleExpand}/>
         </Form.Item>
     );
 };

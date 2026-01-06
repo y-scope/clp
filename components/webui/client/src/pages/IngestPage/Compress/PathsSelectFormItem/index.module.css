@@ -1,5 +1,3 @@
-.treeTitle {
-    cursor: pointer;
-    display: inline-block;
-    width: 100%;
+.directoryTreePopup {
+    padding: 4px;
 }
