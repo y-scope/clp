@@ -6,8 +6,19 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
 data:
   clp-config.yaml: |
+    {{- with .Values.clpConfig.api_server }}
+    api_server:
+      default_max_num_query_results: {{ .default_max_num_query_results | int }}
+      host: "localhost"
+      port: 3001
+      query_job_polling:
+        initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
+        max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
+    {{- else }}
+    api_server: null
+    {{- end }}
     archive_output:
-      compression_level: {{ .Values.clpConfig.archive_output.compression_level }}
+      compression_level: {{ .Values.clpConfig.archive_output.compression_level | int }}
       storage:
         directory: "/var/data/archives"
         type: "fs"
@@ -27,7 +38,7 @@ data:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
       max_concurrent_tasks_per_job: {{
-        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job }}
+        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
     data_directory: "/var/data"
@@ -39,7 +50,7 @@ data:
     database:
       auto_commit: false
       compress: true
-      host: {{ include "clp.fullname" . }}-database
+      host: "{{ include "clp.fullname" . }}-database"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
       port: 3306
@@ -53,30 +64,30 @@ data:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     query_scheduler:
-      host: {{ include "clp.fullname" . }}-query-scheduler
+      host: "{{ include "clp.fullname" . }}-query-scheduler"
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
       num_archives_to_search_per_sub_job: {{
-        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
+        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job | int }}
       port: 7000
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
-      host: {{ include "clp.fullname" . }}-queue
+      host: "{{ include "clp.fullname" . }}-queue"
       port: 5672
     redis:
-      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
-      host: {{ include "clp.fullname" . }}-redis
+      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database | int }}
+      host: "{{ include "clp.fullname" . }}-redis"
       port: 6379
-      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
+      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
     reducer:
       base_port: 14009
-      host: {{ include "clp.fullname" . }}-reducer
+      host: "{{ include "clp.fullname" . }}-reducer"
       logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
-      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
+      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval | int }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
-      host: {{ include "clp.fullname" . }}-results-cache
+      host: "{{ include "clp.fullname" . }}-results-cache"
       port: 27017
       {{- if .Values.clpConfig.results_cache.retention_period }}
       retention_period: {{ .Values.clpConfig.results_cache.retention_period | int }}
@@ -93,9 +104,17 @@ data:
     webui:
       host: "localhost"
       port: 4000
-      rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
+      rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
+    {{- with .Values.clpConfig.mcp_server }}
+    mcp_server:
+      host: "localhost"
+      port: 8000
+      logging_level: {{ .logging_level | quote }}
+    {{- else }}
+    mcp_server: null
+    {{- end }}
 
   mysql-logging.cnf: |
     [mysqld]
@@ -163,7 +182,7 @@ data:
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
-      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level }},
+      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level | int }},
       "ArchiveOutputTargetArchiveSize":
         {{ .Values.clpConfig.archive_output.target_archive_size | int }},
       "ArchiveOutputTargetDictionariesSize":

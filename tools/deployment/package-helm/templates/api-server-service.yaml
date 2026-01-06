@@ -1,0 +1,18 @@
+{{- if .Values.clpConfig.api_server }}
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp.fullname" . }}-api-server
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "api-server"
+spec:
+  type: "NodePort"
+  selector:
+    {{- include "clp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "api-server"
+  ports:
+    - port: 3001
+      targetPort: "api-server"
+      nodePort: {{ .Values.clpConfig.api_server.port }}
+{{- end }}
