@@ -33,8 +33,8 @@ To also apply any automatic fixes:
 task lint:fix
 ```
 
-[clp-artifact-build]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-artifact-build.yaml
-[clp-lint]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-lint.yaml
+[clp-artifact-build]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/.github/workflows/clp-artifact-build.yaml
+[clp-lint]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/.github/workflows/clp-lint.yaml
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yaml
 [Task]: https://taskfile.dev/

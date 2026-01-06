@@ -6,7 +6,7 @@ import settings from "../../../settings.json" with {type: "json"};
 export const autoConfig = () => {
     return {
         forceClose: true,
-        url: `mongodb://${settings.MongoDbHost}:${settings.MongoDbPort}/${settings.MongoDbName}`,
+        url: `mongodb://${settings.MongoDbHost}:${settings.MongoDbPort}/${settings.MongoDbName}?directConnection=true`,
     };
 };
 

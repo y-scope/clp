@@ -93,6 +93,7 @@ class SearchJobConfig(QueryJobConfig):
     # Tuple of (host, port)
     network_address: tuple[str, int] | None = None
     aggregation_config: AggregationConfig | None = None
+    write_to_file: bool = False
 
     @field_validator("network_address")
     @classmethod

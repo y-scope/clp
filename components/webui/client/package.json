@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "npm run lint:check -- --fix",
-    "start": "vite"
+    "dev": "vite"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",

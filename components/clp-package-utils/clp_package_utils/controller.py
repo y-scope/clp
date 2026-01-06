@@ -8,19 +8,34 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
+from types import MappingProxyType
 from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
+    BundledService,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_USER_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
+    CLP_QUEUE_PASS_ENV_VAR_NAME,
+    CLP_QUEUE_USER_ENV_VAR_NAME,
+    CLP_REDIS_PASS_ENV_VAR_NAME,
     ClpConfig,
+    ClpDbNameType,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
+    DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
+    OrchestrationType,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -29,6 +44,9 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_DB_PASS_ENV_VAR_NAME,
+    SPIDER_DB_USER_ENV_VAR_NAME,
+    SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -107,14 +125,23 @@ class BaseController(ABC):
         Stops the components.
         """
 
-    def _set_up_env_for_database(self) -> EnvVarsDict:
+    def _set_up_env_for_database_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the database component.
+        Sets up environment variables and directories for bundling the database component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
         component_name = DB_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_DATABASE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         conf_logging_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self._clp_config.data_directory / component_name
@@ -130,19 +157,6 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection config
-        env_vars |= {
-            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
-            "CLP_DB_NAME": self._clp_config.database.name,
-            "CLP_DB_PORT": str(self._clp_config.database.port),
-        }
-
-        # Credentials
-        env_vars |= {
-            "CLP_DB_PASS": self._clp_config.database.password,
-            "CLP_DB_USER": self._clp_config.database.username,
-        }
-
         # Paths
         env_vars |= {
             "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
@@ -153,20 +167,65 @@ class BaseController(ABC):
         # Runtime config
         env_vars |= {
             "CLP_DB_CONTAINER_IMAGE_REF": (
-                "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
+                "mysql:8.0.23"
+                if self._clp_config.database.type == DatabaseEngine.MYSQL
+                else "mariadb:10-jammy"
             ),
         }
 
         return env_vars
 
-    def _set_up_env_for_queue(self) -> EnvVarsDict:
+    def _set_up_env_for_database(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the message queue component.
+        Sets up environment variables for the database component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
-        component_name = QUEUE_COMPONENT_NAME
+        component_name = DB_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
+            "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
+            "CLP_DB_PORT": str(self._clp_config.database.port),
+        }
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
+            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
+
+        # Credentials
+        credentials = self._clp_config.database.credentials
+        env_vars |= {
+            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+            CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            SPIDER_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].password,
+            CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
+            CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+            SPIDER_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].username,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_queue_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for bundling the queue component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = QUEUE_COMPONENT_NAME
+
+        if self._clp_config.queue is None or BundledService.QUEUE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_QUEUE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_queue_config(self._clp_config, logs_dir)
@@ -174,6 +233,30 @@ class BaseController(ABC):
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(resolved_logs_dir)
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= {
+            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_queue(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the message queue component.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUEUE_COMPONENT_NAME
+        if self._clp_config.queue is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
+        logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
 
@@ -185,25 +268,30 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_QUEUE_PASS": self._clp_config.queue.password,
-            "CLP_QUEUE_USER": self._clp_config.queue.username,
-        }
-
-        # Paths
-        env_vars |= {
-            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+            CLP_QUEUE_PASS_ENV_VAR_NAME: self._clp_config.queue.password,
+            CLP_QUEUE_USER_ENV_VAR_NAME: self._clp_config.queue.username,
         }
 
         return env_vars
 
-    def _set_up_env_for_redis(self) -> EnvVarsDict:
+    def _set_up_env_for_redis_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the Redis component.
+        Sets up environment variables and directories for bundling the redis component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
         component_name = REDIS_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+
+        if self._clp_config.redis is None or BundledService.REDIS not in self._clp_config.bundled:
+            logger.info(
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_REDIS_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
         data_dir = self._clp_config.data_directory / component_name
@@ -227,17 +315,6 @@ class BaseController(ABC):
             "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
 
-        # Connection config
-        env_vars |= {
-            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
-            "CLP_REDIS_PORT": str(self._clp_config.redis.port),
-        }
-
-        # Credentials
-        env_vars |= {
-            "CLP_REDIS_PASS": self._clp_config.redis.password,
-        }
-
         # Paths
         env_vars |= {
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
@@ -247,14 +324,80 @@ class BaseController(ABC):
 
         return env_vars
 
-    def _set_up_env_for_results_cache(self) -> EnvVarsDict:
+    def _set_up_env_for_redis(self) -> EnvVarsDict:
         """
-        Sets up environment variables and directories for the results cache (MongoDB) component.
+        Sets up environment variables for the Redis component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
-        component_name = RESULTS_CACHE_COMPONENT_NAME
+        component_name = REDIS_COMPONENT_NAME
+        if self._clp_config.redis is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
         logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
+            "CLP_REDIS_PORT": str(self._clp_config.redis.port),
+        }
+
+        # Credentials
+        env_vars |= {
+            CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the Spider scheduler component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = SPIDER_SCHEDULER_COMPONENT_NAME
+        if self._clp_config.compression_scheduler.type != OrchestrationType.SPIDER:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self._clp_config.spider_scheduler.host),
+            "SPIDER_SCHEDULER_PORT": str(self._clp_config.spider_scheduler.port),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_results_cache_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for bundling the results cache component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = RESULTS_CACHE_COMPONENT_NAME
+
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_RESULTS_CACHE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
 
         conf_file = self._conf_dir / "mongo" / "mongod.conf"
         data_dir = self._clp_config.data_directory / component_name
@@ -276,19 +419,31 @@ class BaseController(ABC):
                 self._clp_config.results_cache.stream_collection_name
             ),
         }
+        # Paths
+        env_vars |= {
+            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
+            "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
+            "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_results_cache(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the results cache (MongoDB) component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = RESULTS_CACHE_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
 
         # Connection config
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
             "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
-        }
-
-        # Paths
-        env_vars |= {
-            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
-            "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
-            "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
         }
 
         return env_vars
@@ -433,7 +588,9 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = API_SERVER_COMPONENT_NAME
-
+        if self._clp_config.api_server is None:
+            logger.info(f"The API Server is not configured, skipping {component_name} creation...")
+            return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -446,6 +603,43 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the log ingestor component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = LOG_INGESTOR_COMPONENT_NAME
+        if self._clp_config.log_ingestor is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        if self._clp_config.logs_input.type != StorageType.S3:
+            logger.info(
+                "%s is only applicable for S3 logs input type, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_HOST": _get_ip_from_hostname(self._clp_config.log_ingestor.host),
+            "CLP_LOG_INGESTOR_PORT": str(self._clp_config.log_ingestor.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
         }
 
         return env_vars
@@ -488,6 +682,7 @@ class BaseController(ABC):
         client_settings_json_updates = {
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "LogsInputType": self._clp_config.logs_input.type,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
@@ -497,19 +692,11 @@ class BaseController(ABC):
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         }
-        resolved_client_settings_json_path = resolve_host_path_in_container(
-            client_settings_json_path
-        )
-        client_settings_json = self._read_and_update_settings_json(
-            resolved_client_settings_json_path, client_settings_json_updates
-        )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
-            client_settings_json_file.write(json.dumps(client_settings_json))
 
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
-            "SqlDbName": self._clp_config.database.name,
+            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
@@ -555,6 +742,22 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
 
+        if StorageType.FS == self._clp_config.logs_input.type:
+            client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        else:
+            client_settings_json_updates["LogsInputRootDir"] = None
+            server_settings_json_updates["LogsInputRootDir"] = None
+
+        resolved_client_settings_json_path = resolve_host_path_in_container(
+            client_settings_json_path
+        )
+        client_settings_json = self._read_and_update_settings_json(
+            resolved_client_settings_json_path, client_settings_json_updates
+        )
+        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
+            client_settings_json_file.write(json.dumps(client_settings_json))
+
         resolved_server_settings_json_path = resolve_host_path_in_container(
             server_settings_json_path
         )
@@ -598,6 +801,11 @@ class BaseController(ABC):
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_MCP_SERVER_ENABLED": "1",
+        }
 
         # Connection config
         env_vars |= {
@@ -685,6 +893,16 @@ class BaseController(ABC):
                 settings[key] = value
 
 
+_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
+    {
+        DeploymentType.BASE: "docker-compose-base.yaml",
+        DeploymentType.FULL: "docker-compose.yaml",
+        DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
+        DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
+    }
+)
+
+
 class DockerComposeController(BaseController):
     """
     Controller for orchestrating CLP components using Docker Compose.
@@ -760,9 +978,14 @@ class DockerComposeController(BaseController):
             env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
 
         # Component-specific config
+        env_vars |= self._set_up_env_for_database_bundling()
+        env_vars |= self._set_up_env_for_queue_bundling()
+        env_vars |= self._set_up_env_for_redis_bundling()
+        env_vars |= self._set_up_env_for_results_cache_bundling()
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
+        env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
@@ -770,6 +993,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_api_server()
+        env_vars |= self._set_up_env_for_log_ingestor()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
@@ -797,8 +1021,6 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
-        if self._clp_config.mcp_server is not None:
-            cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
@@ -851,10 +1073,7 @@ class DockerComposeController(BaseController):
         """
         :return: The Docker Compose file name to use based on the config.
         """
-        deployment_type = self._clp_config.get_deployment_type()
-        if deployment_type == DeploymentType.BASE:
-            return "docker-compose-base.yaml"
-        return "docker-compose.yaml"
+        return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:

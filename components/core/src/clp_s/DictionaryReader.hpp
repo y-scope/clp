@@ -126,7 +126,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
 
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     auto dictionary_reader = m_adaptor.checkout_reader_for_section(m_dictionary_path);
 
     uint64_t num_dictionary_entries;

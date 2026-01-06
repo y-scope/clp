@@ -6,17 +6,11 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
-from sql_adapter import SqlAdapter
 
-from clp_py_utils.clp_config import (
-    ClpConfig,
-    StorageEngine,
-)
-from clp_py_utils.clp_metadata_db_utils import (
-    create_datasets_table,
-    create_metadata_db_tables,
-)
+from clp_py_utils.clp_config import ClpConfig, StorageEngine
+from clp_py_utils.clp_metadata_db_utils import create_datasets_table, create_metadata_db_tables
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.sql_adapter import SqlAdapter
 
 # Setup logging
 # Create logger

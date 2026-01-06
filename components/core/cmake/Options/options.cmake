@@ -328,12 +328,6 @@ function(set_clp_s_search_dependencies)
     )
 endfunction()
 
-function(validate_clp_s_search_ast_dependencies)
-    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH_AST
-        CLP_BUILD_CLP_S_TIMESTAMPPATTERN
-    )
-endfunction()
-
 function(set_clp_s_search_ast_dependencies)
     set_clp_need_flags(
         CLP_NEED_SIMDJSON
@@ -344,6 +338,7 @@ function(validate_clp_s_search_kql_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
@@ -376,6 +371,7 @@ endfunction()
 function(set_clp_s_timestamp_parser_dependencies)
     set_clp_need_flags(
         CLP_NEED_DATE
+        CLP_NEED_FMT
         CLP_NEED_YSTDLIB
     )
 endfunction()
@@ -450,7 +446,6 @@ function(validate_and_setup_all_clp_dependency_flags)
     endif()
 
     if (CLP_BUILD_CLP_S_SEARCH_AST)
-        validate_clp_s_search_ast_dependencies()
         set_clp_s_search_ast_dependencies()
     endif()
 

@@ -129,7 +129,7 @@ dev-docs/index
 [logback-appenders]: https://github.com/y-scope/logback-appenders
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
-[webui]: https://github.com/y-scope/clp/blob/main/components/webui
+[webui]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/webui
 [yscope-community-discord]: https://discord.gg/7kZA2m5G87
 [yscope-community-slack]: https://communityinviter.com/apps/yscopecommunity/yscope-community
 [yscope-community-zulip]: https://yscope-clp.zulipchat.com

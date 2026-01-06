@@ -23,10 +23,12 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "Timestamp pattern does not match the format of the given timestamp";
         case ErrorCodeEnum::InvalidDate:
             return "Timestamp was parsed successfully, but did not yield a valid date";
-        case ErrorCodeEnum::FormatSpecifierNotImplemented:
-            return "Encountered unimplemented format specifier in timestamp pattern";
         case ErrorCodeEnum::InvalidTimezoneOffset:
             return "Encountered invalid data when expecting a timezone offset";
+        case ErrorCodeEnum::InvalidEscapeSequence:
+            return "Timestamp pattern contains an unsupported escape sequence";
+        case ErrorCodeEnum::InvalidCharacter:
+            return "Timestamp pattern contains an unsupported character";
         default:
             return "Unknown error code enum";
     }

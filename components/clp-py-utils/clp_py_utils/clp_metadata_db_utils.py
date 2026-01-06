@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from clp_py_utils.clp_config import (
-    ArchiveOutput,
-    StorageType,
-)
+from clp_py_utils.clp_config import ArchiveOutput, StorageType
 
 # Constants
 MYSQL_TABLE_NAME_MAX_LEN = 64

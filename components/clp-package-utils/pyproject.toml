@@ -1,12 +1,13 @@
 [project]
 name = "clp-package-utils"
-version = "0.6.1-dev"
+version = "0.7.1-dev"
 description = "Utilities for the CLP package."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "Brotli>=1.1.0",
+    "click>=8.3.1",
     "msgpack>=1.1.2",
     "psutil>=7.1.0",
     "pydantic>=2.12.3",
@@ -38,7 +39,7 @@ show_error_context = true
 show_error_end = true
 
 [tool.ruff]
-extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
+extend = "../../ruff.toml"
 
 [tool.uv]
 default-groups = ["clp", "dev"]

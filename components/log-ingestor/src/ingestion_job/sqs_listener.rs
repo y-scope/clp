@@ -1,6 +1,7 @@
 use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
+    job_config::ingestion::s3::SqsListenerConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
@@ -9,17 +10,6 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::aws_client_manager::AwsClientManagerType;
-
-/// Configuration for a SQS listener job.
-#[derive(Debug, Clone)]
-pub struct SqsListenerConfig {
-    pub queue_url: String,
-    pub bucket_name: String,
-    pub prefix: String,
-    pub max_num_messages_to_fetch: i32,
-    pub init_polling_backoff_sec: i32,
-    pub max_polling_backoff_sec: i32,
-}
 
 /// Represents a SQS listener task that listens to SQS messages and extracts S3 object metadata.
 ///
@@ -32,7 +22,7 @@ struct Task<SqsClientManager: AwsClientManagerType<Client>> {
     sender: mpsc::Sender<ObjectMetadata>,
 }
 
-impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientManager> {
+impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
     /// extracted metadata is sent to the provided channel sender.
     ///
@@ -50,7 +40,9 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientMan
     ///   [`aws_sdk_sqs::operation::receive_message::builders::ReceiveMessageFluentBuilder::send`]'s
     ///   return values on failure.
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
-        let mut polling_backoff_sec = self.config.init_polling_backoff_sec;
+        const MAX_NUM_MESSAGES_TO_FETCH: i32 = 10;
+        const MAX_WAIT_TIME_SEC: i32 = 20;
+
         loop {
             select! {
                 // Cancellation requested.
@@ -62,14 +54,9 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientMan
                 result = self.sqs_client_manager.get().await?
                     .receive_message()
                     .queue_url(self.config.queue_url.as_str())
-                    .max_number_of_messages(self.config.max_num_messages_to_fetch)
-                    .wait_time_seconds(polling_backoff_sec).send() => {
-                    polling_backoff_sec = if self.process_sqs_response(result?).await? {
-                        self.config.init_polling_backoff_sec
-                    } else { std::cmp::min(
-                        polling_backoff_sec.saturating_mul(2),
-                        self.config.max_polling_backoff_sec
-                    ) };
+                    .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
+                    .wait_time_seconds(MAX_WAIT_TIME_SEC).send() => {
+                    self.process_sqs_response(result?).await?;
                 }
             }
         }
@@ -113,6 +100,10 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientMan
 
             for record in event.records {
                 if let Some(object_metadata) = self.extract_object_metadata(record) {
+                    tracing::info!(
+                        object = ? object_metadata,
+                        "Received new object metadata from SQS."
+                    );
                     self.sender.send(object_metadata).await?;
                     ingested = true;
                 }
@@ -143,7 +134,7 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientMan
     ///   * [`Self::is_relevant_object`] evaluates to `false`.
     fn extract_object_metadata(&self, record: Record) -> Option<ObjectMetadata> {
         if !record.event_name.starts_with("ObjectCreated:")
-            || self.config.bucket_name != record.s3.bucket.name.as_str()
+            || self.config.base.bucket_name != record.s3.bucket.name.as_str()
             || !self.is_relevant_object(record.s3.object.key.as_str())
         {
             return None;
@@ -159,7 +150,7 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientMan
     ///
     /// Whether the object key corresponds to a relevant object based on the listener's prefix.
     fn is_relevant_object(&self, object_key: &str) -> bool {
-        !object_key.ends_with('/') && object_key.starts_with(self.config.prefix.as_str())
+        !object_key.ends_with('/') && object_key.starts_with(self.config.base.key_prefix.as_str())
     }
 }
 
@@ -184,7 +175,7 @@ impl SqsListener {
     ///
     /// A newly created instance of [`SqsListener`].
     #[must_use]
-    pub fn spawn<SqsClientManager: AwsClientManagerType<Client> + 'static>(
+    pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
         id: Uuid,
         sqs_client_manager: SqsClientManager,
         config: SqsListenerConfig,
@@ -197,7 +188,11 @@ impl SqsListener {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move {
+            task.run(child_cancel_token).await.inspect_err(|err| {
+                tracing::error!(error = ? err, "SQS listener task execution failed.");
+            })
+        });
         Self {
             id,
             cancel_token,

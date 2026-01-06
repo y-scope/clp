@@ -27,6 +27,8 @@ dev = [
     "ruff>=0.11.12",
     "pytest>=8.4.1",
     "pytest-env>=1.1.5",
+    "PyYAML>=6.0.3",
+    "types-PyYAML>=6.0.12.20250915",
 ]
 
 [tool.mypy]

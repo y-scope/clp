@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from .constants import TIMESTAMP_NOT_AVAILABLE
+from clp_mcp_server.server.constants import TIMESTAMP_NOT_AVAILABLE
 
 logger = logging.getLogger(__name__)
 

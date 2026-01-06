@@ -1,6 +1,6 @@
 [project]
 name = "clp-mcp-server"
-version = "0.6.1-dev"
+version = "0.7.1-dev"
 description = "MCP server for CLP"
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
@@ -47,7 +47,7 @@ show_error_context = true
 show_error_end = true
 
 [tool.ruff]
-extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
+extend = "../../ruff.toml"
 
 [tool.uv]
 default-groups = ["clp", "dev"]

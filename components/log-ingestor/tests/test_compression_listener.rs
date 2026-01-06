@@ -2,11 +2,12 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::{s3::ObjectMetadata, types::non_empty_string::ExpectedNonEmpty};
 use log_ingestor::compression::{Buffer, BufferSubmitter, DEFAULT_LISTENER_CAPACITY, Listener};
+use non_empty_string::NonEmptyString;
 use tokio::sync::{Mutex, mpsc};
 
-const TEST_OBJECT_SIZE: usize = 1024;
+const TEST_OBJECT_SIZE: u64 = 1024;
 
 /// A test submitter that stores submitted buffers in memory for inspection.
 struct TestBufferSubmitter {
@@ -50,8 +51,8 @@ async fn send_to_listener(objects: Vec<ObjectMetadata>, sender: mpsc::Sender<Obj
 fn create_test_objects(bucket_name: &str, count: usize) -> Vec<ObjectMetadata> {
     (0..count)
         .map(|i| ObjectMetadata {
-            bucket: bucket_name.to_string(),
-            key: format!("object-{i}"),
+            bucket: NonEmptyString::from_string(bucket_name.to_string()),
+            key: NonEmptyString::from_string(format!("object-{i}")),
             size: TEST_OBJECT_SIZE,
         })
         .collect()
