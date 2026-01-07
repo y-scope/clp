@@ -615,7 +615,10 @@ jobs:
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
-    if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+    if: >-
+      github.event_name != 'pull_request'
+      && github.ref == 'refs/heads/main'
+      && needs.package-image.result == 'success'
     needs: "package-image"
     runs-on: *runner-amd64
     steps:
