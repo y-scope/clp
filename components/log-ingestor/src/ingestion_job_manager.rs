@@ -61,7 +61,7 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * The logs input type in the CLP configuration is unsupported.
-    /// * Forwards [`clp_rust_utils::database::mysql::create_mysql_pool`]'s return values on
+    /// * Forwards [`clp_rust_utils::database::mysql::create_clp_db_mysql_pool`]'s return values on
     ///   failure.
     pub async fn from_config(
         clp_config: ClpConfig,
@@ -78,7 +78,7 @@ impl IngestionJobManagerState {
                 ));
             }
         };
-        let mysql_pool = clp_rust_utils::database::mysql::create_mysql_pool(
+        let mysql_pool = clp_rust_utils::database::mysql::create_clp_db_mysql_pool(
             &clp_config.database,
             &clp_credentials.database,
             10,
