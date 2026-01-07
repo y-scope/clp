@@ -1,7 +1,7 @@
 # Configuring object storage
 
 To use object storage with CLP, follow the steps below to configure the necessary IAM permissions
-and your object storage bucket(s) for each use case you require. If you use non-AWS S3-compatitble
+and your object storage bucket(s) for each use case you require. If you use non-AWS S3-compatible
 endpoints, they should be configured with equivalent bucket access policies. During compression,
 CLP will automatically determine the appropriate endpoint URL.
 
