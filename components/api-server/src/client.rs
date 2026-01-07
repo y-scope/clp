@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use async_stream::stream;
 use clp_rust_utils::{
+    aws::AWS_DEFAULT_REGION,
     clp_config::{
         AwsAuthentication,
         package::{
@@ -161,6 +162,7 @@ impl Client {
     /// * Forwards [`Client::get_status`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
+    /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
@@ -197,7 +199,7 @@ impl Client {
                     inner: self.fetch_results_from_file(search_job_id),
                 },
                 StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self.fetch_results_from_s3(search_job_id).await,
+                    inner: self.fetch_results_from_s3(search_job_id).await?,
                 },
             };
             return Ok(stream);
@@ -311,13 +313,20 @@ impl Client {
     /// * Forwards [`aws_smithy_types::byte_stream::ByteStream::collect`]'s return values on
     ///   failure.
     ///
+    /// # Errors
+    ///
+    /// Return an error if:
+    ///
+    /// * [`ClientError::Aws`] if a region code is not provided when using the default AWS S3
+    ///   endpoint.
+    ///
     /// # Panics
     ///
     /// Panics if the stream output storage is not S3.
     async fn fetch_results_from_s3(
         &self,
         search_job_id: u64,
-    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
             unreachable!();
@@ -326,13 +335,22 @@ impl Client {
         let AwsAuthentication::Credentials { credentials } = &s3_config.aws_authentication;
 
         let s3_config = s3_config.clone();
-        let credentials = credentials.clone();
+        if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
+            return Err(ClientError::Aws {
+                description: "a region code must be given when using the default AWS S3 endpoint"
+                    .to_owned(),
+            });
+        }
 
+        let credentials = credentials.clone();
         let s3_client = clp_rust_utils::s3::create_new_client(
-            s3_config.region_code.as_str(),
             credentials.access_key_id.as_str(),
             credentials.secret_access_key.as_str(),
-            None,
+            s3_config
+                .region_code
+                .as_ref()
+                .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
+            s3_config.endpoint_url.as_ref(),
         )
         .await;
 
@@ -345,7 +363,7 @@ impl Client {
             .into_paginator()
             .send();
 
-        stream! {
+        Ok(stream! {
             while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
@@ -372,7 +390,7 @@ impl Client {
                     }
                 }
             }
-        }
+        })
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
