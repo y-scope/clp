@@ -53,6 +53,7 @@ data:
       host: "{{ include "clp.fullname" . }}-database"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
+        spider: {{ .Values.clpConfig.database.names.spider | quote }}
       port: 3306
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
