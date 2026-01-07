@@ -52,10 +52,7 @@ impl Default for Config {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ClpDbNames {
-    #[serde(rename = "clp-db")]
     pub clp: String,
-
-    #[serde(rename = "spider-db")]
     pub spider: String,
 }
 
