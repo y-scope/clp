@@ -19,6 +19,9 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::client::{Client, ClientError, QueryConfig};
 
+const LOG_INGESTOR_HOSTNAME_ENV_VAR: &str = "CLP_LOG_INGESTOR_HOSTNAME";
+const DEFAULT_LOG_INGESTOR_HOSTNAME: &str = "log_ingestor";
+
 /// Factory method to create an Axum router configured with all API routes.
 ///
 /// # Returns
@@ -57,10 +60,18 @@ pub fn from_client(client: Client, config: &Config) -> Result<axum::Router, serd
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .expect("Failed to install default crypto provider");
+    let hostname = std::env::var(LOG_INGESTOR_HOSTNAME_ENV_VAR);
+    if hostname.is_err() {
+        tracing::info!(
+            "`{LOG_INGESTOR_HOSTNAME_ENV_VAR}` is not configured. Using \
+             `{DEFAULT_LOG_INGESTOR_HOSTNAME}` instead."
+        );
+    }
+    let hostname = hostname.unwrap_or_else(|_| DEFAULT_LOG_INGESTOR_HOSTNAME.to_owned());
     let port = &config.log_ingestor.port;
     let proxy = axum_reverse_proxy::ReverseProxy::new(
         "/log_ingestor",
-        &format!("http://log_ingestor:{port}"),
+        &format!("http://{hostname}:{port}"),
     );
     let router = router.merge(proxy);
     Ok(router)
