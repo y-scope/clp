@@ -1,3 +1,4 @@
+{{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "shared-data"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteMany")
   "hostPath" .Values.clpConfig.archive_output.storage.directory
 ) }}
+{{- end }}

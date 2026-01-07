@@ -3,8 +3,8 @@
   "root" .
   "component_category" "query-worker"
   "name" "staged-streams"
-  "capacity" "50Gi"
+  "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/var/data/staged-streams" .Values.clpConfig.data_directory)
+  "hostPath" .Values.clpConfig.stream_output.storage.staging_directory
 ) }}
 {{- end }}

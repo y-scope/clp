@@ -3,7 +3,7 @@
   "root" .
   "component_category" "query-worker"
   "name" "staged-streams"
-  "capacity" "50Gi"
+  "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}
 {{- end }}

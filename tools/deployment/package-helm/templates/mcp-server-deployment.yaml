@@ -1,22 +1,22 @@
-{{- if .Values.clpConfig.api_server }}
+{{- if .Values.clpConfig.mcp_server }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp.fullname" . }}-api-server
+  name: {{ include "clp.fullname" . }}-mcp-server
   labels:
     {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "api-server"
+    app.kubernetes.io/component: "mcp-server"
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "api-server"
+      app.kubernetes.io/component: "mcp-server"
   template:
     metadata:
       labels:
         {{- include "clp.labels" . | nindent 8 }}
-        app.kubernetes.io/component: "api-server"
+        app.kubernetes.io/component: "mcp-server"
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       terminationGracePeriodSeconds: 60
@@ -36,7 +36,7 @@ spec:
             "name" "results-cache-indices-creator"
           ) | nindent 10 }}
       containers:
-        - name: "api-server"
+        - name: "mcp-server"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
@@ -50,58 +50,47 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
-              value: "/var/log/api_server"
-            - name: "RUST_LOG"
-              value: "INFO"
+              value: "/var/log/mcp_server"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
           ports:
-            - name: "api-server"
-              containerPort: 3001
+            - name: "mcp"
+              containerPort: 8000
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "api-server"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/api_server"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
-                "component_category" "shared-data"
-                "name" "streams"
+                "component_category" "mcp-server"
+                "name" "logs"
               ) | quote }}
-              mountPath: "/var/data/streams"
-            {{- end }}
+              mountPath: "/var/log/mcp_server"
           command: [
-            "/opt/clp/bin/api_server",
+            "python3", "-u",
+            "-m", "clp_mcp_server.clp_mcp_server",
             "--host", "0.0.0.0",
-            "--port", "3001",
-            "--config", "/etc/clp-config.yaml"
+            "--port", "8000",
+            "--config-path", "/etc/clp-config.yaml"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            httpGet: &api-server-health-check
+            httpGet: &mcp-server-health-check
               path: "/health"
-              port: "api-server"
+              port: "mcp"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            httpGet: *api-server-health-check
+            httpGet: *mcp-server-health-check
       volumes:
         - {{- include "clp.pvcVolume" (dict
             "root" .
-            "component_category" "api-server"
+            "component_category" "mcp-server"
             "name" "logs"
           ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "shared-data"
-            "name" "streams"
-          ) | nindent 10 }}
-        {{- end }}
 {{- end }}

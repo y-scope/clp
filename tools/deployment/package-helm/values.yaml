@@ -72,6 +72,14 @@ clpConfig:
     storage_engine: "clp-s"
     query_engine: "clp-s"
 
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
+
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
   logs_input:
@@ -86,6 +94,7 @@ clpConfig:
     port: 30306
     names:
       clp: "clp-db"
+      spider: "spider-db"
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -124,13 +133,9 @@ clpConfig:
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
-  # API server config
-  api_server:
-    port: 30301
-    default_max_num_query_results: 1000
-    query_job_polling:
-      initial_backoff_ms: 100
-      max_backoff_ms: 5000
+  mcp_server: null
+  #   port: 30800
+  #   logging_level: "INFO"
 
   # Where archives should be output to
   archive_output:
