@@ -1,3 +1,4 @@
+import type {CompressionMetadata} from "@webui/common/schemas/compress-metadata";
 import {RowDataPacket} from "mysql2";
 
 import settings from "../../../../settings.json" with {type: "json"};
@@ -15,17 +16,7 @@ enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
     CLP_CONFIG = "clp_config",
 }
 
-interface CompressionMetadataQueryRow extends RowDataPacket {
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.ID]: number;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS]: number;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS_MSG]: string;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.START_TIME]: string | null;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME]: string;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.DURATION]: number | null;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE]: number;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE]: number;
-    [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.CLP_CONFIG]: Buffer;
-}
+type CompressionMetadataQueryRow = CompressionMetadata & RowDataPacket;
 
 /**
  * Builds the SQL query to fetch recent compression metadata.

@@ -1,8 +1,12 @@
 import {brotliDecompressSync} from "node:zlib";
 
 import {decode} from "@msgpack/msgpack";
+import {Value} from "@sinclair/typebox/value";
 import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
-import {ClpIoConfig} from "@webui/common/schemas/compression";
+import {
+    ClpIoConfig,
+    ClpIoConfigSchema,
+} from "@webui/common/schemas/compression";
 
 import {CompressionMetadataQueryRow} from "./sql.js";
 
@@ -14,7 +18,7 @@ import {CompressionMetadataQueryRow} from "./sql.js";
  * @return
  * @throws {Error} When the buffer is missing or cannot be decoded.
  */
-export const decodeJobConfig = (
+const decodeJobConfig = (
     jobConfig: unknown
 ): {clp_config: ClpIoConfig} => {
     if (!(jobConfig instanceof Buffer)) {
@@ -22,9 +26,10 @@ export const decodeJobConfig = (
     }
 
     try {
-        const decodedClpConfig = decode(
-            brotliDecompressSync(jobConfig)
-        ) as ClpIoConfig;
+        const decodedClpConfig = Value.Parse(
+            ClpIoConfigSchema,
+            decode(brotliDecompressSync(jobConfig))
+        );
 
         return {clp_config: decodedClpConfig};
     } catch (err: unknown) {
@@ -39,7 +44,7 @@ export const decodeJobConfig = (
  * @param rows
  * @return
  */
-export const mapCompressionMetadataRows = (
+const mapCompressionMetadataRows = (
     rows: CompressionMetadataQueryRow[]
 ): CompressionMetadataDecoded[] => {
     return rows.map(
@@ -69,4 +74,9 @@ export const mapCompressionMetadataRows = (
             };
         }
     );
+};
+
+export {
+    decodeJobConfig,
+    mapCompressionMetadataRows,
 };

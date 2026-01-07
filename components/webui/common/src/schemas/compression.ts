@@ -127,8 +127,10 @@ const ClpIoOutputConfigSchema = Type.Object({
  */
 const ClpIoConfigSchema =
     Type.Object({
-        input: Type.Union([ClpIoFsInputConfigSchema,
-            (ClpIoS3InputConfigSchema)]),
+        input: Type.Union([
+            ClpIoFsInputConfigSchema,
+            ClpIoS3InputConfigSchema,
+        ]),
         output: ClpIoOutputConfigSchema,
     });
 

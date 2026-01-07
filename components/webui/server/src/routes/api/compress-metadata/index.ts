@@ -31,7 +31,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             },
         },
         async () => {
-            console.log("Fetching compression metadata...");
             const [rows] = await fastify.mysql.query<CompressionMetadataQueryRow[]>(
                 getCompressionMetadataQuery()
             );
