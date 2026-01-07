@@ -47,6 +47,7 @@ clpConfig:
     port: 30306
     names:
       clp: "clp-db"
+      spider: "spider-db"
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
