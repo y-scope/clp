@@ -180,7 +180,7 @@ def delete_archives_from_metadata_db(
 ) -> None:
     """
     Deletes archives from the metadata database specified by a list of IDs. It also deletes
-    the associated entries from `file_splits` and `files` tables that reference these archives.
+    the associated entries from the `files` table that reference these archives.
 
     The order of deletion follows the foreign key constraints, ensuring no violations occur during
     the process.
