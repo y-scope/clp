@@ -252,6 +252,11 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
                             old_buf_occupied,
                             m_buf_occupied
                     );
+                } else {
+                    // Sanitization made no changes - report the original error to avoid infinite
+                    // loop
+                    m_error_code = m_doc_it.error();
+                    return false;
                 }
 
                 // Re-setup the document stream and restart iteration
@@ -313,6 +318,11 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
                             old_buf_occupied,
                             m_buf_occupied
                     );
+                } else {
+                    // Sanitization made no changes - report the original error to avoid infinite
+                    // loop
+                    m_error_code = simdjson::error_code::UTF8_ERROR;
+                    return false;
                 }
 
                 // Re-setup the document stream and restart iteration
