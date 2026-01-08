@@ -118,6 +118,29 @@ public:
             size_t simdjson_padding
     );
 
+    /**
+     * Sanitizes a buffer by replacing invalid UTF-8 sequences with the Unicode replacement
+     * character (U+FFFD). This is used to fix malformed data that contains invalid UTF-8
+     * which would cause JSON parsing errors.
+     *
+     * @param buf Pointer to pointer to the buffer. May be reallocated if expansion is needed.
+     *            The caller's pointer will be updated to point to the new buffer if reallocation
+     *            occurs. The caller is responsible for deleting the buffer.
+     * @param buf_size Current allocated size of the buffer (excluding simdjson padding).
+     *                 This parameter is modified by reference and will be updated if the buffer
+     *                 is reallocated to reflect the new buffer size.
+     * @param buf_occupied Number of bytes currently used in the buffer.
+     * @param simdjson_padding Amount of padding required after buffer content.
+     * @return Result containing new buf_occupied and counts of each type of invalid sequence
+     *         replaced.
+     */
+    static JsonSanitizeResult sanitize_utf8_buffer(
+            char*& buf,
+            size_t& buf_size,
+            size_t buf_occupied,
+            size_t simdjson_padding
+    );
+
 private:
     /**
      * Converts a character into its two byte hexadecimal representation.

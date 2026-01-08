@@ -257,6 +257,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::bool_switch(&m_structurize_arrays),
                     "Structurize arrays instead of compressing them as clp strings."
             )(
+                    "sanitize-invalid-json",
+                    po::bool_switch(&m_sanitize_invalid_json),
+                    "Sanitize invalid JSON by escaping unescaped control characters (0x00-0x1F),"
+                    " replacing invalid UTF-8 sequences with U+FFFD, and handling invalid"
+                    " surrogate escapes. When disabled (default), parsing fails on invalid JSON."
+            )(
                     "disable-log-order",
                     po::bool_switch(&m_disable_log_order),
                     "Do not record log order at ingestion time; Do not record the archive range"

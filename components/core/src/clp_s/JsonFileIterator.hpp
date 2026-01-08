@@ -21,12 +21,14 @@ public:
 
      * @param reader the input stream containing JSON
      * @param max_document_size the maximum allowed size of a single document
+     * @param sanitize_invalid_json whether to sanitize invalid JSON (control chars, invalid UTF-8)
      * @param path optional path to the file being read (used for logging)
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
             clp::ReaderInterface& reader,
             size_t max_document_size,
+            bool sanitize_invalid_json,
             std::string path = {},
             size_t buf_size = 1024 * 1024 /* 1 MiB default */
     );
@@ -89,6 +91,7 @@ private:
     char* m_buf{nullptr};
     clp::ReaderInterface& m_reader;
     std::string m_path;
+    bool m_sanitize_invalid_json{false};
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};

@@ -233,6 +233,148 @@ JsonSanitizeResult StringUtils::sanitize_json_buffer(
     return {sanitized.size(), std::move(sanitized_char_counts)};
 }
 
+namespace {
+/**
+ * Checks if a byte is a valid UTF-8 continuation byte (10xxxxxx pattern).
+ * @param byte The byte to check
+ * @return true if the byte is a valid continuation byte (0x80-0xBF)
+ */
+constexpr bool is_continuation_byte(unsigned char byte) {
+    return (byte & 0xC0) == 0x80;
+}
+
+/**
+ * Validates a UTF-8 sequence starting at the given position and returns the sequence length.
+ * @param buf The buffer containing the UTF-8 data
+ * @param pos Current position in the buffer
+ * @param buf_occupied Total bytes in the buffer
+ * @return The length of the valid UTF-8 sequence (1-4), or 0 if invalid
+ */
+size_t validate_utf8_sequence(char const* buf, size_t pos, size_t buf_occupied) {
+    auto const byte = static_cast<unsigned char>(buf[pos]);
+    size_t remaining = buf_occupied - pos;
+
+    // ASCII (0x00-0x7F)
+    if (byte <= 0x7F) {
+        return 1;
+    }
+
+    // Invalid: continuation byte without leader, or invalid lead bytes
+    if (byte < 0xC2 || byte > 0xF4) {
+        return 0;
+    }
+
+    // 2-byte sequence (0xC2-0xDF)
+    if (byte <= 0xDF) {
+        if (remaining < 2 || !is_continuation_byte(static_cast<unsigned char>(buf[pos + 1]))) {
+            return 0;
+        }
+        return 2;
+    }
+
+    // 3-byte sequence (0xE0-0xEF)
+    if (byte <= 0xEF) {
+        if (remaining < 3) {
+            return 0;
+        }
+        auto const byte2 = static_cast<unsigned char>(buf[pos + 1]);
+        auto const byte3 = static_cast<unsigned char>(buf[pos + 2]);
+
+        if (!is_continuation_byte(byte2) || !is_continuation_byte(byte3)) {
+            return 0;
+        }
+
+        // Check for overlong encoding (E0 requires second byte >= 0xA0)
+        if (byte == 0xE0 && byte2 < 0xA0) {
+            return 0;
+        }
+
+        // Check for surrogate code points (ED with second byte >= 0xA0 means 0xD800-0xDFFF)
+        if (byte == 0xED && byte2 >= 0xA0) {
+            return 0;
+        }
+
+        return 3;
+    }
+
+    // 4-byte sequence (0xF0-0xF4)
+    if (remaining < 4) {
+        return 0;
+    }
+    auto const byte2 = static_cast<unsigned char>(buf[pos + 1]);
+    auto const byte3 = static_cast<unsigned char>(buf[pos + 2]);
+    auto const byte4 = static_cast<unsigned char>(buf[pos + 3]);
+
+    if (!is_continuation_byte(byte2) || !is_continuation_byte(byte3)
+        || !is_continuation_byte(byte4))
+    {
+        return 0;
+    }
+
+    // Check for overlong encoding (F0 requires second byte >= 0x90)
+    if (byte == 0xF0 && byte2 < 0x90) {
+        return 0;
+    }
+
+    // Check for code points > U+10FFFF (F4 requires second byte <= 0x8F)
+    if (byte == 0xF4 && byte2 > 0x8F) {
+        return 0;
+    }
+
+    return 4;
+}
+}  // namespace
+
+JsonSanitizeResult StringUtils::sanitize_utf8_buffer(
+        char*& buf,
+        size_t& buf_size,
+        size_t buf_occupied,
+        size_t simdjson_padding
+) {
+    // Build sanitized content in a temporary buffer, replacing invalid UTF-8 sequences
+    // with the Unicode replacement character U+FFFD (0xEF 0xBF 0xBD).
+    std::string sanitized;
+
+    // We use a special key to count invalid UTF-8 sequences
+    // Using 0xFF as the key since it's never a valid UTF-8 byte
+    std::map<char, size_t> sanitized_char_counts;
+    constexpr char cInvalidUtf8Key = static_cast<char>(0xFF);
+
+    size_t i = 0;
+    while (i < buf_occupied) {
+        size_t seq_len = validate_utf8_sequence(buf, i, buf_occupied);
+        if (seq_len > 0) {
+            // Valid sequence - copy it
+            sanitized.append(buf + i, seq_len);
+            i += seq_len;
+        } else {
+            // Invalid sequence - replace with U+FFFD
+            sanitized.append("\xEF\xBF\xBD", 3);
+            ++sanitized_char_counts[cInvalidUtf8Key];
+            // Skip one byte and continue (maximal subpart replacement strategy)
+            ++i;
+        }
+    }
+
+    // If no changes were made, return early
+    if (sanitized.size() == buf_occupied) {
+        return {buf_occupied, {}};
+    }
+
+    // Grow buffer if needed to hold sanitized content
+    if (sanitized.size() > buf_size) {
+        size_t new_buf_size = sanitized.size();
+        char* new_buf = new char[new_buf_size + simdjson_padding];
+        delete[] buf;
+        buf = new_buf;
+        buf_size = new_buf_size;
+    }
+
+    // Copy sanitized content to buffer
+    std::memcpy(buf, sanitized.data(), sanitized.size());
+    return {sanitized.size(), std::move(sanitized_char_counts)};
+}
+
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
     // Escaping is implemented using this `append_unescaped_slice` approach to offer a fast path
     // when strings are mostly or entirely valid escaped JSON. Benchmarking shows that this offers
