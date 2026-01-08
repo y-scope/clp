@@ -5,7 +5,7 @@ import {Value} from "@sinclair/typebox/value";
 import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import {
     ClpIoConfig,
-    ClpIoConfigSchema,
+    ClpIoPartialConfigSchema,
 } from "@webui/common/schemas/compression";
 
 import {CompressionMetadataQueryRow} from "./sql.js";
@@ -27,9 +27,9 @@ const decodeJobConfig = (
 
     try {
         const decodedClpConfig = Value.Parse(
-            ClpIoConfigSchema,
+            ClpIoPartialConfigSchema,
             decode(brotliDecompressSync(jobConfig))
-        );
+        ) as ClpIoConfig;
 
         return {clp_config: decodedClpConfig};
     } catch (err: unknown) {
