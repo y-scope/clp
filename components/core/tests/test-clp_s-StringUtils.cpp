@@ -8,7 +8,7 @@
 
 #include "../src/clp_s/Utils.hpp"
 
-using clp_s::JsonSanitizeResult;
+using clp_s::BufferSanitizeResult;
 using clp_s::StringUtils;
 
 // We use C++14 string literals (the `s` suffix) to construct strings containing embedded null bytes
@@ -23,7 +23,7 @@ namespace {
  * Result structure containing both the sanitization result and the output string.
  */
 struct SanitizeResultWithOutput {
-    JsonSanitizeResult result;
+    BufferSanitizeResult result;
     std::string output;
 };
 

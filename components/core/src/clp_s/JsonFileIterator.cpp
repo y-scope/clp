@@ -78,7 +78,7 @@ bool JsonFileIterator::read_new_json() {
             if (simdjson::error_code::UTF8_ERROR == error) {
                 // Return value intentionally ignored - in read_new_json we always retry after
                 // sanitization regardless of whether changes were made
-                static_cast<void>(sanitize_and_log_utf8());
+                static_cast<void>(sanitize_invalid_utf8_and_log());
                 error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied).get(m_stream);
             }
 
@@ -86,7 +86,7 @@ bool JsonFileIterator::read_new_json() {
             if (simdjson::error_code::UNESCAPED_CHARS == error) {
                 // Return value intentionally ignored - in read_new_json we always retry after
                 // sanitization regardless of whether changes were made
-                static_cast<void>(sanitize_and_log_json());
+                static_cast<void>(sanitize_control_chars_and_log());
                 error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied).get(m_stream);
             }
         }
@@ -122,8 +122,10 @@ size_t JsonFileIterator::skip_whitespace_and_get_truncated_bytes() {
     return m_buf_occupied - m_next_document_position;
 }
 
-bool JsonFileIterator::sanitize_and_log_utf8() {
+bool JsonFileIterator::sanitize_invalid_utf8_and_log() {
     size_t const old_buf_occupied = m_buf_occupied;
+    // Note: sanitize_utf8_buffer may reallocate m_buf and will update m_buf_size by reference if
+    // reallocation is needed. This keeps m_buf_size in sync with the actual allocated buffer size.
     auto const result = StringUtils::sanitize_utf8_buffer(
             m_buf,
             m_buf_size,
@@ -142,7 +144,7 @@ bool JsonFileIterator::sanitize_and_log_utf8() {
         total_replaced += count;
     }
     SPDLOG_WARN(
-            "Replaced {} invalid UTF-8 sequence(s) with U+FFFD{}. Buffer size changed by {} bytes "
+            "Replaced {} invalid UTF-8 sequence(s) with U+FFFD{}. Buffer expanded by {} bytes "
             "({} -> {}).",
             total_replaced,
             m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
@@ -153,7 +155,7 @@ bool JsonFileIterator::sanitize_and_log_utf8() {
     return true;
 }
 
-bool JsonFileIterator::sanitize_and_log_json() {
+bool JsonFileIterator::sanitize_control_chars_and_log() {
     size_t const old_buf_occupied = m_buf_occupied;
     // Note: sanitize_json_buffer may reallocate m_buf and will update m_buf_size by reference if
     // reallocation is needed. This keeps m_buf_size in sync with the actual allocated buffer size.
@@ -185,10 +187,22 @@ bool JsonFileIterator::sanitize_and_log_json() {
             total_sanitized,
             m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
             char_details,
-            m_buf_occupied - old_buf_occupied,
+            static_cast<int64_t>(m_buf_occupied) - static_cast<int64_t>(old_buf_occupied),
             old_buf_occupied,
             m_buf_occupied
     );
+    return true;
+}
+
+bool JsonFileIterator::reinitialize_document_stream() {
+    auto error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied).get(m_stream);
+    if (error) {
+        m_error_code = error;
+        return false;
+    }
+    m_doc_it = m_stream.begin();
+    m_first_doc_in_buffer = true;
+    m_next_document_position = 0;
     return true;
 }
 
@@ -220,23 +234,16 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
             {
                 // Unescaped control characters detected during document iteration. Sanitize the
                 // buffer and re-setup the document stream to restart from the beginning.
-                if (false == sanitize_and_log_json()) {
+                if (false == sanitize_control_chars_and_log()) {
                     // Sanitization made no changes - report the original error to avoid infinite
                     // loop
                     m_error_code = m_doc_it.error();
                     return false;
                 }
 
-                // Re-setup the document stream and restart iteration
-                auto error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied)
-                                     .get(m_stream);
-                if (error) {
-                    m_error_code = error;
+                if (false == reinitialize_document_stream()) {
                     return false;
                 }
-                m_doc_it = m_stream.begin();
-                m_first_doc_in_buffer = true;
-                m_next_document_position = 0;
                 continue;
             } else {
                 m_error_code = m_doc_it.error();
@@ -261,23 +268,16 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
             // way to check is to parse it ourselves, so we rely on this heuristic for now.
             if (m_sanitize_invalid_json) {
                 // Sanitize invalid UTF-8 sequences and retry
-                if (false == sanitize_and_log_utf8()) {
+                if (false == sanitize_invalid_utf8_and_log()) {
                     // Sanitization made no changes - report the original error to avoid infinite
                     // loop
                     m_error_code = simdjson::error_code::UTF8_ERROR;
                     return false;
                 }
 
-                // Re-setup the document stream and restart iteration
-                auto error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied)
-                                     .get(m_stream);
-                if (error) {
-                    m_error_code = error;
+                if (false == reinitialize_document_stream()) {
                     return false;
                 }
-                m_doc_it = m_stream.begin();
-                m_first_doc_in_buffer = true;
-                m_next_document_position = 0;
                 continue;
             }
             m_error_code = simdjson::error_code::UTF8_ERROR;

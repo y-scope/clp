@@ -164,64 +164,73 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     return true;
 }
 
-JsonSanitizeResult StringUtils::sanitize_json_buffer(
+BufferSanitizeResult StringUtils::sanitize_json_buffer(
         char*& buf,
         size_t& buf_size,
         size_t buf_occupied,
         size_t simdjson_padding
 ) {
-    // Build sanitized content in a temporary buffer, escaping control characters
-    // inside JSON strings. This is a fallback path only triggered on UNESCAPED_CHARS error,
-    // so we prioritize correctness over performance.
+    // Early return for empty or null buffer
+    if (nullptr == buf || 0 == buf_occupied) {
+        return {buf_occupied, {}};
+    }
+
+    // Sanitize by escaping control characters inside JSON strings. Uses a lazy-copy approach:
+    // only allocate the output string when the first control character is found, and copy
+    // valid ranges in bulk rather than byte-by-byte for efficiency.
     //
     // Note: If the buffer contains unmatched quotes (e.g., truncated JSON), the string state
     // tracking may be incorrect, potentially escaping control characters outside of actual
     // JSON strings. This is acceptable since such malformed JSON will fail parsing anyway.
     std::string sanitized;
-
     std::map<char, size_t> sanitized_char_counts;
     bool in_string = false;
     bool escape_next = false;
+    size_t copy_start = 0;
 
     for (size_t i = 0; i < buf_occupied; ++i) {
-        char c = buf[i];
+        char const c = buf[i];
 
         if (escape_next) {
             escape_next = false;
-            sanitized.push_back(c);
             continue;
         }
 
-        if (c == '\\' && in_string) {
+        if ('\\' == c && in_string) {
             escape_next = true;
-            sanitized.push_back(c);
             continue;
         }
 
-        if (c == '"') {
+        if ('"' == c) {
             in_string = !in_string;
-            sanitized.push_back(c);
             continue;
         }
 
         // Escape control characters (0x00-0x1F) inside strings to \u00XX format
         if (in_string && static_cast<unsigned char>(c) < 0x20) {
+            if (sanitized.empty()) {
+                // First control char found - allocate with extra space for escapes
+                sanitized.reserve(buf_occupied + 64);
+            }
+            // Copy the valid range before this control character
+            sanitized.append(buf + copy_start, i - copy_start);
             char_to_escaped_four_char_hex(sanitized, c);
             ++sanitized_char_counts[c];
-        } else {
-            sanitized.push_back(c);
+            copy_start = i + 1;
         }
     }
 
-    // If no changes were made, return early
-    if (sanitized.size() == buf_occupied) {
+    // If no sanitization was needed, return early without any allocation
+    if (sanitized.empty()) {
         return {buf_occupied, {}};
     }
 
+    // Copy any remaining content after the last control character
+    sanitized.append(buf + copy_start, buf_occupied - copy_start);
+
     // Grow buffer if needed to hold sanitized content
     if (sanitized.size() > buf_size) {
-        // Allocate exactly the size needed since we know the exact size upfront
-        size_t new_buf_size = sanitized.size();
+        size_t const new_buf_size = sanitized.size();
         char* new_buf = new char[new_buf_size + simdjson_padding];
         delete[] buf;
         buf = new_buf;
@@ -325,45 +334,60 @@ size_t validate_utf8_sequence(char const* buf, size_t pos, size_t buf_occupied) 
 }
 }  // namespace
 
-JsonSanitizeResult StringUtils::sanitize_utf8_buffer(
+BufferSanitizeResult StringUtils::sanitize_utf8_buffer(
         char*& buf,
         size_t& buf_size,
         size_t buf_occupied,
         size_t simdjson_padding
 ) {
-    // Build sanitized content in a temporary buffer, replacing invalid UTF-8 sequences
-    // with the Unicode replacement character U+FFFD (0xEF 0xBF 0xBD).
-    std::string sanitized;
-
-    // We use a special key to count invalid UTF-8 sequences
-    // Using 0xFF as the key since it's never a valid UTF-8 byte
-    std::map<char, size_t> sanitized_char_counts;
-    constexpr char cInvalidUtf8Key = static_cast<char>(0xFF);
-
-    size_t i = 0;
-    while (i < buf_occupied) {
-        size_t seq_len = validate_utf8_sequence(buf, i, buf_occupied);
-        if (seq_len > 0) {
-            // Valid sequence - copy it
-            sanitized.append(buf + i, seq_len);
-            i += seq_len;
-        } else {
-            // Invalid sequence - replace with U+FFFD
-            sanitized.append("\xEF\xBF\xBD", 3);
-            ++sanitized_char_counts[cInvalidUtf8Key];
-            // Skip one byte and continue (maximal subpart replacement strategy)
-            ++i;
-        }
-    }
-
-    // If no changes were made, return early
-    if (sanitized.size() == buf_occupied) {
+    // Early return for empty or null buffer
+    if (nullptr == buf || 0 == buf_occupied) {
         return {buf_occupied, {}};
     }
 
+    // Sanitize by replacing invalid UTF-8 sequences with U+FFFD. Uses a lazy-copy approach:
+    // only allocate the output string when the first invalid sequence is found, and copy
+    // valid ranges in bulk rather than byte-by-byte for efficiency.
+    constexpr std::string_view cUtf8ReplacementChar{"\xEF\xBF\xBD", 3};
+    constexpr char cInvalidUtf8Key = static_cast<char>(0xFF);
+
+    std::string sanitized;
+    std::map<char, size_t> sanitized_char_counts;
+    size_t copy_start = 0;
+
+    size_t i = 0;
+    while (i < buf_occupied) {
+        size_t const seq_len = validate_utf8_sequence(buf, i, buf_occupied);
+        if (seq_len > 0) {
+            // Valid sequence - advance position (will be copied in bulk later)
+            i += seq_len;
+        } else {
+            // Invalid sequence - need to sanitize
+            if (sanitized.empty()) {
+                // First invalid sequence found - allocate with extra space for replacements
+                sanitized.reserve(buf_occupied + 64);
+            }
+            // Copy the valid range before this invalid byte
+            sanitized.append(buf + copy_start, i - copy_start);
+            sanitized.append(cUtf8ReplacementChar);
+            ++sanitized_char_counts[cInvalidUtf8Key];
+            // Skip one byte and continue (maximal subpart replacement strategy)
+            ++i;
+            copy_start = i;
+        }
+    }
+
+    // If no sanitization was needed, return early without any allocation
+    if (sanitized.empty()) {
+        return {buf_occupied, {}};
+    }
+
+    // Copy any remaining valid content after the last invalid byte
+    sanitized.append(buf + copy_start, buf_occupied - copy_start);
+
     // Grow buffer if needed to hold sanitized content
     if (sanitized.size() > buf_size) {
-        size_t new_buf_size = sanitized.size();
+        size_t const new_buf_size = sanitized.size();
         char* new_buf = new char[new_buf_size + simdjson_padding];
         delete[] buf;
         buf = new_buf;

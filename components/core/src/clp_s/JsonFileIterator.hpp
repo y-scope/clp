@@ -13,7 +13,7 @@ public:
     /**
      * An iterator over an input stream containing json objects. JSON is parsed
      * using simdjson::parse_many. This allows simdjson to efficiently find
-     * delimeters between JSON objects, and if enabled parse JSON ahead of time
+     * delimiters between JSON objects, and if enabled parse JSON ahead of time
      * in another thread while the JSON is being iterated over.
      *
      * The buffer grows automatically if there are JSON objects larger than the buffer size.
@@ -85,15 +85,24 @@ private:
      * Sanitizes invalid UTF-8 sequences in the buffer by replacing them with U+FFFD,
      * updates buffer tracking variables, and logs a warning if changes were made.
      * @return true if sanitization made changes, false otherwise
+     * @note May reallocate m_buf if buffer expansion is needed. m_buf_size is updated accordingly.
      */
-    [[nodiscard]] bool sanitize_and_log_utf8();
+    [[nodiscard]] bool sanitize_invalid_utf8_and_log();
 
     /**
      * Sanitizes unescaped control characters in the buffer by escaping them to \\u00XX format,
      * updates buffer tracking variables, and logs a warning if changes were made.
      * @return true if sanitization made changes, false otherwise
+     * @note May reallocate m_buf if buffer expansion is needed. m_buf_size is updated accordingly.
      */
-    [[nodiscard]] bool sanitize_and_log_json();
+    [[nodiscard]] bool sanitize_control_chars_and_log();
+
+    /**
+     * Reinitializes the document stream after buffer sanitization.
+     * Resets iteration state to start from the beginning of the buffer.
+     * @return true on success, false if iteration setup fails (m_error_code is set on failure)
+     */
+    [[nodiscard]] bool reinitialize_document_stream();
 
     size_t m_truncated_bytes{0};
     size_t m_next_document_position{0};

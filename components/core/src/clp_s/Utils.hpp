@@ -65,10 +65,14 @@ public:
 };
 
 /**
- * Result of sanitizing a JSON buffer, including statistics about what was sanitized.
+ * Result of sanitizing a buffer, including statistics about what was sanitized.
  */
-struct JsonSanitizeResult {
+struct BufferSanitizeResult {
+    /// New number of bytes occupied in the buffer after sanitization.
     size_t new_buf_occupied;
+    /// Map of sanitized characters to their occurrence counts.
+    /// For JSON control char sanitization: key is the actual control character (0x00-0x1F).
+    /// For UTF-8 sanitization: key is 0xFF (sentinel value for all invalid sequences).
     std::map<char, size_t> sanitized_char_counts;
 };
 
@@ -101,7 +105,7 @@ public:
      *
      * Characters are escaped using unicode escape sequences (e.g., \x00 becomes \u0000).
      *
-     * @param buf Pointer to pointer to the buffer. May be reallocated if expansion is needed.
+     * @param buf Reference to pointer to the buffer. May be reallocated if expansion is needed.
      *             The caller's pointer will be updated to point to the new buffer if reallocation
      *             occurs. The caller is responsible for deleting the buffer.
      * @param buf_size Current allocated size of the buffer (excluding simdjson padding).
@@ -111,7 +115,7 @@ public:
      * @param simdjson_padding Amount of padding required after buffer content.
      * @return Result containing new buf_occupied and counts of each sanitized character.
      */
-    static JsonSanitizeResult sanitize_json_buffer(
+    static BufferSanitizeResult sanitize_json_buffer(
             char*& buf,
             size_t& buf_size,
             size_t buf_occupied,
@@ -123,7 +127,7 @@ public:
      * character (U+FFFD). This is used to fix malformed data that contains invalid UTF-8
      * which would cause JSON parsing errors.
      *
-     * @param buf Pointer to pointer to the buffer. May be reallocated if expansion is needed.
+     * @param buf Reference to pointer to the buffer. May be reallocated if expansion is needed.
      *            The caller's pointer will be updated to point to the new buffer if reallocation
      *            occurs. The caller is responsible for deleting the buffer.
      * @param buf_size Current allocated size of the buffer (excluding simdjson padding).
@@ -134,7 +138,7 @@ public:
      * @return Result containing new buf_occupied and counts of each type of invalid sequence
      *         replaced.
      */
-    static JsonSanitizeResult sanitize_utf8_buffer(
+    static BufferSanitizeResult sanitize_utf8_buffer(
             char*& buf,
             size_t& buf_size,
             size_t buf_occupied,
@@ -148,7 +152,6 @@ private:
      * @return the two byte hexadecimal representation of c as an array of two characters.
      */
     static std::array<char, 2> char_to_hex(char c) {
-        std::array<char, 2> ret;
         auto nibble_to_hex = [](char nibble) -> char {
             if ('\x00' <= nibble && nibble <= '\x09') {
                 return '0' + (nibble - '\x00');
@@ -157,7 +160,7 @@ private:
             }
         };
 
-        return std::array<char, 2>{nibble_to_hex(0x0F & (c >> 4)), nibble_to_hex(0x0f & c)};
+        return {nibble_to_hex(0x0F & (c >> 4)), nibble_to_hex(0x0f & c)};
     }
 
     /**
