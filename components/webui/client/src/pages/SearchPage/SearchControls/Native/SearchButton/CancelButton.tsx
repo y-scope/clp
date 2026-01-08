@@ -49,7 +49,6 @@ const CancelButton = () => {
             type={"primary"}
             onClick={handleCancelButtonClick}
         >
-            Cancel
         </Button>
     );
 };

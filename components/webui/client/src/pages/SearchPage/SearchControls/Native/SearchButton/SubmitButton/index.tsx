@@ -138,7 +138,6 @@ const SubmitButton = () => {
                     });
                 }}
             >
-                Search
             </Button>
         </Tooltip>
     );
