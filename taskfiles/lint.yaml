@@ -793,10 +793,10 @@ tasks:
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy . || true
       - for:
-          - "components/core/tools/scripts/utils"
+          - "components/core/tools/scripts"
+          - "docs/conf"
           - "tools/deployment"
           - "tools/scripts"
-          - "docs/conf"
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
