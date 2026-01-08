@@ -7,7 +7,8 @@ import nativeStyles from "./index.module.css";
 
 /**
  * Renders CLP-S controls.
- * @returns
+ *
+ * @return
  */
 const ClpSControls = () => (
     <>

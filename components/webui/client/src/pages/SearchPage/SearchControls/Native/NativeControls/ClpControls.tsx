@@ -6,7 +6,8 @@ import SearchButton from "../SearchButton";
 
 /**
  * Renders CLP search controls.
- * @returns
+ *
+ * @return
  */
 const ClpControls = () => (
     <div className={styles["inputsAndButtonRow"]}>
