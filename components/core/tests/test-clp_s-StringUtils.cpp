@@ -274,6 +274,257 @@ TEST_CASE("sanitize_json_buffer_truncated_json", "[clp_s][StringUtils]") {
     }
 }
 
+// =====================================================================================
+// UTF-8 Sanitization Tests
+// =====================================================================================
+
+namespace {
+/**
+ * Helper to create a buffer with simdjson padding and run UTF-8 sanitization.
+ * @param input The input string to sanitize
+ * @return The sanitized string
+ */
+auto sanitize_utf8_string(std::string_view input) -> std::string {
+    size_t buf_size = input.size();
+    size_t buf_occupied = input.size();
+    char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
+    std::memcpy(buf, input.data(), input.size());
+
+    try {
+        auto const result = StringUtils::sanitize_utf8_buffer(
+                buf,
+                buf_size,
+                buf_occupied,
+                simdjson::SIMDJSON_PADDING
+        );
+        std::string output(buf, result.new_buf_occupied);
+        delete[] buf;
+        return output;
+    } catch (...) {
+        delete[] buf;
+        throw;
+    }
+}
+
+/**
+ * Count occurrences of U+FFFD replacement character (0xEF 0xBF 0xBD) in a string.
+ */
+auto count_replacement_chars(std::string_view s) -> size_t {
+    size_t count = 0;
+    for (size_t i = 0; i + 2 < s.size(); ++i) {
+        if (static_cast<unsigned char>(s[i]) == 0xEF && static_cast<unsigned char>(s[i + 1]) == 0xBF
+            && static_cast<unsigned char>(s[i + 2]) == 0xBD)
+        {
+            ++count;
+            i += 2;  // Skip past the replacement char
+        }
+    }
+    return count;
+}
+}  // namespace
+
+TEST_CASE("sanitize_utf8_buffer_no_changes", "[clp_s][StringUtils]") {
+    SECTION("valid ASCII") {
+        std::string input = "Hello, World!";
+        REQUIRE(sanitize_utf8_string(input) == input);
+    }
+
+    SECTION("valid UTF-8 multibyte characters") {
+        // 2-byte: é (U+00E9) = 0xC3 0xA9
+        // 3-byte: € (U+20AC) = 0xE2 0x82 0xAC
+        // 4-byte: 𝄞 (U+1D11E) = 0xF0 0x9D 0x84 0x9E
+        std::string input = "café € 𝄞";
+        REQUIRE(sanitize_utf8_string(input) == input);
+    }
+
+    SECTION("valid JSON with UTF-8") {
+        std::string input = R"({"msg": "日本語テスト"})";
+        REQUIRE(sanitize_utf8_string(input) == input);
+    }
+
+    SECTION("empty string") {
+        std::string input = "";
+        REQUIRE(sanitize_utf8_string(input) == input);
+    }
+}
+
+TEST_CASE("sanitize_utf8_buffer_replaces_invalid_bytes", "[clp_s][StringUtils]") {
+    // U+FFFD is encoded as 0xEF 0xBF 0xBD in UTF-8
+    constexpr char cReplacementChar[] = "\xEF\xBF\xBD";
+
+    SECTION("single invalid byte 0xFF") {
+        auto input = "hello\xFF world"s;
+        std::string expected = "hello" + std::string(cReplacementChar) + " world";
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("single invalid byte 0xFE") {
+        auto input = "test\xFE"s;
+        std::string expected = "test" + std::string(cReplacementChar);
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("multiple invalid bytes") {
+        auto input = "\xFF\xFE\xFF"s;
+        std::string expected = std::string(cReplacementChar) + cReplacementChar + cReplacementChar;
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("continuation byte without leader (0x80-0xBF)") {
+        auto input = "test\x80 value"s;
+        std::string expected = "test" + std::string(cReplacementChar) + " value";
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("truncated 2-byte sequence") {
+        // 0xC3 expects one continuation byte, but we end the string
+        auto input = "test\xC3"s;
+        std::string expected = "test" + std::string(cReplacementChar);
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("truncated 3-byte sequence") {
+        // 0xE2 expects two continuation bytes
+        auto input = "test\xE2\x82"s;
+        std::string expected
+                = "test" + std::string(cReplacementChar) + std::string(cReplacementChar);
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("truncated 4-byte sequence") {
+        // 0xF0 expects three continuation bytes
+        auto input = "test\xF0\x9D\x84"s;
+        std::string expected = "test" + std::string(cReplacementChar)
+                               + std::string(cReplacementChar) + std::string(cReplacementChar);
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("overlong 2-byte encoding") {
+        // 0xC0 0x80 is overlong encoding of NUL (should be just 0x00)
+        // 0xC0 and 0xC1 are never valid UTF-8 lead bytes
+        auto input = "test\xC0\x80"s;
+        // Both bytes are invalid
+        std::string expected
+                = "test" + std::string(cReplacementChar) + std::string(cReplacementChar);
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("surrogate code points (U+D800-U+DFFF)") {
+        // 0xED 0xA0 0x80 encodes U+D800 (invalid surrogate)
+        auto input = "test\xED\xA0\x80 end"s;
+        // The sequence is invalid, bytes replaced individually
+        std::string expected = "test" + std::string(cReplacementChar)
+                               + std::string(cReplacementChar) + std::string(cReplacementChar)
+                               + " end";
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("code point above U+10FFFF") {
+        // 0xF4 0x90 0x80 0x80 would encode U+110000 (above max)
+        auto input = "test\xF4\x90\x80\x80 end"s;
+        std::string sanitized = sanitize_utf8_string(input);
+        // Should contain replacement characters
+        REQUIRE(count_replacement_chars(sanitized) >= 1);
+    }
+}
+
+TEST_CASE("sanitize_utf8_buffer_mixed_valid_invalid", "[clp_s][StringUtils]") {
+    constexpr char cReplacementChar[] = "\xEF\xBF\xBD";
+
+    SECTION("invalid byte between valid UTF-8") {
+        // café with invalid byte in middle
+        auto input = "caf\xC3\xA9\xFF test"s;  // café + 0xFF + " test"
+        std::string expected = "caf\xC3\xA9" + std::string(cReplacementChar) + " test";
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+
+    SECTION("JSON with invalid UTF-8 in value") {
+        auto input = "{\"msg\": \"test\xFF value\"}"s;
+        std::string expected = "{\"msg\": \"test" + std::string(cReplacementChar) + " value\"}";
+        REQUIRE(sanitize_utf8_string(input) == expected);
+    }
+}
+
+TEST_CASE("sanitize_utf8_buffer_returns_correct_counts", "[clp_s][StringUtils]") {
+    SECTION("counts invalid sequences") {
+        auto input = "\xFF\xFE\xFF"s;  // 3 invalid bytes
+
+        size_t buf_size = input.size();
+        size_t buf_occupied = input.size();
+        char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
+        std::memcpy(buf, input.data(), input.size());
+
+        try {
+            auto const result = StringUtils::sanitize_utf8_buffer(
+                    buf,
+                    buf_size,
+                    buf_occupied,
+                    simdjson::SIMDJSON_PADDING
+            );
+
+            // The count uses 0xFF as a special key for invalid UTF-8 sequences
+            REQUIRE_FALSE(result.sanitized_char_counts.empty());
+            size_t total = 0;
+            for (auto const& [ch, count] : result.sanitized_char_counts) {
+                total += count;
+            }
+            REQUIRE(total == 3);
+
+            delete[] buf;
+        } catch (...) {
+            delete[] buf;
+            throw;
+        }
+    }
+
+    SECTION("returns empty counts when no sanitization needed") {
+        std::string input = "valid UTF-8 string";
+
+        size_t buf_size = input.size();
+        size_t buf_occupied = input.size();
+        char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
+        std::memcpy(buf, input.data(), input.size());
+
+        try {
+            auto const result = StringUtils::sanitize_utf8_buffer(
+                    buf,
+                    buf_size,
+                    buf_occupied,
+                    simdjson::SIMDJSON_PADDING
+            );
+
+            REQUIRE(result.sanitized_char_counts.empty());
+            REQUIRE(result.new_buf_occupied == input.size());
+
+            delete[] buf;
+        } catch (...) {
+            delete[] buf;
+            throw;
+        }
+    }
+}
+
+TEST_CASE("sanitize_utf8_buffer_handles_buffer_growth", "[clp_s][StringUtils]") {
+    // Each invalid byte (1 byte) becomes U+FFFD (3 bytes), so buffer may need to grow
+    SECTION("many invalid bytes requiring expansion") {
+        // 100 invalid bytes -> 300 bytes after replacement with U+FFFD
+        std::string input(100, '\xFF');
+
+        std::string sanitized = sanitize_utf8_string(input);
+
+        // Verify all bytes were replaced
+        REQUIRE(sanitized.find('\xFF') == std::string::npos);
+        // Verify correct number of replacement characters
+        REQUIRE(count_replacement_chars(sanitized) == 100);
+        // Verify size: 100 * 3 = 300 bytes
+        REQUIRE(sanitized.size() == 300);
+    }
+}
+
+// =====================================================================================
+// JSON Sanitization Character Count Tests
+// =====================================================================================
+
 TEST_CASE("sanitize_json_buffer_returns_correct_char_counts", "[clp_s][StringUtils]") {
     SECTION("counts multiple different control characters") {
         // Input with: 3x \x00, 2x \x01, 1x \x1f
