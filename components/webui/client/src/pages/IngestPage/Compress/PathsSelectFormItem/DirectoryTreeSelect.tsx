@@ -1,150 +1,105 @@
-import React, {
+import {
     useCallback,
-    useEffect,
     useMemo,
-    useState,
 } from "react";
 
-import {
-    Tree,
-    TreeSelect,
-} from "antd";
-import type {TreeProps} from "antd/es";
+import {Select} from "antd";
+import type {TreeDataNode} from "antd/es";
 
-import styles from "./index.module.css";
+import DirectoryTreePopup from "./DirectoryTreePopup";
 import {TreeNode} from "./typings";
 import {
+    filterToParents,
     flatToHierarchy,
-    getListHeight,
+    removeWithDescendants,
 } from "./utils";
 
 
-const {DirectoryTree} = Tree;
-
-
 interface DirectoryTreeSelectProps {
+    checkedKeys: string[];
     expandedKeys: string[];
     treeData: TreeNode[];
-    onChange: (values: string[]) => void;
-    onDataLoad: (path: string) => Promise<void>;
+    onCheck: (keys: string[]) => void;
     onExpand: (keys: string[]) => void;
+    onLoadData: (path: string) => Promise<void>;
 }
 
 /**
- * TreeSelect component that uses DirectoryTree for the popup. Provides folder/file icons and
- * intuitive directory navigation.
+ * Renders a select component that uses DirectoryTree for the dropdown. Provides folder/file
+ * icons and intuitive directory navigation.
  *
  * @param props
+ * @param props.checkedKeys
  * @param props.expandedKeys
  * @param props.treeData
- * @param props.onChange
- * @param props.onDataLoad
+ * @param props.onCheck
  * @param props.onExpand
+ * @param props.onLoadData
  * @return
- * @see https://ant.design/components/tree#tree-demo-directory
  */
 const DirectoryTreeSelect = ({
+    checkedKeys,
     expandedKeys,
     treeData,
-    onChange,
-    onDataLoad,
+    onCheck,
     onExpand,
+    onLoadData,
 }: DirectoryTreeSelectProps) => {
-    const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
-    const [listHeight, setListHeight] = useState<number>(getListHeight);
-
-    const hierarchicalTreeData = useMemo(
+    const hierarchicalTreeData: TreeDataNode[] = useMemo(
         () => flatToHierarchy(treeData),
         [treeData]
     );
+    const selectOptions = useMemo(
+        () => treeData.map((node) => ({label: node.value, value: node.value})),
+        [treeData]
+    );
+    const displayValue = useMemo(
+        () => filterToParents(treeData, checkedKeys),
+        [
+            checkedKeys,
+            treeData,
+        ]
+    );
 
-    const handleTreeSelectDataLoad = useCallback(async ({value: nodeValue}: {value?: unknown}) => {
-        if ("string" !== typeof nodeValue) {
-            return;
-        }
-        await onDataLoad(nodeValue);
-    }, [onDataLoad]);
+    const handleClear = useCallback(() => {
+        onCheck([]);
+    }, [onCheck]);
 
-    const handleDirectoryTreeLoadData = useCallback(async (node: {key: React.Key}) => {
-        await onDataLoad(node.key as string);
-    }, [onDataLoad]);
+    const handleDeselect = useCallback((value: string) => {
+        onCheck(removeWithDescendants(treeData, checkedKeys, value));
+    }, [
+        checkedKeys,
+        onCheck,
+        treeData,
+    ]);
 
-    const handleTreeExpand = useCallback((keys: React.Key[]) => {
-        onExpand(keys as string[]);
-    }, [onExpand]);
-
-    const handleDirectoryTreeCheck: TreeProps["onCheck"] = useCallback((
-        checked: React.Key[] | {checked: React.Key[]; halfChecked: React.Key[]}
-    ) => {
-        const keys = Array.isArray(checked) ?
-            checked :
-            checked.checked;
-
-        const stringKeys = keys as string[];
-        setCheckedKeys(stringKeys);
-        onChange(stringKeys);
-    }, [onChange]);
-
-    const handleTreeSelectChange = useCallback((values: string[]) => {
-        setCheckedKeys(values);
-        onChange(values);
-    }, [onChange]);
-
-    const renderPopup = useCallback(() => (
-        <div
-            className={styles["directoryTreePopup"]}
-            style={{height: listHeight, overflow: "auto"}}
-        >
-            <DirectoryTree
-                checkable={true}
-                checkedKeys={checkedKeys}
-                expandedKeys={expandedKeys}
-                loadData={handleDirectoryTreeLoadData}
-                treeData={hierarchicalTreeData}
-                onCheck={handleDirectoryTreeCheck}
-                onExpand={handleTreeExpand}/>
-        </div>
+    const renderDropdown = useCallback(() => (
+        <DirectoryTreePopup
+            checkedKeys={checkedKeys}
+            expandedKeys={expandedKeys}
+            treeData={hierarchicalTreeData}
+            onCheck={onCheck}
+            onExpand={onExpand}
+            onLoadData={onLoadData}/>
     ), [
         checkedKeys,
         expandedKeys,
-        handleDirectoryTreeCheck,
-        handleDirectoryTreeLoadData,
-        handleTreeExpand,
         hierarchicalTreeData,
-        listHeight,
+        onCheck,
+        onExpand,
+        onLoadData,
     ]);
 
-    // On initialization, set up window resize listener to adjust list height.
-    useEffect(() => {
-        const handleResize = () => {
-            setListHeight(getListHeight());
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
-
     return (
-        <TreeSelect
+        <Select
             allowClear={true}
-            listHeight={listHeight}
-            loadData={handleTreeSelectDataLoad}
-            multiple={true}
+            mode={"multiple"}
+            options={selectOptions}
             placeholder={"Select paths to compress"}
-            popupRender={renderPopup}
-            showCheckedStrategy={TreeSelect.SHOW_PARENT}
-            showSearch={false}
-            treeCheckable={true}
-            treeData={treeData}
-            treeDataSimpleMode={true}
-            treeExpandedKeys={expandedKeys}
-            treeNodeLabelProp={"value"}
-            value={checkedKeys}
-            onChange={handleTreeSelectChange}
-            onTreeExpand={handleTreeExpand}/>
+            popupRender={renderDropdown}
+            value={displayValue}
+            onClear={handleClear}
+            onDeselect={handleDeselect}/>
     );
 };
 

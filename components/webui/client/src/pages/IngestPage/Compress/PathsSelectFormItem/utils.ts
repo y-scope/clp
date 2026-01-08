@@ -151,11 +151,82 @@ const flatToHierarchy = (flatData: TreeNode[]): TreeDataNode[] => {
 };
 
 
+/**
+ * Filters checked keys to only include topmost ancestors. That is, if a node's parent is also
+ * checked, the node is excluded from the result.
+ *
+ * @param treeData
+ * @param checkedKeys
+ * @return Filtered keys containing only topmost checked ancestors.
+ */
+const filterToParents = (treeData: TreeNode[], checkedKeys: string[]): string[] => {
+    const checkedSet = new Set(checkedKeys);
+    const nodeMap = new Map(treeData.map((node) => [
+        node.id,
+        node,
+    ]));
+
+    return checkedKeys.filter((key) => {
+        // Include if node not found in tree data
+        if (false === nodeMap.has(key)) {
+            return true;
+        }
+
+        const node = nodeMap.get(key) as TreeNode;
+
+        // Exclude if parent is also checked; include otherwise
+        return null === node.pId || false === checkedSet.has(node.pId);
+    });
+};
+
+/**
+ * Removes a key and all its descendants from the checked keys.
+ *
+ * @param treeData Flat tree data with pId references
+ * @param checkedKeys Current checked keys
+ * @param keyToRemove The key to remove along with its descendants
+ * @return Checked keys with the specified key and descendants removed.
+ */
+const removeWithDescendants = (
+    treeData: TreeNode[],
+    checkedKeys: string[],
+    keyToRemove: string
+): string[] => {
+    // Build set of descendants by traversing the tree
+    const toRemove = new Set<string>([keyToRemove]);
+    const childrenMap = new Map<string, string[]>();
+
+    for (const node of treeData) {
+        if (null !== node.pId) {
+            const children = childrenMap.get(node.pId) ?? [];
+            children.push(node.id);
+            childrenMap.set(node.pId, children);
+        }
+    }
+
+    // BFS to find all descendants
+    const queue = [keyToRemove];
+    while (0 < queue.length) {
+        const current = queue[0] as string;
+        queue.shift();
+        const children = childrenMap.get(current) ?? [];
+        for (const child of children) {
+            toRemove.add(child);
+            queue.push(child);
+        }
+    }
+
+    return checkedKeys.filter((key) => false === toRemove.has(key));
+};
+
+
 export {
     addServerPrefix,
+    filterToParents,
     flatToHierarchy,
     getListHeight,
     handleLoadError,
+    removeWithDescendants,
     ROOT_PATH,
     toTreeNode,
 };

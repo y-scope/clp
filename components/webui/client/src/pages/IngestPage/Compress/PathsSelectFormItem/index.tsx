@@ -33,6 +33,7 @@ const PathsSelectFormItem = () => {
     const form = Form.useFormInstance();
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+    const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
 
     // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
@@ -65,8 +66,9 @@ const PathsSelectFormItem = () => {
         }
     }, [addNodes]);
 
-    const handleChange = useCallback((values: string[]) => {
-        form.setFieldValue("paths", values);
+    const handleCheck = useCallback((keys: string[]) => {
+        setCheckedKeys(keys);
+        form.setFieldValue("paths", keys);
     }, [form]);
 
     const handleExpand = useCallback((keys: string[]) => {
@@ -93,11 +95,12 @@ const PathsSelectFormItem = () => {
             rules={[{required: true, message: "Please select at least one path"}]}
         >
             <DirectoryTreeSelect
+                checkedKeys={checkedKeys}
                 expandedKeys={expandedKeys}
                 treeData={treeData}
-                onChange={handleChange}
-                onDataLoad={handleLoadData}
-                onExpand={handleExpand}/>
+                onCheck={handleCheck}
+                onExpand={handleExpand}
+                onLoadData={handleLoadData}/>
         </Form.Item>
     );
 };
