@@ -76,85 +76,18 @@ bool JsonFileIterator::read_new_json() {
         if (m_sanitize_invalid_json) {
             // Handle invalid UTF-8 sequences by replacing with U+FFFD
             if (simdjson::error_code::UTF8_ERROR == error) {
-                size_t const old_buf_occupied = m_buf_occupied;
-                auto const result = StringUtils::sanitize_utf8_buffer(
-                        m_buf,
-                        m_buf_size,
-                        m_buf_occupied,
-                        simdjson::SIMDJSON_PADDING
-                );
-                m_buf_occupied = result.new_buf_occupied;
-                m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
-
-                if (!result.sanitized_char_counts.empty()) {
-                    size_t total_replaced = 0;
-                    for (auto const& [ch, count] : result.sanitized_char_counts) {
-                        total_replaced += count;
-                    }
-                    SPDLOG_WARN(
-                            "Replaced {} invalid UTF-8 sequence(s) with U+FFFD{}. Buffer size "
-                            "changed by {} bytes ({} -> {}).",
-                            total_replaced,
-                            m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
-                            static_cast<int64_t>(m_buf_occupied)
-                                    - static_cast<int64_t>(old_buf_occupied),
-                            old_buf_occupied,
-                            m_buf_occupied
-                    );
-                }
-
-                error = m_parser.iterate_many(
-                                        m_buf,
-                                        /* length of data */ m_buf_occupied,
-                                        /* batch size of data to parse*/ m_buf_occupied
-                )
-                                .get(m_stream);
+                // Return value intentionally ignored - in read_new_json we always retry after
+                // sanitization regardless of whether changes were made
+                static_cast<void>(sanitize_and_log_utf8());
+                error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied).get(m_stream);
             }
 
             // Handle unescaped control characters by escaping them to \u00XX format
             if (simdjson::error_code::UNESCAPED_CHARS == error) {
-                size_t const old_buf_occupied = m_buf_occupied;
-                // Note: sanitize_json_buffer may reallocate m_buf and will update m_buf_size by
-                // reference if reallocation is needed. This keeps m_buf_size in sync with the
-                // actual allocated buffer size.
-                auto const result = StringUtils::sanitize_json_buffer(
-                        m_buf,
-                        m_buf_size,
-                        m_buf_occupied,
-                        simdjson::SIMDJSON_PADDING
-                );
-                m_buf_occupied = result.new_buf_occupied;
-                m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
-
-                // Build log message with details of sanitized characters
-                size_t total_sanitized = 0;
-                std::string char_details;
-                for (auto const& [ch, count] : result.sanitized_char_counts) {
-                    if (!char_details.empty()) {
-                        char_details += ", ";
-                    }
-                    char_details
-                            += fmt::format("0x{:02x} ({})", static_cast<unsigned char>(ch), count);
-                    total_sanitized += count;
-                }
-                size_t bytes_added = m_buf_occupied - old_buf_occupied;
-                SPDLOG_WARN(
-                        "Escaped {} control character(s) in JSON{}: [{}]. Buffer expanded by {} "
-                        "bytes ({} -> {}).",
-                        total_sanitized,
-                        m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
-                        char_details,
-                        bytes_added,
-                        old_buf_occupied,
-                        m_buf_occupied
-                );
-
-                error = m_parser.iterate_many(
-                                        m_buf,
-                                        /* length of data */ m_buf_occupied,
-                                        /* batch size of data to parse*/ m_buf_occupied
-                )
-                                .get(m_stream);
+                // Return value intentionally ignored - in read_new_json we always retry after
+                // sanitization regardless of whether changes were made
+                static_cast<void>(sanitize_and_log_json());
+                error = m_parser.iterate_many(m_buf, m_buf_occupied, m_buf_occupied).get(m_stream);
             }
         }
 
@@ -189,6 +122,76 @@ size_t JsonFileIterator::skip_whitespace_and_get_truncated_bytes() {
     return m_buf_occupied - m_next_document_position;
 }
 
+bool JsonFileIterator::sanitize_and_log_utf8() {
+    size_t const old_buf_occupied = m_buf_occupied;
+    auto const result = StringUtils::sanitize_utf8_buffer(
+            m_buf,
+            m_buf_size,
+            m_buf_occupied,
+            simdjson::SIMDJSON_PADDING
+    );
+    m_buf_occupied = result.new_buf_occupied;
+    m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
+
+    if (result.sanitized_char_counts.empty()) {
+        return false;
+    }
+
+    size_t total_replaced = 0;
+    for (auto const& [ch, count] : result.sanitized_char_counts) {
+        total_replaced += count;
+    }
+    SPDLOG_WARN(
+            "Replaced {} invalid UTF-8 sequence(s) with U+FFFD{}. Buffer size changed by {} bytes "
+            "({} -> {}).",
+            total_replaced,
+            m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
+            static_cast<int64_t>(m_buf_occupied) - static_cast<int64_t>(old_buf_occupied),
+            old_buf_occupied,
+            m_buf_occupied
+    );
+    return true;
+}
+
+bool JsonFileIterator::sanitize_and_log_json() {
+    size_t const old_buf_occupied = m_buf_occupied;
+    // Note: sanitize_json_buffer may reallocate m_buf and will update m_buf_size by reference if
+    // reallocation is needed. This keeps m_buf_size in sync with the actual allocated buffer size.
+    auto const result = StringUtils::sanitize_json_buffer(
+            m_buf,
+            m_buf_size,
+            m_buf_occupied,
+            simdjson::SIMDJSON_PADDING
+    );
+    m_buf_occupied = result.new_buf_occupied;
+    m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
+
+    if (result.sanitized_char_counts.empty()) {
+        return false;
+    }
+
+    size_t total_sanitized = 0;
+    std::string char_details;
+    for (auto const& [ch, count] : result.sanitized_char_counts) {
+        if (false == char_details.empty()) {
+            char_details += ", ";
+        }
+        char_details += fmt::format("0x{:02x} ({})", static_cast<unsigned char>(ch), count);
+        total_sanitized += count;
+    }
+    SPDLOG_WARN(
+            "Escaped {} control character(s) in JSON{}: [{}]. Buffer expanded by {} bytes "
+            "({} -> {}).",
+            total_sanitized,
+            m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
+            char_details,
+            m_buf_occupied - old_buf_occupied,
+            old_buf_occupied,
+            m_buf_occupied
+    );
+    return true;
+}
+
 bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& it) {
     if (false == m_first_read) {
         ++m_doc_it;
@@ -217,42 +220,7 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
             {
                 // Unescaped control characters detected during document iteration. Sanitize the
                 // buffer and re-setup the document stream to restart from the beginning.
-                size_t const old_buf_occupied = m_buf_occupied;
-                auto const result = StringUtils::sanitize_json_buffer(
-                        m_buf,
-                        m_buf_size,
-                        m_buf_occupied,
-                        simdjson::SIMDJSON_PADDING
-                );
-                m_buf_occupied = result.new_buf_occupied;
-                m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
-
-                // Log sanitization details
-                if (!result.sanitized_char_counts.empty()) {
-                    size_t total_sanitized = 0;
-                    std::string char_details;
-                    for (auto const& [ch, count] : result.sanitized_char_counts) {
-                        if (!char_details.empty()) {
-                            char_details += ", ";
-                        }
-                        char_details += fmt::format(
-                                "0x{:02x} ({})",
-                                static_cast<unsigned char>(ch),
-                                count
-                        );
-                        total_sanitized += count;
-                    }
-                    SPDLOG_WARN(
-                            "Escaped {} control character(s) in JSON{}: [{}]. Buffer expanded by "
-                            "{} bytes ({} -> {}).",
-                            total_sanitized,
-                            m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
-                            char_details,
-                            m_buf_occupied - old_buf_occupied,
-                            old_buf_occupied,
-                            m_buf_occupied
-                    );
-                } else {
+                if (false == sanitize_and_log_json()) {
                     // Sanitization made no changes - report the original error to avoid infinite
                     // loop
                     m_error_code = m_doc_it.error();
@@ -293,32 +261,7 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
             // way to check is to parse it ourselves, so we rely on this heuristic for now.
             if (m_sanitize_invalid_json) {
                 // Sanitize invalid UTF-8 sequences and retry
-                size_t const old_buf_occupied = m_buf_occupied;
-                auto const result = StringUtils::sanitize_utf8_buffer(
-                        m_buf,
-                        m_buf_size,
-                        m_buf_occupied,
-                        simdjson::SIMDJSON_PADDING
-                );
-                m_buf_occupied = result.new_buf_occupied;
-                m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
-
-                if (!result.sanitized_char_counts.empty()) {
-                    size_t total_replaced = 0;
-                    for (auto const& [ch, count] : result.sanitized_char_counts) {
-                        total_replaced += count;
-                    }
-                    SPDLOG_WARN(
-                            "Replaced {} invalid UTF-8 sequence(s) with U+FFFD{}. Buffer size "
-                            "changed by {} bytes ({} -> {}).",
-                            total_replaced,
-                            m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
-                            static_cast<int64_t>(m_buf_occupied)
-                                    - static_cast<int64_t>(old_buf_occupied),
-                            old_buf_occupied,
-                            m_buf_occupied
-                    );
-                } else {
+                if (false == sanitize_and_log_utf8()) {
                     // Sanitization made no changes - report the original error to avoid infinite
                     // loop
                     m_error_code = simdjson::error_code::UTF8_ERROR;

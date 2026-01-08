@@ -81,6 +81,20 @@ private:
      */
     [[nodiscard]] size_t skip_whitespace_and_get_truncated_bytes();
 
+    /**
+     * Sanitizes invalid UTF-8 sequences in the buffer by replacing them with U+FFFD,
+     * updates buffer tracking variables, and logs a warning if changes were made.
+     * @return true if sanitization made changes, false otherwise
+     */
+    [[nodiscard]] bool sanitize_and_log_utf8();
+
+    /**
+     * Sanitizes unescaped control characters in the buffer by escaping them to \\u00XX format,
+     * updates buffer tracking variables, and logs a warning if changes were made.
+     * @return true if sanitization made changes, false otherwise
+     */
+    [[nodiscard]] bool sanitize_and_log_json();
+
     size_t m_truncated_bytes{0};
     size_t m_next_document_position{0};
     size_t m_bytes_read{0};
