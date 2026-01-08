@@ -60,7 +60,7 @@ auto can_parse_json(std::string_view json) -> bool {
     simdjson::ondemand::parser parser;
     simdjson::padded_string padded(json);
     auto result = parser.iterate(padded);
-    return !result.error();
+    return false == result.error();
 }
 }  // namespace
 
