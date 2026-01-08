@@ -41,6 +41,30 @@ impl Default for Config {
     }
 }
 
+/// Database names for CLP components.
+///
+/// # NOTE
+///
+///
+/// This struct mirrors all allowed DB names from `clp_py_utils.clp_config.ClpDbNameType`. Instead
+/// of storing them in a map, we use a struct to ensure all expected names are always present and
+/// reject all unknown fields.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct ClpDbNames {
+    pub clp: String,
+    pub spider: String,
+}
+
+impl Default for ClpDbNames {
+    fn default() -> Self {
+        Self {
+            clp: "clp-db".to_owned(),
+            spider: "spider-db".to_owned(),
+        }
+    }
+}
+
 /// Mirror of `clp_py_utils.clp_config.Database`.
 ///
 /// # NOTE
@@ -53,7 +77,7 @@ impl Default for Config {
 pub struct Database {
     pub host: String,
     pub port: u16,
-    pub name: String,
+    pub names: ClpDbNames,
 }
 
 impl Default for Database {
@@ -61,7 +85,7 @@ impl Default for Database {
         Self {
             host: "localhost".to_owned(),
             port: 3306,
-            name: "clp-db".to_owned(),
+            names: ClpDbNames::default(),
         }
     }
 }

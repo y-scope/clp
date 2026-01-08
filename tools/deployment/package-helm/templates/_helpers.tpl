@@ -248,6 +248,31 @@ hostPath:
 {{- end }}
 
 {{/*
+Creates a volumeMount for the AWS config directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volumeMount definition
+*/}}
+{{- define "clp.awsConfigVolumeMount" -}}
+name: "aws-config"
+mountPath: {{ .Values.clpConfig.aws_config_directory | quote }}
+readOnly: true
+{{- end }}
+
+{{/*
+Creates a volume for the AWS config directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.awsConfigVolume" -}}
+name: "aws-config"
+hostPath:
+  path: {{ .Values.clpConfig.aws_config_directory | quote }}
+  type: "Directory"
+{{- end }}
+
+{{/*
 Creates an initContainer that waits for a Kubernetes resource to be ready.
 
 @param {object} root Root template context

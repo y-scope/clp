@@ -1,4 +1,6 @@
-{{- if or .Values.clpConfig.archive_output.retention_period .Values.clpConfig.results_cache.retention_period }}
+{{- if or
+  .Values.clpConfig.archive_output.retention_period
+  .Values.clpConfig.results_cache.retention_period }}
 {{- include "clp.createLocalPv" (dict
   "root" .
   "component_category" "garbage-collector"
