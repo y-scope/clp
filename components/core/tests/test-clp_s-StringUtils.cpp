@@ -1,4 +1,5 @@
 #include <cstring>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -19,36 +20,47 @@ using namespace std::string_literals;
 
 namespace {
 /**
- * Helper to create a buffer with simdjson padding and run sanitization.
- * @param input The input string to sanitize
- * @return The sanitized string
- * @note If sanitize_json_buffer reallocates the buffer, the new buffer pointer is returned
- *       and the original buffer is automatically deleted by sanitize_json_buffer. This helper
- *       correctly handles both cases (reallocation and no reallocation) by always deleting
- *       the final buffer pointer.
+ * Result structure containing both the sanitization result and the output string.
  */
-auto sanitize_string(std::string_view input) -> std::string {
+struct SanitizeResultWithOutput {
+    JsonSanitizeResult result;
+    std::string output;
+};
+
+/**
+ * Helper to create a buffer with simdjson padding and run JSON sanitization.
+ * Returns both the result (with character counts) and the sanitized output string.
+ * @param input The input string to sanitize
+ * @return SanitizeResultWithOutput containing result metadata and sanitized string
+ * @note sanitize_json_buffer may reallocate the buffer (passed by reference). This helper
+ *       handles both reallocation and no-reallocation cases correctly.
+ */
+auto sanitize_json_with_result(std::string_view input) -> SanitizeResultWithOutput {
     size_t buf_size = input.size();
     size_t buf_occupied = input.size();
+    // Use raw pointer since sanitize_json_buffer may delete and reallocate
     char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
     std::memcpy(buf, input.data(), input.size());
 
-    try {
-        auto const result = StringUtils::sanitize_json_buffer(
-                buf,
-                buf_size,
-                buf_occupied,
-                simdjson::SIMDJSON_PADDING
-        );
-        std::string output(buf, result.new_buf_occupied);
-        // Delete the buffer (may be reallocated, but buf points to the current buffer)
-        delete[] buf;
-        return output;
-    } catch (...) {
-        // If sanitization failed, buf still points to the original buffer
-        delete[] buf;
-        throw;
-    }
+    auto result = StringUtils::sanitize_json_buffer(
+            buf,
+            buf_size,
+            buf_occupied,
+            simdjson::SIMDJSON_PADDING
+    );
+    std::string output(buf, result.new_buf_occupied);
+    // buf now points to the final buffer (may have been reallocated)
+    delete[] buf;
+    return {std::move(result), std::move(output)};
+}
+
+/**
+ * Helper to create a buffer with simdjson padding and run JSON sanitization.
+ * @param input The input string to sanitize
+ * @return The sanitized string
+ */
+auto sanitize_string(std::string_view input) -> std::string {
+    return sanitize_json_with_result(input).output;
 }
 
 /**
@@ -281,29 +293,38 @@ TEST_CASE("sanitize_json_buffer_truncated_json", "[clp_s][StringUtils]") {
 namespace {
 /**
  * Helper to create a buffer with simdjson padding and run UTF-8 sanitization.
+ * Returns both the result (with character counts) and the sanitized output string.
+ * @param input The input string to sanitize
+ * @return SanitizeResultWithOutput containing result metadata and sanitized string
+ * @note sanitize_utf8_buffer may reallocate the buffer (passed by reference). This helper
+ *       handles both reallocation and no-reallocation cases correctly.
+ */
+auto sanitize_utf8_with_result(std::string_view input) -> SanitizeResultWithOutput {
+    size_t buf_size = input.size();
+    size_t buf_occupied = input.size();
+    // Use raw pointer since sanitize_utf8_buffer may delete and reallocate
+    char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
+    std::memcpy(buf, input.data(), input.size());
+
+    auto result = StringUtils::sanitize_utf8_buffer(
+            buf,
+            buf_size,
+            buf_occupied,
+            simdjson::SIMDJSON_PADDING
+    );
+    std::string output(buf, result.new_buf_occupied);
+    // buf now points to the final buffer (may have been reallocated)
+    delete[] buf;
+    return {std::move(result), std::move(output)};
+}
+
+/**
+ * Helper to create a buffer with simdjson padding and run UTF-8 sanitization.
  * @param input The input string to sanitize
  * @return The sanitized string
  */
 auto sanitize_utf8_string(std::string_view input) -> std::string {
-    size_t buf_size = input.size();
-    size_t buf_occupied = input.size();
-    char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
-    std::memcpy(buf, input.data(), input.size());
-
-    try {
-        auto const result = StringUtils::sanitize_utf8_buffer(
-                buf,
-                buf_size,
-                buf_occupied,
-                simdjson::SIMDJSON_PADDING
-        );
-        std::string output(buf, result.new_buf_occupied);
-        delete[] buf;
-        return output;
-    } catch (...) {
-        delete[] buf;
-        throw;
-    }
+    return sanitize_utf8_with_result(input).output;
 }
 
 /**
@@ -449,58 +470,24 @@ TEST_CASE("sanitize_utf8_buffer_returns_correct_counts", "[clp_s][StringUtils]")
     SECTION("counts invalid sequences") {
         auto input = "\xFF\xFE\xFF"s;  // 3 invalid bytes
 
-        size_t buf_size = input.size();
-        size_t buf_occupied = input.size();
-        char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
-        std::memcpy(buf, input.data(), input.size());
+        auto [result, output] = sanitize_utf8_with_result(input);
 
-        try {
-            auto const result = StringUtils::sanitize_utf8_buffer(
-                    buf,
-                    buf_size,
-                    buf_occupied,
-                    simdjson::SIMDJSON_PADDING
-            );
-
-            // The count uses 0xFF as a special key for invalid UTF-8 sequences
-            REQUIRE_FALSE(result.sanitized_char_counts.empty());
-            size_t total = 0;
-            for (auto const& [ch, count] : result.sanitized_char_counts) {
-                total += count;
-            }
-            REQUIRE(total == 3);
-
-            delete[] buf;
-        } catch (...) {
-            delete[] buf;
-            throw;
+        // The count uses 0xFF as a special key for invalid UTF-8 sequences
+        REQUIRE_FALSE(result.sanitized_char_counts.empty());
+        size_t total = 0;
+        for (auto const& [ch, count] : result.sanitized_char_counts) {
+            total += count;
         }
+        REQUIRE(total == 3);
     }
 
     SECTION("returns empty counts when no sanitization needed") {
         std::string input = "valid UTF-8 string";
 
-        size_t buf_size = input.size();
-        size_t buf_occupied = input.size();
-        char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
-        std::memcpy(buf, input.data(), input.size());
+        auto [result, output] = sanitize_utf8_with_result(input);
 
-        try {
-            auto const result = StringUtils::sanitize_utf8_buffer(
-                    buf,
-                    buf_size,
-                    buf_occupied,
-                    simdjson::SIMDJSON_PADDING
-            );
-
-            REQUIRE(result.sanitized_char_counts.empty());
-            REQUIRE(result.new_buf_occupied == input.size());
-
-            delete[] buf;
-        } catch (...) {
-            delete[] buf;
-            throw;
-        }
+        REQUIRE(result.sanitized_char_counts.empty());
+        REQUIRE(result.new_buf_occupied == input.size());
     }
 }
 
@@ -530,54 +517,20 @@ TEST_CASE("sanitize_json_buffer_returns_correct_char_counts", "[clp_s][StringUti
         // Input with: 3x \x00, 2x \x01, 1x \x1f
         auto input = "{\"a\": \"\x00\x00\x01\x00\x01\x1f\"}"s;
 
-        size_t buf_size = input.size();
-        size_t buf_occupied = input.size();
-        char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
-        std::memcpy(buf, input.data(), input.size());
+        auto [result, output] = sanitize_json_with_result(input);
 
-        try {
-            auto const result = StringUtils::sanitize_json_buffer(
-                    buf,
-                    buf_size,
-                    buf_occupied,
-                    simdjson::SIMDJSON_PADDING
-            );
-
-            REQUIRE(result.sanitized_char_counts.size() == 3);
-            REQUIRE(result.sanitized_char_counts.at('\x00') == 3);
-            REQUIRE(result.sanitized_char_counts.at('\x01') == 2);
-            REQUIRE(result.sanitized_char_counts.at('\x1f') == 1);
-
-            delete[] buf;
-        } catch (...) {
-            delete[] buf;
-            throw;
-        }
+        REQUIRE(result.sanitized_char_counts.size() == 3);
+        REQUIRE(result.sanitized_char_counts.at('\x00') == 3);
+        REQUIRE(result.sanitized_char_counts.at('\x01') == 2);
+        REQUIRE(result.sanitized_char_counts.at('\x1f') == 1);
     }
 
     SECTION("returns empty counts when no sanitization needed") {
         std::string input = R"({"key": "valid value"})";
 
-        size_t buf_size = input.size();
-        size_t buf_occupied = input.size();
-        char* buf = new char[buf_size + simdjson::SIMDJSON_PADDING];
-        std::memcpy(buf, input.data(), input.size());
+        auto [result, output] = sanitize_json_with_result(input);
 
-        try {
-            auto const result = StringUtils::sanitize_json_buffer(
-                    buf,
-                    buf_size,
-                    buf_occupied,
-                    simdjson::SIMDJSON_PADDING
-            );
-
-            REQUIRE(result.sanitized_char_counts.empty());
-            REQUIRE(result.new_buf_occupied == input.size());
-
-            delete[] buf;
-        } catch (...) {
-            delete[] buf;
-            throw;
-        }
+        REQUIRE(result.sanitized_char_counts.empty());
+        REQUIRE(result.new_buf_occupied == input.size());
     }
 }
