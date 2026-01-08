@@ -31,8 +31,8 @@ interface DirectoryTreeSelectProps {
 }
 
 /**
- * TreeSelect component that uses DirectoryTree for the popup.
- * Provides folder/file icons and intuitive directory navigation.
+ * TreeSelect component that uses DirectoryTree for the popup. Provides folder/file icons and
+ * intuitive directory navigation.
  *
  * @param props
  * @param props.expandedKeys
