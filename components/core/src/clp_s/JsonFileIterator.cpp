@@ -12,12 +12,14 @@ namespace clp_s {
 JsonFileIterator::JsonFileIterator(
         clp::ReaderInterface& reader,
         size_t max_document_size,
+        std::string path,
         size_t buf_size
 )
         : m_buf_size(buf_size),
           m_max_document_size(max_document_size),
           m_buf(new char[buf_size + simdjson::SIMDJSON_PADDING]),
-          m_reader(reader) {
+          m_reader(reader),
+          m_path(std::move(path)) {
     read_new_json();
 }
 
@@ -95,8 +97,10 @@ bool JsonFileIterator::read_new_json() {
             }
             size_t bytes_added = m_buf_occupied - old_buf_occupied;
             SPDLOG_WARN(
-                    "Escaped {} control character(s) in JSON: [{}]. Buffer expanded by {} bytes ({} -> {}).",
+                    "Escaped {} control character(s) in JSON{}: [{}]. Buffer expanded by {} bytes "
+                    "({} -> {}).",
                     total_sanitized,
+                    m_path.empty() ? "" : fmt::format(" in file '{}'", m_path),
                     char_details,
                     bytes_added,
                     old_buf_occupied,

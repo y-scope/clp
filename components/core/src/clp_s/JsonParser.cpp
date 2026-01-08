@@ -668,7 +668,7 @@ auto JsonParser::ingest_json(
         Path const& path,
         std::string const& archive_creator_id
 ) -> bool {
-    JsonFileIterator json_file_iterator(*reader, m_max_document_size);
+    JsonFileIterator json_file_iterator(*reader, m_max_document_size, path.path);
     if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
         SPDLOG_ERROR(
                 "Encountered error - {} - while trying to parse {} after parsing 0 bytes",

@@ -1,6 +1,8 @@
 #ifndef CLP_S_JSONFILEITERATOR_HPP
 #define CLP_S_JSONFILEITERATOR_HPP
 
+#include <string>
+
 #include <simdjson.h>
 
 #include "../clp/ReaderInterface.hpp"
@@ -19,11 +21,13 @@ public:
 
      * @param reader the input stream containing JSON
      * @param max_document_size the maximum allowed size of a single document
+     * @param path optional path to the file being read (used for logging)
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
             clp::ReaderInterface& reader,
             size_t max_document_size,
+            std::string path = {},
             size_t buf_size = 1024 * 1024 /* 1 MiB default */
     );
     ~JsonFileIterator();
@@ -84,6 +88,7 @@ private:
     size_t m_max_document_size{0};
     char* m_buf{nullptr};
     clp::ReaderInterface& m_reader;
+    std::string m_path;
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};
