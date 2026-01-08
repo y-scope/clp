@@ -1,26 +1,25 @@
+{{- if .Values.clpConfig.mcp_server }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp.fullname" . }}-query-scheduler
+  name: {{ include "clp.fullname" . }}-mcp-server
   labels:
     {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "query-scheduler"
+    app.kubernetes.io/component: "mcp-server"
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "query-scheduler"
+      app.kubernetes.io/component: "mcp-server"
   template:
     metadata:
       labels:
         {{- include "clp.labels" . | nindent 8 }}
-        app.kubernetes.io/component: "query-scheduler"
+        app.kubernetes.io/component: "mcp-server"
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
-      hostname: {{ include "clp.fullname" . }}-query-scheduler
-      subdomain: {{ include "clp.fullname" . }}-query-scheduler
-      terminationGracePeriodSeconds: 10
+      terminationGracePeriodSeconds: 60
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
@@ -33,24 +32,14 @@ spec:
           ) | nindent 10 }}
         - {{- include "clp.waitFor" (dict
             "root" .
-            "type" "service"
-            "name" "queue"
-          ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "service"
-            "name" "redis"
+            "type" "job"
+            "name" "results-cache-indices-creator"
           ) | nindent 10 }}
       containers:
-        - name: "query-scheduler"
+        - name: "mcp-server"
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
-            - {{- include "clp.celeryResultBackendEnvVar" (dict
-                "root" .
-                "database" .Values.clpConfig.redis.query_backend_database
-              ) | nindent 14 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -62,42 +51,46 @@ spec:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
             - name: "CLP_LOGGING_LEVEL"
-              value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+              value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
-              value: "/var/log/query_scheduler"
+              value: "/var/log/mcp_server"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
-            - name: "query-scheduler"
-              containerPort: 7000
+            - name: "mcp"
+              containerPort: 8000
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "query-scheduler"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/query_scheduler"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "mcp-server"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/mcp_server"
           command: [
             "python3", "-u",
-            "-m", "job_orchestration.scheduler.query.query_scheduler",
-            "--config", "/etc/clp-config.yaml"
+            "-m", "clp_mcp_server.clp_mcp_server",
+            "--host", "0.0.0.0",
+            "--port", "8000",
+            "--config-path", "/etc/clp-config.yaml"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            tcpSocket: &query-scheduler-health-check
-              port: "query-scheduler"
+            httpGet: &mcp-server-health-check
+              path: "/health"
+              port: "mcp"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            tcpSocket: *query-scheduler-health-check
+            httpGet: *mcp-server-health-check
       volumes:
         - {{- include "clp.pvcVolume" (dict
             "root" .
-            "component_category" "query-scheduler"
+            "component_category" "mcp-server"
             "name" "logs"
           ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+{{- end }}

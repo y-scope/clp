@@ -10,7 +10,7 @@ use clp_rust_utils::{
             credentials::Credentials,
         },
     },
-    database::mysql::create_mysql_pool,
+    database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
 };
 use futures::{Stream, StreamExt};
@@ -89,10 +89,11 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`create_mysql_pool`]'s errors on failure.
+    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
     /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
     pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        let sql_pool = create_mysql_pool(&config.database, &credentials.database, 10).await?;
+        let sql_pool =
+            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
 
         let mongo_uri = format!(
             "mongodb://{}:{}/{}?directConnection=true",
