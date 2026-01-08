@@ -39,10 +39,8 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
-    get_archive_tags_table_name,
     get_archives_table_name,
     get_files_table_name,
-    get_tags_table_name,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
@@ -418,23 +416,12 @@ def get_archives_for_search(
         filter_clauses.append(
             f"(end_timestamp >= {archive_end_ts_lower_bound} OR end_timestamp = 0)"
         )
-    if search_config.tags is not None:
-        archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
-        tags_table_name = get_tags_table_name(table_prefix, dataset)
-        filter_clauses.append(
-            f"id IN (SELECT archive_id FROM {archive_tags_table_name} WHERE "
-            f"tag_id IN (SELECT tag_id FROM {tags_table_name} WHERE tag_name IN "
-            f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
-        )
     if len(filter_clauses) > 0:
         query += " WHERE " + " AND ".join(filter_clauses)
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        if search_config.tags is not None:
-            cursor.execute(query, tuple(search_config.tags))
-        else:
-            cursor.execute(query)
+        cursor.execute(query)
         archives_for_search = list(cursor.fetchall())
     return archives_for_search
 

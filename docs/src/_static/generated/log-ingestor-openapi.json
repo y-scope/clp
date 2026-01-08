@@ -252,14 +252,6 @@
             "description": "AWS service region. Must be provided if using the default AWS S3 endpoint.",
             "minLength": 1
           },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "description": "Tags to apply on the compressed archives. Defaults to `None`."
-          },
           "timestamp_key": {
             "type": "string",
             "description": "The optional key for extracting timestamps from object metadata. Defaults to `None`.",
