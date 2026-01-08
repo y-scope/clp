@@ -1,0 +1,9 @@
+{{- if .Values.clpConfig.log_ingestor }}
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component_category" "log-ingestor"
+  "name" "logs"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+) }}
+{{- end }}
