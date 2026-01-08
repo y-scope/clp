@@ -14,12 +14,14 @@ CLUSTER_NAME="${CLUSTER_NAME:-clp-test-multi}"
 NUM_WORKER_NODES="${NUM_WORKER_NODES:-2}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
+REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
 
 echo "=== Multi-node test with shared worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Worker nodes: ${NUM_WORKER_NODES}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
+echo "Reducers: ${REDUCER_REPLICAS}"
 echo ""
 
 echo "Deleting existing cluster if present..."
@@ -73,7 +75,8 @@ sleep 2
 helm install test "${script_dir}" \
     --set "distributed=true" \
     --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
-    --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}"
+    --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
+    --set "reducer.replicas=${REDUCER_REPLICAS}"
 
 wait $SAMPLE_DOWNLOAD_PID
 echo "Sample download and extraction complete"

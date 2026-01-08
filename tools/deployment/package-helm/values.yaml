@@ -61,6 +61,22 @@ queryWorker:
   #       topologyKey: "kubernetes.io/hostname"
   #       whenUnsatisfiable: "DoNotSchedule"
 
+reducer:
+  replicas: 1
+  # Controls which nodes run reducers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "reducer"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
 storage:
   # Name of the StorageClass for PVs and PVCs.
   # - If "local-storage" (default), the chart creates a StorageClass with WaitForFirstConsumer

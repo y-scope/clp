@@ -15,6 +15,7 @@ NUM_COMPRESSION_NODES="${NUM_COMPRESSION_NODES:-2}"
 NUM_QUERY_NODES="${NUM_QUERY_NODES:-2}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
+REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
 
 echo "=== Multi-node test with dedicated worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
@@ -22,6 +23,7 @@ echo "Compression nodes: ${NUM_COMPRESSION_NODES}"
 echo "Query nodes: ${NUM_QUERY_NODES}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
+echo "Reducers: ${REDUCER_REPLICAS}"
 echo ""
 
 echo "Deleting existing cluster if present..."
@@ -94,7 +96,8 @@ helm install test "${script_dir}" \
     --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
     --set "compressionWorker.scheduling.nodeSelector.yscope\.io/nodeType=compression" \
     --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "queryWorker.scheduling.nodeSelector.yscope\.io/nodeType=query"
+    --set "queryWorker.scheduling.nodeSelector.yscope\.io/nodeType=query" \
+    --set "reducer.replicas=${REDUCER_REPLICAS}"
 
 wait $SAMPLE_DOWNLOAD_PID
 echo "Sample download and extraction complete"
