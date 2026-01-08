@@ -12,8 +12,9 @@ using clp_s::StringUtils;
 
 // We use C++14 string literals (the `s` suffix) to construct strings containing embedded null bytes
 // and control characters. Without the `s` suffix, std::string's constructor from a C-string literal
-// stops at the first null byte, truncating the test input. Additionally, we use string concatenation
-// (e.g., "\x00" "end") to prevent hex escape sequences from being extended by following hex digits.
+// stops at the first null byte, truncating the test input. Additionally, we use string
+// concatenation (e.g., "\x00" "end") to prevent hex escape sequences from being extended by
+// following hex digits.
 using namespace std::string_literals;
 
 namespace {
@@ -108,7 +109,10 @@ TEST_CASE("sanitize_json_buffer_escapes_control_chars", "[clp_s][StringUtils]") 
 
     SECTION("various control characters") {
         // Test 0x01 (SOH), 0x02 (STX), 0x1F (US)
-        auto input = "{\"key\": \"a\x01" "b\x02" "c\x1F" "d\"}"s;
+        auto input = "{\"key\": \"a\x01"
+                     "b\x02"
+                     "c\x1F"
+                     "d\"}"s;
         std::string expected = R"({"key": "a\u0001b\u0002c\u001fd"})";
         REQUIRE(sanitize_string(input) == expected);
     }
@@ -141,13 +145,15 @@ TEST_CASE("sanitize_json_buffer_handles_escapes_correctly", "[clp_s][StringUtils
 
     SECTION("control char after escaped backslash") {
         // \\\x00 means escaped backslash followed by a control char still inside the string
-        auto input = "{\"key\": \"slash:\\\\\x00" "end\"}"s;
+        auto input = "{\"key\": \"slash:\\\\\x00"
+                     "end\"}"s;
         std::string expected = R"({"key": "slash:\\\u0000end"})";
         REQUIRE(sanitize_string(input) == expected);
     }
 
     SECTION("control char after escaped quote") {
-        auto input = "{\"key\": \"quote:\\\"\x00" "after\"}"s;
+        auto input = "{\"key\": \"quote:\\\"\x00"
+                     "after\"}"s;
         std::string expected = R"({"key": "quote:\"\u0000after"})";
         REQUIRE(sanitize_string(input) == expected);
     }
@@ -156,16 +162,20 @@ TEST_CASE("sanitize_json_buffer_handles_escapes_correctly", "[clp_s][StringUtils
         // \<control-char> is not a valid JSON escape sequence, but we leave it as-is
         // since the sanitizer treats any char after backslash as an escape target.
         // This JSON is invalid anyway (bad escape sequence) and will fail parsing.
-        auto input = "{\"key\": \"bad:\\\x00" "end\"}"s;
-        auto expected = "{\"key\": \"bad:\\\x00" "end\"}"s;
+        auto input = "{\"key\": \"bad:\\\x00"
+                     "end\"}"s;
+        auto expected = "{\"key\": \"bad:\\\x00"
+                        "end\"}"s;
         REQUIRE(sanitize_string(input) == expected);
     }
 
     SECTION("triple backslash followed by control char") {
         // \\\ followed by \x00: first \\ is escaped backslash, third \ starts escape sequence.
         // The third backslash makes the null appear to be an escape target, so it's not escaped.
-        auto input = "{\"key\": \"\\\\\\\x00" "end\"}"s;
-        auto expected = "{\"key\": \"\\\\\\\x00" "end\"}"s;
+        auto input = "{\"key\": \"\\\\\\\x00"
+                     "end\"}"s;
+        auto expected = "{\"key\": \"\\\\\\\x00"
+                        "end\"}"s;
         REQUIRE(sanitize_string(input) == expected);
     }
 }
@@ -226,19 +236,24 @@ TEST_CASE("sanitize_json_buffer_truncated_json", "[clp_s][StringUtils]") {
         //
         // Input: truncated JSON where the string is not closed, followed by control chars
         // The sanitizer may incorrectly think it's still in a string and escape the control chars
-        auto input = "{\"key\": \"unclosed string\x00\x01" "after\"}"s;
+        auto input = "{\"key\": \"unclosed string\x00\x01"
+                     "after\"}"s;
         // The sanitizer will escape the control chars because it thinks we're still in a string
         // (the quote after "unclosed string" is escaped, so the string continues)
         std::string sanitized = sanitize_string(input);
         // The control chars should be escaped (behavior may vary based on quote matching)
         // The important thing is that the function doesn't crash and handles it gracefully
-        REQUIRE((sanitized.find('\x00') == std::string::npos || sanitized.find("\\u0000") != std::string::npos));
+        REQUIRE(
+                (sanitized.find('\x00') == std::string::npos
+                 || sanitized.find("\\u0000") != std::string::npos)
+        );
     }
 
     SECTION("truncated JSON ending mid-string") {
         // JSON truncated in the middle of a string with control chars (no closing quote)
         // This simulates a real truncation scenario where the buffer ends mid-string
-        auto input = "{\"key\": \"value\x00\x01" "truncated"s;
+        auto input = "{\"key\": \"value\x00\x01"
+                     "truncated"s;
         std::string sanitized = sanitize_string(input);
         // Should handle gracefully without crashing
         // Control chars inside the (unclosed) string should be escaped
@@ -251,7 +266,8 @@ TEST_CASE("sanitize_json_buffer_truncated_json", "[clp_s][StringUtils]") {
     SECTION("truncated JSON with control chars after unmatched quote") {
         // JSON with unmatched quote followed by control chars outside the string
         // The sanitizer may incorrectly escape these if it thinks we're still in a string
-        auto input = "{\"key\": \"value\x00" "}\x01\x02"s;
+        auto input = "{\"key\": \"value\x00"
+                     "}\x01\x02"s;
         std::string sanitized = sanitize_string(input);
         // Function should not crash - behavior may vary but should be consistent
         REQUIRE(sanitized.size() >= input.size());

@@ -107,12 +107,11 @@ bool JsonFileIterator::read_new_json() {
                     m_buf_occupied
             );
 
-            error = m_parser
-                            .iterate_many(
+            error = m_parser.iterate_many(
                                     m_buf,
                                     /* length of data */ m_buf_occupied,
                                     /* batch size of data to parse*/ m_buf_occupied
-                            )
+            )
                             .get(m_stream);
         }
 
