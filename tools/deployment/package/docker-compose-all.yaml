@@ -573,6 +573,7 @@ services:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
+      CLP_LOG_INGESTOR_HOSTNAME: "log_ingestor"
       RUST_LOG: "INFO"
     ports:
       - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
