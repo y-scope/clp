@@ -56,9 +56,10 @@ wait_for_pods() {
 kind delete cluster --name clp-test
 rm -rf "$CLP_HOME"
 mkdir -p  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-          "$CLP_HOME/var/data/"{archives,streams} \
+          "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
           "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
           "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
+          "$CLP_HOME/var/log/"{api_server,garbage_collector,mcp_server} \
           "$CLP_HOME/var/tmp" \
           "$CLP_HOME/samples"
 
@@ -66,6 +67,12 @@ mkdir -p  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
 wget -O - https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1 \
   | tar xz -C "$CLP_HOME/samples" &
 SAMPLE_DOWNLOAD_PID=$!
+
+# Generate sample log file for garbage collector testing.
+cat <<EOF > /tmp/clp/samples/test-gc.jsonl
+{"timestamp": $(date +%s%3N), "level": "INFO", "message": "User login successful"}
+{"timestamp": $(date +%s%3N), "level": "ERROR", "message": "Database connection failed"}
+EOF
 
 cat <<EOF | kind create cluster --name clp-test --config=-
   kind: Cluster
@@ -86,6 +93,12 @@ cat <<EOF | kind create cluster --name clp-test --config=-
       protocol: TCP
     - containerPort: 30000
       hostPort: 30000
+      protocol: TCP
+    - containerPort: 30301
+      hostPort: 30301
+      protocol: TCP
+    - containerPort: 30800
+      hostPort: 30800
       protocol: TCP
 EOF
 

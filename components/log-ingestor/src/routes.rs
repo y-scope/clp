@@ -89,6 +89,10 @@ impl IntoResponse for Error {
                 IngestionJobManagerError::PrefixConflict(_) => {
                     (axum::http::StatusCode::CONFLICT, self.to_string())
                 }
+                IngestionJobManagerError::CustomEndpointUrlNotSupported(_)
+                | IngestionJobManagerError::MissingRegionCode => {
+                    (axum::http::StatusCode::BAD_REQUEST, self.to_string())
+                }
             },
             Self::InvalidJobId(_) => (axum::http::StatusCode::BAD_REQUEST, self.to_string()),
         };
@@ -148,6 +152,11 @@ async fn health() -> &'static str {
             status = INTERNAL_SERVER_ERROR,
             body = ErrorResponse,
             description = "Internal server failure."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "A region code is not provided when using the default AWS S3 endpoint."
         )
     )
 )]
@@ -194,6 +203,11 @@ async fn create_s3_scanner_job(
             status = INTERNAL_SERVER_ERROR,
             body = ErrorResponse,
             description = "Internal server failure."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "Custom endpoint URLs are not supported for SQS listener jobs."
         )
     )
 )]
