@@ -29,9 +29,9 @@ const decodeJobConfig = (
         const decodedClpConfig = Value.Parse(
             ClpIoPartialConfigSchema,
             decode(brotliDecompressSync(jobConfig))
-        ) as ClpIoConfig;
+        );
 
-        return {clp_config: decodedClpConfig};
+        return {clp_config: decodedClpConfig as ClpIoConfig};
     } catch (err: unknown) {
         console.error(err);
         throw new Error("Failed to decode clp_config buffer");
