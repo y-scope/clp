@@ -17,7 +17,9 @@ const NativeControls = () => {
 
     return (
         <div className={styles["searchControlsContainer"]}>
-            {isClpS ? <ClpSControls/> : <ClpControls/>}
+            {isClpS ?
+                <ClpSControls/> :
+                <ClpControls/>}
             <div className={styles["status"]}>
                 <QueryStatus/>
             </div>

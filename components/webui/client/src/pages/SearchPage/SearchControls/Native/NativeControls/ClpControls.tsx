@@ -1,9 +1,13 @@
 import styles from "../../index.module.css";
-import SearchButton from "../SearchButton";
-import QueryInput from "../QueryInput";
 import TimeRangeInput from "../../TimeRangeInput";
+import QueryInput from "../QueryInput";
+import SearchButton from "../SearchButton";
 
 
+/**
+ * Renders CLP search controls.
+ * @returns
+ */
 const ClpControls = () => (
     <div className={styles["inputsAndButtonRow"]}>
         <QueryInput/>

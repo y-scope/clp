@@ -136,9 +136,7 @@ const SubmitButton = () => {
                     handleSubmitButtonClick().catch((err: unknown) => {
                         throw err;
                     });
-                }}
-            >
-            </Button>
+                }}/>
         </Tooltip>
     );
 };

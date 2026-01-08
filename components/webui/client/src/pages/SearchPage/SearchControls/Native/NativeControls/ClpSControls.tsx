@@ -5,6 +5,10 @@ import SearchButton from "../SearchButton";
 import nativeStyles from "./index.module.css";
 
 
+/**
+ * Renders CLP-S controls.
+ * @returns
+ */
 const ClpSControls = () => (
     <>
         <div className={nativeStyles["clpSRow"]}>
