@@ -36,6 +36,13 @@ AWS_ENV_VAR_SESSION_TOKEN: Final[str] = "AWS_SESSION_TOKEN"
 
 S3_OBJECT_DELETION_BATCH_SIZE_MAX: Final[int] = 1000
 
+SCHEME_REGEXP = r"(?P<scheme>(http|https))"
+S3_PREFIX_REGEXP = r"(?P<s3>s3)"
+ENDPOINT_REGEXP = r"(?P<endpoint>[a-z0-9.-]+(\:[0-9]+)?)"
+REGION_CODE_REGEXP = r"(?P<region_code>[a-z0-9\-]+)"
+BUCKET_NAME_REGEXP = r"(?P<bucket_name>[a-z0-9.-]+)"
+KEY_PREFIX_REGEXP = r"(?P<key_prefix>[^?]+)"
+
 
 def _get_session_credentials(aws_profile: str | None = None) -> S3Credentials | None:
     """
@@ -180,7 +187,10 @@ def generate_container_auth_options(
 
 
 def _create_s3_client(
-    region_code: str, s3_auth: AwsAuthentication, boto3_config: Config | None = None
+    endpoint_url: str | None,
+    region_code: str | None,
+    s3_auth: AwsAuthentication,
+    boto3_config: Config | None = None,
 ) -> boto3.client:
     aws_session: boto3.Session | None
     if AwsAuthType.profile == s3_auth.type:
@@ -202,55 +212,76 @@ def _create_s3_client(
     else:
         raise ValueError(f"Unsupported authentication type: {s3_auth.type}")
 
-    s3_client = aws_session.client("s3", config=boto3_config)
+    s3_client = aws_session.client("s3", endpoint_url=endpoint_url, config=boto3_config)
     return s3_client
 
 
-def parse_s3_url(s3_url: str) -> tuple[str, str, str]:
+def parse_s3_url(s3_url: str) -> tuple[str | None, str | None, str, str]:
     """
-    Parses the region_code, bucket, and key_prefix from the given S3 URL.
+    Parses the endpoint_url, region_code, bucket, and key_prefix from the given S3 URL.
     :param s3_url: A host-style URL or path-style URL.
-    :return: A tuple of (region_code, bucket, key_prefix).
+    :return: A tuple of (endpoint_url, region_code, bucket, key_prefix). A value of None is returned
+    if the endpoint_url originates from AWS.
     :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
     """
     host_style_url_regex = re.compile(
-        r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))"
-        r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
+        rf"{SCHEME_REGEXP}://{BUCKET_NAME_REGEXP}\."
+        rf"{S3_PREFIX_REGEXP}\.({REGION_CODE_REGEXP}\.)?"
+        rf"{ENDPOINT_REGEXP}/{KEY_PREFIX_REGEXP}.*"
     )
     match = host_style_url_regex.match(s3_url)
 
     if match is None:
         path_style_url_regex = re.compile(
-            r"https://s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))\.(?P<endpoint>[a-z0-9.-]+)/"
-            r"(?P<bucket_name>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
+            rf"{SCHEME_REGEXP}://({S3_PREFIX_REGEXP}\."
+            rf"({REGION_CODE_REGEXP}\.)?)?{ENDPOINT_REGEXP}"
+            rf"/{BUCKET_NAME_REGEXP}/{KEY_PREFIX_REGEXP}.*"
         )
         match = path_style_url_regex.match(s3_url)
 
     if match is None:
         raise ValueError(f"Unsupported URL format: {s3_url}")
 
+    scheme = match.group("scheme")
+    endpoint = match.group("endpoint")
     region_code = match.group("region_code")
     bucket_name = match.group("bucket_name")
-    endpoint = match.group("endpoint")
+
+    s3_prefix = "s3." if match.group("s3") is not None else ""
+    endpoint_url = f"{scheme}://{s3_prefix}{endpoint}" if endpoint != AWS_ENDPOINT else None
     key_prefix = match.group("key_prefix")
 
-    if AWS_ENDPOINT != endpoint:
-        raise ValueError(f"Unsupported endpoint: {endpoint}")
-
-    return region_code, bucket_name, key_prefix
+    return endpoint_url, region_code, bucket_name, key_prefix
 
 
-def generate_s3_virtual_hosted_style_url(
-    region_code: str, bucket_name: str, object_key: str
+def generate_s3_url(
+    endpoint_url: str | None, region_code: str | None, bucket_name: str, object_key: str
 ) -> str:
-    if not bool(region_code):
-        raise ValueError("Region code is not specified")
     if not bool(bucket_name):
         raise ValueError("Bucket name is not specified")
     if not bool(object_key):
         raise ValueError("Object key is not specified")
 
-    return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
+    if endpoint_url is None:
+        if region_code is None:
+            return f"https://{bucket_name}.s3.{AWS_ENDPOINT}/{object_key}"
+        return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
+
+    endpoint_url_regex = re.compile(
+        rf"{SCHEME_REGEXP}://({S3_PREFIX_REGEXP}\.)?{ENDPOINT_REGEXP}/?$"
+    )
+    match = endpoint_url_regex.match(endpoint_url)
+    if match is None:
+        raise ValueError(f"Unsupported endpoint URL format: {endpoint_url}")
+
+    s3_prefix = "s3." if match.group("s3") is not None else ""
+    scheme = match.group("scheme")
+    endpoint = match.group("endpoint")
+
+    if region_code is None:
+        return f"{scheme}://{s3_prefix}{endpoint}/{bucket_name}/{object_key}"
+
+    return f"{scheme}://{s3_prefix}{region_code}.{endpoint}/{bucket_name}/{object_key}"
 
 
 def s3_get_object_metadata(s3_input_config: S3InputConfig) -> list[FileMetadata]:
@@ -266,7 +297,11 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> list[FileMetadata]
     :raise: Propagates `_s3_get_object_metadata_from_single_prefix`'s exceptions.
     :raise: Propagates `_s3_get_object_metadata_from_keys`'s exceptions.
     """
-    s3_client = _create_s3_client(s3_input_config.region_code, s3_input_config.aws_authentication)
+    s3_client = _create_s3_client(
+        s3_input_config.endpoint_url,
+        s3_input_config.region_code,
+        s3_input_config.aws_authentication,
+    )
 
     if s3_input_config.keys is None:
         return _s3_get_object_metadata_from_single_prefix(
@@ -301,7 +336,9 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
         )
 
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
-    s3_client = _create_s3_client(s3_config.region_code, s3_config.aws_authentication, boto3_config)
+    s3_client = _create_s3_client(
+        s3_config.endpoint_url, s3_config.region_code, s3_config.aws_authentication, boto3_config
+    )
 
     with open(src_file, "rb") as file_data:
         s3_client.put_object(
@@ -310,11 +347,16 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
 
 
 def s3_delete_by_key_prefix(
-    region_code: str, bucket_name: str, key_prefix: str, s3_auth: AwsAuthentication
+    endpoint_url: str | None,
+    region_code: str | None,
+    bucket_name: str,
+    key_prefix: str,
+    s3_auth: AwsAuthentication,
 ) -> None:
     """
     Deletes all objects under the S3 path `bucket_name`/`key_prefix`.
 
+    :param endpoint_url:
     :param region_code:
     :param bucket_name:
     :param key_prefix:
@@ -322,15 +364,13 @@ def s3_delete_by_key_prefix(
     :raises: ValueError if any parameter is invalid.
     :raises: Propagates `boto3.client.delete_objects`'s exceptions.
     """
-    if not bool(region_code):
-        raise ValueError("Region code is not specified")
     if not bool(bucket_name):
         raise ValueError("Bucket name is not specified")
     if not bool(key_prefix):
         raise ValueError("Key prefix is not specified")
 
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
-    s3_client = _create_s3_client(region_code, s3_auth, boto3_config)
+    s3_client = _create_s3_client(endpoint_url, region_code, s3_auth, boto3_config)
 
     paginator = s3_client.get_paginator("list_objects_v2")
     for page in paginator.paginate(
@@ -361,7 +401,9 @@ def s3_delete_objects(s3_config: S3Config, object_keys: set[str]) -> None:
     :raises: Propagates `boto3.client.delete_object`'s exceptions.
     """
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
-    s3_client = _create_s3_client(s3_config.region_code, s3_config.aws_authentication, boto3_config)
+    s3_client = _create_s3_client(
+        s3_config.endpoint_url, s3_config.region_code, s3_config.aws_authentication, boto3_config
+    )
 
     def _gen_deletion_config(objects_list: list[str]):
         return {"Objects": [{"Key": object_to_delete} for object_to_delete in objects_list]}

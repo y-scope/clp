@@ -113,6 +113,7 @@ dependencies = [
  "clp-rust-utils",
  "futures",
  "mongodb",
+ "non-empty-string",
  "num_enum",
  "pin-project-lite",
  "rmp-serde",
@@ -901,6 +902,7 @@ dependencies = [
  "serde_yaml",
  "sqlx",
  "thiserror",
+ "utoipa",
 ]
 
 [[package]]
@@ -2153,7 +2155,6 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "const_format",
- "log",
  "non-empty-string",
  "secrecy",
  "serde",
@@ -2163,9 +2164,12 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util",
+ "tower-http",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "utoipa",
+ "utoipa-axum",
  "uuid",
 ]
 
