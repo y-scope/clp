@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cstdint>
 #include <cstring>
+#include <map>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -63,6 +64,14 @@ public:
     static bool get_last_uri_component(std::string_view const uri, std::string& name);
 };
 
+/**
+ * Result of sanitizing a JSON buffer, including statistics about what was sanitized.
+ */
+struct JsonSanitizeResult {
+    size_t new_buf_occupied;
+    std::map<char, size_t> sanitized_char_counts;
+};
+
 class StringUtils {
 public:
     /**
@@ -80,6 +89,34 @@ public:
      * @param source
      */
     static void escape_json_string(std::string& destination, std::string_view const source);
+
+    /**
+     * Sanitizes a JSON buffer by escaping unescaped control characters (0x00-0x1F) inside JSON
+     * strings. This is used to fix malformed JSON that contains raw control characters which
+     * would cause parsing errors.
+     *
+     * Only control characters inside JSON string values (between unescaped double quotes) are
+     * escaped. Control characters outside strings are left unchanged as they would cause
+     * structural JSON errors anyway.
+     *
+     * Characters are escaped using unicode escape sequences (e.g., \x00 becomes \u0000).
+     *
+     * @param buf Pointer to pointer to the buffer. May be reallocated if expansion is needed.
+     *             The caller's pointer will be updated to point to the new buffer if reallocation
+     *             occurs. The caller is responsible for deleting the buffer.
+     * @param buf_size Current allocated size of the buffer (excluding simdjson padding).
+     *                 This parameter is modified by reference and will be updated if the buffer
+     *                 is reallocated to reflect the new buffer size.
+     * @param buf_occupied Number of bytes currently used in the buffer.
+     * @param simdjson_padding Amount of padding required after buffer content.
+     * @return Result containing new buf_occupied and counts of each sanitized character.
+     */
+    static JsonSanitizeResult sanitize_json_buffer(
+            char*& buf,
+            size_t& buf_size,
+            size_t buf_occupied,
+            size_t simdjson_padding
+    );
 
 private:
     /**

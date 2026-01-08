@@ -2,6 +2,7 @@
 
 #include <charconv>
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <set>
@@ -161,6 +162,75 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     }
     name = path_segments_view.back();
     return true;
+}
+
+JsonSanitizeResult StringUtils::sanitize_json_buffer(
+        char*& buf,
+        size_t& buf_size,
+        size_t buf_occupied,
+        size_t simdjson_padding
+) {
+    // Build sanitized content in a temporary buffer, escaping control characters
+    // inside JSON strings. This is a fallback path only triggered on UNESCAPED_CHARS error,
+    // so we prioritize correctness over performance.
+    //
+    // Note: If the buffer contains unmatched quotes (e.g., truncated JSON), the string state
+    // tracking may be incorrect, potentially escaping control characters outside of actual
+    // JSON strings. This is acceptable since such malformed JSON will fail parsing anyway.
+    std::string sanitized;
+
+    std::map<char, size_t> sanitized_char_counts;
+    bool in_string = false;
+    bool escape_next = false;
+
+    for (size_t i = 0; i < buf_occupied; ++i) {
+        char c = buf[i];
+
+        if (escape_next) {
+            escape_next = false;
+            sanitized.push_back(c);
+            continue;
+        }
+
+        if (c == '\\' && in_string) {
+            escape_next = true;
+            sanitized.push_back(c);
+            continue;
+        }
+
+        if (c == '"') {
+            in_string = !in_string;
+            sanitized.push_back(c);
+            continue;
+        }
+
+        // Escape control characters (0x00-0x1F) inside strings to \u00XX format
+        if (in_string && static_cast<unsigned char>(c) < 0x20) {
+            char_to_escaped_four_char_hex(sanitized, c);
+            ++sanitized_char_counts[c];
+        } else {
+            sanitized.push_back(c);
+        }
+    }
+
+    // If no changes were made, return early
+    if (sanitized.size() == buf_occupied) {
+        return {buf_occupied, {}};
+    }
+
+    // Grow buffer if needed to hold sanitized content
+    if (sanitized.size() > buf_size) {
+        // Allocate exactly the size needed since we know the exact size upfront
+        size_t new_buf_size = sanitized.size();
+        char* new_buf = new char[new_buf_size + simdjson_padding];
+        delete[] buf;
+        buf = new_buf;
+        buf_size = new_buf_size;
+    }
+
+    // Copy sanitized content to buffer
+    std::memcpy(buf, sanitized.data(), sanitized.size());
+    return {sanitized.size(), std::move(sanitized_char_counts)};
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {

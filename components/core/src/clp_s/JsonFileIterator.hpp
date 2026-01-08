@@ -41,9 +41,11 @@ public:
     [[nodiscard]] size_t truncated_bytes() const { return m_truncated_bytes; }
 
     /**
-     * @return total number of bytes read from the file
+     * @return total number of bytes read from the file, plus any bytes added by sanitization
      */
-    [[nodiscard]] size_t get_num_bytes_read() const { return m_bytes_read; }
+    [[nodiscard]] size_t get_num_bytes_read() const {
+        return m_bytes_read + m_sanitization_bytes_added;
+    }
 
     /**
      * Note: this method can not be const because checking if a simdjson iterator is at the end
@@ -76,6 +78,7 @@ private:
     size_t m_truncated_bytes{0};
     size_t m_next_document_position{0};
     size_t m_bytes_read{0};
+    size_t m_sanitization_bytes_added{0};
     size_t m_buf_size{0};
     size_t m_buf_occupied{0};
     size_t m_max_document_size{0};

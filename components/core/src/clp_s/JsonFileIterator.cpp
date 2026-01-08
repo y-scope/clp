@@ -3,7 +3,10 @@
 #include <cctype>
 #include <cstring>
 
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
+
+#include "Utils.hpp"
 
 namespace clp_s {
 JsonFileIterator::JsonFileIterator(
@@ -63,6 +66,51 @@ bool JsonFileIterator::read_new_json() {
                                      /* batch size of data to parse*/ m_buf_occupied
         )
                              .get(m_stream);
+
+        // If we encounter unescaped control characters in JSON strings, sanitize the buffer
+        // by escaping them to \u00XX format and retry parsing
+        if (simdjson::error_code::UNESCAPED_CHARS == error) {
+            size_t const old_buf_occupied = m_buf_occupied;
+            // Note: sanitize_json_buffer may reallocate m_buf and will update m_buf_size by
+            // reference if reallocation is needed. This keeps m_buf_size in sync with the
+            // actual allocated buffer size.
+            auto const result = StringUtils::sanitize_json_buffer(
+                    m_buf,
+                    m_buf_size,
+                    m_buf_occupied,
+                    simdjson::SIMDJSON_PADDING
+            );
+            m_buf_occupied = result.new_buf_occupied;
+            m_sanitization_bytes_added += m_buf_occupied - old_buf_occupied;
+
+            // Build log message with details of sanitized characters
+            size_t total_sanitized = 0;
+            std::string char_details;
+            for (auto const& [ch, count] : result.sanitized_char_counts) {
+                if (!char_details.empty()) {
+                    char_details += ", ";
+                }
+                char_details += fmt::format("0x{:02x} ({})", static_cast<unsigned char>(ch), count);
+                total_sanitized += count;
+            }
+            size_t bytes_added = m_buf_occupied - old_buf_occupied;
+            SPDLOG_WARN(
+                    "Escaped {} control character(s) in JSON: [{}]. Buffer expanded by {} bytes ({} -> {}).",
+                    total_sanitized,
+                    char_details,
+                    bytes_added,
+                    old_buf_occupied,
+                    m_buf_occupied
+            );
+
+            error = m_parser
+                            .iterate_many(
+                                    m_buf,
+                                    /* length of data */ m_buf_occupied,
+                                    /* batch size of data to parse*/ m_buf_occupied
+                            )
+                            .get(m_stream);
+        }
 
         if (error) {
             m_error_code = error;
@@ -151,10 +199,12 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
 size_t JsonFileIterator::get_num_bytes_consumed() {
     // If there are more documents left in the current buffer account for how much of the
     // buffer has been consumed, otherwise report the total number of bytes read so that we
-    // capture trailing whitespace.
+    // capture trailing whitespace. Include bytes added by sanitization since the sanitized
+    // content is what gets compressed.
     if (m_doc_it != m_stream.end()) {
-        return m_bytes_read - (m_buf_occupied - m_next_document_position);
+        return m_bytes_read + m_sanitization_bytes_added
+               - (m_buf_occupied - m_next_document_position);
     }
-    return m_bytes_read;
+    return m_bytes_read + m_sanitization_bytes_added;
 }
 }  // namespace clp_s
