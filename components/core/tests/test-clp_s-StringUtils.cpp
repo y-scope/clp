@@ -332,12 +332,15 @@ auto sanitize_utf8_string(std::string_view input) -> std::string {
  */
 auto count_replacement_chars(std::string_view s) -> size_t {
     size_t count = 0;
-    for (size_t i = 0; i + 2 < s.size(); ++i) {
+    size_t i = 0;
+    while (i + 2 < s.size()) {
         if (static_cast<unsigned char>(s[i]) == 0xEF && static_cast<unsigned char>(s[i + 1]) == 0xBF
             && static_cast<unsigned char>(s[i + 2]) == 0xBD)
         {
             ++count;
-            i += 2;  // Skip past the replacement char
+            i += 3;  // Skip past the replacement char (3 bytes for U+FFFD)
+        } else {
+            ++i;
         }
     }
     return count;
