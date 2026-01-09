@@ -1,0 +1,15 @@
+1972-12-10T05:33:00.000 apollo-17 d04 e000 spacecraft enters lunar sphere of influence with gravity reference shifting; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T05:42:35.999 apollo-17 d04 e001 navigation update computes parameters for lunar orbit insertion burn; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T05:52:11.998 apollo-17 d04 e002 service propulsion system gimbals exercised in preparation for major burn; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:01:47.997 apollo-17 d04 e003 lunar orbit insertion burn ignition places spacecraft behind the Moon; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:11:23.996 apollo-17 d04 e004 loss of signal period begins as spacecraft passes behind lunar limb; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:20:59.995 apollo-17 d04 e005 lunar orbit insertion burn complete before acquisition of signal; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:30:35.994 apollo-17 d04 e006 acquisition of signal resumes with telemetry confirming stable lunar orbit; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:40:11.993 apollo-17 d04 e007 initial lunar orbit tracking verifies altitude and period close to plan; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:49:47.992 apollo-17 d04 e008 crew performs visual inspection of lunar surface features from orbit; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T06:59:23.991 apollo-17 d04 e009 lunar module powered up for initial systems checkout in lunar orbit; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T07:08:59.990 apollo-17 d04 e010 radar and communications links between command and lunar modules verified; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T07:18:35.989 apollo-17 d04 e011 flight controllers review descent trajectory to Taurus Littrow landing site; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T07:28:11.988 apollo-17 d04 e012 orbital trim maneuver planned to adjust pericynthion for descent path; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T07:37:47.987 apollo-17 d04 e013 crew rehearses undocking sequence and activation timeline for Challenger; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-10T07:47:23.986 apollo-17 d04 e014 lunar orbit mapping and photography program begins from command module; all primary systems nominal; communications lock; navigation solution within expected error
