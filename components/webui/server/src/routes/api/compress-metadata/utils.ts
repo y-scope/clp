@@ -21,7 +21,7 @@ import {CompressionMetadataQueryRow} from "./sql.js";
 const decodeJobConfig = (
     jobConfig: unknown
 ): {clp_config: ClpIoConfig} => {
-    if (!(jobConfig instanceof Buffer)) {
+    if (false === (jobConfig instanceof Buffer)) {
         throw new Error("Missing clp_config buffer for compression metadata");
     }
 
