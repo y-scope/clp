@@ -8,16 +8,18 @@ from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import TracebackType
-from typing import BinaryIO, cast, TextIO
+from typing import BinaryIO, cast, IO, TextIO
 
 from typing_extensions import Unpack
 
 from clp_core._bin import _get_executable
 from clp_core._config import (
     ArchiveInputSource,
+    ClpQuery,
     CompressionKwargs,
     DecompressionKwargs,
     LogEvent,
+    SearchKwargs,
 )
 from clp_core._except import (
     BadCompressionInputError,
@@ -158,10 +160,11 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
             err_msg = f"ClpArchiveReader for archive at {self._archive_path} is closed."
             raise ClpCoreRuntimeError(err_msg)
 
-        line = self._decomp_fp.readline().strip()
+        line = self._decomp_fp.readline()
         if 0 == len(line):
             raise StopIteration
-        return LogEvent(kv_pairs=json.loads(line))
+
+        return LogEvent(kv_pairs=json.loads(line.rstrip("\n")))
 
     def close(self) -> None:
         if self._archive_is_temp:
@@ -183,6 +186,98 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
         return self
 
     def __enter__(self) -> "ClpArchiveReader":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.close()
+
+
+class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterator[LogEvent]):
+    def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[SearchKwargs]) -> None:
+        self._file: ArchiveInputSource = file
+        self._encoding: str | None = kwargs.get("encoding")
+        self._errors: str | None = kwargs.get("errors")
+        self._query: ClpQuery = kwargs["query"]
+
+        _validate_archive_source(self._file)
+
+        self._archive_path: Path
+        self._archive_is_temp: bool = False
+        if isinstance(self._file, (str, os.PathLike)):
+            self._archive_path = Path(self._file)
+        else:
+            self._archive_path = Path(_write_stream_to_temp_file(self._file, suffix=".clp"))
+            self._archive_is_temp = True
+
+        search_cmd = [
+            str(CLP_S_BIN),
+            "s",
+            str(self._archive_path),
+            self._query.get_query_string(),
+        ]
+
+        self._search_proc: subprocess.Popen[str] | None = None
+        self._search_fp: IO[str] | None = None
+        try:
+            self._search_proc = subprocess.Popen(
+                search_cmd,
+                stdout=subprocess.PIPE,
+                text=True,
+                encoding=self._encoding,
+                errors=self._errors,
+                bufsize=1,  # flushes each line
+            )
+        except Exception as e:
+            err_msg = f"Failed to query archive at {self._archive_path}."
+            raise ClpCoreRuntimeError(err_msg) from e
+
+        self._search_fp = self._search_proc.stdout
+        if self._search_fp is None:
+            err_msg = "Cannot read the search results stream."
+            raise ClpCoreRuntimeError(err_msg)
+
+    def get_next_log_event(self) -> LogEvent:
+        if self._search_fp is None or self._search_proc is None:
+            err_msg = f"ClpSearchResults streaming for archive at {self._archive_path} is closed."
+            raise ClpCoreRuntimeError(err_msg)
+
+        line = self._search_fp.readline()
+        if 0 == len(line):
+            # Check if the search hit EOF or erred midway
+            rc = self._search_proc.wait()
+            if rc != 0:
+                raise subprocess.CalledProcessError(rc, self._search_proc.args)
+            raise StopIteration
+
+        return LogEvent(kv_pairs=json.loads(line.rstrip("\n")))
+
+    def close(self) -> None:
+        if self._archive_is_temp:
+            with suppress(OSError):
+                self._archive_path.unlink()
+
+        if self._search_fp is not None:
+            with suppress(OSError):
+                self._search_fp.close()
+            self._search_fp = None
+
+        if self._search_proc is not None:
+            with suppress(OSError):
+                self._search_proc.wait()
+            self._search_proc = None
+
+    def __next__(self) -> LogEvent:
+        return self.get_next_log_event()
+
+    def __iter__(self) -> "ClpSearchResults":
+        return self
+
+    def __enter__(self) -> "ClpSearchResults":
         return self
 
     def __exit__(
