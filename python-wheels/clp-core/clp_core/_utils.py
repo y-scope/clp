@@ -5,6 +5,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import BinaryIO, TextIO
 
 from clp_core._except import (
     BadArchiveSourceError,
@@ -43,22 +44,28 @@ def _get_single_file_in_dir(dir_path: Path) -> Path:
     return files[0]
 
 
-def _write_stream_to_temp_file(stream: io.IOBase, text_encoding: str = "utf-8") -> str:
+def _write_stream_to_temp_file(
+    stream: BinaryIO | TextIO,
+    suffix: str | None = None,
+    temp_file_dir: str | None = "/tmp/bill",  # noqa: S108
+) -> str:
     if not stream.readable():
-        err_msg = "Compression input stream is not readable."
+        err_msg = "Input stream is not readable."
         raise ClpCoreRuntimeError(err_msg)
 
     is_text = isinstance(stream, io.TextIOBase)
     mode = "w" if is_text else "wb"
-    encoding = text_encoding if is_text else None
+    encoding = getattr(stream, "encoding", None)
+    errors = getattr(stream, "errors", None)
 
     # Context manager for temporary files is used in parent function.
     temp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
         mode=mode,
         encoding=encoding,
+        errors=errors,
         delete=False,
-        suffix=".log",
-        dir="/tmp/bill",
+        suffix=suffix,
+        dir=temp_file_dir,
     )
 
     temp_file_path_str = temp_file.name

@@ -11,15 +11,15 @@ from clp_core._archive_io import (
     ClpArchiveWriter,
 )
 from clp_core._config import (
+    ArchiveInputSource,
     CompressionKwargs,
     DecompressionKwargs,
-    InputSource,
 )
 
 
 @overload
 def open_archive(
-    file: InputSource,
+    file: ArchiveInputSource,
     mode: Literal["w"],
     **kwargs: Unpack[CompressionKwargs],
 ) -> ClpArchiveWriter:
@@ -28,7 +28,7 @@ def open_archive(
 
 @overload
 def open_archive(
-    file: InputSource,
+    file: ArchiveInputSource,
     mode: Literal["r"],
     **kwargs: Unpack[DecompressionKwargs],
 ) -> ClpArchiveReader:
@@ -36,7 +36,7 @@ def open_archive(
 
 
 def open_archive(
-    file: InputSource,
+    file: ArchiveInputSource,
     mode: Literal["r", "w"] = "r",
     **kwargs: Any,
 ) -> ClpArchiveWriter | ClpArchiveReader:

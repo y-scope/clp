@@ -1,20 +1,23 @@
 import io
+import json
 import os
 import shutil
 import subprocess
-from contextlib import AbstractContextManager
+from collections.abc import Iterator
+from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import TracebackType
-from typing import BinaryIO, cast
+from typing import BinaryIO, cast, TextIO
 
 from typing_extensions import Unpack
 
 from clp_core._bin import _get_executable
 from clp_core._config import (
+    ArchiveInputSource,
     CompressionKwargs,
     DecompressionKwargs,
-    InputSource,
+    LogEvent,
 )
 from clp_core._except import (
     BadCompressionInputError,
@@ -27,11 +30,12 @@ from clp_core._utils import (
 )
 
 CLP_S_BIN = _get_executable("clp-s")
+TEMP_DIR = "/tmp/bill"  # noqa: S108
 
 
 class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
-    def __init__(self, file: InputSource, **kwargs: Unpack[CompressionKwargs]) -> None:
-        self._file: InputSource = file
+    def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[CompressionKwargs]) -> None:
+        self._file: ArchiveInputSource = file
         self._compression_level: int | None = kwargs.get("compression_level")
         self._timestamp_key: str | None = kwargs.get("timestamp_key")
 
@@ -42,8 +46,8 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
         self._archive_dir: Path
         self._temp_archive_dir: TemporaryDirectory[str] | None = None
-        if isinstance(file, (str, os.PathLike)):
-            self._archive_dir = Path(file)
+        if isinstance(self._file, (str, os.PathLike)):
+            self._archive_dir = Path(self._file)
             try:
                 if self._archive_dir.is_dir():
                     shutil.rmtree(self._archive_dir)
@@ -55,14 +59,14 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         else:
             # Create a temporary directory for the archive to live in, and feed
             # the archive into the BinaryIO stream.
-            self._temp_archive_dir = TemporaryDirectory(dir="/tmp/bill")
+            self._temp_archive_dir = TemporaryDirectory(dir=TEMP_DIR)
             self._archive_dir = Path(self._temp_archive_dir.name)
 
-    def add(self, source: str | os.PathLike[str] | io.IOBase) -> None:
+    def add(self, source: str | os.PathLike[str] | BinaryIO | TextIO) -> None:
         if isinstance(source, (str, os.PathLike)):
             self._files_to_compress.append(Path(source))
         elif isinstance(source, io.IOBase):
-            temp_file_path = Path(_write_stream_to_temp_file(source))
+            temp_file_path = Path(_write_stream_to_temp_file(source, suffix=".log"))
             self._files_to_compress.append(temp_file_path)
             self._temp_files_to_compress.append(temp_file_path)
         else:
@@ -89,10 +93,13 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
     def close(self) -> None:
         for p in self._temp_files_to_compress:
-            p.unlink()
+            with suppress(OSError):
+                p.unlink()
+
         if self._temp_archive_dir is not None:
-            self._temp_archive_dir.cleanup()
-        self._temp_archive_dir = None
+            with suppress(OSError):
+                self._temp_archive_dir.cleanup()
+            self._temp_archive_dir = None
 
     def __enter__(self) -> "ClpArchiveWriter":
         return self
@@ -113,6 +120,75 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             self.close()
 
 
-class ClpArchiveReader:
-    def __init__(self, file: InputSource, **kwargs: Unpack[DecompressionKwargs]) -> None:
-        pass
+class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterator[LogEvent]):
+    def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[DecompressionKwargs]) -> None:
+        self._file: ArchiveInputSource = file
+        self._encoding: str | None = kwargs.get("encoding")
+        self._errors: str | None = kwargs.get("errors")
+
+        _validate_archive_source(self._file)
+
+        self._archive_path: Path
+        self._archive_is_temp: bool = False
+        if isinstance(self._file, (str, os.PathLike)):
+            self._archive_path = Path(self._file)
+        else:
+            self._archive_path = Path(_write_stream_to_temp_file(self._file, suffix=".clp"))
+            self._archive_is_temp = True
+
+        self._decompression_temp_dir: TemporaryDirectory[str] = TemporaryDirectory(dir=TEMP_DIR)
+        decompress_cmd = [
+            str(CLP_S_BIN),
+            "x",
+            "--ordered",
+            str(self._archive_path),
+            self._decompression_temp_dir.name,
+        ]
+        subprocess.run(decompress_cmd, check=True)
+
+        self._decomp_fp: TextIO | None
+        self._decomp_fp = _get_single_file_in_dir(Path(self._decompression_temp_dir.name)).open(
+            mode="r",
+            encoding=self._encoding,
+            errors=self._errors,
+        )
+
+    def get_next_log_event(self) -> LogEvent:
+        if self._decomp_fp is None:
+            err_msg = f"ClpArchiveReader for archive at {self._archive_path} is closed."
+            raise ClpCoreRuntimeError(err_msg)
+
+        line = self._decomp_fp.readline().strip()
+        if 0 == len(line):
+            raise StopIteration
+        return LogEvent(kv_pairs=json.loads(line))
+
+    def close(self) -> None:
+        if self._archive_is_temp:
+            with suppress(OSError):
+                self._archive_path.unlink()
+
+        if self._decomp_fp is not None:
+            with suppress(OSError):
+                self._decomp_fp.close()
+            self._decomp_fp = None
+
+        with suppress(OSError):
+            self._decompression_temp_dir.cleanup()
+
+    def __next__(self) -> LogEvent:
+        return self.get_next_log_event()
+
+    def __iter__(self) -> "ClpArchiveReader":
+        return self
+
+    def __enter__(self) -> "ClpArchiveReader":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.close()

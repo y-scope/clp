@@ -4,7 +4,7 @@ from typing import Any, BinaryIO
 
 from typing_extensions import TypedDict
 
-InputSource = str | os.PathLike[str] | BinaryIO
+ArchiveInputSource = str | os.PathLike[str] | BinaryIO
 
 
 class CompressionKwargs(TypedDict, total=False):
@@ -14,7 +14,7 @@ class CompressionKwargs(TypedDict, total=False):
 
 class DecompressionKwargs(TypedDict, total=False):
     encoding: str
-    error: str
+    errors: str
 
 
 @dataclass
