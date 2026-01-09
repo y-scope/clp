@@ -50,6 +50,7 @@ Reference docs like format specifications, etc.
 :caption: Quick start
 
 quick-start/index
+quick-start/text-v-json
 quick-start/clp-json
 quick-start/clp-text
 :::
