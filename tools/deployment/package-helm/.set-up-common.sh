@@ -140,8 +140,12 @@ wait_for_pods() {
 
 # Waits for sample download to complete and all pods to be ready
 wait_for_cluster_ready() {
-    wait "$SAMPLE_DOWNLOAD_PID"
-    echo "Sample download and extraction complete"
+    if wait "$SAMPLE_DOWNLOAD_PID"; then
+        echo "Sample download and extraction complete"
+    else
+        echo "ERROR: Sample download failed"
+        return 1
+    fi
 
     wait_for_pods 300 5 5
 }
