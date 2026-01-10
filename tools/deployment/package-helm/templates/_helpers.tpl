@@ -310,7 +310,7 @@ When distributed is false (single-node mode), a control-plane toleration is auto
 so pods can be scheduled on tainted control-plane nodes without manual untainting.
 
 @param {object} root Root template context
-@param {string} component Top-level values key (e.g., "compressionWorker", "queryWorker")
+@param {string} component Key name in top-level Values (e.g., "compressionWorker", "queryWorker")
 @return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
   topologySpreadConstraints)
 */}}
