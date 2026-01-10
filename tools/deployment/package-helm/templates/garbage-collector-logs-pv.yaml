@@ -1,11 +1,10 @@
 {{- if or
   .Values.clpConfig.archive_output.retention_period
   .Values.clpConfig.results_cache.retention_period }}
-{{- include "clp.createLocalPv" (dict
+{{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "garbage-collector"
   "name" "logs"
-  "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/garbage_collector" .Values.clpConfig.logs_directory)
