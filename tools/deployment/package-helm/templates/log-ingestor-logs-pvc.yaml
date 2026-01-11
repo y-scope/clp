@@ -3,7 +3,7 @@
   "root" .
   "component_category" "log-ingestor"
   "name" "logs"
-  "capacity" "5Gi"
+  "capacity" "10Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}
 {{- end }}
