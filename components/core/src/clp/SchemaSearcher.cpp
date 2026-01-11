@@ -8,9 +8,8 @@
 #include <variant>
 #include <vector>
 
+#include <EncodedVariableInterpreter.hpp>
 #include <log_surgeon/Constants.hpp>
-
-#include "EncodedVariableInterpreter.hpp"
 
 using log_surgeon::SymbolId::TokenFloat;
 using log_surgeon::SymbolId::TokenInt;

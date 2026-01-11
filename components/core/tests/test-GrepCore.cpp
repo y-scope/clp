@@ -6,13 +6,13 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <Defs.h>
+#include <GrepCore.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
-#include "../src/clp/Defs.h"
-#include "../src/clp/GrepCore.hpp"
 #include "search_test_utils.hpp"
 
 using clp::epochtime_t;

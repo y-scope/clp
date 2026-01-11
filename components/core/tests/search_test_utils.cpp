@@ -11,9 +11,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "../src/clp/Defs.h"
-#include "../src/clp/EncodedVariableInterpreter.hpp"
-#include "../src/clp/Query.hpp"
+#include <Defs.h>
+#include <EncodedVariableInterpreter.hpp>
+#include <Query.hpp>
+
 #include "MockLogTypeDictionary.hpp"
 #include "MockVariableDictionary.hpp"
 

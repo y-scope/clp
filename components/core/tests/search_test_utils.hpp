@@ -10,8 +10,9 @@
 #include <variant>
 #include <vector>
 
-#include "../src/clp/Defs.h"
-#include "../src/clp/Query.hpp"
+#include <Defs.h>
+#include <Query.hpp>
+
 #include "MockLogTypeDictionary.hpp"
 #include "MockVariableDictionary.hpp"
 

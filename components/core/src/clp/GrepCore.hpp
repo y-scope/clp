@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <log_surgeon/Lexer.hpp>
+#include <SchemaSearcher.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
@@ -20,7 +21,6 @@
 #include "LogTypeDictionaryReaderReq.hpp"
 #include "Query.hpp"
 #include "QueryToken.hpp"
-#include "SchemaSearcher.hpp"
 #include "VariableDictionaryReaderReq.hpp"
 
 namespace clp {

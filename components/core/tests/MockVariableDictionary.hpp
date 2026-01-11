@@ -7,8 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../src/clp/Defs.h"
-#include "../src/clp/string_utils/string_utils.hpp"
+#include <Defs.h>
+#include <string_utils/string_utils.hpp>
 
 /**
  * Simple helper class representing a mock variable dictionary entry for unit tests.
