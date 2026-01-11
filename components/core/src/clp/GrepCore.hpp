@@ -9,19 +9,18 @@
 #include <unordered_set>
 #include <vector>
 
+#include <Defs.h>
+#include <EncodedVariableInterpreter.hpp>
+#include <ir/parsing.hpp>
+#include <ir/types.hpp>
+#include <LogTypeDictionaryReaderReq.hpp>
 #include <log_surgeon/Lexer.hpp>
+#include <Query.hpp>
+#include <QueryToken.hpp>
 #include <SchemaSearcher.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
-
-#include "Defs.h"
-#include "EncodedVariableInterpreter.hpp"
-#include "ir/parsing.hpp"
-#include "ir/types.hpp"
-#include "LogTypeDictionaryReaderReq.hpp"
-#include "Query.hpp"
-#include "QueryToken.hpp"
-#include "VariableDictionaryReaderReq.hpp"
+#include <VariableDictionaryReaderReq.hpp>
 
 namespace clp {
 class GrepCore {

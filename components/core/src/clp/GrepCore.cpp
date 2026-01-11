@@ -4,9 +4,9 @@
 #include <string>
 #include <string_view>
 
+#include <ir/parsing.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "ir/parsing.hpp"
 
 using clp::ir::is_delim;
 using clp::string_utils::is_alphabet;
