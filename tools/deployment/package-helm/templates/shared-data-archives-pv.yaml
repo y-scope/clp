@@ -1,0 +1,11 @@
+{{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "shared-data"
+  "name" "archives"
+  "nodeRole" "control-plane"
+  "capacity" "50Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" .Values.clpConfig.archive_output.storage.directory
+) }}
+{{- end }}

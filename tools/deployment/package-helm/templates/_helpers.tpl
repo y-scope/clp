@@ -95,6 +95,22 @@ failureThreshold: 3
 {{- end }}
 
 {{/*
+Creates a volume name for persistent storage resources.
+
+Used for:
+- Pod volume names (standalone)
+- PV/PVC resource names (combined with fullname)
+- StatefulSet volumeClaimTemplate names
+
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
+@return {string} Volume name in the format "{component_category}-{name}"
+*/}}
+{{- define "clp.volumeName" -}}
+{{- printf "%s-%s" .component_category .name -}}
+{{- end }}
+
+{{/*
 Creates a local PersistentVolume.
 
 @param {object} root Root template context
@@ -112,7 +128,7 @@ Creates a local PersistentVolume.
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp.fullname" .root }}-{{ .component_category }}-{{ .name }}
+  name: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
   labels:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component_category | quote }}
@@ -123,7 +139,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ .hostPath }}
+    path: {{ .hostPath | quote }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -133,6 +149,127 @@ spec:
         - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
+{{- end }}
+
+{{/*
+Creates a PersistentVolumeClaim for the given component.
+
+@param {object} root Root template context
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
+@param {string} capacity Storage capacity
+@param {string[]} accessModes Access modes
+@return {string} YAML-formatted PersistentVolumeClaim resource
+*/}}
+{{- define "clp.createPvc" -}}
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
+  labels:
+    {{- include "clp.labels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component_category | quote }}
+spec:
+  accessModes: {{ .accessModes }}
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" .root | nindent 6 }}
+      app.kubernetes.io/component: {{ .component_category | quote }}
+  resources:
+    requests:
+      storage: {{ .capacity }}
+{{- end }}
+
+{{/*
+Creates a volume definition that references a PersistentVolumeClaim.
+
+@param {object} root Root template context
+@param {string} component_category (e.g., "database", "shared-data")
+@param {string} name (e.g., "archives", "data", "logs")
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.pvcVolume" -}}
+name: {{ include "clp.volumeName" . | quote }}
+persistentVolumeClaim:
+  claimName: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
+{{- end }}
+
+{{/*
+Gets the BROKER_URL env var for Celery workers.
+
+@param {object} . Root template context
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryBrokerUrlEnvVar" -}}
+{{- $user := .Values.credentials.queue.username -}}
+{{- $pass := .Values.credentials.queue.password -}}
+{{- $host := printf "%s-queue" (include "clp.fullname" .) -}}
+name: "BROKER_URL"
+value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
+{{- end }}
+
+{{/*
+Gets the RESULT_BACKEND env var for Celery workers.
+
+@param {object} root Root template context
+@param {string} database Redis database number from config
+@return {string} YAML-formatted env var definition
+*/}}
+{{- define "clp.celeryResultBackendEnvVar" -}}
+{{- $pass := .root.Values.credentials.redis.password -}}
+{{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
+name: "RESULT_BACKEND"
+value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
+{{- end }}
+
+{{/*
+Creates a volumeMount for the logs input directory.
+
+@return {string} YAML-formatted volumeMount definition
+*/}}
+{{- define "clp.logsInputVolumeMount" -}}
+name: "logs-input"
+mountPath: "/mnt/logs"
+readOnly: true
+{{- end }}
+
+{{/*
+Creates a volume for the logs input directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.logsInputVolume" -}}
+name: "logs-input"
+hostPath:
+  path: {{ .Values.clpConfig.logs_input.directory | quote }}
+  type: "Directory"
+{{- end }}
+
+{{/*
+Creates a volumeMount for the AWS config directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volumeMount definition
+*/}}
+{{- define "clp.awsConfigVolumeMount" -}}
+name: "aws-config"
+mountPath: {{ .Values.clpConfig.aws_config_directory | quote }}
+readOnly: true
+{{- end }}
+
+{{/*
+Creates a volume for the AWS config directory.
+
+@param {object} . Root template context
+@return {string} YAML-formatted volume definition
+*/}}
+{{- define "clp.awsConfigVolume" -}}
+name: "aws-config"
+hostPath:
+  path: {{ .Values.clpConfig.aws_config_directory | quote }}
+  type: "Directory"
 {{- end }}
 
 {{/*

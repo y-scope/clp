@@ -41,6 +41,13 @@ How to use the API server to interact with CLP.
 :::
 
 :::{grid-item-card}
+:link: guides-using-log-ingestor
+Using `log-ingestor`
+^^^
+How to use `log-ingestor` to continuously ingest logs.
+:::
+
+:::{grid-item-card}
 :link: guides-using-presto
 Using Presto with CLP
 ^^^

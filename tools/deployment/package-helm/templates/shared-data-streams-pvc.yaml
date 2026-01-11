@@ -1,0 +1,9 @@
+{{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component_category" "shared-data"
+  "name" "streams"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteMany")
+) }}
+{{- end }}
