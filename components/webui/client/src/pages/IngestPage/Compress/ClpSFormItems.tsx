@@ -6,6 +6,7 @@ import {
     Typography,
 } from "antd";
 
+import styles from "./index.module.css";
 import {validateDatasetName} from "./validation";
 
 
@@ -30,8 +31,22 @@ const TIMESTAMP_KEY_PLACEHOLDER_TEXT =
     "The path (e.g. x.y) for the field containing the log event's timestamp";
 const UNSTRUCTURED_HELPER_TEXT = (
     <>
-        Enable this to compress unstructured text logs by converting them into JSON first.
-        When enabled, each log event is parsed to extract the timestamp and message into separate
+        Enable this for non-JSON logs. Each log event will be parsed and converted to JSON with
+        {" "}
+        <Typography.Text
+            className={styles["tooltipCode"] || ""}
+            code={true}
+        >
+            timestamp
+        </Typography.Text>
+        {" and "}
+        <Typography.Text
+            className={styles["tooltipCode"] || ""}
+            code={true}
+        >
+            message
+        </Typography.Text>
+        {" "}
         fields. See the
         {" "}
         <Typography.Link
@@ -80,11 +95,12 @@ const ClpSFormItems = () => (
             <Input placeholder={TIMESTAMP_KEY_PLACEHOLDER_TEXT}/>
         </Form.Item>
         <Form.Item
+            label={"Unstructured Logs"}
             name={"unstructured"}
             tooltip={UNSTRUCTURED_HELPER_TEXT}
             valuePropName={"checked"}
         >
-            <Checkbox>Unstructured</Checkbox>
+            <Checkbox>Convert to JSON</Checkbox>
         </Form.Item>
     </>
 );
