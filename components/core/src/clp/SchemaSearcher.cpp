@@ -1,10 +1,8 @@
 #include "SchemaSearcher.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -19,7 +17,6 @@ using log_surgeon::wildcard_query_parser::VariableQueryToken;
 using std::holds_alternative;
 using std::set;
 using std::string;
-using std::unordered_map;
 using std::vector;
 
 namespace clp {
