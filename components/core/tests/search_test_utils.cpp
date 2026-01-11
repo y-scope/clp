@@ -65,6 +65,7 @@ auto generate_expected_logtype_string(vector<variant<string_view, char>> const& 
                     EncodedVariableInterpreter::add_dict_var(result);
                     break;
                 default:
+                    REQUIRE(false);
                     break;
             }
         }
