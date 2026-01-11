@@ -60,6 +60,8 @@ const Compress = () => {
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
             if ("undefined" === typeof values.dataset || 0 === values.dataset.length) {
                 payload.dataset = CLP_DEFAULT_DATASET_NAME;
+            } else {
+                payload.dataset = values.dataset;
             }
             if ("undefined" !== typeof values.timestampKey) {
                 payload.timestampKey = values.timestampKey;
