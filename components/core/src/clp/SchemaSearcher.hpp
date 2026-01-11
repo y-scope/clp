@@ -40,7 +40,6 @@ public:
            LogTypeDictionaryReaderType const& logtype_dict,
            VariableDictionaryReaderType const& var_dict,
            bool ignore_case) -> std::vector<SubQuery> {
-        // TODO: Optimize such that interpretations are only generated once per schema.
         log_surgeon::wildcard_query_parser::Query const query{search_string};
         auto const interpretations{query.get_all_multi_token_interpretations(lexer)};
         auto const normalized_interpretations{normalize_interpretations(interpretations)};
