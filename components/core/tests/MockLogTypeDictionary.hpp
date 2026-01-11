@@ -12,7 +12,7 @@
 #include <string_utils/string_utils.hpp>
 
 /**
- * Simple helper class representing a mock logtype dictionary entry for unit tests.
+ * Helper class representing a mock logtype dictionary entry for unit tests.
  *
  * Adheres to `LogtypeDictionaryEntryReq`.
  */
@@ -65,7 +65,7 @@ private:
 };
 
 /**
- * Simple helper class representing a mock logtype dictionary for unit tests.
+ * Helper class representing a mock logtype dictionary for unit tests.
  *
  * Provides a method for adding entries and adheres to `LogtypeDictionaryReaderReq`.
  */

@@ -11,7 +11,7 @@
 #include <string_utils/string_utils.hpp>
 
 /**
- * Simple helper class representing a mock variable dictionary entry for unit tests.
+ * Helper class representing a mock variable dictionary entry for unit tests.
  *
  * Adheres to `VariableDictionaryEntryReq`.
  */
@@ -31,7 +31,7 @@ private:
 };
 
 /**
- * Simple helper class representing a mock variable dictionary for unit tests.
+ * Helper class representing a mock variable dictionary for unit tests.
  *
  * Provides a method for adding entries and adheres to `VariableDictionaryReaderReq`.
  */
