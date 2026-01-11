@@ -147,7 +147,10 @@ std::optional<Query> GrepCore::process_raw_query(
         bool use_heuristic
 ) {
     std::vector<SubQuery> sub_queries;
-    if (use_heuristic) {
+    if (false == use_heuristic) {
+        sub_queries
+                = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
+    } else {
         // Split search_string into tokens with wildcards
         std::vector<QueryToken> query_tokens;
         size_t begin_pos = 0;
@@ -232,9 +235,6 @@ std::optional<Query> GrepCore::process_raw_query(
                 }
             }
         }
-    } else {
-        sub_queries
-                = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
     }
 
     if (sub_queries.empty()) {
