@@ -192,10 +192,11 @@ TEST_CASE("Test lexer", "[Search]") {
     auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     Token token{opt_token.value()};
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
+    while (token.get_type_ids()->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
-                "token.m_type_ids->back():" + lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
+                "token.get_type_ids()->back():" + lexer.m_id_symbol[token.get_type_ids()->back()]
+                + "\n"
         );
         auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);

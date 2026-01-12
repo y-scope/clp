@@ -24,6 +24,9 @@ constexpr char cArchiveArrayDictFile[] = "/array.dict";
 constexpr char cArchiveLogDictFile[] = "/log.dict";
 constexpr char cArchiveVarDictFile[] = "/var.dict";
 
+// Experimental stats
+constexpr std::string_view cArchiveStatsFile{"/stats"};
+
 // Schema tree constants
 constexpr char cRootNodeName[] = "";
 constexpr int32_t cRootNodeId = -1;
