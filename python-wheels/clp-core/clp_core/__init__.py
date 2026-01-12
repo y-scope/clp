@@ -12,8 +12,11 @@ from clp_core._archive_io import (
 from clp_core._bin import clp_s
 from clp_core._config import (
     ClpQuery,
+    CompressionKwargs,
+    DecompressionKwargs,
     KqlQuery,
     LogEvent,
+    SearchKwargs,
 )
 from clp_core._except import (
     BadArchiveSourceError,
@@ -31,8 +34,11 @@ __all__ = [
     "ClpCoreRuntimeError",
     "ClpQuery",
     "ClpSearchResults",
+    "CompressionKwargs",
+    "DecompressionKwargs",
     "KqlQuery",
     "LogEvent",
+    "SearchKwargs",
     "clp_s",
     "open_archive",
     "search_archive",

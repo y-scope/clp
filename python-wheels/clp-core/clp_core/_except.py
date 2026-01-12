@@ -13,5 +13,5 @@ class BadArchiveSourceError(ClpCoreError, TypeError):
     """Raised when the archive source has an invalid type."""
 
 
-class BadCompressionInputError(ClpCoreError, ValueError):
-    """Raised when compression input is invalid or unsupported."""
+class BadCompressionInputError(ClpCoreError, TypeError):
+    """Raised when compression input has an invalid type."""

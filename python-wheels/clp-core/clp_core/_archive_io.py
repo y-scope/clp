@@ -33,7 +33,24 @@ from clp_core._utils import (
 
 
 class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
+    """
+    Archive handler for creating and writing a CLP archive.
+
+    This class collects one or more input sources and produces a single CLP archive. Instances
+    should be closed explicitly, as the writer finalizes compression and releases all associated
+    resources at that point.
+    """
+
     def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[CompressionKwargs]) -> None:
+        """
+        Initialize a `ClpArchiveWriter` instance.
+
+        If the provided archive is a binary stream sink, a temporary archive is created, and its
+        contents are written to the stream when the writer is closed.
+        :param file: Archive sink. Must be either a filesystem path or a binary I/O object.
+        :param kwargs: Compression specific keyword arguments. See `CompressionKwargs`.
+        :raise ClpCoreRuntimeError: if initialization fails.
+        """
         self._file: ArchiveInputSource = file
         self._compression_level: int | None = kwargs.get("compression_level")
         self._timestamp_key: str | None = kwargs.get("timestamp_key")
@@ -62,6 +79,15 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             self._archive_dir = Path(self._temp_archive_dir.name)
 
     def add(self, source: str | os.PathLike[str] | BinaryIO | TextIO) -> None:
+        """
+        Add an input source to be included in the compressed archive.
+
+        :param source: Input source to add. Must be a filesystem path or an I/O stream. Filesystem
+            paths are added directly. Stream inputs are first materialized into temporary files, as
+            the CLP compression pipeline currently does not support operating on stdin.
+        :raise BadCompressionInputError: If the input source type is not supported.
+        :raise ClpCoreRuntimeError: If the input source cannot be processed successfully.
+        """
         if isinstance(source, (str, os.PathLike)):
             self._files_to_compress.append(Path(source))
         elif isinstance(source, io.IOBase):
@@ -73,6 +99,12 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             raise BadCompressionInputError(err_msg)
 
     def _compress(self) -> None:
+        """
+        Perform compression and, if a binary I/O stream was provided at initialization, write the
+        archive contents to that stream. Should not be called by the class user.
+
+        :raise subprocess.CalledProcessError: If the archive compression fails.
+        """
         if 0 == len(self._files_to_compress):
             err_msg = f"Nothing to compress for archive {self._archive_dir}."
             raise BadCompressionInputError(err_msg)
@@ -92,6 +124,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
                 shutil.copyfileobj(archive_file, cast("BinaryIO", self._file), length=1024 * 1024)
 
     def close(self) -> None:
+        """Cleans up all temporary resources used by the archive writer."""
         for p in self._temp_files_to_compress:
             with suppress(OSError):
                 p.unlink()
@@ -110,6 +143,16 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        """
+        Finalize archive creation and release associated resources.
+
+        Compression is performed only if no exception was raised while adding inputs. All temporary
+        resources are released before returning, regardless of whether compression succeeds.
+        :param exc_type:
+        :param exc_val:
+        :param exc_tb:
+        :raise ClpCoreRuntimeError: If compression fails.
+        """
         try:
             if exc_type is None:
                 self._compress()
@@ -121,7 +164,26 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
 
 class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterator[LogEvent]):
+    """
+    Archive handler for decompressing and reading a CLP archive.
+
+    This reader provides sequential access to log events in their original ingestion order. The
+    underlying reader stream is closed automatically after the final log event has been consumed.
+    """
+
     def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[DecompressionKwargs]) -> None:
+        """
+        Initialize a `ClpArchiveReader` instance.
+
+        A temporary directory is created to hold the decompressed output and is used for reading log
+        events.
+
+        :param file: Archive source. Must be either a filesystem path or a binary I/O object. For a
+            binary stream, its contents are written into a temporary archive file for decompression.
+        :param kwargs: Decompression specific keyword arguments. See `DecompressionKwargs`.
+        :raise ClpCoreRuntimeError: if the decompression handler fails.
+        :raise subprocess.CalledProcessError: If the archive decompression fails.
+        """
         self._file: ArchiveInputSource = file
         self._encoding: str | None = kwargs.get("encoding")
         self._errors: str | None = kwargs.get("errors")
@@ -155,6 +217,12 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
         )
 
     def get_next_log_event(self) -> LogEvent:
+        """
+        Return the next log event from the archive.
+
+        :raise StopIteration: When no more log events are available.
+        :raise ClpCoreRuntimeError: If the reader has already been closed.
+        """
         if self._decomp_fp is None:
             err_msg = f"ClpArchiveReader for archive at {self._archive_path} is closed."
             raise ClpCoreRuntimeError(err_msg)
@@ -166,6 +234,7 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
         return LogEvent(kv_pairs=json.loads(line.rstrip("\n")))
 
     def close(self) -> None:
+        """Cleans up all temporary resources used by the archive reader."""
         if self._archive_is_temp:
             with suppress(OSError):
                 self._archive_path.unlink()
@@ -197,11 +266,29 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
 
 
 class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterator[LogEvent]):
-    def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[SearchKwargs]) -> None:
+    """
+    Handler for executing a search query against a CLP archive.
+
+    This class streams search results from the archive and provides an iterator interface over
+    matching log events.
+    """
+
+    def __init__(
+        self, file: ArchiveInputSource, query: ClpQuery, **kwargs: Unpack[SearchKwargs]
+    ) -> None:
+        """
+        Initialize a `ClpSearchResults` instance.
+
+        :param file: Archive source. Must be either a filesystem path or a binary I/O object. For a
+            binary stream, its contents are written into a temporary archive file for decompression.
+        :param query: Search query to evaluate against the archive.
+        :param kwargs: Search specific keyword arguments. See `SearchKwargs`.
+        :raise ClpCoreRuntimeError: If the archive search handler or execution fails.
+        """
         self._file: ArchiveInputSource = file
+        self._query: ClpQuery = query
         self._encoding: str | None = kwargs.get("encoding")
         self._errors: str | None = kwargs.get("errors")
-        self._query: ClpQuery = kwargs["query"]
 
         _validate_archive_source(self._file)
 
@@ -242,6 +329,13 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
             raise ClpCoreRuntimeError(err_msg)
 
     def get_next_log_event(self) -> LogEvent:
+        """
+        Return the next log event produced by the search query.
+
+        :raise StopIteration: When no more matching log events are available.
+        :raise ClpCoreRuntimeError: If the search results stream has been closed.
+        :raise subprocess.CalledProcessError: If the search process exits with a non-zero status.
+        """
         if self._search_fp is None or self._search_proc is None:
             err_msg = f"ClpSearchResults streaming for archive at {self._archive_path} is closed."
             raise ClpCoreRuntimeError(err_msg)
@@ -257,6 +351,7 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         return LogEvent(kv_pairs=json.loads(line.rstrip("\n")))
 
     def close(self) -> None:
+        """Cleans up all temporary resources used by the archive search handler."""
         if self._archive_is_temp:
             with suppress(OSError):
                 self._archive_path.unlink()
