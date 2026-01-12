@@ -113,9 +113,10 @@ Used for:
 {{/*
 Creates a PersistentVolume that does not use dynamic provisioning.
 
-Behavior depends on the `distributed` value:
-- distributed=false: Uses local volume type with node affinity targeting control-plane nodes
-- distributed=true: Uses hostPath without node affinity (assumes shared storage like NFS)
+Behavior depends on the `distributed_deployment` value:
+- distributed_deployment=false: Uses local volume type with node affinity targeting control-plane
+  nodes
+- distributed_deployment=true: Uses hostPath without node affinity (assumes shared storage like NFS)
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
@@ -139,7 +140,7 @@ spec:
   accessModes: {{ .accessModes }}
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: {{ .root.Values.storage.storageClassName | quote }}
-  {{- if .root.Values.distributed }}
+  {{- if .root.Values.distributed_deployment }}
   hostPath:
     path: {{ .hostPath | quote }}
     type: "DirectoryOrCreate"
@@ -152,7 +153,7 @@ spec:
         - matchExpressions:
             - key: "node-role.kubernetes.io/control-plane"
               operator: "Exists"
-  {{- end }}{{/* if .root.Values.distributed */}}
+  {{- end }}{{/* if .root.Values.distributed_deployment */}}
 {{- end }}{{/* define "clp.createStaticPv" */}}
 
 {{/*
@@ -306,8 +307,8 @@ command: [
 Creates scheduling configuration (nodeSelector, affinity, tolerations, topologySpreadConstraints)
 for a component.
 
-When distributed is false (single-node mode), a control-plane toleration is automatically added
-so pods can be scheduled on tainted control-plane nodes without manual untainting.
+When distributed_deployment is false (single-node mode), a control-plane toleration is automatically
+added so pods can be scheduled on tainted control-plane nodes without manual untainting.
 
 @param {object} root Root template context
 @param {string} component Key name in top-level Values (e.g., "compressionWorker", "queryWorker")
@@ -318,7 +319,7 @@ so pods can be scheduled on tainted control-plane nodes without manual untaintin
 {{- $componentConfig := index .root.Values .component | default dict -}}
 {{- $scheduling := $componentConfig.scheduling | default dict -}}
 {{- $tolerations := $scheduling.tolerations | default list -}}
-{{- if not .root.Values.distributed -}}
+{{- if not .root.Values.distributed_deployment -}}
 {{- $tolerations = append $tolerations (dict
     "key" "node-role.kubernetes.io/control-plane"
     "operator" "Exists"
