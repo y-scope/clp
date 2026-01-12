@@ -34,9 +34,9 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 ```
 
 ````{warning}
-**Do not comment out or remove the `package` block in `etc/clp-config.yaml`**; otherwise, the storage
-and query engines will default to `clp-s`, which is optimized for JSON logs rather than unstructured
-text logs.
+**Do not comment out or remove the `package` block in `etc/clp-config.yaml`**; otherwise, the
+storage and query engines will default to `clp-s`, which is optimized for JSON logs rather than
+unstructured text logs.
 
 To use `clp-text`, the `package` block should be configured as follows:
 
@@ -47,7 +47,8 @@ package:
 ```
 ````
 
-For more details on Docker Compose deployment, see the [Docker Compose deployment guide][docker-compose-deployment].
+For more details on Docker Compose deployment, see the
+[Docker Compose deployment guide][docker-compose-deployment].
 :::
 
 :::{tab-item} Kubernetes (kind)
@@ -166,6 +167,7 @@ Configure `etc/clp-config.yaml` to connect to the kind-deployed database:
 database:
   port: 30306
 ```
+
 :::
 ::::
 
@@ -320,6 +322,7 @@ database:
 results_cache:
   port: 30017
 ```
+
 :::
 ::::
 
@@ -355,6 +358,7 @@ If you need to stop CLP, run:
 ```bash
 sbin/stop-clp.sh
 ```
+
 :::
 
 :::{tab-item} Kubernetes (kind)
@@ -371,11 +375,11 @@ To also delete the kind cluster:
 ```bash
 kind delete cluster --name clp
 ```
+
 :::
 ::::
 
 [api-server]: ../guides-using-the-api-server.md
-[clp-releases]: https://github.com/y-scope/clp/releases
 [datasets]: ../resources-datasets
 [docker-compose-deployment]: ../guides-docker-compose-deployment.md
 [k8s-deployment]: ../guides-k8s-deployment.md
