@@ -5,8 +5,8 @@ Docker Compose and enables deployment on Kubernetes clusters ranging from local 
 to production environments.
 
 :::{note}
-For a detailed overview of CLP's services and their dependencies, see the [deployment orchestration
-design doc][design-orchestration].
+For a detailed overview of CLP's services and their dependencies, see the
+[deployment orchestration design doc][design-orchestration].
 :::
 
 ---
@@ -32,8 +32,8 @@ You can deploy CLP on either a local development cluster or a production Kuberne
 [kind] (Kubernetes in Docker) is ideal for testing and development. It runs a Kubernetes cluster
 inside Docker containers on your local machine.
 
-For single-host kind deployments, see the [quick-start guides][quick-start], which cover
-creating a kind cluster and installing the Helm chart.
+For single-host kind deployments, see the [quick-start guides][quick-start], which cover creating a
+kind cluster and installing the Helm chart.
 
 ### Option 2: Production Kubernetes cluster
 
@@ -123,7 +123,7 @@ cd clp/tools/deployment/package-helm
 The following configurations are optional but recommended for production deployments. You can skip
 this section for testing or development.
 
-1. **Storage for CLP Package services' data and logs** (optional, for centralized debugging):
+1. **Storage for CLP package services' data and logs** (optional, for centralized debugging):
 
    The Helm chart creates static PersistentVolumes using local host paths by default, so no
    StorageClass configuration is required for basic deployments. For easier debugging, you can
@@ -287,6 +287,7 @@ To preview the generated Kubernetes manifests before installing, use `helm templ
 ```bash
 helm template clp . -f custom-values.yaml
 ```
+
 ::::
 
 ### Worker scheduling
@@ -426,7 +427,7 @@ kubectl wait pods --all --for=condition=Ready --timeout=300s
 
 Expected output shows all pods in `Running` state:
 
-```
+```text
 NAME                                        READY   STATUS    RESTARTS   AGE
 clp-api-server-...                          1/1     Running   0          2m
 clp-compression-scheduler-...               1/1     Running   0          2m
@@ -458,7 +459,8 @@ kubectl get jobs
 
 ### Access the Web UI
 
-Once all pods are ready, access the CLP Web UI: `http://<node-ip>:30000` (the value of `clpConfig.webui.port`)
+Once all pods are ready, access the CLP Web UI: `http://<node-ip>:30000` (the value of
+`clpConfig.webui.port`)
 
 ---
 
@@ -584,10 +586,11 @@ To tear down a kubeadm cluster:
 
 ## Related guides
 
-* [Docker Compose deployment][docker-compose-deployment] - Docker Compose orchestration for single or multi-host setups
-* [External database setup][external-db-guide] - Using external MariaDB and MongoDB
-* [Using object storage][s3-storage] - Configuring S3 storage
-* [Configuring retention periods][retention-guide] - Setting up data retention policies
+* [Docker Compose deployment][docker-compose-deployment]: Docker Compose orchestration for single or
+  multi-host setups
+* [External database setup][external-db-guide]: Using external MariaDB and MongoDB
+* [Using object storage][s3-storage]: Configuring S3 storage
+* [Configuring retention periods][retention-guide]: Setting up data retention policies
 
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
