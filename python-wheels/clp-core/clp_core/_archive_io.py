@@ -31,8 +31,6 @@ from clp_core._utils import (
     _write_stream_to_temp_file,
 )
 
-CLP_S_BIN = _get_executable("clp-s")
-
 
 class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
     def __init__(self, file: ArchiveInputSource, **kwargs: Unpack[CompressionKwargs]) -> None:
@@ -79,7 +77,8 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             err_msg = f"Nothing to compress for archive {self._archive_dir}."
             raise BadCompressionInputError(err_msg)
 
-        compress_cmd = [str(CLP_S_BIN), "c", "--single-file-archive"]
+        clp_s_bin_path = _get_executable("clp-s")
+        compress_cmd = [str(clp_s_bin_path), "c", "--single-file-archive"]
         if self._compression_level is not None:
             compress_cmd.extend(["--compression-level", str(self._compression_level)])
         if self._timestamp_key is not None:
@@ -138,8 +137,9 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
             self._archive_is_temp = True
 
         self._decompression_temp_dir: TemporaryDirectory[str] = TemporaryDirectory()
+        clp_s_bin_path = _get_executable("clp-s")
         decompress_cmd = [
-            str(CLP_S_BIN),
+            str(clp_s_bin_path),
             "x",
             "--ordered",
             str(self._archive_path),
@@ -213,8 +213,9 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
             self._archive_path = Path(_write_stream_to_temp_file(self._file, suffix=".clp"))
             self._archive_is_temp = True
 
+        clp_s_bin_path = _get_executable("clp-s")
         search_cmd = [
-            str(CLP_S_BIN),
+            str(clp_s_bin_path),
             "s",
             str(self._archive_path),
             self._query.get_query_string(),
