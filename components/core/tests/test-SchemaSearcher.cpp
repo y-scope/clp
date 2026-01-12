@@ -7,12 +7,12 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <LogTypeDictionaryReaderReq.hpp>
+#include <clp/LogTypeDictionaryReaderReq.hpp>
+#include <clp/Query.hpp>
+#include <clp/SchemaSearcher.hpp>
+#include <clp/VariableDictionaryReaderReq.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
-#include <Query.hpp>
-#include <SchemaSearcher.hpp>
-#include <VariableDictionaryReaderReq.hpp>
 
 #include "search_test_utils.hpp"
 

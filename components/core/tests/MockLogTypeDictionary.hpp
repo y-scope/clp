@@ -7,8 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include <Defs.h>
-#include <EncodedVariableInterpreter.hpp>
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
 #include <string_utils/string_utils.hpp>
 
 /**

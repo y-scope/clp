@@ -6,8 +6,8 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <Defs.h>
-#include <GrepCore.hpp>
+#include <clp/Defs.h>
+#include <clp/GrepCore.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>

@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include <ir/parsing.hpp>
+#include <clp/ir/parsing.hpp>
 #include <string_utils/string_utils.hpp>
 
 
