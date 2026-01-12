@@ -1,13 +1,22 @@
 .gridContainer {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(100px, 1fr));
-    grid-auto-rows: 32px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     gap: 5px;
+    min-width: 0;
 }
 
 .gridItem {
     grid-column: span 1;
     display: flex;
+    align-items: stretch;
+    min-height: 32px;
+    width: 100%;
+}
+
+.sqlInput {
+    flex: 1;
+    min-width: 0;
 }
 
 .timestampKey {
@@ -28,4 +37,43 @@
 .noLeftBorderRadius {
     border-top-left-radius: 0!important;
     border-bottom-left-radius: 0!important;
+}
+
+.datasetRow {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.datasetContainer {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    align-items: stretch;
+    min-height: 32px;
+}
+
+.datasetSelect {
+    width: 100px;
+    min-width: 100px;
+}
+
+.datasetSelect :global(.ant-select-selector) {
+    height: 100%;
+}
+
+.inputsAndRunRow {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.runColumn {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    align-self: stretch;
 }

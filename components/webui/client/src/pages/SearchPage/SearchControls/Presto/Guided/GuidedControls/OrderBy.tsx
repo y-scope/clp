@@ -24,7 +24,7 @@ const OrderBy = () => {
         <div className={guidedGrid["gridItem"]}>
             <InputLabel width={LABEL_WIDTH}>ORDER BY</InputLabel>
             <SqlInput
-                className={guidedGrid["noLeftBorderRadius"] || ""}
+                className={`${guidedGrid["sqlInput"]} ${guidedGrid["noLeftBorderRadius"]}`}
                 disabled={disabled}
                 validateFn={validateSortItemList}
                 value={orderBy}

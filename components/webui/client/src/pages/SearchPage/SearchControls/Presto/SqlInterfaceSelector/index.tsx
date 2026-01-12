@@ -1,14 +1,6 @@
 import {useCallback} from "react";
 
-import {
-    AppstoreOutlined,
-    EditOutlined,
-} from "@ant-design/icons";
-import {
-    ConfigProvider,
-    Segmented,
-    theme,
-} from "antd";
+import {Tabs} from "antd";
 
 import useSearchStore from "../../../SearchState";
 import usePrestoSearchState from "../../../SearchState/Presto";
@@ -25,7 +17,6 @@ import styles from "./index.module.css";
  * @return
  */
 const SqlInterfaceSelector = () => {
-    const {token} = theme.useToken();
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const disabled = searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
@@ -48,36 +39,22 @@ const SqlInterfaceSelector = () => {
 
     return (
         <div className={styles["sqlInterfaceButton"]}>
-            <ConfigProvider
-                theme={{
-                    components: {
-                        Segmented: {
-                            trackBg: token.colorBorder,
-                        },
+            <Tabs
+                activeKey={sqlInterface}
+                onChange={(value) => handleChange(value as PRESTO_SQL_INTERFACE)}
+                items={[
+                    {
+                        key: PRESTO_SQL_INTERFACE.GUIDED,
+                        label: "Guided",
+                        disabled,
                     },
-                }}
-            >
-                <Segmented
-                    block={true}
-                    disabled={disabled}
-                    size={"middle"}
-                    value={sqlInterface}
-                    options={[
-                        {
-                            label: "Guided",
-                            value: PRESTO_SQL_INTERFACE.GUIDED,
-                            icon: <AppstoreOutlined/>,
-                        },
-                        {
-                            label: "Manual",
-                            value: PRESTO_SQL_INTERFACE.FREEFORM,
-                            icon: <EditOutlined/>,
-                        },
-                    ]}
-                    onChange={(value) => {
-                        handleChange(value);
-                    }}/>
-            </ConfigProvider>
+                    {
+                        key: PRESTO_SQL_INTERFACE.FREEFORM,
+                        label: "Manual",
+                        disabled,
+                    },
+                ]}
+            />
         </div>
     );
 };

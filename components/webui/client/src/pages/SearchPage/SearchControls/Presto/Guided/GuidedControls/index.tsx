@@ -1,14 +1,15 @@
 import useTimestampKeyInit from "../../../../SearchState/Presto/useTimestampKeyInit";
 import searchStyles from "../../../index.module.css";
+import InputLabel from "../../../../../../components/InputLabel";
+import DatasetSelect from "../../../Dataset/DatasetSelect";
 import QueryStatus from "../../../QueryStatus";
 import TimeRangeInput from "../../../TimeRangeInput";
-import SqlInterfaceSelector from "../../SqlInterfaceSelector";
 import SqlSearchButton from "../../SqlSearchButton";
-import From from "./From";
 import guidedGrid from "./index.module.css";
 import OrderBy from "./OrderBy";
 import Select from "./Select";
 import Where from "./Where";
+import {LABEL_WIDTH} from "./typings";
 
 
 /**
@@ -22,20 +23,23 @@ const GuidedControls = () => {
     return (
         <div className={searchStyles["searchControlsContainer"]}>
             {contextHolder}
-            <div className={searchStyles["runRow"]}>
-                <div>
-                    <SqlInterfaceSelector/>
+            <div className={guidedGrid["datasetRow"]}>
+                <div className={guidedGrid["datasetContainer"]}>
+                    <InputLabel width={LABEL_WIDTH}>DATASET</InputLabel>
+                    <DatasetSelect
+                        className={`${guidedGrid["datasetSelect"]} ${guidedGrid["noLeftBorderRadiusSelect"]}`}/>
                 </div>
-                <div className={searchStyles["buttons"]}>
-                    <TimeRangeInput/>
+                <TimeRangeInput/>
+            </div>
+            <div className={guidedGrid["inputsAndRunRow"]}>
+                <div className={guidedGrid["gridContainer"]}>
+                    <Select/>
+                    <Where/>
+                    <OrderBy/>
+                </div>
+                <div className={guidedGrid["runColumn"]}>
                     <SqlSearchButton/>
                 </div>
-            </div>
-            <div className={guidedGrid["gridContainer"]}>
-                <Select/>
-                <From/>
-                <Where/>
-                <OrderBy/>
             </div>
             <div className={searchStyles["status"]}>
                 <QueryStatus/>
