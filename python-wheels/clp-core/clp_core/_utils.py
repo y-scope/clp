@@ -14,6 +14,14 @@ from clp_core._except import (
 
 
 def _validate_archive_source(src: object) -> None:
+    """
+    Type check the given archive source for a supported type.
+
+    TODO: Consider replacing this with a Pydantic field validator for runtime validation.
+
+    :param src:
+    :raise BadArchiveSourceError: If the source is not a str, os.PathLike, or BinaryIO.
+    """
     if isinstance(src, (str, os.PathLike)):
         return
     if isinstance(src, io.IOBase) and not isinstance(src, io.TextIOBase):
@@ -48,6 +56,17 @@ def _write_stream_to_temp_file(
     stream: BinaryIO | TextIO,
     suffix: str | None = None,
 ) -> str:
+    """
+    Write the contents of a readable text or binary stream to a temporary file and return its path.
+
+    This helper materializes an input stream into a temporary file on disk for utilities that
+    require a filesystem path. The caller assumes responsibility for deleting the file when it is no
+    longer required. On write failure, the file is closed and removed before propagating the error.
+    :param stream: Readable text or binary stream whose contents will be written to disk.
+    :param suffix: Optional filename suffix for the temporary file.
+    :return: Path string to the temporary file containing the stream contents.
+    :raise ClpCoreRuntimeError: If an error occurs while writing the stream to disk.
+    """
     if not stream.readable():
         err_msg = "Input stream is not readable."
         raise ClpCoreRuntimeError(err_msg)
