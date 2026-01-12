@@ -1,5 +1,6 @@
 import {useCallback} from "react";
 
+import {AppstoreOutlined, EditOutlined} from "@ant-design/icons";
 import {Tabs} from "antd";
 
 import useSearchStore from "../../../SearchState";
@@ -42,15 +43,26 @@ const SqlInterfaceSelector = () => {
             <Tabs
                 activeKey={sqlInterface}
                 onChange={(value) => handleChange(value as PRESTO_SQL_INTERFACE)}
+                size="small"
                 items={[
                     {
                         key: PRESTO_SQL_INTERFACE.GUIDED,
-                        label: "Guided",
+                        label: (
+                            <span className={styles["tabLabel"]}>
+                                <AppstoreOutlined/>
+                                Guided
+                            </span>
+                        ),
                         disabled,
                     },
                     {
                         key: PRESTO_SQL_INTERFACE.FREEFORM,
-                        label: "Manual",
+                        label: (
+                            <span className={styles["tabLabel"]}>
+                                <EditOutlined/>
+                                Manual
+                            </span>
+                        ),
                         disabled,
                     },
                 ]}

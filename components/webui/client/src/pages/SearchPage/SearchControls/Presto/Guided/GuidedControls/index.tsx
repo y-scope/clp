@@ -29,7 +29,9 @@ const GuidedControls = () => {
                     <DatasetSelect
                         className={`${guidedGrid["datasetSelect"]} ${guidedGrid["noLeftBorderRadiusSelect"]}`}/>
                 </div>
-                <TimeRangeInput/>
+                <div className={guidedGrid["timeRangeContainer"]}>
+                    <TimeRangeInput/>
+                </div>
             </div>
             <div className={guidedGrid["inputsAndRunRow"]}>
                 <div className={guidedGrid["gridContainer"]}>
