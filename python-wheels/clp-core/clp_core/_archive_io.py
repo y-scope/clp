@@ -32,7 +32,6 @@ from clp_core._utils import (
 )
 
 CLP_S_BIN = _get_executable("clp-s")
-TEMP_DIR = "/tmp/bill"  # noqa: S108
 
 
 class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
@@ -61,7 +60,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         else:
             # Create a temporary directory for the archive to live in, and feed
             # the archive into the BinaryIO stream.
-            self._temp_archive_dir = TemporaryDirectory(dir=TEMP_DIR)
+            self._temp_archive_dir = TemporaryDirectory()
             self._archive_dir = Path(self._temp_archive_dir.name)
 
     def add(self, source: str | os.PathLike[str] | BinaryIO | TextIO) -> None:
@@ -138,7 +137,7 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
             self._archive_path = Path(_write_stream_to_temp_file(self._file, suffix=".clp"))
             self._archive_is_temp = True
 
-        self._decompression_temp_dir: TemporaryDirectory[str] = TemporaryDirectory(dir=TEMP_DIR)
+        self._decompression_temp_dir: TemporaryDirectory[str] = TemporaryDirectory()
         decompress_cmd = [
             str(CLP_S_BIN),
             "x",

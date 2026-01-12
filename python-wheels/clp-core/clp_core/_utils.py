@@ -47,7 +47,6 @@ def _get_single_file_in_dir(dir_path: Path) -> Path:
 def _write_stream_to_temp_file(
     stream: BinaryIO | TextIO,
     suffix: str | None = None,
-    temp_file_dir: str | None = "/tmp/bill",  # noqa: S108
 ) -> str:
     if not stream.readable():
         err_msg = "Input stream is not readable."
@@ -65,7 +64,6 @@ def _write_stream_to_temp_file(
         errors=errors,
         delete=False,
         suffix=suffix,
-        dir=temp_file_dir,
     )
 
     temp_file_path_str = temp_file.name
