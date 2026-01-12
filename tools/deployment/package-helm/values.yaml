@@ -19,12 +19,12 @@ image:
     tag: "main"
 
 # Deployment mode:
-# - distributed_deployment=false: Single-node deployment. PVs use local volumes bound to one node.
+# - distributedDeployment=false: Single-node deployment. PVs use local volumes bound to one node.
 #   Pods automatically tolerate control-plane taints. Only works with worker replicas=1.
-# - distributed_deployment=true: Multi-node deployment. PVs use hostPath without node affinity,
+# - distributedDeployment=true: Multi-node deployment. PVs use hostPath without node affinity,
 #   assuming unmanaged shared storage (e.g., NFS/CephFS mounted via /etc/fstab) at the same path on
 #   all nodes.
-distributed_deployment: false
+distributedDeployment: false
 
 # Number of concurrent processes per worker pod.
 workerConcurrency: 8

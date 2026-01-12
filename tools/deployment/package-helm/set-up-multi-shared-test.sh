@@ -33,7 +33,7 @@ echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
 helm install test "${script_dir}" \
-    --set "distributed=true" \
+    --set "distributedDeployment=true" \
     --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
     --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
     --set "reducer.replicas=${REDUCER_REPLICAS}"
