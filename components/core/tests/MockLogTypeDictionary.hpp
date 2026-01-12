@@ -7,9 +7,10 @@
 #include <unordered_set>
 #include <vector>
 
+#include <string_utils/string_utils.hpp>
+
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
-#include <string_utils/string_utils.hpp>
 
 /**
  * Helper class representing a mock logtype dictionary entry for unit tests.

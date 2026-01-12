@@ -6,8 +6,9 @@
 #include <variant>
 #include <vector>
 
-#include <clp/EncodedVariableInterpreter.hpp>
 #include <log_surgeon/Constants.hpp>
+
+#include <clp/EncodedVariableInterpreter.hpp>
 
 using log_surgeon::SymbolId::TokenFloat;
 using log_surgeon::SymbolId::TokenInt;

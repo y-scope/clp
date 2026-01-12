@@ -12,13 +12,14 @@
 #include <variant>
 #include <vector>
 
+#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/wildcard_query_parser/Query.hpp>
+
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
 #include <clp/LogTypeDictionaryReaderReq.hpp>
 #include <clp/Query.hpp>
 #include <clp/VariableDictionaryReaderReq.hpp>
-#include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/wildcard_query_parser/Query.hpp>
 
 namespace clp {
 #ifdef CLP_BUILD_TESTING

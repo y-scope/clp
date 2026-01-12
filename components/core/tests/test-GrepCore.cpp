@@ -6,12 +6,13 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <clp/Defs.h>
-#include <clp/GrepCore.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
+
+#include <clp/Defs.h>
+#include <clp/GrepCore.hpp>
 
 #include "search_test_utils.hpp"
 
