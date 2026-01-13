@@ -281,6 +281,5 @@ resources-datasets
 reference-json-search-syntax
 reference-text-search-syntax
 reference-sbin-scripts/index
-reference-sbin-scripts/admin-tools
 reference-unstructured-schema-file
 :::
