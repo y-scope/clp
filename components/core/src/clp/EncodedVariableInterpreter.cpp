@@ -200,6 +200,9 @@ void EncodedVariableInterpreter::convert_encoded_float_to_string(
 auto EncodedVariableInterpreter::wildcard_string_could_be_representable_integer_var(
         std::string_view value
 ) -> bool {
+    if (value.empty()) {
+        return false;
+    }
     return false == std::ranges::any_of(value, [](char const c) -> bool {
                return false == (('0' <= c && c <= '9') || c == '-' || c == '?' || c == '*');
            });
@@ -208,6 +211,9 @@ auto EncodedVariableInterpreter::wildcard_string_could_be_representable_integer_
 auto EncodedVariableInterpreter::wildcard_string_could_be_representable_float_var(
         std::string_view value
 ) -> bool {
+    if (value.empty()) {
+        return false;
+    }
     return false == std::ranges::any_of(value, [](char const c) -> bool {
                return false
                       == (('0' <= c && c <= '9') || c == '-' || c == '.' || c == '?' || c == '*');
