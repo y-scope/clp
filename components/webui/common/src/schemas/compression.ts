@@ -73,14 +73,99 @@ const CompressionJobSchema = Type.Object({
 
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
+/**
+ * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
+ */
+enum CompressionJobInputType {
+    FS = "fs",
+    S3 = "s3",
+}
+
+/**
+ * Matching `FsInputConfig` in `job_orchestration.scheduler.job_config`.
+ */
+const ClpIoFsInputConfigSchema = Type.Object({
+    dataset: Type.Union([Type.String(),
+        Type.Null()]),
+    path_prefix_to_remove: Type.Union([Type.String(),
+        Type.Null()]),
+    paths_to_compress: Type.Array(Type.String()),
+    timestamp_key: Type.Union([Type.String(),
+        Type.Null()]),
+    type: Type.Literal(CompressionJobInputType.FS),
+    unstructured: Type.Boolean(),
+});
+
+/**
+ * Matching `S3InputConfig` in `job_orchestration.scheduler.job_config`.
+ */
+const ClpIoS3InputConfigSchema = Type.Object({
+    dataset: Type.Union([Type.String(),
+        Type.Null()]),
+    keys: Type.Union([Type.Array(Type.String()),
+        Type.Null()]),
+    timestamp_key: Type.Union([Type.String(),
+        Type.Null()]),
+    type: Type.Literal(CompressionJobInputType.S3),
+    unstructured: Type.Boolean(),
+});
+
+/**
+ * Matching `OutputConfig` in `job_orchestration.scheduler.job_config`.
+ */
+const ClpIoOutputConfigSchema = Type.Object({
+    compression_level: Type.Number(),
+    tags: Type.Union([Type.Array(Type.String()),
+        Type.Null()]),
+    target_archive_size: Type.Number(),
+    target_dictionaries_size: Type.Number(),
+    target_encoded_file_size: Type.Number(),
+    target_segment_size: Type.Number(),
+});
+
+/**
+ * Matching `ClpIoConfig` in `job_orchestration.scheduler.job_config`.
+ */
+const ClpIoConfigSchema =
+    Type.Object({
+        input: Type.Union([
+            ClpIoFsInputConfigSchema,
+            ClpIoS3InputConfigSchema,
+        ]),
+        output: ClpIoOutputConfigSchema,
+    });
+
+/**
+ * Less strict version of `ClpIoConfigSchema` to prevent Fastify validation errors
+ * for compression metadata from older CLP releases with missing data.
+ */
+const ClpIoPartialConfigSchema =
+    Type.Object({
+        input: Type.Union([Type.Partial(ClpIoFsInputConfigSchema),
+            Type.Partial(ClpIoS3InputConfigSchema)]),
+        output: Type.Partial(ClpIoOutputConfigSchema),
+    });
+
+type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
+
+type ClpIoS3InputConfig = Static<typeof ClpIoS3InputConfigSchema>;
+
+type ClpIoFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
+
 export {
+    ClpIoConfigSchema,
+    ClpIoPartialConfigSchema,
     CompressionJobCreationSchema,
+    CompressionJobInputType,
     CompressionJobSchema,
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
     DatasetNameSchema,
 };
 export type {
+    ClpIoConfig,
+    ClpIoFsInputConfig,
+    ClpIoS3InputConfig,
     CompressionJob,
     CompressionJobCreation,
 };

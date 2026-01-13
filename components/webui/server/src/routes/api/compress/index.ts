@@ -3,27 +3,34 @@ import {join} from "node:path";
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
+    ClpIoConfig,
+    ClpIoFsInputConfig,
     CompressionJobCreationSchema,
+    CompressionJobInputType,
     CompressionJobSchema,
 } from "@webui/common/schemas/compression";
 import {ErrorSchema} from "@webui/common/schemas/error";
 import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 
 
 /**
  * Default compression job configuration.
  */
-const DEFAULT_COMPRESSION_JOB_CONFIG: CompressionJobConfig = Object.freeze({
+const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
     input: {
-        paths_to_compress: [],
+        dataset: null,
         path_prefix_to_remove: CONTAINER_INPUT_LOGS_ROOT_DIR,
+        paths_to_compress: [],
+        timestamp_key: null,
+        type: CompressionJobInputType.FS,
+        unstructured: true,
     },
     output: {
         compression_level: settings.ArchiveOutputCompressionLevel,
+        tags: null,
         target_archive_size: settings.ArchiveOutputTargetArchiveSize,
         target_dictionaries_size: settings.ArchiveOutputTargetDictionariesSize,
         target_encoded_file_size: settings.ArchiveOutputTargetEncodedFileSize,
@@ -62,12 +69,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 unstructured,
             } = request.body;
 
-            const jobConfig: CompressionJobConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
-            jobConfig.input.paths_to_compress = paths.map(
+            const jobConfig: ClpIoConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
+            // eslint-disable-next-line no-warning-comments
+            // TODO: Add support for S3 input
+            (jobConfig.input as ClpIoFsInputConfig).paths_to_compress = paths.map(
                 (path) => join(settings.LogsInputRootDir, path)
             );
 
             if (CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine as CLP_STORAGE_ENGINES) {
+                jobConfig.input.unstructured = false;
                 if ("string" !== typeof dataset || 0 === dataset.length) {
                     request.log.error("Unable to submit compression job to the SQL database");
                 } else {
