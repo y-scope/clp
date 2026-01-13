@@ -119,6 +119,19 @@ public:
     static void convert_encoded_float_to_string(encoded_variable_t encoded_var, std::string& value);
 
     /**
+     * @param value
+     * @return Whether the given wildcard string could correspond to a representable integer
+     * variable.
+     */
+    static auto wildcard_string_could_be_representable_integer_var(std::string_view value) -> bool;
+
+    /**
+     * @param value
+     * @return Whether the given wildcard string could correspond to a representable float variable.
+     */
+    static auto wildcard_string_could_be_representable_float_var(std::string_view value) -> bool;
+
+    /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding
      * them to the variable dictionary if necessary)
      * @tparam LogTypeDictionaryEntryType

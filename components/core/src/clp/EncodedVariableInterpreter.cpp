@@ -196,6 +196,28 @@ void EncodedVariableInterpreter::convert_encoded_float_to_string(
     value[value_length - 1 - decimal_pos] = '.';
 }
 
+auto EncodedVariableInterpreter::wildcard_string_could_be_representable_integer_var(
+        std::string_view value
+) -> bool {
+    for (char const c : value) {
+        if (false == (('0' <= c && c <= '9') || '-' == c || '?' == c || '*' == c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+auto EncodedVariableInterpreter::wildcard_string_could_be_representable_float_var(
+        std::string_view value
+) -> bool {
+    for (char const c : value) {
+        if (false == (('0' <= c && c <= '9') || '-' == c || '.' == c || '?' == c || '*' == c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 encoded_variable_t EncodedVariableInterpreter::encode_var_dict_id(variable_dictionary_id_t id) {
     return bit_cast<encoded_variable_t>(id);
 }

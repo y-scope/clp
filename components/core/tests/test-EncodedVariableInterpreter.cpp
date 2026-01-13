@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include "../src/clp/EncodedVariableInterpreter.hpp"
 #include "../src/clp/ir/types.hpp"
@@ -382,6 +383,71 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
                 value,
                 encoded_var
         ));
+    }
+
+    SECTION("Test matches for wildcard_string_could_be_representable_integer_var") {
+        auto const value = GENERATE(
+                std::string_view{"?"},
+                std::string_view{"*"},
+                std::string_view{"*123456789*"},
+                std::string_view{"*12*34*56*"},
+                std::string_view{"?987"},
+                std::string_view{"-12*"},
+                std::string_view{"-12?"}
+        );
+        REQUIRE(EncodedVariableInterpreter::wildcard_string_could_be_representable_integer_var(
+                value
+        ));
+    }
+
+    SECTION("Test rejections for wildcard_string_could_be_representable_integer_var") {
+        auto const value = GENERATE(
+                std::string_view{"\\*"},
+                std::string_view{"\\?"},
+                std::string_view{"\\\\"},
+                std::string_view{"*1abcABC*"},
+                std::string_view{"*\u2345*"},
+                std::string_view{"?1234\\?"},
+                std::string_view{"?1234\\*"},
+                std::string_view{"*1.2*"}
+        );
+        REQUIRE_FALSE(
+                EncodedVariableInterpreter::wildcard_string_could_be_representable_integer_var(
+                        value
+                )
+        );
+    }
+
+    SECTION("Test matches for wildcard_string_could_be_representable_float_var") {
+        auto const value = GENERATE(
+                std::string_view{"?"},
+                std::string_view{"*"},
+                std::string_view{"*123456789*"},
+                std::string_view{"*12*34*56*"},
+                std::string_view{"-12*"},
+                std::string_view{"-12?1"},
+                std::string_view{"*25.987*"}
+        );
+        REQUIRE(
+                EncodedVariableInterpreter::wildcard_string_could_be_representable_float_var(value)
+        );
+    }
+
+    SECTION("Test rejections for wildcard_string_could_be_representable_float_var") {
+        auto const value = GENERATE(
+                std::string_view{"\\*"},
+                std::string_view{"\\?"},
+                std::string_view{"\\\\"},
+                std::string_view{"*1abcABC*"},
+                std::string_view{"*\u2345*"},
+                std::string_view{"?1234\\?1"},
+                std::string_view{"?1234\\*"},
+                std::string_view{"*1.4E09*"},
+                std::string_view{"*1.4e09*"}
+        );
+        REQUIRE_FALSE(
+                EncodedVariableInterpreter::wildcard_string_could_be_representable_float_var(value)
+        );
     }
 
     SECTION("Test multiple metching values") {
