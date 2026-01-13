@@ -35,10 +35,10 @@ For more details on Docker Compose deployment, see the
 [Docker Compose deployment guide][docker-compose-deployment].
 :::
 
-:::{tab-item} Kubernetes (kind)
+:::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
-First, create a kind cluster:
+First, create a `kind` cluster:
 
 ```bash
 # Data and logs directory for the CLP Package
@@ -65,7 +65,7 @@ mkdir -p "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
          "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
          "$CLP_HOME/var/tmp"
 
-# Create the kind cluster
+# Create the `kind` cluster
 cat <<EOF | kind create cluster --name clp --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -140,10 +140,10 @@ For more details on Kubernetes deployment, see the [Kubernetes deployment guide]
 No additional configuration is required.
 :::
 
-:::{tab-item} Kubernetes (kind)
+:::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
-Configure `etc/clp-config.yaml` to connect to the kind-deployed database:
+Configure `etc/clp-config.yaml` to connect to the `kind`-deployed database:
 
 ```yaml
 database:
@@ -195,10 +195,10 @@ To compress logs from object storage, see
 No additional configuration is required.
 :::
 
-:::{tab-item} Kubernetes (kind)
+:::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
-Configure `etc/clp-config.yaml` to connect to the kind-deployed database:
+Configure `etc/clp-config.yaml` to connect to the `kind`-deployed database:
 
 ```yaml
 database:
@@ -372,10 +372,10 @@ For more details on the API, see [Using the API server][api-server].
 No additional configuration is required.
 :::
 
-:::{tab-item} Kubernetes (kind)
+:::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
-Configure `etc/clp-config.yaml` to connect to the kind-deployed services:
+Configure `etc/clp-config.yaml` to connect to the `kind`-deployed services:
 
 ```yaml
 database:
@@ -422,7 +422,7 @@ sbin/stop-clp.sh
 
 :::
 
-:::{tab-item} Kubernetes (kind)
+:::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
 To stop CLP, uninstall the Helm release:
@@ -431,7 +431,7 @@ To stop CLP, uninstall the Helm release:
 helm uninstall clp
 ```
 
-To also delete the kind cluster:
+To also delete the `kind` cluster:
 
 ```bash
 kind delete cluster --name clp

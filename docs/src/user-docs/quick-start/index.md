@@ -44,19 +44,19 @@ docker compose version --short
 
 :::
 
-:::{tab-item} Kubernetes (kind)
+:::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
-[kind] (Kubernetes in Docker) runs a Kubernetes cluster inside Docker containers, making it ideal
-for local Kubernetes testing and development.
+[`kind`][kind] (Kubernetes in Docker) runs a Kubernetes cluster inside Docker containers, making it
+ideal for local Kubernetes testing and development.
 
-* [Docker][Docker] (required for kind)
+* [Docker][Docker] (required for `kind`)
   * `containerd.io` >= 1.7.18
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
-* [kubectl][kubectl] >= 1.30
+* [`kubectl`][kubectl] >= 1.30
 * [Helm][Helm] >= 4.0
-* [kind][kind] >= 0.23
+* [`kind`][kind] >= 0.23
 
 To check whether the tools are installed on your system, run:
 

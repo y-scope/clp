@@ -15,7 +15,7 @@ For a detailed overview of CLP's services and their dependencies, see the
 
 The following tools are required to deploy CLP on Kubernetes:
 
-* [kubectl] >= 1.30
+* [`kubectl`][kubectl] >= 1.30
 * [Helm] >= 4.0
 * A Kubernetes cluster (see [Setting up a cluster](#setting-up-a-cluster) below)
 * When not using S3 storage, a shared filesystem accessible by all worker pods (e.g., NFS,
@@ -27,26 +27,26 @@ The following tools are required to deploy CLP on Kubernetes:
 
 You can deploy CLP on either a local development cluster or a production Kubernetes cluster.
 
-### Option 1: Local development with kind
+### Option 1: Local development with `kind`
 
-[kind] (Kubernetes in Docker) is ideal for testing and development. It runs a Kubernetes cluster
-inside Docker containers on your local machine.
+[`kind`][kind] (Kubernetes in Docker) is ideal for testing and development. It runs a Kubernetes
+cluster inside Docker containers on your local machine.
 
-For single-host kind deployments, see the [quick-start guides][quick-start], which cover creating a
-kind cluster and installing the Helm chart.
+For single-host `kind` deployments, see the [quick-start guides][quick-start], which cover creating
+a `kind` cluster and installing the Helm chart.
 
 ### Option 2: Production Kubernetes cluster
 
 For production deployments, you can use any Kubernetes distribution:
 
 * Managed Kubernetes services: [Amazon EKS][eks], [Google GKE][gke], [Azure AKS][aks]
-* Self-hosted: [kubeadm], [k3s], [RKE2]
+* Self-hosted: [`kubeadm`][kubeadm], [k3s], [RKE2]
 
-#### Setting up a cluster with kubeadm
+#### Setting up a cluster with `kubeadm`
 
-[kubeadm] is the official Kubernetes tool for bootstrapping clusters. Follow the
-[official kubeadm installation guide][kubeadm] to install the prerequisites, container runtime,
-and kubeadm on all nodes.
+[`kubeadm`][kubeadm] is the official Kubernetes tool for bootstrapping clusters. Follow the
+[official `kubeadm` installation guide][kubeadm] to install the prerequisites, container runtime,
+and `kubeadm` on all nodes.
 
 1. **Initialize the control plane** (on the control-plane node only):
 
@@ -559,7 +559,7 @@ the data directories manually.
 
 ## Cleaning up
 
-To tear down a kubeadm cluster:
+To tear down a `kubeadm` cluster:
 
 1. **Uninstall Cilium** (on the control-plane):
 
