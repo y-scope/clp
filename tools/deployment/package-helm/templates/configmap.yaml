@@ -115,6 +115,15 @@ data:
       {{- end }}{{/* with .aws_authentication */}}
       {{- end }}{{/* if eq .type "fs" */}}
     {{- end }}{{/* with .Values.clpConfig.logs_input */}}
+    {{- with .Values.clpConfig.log_ingestor }}
+    log_ingestor:
+      buffer_flush_threshold: {{ .buffer_flush_threshold | int }}
+      buffer_flush_timeout: {{ .buffer_flush_timeout | int }}
+      channel_capacity: {{ .channel_capacity | int }}
+      host: "localhost"
+      logging_level: {{ .logging_level | quote }}
+      port: 3002
+    {{- end }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
