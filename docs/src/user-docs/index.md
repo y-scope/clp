@@ -23,7 +23,7 @@ searching them.
 
 ## Multi-host Deployment
 
-Guides for deploying CLP in multi-host environments for production ready use cases.
+Deploy CLP across multiple hosts for production workloads.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -123,8 +123,7 @@ Use Spider for compression and query job task distribution.
 
 ## Core
 
-CLP's core component contains the code to compress, decompress, and search logs. You can use it to
-try CLP on your logs before deploying a cluster.
+Try CLP's core binaries directly, without deploying the full package.
 
 There are currently two flavours of CLP, depending on the format of your logs:
 
@@ -163,7 +162,7 @@ A container for trying CLP's core.
 
 ## Resources
 
-Sample datasets and other resources for testing and benchmarking CLP.
+Find sample datasets for testing and benchmarking CLP.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -180,7 +179,7 @@ Log datasets for testing and benchmarking.
 
 ## Reference
 
-Syntax and tools for working with compressed logs.
+Look up search syntax and tools for working with compressed logs.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
