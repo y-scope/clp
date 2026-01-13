@@ -123,13 +123,17 @@ public:
      * @return Whether the given wildcard string could correspond to a representable integer
      * variable.
      */
-    static auto wildcard_string_could_be_representable_integer_var(std::string_view value) -> bool;
+    [[nodiscard]] static auto wildcard_string_could_be_representable_integer_var(
+            std::string_view value
+    ) -> bool;
 
     /**
      * @param value
      * @return Whether the given wildcard string could correspond to a representable float variable.
      */
-    static auto wildcard_string_could_be_representable_float_var(std::string_view value) -> bool;
+    [[nodiscard]] static auto wildcard_string_could_be_representable_float_var(
+            std::string_view value
+    ) -> bool;
 
     /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding
