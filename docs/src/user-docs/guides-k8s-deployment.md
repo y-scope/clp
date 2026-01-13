@@ -216,7 +216,7 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 
 ```bash
 helm install clp . \
-  --set distributed=true \
+  --set distributedDeployment=true \
   --set compressionWorker.replicas=3 \
   --set queryWorker.replicas=3
 ```
@@ -330,7 +330,7 @@ To run compression and query workers on separate node pools:
 3. Install:
 
    ```bash
-   helm install clp . -f dedicated-scheduling.yaml --set distributed=true
+   helm install clp . -f dedicated-scheduling.yaml --set distributedDeployment=true
    ```
 
 #### Shared node pool
@@ -371,7 +371,7 @@ To run both worker types on the same node pool:
 3. Install:
 
    ```bash
-   helm install clp . -f shared-scheduling.yaml --set distributed=true
+   helm install clp . -f shared-scheduling.yaml --set distributedDeployment=true
    ```
 
 ### Common configuration options
@@ -379,33 +379,33 @@ To run both worker types on the same node pool:
 The following table lists commonly used Helm values. For a complete list, see `values.yaml` in the
 chart directory.
 
-| Parameter                                    | Description                                  | Default                           |
-|----------------------------------------------|----------------------------------------------|-----------------------------------|
-| `image.clpPackage.repository`                | CLP package image repository                 | `ghcr.io/y-scope/clp/clp-package` |
-| `image.clpPackage.tag`                       | Image tag                                    | `main`                            |
-| `workerConcurrency`                          | Number of worker processes                   | `8`                               |
-| `distributed`                                | Distributed/multi-node deployment mode       | `false`                           |
-| `compressionWorker.replicas`                 | Number of compression worker replicas        | `1`                               |
-| `compressionWorker.scheduling`               | Scheduling config for compression workers    | `{}`                              |
-| `queryWorker.replicas`                       | Number of query worker replicas              | `1`                               |
-| `queryWorker.scheduling`                     | Scheduling config for query workers          | `{}`                              |
-| `storage.storageClassName`                   | StorageClass name (created if "local-storage") | `local-storage`                 |
-| `allowHostAccessForSbinScripts`              | Expose database/cache for sbin scripts       | `true`                            |
-| `clpConfig.package.storage_engine`           | Storage engine (`clp-s` or `clp`)            | `clp-s`                           |
-| `clpConfig.package.query_engine`             | Query engine (`clp-s`, `clp`, or `presto`)   | `clp-s`                           |
-| `clpConfig.webui.port`                       | Web UI NodePort                              | `30000`                           |
-| `clpConfig.api_server.port`                  | API server NodePort                          | `30301`                           |
-| `clpConfig.database.port`                    | Database NodePort                            | `30306`                           |
-| `clpConfig.results_cache.port`               | Results cache (MongoDB) NodePort             | `30017`                           |
-| `clpConfig.mcp_server.port`                  | MCP server NodePort                          | `30800`                           |
-| `clpConfig.logs_input.directory`             | Directory containing logs to compress        | `/`                               |
-| `clpConfig.data_directory`                   | Directory for data storage                   | `/tmp/clp/var/data`               |
-| `clpConfig.logs_directory`                   | Directory for log files                      | `/tmp/clp/var/log`                |
-| `clpConfig.tmp_directory`                    | Directory for temporary files                | `/tmp/clp/var/tmp`                |
-| `clpConfig.archive_output.storage.directory` | Directory for compressed archives            | `/tmp/clp/var/data/archives`      |
-| `clpConfig.stream_output.storage.directory`  | Directory for stream files                   | `/tmp/clp/var/data/streams`       |
-| `clpConfig.archive_output.retention_period`  | Archive retention (minutes, null to disable) | `null`                            |
-| `clpConfig.results_cache.retention_period`   | Search results retention (minutes)           | `60`                              |
+| Parameter                                    | Description                                    | Default                           |
+|----------------------------------------------|------------------------------------------------|-----------------------------------|
+| `image.clpPackage.repository`                | CLP package image repository                   | `ghcr.io/y-scope/clp/clp-package` |
+| `image.clpPackage.tag`                       | Image tag                                      | `main`                            |
+| `workerConcurrency`                          | Number of worker processes                     | `8`                               |
+| `distributedDeployment`                      | Distributed/multi-node deployment mode         | `false`                           |
+| `compressionWorker.replicas`                 | Number of compression worker replicas          | `1`                               |
+| `compressionWorker.scheduling`               | Scheduling config for compression workers      | `{}`                              |
+| `queryWorker.replicas`                       | Number of query worker replicas                | `1`                               |
+| `queryWorker.scheduling`                     | Scheduling config for query workers            | `{}`                              |
+| `storage.storageClassName`                   | StorageClass name (created if "local-storage") | `local-storage`                   |
+| `allowHostAccessForSbinScripts`              | Expose database/cache for sbin scripts         | `true`                            |
+| `clpConfig.package.storage_engine`           | Storage engine (`clp-s` or `clp`)              | `clp-s`                           |
+| `clpConfig.package.query_engine`             | Query engine (`clp-s`, `clp`, or `presto`)     | `clp-s`                           |
+| `clpConfig.webui.port`                       | Web UI NodePort                                | `30000`                           |
+| `clpConfig.api_server.port`                  | API server NodePort                            | `30301`                           |
+| `clpConfig.database.port`                    | Database NodePort                              | `30306`                           |
+| `clpConfig.results_cache.port`               | Results cache (MongoDB) NodePort               | `30017`                           |
+| `clpConfig.mcp_server.port`                  | MCP server NodePort                            | `30800`                           |
+| `clpConfig.logs_input.directory`             | Directory containing logs to compress          | `/`                               |
+| `clpConfig.data_directory`                   | Directory for data storage                     | `/tmp/clp/var/data`               |
+| `clpConfig.logs_directory`                   | Directory for log files                        | `/tmp/clp/var/log`                |
+| `clpConfig.tmp_directory`                    | Directory for temporary files                  | `/tmp/clp/var/tmp`                |
+| `clpConfig.archive_output.storage.directory` | Directory for compressed archives              | `/tmp/clp/var/data/archives`      |
+| `clpConfig.stream_output.storage.directory`  | Directory for stream files                     | `/tmp/clp/var/data/streams`       |
+| `clpConfig.archive_output.retention_period`  | Archive retention (minutes, null to disable)   | `null`                            |
+| `clpConfig.results_cache.retention_period`   | Search results retention (minutes)             | `60`                              |
 
 ---
 
