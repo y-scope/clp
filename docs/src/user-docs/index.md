@@ -21,9 +21,10 @@ searching them.
 
 ---
 
-## Multi-host Deployment
+## Deployment
 
-Deploy CLP across multiple hosts for production workloads.
+Dive deeper into deploying CLP with Docker Compose or Kubernetes. In particular, multi-host
+deployments enable horizontal scaling and high availability for production workloads.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
