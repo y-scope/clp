@@ -207,7 +207,7 @@ Reference for the shell scripts in the package's `sbin/` directory.
 :::
 
 :::{grid-item-card}
-:link: reference-admin-tools
+:link: reference-sbin-scripts/admin-tools
 Admin tools
 ^^^
 Reference for a set of tools for managing compressed logs in `clp-json` or `clp-text`.
@@ -281,5 +281,6 @@ resources-datasets
 reference-json-search-syntax
 reference-text-search-syntax
 reference-sbin-scripts/index
+reference-sbin-scripts/admin-tools
 reference-unstructured-schema-file
 :::
