@@ -1,0 +1,11 @@
+{{- if .Values.clpConfig.log_ingestor }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "component_category" "log-ingestor"
+  "name" "logs"
+  "nodeRole" "control-plane"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/log_ingestor" .Values.clpConfig.logs_directory)
+) }}
+{{- end }}

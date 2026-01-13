@@ -56,10 +56,10 @@ wait_for_pods() {
 kind delete cluster --name clp-test
 rm -rf "$CLP_HOME"
 mkdir -p  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-          "$CLP_HOME/var/data/"{archives,streams} \
+          "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
           "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
           "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-          "$CLP_HOME/var/log/garbage_collector" \
+          "$CLP_HOME/var/log/"{api_server,garbage_collector,log_ingestor,mcp_server} \
           "$CLP_HOME/var/tmp" \
           "$CLP_HOME/samples"
 
@@ -85,14 +85,23 @@ cat <<EOF | kind create cluster --name clp-test --config=-
     - hostPath: $CLP_HOME
       containerPath: $CLP_HOME
     extraPortMappings:
-    - containerPort: 30306
-      hostPort: 30306
+    - containerPort: 30000
+      hostPort: 30000
       protocol: TCP
     - containerPort: 30017
       hostPort: 30017
       protocol: TCP
-    - containerPort: 30000
-      hostPort: 30000
+    - containerPort: 30301
+      hostPort: 30301
+      protocol: TCP
+    - containerPort: 30302
+      hostPort: 30302
+      protocol: TCP
+    - containerPort: 30306
+      hostPort: 30306
+      protocol: TCP
+    - containerPort: 30800
+      hostPort: 30800
       protocol: TCP
 EOF
 

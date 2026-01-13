@@ -25,6 +25,14 @@ clpConfig:
     storage_engine: "clp-s"
     query_engine: "clp-s"
 
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
+
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
   logs_input:
@@ -39,6 +47,7 @@ clpConfig:
     port: 30306
     names:
       clp: "clp-db"
+      spider: "spider-db"
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -76,6 +85,23 @@ clpConfig:
     port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
+
+  mcp_server: null
+  #   port: 30800
+  #   logging_level: "INFO"
+
+  # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+  log_ingestor: null
+  #   port: 30302
+  #   # The timeout (in seconds) after which the log buffer is flushed for compression if no new
+  #   # input arrives.
+  #   buffer_flush_timeout: 300
+  #   # The log buffer size (in bytes) that triggers a flush for compression.
+  #   buffer_flush_threshold: 268435456  # 256 MiB
+  #   # The capacity of the internal channel used for communication between an ingestion job and the
+  #   # log buffer.
+  #   channel_capacity: 10
+  #   logging_level: "INFO"
 
   # Where archives should be output to
   archive_output:
@@ -140,6 +166,9 @@ clpConfig:
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
   tmp_directory: "/tmp/clp/var/tmp"
+
+  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
+  aws_config_directory: null
 
 credentials:
   database:
