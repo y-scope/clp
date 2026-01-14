@@ -223,6 +223,12 @@ Syntax reference for clp's schema file for parsing unstructured text logs.
 
 :::{toctree}
 :hidden:
+
+self
+:::
+
+:::{toctree}
+:hidden:
 :caption: Quick start
 
 quick-start/index
