@@ -26,6 +26,7 @@ image:
 #   - PVs use a path on the host (`hostPath`) without node affinity.
 #   - `hostPath` must point to externally managed shared storage (e.g., NFS/CephFS) mounted at the
 #      same path on all nodes.
+distributedDeployment: false
 
 # Number of concurrent processes per worker pod.
 workerConcurrency: 8
