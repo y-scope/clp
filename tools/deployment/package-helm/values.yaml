@@ -19,11 +19,13 @@ image:
     tag: "main"
 
 # Deployment mode:
-# - distributedDeployment=false: Single-node deployment. PVs use local volumes bound to one node.
-#   Pods automatically tolerate control-plane taints. Only works with worker replicas=1.
-# - distributedDeployment=true: Multi-node deployment. PVs use hostPath without node affinity,
-#   assuming unmanaged shared storage (e.g., NFS/CephFS mounted via /etc/fstab) at the same path on
-#   all nodes.
+# - distributedDeployment=false indicates a single-node deployment. In this case:
+#   - PVs use local storage bound to a single node.
+#   - Pods automatically tolerate control-plane taints.
+#   - Deployments only work with 1 replica for each worker.
+# - distributedDeployment=true indicates a multi-node deployment. In this case:
+#   - PVs use `hostPath` without node affinity, assuming that `hostPath` is on unmanaged shared
+#     storage (e.g., NFS/CephFS mounted via /etc/fstab) at the same path on all nodes.
 distributedDeployment: false
 
 # Number of concurrent processes per worker pod.
@@ -79,8 +81,9 @@ reducer:
 
 storage:
   # Name of the StorageClass for PVs and PVCs.
-  # - If "local-storage" (default), the chart creates a StorageClass with WaitForFirstConsumer
-  # - If a different name, the StorageClass must already exist in your cluster
+  # - "local-storage" (default) indicates the chart should create a StorageClass with
+  #   WaitForFirstConsumer.
+  # - A different name indicates a StorageClass which must already exist in your cluster.
   storageClassName: "local-storage"
 
 clpConfig:
