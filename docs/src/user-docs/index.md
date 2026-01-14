@@ -84,9 +84,9 @@ Configure retention periods for archives and search results.
 
 ---
 
-## Package services
+## Query & analytics
 
-Learn how to interact with CLP package services.
+Learn how to query and analyze logs with CLP.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -250,7 +250,7 @@ guides-retention
 
 :::{toctree}
 :hidden:
-:caption: Package services
+:caption: Query & analytics
 
 guides-using-the-api-server
 guides-mcp-server/index
