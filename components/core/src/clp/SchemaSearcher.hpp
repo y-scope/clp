@@ -39,9 +39,7 @@ public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
 
-        char const* what() const noexcept override {
-            return "Too many encodable variables.";
-        }
+        char const* what() const noexcept override { return "Too many encodable variables."; }
     };
 
     template <
