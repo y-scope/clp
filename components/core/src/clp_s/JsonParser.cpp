@@ -586,10 +586,11 @@ void JsonParser::parse_line(
                                       ->add_node(node_id_stack.top(), NodeType::Timestamp, cur_key);
                     m_current_parsed_message.add_value(
                             node_id,
-                            m_archive_writer->ingest_json_string_timestamp(
+                            m_archive_writer->ingest_string_timestamp(
                                     m_timestamp_key,
                                     node_id,
-                                    raw_timestamp_literal
+                                    raw_timestamp_literal,
+                                    true
                             )
                     );
                     m_current_schema.insert_ordered(node_id);
@@ -1239,10 +1240,11 @@ void JsonParser::parse_kv_log_event_subtree(
                 if (matches_timestamp) {
                     m_current_parsed_message.add_value(
                             node_id,
-                            m_archive_writer->ingest_utf8_string_timestamp(
+                            m_archive_writer->ingest_string_timestamp(
                                     m_timestamp_key,
                                     node_id,
-                                    var_value
+                                    var_value,
+                                    false
                             )
                     );
                 } else {
@@ -1290,10 +1292,11 @@ void JsonParser::parse_kv_log_event_subtree(
 
                 m_current_parsed_message.add_value(
                         node_id,
-                        m_archive_writer->ingest_utf8_string_timestamp(
+                        m_archive_writer->ingest_string_timestamp(
                                 m_timestamp_key,
                                 node_id,
-                                decoding_result.value()
+                                decoding_result.value(),
+                                false
                         )
                 );
             } break;

@@ -2,7 +2,9 @@
 
 #include <cstdint>
 #include <sstream>
+#include <string>
 #include <string_view>
+#include <utility>
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
@@ -20,7 +22,7 @@ void TimestampDictionaryWriter::write(std::stringstream& stream) {
             stream,
             m_string_patterns_and_ids.size() + m_numeric_pattern_to_id.size()
     );
-    for (auto const& [quoted_pattern, unquoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+    for (auto const& [quoted_pattern, pattern_id] : m_string_patterns_and_ids) {
         write_numeric_value<uint64_t>(stream, pattern_id);
 
         auto const raw_pattern{quoted_pattern.get_pattern()};
@@ -36,10 +38,11 @@ void TimestampDictionaryWriter::write(std::stringstream& stream) {
     }
 }
 
-auto TimestampDictionaryWriter::ingest_json_string_timestamp(
+auto TimestampDictionaryWriter::ingest_string_timestamp(
         std::string_view key,
         int32_t node_id,
-        std::string_view timestamp
+        std::string_view timestamp,
+        bool is_json_literal
 ) -> std::pair<epochtime_t, uint64_t> {
     auto timestamp_entry_it = m_column_id_to_range.find(node_id);
     if (m_column_id_to_range.end() == timestamp_entry_it) {
@@ -48,11 +51,11 @@ auto TimestampDictionaryWriter::ingest_json_string_timestamp(
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
     std::string generated_pattern;
-    for (auto const& [quoted_pattern, unquoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+    for (auto const& [quoted_pattern, pattern_id] : m_string_patterns_and_ids) {
         auto const parsing_result{timestamp_parser::parse_timestamp(
                 timestamp,
                 quoted_pattern,
-                true,
+                is_json_literal,
                 generated_pattern
         )};
         if (parsing_result.has_error()) {
@@ -67,7 +70,7 @@ auto TimestampDictionaryWriter::ingest_json_string_timestamp(
     auto const parsing_result{timestamp_parser::search_known_timestamp_patterns(
             timestamp,
             m_quoted_timestamp_patterns,
-            true,
+            is_json_literal,
             generated_pattern
     )};
     if (false == parsing_result.has_value()) {
@@ -78,10 +81,7 @@ auto TimestampDictionaryWriter::ingest_json_string_timestamp(
     auto const [epoch_timestamp, pattern] = parsing_result.value();
     timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
     auto const quoted_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
-    auto const unquoted_pattern_result{
-            timestamp_parser::TimestampPattern::create(pattern.substr(1ULL, pattern.size() - 2ULL))
-    };
-    if (quoted_pattern_result.has_error() || unquoted_pattern_result.has_error()) {
+    if (quoted_pattern_result.has_error()) {
         SPDLOG_ERROR("Failed to create timestamp pattern.");
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
@@ -89,65 +89,6 @@ auto TimestampDictionaryWriter::ingest_json_string_timestamp(
     auto const new_pattern_id{m_next_id++};
     m_string_patterns_and_ids.emplace_back(
             std::move(quoted_pattern_result.value()),
-            std::move(unquoted_pattern_result.value()),
-            new_pattern_id
-    );
-    return {epoch_timestamp, new_pattern_id};
-}
-
-auto TimestampDictionaryWriter::ingest_utf8_string_timestamp(
-        std::string_view key,
-        int32_t node_id,
-        std::string_view timestamp
-) -> std::pair<epochtime_t, uint64_t> {
-    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
-    if (m_column_id_to_range.end() == timestamp_entry_it) {
-        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
-    }
-
-    // Try parsing the timestamp as one of the previously seen timestamp patterns
-    std::string generated_pattern;
-    for (auto const& [quoted_pattern, unquoted_pattern, pattern_id] : m_string_patterns_and_ids) {
-        auto const parsing_result{timestamp_parser::parse_timestamp(
-                timestamp,
-                quoted_pattern,
-                false,
-                generated_pattern
-        )};
-        if (parsing_result.has_error()) {
-            continue;
-        }
-        auto const epoch_timestamp{parsing_result.value().first};
-        timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
-        return {epoch_timestamp, pattern_id};
-    }
-
-    // Fall back to consulting all known timestamp patterns
-    auto const parsing_result{timestamp_parser::search_known_timestamp_patterns(
-            timestamp,
-            m_unquoted_timestamp_patterns,
-            false,
-            generated_pattern
-    )};
-    if (false == parsing_result.has_value()) {
-        SPDLOG_ERROR("Failed to parse timestamp {} against known timestamp patterns.", timestamp);
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
-    }
-
-    auto const [epoch_timestamp, pattern] = parsing_result.value();
-    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
-    auto const quoted_pattern{fmt::format(R"("{}")", pattern)};
-    auto const quoted_pattern_result{timestamp_parser::TimestampPattern::create(quoted_pattern)};
-    auto const unquoted_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
-    if (quoted_pattern_result.has_error() || unquoted_pattern_result.has_error()) {
-        SPDLOG_ERROR("Failed to create timestamp pattern.");
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
-    }
-
-    auto const new_pattern_id{m_next_id++};
-    m_string_patterns_and_ids.emplace_back(
-            std::move(quoted_pattern_result.value()),
-            std::move(unquoted_pattern_result.value()),
             new_pattern_id
     );
     return {epoch_timestamp, new_pattern_id};

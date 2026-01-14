@@ -6,7 +6,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
 
@@ -36,30 +35,21 @@ public:
     void write(std::stringstream& stream);
 
     /**
-     * Ingests a timestamp entry from a JSON string.
+     * Ingests a timestamp entry from a string.
      * @param key
      * @param node_id
      * @param timestamp
+     * @param is_json_literal
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
      */
-    [[nodiscard]] auto
-    ingest_json_string_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
-            -> std::pair<epochtime_t, uint64_t>;
-
-    /**
-     * Ingests a timestamp entry from a UTF-8 string.
-     * @param key
-     * @param node_id
-     * @param timestamp
-     * @return A pair containing:
-     * - The timestamp in epoch nanoseconds.
-     * - The pattern ID corresponding to the timestamp format.
-     */
-    [[nodiscard]] auto
-    ingest_utf8_string_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
-            -> std::pair<epochtime_t, uint64_t>;
+    [[nodiscard]] auto ingest_string_timestamp(
+            std::string_view key,
+            int32_t node_id,
+            std::string_view timestamp,
+            bool is_json_literal
+    ) -> std::pair<epochtime_t, uint64_t>;
 
     /**
      * Ingests a numeric JSON entry.
@@ -114,11 +104,7 @@ private:
     using pattern_to_id_t = absl::flat_hash_map<std::string, uint64_t>;
 
     // Variables
-    std::vector<std::
-                        tuple<timestamp_parser::TimestampPattern,
-                              timestamp_parser::TimestampPattern,
-                              uint64_t>>
-            m_string_patterns_and_ids;
+    std::vector<std::pair<timestamp_parser::TimestampPattern, uint64_t>> m_string_patterns_and_ids;
     absl::flat_hash_map<std::string, std::pair<timestamp_parser::TimestampPattern, uint64_t>>
             m_numeric_pattern_to_id;
     uint64_t m_next_id{};
@@ -127,9 +113,6 @@ private:
 
     std::vector<timestamp_parser::TimestampPattern> m_quoted_timestamp_patterns{
             timestamp_parser::get_all_default_quoted_timestamp_patterns().assume_value()
-    };
-    std::vector<timestamp_parser::TimestampPattern> m_unquoted_timestamp_patterns{
-            timestamp_parser::get_all_default_timestamp_patterns().assume_value()
     };
     std::vector<timestamp_parser::TimestampPattern> m_numeric_timestamp_patterns{
             timestamp_parser::get_default_numeric_timestamp_patterns().assume_value()

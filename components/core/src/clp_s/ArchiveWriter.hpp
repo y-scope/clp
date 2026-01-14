@@ -192,33 +192,22 @@ public:
     int32_t add_schema(Schema const& schema) { return m_schema_map.add_schema(schema); }
 
     /**
-     * Ingests a timestamp entry from a JSON string.
+     * Ingests a timestamp entry from a string.
      * @param key
      * @param node_id
      * @param timestamp
+     * @param is_json_literal
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
      */
-    [[nodiscard]] auto
-    ingest_json_string_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
-            -> std::pair<epochtime_t, uint64_t> {
-        return m_timestamp_dict.ingest_json_string_timestamp(key, node_id, timestamp);
-    }
-
-    /**
-     * Ingests a timestamp entry from a UTF-8 string.
-     * @param key
-     * @param node_id
-     * @param timestamp
-     * @return A pair containing:
-     * - The timestamp in epoch nanoseconds.
-     * - The pattern ID corresponding to the timestamp format.
-     */
-    [[nodiscard]] auto
-    ingest_utf8_string_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
-            -> std::pair<epochtime_t, uint64_t> {
-        return m_timestamp_dict.ingest_utf8_string_timestamp(key, node_id, timestamp);
+    [[nodiscard]] auto ingest_string_timestamp(
+            std::string_view key,
+            int32_t node_id,
+            std::string_view timestamp,
+            bool is_json_literal
+    ) -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_string_timestamp(key, node_id, timestamp, is_json_literal);
     }
 
     /**
