@@ -1,9 +1,8 @@
 {{- if eq .Values.clpConfig.archive_output.storage.type "s3" }}
-{{- include "clp.createLocalPv" (dict
+{{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "compression-worker"
   "name" "staged-archives"
-  "nodeRole" "worker"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" .Values.clpConfig.archive_output.storage.staging_directory
