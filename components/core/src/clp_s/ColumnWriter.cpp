@@ -28,16 +28,19 @@ void Int64ColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-size_t DeltaEncodedInt64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
+auto DeltaEncodedInt64ColumnWriter::add_value(int64_t value) -> size_t {
     if (0 == m_values.size()) {
-        m_cur = std::get<int64_t>(value);
-        m_values.push_back(m_cur);
+        m_cur = value;
+        m_values.emplace_back(m_cur);
     } else {
-        auto next = std::get<int64_t>(value);
-        m_values.push_back(next - m_cur);
-        m_cur = next;
+        m_values.emplace_back(value - m_cur);
+        m_cur = value;
     }
     return sizeof(int64_t);
+}
+
+size_t DeltaEncodedInt64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    return add_value(std::get<int64_t>(value));
 }
 
 void DeltaEncodedInt64ColumnWriter::store(ZstdCompressor& compressor) {
@@ -179,6 +182,19 @@ void DateStringColumnWriter::store(ZstdCompressor& compressor) {
     size_t timestamps_size = m_timestamps.size() * sizeof(int64_t);
     compressor.write(reinterpret_cast<char const*>(m_timestamps.data()), timestamps_size);
     size_t encodings_size = m_timestamp_encodings.size() * sizeof(int64_t);
+    compressor.write(reinterpret_cast<char const*>(m_timestamp_encodings.data()), encodings_size);
+}
+
+auto TimestampColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
+    auto const& encoded_timestamp = std::get<std::pair<epochtime_t, uint64_t>>(value);
+    auto const encoded_timestamp_size{m_timestamps.add_value(encoded_timestamp.first)};
+    m_timestamp_encodings.emplace_back(encoded_timestamp.second);
+    return encoded_timestamp_size + sizeof(uint64_t);
+}
+
+void TimestampColumnWriter::store(ZstdCompressor& compressor) {
+    m_timestamps.store(compressor);
+    size_t const encodings_size{m_timestamp_encodings.size() * sizeof(uint64_t)};
     compressor.write(reinterpret_cast<char const*>(m_timestamp_encodings.data()), encodings_size);
 }
 }  // namespace clp_s
