@@ -41,7 +41,8 @@ x-volume-definitions:
     source: "${CLP_LOGS_DIR_HOST:-./var/log}"
     target: "/var/log"
   clp-tmp: &volume_clp_tmp
-    type: "tmpfs"
+    type: "bind"
+    source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
     target: "/var/tmp"
 
 services:
