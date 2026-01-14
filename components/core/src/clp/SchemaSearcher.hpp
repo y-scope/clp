@@ -191,7 +191,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
     constexpr size_t cMaxEncodableWildcardVariables{16};
     for (auto const& interpretation : interpretations) {
         auto const logtype{interpretation.get_logtype()};
-        auto wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
+        auto const wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
         if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
             throw std::runtime_error("Too many encodable variables.");
         }
