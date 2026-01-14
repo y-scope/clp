@@ -11,6 +11,10 @@ path = "src/lib.rs"
 name = "api_server"
 path  = "src/bin/api_server.rs"
 
+[[bin]]
+name = "api-server-openapi-codegen"
+path = "src/bin/openapi_codegen.rs"
+
 [dependencies]
 anyhow = "1.0.100"
 async-stream = "0.3.6"
@@ -21,6 +25,7 @@ clp-rust-utils = { path = "../clp-rust-utils" }
 futures = "0.3.31"
 mongodb = "3.3.0"
 num_enum = "0.7.5"
+non-empty-string = { version = "0.2.6", features = ["serde"] }
 pin-project-lite = "0.2.16"
 rmp-serde = "1.3.0"
 secrecy = "0.10.3"

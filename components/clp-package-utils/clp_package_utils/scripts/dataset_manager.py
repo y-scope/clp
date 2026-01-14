@@ -96,11 +96,7 @@ def main(argv: list[str]) -> int:
     # Validate and load config file
     try:
         config_file_path = Path(parsed_args.config)
-        clp_config = load_config_file(
-            resolve_host_path_in_container(config_file_path),
-            resolve_host_path_in_container(default_config_file_path),
-            clp_home,
-        )
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
         clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials

@@ -1,0 +1,126 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-webui
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "webui"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "webui"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "webui"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "results-cache-indices-creator"
+          ) | nindent 10 }}
+      containers:
+        - name: "webui"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "HOST"
+              value: "0.0.0.0"
+            - name: "NODE_ENV"
+              value: "production"
+            - name: "NODE_PATH"
+              value: "/opt/clp/var/www/webui/server/node_modules"
+            - name: "PORT"
+              value: "4000"
+            - name: "RATE_LIMIT"
+              value: {{ .Values.clpConfig.webui.rate_limit | quote }}
+            {{- with .Values.clpConfig.stream_output.storage }}
+            {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
+            - name: "AWS_ACCESS_KEY_ID"
+              value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
+            - name: "AWS_SECRET_ACCESS_KEY"
+              value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
+            {{- end }}{{/* if and (eq .type "s3")
+                                  (eq .s3_config.aws_authentication.type "credentials") */}}
+            {{- end }}{{/* with .Values.clpConfig.stream_output.storage */}}
+          ports:
+            - name: "webui"
+              containerPort: 4000
+          volumeMounts:
+            - name: "client-settings"
+              mountPath: "/opt/clp/var/www/webui/client/settings.json"
+              subPath: "webui-client-settings.json"
+              readOnly: true
+            - name: "server-settings"
+              mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
+              subPath: "webui-server-settings.json"
+              readOnly: true
+            {{- if .Values.clpConfig.aws_config_directory }}
+            - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
+            {{- end }}
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            {{- end }}
+            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "streams"
+              ) | quote }}
+              mountPath: "/var/data/streams"
+            {{- end }}
+          command: [
+            "/opt/clp/bin/node-22",
+            "/opt/clp/var/www/webui/server/dist/src/main.js"
+          ]
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            tcpSocket: &webui-health-check
+              port: "webui"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            tcpSocket: *webui-health-check
+      volumes:
+        - name: "client-settings"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "server-settings"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        {{- if .Values.clpConfig.aws_config_directory }}
+        - {{- include "clp.awsConfigVolume" . | nindent 10 }}
+        {{- end }}
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "streams"
+          ) | nindent 10 }}
+        {{- end }}

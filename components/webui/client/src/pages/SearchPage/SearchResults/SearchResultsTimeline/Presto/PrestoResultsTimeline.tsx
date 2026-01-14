@@ -10,7 +10,7 @@ import {TimelineConfig} from "../../../../../components/ResultsTimeline/typings"
 import {
     buildPrestoGuidedQueries,
     handlePrestoGuidedQuerySubmit,
-} from "../../../SearchControls/Presto/presto-guided-search-requests";
+} from "../../../SearchControls/Presto/Guided/presto-guided-search-requests";
 import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../../../SearchState/index";
 import usePrestoSearchState from "../../../SearchState/Presto";

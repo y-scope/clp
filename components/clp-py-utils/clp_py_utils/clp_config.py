@@ -588,7 +588,8 @@ class AwsAuthentication(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_code: NonEmptyStr
+    endpoint_url: str | None = None
+    region_code: NonEmptyStr | None = None
     bucket: NonEmptyStr
     key_prefix: str
     aws_authentication: AwsAuthentication
@@ -702,10 +703,10 @@ def _set_directory_for_storage_config(storage_config: FsStorage | S3Storage, dir
 
 class ArchiveOutput(BaseModel):
     storage: ArchiveFsStorage | ArchiveS3Storage = ArchiveFsStorage()
-    target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
-    target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MB
-    target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
-    target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
+    target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MiB
+    target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
     compression_level: ZstdCompressionLevel = 3
     retention_period: PositiveInt | None = None
 
