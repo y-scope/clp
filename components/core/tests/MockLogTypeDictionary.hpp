@@ -2,6 +2,7 @@
 #define MOCK_LOGTYPE_DICTIONARY_HPP
 
 #include <cstddef>
+#include <deque>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -106,7 +107,7 @@ public:
     }
 
 private:
-    std::vector<Entry> m_storage;
+    std::deque<Entry> m_storage;
 };
 
 #endif  // MOCK_LOGTYPE_DICTIONARY_HPP
