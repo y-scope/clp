@@ -63,28 +63,25 @@ jobs:
           # image (since it would be different from the published image).
           base: "main"
           filters: |
-            centos_stream_9_image:
+            _deps_image_common_paths:
               - ".github/actions/**"
               - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/scripts/lib_install/pipx-packages/**"
+            centos_stream_9_image:
+              - *_deps_image_common_paths
               - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
               - "components/core/tools/scripts/lib_install/centos-stream-9/**"
             manylinux_2_28_x86_64_image:
-              - ".github/actions/**"
-              - ".github/workflows/clp-artifact-build.yaml"
-              - "components/core/tools/scripts/lib_install/*.sh"
+              - *_deps_image_common_paths
               - "components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64/**"
               - "components/core/tools/scripts/lib_install/manylinux_2_28/**"
             musllinux_1_2_x86_64_image:
-              - ".github/actions/**"
-              - ".github/workflows/clp-artifact-build.yaml"
-              - "components/core/tools/scripts/lib_install/*.sh"
+              - *_deps_image_common_paths
               - "components/core/tools/docker-images/clp-env-base-musllinux_1_2-x86_64/**"
               - "components/core/tools/scripts/lib_install/musllinux_1_2/**"
             ubuntu_jammy_image:
-              - ".github/actions/**"
-              - ".github/workflows/clp-artifact-build.yaml"
-              - "components/core/tools/scripts/lib_install/*.sh"
+              - *_deps_image_common_paths
               - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
               - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
             clp:
