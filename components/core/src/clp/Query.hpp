@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <clp/Defs.h>
+#include "Defs.h"
 
 namespace clp {
 /**
