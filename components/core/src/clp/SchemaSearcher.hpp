@@ -17,8 +17,10 @@
 
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
+#include <clp/ErrorCode.hpp>
 #include <clp/LogTypeDictionaryReaderReq.hpp>
 #include <clp/Query.hpp>
+#include <clp/TraceableException.hpp>
 #include <clp/VariableDictionaryReaderReq.hpp>
 
 namespace clp {
@@ -32,6 +34,16 @@ class SchemaSearcher {
 #endif
 
 public:
+    class OperationFailed : public TraceableException {
+    public:
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+
+        char const* what() const noexcept override {
+            return "Too many encodable variables.";
+        }
+    };
+
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType
@@ -104,7 +116,7 @@ private:
      * @param var_dict The variable dictionary.
      * @param ignore_case If true, perform a case-insensitive search.
      * @return The vector of subqueries to compare against CLP's archives.
-     * @throw std::runtime_error If there are too many candidate combinations.
+     * @throw clp::TraceableException If there are too many candidate combinations.
      */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
@@ -193,7 +205,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
         auto const logtype{interpretation.get_logtype()};
         auto const wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
         if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
-            throw std::runtime_error("Too many encodable variables.");
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
         for (uint64_t mask{0}; mask < num_combos; ++mask) {
