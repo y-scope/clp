@@ -126,6 +126,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         )
         add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
         target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
+        target_include_directories(clp_s_clp_dependencies PUBLIC ../)
         target_link_libraries(
                 clp_s_clp_dependencies
                 PUBLIC
@@ -177,6 +178,7 @@ if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
         )
         add_library(clp_s::reducer_dependencies ALIAS clp_s_reducer_dependencies)
         target_compile_features(clp_s_reducer_dependencies PRIVATE cxx_std_20)
+        target_include_directories(clp_s_reducer_dependencies PUBLIC ../)
         target_link_libraries(
                 clp_s_reducer_dependencies
                 PUBLIC
@@ -431,6 +433,7 @@ if(CLP_BUILD_EXECUTABLES)
                 ${CLP_S_EXE_SOURCES}
         )
         target_compile_features(clp-s PRIVATE cxx_std_20)
+        target_include_directories(clp-s PRIVATE ../)
         target_link_libraries(
                 clp-s
                 PRIVATE
