@@ -214,7 +214,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
                 mask_encoded_flags[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
             }
 
-            auto logtype_string{generate_logtype_string(
+            auto const logtype_string{generate_logtype_string(
                     interpretation,
                     wildcard_encodable_positions,
                     mask_encoded_flags
@@ -319,7 +319,7 @@ auto SchemaSearcher::process_schema_var_token(
         return true;
     }
 
-    auto entries = var_dict.get_entry_matching_value(raw_string, ignore_case);
+    auto const entries{var_dict.get_entry_matching_value(raw_string, ignore_case)};
     if (entries.empty()) {
         return false;
     }
