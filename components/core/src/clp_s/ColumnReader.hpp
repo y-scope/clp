@@ -119,7 +119,7 @@ public:
      * @param idx
      * @return The value stored at the requested index.
      */
-    [[nodiscard]] auto get_value_at_idx(size_t idx) const -> int64_t;
+    [[nodiscard]] auto get_value_at_idx(size_t idx) -> int64_t;
 
 private:
     UnalignedMemSpan<int64_t> m_values;
@@ -387,7 +387,7 @@ public:
      * @param cur_message
      * @return The encoded time in epoch nanoseconds.
      */
-    [[nodiscard]] auto get_encoded_time(uint64_t cur_message) const -> epochtime_t;
+    [[nodiscard]] auto get_encoded_time(uint64_t cur_message) -> epochtime_t;
 
 private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;

@@ -30,7 +30,7 @@ void DeltaEncodedInt64ColumnReader::load(BufferViewReader& reader, uint64_t num_
     }
 }
 
-auto DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) const -> int64_t {
+auto DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) -> int64_t {
     if (m_cur_idx == idx) {
         return m_cur_value;
     }
@@ -280,7 +280,7 @@ TimestampColumnReader::extract_string_value_into_buffer(uint64_t cur_message, st
     );
 }
 
-auto TimestampColumnReader::get_encoded_time(uint64_t cur_message) const -> epochtime_t {
+auto TimestampColumnReader::get_encoded_time(uint64_t cur_message) -> epochtime_t {
     return m_timestamps.get_value_at_idx(cur_message);
 }
 }  // namespace clp_s
