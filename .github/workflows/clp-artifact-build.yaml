@@ -63,7 +63,7 @@ jobs:
           # image (since it would be different from the published image).
           base: "main"
           filters: |
-            _deps_image_common_paths:
+            _deps_image_common_paths: &_deps_image_common_paths
               - ".github/actions/**"
               - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
