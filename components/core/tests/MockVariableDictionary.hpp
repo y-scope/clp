@@ -46,12 +46,11 @@ public:
     }
 
     [[nodiscard]] auto get_value(dictionary_id_t const id) const -> std::string const& {
-        static std::string const cEmpty{};
         auto const it{m_storage.find(id)};
         if (m_storage.end() != it) {
             return it->second.get_value();
         }
-        return cEmpty;
+        return m_empty_string;
     }
 
     auto
@@ -80,6 +79,7 @@ public:
 
 private:
     std::unordered_map<dictionary_id_t, Entry> m_storage;
+    std::string m_empty_string;
 };
 
 #endif  // MOCK_VARIABLE_DICTIONARY_HPP
