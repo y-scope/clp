@@ -21,7 +21,14 @@ Syntax reference for `clp-text`'s (and `clp`'s) search syntax.
 :::
 
 :::{grid-item-card}
-:link: reference-admin-tools
+:link: reference-sbin-scripts/index
+Package scripts
+^^^
+Reference for the shell scripts in the package's `sbin/` directory.
+:::
+
+:::{grid-item-card}
+:link: reference-sbin-scripts/admin-tools
 Admin tools
 ^^^
 Reference for a set of tools for managing compressed logs in `clp-json` or `clp-text`.

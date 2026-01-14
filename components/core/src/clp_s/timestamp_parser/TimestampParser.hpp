@@ -55,6 +55,8 @@ public:
 
     [[nodiscard]] auto uses_twelve_hour_clock() const -> bool { return m_uses_twelve_hour_clock; }
 
+    [[nodiscard]] auto is_quoted_pattern() const -> bool { return m_is_quoted_pattern; }
+
     /**
      * Finds the first matching month as a prefix of `timestamp`.
      * @param timestamp
@@ -119,7 +121,8 @@ private:
             uint16_t month_name_bracket_pattern_length,
             uint16_t weekday_name_bracket_pattern_length,
             bool uses_date_type_representation,
-            bool uses_twelve_hour_clock
+            bool uses_twelve_hour_clock,
+            bool is_quoted_pattern
     )
             : m_pattern{pattern},
               m_optional_timezone_size_and_offset{std::move(optional_timezone_size_and_offset)},
@@ -128,7 +131,8 @@ private:
               m_month_name_bracket_pattern_length{month_name_bracket_pattern_length},
               m_weekday_name_bracket_pattern_length{weekday_name_bracket_pattern_length},
               m_uses_date_type_representation{uses_date_type_representation},
-              m_uses_twelve_hour_clock{uses_twelve_hour_clock} {}
+              m_uses_twelve_hour_clock{uses_twelve_hour_clock},
+              m_is_quoted_pattern{is_quoted_pattern} {}
 
     // Variables
     std::string m_pattern;
@@ -139,6 +143,7 @@ private:
     uint16_t m_weekday_name_bracket_pattern_length{};
     bool m_uses_date_type_representation{false};
     bool m_uses_twelve_hour_clock{false};
+    bool m_is_quoted_pattern{false};
 };
 
 /**
