@@ -380,7 +380,7 @@ kind delete cluster --name clp
 ::::
 
 [api-server]: ../guides-using-the-api-server.md
-[datasets]: ../resources-datasets
+[datasets]: ../resources-datasets.md
 [docker-compose-deployment]: ../guides-docker-compose-deployment.md
 [k8s-deployment]: ../guides-k8s-deployment.md
 [text-search-syntax]: ../reference-text-search-syntax.md
