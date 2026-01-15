@@ -14,6 +14,7 @@ from pydantic import (
     model_validator,
     PlainSerializer,
     PrivateAttr,
+    StringConstraints,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -87,7 +88,7 @@ SPIDER_DB_PASS_ENV_VAR_NAME = "SPIDER_DB_PASS"
 # Serializer
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
-NonEmptyStr = Annotated[str, Field(min_length=1)]
+NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
