@@ -154,7 +154,8 @@ this section for testing or development.
    * `logs_input.directory` - where input logs are read from
 
    Set up NFS, SeaweedFS, or another shared filesystem to provide this access. See the
-   [multi-host deployment guide][multi-host-guide] for SeaweedFS setup instructions.
+   [SeaweedFS section][seaweedfs-setup] in the Docker Compose deployment guide for setup
+   instructions.
 
 3. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
@@ -625,12 +626,12 @@ To tear down a `kubeadm` cluster:
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
 [logging-infra-issue]: https://github.com/y-scope/clp/issues/1760
-[multi-host-guide]: guides-docker-compose-deployment.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3
 [RKE2]: https://docs.rke2.io/
 [s3-storage]: guides-using-object-storage/index
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
+[seaweedfs-setup]: guides-docker-compose-deployment.md#setting-up-seaweedfs
 [webui-clp-json]: quick-start/clp-json.md#searching-from-the-ui
 [webui-clp-text]: quick-start/clp-text.md#searching-from-the-ui
