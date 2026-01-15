@@ -199,7 +199,7 @@ interface (`clp-config.yaml` and `credentials.yaml`) and support the same deploy
 
 Each service requires configuration values passed through config files, environment variables,
 and/or command line arguments. Since services run in containers, some values must be adapted for the
-orchestration environment—specifically, host paths must be converted to container paths, and
+orchestration environment. Specifically, host paths must be converted to container paths, and
 hostnames/ports must use service discovery mechanisms.
 
 The orchestration controller (e.g., `DockerComposeController`) reads `etc/clp-config.yaml` and
