@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Cannot connect to CLP")?;
 
-    let router = api_server::routes::from_client(client)?;
+    let router = api_server::routes::from_client(client, &config)?;
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, router)
