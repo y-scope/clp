@@ -182,8 +182,7 @@ config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defau
 `var/data/archives`).
 
 :::{tip}
-To compress logs from object storage, see
-[Using object storage][object-storage].
+To compress logs from object storage, see [Using object storage][object-storage].
 :::
 
 ### Compressing unstructured text logs
