@@ -44,7 +44,7 @@ For production deployments, you can use any Kubernetes distribution:
 
 #### Setting up a cluster with `kubeadm`
 
-[`kubeadm`][kubeadm] is the official Kubernetes tool for bootstrapping clusters. Follow the
+`kubeadm` is the official Kubernetes tool for bootstrapping clusters. Follow the
 [official `kubeadm` installation guide][kubeadm] to install the prerequisites, container runtime,
 and `kubeadm` on all nodes.
 
