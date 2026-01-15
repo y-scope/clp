@@ -15,14 +15,24 @@ from tests.utils.package_utils import (
 
 
 @pytest.fixture
-def fixt_package_instance(fixt_package_config: PackageConfig) -> Iterator[PackageInstance]:
+def fixt_package_instance(
+    fixt_package_config: PackageConfig,
+    request: pytest.FixtureRequest,
+) -> Iterator[PackageInstance]:
     """
     Starts a CLP package instance for the given configuration and stops it during teardown.
 
     :param fixt_package_config:
+    :param request:
     :return: Iterator that yields the running package instance.
     """
     mode_name = fixt_package_config.mode_name
+    no_jobs: bool = bool(request.config.option.NO_JOBS)
+    package_job_list = fixt_package_config.package_job_list
+
+    # Do not start this mode if there are no jobs and the '--no-jobs' flag wasn't specified by user.
+    if package_job_list is None and not no_jobs:
+        pytest.skip(f"No jobs to run for mode '{mode_name}' with current job filter.")
 
     try:
         start_clp_package(fixt_package_config)
