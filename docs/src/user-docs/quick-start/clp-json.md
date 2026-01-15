@@ -48,6 +48,7 @@ export CLP_HOME="$HOME/clp"
 export CLP_WEBUI_PORT=30000
 export CLP_RESULTS_CACHE_PORT=30017
 export CLP_API_SERVER_PORT=30301
+export CLP_LOG_INGESTOR_PORT=30302
 export CLP_DATABASE_PORT=30306
 export CLP_MCP_SERVER_PORT=30800
 
@@ -86,6 +87,8 @@ nodes:
     hostPort: $CLP_RESULTS_CACHE_PORT
   - containerPort: $CLP_API_SERVER_PORT
     hostPort: $CLP_API_SERVER_PORT
+  - containerPort: $CLP_LOG_INGESTOR_PORT
+    hostPort: $CLP_LOG_INGESTOR_PORT
   - containerPort: $CLP_DATABASE_PORT
     hostPort: $CLP_DATABASE_PORT
   - containerPort: $CLP_MCP_SERVER_PORT
@@ -101,6 +104,7 @@ helm install clp . \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.api_server.port="$CLP_API_SERVER_PORT" \
+  --set clpConfig.log_ingestor.port="$CLP_LOG_INGESTOR_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
   --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
   --set clpConfig.data_directory="$CLP_HOME/var/data" \

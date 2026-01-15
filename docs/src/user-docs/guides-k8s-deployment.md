@@ -194,6 +194,7 @@ export CLP_REDIS_PASS="pass"
 # Worker replicas (increase for multi-node clusters)
 export CLP_COMPRESSION_WORKER_REPLICAS=1
 export CLP_QUERY_WORKER_REPLICAS=1
+export CLP_REDUCER_REPLICAS=1
 
 helm install clp . \
   --set clpConfig.data_directory="$CLP_HOME/var/data" \
@@ -206,7 +207,8 @@ helm install clp . \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
   --set credentials.redis.password="$CLP_REDIS_PASS" \
   --set compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
-  --set queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS"
+  --set queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
+  --set reducer.replicas="$CLP_REDUCER_REPLICAS"
 ```
 
 ### Multi-node deployment
@@ -218,7 +220,8 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 helm install clp . \
   --set distributedDeployment=true \
   --set compressionWorker.replicas=3 \
-  --set queryWorker.replicas=3
+  --set queryWorker.replicas=3 \
+  --set reducer.replicas=3
 ```
 
 ### Installation with custom values
@@ -297,7 +300,7 @@ You can control where workers are scheduled using standard Kubernetes scheduling
 
 #### Dedicated node pools
 
-To run compression and query workers on separate node pools:
+To run compression workers, query workers, and reducers on separate node pools:
 
 1. Label your nodes:
 
@@ -325,6 +328,12 @@ To run compression and query workers on separate node pools:
      scheduling:
        nodeSelector:
          yscope.io/nodeType: query
+
+   reducer:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: query
    ```
 
 3. Install:
@@ -335,7 +344,7 @@ To run compression and query workers on separate node pools:
 
 #### Shared node pool
 
-To run both worker types on the same node pool:
+To run all worker types on the same node pool:
 
 1. Label your nodes:
 
@@ -366,6 +375,12 @@ To run both worker types on the same node pool:
      scheduling:
        nodeSelector:
          yscope.io/nodeType: compute
+
+   reducer:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: compute
    ```
 
 3. Install:
@@ -389,6 +404,8 @@ chart directory.
 | `compressionWorker.scheduling`               | Scheduling config for compression workers      | `{}`                              |
 | `queryWorker.replicas`                       | Number of query worker replicas                | `1`                               |
 | `queryWorker.scheduling`                     | Scheduling config for query workers            | `{}`                              |
+| `reducer.replicas`                           | Number of reducer replicas                     | `1`                               |
+| `reducer.scheduling`                         | Scheduling config for reducers                 | `{}`                              |
 | `storage.storageClassName`                   | StorageClass name (created if "local-storage") | `local-storage`                   |
 | `allowHostAccessForSbinScripts`              | Expose database/cache for sbin scripts         | `true`                            |
 | `clpConfig.package.storage_engine`           | Storage engine (`clp-s` or `clp`)              | `clp-s`                           |
@@ -398,6 +415,7 @@ chart directory.
 | `clpConfig.database.port`                    | Database NodePort                              | `30306`                           |
 | `clpConfig.results_cache.port`               | Results cache (MongoDB) NodePort               | `30017`                           |
 | `clpConfig.mcp_server.port`                  | MCP server NodePort                            | `30800`                           |
+| `clpConfig.log_ingestor.port`                | Log ingestor NodePort                          | `30302`                           |
 | `clpConfig.logs_input.directory`             | Directory containing logs to compress          | `/`                               |
 | `clpConfig.data_directory`                   | Directory for data storage                     | `/tmp/clp/var/data`               |
 | `clpConfig.logs_directory`                   | Directory for log files                        | `/tmp/clp/var/log`                |
