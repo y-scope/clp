@@ -49,7 +49,7 @@ public:
             epochtime_t timestamp,
             uint64_t format_id,
             std::string& buffer
-    ) const { /*NO-OP until follow-up PR*/}
+    ) const { /*NO-OP until follow-up PR*/ }
 
     /**
      * Gets iterators for the timestamp patterns
