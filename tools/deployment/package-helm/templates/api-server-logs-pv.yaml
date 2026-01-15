@@ -1,9 +1,8 @@
 {{- if .Values.clpConfig.api_server }}
-{{- include "clp.createLocalPv" (dict
+{{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "api-server"
   "name" "logs"
-  "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/api_server" .Values.clpConfig.logs_directory)
