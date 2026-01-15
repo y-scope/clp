@@ -212,9 +212,9 @@ For Docker Compose, this generates `var/log/.clp-config.yaml` and `.env`. For Ku
 chart generates a ConfigMap and Secrets from `values.yaml`.
 
 :::{note}
-A `KubernetesController` is also planned that will read `clp-config.yaml` and `credentials.yaml`
-like `DockerComposeController`, then set up the Helm release accordingly. This will unify the
-configuration experience across both orchestration methods.
+We are currently developing a `KubernetesController`, which will unify the configuration experience
+across both orchestration methods. The new controller will read `clp-config.yaml` and
+`credentials.yaml` like `DockerComposeController`, then set up the Helm release accordingly.
 :::
 
 ### Secrets
