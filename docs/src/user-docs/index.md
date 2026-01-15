@@ -132,17 +132,17 @@ There are currently two flavours of CLP, depending on the format of your logs:
 :gutter: 2
 
 :::{grid-item-card}
-:link: core-unstructured/index
-CLP for unstructured logs
-^^^
-A flavour of CLP for unstructured (e.g., free-text) logs.
-:::
-
-:::{grid-item-card}
 :link: core-clp-s
 CLP for JSON logs
 ^^^
 A flavour of CLP for JSON logs.
+:::
+
+:::{grid-item-card}
+:link: core-unstructured/index
+CLP for unstructured logs
+^^^
+A flavour of CLP for unstructured (e.g., free-text) logs.
 :::
 ::::
 
@@ -268,9 +268,9 @@ guides-using-spider
 :hidden:
 :caption: Core
 
-core-container
 core-clp-s
 core-unstructured/index
+core-container
 :::
 
 :::{toctree}
