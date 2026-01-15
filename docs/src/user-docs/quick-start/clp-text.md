@@ -133,8 +133,8 @@ helm install clp . \
 ```
 
 ```{note}
-To use sbin scripts with this deployment, do not set `allowHostAccessForSbinScripts` to `false`
-(it is `true` by default).
+To use sbin scripts with this deployment, do not set `allowHostAccessForSbinScripts` to `false` (it
+is `true` by default).
 ```
 
 Wait for all pods to be ready:
