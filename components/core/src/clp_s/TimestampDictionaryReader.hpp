@@ -42,7 +42,7 @@ public:
      * @param timestamp
      * @param format_id
      * @param buffer
-     * @throws OperationFailed is the format indicated by `format_id` can not be interpreted as a
+     * @throws OperationFailed if the format indicated by `format_id` can not be interpreted as a
      * `clp_s::timestamp_parser::TimestampPattern`.
      */
     void append_timestamp_to_buffer(
