@@ -1,16 +1,17 @@
 [project]
 name = "clp-mcp-server"
-version = "0.5.2-dev"
+version = "0.7.1-dev"
 description = "MCP server for CLP"
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "aiomysql>=0.2.0",
     "click>=8.3.0",
     "fastmcp>=2.12.4",
-    "pymongo>=4.15.1",
-    "aiomysql>=0.2.0",
-    "msgpack>=1.1.1",
+    "msgpack>=1.1.2",
+    "paginate>=0.5.7",
+    "pymongo>=4.15.3",
 ]
 
 [project.scripts]
@@ -21,12 +22,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
+clp = [
+    "clp-py-utils",
+]
 dev = [
     "mypy>=1.16.0",
-    "ruff>=0.11.12",
     "pytest>=8.4.1",
-    "pytest-env>=1.1.5",
     "pytest-asyncio>=1.2.0",
+    "pytest-env>=1.1.5",
+    "pytest-repeat>=0.9.4",
+    "ruff>=0.11.12",
 ]
 
 [tool.hatch.metadata]
@@ -42,39 +47,10 @@ show_error_context = true
 show_error_end = true
 
 [tool.ruff]
-line-length = 100
+extend = "../../ruff.toml"
 
-[tool.ruff.lint]
-select = ["ALL"]
-ignore = [
-    "ANN401",  # Allow using `Any` type for function signatures
-    "COM812",  # Redundant and conflicts with ruff format
-    "D203",  # No blank line before docstrings (D211)
-    "D205",  # Breaks if summary is larger than one line due to wrapping or if no summary exists
-    "D212",  # Enforce docstring summary line on the next line after quotes (D213)
-    "D400",  # First line of docstrings may not end in period
-    "D401",  # Docstrings should be written in present tense (not imperative)
-    "D415",  # First line of docstrings may not end in a period, question mark, or exclamation point
-    "FBT",  # Allow bool positional parameters since other value positions are allowed
-    "FIX002",  # Allow todo statements
-    "PERF401",  # Allow for loops when creating lists
-    "PERF403",  # Allow for loops when creating dicts
-    "S311",  # Allow usage of `random` package
-    "S603",  # Automatically trust inputs of subprocess execution
-    "SIM102",  # Allow collapsible if statements for readability
-    "SIM300",  # Skip Yoda-condition format fixes
-    "TD002",  # Author unnecessary for todo statement
-    "TD003",  # Issue link unnecessary for todo statement
-    "UP015",  # Explicit open modes are helpful
-]
-isort.order-by-type = false
+[tool.uv]
+default-groups = ["clp", "dev"]
 
-[tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 100
-
-[tool.ruff.lint.per-file-ignores]
-    "tests/test_clp_connector.py" = [
-        "INP001",  # Allow implicit namespace package for tests
-        "S101",  # Allow "assert" in test cases
-    ]
+[tool.uv.sources]
+clp-py-utils = { path = "../clp-py-utils", editable = true }

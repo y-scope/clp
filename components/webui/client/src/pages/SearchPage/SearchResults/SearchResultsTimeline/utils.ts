@@ -71,9 +71,9 @@ const computeTimelineConfig = (
     );
 
     const bucketDuration =
-      durationSelections.find(
-          (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
-      ) ||
+        durationSelections.find(
+            (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
+        ) ||
 
       // If the timeline bucket spans more than 1 year, calculate a custom multi-year duration.
       dayjs.duration(

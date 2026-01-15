@@ -1,12 +1,12 @@
+import {
+    CLP_STORAGE_ENGINES,
+    SqlTableSuffix,
+} from "@webui/common/config";
 import {Nullable} from "@webui/common/utility-types";
 import dayjs, {Dayjs} from "dayjs";
 
 import {querySql} from "../../../../api/sql";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../../config";
-import {SqlTableSuffix} from "../../../../config/sql-table-suffix";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
 import {settings} from "../../../../settings";
 import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../../../IngestPage/sqlConfig";
 import {DEFAULT_TIME_RANGE} from "./utils";
@@ -45,8 +45,7 @@ FROM ${settings.SqlDbClpTablePrefix}${datasetName}_${SqlTableSuffix.ARCHIVES}`;
  * @param selectDataset
  * @return
  */
-const fetchAllTimeRange = async (selectDataset: Nullable<string>)
-: Promise<[Dayjs, Dayjs]> => {
+const fetchAllTimeRange = async (selectDataset: Nullable<string>): Promise<[Dayjs, Dayjs]> => {
     let sql: string;
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         sql = buildClpTimeRangeSql();

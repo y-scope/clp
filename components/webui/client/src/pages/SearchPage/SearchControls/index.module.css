@@ -13,7 +13,7 @@
     margin-left: 2px;
 }
 
-.statusAndButtonsRow {
+.runRow {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;

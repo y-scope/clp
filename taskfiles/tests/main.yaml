@@ -2,11 +2,36 @@ version: "3"
 
 includes:
   integration: "integration.yaml"
+  toolchains: "../toolchains.yaml"
 
 tasks:
   rust-all:
-    deps: [":toolchains:rust"]
+    vars:
+      LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"
+      LOG_INGESTOR_QUEUE: "clp-log-ingestor-test-queue"
+      LOCALSTACK_CONTAINER_NAME:
+        # Normalize UUID casing: macOS generates uppercase while Linux generates lowercase.
+        sh: "uuidgen | tr '[:upper:]' '[:lower:]' | sed 's/^/clp-localstack-rust-/'"
+      LOCALSTACK_PORT:
+        sh: "tools/scripts/localstack/get-free-port.py"
     dir: "{{.ROOT_DIR}}"
-    cmd: |-
-      . "$HOME/.cargo/env"
-      cargo test --all --all-features --release
+    deps: ["toolchains:rust"]
+    cmds:
+      - |-
+        tools/scripts/localstack/start.py \
+        --name "{{.LOCALSTACK_CONTAINER_NAME}}" \
+        --port "{{.LOCALSTACK_PORT}}"
+      - defer: |-
+          tools/scripts/localstack/stop.py \
+          --name "{{.LOCALSTACK_CONTAINER_NAME}}"
+      - |-
+        tools/scripts/localstack/create-bucket.py \
+        --bucket "{{.LOG_INGESTOR_BUCKET}}" \
+        --queue "{{.LOG_INGESTOR_QUEUE}}" \
+        --port "{{.LOCALSTACK_PORT}}"
+      - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        AWS_ENDPOINT_URL="http://localhost:{{.LOCALSTACK_PORT}}" \
+        CLP_LOG_INGESTOR_S3_BUCKET="{{.LOG_INGESTOR_BUCKET}}" \
+        CLP_LOG_INGESTOR_SQS_QUEUE="{{.LOG_INGESTOR_QUEUE}}" \
+        cargo nextest run --all --all-features --run-ignored all --release

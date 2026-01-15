@@ -12,7 +12,7 @@ import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 } from "@webui/common/schemas/presto-search";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
@@ -51,8 +51,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: PrestoQueryJobCreationSchema,
                 response: {
-                    [StatusCodes.CREATED]: PrestoQueryJobSchema,
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_CREATED]: PrestoQueryJobSchema,
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Presto Search"],
             },
@@ -197,7 +197,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             await mongoDb.createCollection(searchJobId);
 
-            reply.code(StatusCodes.CREATED);
+            reply.code(constants.HTTP_STATUS_CREATED);
 
             return {searchJobId};
         }
@@ -209,8 +209,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: PrestoQueryJobSchema,
                 response: {
-                    [StatusCodes.NO_CONTENT]: Type.Null(),
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_NO_CONTENT]: Type.Null(),
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Presto Search"],
             },
@@ -226,7 +226,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 });
             });
             request.log.info({searchJobId}, "Presto search cancelled");
-            reply.code(StatusCodes.NO_CONTENT);
+            reply.code(constants.HTTP_STATUS_NO_CONTENT);
 
             return null;
         }
@@ -238,8 +238,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: PrestoQueryJobSchema,
                 response: {
-                    [StatusCodes.NO_CONTENT]: Type.Null(),
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_NO_CONTENT]: Type.Null(),
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Presto Search"],
             },
@@ -253,7 +253,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             await mongoDb.collection(searchJobId).drop();
 
-            reply.code(StatusCodes.NO_CONTENT);
+            reply.code(constants.HTTP_STATUS_NO_CONTENT);
 
             return null;
         }

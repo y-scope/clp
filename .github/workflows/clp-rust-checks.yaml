@@ -2,7 +2,19 @@ name: "clp-rust-checks"
 
 on:
   pull_request:
+    paths: &monitored_paths
+      - ".cargo/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - ".github/workflows/clp-rust-checks.yaml"
+      - "components/api-server/**"
+      - "components/clp-rust-utils/**"
+      - "components/log-ingestor/**"
+      - "taskfile.yaml"
+      - "taskfiles/**"
+      - "tools/scripts/localstack/**"
   push:
+    paths: *monitored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
@@ -15,13 +27,7 @@ concurrency:
 
 jobs:
   rust-checks:
-    strategy:
-      matrix:
-        os:
-          - "macos-15"
-          - "ubuntu-22.04"
-          - "ubuntu-24.04"
-    runs-on: "${{matrix.os}}"
+    runs-on: "ubuntu-22.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -30,6 +36,13 @@ jobs:
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli@3.44.0"
+
+      - name: "Install the latest version of uv"
+        uses: "astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41"  # v7.1.2
+
+      - name: "Validate lock files"
+        shell: "bash"
+        run: "task deps:lock:check-rust"
 
       - name: "Lint"
         shell: "bash"

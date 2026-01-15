@@ -47,7 +47,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - "macos-14"
           - "macos-15"
         use_shared_libs:
           - true
@@ -96,8 +95,10 @@ jobs:
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
 
-      # NOTE: We don't use the cache for scheduled runs so that they run lint:check-cpp-static-full
-      # on all files.
+      # NOTE: We don't restore the cache for `schedule` runs so that below,
+      # `lint:check-cpp-static-full` runs on all files. If we don't do this periodically,
+      # `lint:check-cpp-static-full` could miss issues in files that haven't changed but depend on
+      # files which have changed.
       - if: "'schedule' != github.event_name"
         name: "Restore lint:check-cpp-static-full cache"
         id: "cache-restore-lint-check-cpp-static-full"
@@ -108,9 +109,11 @@ jobs:
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
 
-          # NOTE: We use a per-OS cache since different OSes may trigger different clang-tidy
-          # violations.
-          key: "main-branch-${{matrix.os}}-lint:check-cpp-static-full"
+          # NOTE: This key must be kept in-sync with the key prefix in the `actions/cache/save` step
+          # below (we can't use the output of the current step since `schedule` workflow runs don't
+          # run this step).
+          key: "lint:check-cpp-static-full-on-${{matrix.os}}-with\
+          -${{matrix.use_shared_libs == true && 'shared' || 'static'}}-libs"
 
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-
@@ -131,4 +134,14 @@ jobs:
             .task/checksum/lint-check-cpp-static-full
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
-          key: "${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"
+
+          # NOTE: This key prefix (without the hash) must be kept in-sync with the
+          # `actions/cache/restore` step above.
+          key: >-
+            lint:check-cpp-static-full-on-${{matrix.os}}-with-${{
+              matrix.use_shared_libs == true && 'shared' || 'static'
+            }}-libs-${{hashFiles(
+              '.task/checksum/lint-check-cpp-static-full',
+              '.task/checksum/utils-cpp-lint-clang-tidy-*',
+              'build/lint-clang-tidy/**/*'
+            )}}

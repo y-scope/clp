@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 import celery
+
 from job_orchestration.executor.compress.celery_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 
 
 class CeleryTaskManager(TaskManager):
-
     class ResultHandle(TaskManager.ResultHandle):
         def __init__(self, celery_result: celery.result.GroupResult) -> None:
             self._celery_result: celery.result.GroupResult = celery_result

@@ -155,6 +155,13 @@ public:
     uint64_t get_num_messages() const { return m_num_messages; }
 
     /**
+     * Generates a JSON string from the encoded columns
+     * @param message_index The index of the message to generate the JSON string for.
+     * @return The generated JSON string
+     */
+    [[nodiscard]] auto generate_json_string(uint64_t message_index) -> std::string;
+
+    /**
      * Gets next message
      * @param message
      * @return true if there is a next message
@@ -196,6 +203,11 @@ public:
      * @param filter
      */
     void initialize_filter_with_column_map(FilterClass* filter);
+
+    /**
+     * Initializes all internal data structures required to serialize records.
+     */
+    void initialize_serializer();
 
     /**
      * Marks a column as timestamp
@@ -298,16 +310,6 @@ private:
             int32_t next_root,
             std::vector<int32_t>& path_to_intersection
     );
-
-    /**
-     * Generates a json string from the extracted values
-     */
-    void generate_json_string();
-
-    /**
-     * Initializes all internal data structured required to serialize records.
-     */
-    void initialize_serializer();
 
     int32_t m_schema_id;
     uint64_t m_num_messages;

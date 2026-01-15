@@ -45,7 +45,7 @@ const init = async (): Promise<void> => {
     app.register(fp(serviceApp));
 
     closeWithGrace(
-        {delay: Number(DEFAULT_FASTIFY_CLOSE_GRACE_DELAY)},
+        {delay: DEFAULT_FASTIFY_CLOSE_GRACE_DELAY},
         async ({err}) => {
             if (err) {
                 app.log.error(err);

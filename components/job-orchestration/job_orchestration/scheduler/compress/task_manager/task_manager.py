@@ -18,7 +18,6 @@ class TaskManager(ABC):
                 on the implementation, this parameter may be ignored.
             :return: A list of task results.
             """
-            pass
 
     @abstractmethod
     def submit(self, task_params: list[dict[str, Any]]) -> ResultHandle:
@@ -27,4 +26,3 @@ class TaskManager(ABC):
         :param task_params: A list of dictionaries containing parameters for each compression task.
         :return: A handle through which to get the result of the job.
         """
-        pass

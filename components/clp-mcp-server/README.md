@@ -49,6 +49,14 @@ For more details on Claude Desktop MCP setup, see the
 
 > **Warning:** 🚧 This section is still under construction.
 
+## Testing
+
+Use the following command to run all unit tests:
+
+```shell
+uv test pytest
+```
+
 [claude-desktop]: https://claude.ai/download
 [claude-desktop-mcp-doc]: https://modelcontextprotocol.io/docs/develop/connect-local-servers
 [mcp]: https://modelcontextprotocol.io/docs/getting-started/intro

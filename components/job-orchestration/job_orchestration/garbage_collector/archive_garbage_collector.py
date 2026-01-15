@@ -2,11 +2,10 @@ import asyncio
 import pathlib
 import time
 from contextlib import closing
-from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
-    CLPConfig,
+    ClpConfig,
     Database,
     QUERY_JOBS_TABLE_NAME,
     StorageEngine,
@@ -17,7 +16,8 @@ from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
     get_archives_table_name,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
+
 from job_orchestration.garbage_collector.constants import (
     ARCHIVE_GARBAGE_COLLECTOR_NAME,
     MIN_TO_SECONDS,
@@ -41,7 +41,7 @@ def _delete_expired_archives(
     archive_expiry_epoch_secs: int,
     candidates_buffer: DeletionCandidatesBuffer,
     archive_output_config: ArchiveOutput,
-    dataset: Optional[str],
+    dataset: str | None,
 ) -> None:
     archives_table = get_archives_table_name(table_prefix, dataset)
     archive_end_ts_upper_bound = archive_expiry_epoch_secs * SECOND_TO_MILLISECOND
@@ -80,7 +80,7 @@ def _delete_expired_archives(
 
     # Prepare the log message
     dataset_msg: str
-    deleted_candidates: List[str]
+    deleted_candidates: list[str]
     if dataset is not None:
         dataset_log_msg = f" from dataset `{dataset}`"
         # Note: If dataset is not None, candidates are expected to be in the format
@@ -156,10 +156,11 @@ def _collect_and_sweep_expired_archives(
 
     clp_connection_param = database_config.get_clp_connection_params_and_type()
     table_prefix = clp_connection_param["table_prefix"]
-    sql_adapter = SQL_Adapter(database_config)
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    sql_adapter = SqlAdapter(database_config)
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         archive_expiry_epoch = _get_archive_safe_expiry_epoch(
             db_cursor,
             archive_output_config.retention_period,
@@ -192,7 +193,7 @@ def _collect_and_sweep_expired_archives(
 
 
 async def archive_garbage_collector(
-    clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
+    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, ARCHIVE_GARBAGE_COLLECTOR_NAME)
 

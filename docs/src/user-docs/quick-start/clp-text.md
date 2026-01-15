@@ -19,9 +19,28 @@ To start CLP, run:
 sbin/start-clp.sh
 ```
 
+:::{tip}
+To validate configuration and prepare directories without launching services, add the
+`--setup-only` flag (e.g., `sbin/start-clp.sh --setup-only`).
+:::
+
 :::{note}
 If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
-`etc/clp-config.yml` and then run the start command again.
+`etc/clp-config.yaml` and then run the start command again.
+:::
+
+:::{warning}
+**Do not comment out or remove the `package` block in `etc/clp-config.yaml`**; otherwise, the storage
+and query engines will default to `clp-s`, which is optimized for JSON logs rather than unstructured
+text logs.
+
+To use `clp-text`, the `package` block should be configured as follows:
+
+```yaml
+package:
+  storage_engine: "clp"
+  query_engine: "clp"
+```
 :::
 
 ---
@@ -40,7 +59,7 @@ The compression script will output the compression ratio of each dataset you com
 use the UI to view overall statistics.
 
 Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
-config option in `etc/clp-config.yml` (`archive_output.storage.directory` defaults to
+config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
 `var/data/archives`).
 
 ### Sample logs
@@ -99,7 +118,7 @@ A complete reference for clp-text's query syntax is available on the
 ### Searching from the UI
 
 To search your compressed logs from CLP's UI, open [http://localhost:4000](http://localhost:4000) in
-your browser (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new
+your browser (if you changed `webui.host` or `webui.port` in `etc/clp-config.yaml`, use the new
 values).
 
 [Figure 3](#figure-3) shows the search page after running a query.

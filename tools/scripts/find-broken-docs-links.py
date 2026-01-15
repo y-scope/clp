@@ -1,10 +1,25 @@
+#!/usr/bin/env python3
+"""Finds broken docs links in the docs."""
+
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 
+# Setup logging
+# Create logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
 
-def main(argv):
+
+def main() -> int:
+    """Main."""
     repo_root = _get_repo_root()
 
     found_violation = False
@@ -35,7 +50,9 @@ def main(argv):
 
 def _get_repo_root() -> Path:
     path_str = subprocess.check_output(
-        ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, text=True
+        ["/usr/bin/env", "git", "rev-parse", "--show-toplevel"],
+        cwd=Path(__file__).parent,
+        text=True,
     )
     return Path(path_str.strip())
 
@@ -56,6 +73,7 @@ def _check_tracked_files(
     # NOTE: "-z" ensures the paths won't be quoted (while delimiting them using '\0')
     for path_str in subprocess.check_output(
         [
+            "/usr/bin/env",
             "git",
             "ls-files",
             "--cached",
@@ -74,7 +92,15 @@ def _check_tracked_files(
 
         try:
             for match in subprocess.check_output(
-                ["grep", "--extended-regexp", "--line-number", "--with-filename", pattern, path],
+                [
+                    "/usr/bin/env",
+                    "grep",
+                    "--extended-regexp",
+                    "--line-number",
+                    "--with-filename",
+                    pattern,
+                    path,
+                ],
                 cwd=repo_root,
                 text=True,
             ).splitlines():
@@ -86,7 +112,7 @@ def _check_tracked_files(
     return found_matches
 
 
-def _parse_and_print_match(match: str, error_msg: str):
+def _parse_and_print_match(match: str, error_msg: str) -> None:
     """
     Parses and prints grep matches in a format relevant to the current environment.
     :param match: The match to parse and print.
@@ -95,11 +121,11 @@ def _parse_and_print_match(match: str, error_msg: str):
     if os.getenv("GITHUB_ACTIONS") == "true":
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
-        print(f"::error file={file},line={line}::{error_msg}")
+        logger.error("::error file=%s,line=%s::%s", file, line, error_msg)
     else:
-        print(error_msg, file=sys.stderr)
-        print(match, file=sys.stderr)
+        logger.error(error_msg)
+        logger.error(match)
 
 
 if "__main__" == __name__:
-    sys.exit(main(sys.argv))
+    sys.exit(main())

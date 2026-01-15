@@ -6,10 +6,11 @@ import sys
 from contextlib import closing
 from logging import Logger
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
+
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 
@@ -20,7 +21,7 @@ def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Pat
 
 
 def report_task_failure(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     task_id: int,
     start_time: datetime.datetime,
 ):
@@ -39,16 +40,16 @@ def report_task_failure(
 
 
 def run_query_task(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     logger: Logger,
     clp_logs_dir: Path,
-    task_command: List[str],
-    env_vars: Optional[Dict[str, str]],
+    task_command: list[str],
+    env_vars: dict[str, str] | None,
     task_name: str,
     job_id: str,
     task_id: int,
     start_time: datetime.datetime,
-) -> Tuple[QueryTaskResult, str]:
+) -> tuple[QueryTaskResult, str]:
     clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
@@ -57,7 +58,7 @@ def run_query_task(
         sql_adapter, task_id, dict(status=task_status, start_time=start_time)
     )
 
-    logger.info(f'Running: {" ".join(task_command)}')
+    logger.info(f"Running: {' '.join(task_command)}")
     task_proc = subprocess.Popen(
         task_command,
         preexec_fn=os.setpgrp,
@@ -116,19 +117,20 @@ def run_query_task(
 
 
 def update_query_task_metadata(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     task_id: int,
-    kv_pairs: Dict[str, Any],
+    kv_pairs: dict[str, Any],
 ):
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         if not kv_pairs or len(kv_pairs) == 0:
             raise ValueError("No key-value pairs provided to update query task metadata")
 
         query = f"""
             UPDATE {QUERY_TASKS_TABLE_NAME}
-            SET {', '.join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
+            SET {", ".join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
             WHERE id = {task_id}
         """
         db_cursor.execute(query)

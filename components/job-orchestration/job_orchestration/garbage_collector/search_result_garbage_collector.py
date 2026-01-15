@@ -1,12 +1,13 @@
 import asyncio
 import pathlib
-from typing import Final, List
+from typing import Final
 
 import pymongo
 import pymongo.database
 from bson import ObjectId
-from clp_py_utils.clp_config import CLPConfig, ResultsCache
+from clp_py_utils.clp_config import ClpConfig, ResultsCache
 from clp_py_utils.clp_logging import get_logger
+
 from job_orchestration.garbage_collector.constants import (
     MIN_TO_SECONDS,
     SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
@@ -46,7 +47,7 @@ def _collect_and_sweep_expired_search_results(
     expiry_epoch = get_expiry_epoch_secs(result_cache_config.retention_period)
 
     logger.debug(f"Searching for search jobs finished before {expiry_epoch}.")
-    deleted_job_ids: List[int] = []
+    deleted_job_ids: list[int] = []
     with pymongo.MongoClient(result_cache_config.get_uri()) as results_cache_client:
         results_cache_db = results_cache_client.get_default_database()
         collection_names = results_cache_db.list_collection_names()
@@ -66,11 +67,11 @@ def _collect_and_sweep_expired_search_results(
     if len(deleted_job_ids) != 0:
         logger.debug(f"Deleted search results of job(s): {deleted_job_ids}.")
     else:
-        logger.debug(f"No search results matched the expiry criteria.")
+        logger.debug("No search results matched the expiry criteria.")
 
 
 async def search_result_garbage_collector(
-    clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
+    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
 

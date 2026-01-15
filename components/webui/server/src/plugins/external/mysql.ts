@@ -20,7 +20,7 @@ export const autoConfig = (fastify: FastifyInstance) => {
         database: settings.SqlDbName,
         host: settings.SqlDbHost,
         password: fastify.config.CLP_DB_PASS,
-        port: Number(settings.SqlDbPort),
+        port: settings.SqlDbPort,
         promise: true,
         user: fastify.config.CLP_DB_USER,
     };

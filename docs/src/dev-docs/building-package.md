@@ -15,7 +15,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
   * `docker-buildx-plugin` >= 0.15.1
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
-* Python 3.9 or newer
+* Python 3.10 or newer
 * python3-dev
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
@@ -45,7 +45,7 @@ There are two flavours of the CLP package:
 
 :::{note}
 Both flavours contain the same binaries but are configured with different values for the
-`package.storage_engine` key.
+`package.storage_engine` and `package.query_engine` key.
 :::
 
 To build the package, run:
@@ -54,11 +54,19 @@ To build the package, run:
 task
 ```
 
-The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+The build will be in `build/clp-package` and defaults to using the storage and query engines for
+`clp-json`.
 
 :::{note}
-The `task` command runs `task docker-images:package` under the hood. In addition to the build, a
-Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
+The `task` command runs `task package` under the hood. In addition to the build, a Docker image
+named `clp-package:dev-<user>-<unique-id>` will also be created.
+:::
+
+:::{note}
+The package includes a `docker-compose.yaml` file that can be used to deploy CLP using [Docker
+Compose][docker-compose]. If you want to manually deploy with Docker Compose instead of using the
+package scripts, see the [Deployment orchestration][design-deployment-orchestration] design doc for
+more information.
 :::
 
 To build a releasable tar of either flavour, run:
@@ -81,6 +89,8 @@ task clean
 ```
 
 [Docker]: https://docs.docker.com/engine/install/
+[docker-compose]: https://docs.docker.com/compose/
+[design-deployment-orchestration]: design-deployment-orchestration.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352

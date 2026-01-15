@@ -2,7 +2,7 @@ import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {EXTRACT_JOB_TYPES} from "@webui/common/query";
 import {ErrorSchema} from "@webui/common/schemas/error";
 import {StreamFileExtractionSchema} from "@webui/common/schemas/stream-files";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {StreamFileMetadataSchema} from "../../../typings/stream-files.js";
@@ -22,8 +22,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: StreamFileExtractionSchema,
                 response: {
-                    [StatusCodes.OK]: StreamFileMetadataSchema,
-                    [StatusCodes.BAD_REQUEST]: ErrorSchema,
+                    [constants.HTTP_STATUS_OK]: StreamFileMetadataSchema,
+                    [constants.HTTP_STATUS_BAD_REQUEST]: ErrorSchema,
                 },
                 tags: ["Stream Files"],
             },

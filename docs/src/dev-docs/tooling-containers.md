@@ -139,6 +139,56 @@ An image containing the CLP package.
   tools/docker-images/clp-package
   ```
 
+### Notable configurations
+
+The container image sets the following environment variables and configurations, some of which
+(e.g., the user's home directory) may be unexpected.
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Configuration</th>
+      <th>Value</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="literal">$USER</code></td>
+      <td><code class="literal">clp-user</code></td>
+      <td>Default user in the container.</td>
+    </tr>
+    <tr>
+      <td><code class="literal">$CLP_HOME</code> and <code class="literal">$HOME</code>
+        (<code class="literal">~</code>)</td>
+      <td><code class="literal">/opt/clp</code></td>
+      <td>Home directory for the default user.</td>
+    </tr>
+    <tr>
+      <td><code class="literal">$SHELL</code></td>
+      <td><code class="literal">/bin/bash</code></td>
+      <td>Default shell for the default user.</td>
+    </tr>
+    <tr>
+      <td><code class="literal">$LD_LIBRARY_PATH</code></td>
+      <td><code class="literal">${CLP_HOME}/lib</code></td>
+      <td>Library path to include any shared libraries in the CLP package.</td>
+    </tr>
+    <tr>
+      <td><code class="literal">$PATH</code></td>
+      <td><code class="literal">${CLP_HOME}/sbin</code><br>
+        <code class="literal">:${CLP_HOME}/bin</code><br>
+        <code class="literal">:${PATH}</code></td>
+      <td>System path including the binaries and scripts in the CLP package.</td>
+    </tr>
+    <tr>
+      <td><code class="literal">$PYTHONPATH</code></td>
+      <td><code class="literal">${CLP_HOME}/lib/python3/site-packages</code></td>
+      <td>Python path to include any Python packages in the CLP package.</td>
+    </tr>
+  </tbody>
+</table>
+
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
 [core-deps-musllinux_1_2-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-musllinux_1_2

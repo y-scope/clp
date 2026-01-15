@@ -121,7 +121,7 @@ TEST_CASE("Test error for colon missing schema file", "[LALR1Parser][SchemaParse
     auto const file_path = get_test_schema_files_dir() / "colon_missing_schema.txt";
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path.string()),
-            "Schema:3:4: error: expected '>',':','AlphaNumeric' before ' ' token\n"
+            "Schema:3:4: error: expected '>',':','IdentifierCharacters' before ' ' token\n"
             "          int [0-9]+\n"
             "             ^\n"
     );

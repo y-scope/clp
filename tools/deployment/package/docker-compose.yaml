@@ -1,0 +1,85 @@
+name: "clp-package"
+
+include:
+  - "docker-compose.utils.yaml"
+
+services:
+  database:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "database"
+
+  db-table-creator:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "db-table-creator"
+
+  queue:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "queue"
+
+  redis:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "redis"
+
+  results-cache:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "results-cache"
+
+  results-cache-indices-creator:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "results-cache-indices-creator"
+
+  compression-scheduler:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "compression-scheduler"
+
+  compression-worker:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "compression-worker"
+
+  webui:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "webui"
+
+  garbage-collector:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "garbage-collector"
+
+  api-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "api-server"
+
+  query-scheduler:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "query-scheduler"
+
+  query-worker:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "query-worker"
+
+  reducer:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "reducer"
+
+  mcp-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "mcp-server"
+
+  log-ingestor:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "log-ingestor"

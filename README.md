@@ -3,6 +3,7 @@
 [![Open bug reports](https://img.shields.io/github/issues/y-scope/clp/bug?label=bugs)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 [![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
 [![Discord][badge-discord]][yscope-community-discord]
+[![Slack][badge-slack]][yscope-community-slack]
 [![CLP on Zulip][badge-zulip]][yscope-community-zulip]
 
 YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to search the
@@ -89,6 +90,7 @@ You can use GitHub issues to [report a bug][bug-report] or [request a feature][f
 Need help? Join us on one of our community servers:
 
 * [![Discord][badge-discord]][yscope-community-discord]
+* [![Slack][badge-slack]][yscope-community-slack]
 * [![CLP on Zulip][badge-zulip]][yscope-community-zulip]
 
 # Next Steps
@@ -96,9 +98,10 @@ Need help? Join us on one of our community servers:
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
 If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
 
-[badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
+[badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=5561f5
+[badge-slack]: https://img.shields.io/badge/Slack-yscope--community-1e724f?style=flat&logo=slack&logoColor=white&labelColor=4A154B
 [badge-zulip]: https://img.shields.io/badge/Zulip-yscope--clp-1888FA?logo=zulip
-[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
+[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yaml
 [build-package]: http://docs.yscope.com/clp/main/dev-docs/building-package
 [clp-docs]: https://docs.yscope.com/clp/main
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
@@ -109,7 +112,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 [core]: http://docs.yscope.com/clp/main/dev-docs/components-core
 [core-container]: http://docs.yscope.com/clp/main/user-docs/core-container
 [datasets]: https://docs.yscope.com/clp/main/user-docs/resources-datasets
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
@@ -118,4 +121,5 @@ If you would like a feature or want to report a bug, please file an issue and we
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [yscope-community-discord]: https://discord.gg/7kZA2m5G87
+[yscope-community-slack]: https://communityinviter.com/apps/yscopecommunity/yscope-community
 [yscope-community-zulip]: https://yscope-clp.zulipchat.com

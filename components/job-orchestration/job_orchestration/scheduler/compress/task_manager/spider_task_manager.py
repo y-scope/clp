@@ -4,15 +4,14 @@ import json
 from typing import Any
 
 import spider_py
+from spider_py.client.job import Job
+
 from job_orchestration.executor.compress.spider_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.task_result import CompressionTaskResult
-from job_orchestration.utils.spider_utils import int8_list_to_utf8_str, utf8_str_to_int8_list
-from spider_py.client.job import Job
 
 
 class SpiderTaskManager(TaskManager):
-
     class ResultHandle(TaskManager.ResultHandle):
         def __init__(self, spider_job: Job) -> None:
             self._spider_job: Job = spider_job
@@ -21,8 +20,10 @@ class SpiderTaskManager(TaskManager):
             job_results = self._spider_job.get_results()
             if job_results is None:
                 return None
+            if not isinstance(job_results, tuple):
+                return [CompressionTaskResult.model_validate_json(job_results.decode("utf-8"))]
             return [
-                CompressionTaskResult.model_validate_json(int8_list_to_utf8_str(task_result))
+                CompressionTaskResult.model_validate_json(task_result.decode("utf-8"))
                 for task_result in job_results
             ]
 
@@ -38,10 +39,10 @@ class SpiderTaskManager(TaskManager):
             job_args.append(spider_py.Int64(task_param["job_id"]))
             job_args.append(spider_py.Int64(task_param["task_id"]))
             job_args.append([spider_py.Int64(tag_id) for tag_id in task_param["tag_ids"]])
-            job_args.append(utf8_str_to_int8_list(task_param["clp_io_config_json"]))
-            job_args.append(utf8_str_to_int8_list(task_param["paths_to_compress_json"]))
+            job_args.append(task_param["clp_io_config_json"].encode("utf-8"))
+            job_args.append(task_param["paths_to_compress_json"].encode("utf-8"))
             job_args.append(
-                utf8_str_to_int8_list(json.dumps(task_param["clp_metadata_db_connection_config"]))
+                json.dumps(task_param["clp_metadata_db_connection_config"]).encode("utf-8")
             )
         submitted_job = self._driver.submit_jobs([job], [job_args])[0]
         return SpiderTaskManager.ResultHandle(submitted_job)

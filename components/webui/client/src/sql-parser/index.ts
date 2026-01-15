@@ -4,6 +4,7 @@ import {
     CommonTokenStream,
     ErrorListener,
     Recognizer,
+    Token,
 } from "antlr4";
 
 import SqlLexer from "./generated/SqlLexer";
@@ -17,16 +18,38 @@ import {
 class SyntaxError extends Error {
 }
 
+interface ValidationError {
+    line: number;
+    column: number;
+    message: string;
+    startColumn: number;
+    endColumn: number;
+}
+
 class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
-    // eslint-disable-next-line max-params, class-methods-use-this
+    errors: ValidationError[] = [];
+
+    // eslint-disable-next-line max-params
     override syntaxError (
         _recognizer: Recognizer<TSymbol>,
-        _offendingSymbol: TSymbol,
+        offendingSymbol: TSymbol,
         line: number,
         column: number,
         msg: string,
     ) {
-        throw new SyntaxError(`line ${line}:${column}: ${msg}`);
+        // Offending symbol always returns a token
+        // https://github.com/antlr/antlr4/blob/cc82115a4e7f53d71d9d905caa2c2dfa4da58899/runtime/JavaScript/src/antlr4/Parser.js#L308
+        const token = offendingSymbol as unknown as Token;
+        const startColumn = token.start + 1;
+        const endColumn = token.stop + 2;
+
+        this.errors.push({
+            column: column,
+            endColumn: endColumn,
+            line: line,
+            message: msg,
+            startColumn: startColumn,
+        });
     }
 }
 
@@ -51,32 +74,63 @@ class UpperCaseCharStream extends CharStream {
 }
 
 /**
- * Creates a SQL parser for a given input string.
+ * Helper function to set up parser with error listener.
  *
- * @param input The SQL query string to be parsed.
- * @return The configured SQL parser instance ready to parse the input.
+ * @param sqlString
+ * @return Object containing parser and error listener
  */
-const buildParser = (input: string): SqlParser => {
+const setupParser = (sqlString: string) => {
     const syntaxErrorListener = new SyntaxErrorListener();
-    const lexer = new SqlLexer(new UpperCaseCharStream(input));
+    const lexer = new SqlLexer(new UpperCaseCharStream(sqlString));
     lexer.removeErrorListeners();
     lexer.addErrorListener(syntaxErrorListener);
     const parser = new SqlParser(new CommonTokenStream(lexer));
     parser.removeErrorListeners();
     parser.addErrorListener(syntaxErrorListener);
 
-    return parser;
+    return {parser, syntaxErrorListener};
 };
 
 /**
- * Validate a SQL string for syntax errors.
+ * Validate a SELECT item list and return any syntax errors found.
  *
  * @param sqlString
- * @throws {SyntaxError} with line, column, and message details if a syntax error is found.
+ * @return Array of validation errors, empty if valid
  */
-const validate = (sqlString: string) => {
-    buildParser(sqlString).singleStatement();
+const validateSelectItemList = (sqlString: string): ValidationError[] => {
+    const {parser, syntaxErrorListener} = setupParser(sqlString);
+    parser.standaloneSelectItemList();
+
+    return syntaxErrorListener.errors;
 };
+
+/**
+ * Validate a boolean expression and return any syntax errors found.
+ *
+ * @param sqlString
+ * @return Array of validation errors, empty if valid
+ */
+const validateBooleanExpression = (sqlString: string): ValidationError[] => {
+    const {parser, syntaxErrorListener} = setupParser(sqlString);
+    parser.standaloneBooleanExpression();
+
+    return syntaxErrorListener.errors;
+};
+
+/**
+ * Validate a sort item list and return any syntax errors found.
+ *
+ * @param sqlString
+ * @return Array of validation errors, empty if valid
+ */
+const validateSortItemList = (sqlString: string): ValidationError[] => {
+    const {parser, syntaxErrorListener} = setupParser(sqlString);
+    parser.standaloneSortItemList();
+
+    return syntaxErrorListener.errors;
+};
+
+const MILLISECONDS_PER_SECOND = 1000;
 
 /**
  * Constructs a SQL search query string from a set of structured components.
@@ -91,7 +145,6 @@ const validate = (sqlString: string) => {
  * @param props.endTimestamp
  * @param props.timestampKey
  * @return
- * @throws {Error} if the constructed SQL string is not valid.
  */
 const buildSearchQuery = ({
     selectItemList,
@@ -104,26 +157,23 @@ const buildSearchQuery = ({
     timestampKey,
 }: BuildSearchQueryProps): string => {
     let queryString = `SELECT ${selectItemList} FROM ${databaseName}
-WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTimestamp.unix()}`;
+WHERE to_unixtime(${timestampKey}) BETWEEN
+${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
+AND ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND}`;
 
     if ("undefined" !== typeof booleanExpression) {
         queryString += ` AND (${booleanExpression})`;
     }
     if ("undefined" !== typeof sortItemList) {
-        queryString += ` ORDER BY ${sortItemList}`;
+        queryString += `\nORDER BY ${sortItemList}`;
     }
     if ("undefined" !== typeof limitValue) {
-        queryString += ` LIMIT ${limitValue}`;
-    }
-
-    try {
-        validate(queryString);
-    } catch (err: unknown) {
-        throw new Error(`The constructed SQL is not valid: ${queryString}`, {cause: err});
+        queryString += `\nLIMIT ${limitValue}`;
     }
 
     return queryString;
 };
+
 
 /**
  * Constructs a bucketed timeline query.
@@ -136,7 +186,6 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTim
  * @param props.timestampKey
  * @param props.booleanExpression
  * @return
- * @throws {Error} if the constructed SQL string is not valid.
  */
 const buildTimelineQuery = ({
     databaseName,
@@ -160,12 +209,14 @@ const buildTimelineQuery = ({
     SELECT
         width_bucket(
             to_unixtime(${timestampKey}),
-            ${startTimestamp.unix()},
-            ${endTimestamp.unix()},
+            ${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND},
+            ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND},
             ${bucketCount}) AS idx,
         COUNT(*) AS cnt
     FROM ${databaseName}
-    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTimestamp.unix()}
+    WHERE to_unixtime(${timestampKey}) BETWEEN
+        ${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
+        AND ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
         ${booleanExpressionQuery}
     GROUP BY 1
     ORDER BY 1
@@ -182,12 +233,6 @@ LEFT JOIN timestamps ON buckets.idx = timestamps.idx
 ORDER BY timestamps.idx
 `;
 
-    try {
-        validate(queryString);
-    } catch (err: unknown) {
-        throw new Error(`The constructed SQL is not valid: ${queryString}`, {cause: err});
-    }
-
     return queryString;
 };
 
@@ -195,10 +240,13 @@ export {
     buildSearchQuery,
     buildTimelineQuery,
     SyntaxError,
-    validate,
+    validateBooleanExpression,
+    validateSelectItemList,
+    validateSortItemList,
 };
 
 export type {
     BuildSearchQueryProps,
     BuildTimelineQueryProps,
+    ValidationError,
 };

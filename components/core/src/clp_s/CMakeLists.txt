@@ -1,5 +1,7 @@
 add_subdirectory(indexer)
+add_subdirectory(log_converter)
 add_subdirectory(search)
+add_subdirectory(timestamp_parser)
 
 set(
         CLP_S_CLP_SOURCES
@@ -27,6 +29,9 @@ set(
         ../clp/ffi/encoding_methods.cpp
         ../clp/ffi/encoding_methods.hpp
         ../clp/ffi/encoding_methods.inc
+        ../clp/ffi/EncodedTextAst.hpp
+        ../clp/ffi/EncodedTextAstError.cpp
+        ../clp/ffi/EncodedTextAstError.hpp
         ../clp/ffi/ir_stream/byteswap.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
         ../clp/ffi/ir_stream/decoding_methods.hpp
@@ -55,6 +60,7 @@ set(
         ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
         ../clp/ffi/SchemaTree.hpp
+        ../clp/ffi/StringBlob.hpp
         ../clp/ffi/Value.hpp
         ../clp/FileDescriptor.cpp
         ../clp/FileDescriptor.hpp
@@ -65,8 +71,6 @@ set(
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
         ../clp/ir/constants.hpp
-        ../clp/ir/EncodedTextAst.cpp
-        ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
@@ -214,6 +218,7 @@ if(CLP_BUILD_CLP_S_IO)
                 Boost::iostreams Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
+                simdjson::simdjson
                 spdlog::spdlog
                 ${zstd_TARGET}
         )
@@ -272,6 +277,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 clp_s_archive_writer
                 PUBLIC
                 absl::flat_hash_map
+                clp_s::clp_dependencies
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
@@ -279,7 +285,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                clp_s::clp_dependencies
                 clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt

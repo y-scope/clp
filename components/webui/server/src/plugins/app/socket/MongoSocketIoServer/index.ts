@@ -233,8 +233,7 @@ class MongoSocketIoServer {
      */
     #getOrCreateWatcherCollection (
         collectionName: string
-    )
-        : MongoWatcherCollection {
+    ): MongoWatcherCollection {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(

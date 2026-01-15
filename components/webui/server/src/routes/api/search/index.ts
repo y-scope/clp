@@ -13,7 +13,7 @@ import {
     QueryJobCreationSchema,
     QueryJobSchema,
 } from "@webui/common/schemas/search";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
@@ -55,8 +55,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: QueryJobCreationSchema,
                 response: {
-                    [StatusCodes.CREATED]: QueryJobSchema,
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_CREATED]: QueryJobSchema,
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Search"],
             },
@@ -138,7 +138,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 logger: request.log,
                 mongoDb: mongoDb,
             });
-            reply.code(StatusCodes.CREATED);
+            reply.code(constants.HTTP_STATUS_CREATED);
 
             return {searchJobId, aggregationJobId};
         }
@@ -153,8 +153,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: QueryJobSchema,
                 response: {
-                    [StatusCodes.NO_CONTENT]: Type.Null(),
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_NO_CONTENT]: Type.Null(),
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Search"],
             },
@@ -170,7 +170,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             await mongoDb.collection(searchJobId.toString()).drop();
             await mongoDb.collection(aggregationJobId.toString()).drop();
 
-            reply.code(StatusCodes.NO_CONTENT);
+            reply.code(constants.HTTP_STATUS_NO_CONTENT);
 
             return null;
         }
@@ -183,8 +183,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: QueryJobSchema,
                 response: {
-                    [StatusCodes.NO_CONTENT]: Type.Null(),
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_NO_CONTENT]: Type.Null(),
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Search"],
             },
@@ -228,7 +228,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 `aggregationJobId=${aggregationJobId}`);
             }
 
-            reply.code(StatusCodes.NO_CONTENT);
+            reply.code(constants.HTTP_STATUS_NO_CONTENT);
 
             return null;
         }

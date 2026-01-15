@@ -3,7 +3,7 @@ import {
     Type,
 } from "@fastify/type-provider-typebox";
 import {SqlSchema} from "@webui/common/schemas/archive-metadata";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 
 
 /**
@@ -12,23 +12,21 @@ import {StatusCodes} from "http-status-codes";
  * @param fastify
  */
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const mysqlConnectionPool = fastify.mysql.pool;
-
     fastify.post(
         "/sql",
         {
             schema: {
                 body: SqlSchema,
                 response: {
-                    [StatusCodes.OK]: Type.Any(),
+                    [constants.HTTP_STATUS_OK]: Type.Any(),
                 },
                 tags: ["Archive Metadata"],
             },
         },
         async (req, reply) => {
             const {queryString} = req.body;
-            const [result] = await mysqlConnectionPool.query(queryString);
-            reply.code(StatusCodes.OK);
+            const [result] = await fastify.mysql.query(queryString);
+            reply.code(constants.HTTP_STATUS_OK);
 
             return result;
         },

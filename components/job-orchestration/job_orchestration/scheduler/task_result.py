@@ -1,14 +1,13 @@
-from typing import Optional
+from pydantic import BaseModel, field_validator
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
-from pydantic import BaseModel, field_validator
 
 
 class CompressionTaskResult(BaseModel):
     task_id: int
     status: int
     duration: float
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     @field_validator("status")
     def valid_status(cls, value):

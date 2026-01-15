@@ -1,79 +1,50 @@
 import os
 import pathlib
 from enum import auto
-from typing import Any, Literal, Optional, Set, Union
+from types import MappingProxyType
+from typing import Annotated, Any, ClassVar, Literal
+from urllib.parse import urlencode
 
-from dotenv import dotenv_values
+import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     field_validator,
     model_validator,
+    PlainSerializer,
     PrivateAttr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from .clp_logging import get_valid_logging_level, is_valid_logging_level
-from .core import (
+from clp_py_utils.clp_logging import LoggingLevel
+from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
+from clp_py_utils.serialization_utils import serialize_path, serialize_str_enum
 
 # Constants
 # Component names
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
+PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
+API_SERVER_COMPONENT_NAME = "api_server"
+LOG_INGESTOR_COMPONENT_NAME = "log_ingestor"
 WEBUI_COMPONENT_NAME = "webui"
+MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
-
-# Component groups
-GENERAL_SCHEDULING_COMPONENTS = {
-    QUEUE_COMPONENT_NAME,
-    REDIS_COMPONENT_NAME,
-}
-COMPRESSION_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
-    DB_COMPONENT_NAME,
-    COMPRESSION_SCHEDULER_COMPONENT_NAME,
-    COMPRESSION_WORKER_COMPONENT_NAME,
-}
-QUERY_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
-    DB_COMPONENT_NAME,
-    QUERY_SCHEDULER_COMPONENT_NAME,
-    QUERY_WORKER_COMPONENT_NAME,
-    REDUCER_COMPONENT_NAME,
-}
-UI_COMPONENTS = {
-    RESULTS_CACHE_COMPONENT_NAME,
-    WEBUI_COMPONENT_NAME,
-}
-STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
-ALL_COMPONENTS = (
-    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
-)
-
-# Target names
-ALL_TARGET_NAME = ""
-CONTROLLER_TARGET_NAME = "controller"
-
-TARGET_TO_COMPONENTS = {
-    ALL_TARGET_NAME: ALL_COMPONENTS,
-    CONTROLLER_TARGET_NAME: GENERAL_SCHEDULING_COMPONENTS
-    | {
-        COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        QUERY_SCHEDULER_COMPONENT_NAME,
-    }
-    | STORAGE_MANAGEMENT_COMPONENTS,
-}
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -83,20 +54,65 @@ QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
-CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
+# Paths
+CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
+CONTAINER_AWS_CONFIG_DIRECTORY = CONTAINER_CLP_HOME / ".aws"
+CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yaml"
+CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yaml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
+CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+CLP_DEFAULT_STREAMS_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+CLP_DEFAULT_LOG_DIRECTORY_PATH = pathlib.Path("var") / "log"
+CLP_DEFAULT_TMP_DIRECTORY_PATH = pathlib.Path("var") / "tmp"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
-CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
+CLP_DB_ROOT_USER_ENV_VAR_NAME = "CLP_DB_ROOT_USER"
+CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
+SPIDER_DB_USER_ENV_VAR_NAME = "SPIDER_DB_USER"
+SPIDER_DB_PASS_ENV_VAR_NAME = "SPIDER_DB_PASS"
+
+# Serializer
+StrEnumSerializer = PlainSerializer(serialize_str_enum)
+# Generic types
+NonEmptyStr = Annotated[str, Field(min_length=1)]
+NonNegativeInt = Annotated[int, Field(ge=0)]
+PositiveFloat = Annotated[float, Field(gt=0)]
+PositiveInt = Annotated[int, Field(gt=0)]
+# Specific types
+# TODO: Replace this with pydantic_extra_types.domain.DomainStr.
+DomainStr = NonEmptyStr
+Port = Annotated[int, Field(gt=0, lt=2**16)]
+SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
+ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
+
+LoggingLevelRust = Literal[
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "TRACE",
+    "OFF",
+]
+
+
+class DeploymentType(KebabCaseStrEnum):
+    BASE = auto()
+    FULL = auto()
+    SPIDER_BASE = auto()
+    SPIDER_FULL = auto()
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -104,10 +120,42 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
+StorageEngineStr = Annotated[StorageEngine, StrEnumSerializer]
+
+
+class BundledService(LowercaseStrEnum):
+    DATABASE = auto()
+    QUEUE = auto()
+    REDIS = auto()
+    RESULTS_CACHE = auto()
+
+
+BundledServiceStr = Annotated[BundledService, StrEnumSerializer]
+
+
+class DatabaseEngine(KebabCaseStrEnum):
+    MARIADB = auto()
+    MYSQL = auto()
+
+
+DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
+
+
+class OrchestrationType(KebabCaseStrEnum):
+    CELERY = auto()
+    SPIDER = auto()
+
+
+OrchestrationTypeStr = Annotated[OrchestrationType, StrEnumSerializer]
+
+
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
     PRESTO = auto()
+
+
+QueryEngineStr = Annotated[QueryEngine, StrEnumSerializer]
 
 
 class StorageType(LowercaseStrEnum):
@@ -122,33 +170,12 @@ class AwsAuthType(LowercaseStrEnum):
     ec2 = auto()
 
 
-VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
-VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
+AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 
 class Package(BaseModel):
-    storage_engine: str = "clp"
-    query_engine: str = "clp"
-
-    @field_validator("storage_engine")
-    @classmethod
-    def validate_storage_engine(cls, value):
-        if value not in VALID_STORAGE_ENGINES:
-            raise ValueError(
-                f"package.storage_engine must be one of the following"
-                f" {'|'.join(VALID_STORAGE_ENGINES)}"
-            )
-        return value
-
-    @field_validator("query_engine")
-    @classmethod
-    def validate_query_engine(cls, value):
-        if value not in VALID_QUERY_ENGINES:
-            raise ValueError(
-                f"package.query_engine must be one of the following"
-                f" {'|'.join(VALID_QUERY_ENGINES)}"
-            )
-        return value
+    storage_engine: StorageEngineStr = StorageEngine.CLP_S
+    query_engine: QueryEngineStr = QueryEngine.CLP_S
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
@@ -173,54 +200,84 @@ class Package(BaseModel):
         return self
 
 
+class ClpDbUserType(KebabCaseStrEnum):
+    """Database user types used by CLP components."""
+
+    CLP = auto()
+    ROOT = auto()
+    SPIDER = auto()
+
+
+class ClpDbNameType(KebabCaseStrEnum):
+    """Database name types used by CLP components."""
+
+    CLP = auto()
+    SPIDER = auto()
+
+
+_DB_USER_TYPE_TO_DB_NAME_TYPE: MappingProxyType[ClpDbUserType, ClpDbNameType] = MappingProxyType(
+    {
+        ClpDbUserType.CLP: ClpDbNameType.CLP,
+        ClpDbUserType.ROOT: ClpDbNameType.CLP,
+        ClpDbUserType.SPIDER: ClpDbNameType.SPIDER,
+    }
+)
+
+
+yaml.SafeDumper.add_multi_representer(
+    KebabCaseStrEnum,
+    yaml.representer.SafeRepresenter.represent_str,
+)
+
+
+class DbUserCredentials(BaseModel):
+    """Credentials for a database user."""
+
+    username: NonEmptyStr
+    password: NonEmptyStr
+
+
 class Database(BaseModel):
-    type: str = "mariadb"
-    host: str = "localhost"
-    port: int = 3306
-    name: str = "clp-db"
-    ssl_cert: Optional[str] = None
+    DEFAULT_PORT: ClassVar[int] = 3306
+
+    type: DatabaseEngineStr = DatabaseEngine.MARIADB
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    names: dict[ClpDbNameType, NonEmptyStr] = {
+        ClpDbNameType.CLP: "clp-db",
+        ClpDbNameType.SPIDER: "spider-db",
+    }
+    ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
     compress: bool = True
 
-    username: Optional[str] = None
-    password: Optional[str] = None
+    credentials: dict[ClpDbUserType, DbUserCredentials] = {}
 
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, value):
-        supported_database_types = ["mysql", "mariadb"]
-        if value not in supported_database_types:
-            raise ValueError(
-                f"database.type must be one of the following {'|'.join(supported_database_types)}"
-            )
-        return value
+    def ensure_credentials_loaded(self, user_type: ClpDbUserType) -> None:
+        """
+        Ensures that credentials for the given `user_type` are loaded.
 
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, value):
-        if "" == value:
-            raise ValueError("database.name cannot be empty.")
-        return value
+        :param user_type:
+        :raise ValueError: If credentials for the given `user_type` are not loaded.
+        """
+        if user_type not in self.credentials:
+            err_msg = f"Credentials for user type '{user_type}' are not loaded."
+            raise ValueError(err_msg)
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError("database.host cannot be empty.")
-        return value
+    def get_mysql_connection_params(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by mysql's or mariadb's `connect()`
+        method, ensuring only credentials for the given `user_type` are loaded.
 
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
-
-    def ensure_credentials_loaded(self):
-        if self.username is None or self.password is None:
-            raise ValueError("Credentials not loaded.")
-
-    def get_mysql_connection_params(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of MySQL connection parameters.
+        """
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
@@ -230,9 +287,9 @@ class Database(BaseModel):
         connection_params = {
             "host": host,
             "port": self.port,
-            "user": self.username,
-            "password": self.password,
-            "database": self.name,
+            "user": self.credentials[user_type].username,
+            "password": self.credentials[user_type].password,
+            "database": self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]],
             "compress": self.compress,
             "autocommit": self.auto_commit,
         }
@@ -240,152 +297,165 @@ class Database(BaseModel):
             connection_params["ssl_cert"] = self.ssl_cert
         return connection_params
 
-    def get_clp_connection_params_and_type(self, disable_localhost_socket_connection: bool = False):
-        self.ensure_credentials_loaded()
+    def get_clp_connection_params_and_type(
+        self,
+        disable_localhost_socket_connection: bool = False,
+        user_type: ClpDbUserType = ClpDbUserType.CLP,
+    ) -> dict[str, Any]:
+        """
+        Returns a dictionary of connection parameters to be used by CLP components and ensures only
+        credentials for the given `user_type` are loaded.
+
+        :param disable_localhost_socket_connection: If true, force TCP connections.
+        :param user_type: User type whose credentials should be included.
+        :return: Dictionary of CLP connection parameters.
+        """
+        self.ensure_credentials_loaded(user_type)
 
         host = self.host
         if disable_localhost_socket_connection and "localhost" == self.host:
             host = "127.0.0.1"
 
-        connection_params_and_type = {
-            # NOTE: clp-core does not distinguish between mysql and mariadb
-            "type": "mysql",
-            "host": host,
-            "port": self.port,
-            "username": self.username,
-            "password": self.password,
-            "name": self.name,
-            "table_prefix": CLP_METADATA_TABLE_PREFIX,
-            "compress": self.compress,
-            "autocommit": self.auto_commit,
-        }
-        if self.ssl_cert:
-            connection_params_and_type["ssl_cert"] = self.ssl_cert
-        return connection_params_and_type
+        d = self.dump_to_primitive_dict()
 
-    def dump_to_primitive_dict(self):
-        return self.model_dump(exclude={"username", "password"})
+        d["credentials"] = {user_type: self.credentials[user_type].model_dump()}
+        d["host"] = host
+        d["table_prefix"] = CLP_METADATA_TABLE_PREFIX
+        # NOTE: clp-core does not distinguish between mysql and mariadb
+        d["type"] = DatabaseEngine.MYSQL.value
+
+        return d
+
+    def get_container_url(self, user_type: ClpDbUserType = ClpDbUserType.CLP) -> str:
+        """
+        Returns a JDBC URL for connecting to the database from within a container.
+        """
+        self.ensure_credentials_loaded(user_type)
+        query = urlencode(
+            {
+                "user": self.credentials[user_type].username,
+                "password": self.credentials[user_type].password,
+            }
+        )
+        return (
+            f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
+            f"{self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
+        )
+
+    def dump_to_primitive_dict(self) -> dict[str, Any]:
+        """:return: A dictionary representation of this model, excluding credentials."""
+        return self.model_dump(exclude={"credentials"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        """
+        Loads database credentials from a YAML file.
+
+        :param credentials_file_path:
+        :raise ValueError: If the file is empty or does not contain the expected keys.
+        """
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
-            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+            self.credentials[ClpDbUserType.CLP] = DbUserCredentials(
+                username=get_config_value(config, f"{DB_COMPONENT_NAME}.username"),
+                password=get_config_value(config, f"{DB_COMPONENT_NAME}.password"),
+            )
+            self.credentials[ClpDbUserType.ROOT] = DbUserCredentials(
+                username=get_config_value(config, f"{DB_COMPONENT_NAME}.root_username"),
+                password=get_config_value(config, f"{DB_COMPONENT_NAME}.root_password"),
+            )
+            self.credentials[ClpDbUserType.SPIDER] = DbUserCredentials(
+                username=get_config_value(config, f"{DB_COMPONENT_NAME}.spider_username"),
+                password=get_config_value(config, f"{DB_COMPONENT_NAME}.spider_password"),
+            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
-    def load_credentials_from_env(self):
+    def load_credentials_from_env(self, user_type: ClpDbUserType = ClpDbUserType.CLP):
         """
-        :raise ValueError: if any expected environment variable is not set.
+        Loads database credentials from environment variables for the given user type.
+
+        :param user_type:
+        :raise ValueError: If the user type is not supported.
+        :raise ValueError: Propagates `_get_env_var`'s exceptions.
         """
-        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
-        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+        if user_type == ClpDbUserType.CLP:
+            user_env_var = CLP_DB_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.ROOT:
+            user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
+            pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
+        elif user_type == ClpDbUserType.SPIDER:
+            user_env_var = SPIDER_DB_USER_ENV_VAR_NAME
+            pass_env_var = SPIDER_DB_PASS_ENV_VAR_NAME
+        else:
+            err_msg = f"Unsupported user type '{user_type}'."
+            raise ValueError(err_msg)
 
-
-def _validate_logging_level(cls, value):
-    if not is_valid_logging_level(value):
-        raise ValueError(
-            f"{cls.__name__}: '{value}' is not a valid logging level. Use one of"
-            f" {get_valid_logging_level()}"
+        self.credentials[user_type] = DbUserCredentials(
+            username=_get_env_var(user_env_var),
+            password=_get_env_var(pass_env_var),
         )
 
+    def transform_for_container(self):
+        self.host = DB_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
-def _validate_host(cls, value):
-    if "" == value:
-        raise ValueError(f"{cls.__name__}.host cannot be empty.")
 
+class SpiderScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6000
 
-def _validate_port(cls, value):
-    min_valid_port = 0
-    max_valid_port = 2**16 - 1
-    if min_valid_port > value or max_valid_port < value:
-        raise ValueError(
-            f"{cls.__name__}.port is not within valid range " f"{min_valid_port}-{max_valid_port}."
-        )
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+
+    def transform_for_container(self):
+        self.host = SPIDER_SCHEDULER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class CompressionScheduler(BaseModel):
-    jobs_poll_delay: float = 0.1  # seconds
-    logging_level: str = "INFO"
+    UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
 
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
+    logging_level: LoggingLevel = "INFO"
+    type: OrchestrationTypeStr = OrchestrationType.CELERY
 
 
 class QueryScheduler(BaseModel):
-    host: str = "localhost"
-    port: int = 7000
-    jobs_poll_delay: float = 0.1  # seconds
-    num_archives_to_search_per_sub_job: int = 16
-    logging_level: str = "INFO"
+    DEFAULT_PORT: ClassVar[int] = 7000
 
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    num_archives_to_search_per_sub_job: PositiveInt = 16
+    logging_level: LoggingLevel = "INFO"
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"Cannot be empty.")
-        return value
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
+    def transform_for_container(self):
+        self.host = QUERY_SCHEDULER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class CompressionWorker(BaseModel):
-    logging_level: str = "INFO"
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    logging_level: LoggingLevel = "INFO"
 
 
 class QueryWorker(BaseModel):
-    logging_level: str = "INFO"
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    logging_level: LoggingLevel = "INFO"
 
 
 class Redis(BaseModel):
-    host: str = "localhost"
-    port: int = 6379
+    DEFAULT_PORT: ClassVar[int] = 6379
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: Optional[str] = None
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
-        return value
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
+    password: str | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"password"})
@@ -407,106 +477,49 @@ class Redis(BaseModel):
         """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
+    def transform_for_container(self):
+        self.host = REDIS_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class Reducer(BaseModel):
-    host: str = "localhost"
-    base_port: int = 14009
-    logging_level: str = "INFO"
-    upsert_interval: int = 100  # milliseconds
+    DEFAULT_PORT: ClassVar[int] = 14009
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{value} cannot be empty")
-        return value
+    host: DomainStr = "localhost"
+    base_port: Port = DEFAULT_PORT
+    logging_level: LoggingLevel = "INFO"
+    upsert_interval: PositiveInt = 100  # milliseconds
 
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
-
-    @field_validator("base_port")
-    @classmethod
-    def validate_base_port(cls, value):
-        _validate_port(cls, value)
-        return value
-
-    @field_validator("upsert_interval")
-    @classmethod
-    def validate_upsert_interval(cls, value):
-        if not value > 0:
-            raise ValueError(f"{value} is not greater than zero")
-        return value
+    def transform_for_container(self):
+        self.host = REDUCER_COMPONENT_NAME
+        self.base_port = self.DEFAULT_PORT
 
 
 class ResultsCache(BaseModel):
-    host: str = "localhost"
-    port: int = 27017
-    db_name: str = "clp-query-results"
-    stream_collection_name: str = "stream-files"
-    retention_period: Optional[int] = 60
+    DEFAULT_PORT: ClassVar[int] = 27017
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
-        return value
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
-
-    @field_validator("db_name")
-    @classmethod
-    def validate_db_name(cls, value):
-        if "" == value:
-            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
-        return value
-
-    @field_validator("stream_collection_name")
-    @classmethod
-    def validate_stream_collection_name(cls, value):
-        if "" == value:
-            raise ValueError(
-                f"{RESULTS_CACHE_COMPONENT_NAME}.stream_collection_name cannot be empty."
-            )
-        return value
-
-    @field_validator("retention_period")
-    @classmethod
-    def validate_retention_period(cls, value):
-        if value is not None and value <= 0:
-            raise ValueError("retention_period must be greater than 0")
-        return value
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    db_name: NonEmptyStr = "clp-query-results"
+    stream_collection_name: NonEmptyStr = "stream-files"
+    retention_period: PositiveInt | None = 60
 
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
+    def transform_for_container(self):
+        self.host = RESULTS_CACHE_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class Queue(BaseModel):
-    host: str = "localhost"
-    port: int = 5672
+    DEFAULT_PORT: ClassVar[int] = 5672
 
-    username: Optional[str] = None
-    password: Optional[str] = None
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{QUEUE_COMPONENT_NAME}.host cannot be empty.")
-        return value
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
+    username: NonEmptyStr | None = None
+    password: str | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"username", "password"})
@@ -516,7 +529,7 @@ class Queue(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.username")
             self.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
@@ -530,36 +543,21 @@ class Queue(BaseModel):
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
+    def transform_for_container(self):
+        self.host = QUEUE_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class S3Credentials(BaseModel):
-    access_key_id: str
-    secret_access_key: str
-    session_token: Optional[str] = None
-
-    @field_validator("access_key_id")
-    @classmethod
-    def validate_access_key_id(cls, value):
-        if "" == value:
-            raise ValueError("access_key_id cannot be empty")
-        return value
-
-    @field_validator("secret_access_key")
-    @classmethod
-    def validate_secret_access_key(cls, value):
-        if "" == value:
-            raise ValueError("secret_access_key cannot be empty")
-        return value
+    access_key_id: NonEmptyStr
+    secret_access_key: NonEmptyStr
+    session_token: NonEmptyStr | None = None
 
 
 class AwsAuthentication(BaseModel):
-    type: Literal[
-        AwsAuthType.credentials.value,
-        AwsAuthType.profile.value,
-        AwsAuthType.env_vars.value,
-        AwsAuthType.ec2.value,
-    ]
-    profile: Optional[str] = None
-    credentials: Optional[S3Credentials] = None
+    type: AwsAuthTypeStr
+    profile: NonEmptyStr | None = None
+    credentials: S3Credentials | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -590,37 +588,24 @@ class AwsAuthentication(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_code: str
-    bucket: str
+    endpoint_url: str | None = None
+    region_code: NonEmptyStr | None = None
+    bucket: NonEmptyStr
     key_prefix: str
     aws_authentication: AwsAuthentication
-
-    @field_validator("region_code")
-    @classmethod
-    def validate_region_code(cls, value):
-        if "" == value:
-            raise ValueError("region_code cannot be empty")
-        return value
-
-    @field_validator("bucket")
-    @classmethod
-    def validate_bucket(cls, value):
-        if "" == value:
-            raise ValueError("bucket cannot be empty")
-        return value
 
 
 class S3IngestionConfig(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     aws_authentication: AwsAuthentication
 
-    def dump_to_primitive_dict(self):
-        return self.model_dump()
+    def transform_for_container(self):
+        pass
 
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: pathlib.Path
+    directory: SerializablePath
 
     @field_validator("directory", mode="before")
     @classmethod
@@ -631,16 +616,11 @@ class FsStorage(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["directory"] = str(d["directory"])
-        return d
-
 
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
-    staging_directory: pathlib.Path
+    staging_directory: SerializablePath
 
     @field_validator("staging_directory", mode="before")
     @classmethod
@@ -661,47 +641,57 @@ class S3Storage(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["staging_directory"] = str(d["staging_directory"])
-        return d
-
 
 class FsIngestionConfig(FsStorage):
-    directory: pathlib.Path = pathlib.Path("/")
+    directory: SerializablePath = pathlib.Path("/")
+
+    def transform_for_container(self):
+        input_logs_dir = self.directory.resolve()
+        self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(
+            input_logs_dir.anchor
+        )
 
 
 class ArchiveFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+    directory: SerializablePath = CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
 
 
 class StreamFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+    directory: SerializablePath = CLP_DEFAULT_STREAMS_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_DIRECTORY_PATH
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+    staging_directory: SerializablePath = CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+    staging_directory: SerializablePath = CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
 
 
 def _get_directory_from_storage_config(
-    storage_config: Union[FsStorage, S3Storage],
+    storage_config: FsStorage | S3Storage,
 ) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
-    elif StorageType.S3 == storage_type:
+    if StorageType.S3 == storage_type:
         return storage_config.staging_directory
-    else:
-        raise NotImplementedError(f"storage.type {storage_type} is not supported")
+    raise NotImplementedError(f"storage.type {storage_type} is not supported")
 
 
-def _set_directory_for_storage_config(
-    storage_config: Union[FsStorage, S3Storage], directory
-) -> None:
+def _set_directory_for_storage_config(storage_config: FsStorage | S3Storage, directory) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         storage_config.directory = directory
@@ -712,78 +702,24 @@ def _set_directory_for_storage_config(
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
-    target_archive_size: int = 256 * 1024 * 1024  # 256 MB
-    target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
-    target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
-    target_segment_size: int = 256 * 1024 * 1024  # 256 MB
-    compression_level: int = 3
-    retention_period: Optional[int] = None
-
-    @field_validator("target_archive_size")
-    @classmethod
-    def validate_target_archive_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_archive_size must be greater than 0")
-        return value
-
-    @field_validator("target_dictionaries_size")
-    @classmethod
-    def validate_target_dictionaries_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_dictionaries_size must be greater than 0")
-        return value
-
-    @field_validator("target_encoded_file_size")
-    @classmethod
-    def validate_target_encoded_file_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_encoded_file_size must be greater than 0")
-        return value
-
-    @field_validator("target_segment_size")
-    @classmethod
-    def validate_target_segment_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_segment_size must be greater than 0")
-        return value
-
-    @field_validator("compression_level")
-    @classmethod
-    def validate_compression_level(cls, value):
-        if value < 1 or value > 19:
-            raise ValueError("compression_level must be a value from 1 to 19")
-        return value
-
-    @field_validator("retention_period")
-    @classmethod
-    def validate_retention_period(cls, value):
-        if value is not None and value <= 0:
-            raise ValueError("retention_period must be greater than 0")
-        return value
+    storage: ArchiveFsStorage | ArchiveS3Storage = ArchiveFsStorage()
+    target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MiB
+    target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    compression_level: ZstdCompressionLevel = 3
+    retention_period: PositiveInt | None = None
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
 
     def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
-
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage"] = self.storage.dump_to_primitive_dict()
-        return d
 
 
 class StreamOutput(BaseModel):
-    storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
-    target_uncompressed_size: int = 128 * 1024 * 1024
-
-    @field_validator("target_uncompressed_size")
-    @classmethod
-    def validate_target_uncompressed_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_uncompressed_size must be greater than 0")
-        return value
+    storage: StreamFsStorage | StreamS3Storage = StreamFsStorage()
+    target_uncompressed_size: PositiveInt = 128 * 1024 * 1024
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
@@ -791,80 +727,66 @@ class StreamOutput(BaseModel):
     def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage"] = self.storage.dump_to_primitive_dict()
-        return d
-
 
 class WebUi(BaseModel):
-    host: str = "localhost"
-    port: int = 4000
-    results_metadata_collection_name: str = "results-metadata"
-    rate_limit: int = 1000
+    DEFAULT_PORT: ClassVar[int] = 4000
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        _validate_host(cls, value)
-        return value
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
-
-    @field_validator("results_metadata_collection_name")
-    @classmethod
-    def validate_results_metadata_collection_name(cls, value):
-        if "" == value:
-            raise ValueError(
-                f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty."
-            )
-        return value
-
-    @field_validator("rate_limit")
-    @classmethod
-    def validate_rate_limit(cls, value):
-        if value <= 0:
-            raise ValueError(f"rate_limit must be greater than 0")
-        return value
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    results_metadata_collection_name: NonEmptyStr = "results-metadata"
+    rate_limit: PositiveInt = 1000
 
 
 class SweepInterval(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    archive: int = Field(default=60, gt=0)
-    search_result: int = Field(default=30, gt=0)
+    archive: PositiveInt = 60
+    search_result: PositiveInt = 30
+
+
+class McpServer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8000
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    logging_level: LoggingLevel = "INFO"
 
 
 class GarbageCollector(BaseModel):
-    logging_level: str = "INFO"
+    logging_level: LoggingLevel = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
 
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+
+class QueryJobPollingConfig(BaseModel):
+    initial_backoff_ms: int = Field(default=100, alias="initial_backoff")
+    max_backoff_ms: int = Field(default=5000, alias="max_backoff")
+
+
+class ApiServer(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 3001
+    query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
+    default_max_num_query_results: int = 1000
+
+
+class LogIngestor(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 3002
+    buffer_flush_timeout: PositiveInt = 300  # seconds
+    buffer_flush_threshold: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    channel_capacity: PositiveInt = 10
+    logging_level: LoggingLevelRust = "INFO"
 
 
 class Presto(BaseModel):
-    host: str
-    port: int
+    DEFAULT_PORT: ClassVar[int] = 8080
 
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        _validate_host(cls, value)
-        return value
+    host: DomainStr
+    port: Port
 
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
+    def transform_for_container(self):
+        self.host = PRESTO_COORDINATOR_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 def _get_env_var(name: str) -> str:
@@ -874,41 +796,53 @@ def _get_env_var(name: str) -> str:
     return value
 
 
-class CLPConfig(BaseModel):
-    container_image_ref: Optional[str] = None
+class ClpConfig(BaseModel):
+    container_image_ref: NonEmptyStr | None = None
 
-    logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
+    logs_input: FsIngestionConfig | S3IngestionConfig = FsIngestionConfig()
+    bundled: list[BundledServiceStr] = [
+        BundledService.DATABASE,
+        BundledService.QUEUE,
+        BundledService.REDIS,
+        BundledService.RESULTS_CACHE,
+    ]
 
     package: Package = Package()
     database: Database = Database()
-    queue: Queue = Queue()
-    redis: Redis = Redis()
+    # Default to use celery backend
+    queue: Queue | None = Queue()
+    redis: Redis | None = Redis()
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
+    spider_scheduler: SpiderScheduler | None = None
     query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+    api_server: ApiServer | None = ApiServer()
+    log_ingestor: LogIngestor | None = LogIngestor()
+    credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
-    presto: Optional[Presto] = None
+    mcp_server: McpServer | None = None
+    presto: Presto | None = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
-    data_directory: pathlib.Path = pathlib.Path("var") / "data"
-    logs_directory: pathlib.Path = pathlib.Path("var") / "log"
-    aws_config_directory: Optional[pathlib.Path] = None
+    data_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH
+    logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
+    tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
+    aws_config_directory: SerializablePath | None = None
 
-    _container_image_id_path: pathlib.Path = PrivateAttr(
+    _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
     )
-    _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
+    _version_file_path: SerializablePath = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
+    def expand_profile_user_home(cls, value: SerializablePath | None) -> SerializablePath | None:
         if value is not None:
             value = value.expanduser()
         return value
@@ -921,20 +855,24 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+        self.tmp_directory = make_config_path_absolute(clp_home, self.tmp_directory)
         self._container_image_id_path = make_config_path_absolute(
             clp_home, self._container_image_id_path
         )
         self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
-    def validate_logs_input_config(self):
+    def validate_logs_input_config(self, use_host_mount: bool = False):
         logs_input_type = self.logs_input.type
         if StorageType.FS == logs_input_type:
             # NOTE: This can't be a pydantic validator since input_logs_dir might be a
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
-            if not input_logs_dir.exists():
+            resolved_input_logs_dir = (
+                resolve_host_path_in_container(input_logs_dir) if use_host_mount else input_logs_dir
+            )
+            if not resolved_input_logs_dir.exists():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
-            if not input_logs_dir.is_dir():
+            if not resolved_input_logs_dir.is_dir():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
         if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
             raise ValueError(
@@ -942,7 +880,7 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
 
-    def validate_archive_output_config(self):
+    def validate_archive_output_config(self, use_host_mount: bool = False):
         if (
             StorageType.S3 == self.archive_output.storage.type
             and StorageEngine.CLP_S != self.package.storage_engine
@@ -951,12 +889,18 @@ class CLPConfig(BaseModel):
                 f"archive_output.storage.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
             )
+        archive_output_dir = self.archive_output.get_directory()
+        resolved_archive_output_dir = (
+            resolve_host_path_in_container(archive_output_dir)
+            if use_host_mount
+            else archive_output_dir
+        )
         try:
-            validate_path_could_be_dir(self.archive_output.get_directory())
+            validate_path_could_be_dir(resolved_archive_output_dir)
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
-    def validate_stream_output_config(self):
+    def validate_stream_output_config(self, use_host_mount: bool = False):
         if (
             StorageType.S3 == self.stream_output.storage.type
             and StorageEngine.CLP_S != self.package.storage_engine
@@ -965,24 +909,42 @@ class CLPConfig(BaseModel):
                 f"stream_output.storage.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
             )
+        stream_output_dir = self.stream_output.get_directory()
+        resolved_stream_output_dir = (
+            resolve_host_path_in_container(stream_output_dir)
+            if use_host_mount
+            else stream_output_dir
+        )
         try:
-            validate_path_could_be_dir(self.stream_output.get_directory())
+            validate_path_could_be_dir(resolved_stream_output_dir)
         except ValueError as ex:
             raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
-    def validate_data_dir(self):
+    def validate_data_dir(self, use_host_mount: bool = False):
+        data_dir = self.data_directory
+        resolved_data_dir = resolve_host_path_in_container(data_dir) if use_host_mount else data_dir
         try:
-            validate_path_could_be_dir(self.data_directory)
+            validate_path_could_be_dir(resolved_data_dir)
         except ValueError as ex:
             raise ValueError(f"data_directory is invalid: {ex}")
 
-    def validate_logs_dir(self):
+    def validate_logs_dir(self, use_host_mount: bool = False):
+        logs_dir = self.logs_directory
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir) if use_host_mount else logs_dir
         try:
-            validate_path_could_be_dir(self.logs_directory)
+            validate_path_could_be_dir(resolved_logs_dir)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
 
-    def validate_aws_config_dir(self):
+    def validate_tmp_dir(self, use_host_mount: bool = False):
+        tmp_dir = self.tmp_directory
+        resolved_tmp_dir = resolve_host_path_in_container(tmp_dir) if use_host_mount else tmp_dir
+        try:
+            validate_path_could_be_dir(resolved_tmp_dir)
+        except ValueError as ex:
+            raise ValueError(f"tmp_directory is invalid: {ex}")
+
+    def validate_aws_config_dir(self, use_host_mount: bool = False):
         profile_auth_used = False
         auth_configs = []
 
@@ -994,7 +956,7 @@ class CLPConfig(BaseModel):
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
         for auth in auth_configs:
-            if AwsAuthType.profile.value == auth.type:
+            if AwsAuthType.profile == auth.type:
                 profile_auth_used = True
                 break
 
@@ -1003,13 +965,24 @@ class CLPConfig(BaseModel):
                 raise ValueError(
                     "aws_config_directory must be set when using profile authentication"
                 )
-            if not self.aws_config_directory.exists():
+            resolved_aws_config_dir = (
+                resolve_host_path_in_container(self.aws_config_directory)
+                if use_host_mount
+                else self.aws_config_directory
+            )
+            if not resolved_aws_config_dir.exists():
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
         if not profile_auth_used and self.aws_config_directory is not None:
             raise ValueError(
                 "aws_config_directory should not be set when profile authentication is not used"
+            )
+
+    def validate_api_server(self):
+        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
+            raise ValueError(
+                f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
 
     def load_container_image_ref(self):
@@ -1028,35 +1001,32 @@ class CLPConfig(BaseModel):
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
-    def get_runnable_components(self) -> Set[str]:
+    def get_deployment_type(self) -> DeploymentType:
+        if OrchestrationType.SPIDER == self.compression_scheduler.type:
+            if QueryEngine.PRESTO == self.package.query_engine:
+                return DeploymentType.SPIDER_BASE
+            return DeploymentType.SPIDER_FULL
         if QueryEngine.PRESTO == self.package.query_engine:
-            return COMPRESSION_COMPONENTS | UI_COMPONENTS
-        else:
-            return ALL_COMPONENTS
+            return DeploymentType.BASE
+        return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = (
-            "database",
-            "queue",
-            "redis",
-            "logs_input",
-            "archive_output",
-            "stream_output",
-        )
-        d = self.model_dump(exclude=set(custom_serialized_fields))
+        custom_serialized_fields = {"database", "queue", "redis"}
+        d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
-            d[key] = getattr(self, key).dump_to_primitive_dict()
-
-        # Turn paths into primitive strings
-        d["credentials_file_path"] = str(self.credentials_file_path)
-        d["data_directory"] = str(self.data_directory)
-        d["logs_directory"] = str(self.logs_directory)
-        if self.aws_config_directory is not None:
-            d["aws_config_directory"] = str(self.aws_config_directory)
-        else:
-            d["aws_config_directory"] = None
+            value = getattr(self, key)
+            d[key] = None if value is None else value.dump_to_primitive_dict()
 
         return d
+
+    @model_validator(mode="after")
+    def validate_log_ingestor_config(self):
+        if self.log_ingestor is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = f"log-ingestor is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def validate_presto_config(self):
@@ -1068,34 +1038,66 @@ class CLPConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_spider_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.SPIDER:
+            return self
+        if self.spider_scheduler is None:
+            raise ValueError(
+                "`spider_scheduler` must be configured when using Spider orchestration."
+            )
+        if self.database.type != DatabaseEngine.MARIADB:
+            raise ValueError("Spider only supports MariaDB for the metadata database.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_celery_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.CELERY:
+            return self
+        if self.queue is None:
+            raise ValueError("`queue` must be configured when using Celery orchestration.")
+        if self.redis is None:
+            raise ValueError("`redis` must be configured when using Celery orchestration.")
+        return self
+
+    def transform_for_container(self):
+        """
+        Converts all relevant directories to absolute paths inside the container, and updates
+        component hostnames and ports to their container service names and default ports.
+        """
+        self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
+        self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        self.tmp_directory = pathlib.Path("/") / CLP_DEFAULT_TMP_DIRECTORY_PATH
+        if self.aws_config_directory is not None:
+            self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+        self.logs_input.transform_for_container()
+        self.archive_output.storage.transform_for_container()
+        self.stream_output.storage.transform_for_container()
+
+        self.database.transform_for_container()
+        if self.queue is not None:
+            self.queue.transform_for_container()
+        if self.redis is not None:
+            self.redis.transform_for_container()
+        if self.spider_scheduler is not None:
+            self.spider_scheduler.transform_for_container()
+        self.results_cache.transform_for_container()
+        self.query_scheduler.transform_for_container()
+        self.reducer.transform_for_container()
+        if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
+            self.presto.transform_for_container()
+
 
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    data_directory: pathlib.Path = CLPConfig().data_directory
+    tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
-
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-
-        # Turn paths into primitive strings
-        d["data_directory"] = str(self.data_directory)
-        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
-
-        return d
-
-
-def get_components_for_target(target: str) -> Set[str]:
-    if target in TARGET_TO_COMPONENTS:
-        return TARGET_TO_COMPONENTS[target]
-    elif target in ALL_COMPONENTS:
-        return {target}
-    else:
-        return set()
 
 
 def _validate_directory(value: Any):

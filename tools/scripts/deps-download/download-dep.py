@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Downloads dependency artifacts."""
+
 import argparse
 import logging
 import os
@@ -21,7 +23,8 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
+    """Main."""
     args_parser = argparse.ArgumentParser(description="Download dependency.")
     args_parser.add_argument("source_url", help="URL of the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
@@ -48,7 +51,7 @@ def main(argv):
             try:
                 subprocess.run(cmd, check=True)
             except subprocess.CalledProcessError:
-                logger.exception(f"Failed to update submodule '{dest_dir}'.")
+                logger.exception("Failed to update submodule '%s'.", dest_dir)
                 return -1
             return 0
 
@@ -60,7 +63,11 @@ def main(argv):
         file_path = work_dir / filename
 
         # Download file
-        urllib.request.urlretrieve(source_url, file_path)
+        if parsed_url.scheme not in {"http", "https"}:
+            logger.error("Unsupported source URL scheme '%s'.", parsed_url.scheme)
+            return -1
+
+        urllib.request.urlretrieve(source_url, file_path)  # noqa: S310 URL scheme is checked above
         if extract_source:
             # NOTE: We need to convert `file_path` to a str since `unpack_archive` only accepts a
             # path-like object on Python versions >= 3.7
@@ -73,7 +80,7 @@ def main(argv):
 
         source_path = work_dir / source_name
         if not source_path.exists():
-            logger.error(f"Source '{source_path}' doesn't exist.")
+            logger.error("Source '%s' doesn't exist.", source_path)
             return -1
 
         if extract_source:

@@ -7,9 +7,11 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/aws/AwsAuthenticationSigner.hpp"
@@ -21,6 +23,7 @@
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
+#include "../clp/utf8_utils.hpp"
 #include "Utils.hpp"
 
 namespace clp_s {
@@ -134,6 +137,14 @@ auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool;
  */
 auto could_be_json(char const* peek_buf, size_t peek_size) -> bool;
 
+/**
+ * Checks if an input contains logtext, based on the first few bytes of data from the input.
+ * @param peek_buf A pointer to a buffer containing peeked data from the start of an input stream.
+ * @param peek_size The number of bytes of peeked data in the buffer.
+ * @return Whether the input could be logtext.
+ */
+auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool;
+
 auto try_create_file_reader(std::string_view const file_path)
         -> std::shared_ptr<clp::ReaderInterface> {
     try {
@@ -242,6 +253,65 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
     return false;
 }
 
+/**
+ * This function decides whether the buffer could be logtext based on whether it contains valid, but
+ * potentially truncated, UTF-8 data.
+ *
+ * To check for valid UTF-8 while accounting for truncation we need to:
+ *   1. Find the last complete UTF-8 codepoint in the buffer
+ *   2. Validate that all of the data in the buffer including the last complete codepoint is valid
+ *      UTF-8.
+ *
+ * For the first step we can always find the last complete codepoint by scanning the last 7 bytes of
+ * the buffer. This is because in the worst case, the stream terminates with a 4-byte codepoint
+ * followed by another 4-byte codepoint with its last byte truncated. The approach, then, is to
+ * scan the last 7 bytes of the buffer to locate the last complete codepoint. Since we use full
+ * UTF-8 validation in the second step, this scan only needs to look for UTF-8 header bytes without
+ * validating continuation bytes. If no complete codepoint can be found, we know that the input is
+ * not valid UTF-8, otherwise we continue on to validating the entire buffer through the end of the
+ * last complete codepoint.
+ *
+ * For the second step, we simply use an off-the-shelf fast UTF-8 validator.
+ */
+auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
+    constexpr size_t cMaxUtf8CodepointBytes = 4ULL;
+    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1ULL;
+
+    size_t cur_byte{
+            peek_size < cMaxRunWithoutFullUtf8Codepoint
+                    ? 0ULL
+                    : (peek_size - cMaxRunWithoutFullUtf8Codepoint)
+    };
+
+    std::optional<size_t> legal_last_byte_index{std::nullopt};
+    auto mark_last_legal_character = [&](size_t remaining_bytes_in_char) {
+        auto const last_byte_in_char = cur_byte + remaining_bytes_in_char;
+        if (last_byte_in_char < peek_size) {
+            legal_last_byte_index = last_byte_in_char;
+        }
+        cur_byte = last_byte_in_char;
+    };
+
+    for (; cur_byte < peek_size; ++cur_byte) {
+        uint8_t const c{static_cast<uint8_t>(peek_buf[cur_byte])};
+        if ((clp::cFourByteUtf8CharHeaderMask & c) == clp::cFourByteUtf8CharHeader) {
+            mark_last_legal_character(3ULL);
+        } else if ((clp::cThreeByteUtf8CharHeaderMask & c) == clp::cThreeByteUtf8CharHeader) {
+            mark_last_legal_character(2ULL);
+        } else if ((clp::cTwoByteUtf8CharHeaderMask & c) == clp::cTwoByteUtf8CharHeader) {
+            mark_last_legal_character(1ULL);
+        } else if (clp::utf8_utils_internal::is_ascii_char(c)) {
+            mark_last_legal_character(0ULL);
+        }
+    }
+
+    if (false == legal_last_byte_index.has_value()) {
+        return false;
+    }
+
+    return simdjson::validate_utf8(peek_buf, legal_last_byte_index.value() + 1ULL);
+}
+
 auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) -> FileType {
     char const* peek_buf{};
     size_t peek_size{};
@@ -262,6 +332,10 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
         return FileType::Json;
     }
 
+    if (could_be_logtext(peek_buf, peek_size)) {
+        return FileType::LogText;
+    }
+
     return FileType::Unknown;
 }
 }  // namespace
@@ -279,7 +353,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
 
 [[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
         -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
-    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     constexpr size_t cMaxNestedFormatDepth = 5;
     if (nullptr == reader) {
         return {{}, FileType::Unknown};
@@ -307,6 +381,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         switch (type) {
             case FileType::Json:
             case FileType::KeyValueIr:
+            case FileType::LogText:
                 return {std::move(readers), type};
             case FileType::Zstd: {
                 readers.emplace_back(

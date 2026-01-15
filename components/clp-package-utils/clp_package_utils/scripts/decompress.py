@@ -4,19 +4,20 @@ import pathlib
 import shlex
 import subprocess
 import sys
-from typing import Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
-    CLPConfig,
+    ClpConfig,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path, resolve_host_path_in_container
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     DockerMount,
     DockerMountType,
     dump_container_config,
@@ -42,7 +43,7 @@ def validate_and_load_config(
     clp_home: pathlib.Path,
     config_file_path: pathlib.Path,
     default_config_file_path: pathlib.Path,
-) -> Optional[CLPConfig]:
+) -> ClpConfig | None:
     """
     Validates and loads the config file.
     :param clp_home:
@@ -51,8 +52,8 @@ def validate_and_load_config(
     :return: The config object on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -77,9 +78,11 @@ def handle_extract_file_cmd(
         paths_to_extract_file_path = pathlib.Path(parsed_args.files_from)
 
     # Validate extraction directory
-    extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
+    extraction_dir = resolve_host_path(extraction_dir)
+    resolved_extraction_dir = resolve_host_path_in_container(extraction_dir)
     try:
-        validate_path_could_be_dir(extraction_dir)
+        validate_path_could_be_dir(resolved_extraction_dir)
     except ValueError as ex:
         logger.error(f"extraction-dir is invalid: {ex}")
         return -1
@@ -107,10 +110,9 @@ def handle_extract_file_cmd(
     )
 
     # Set up mounts
-    extraction_dir.mkdir(exist_ok=True)
+    resolved_extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
-        mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
         mounts.archives_output_dir,
@@ -127,9 +129,10 @@ def handle_extract_file_cmd(
             )
         )
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -154,14 +157,17 @@ def handle_extract_file_cmd(
 
     cmd = container_start_cmd + extract_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("file extraction failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 
@@ -205,10 +211,11 @@ def handle_extract_stream_cmd(
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.logs_dir]
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -259,14 +266,17 @@ def handle_extract_stream_cmd(
 
     cmd = container_start_cmd + extract_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("stream extraction failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 
@@ -299,7 +309,11 @@ def main(argv):
         "-f", "--files-from", help="A file listing all files to extract."
     )
     file_extraction_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
+        "-d",
+        "--extraction-dir",
+        metavar="DIR",
+        default=".",
+        help="Extract files into DIR.",
     )
 
     # IR extraction command parser
@@ -337,11 +351,10 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
+    if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
-    else:
-        logger.exception(f"Unexpected command: {command}")
-        return -1
+    logger.exception(f"Unexpected command: {command}")
+    return -1
 
 
 if "__main__" == __name__:

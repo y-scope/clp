@@ -1,0 +1,119 @@
+apiVersion: "apps/v1"
+kind: "StatefulSet"
+metadata:
+  name: {{ include "clp.fullname" . }}-database
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "database"
+spec:
+  serviceName: {{ include "clp.fullname" . }}-database
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "database"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "database"
+    spec:
+      securityContext:
+        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
+        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
+        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
+      containers:
+        - name: "database"
+          image: >-
+            {{- if eq .Values.clpConfig.database.type "mysql" }}
+              mysql:8.0.23
+            {{- else }}
+              mariadb:10-jammy
+            {{- end }}
+          imagePullPolicy: "Always"
+          env:
+            - name: "MYSQL_DATABASE"
+              value: {{ .Values.clpConfig.database.names.clp | quote }}
+            - name: "MYSQL_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "MYSQL_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "MYSQL_ROOT_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "root_password"
+          ports:
+            - name: "database"
+              containerPort: 3306
+          volumeMounts:
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "database"
+                "name" "data"
+              ) | quote }}
+              mountPath: "/var/lib/mysql"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "database"
+                "name" "logs"
+              ) | quote }}
+              mountPath: "/var/log/mysql"
+            - name: "config"
+              mountPath: "/etc/mysql/conf.d/logging.cnf"
+              subPath: "mysql-logging.cnf"
+              readOnly: true
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec: &database-health-check
+              command: [
+                "mysqladmin", "ping",
+                "--host=127.0.0.1",
+                "--port=3306",
+                "--user=$(MYSQL_USER)",
+                "--password=$(MYSQL_PASSWORD)"
+              ]
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            exec: *database-health-check
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: "Delete"
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "database"
+            "name" "data"
+          ) | quote }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "local-storage"
+        selector:
+          matchLabels:
+            {{- include "clp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: "database"
+        resources:
+          requests:
+            storage: "20Gi"
+    - metadata:
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "database"
+            "name" "logs"
+          ) | quote }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "local-storage"
+        selector:
+          matchLabels:
+            {{- include "clp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: "database"
+        resources:
+          requests:
+            storage: "5Gi"

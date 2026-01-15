@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:jammy AS base
 
 # Install runtime dependencies
@@ -14,15 +16,15 @@ RUN apt-get clean \
 
 WORKDIR /clp
 
-ADD ./clg ./
-ADD ./clp ./
-ADD ./clp-s ./
-ADD ./glt ./
-ADD ./make-dictionaries-readable ./
+COPY --link ./clg ./
+COPY --link ./clp ./
+COPY --link ./clp-s ./
+COPY --link ./glt ./
+COPY --link ./make-dictionaries-readable ./
 
 # Flatten the image
 FROM scratch
-COPY --from=base / /
+COPY --link --from=base / /
 
 WORKDIR /clp
 
