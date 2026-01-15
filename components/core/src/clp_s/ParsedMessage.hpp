@@ -24,6 +24,7 @@ public:
                     clp::ffi::FourByteEncodedTextAst,
                     bool,
                     std::pair<uint64_t, epochtime_t>,
+                    std::pair<epochtime_t, uint64_t>,
                     std::pair<double, float_format_t>>;
 
     // Constructor
