@@ -74,10 +74,4 @@ sbin/stop-clp.sh [OPTIONS]
 |---------------------|--------------------------------------------------------------------|
 | `-c, --config PATH` | CLP package configuration file. Defaults to `etc/clp-config.yaml`. |
 
-:::{toctree}
-:hidden:
-
-admin-tools
-:::
-
-[admin-tools]: ./admin-tools.md
+[admin-tools]: ../reference-admin-tools.md

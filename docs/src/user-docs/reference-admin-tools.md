@@ -10,7 +10,7 @@ Available scripts:
 
 :::{note}
 The admin scripts can only be used after CLP starts. For help using CLP, see
-[clp-json quick start](../quick-start/clp-json.md) or [clp-text quick start](../quick-start/clp-text.md)
+[clp-json quick start](./quick-start/clp-json.md) or [clp-text quick start](./quick-start/clp-text.md)
 for details.
 :::
 
