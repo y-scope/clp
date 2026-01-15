@@ -64,7 +64,7 @@ Ingest logs from and store archives on S3-compatible object storage.
 :link: guides-using-log-ingestor
 Using `log-ingestor`
 ^^^
-How to use `log-ingestor` to continuously ingest logs.
+Use `log-ingestor` to continuously ingest logs.
 :::
 
 :::{grid-item-card}
