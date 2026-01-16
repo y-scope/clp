@@ -2,6 +2,7 @@ use std::io::Write;
 
 use anyhow::Result;
 use clap::Parser;
+use serde_json::to_string_pretty;
 use utoipa::OpenApi;
 
 #[derive(Parser)]
@@ -13,6 +14,6 @@ struct Args {
 fn main() -> Result<()> {
     let mut file = std::fs::File::create(Args::parse().path)?;
     let api = api_server::routes::ApiDoc::openapi();
-    write!(file, "{}", api.to_json()?)?;
+    write!(file, "{}", to_string_pretty(&api)?)?;
     Ok(())
 }

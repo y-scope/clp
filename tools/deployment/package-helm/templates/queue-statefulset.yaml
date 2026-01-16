@@ -43,7 +43,10 @@ spec:
             - name: "queue"
               containerPort: 5672
           volumeMounts:
-            - name: "queue-logs"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "queue"
+                "name" "logs"
+              ) | quote }}
               mountPath: "/var/log/rabbitmq"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
@@ -56,7 +59,10 @@ spec:
     whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
-        name: "queue-logs"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "queue"
+            "name" "logs"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: "local-storage"

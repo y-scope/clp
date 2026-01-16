@@ -1,8 +1,7 @@
-{{- include "clp.createLocalPv" (dict
+{{- include "clp.createStaticPv" (dict
   "root" .
-  "name" (printf "%s-database-data" (include "clp.fullname" .))
-  "component" "database"
-  "nodeRole" "control-plane"
+  "component_category" "database"
+  "name" "data"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/database" .Values.clpConfig.data_directory)

@@ -1,8 +1,7 @@
-{{- include "clp.createLocalPv" (dict
+{{- include "clp.createStaticPv" (dict
   "root" .
-  "name" (printf "%s-redis-logs" (include "clp.fullname" .))
-  "component" "redis"
-  "nodeRole" "control-plane"
+  "component_category" "redis"
+  "name" "logs"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/redis" .Values.clpConfig.logs_directory)

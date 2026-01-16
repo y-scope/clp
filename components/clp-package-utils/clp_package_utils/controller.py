@@ -28,6 +28,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
@@ -691,20 +692,13 @@ class BaseController(ABC):
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         }
-        resolved_client_settings_json_path = resolve_host_path_in_container(
-            client_settings_json_path
-        )
-        client_settings_json = self._read_and_update_settings_json(
-            resolved_client_settings_json_path, client_settings_json_updates
-        )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
-            client_settings_json_file.write(json.dumps(client_settings_json))
 
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
@@ -717,7 +711,17 @@ class BaseController(ABC):
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
+            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
+            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
+            "ArchiveOutputTargetDictionariesSize": (
+                self._clp_config.archive_output.target_dictionaries_size
+            ),
+            "ArchiveOutputTargetEncodedFileSize": (
+                self._clp_config.archive_output.target_encoded_file_size
+            ),
+            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
         }
 
         stream_storage = self._clp_config.stream_output.storage
@@ -748,6 +752,22 @@ class BaseController(ABC):
         else:
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
+
+        if StorageType.FS == self._clp_config.logs_input.type:
+            client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        else:
+            client_settings_json_updates["LogsInputRootDir"] = None
+            server_settings_json_updates["LogsInputRootDir"] = None
+
+        resolved_client_settings_json_path = resolve_host_path_in_container(
+            client_settings_json_path
+        )
+        client_settings_json = self._read_and_update_settings_json(
+            resolved_client_settings_json_path, client_settings_json_updates
+        )
+        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
+            client_settings_json_file.write(json.dumps(client_settings_json))
 
         resolved_server_settings_json_path = resolve_host_path_in_container(
             server_settings_json_path
@@ -899,17 +919,30 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: ClpConfig, instance_id: str) -> None:
+    def __init__(
+        self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
+    ) -> None:
+        """Initializes the DockerComposeController."""
         self._project_name = f"clp-package-{instance_id}"
+        self._restart_policy = restart_policy
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
+        """
+        Sets up environment variables and directories for all components and writes them to the
+        `.env` file.
+        """
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         env_vars = EnvVarsDict()
+
+        # Restart Policy
+        env_vars |= {
+            "CLP_RESTART_POLICY": self._restart_policy,
+        }
 
         # Credentials
         if self._clp_config.stream_output.storage.type == StorageType.S3:

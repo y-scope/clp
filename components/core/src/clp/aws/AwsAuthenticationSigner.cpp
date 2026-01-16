@@ -147,7 +147,16 @@ auto get_scope(string_view date, string_view region) -> string {
 }
 
 auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
-    auto const uri_to_encode = fmt::format("/{}", url.get_key());
+    std::string uri_to_encode;
+    switch (url.get_style()) {
+        case S3Url::Style::VirtualHost:
+            uri_to_encode = fmt::format("/{}", url.get_key());
+            break;
+        case S3Url::Style::Path:
+            uri_to_encode = fmt::format("/{}/{}", url.get_bucket(), url.get_key());
+            break;
+    }
+
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
             AwsAuthenticationSigner::cHttpGetMethod,
@@ -163,23 +172,29 @@ auto get_canonical_request(S3Url const& url, string_view query_string) -> string
 
 S3Url::S3Url(string const& url) {
     // Virtual-hosted-style HTTP URL format: https://[bucket].s3.[region].[endpoint]/[key]
-    boost::regex const host_style_url_regex{
-            R"(https://(?<bucket>[a-z0-9.-]+)\.s3(\.(?<region>[a-z0-9-]+))?)"
-            R"(\.(?<endpoint>[a-z0-9.-]+)/(?<key>[^?]+).*)"
-    };
+    boost::regex const host_style_url_regex{fmt::format(
+            R"({}://(?<host>{}\.s3\.({}\.)?{})/{}.*)",
+            cSchemeRegex,
+            cBucketRegex,
+            cRegionRegex,
+            cEndpointRegex,
+            cKeyRegex
+    )};
     // Path-style HTTP URL format: https://s3.[region].[endpoint]/[bucket]/[key]
-    boost::regex const path_style_url_regex{
-            R"(https://s3(\.(?<region>[a-z0-9-]+))?)"
-            R"(\.(?<endpoint>[a-z0-9.-]+)/(?<bucket>[a-z0-9.-]+)/(?<key>[^?]+).*)"
-    };
+    boost::regex const path_style_url_regex{fmt::format(
+            R"({}://(?<host>(s3\.({}\.)?)?{})/{}/{}.*)",
+            cSchemeRegex,
+            cRegionRegex,
+            cEndpointRegex,
+            cBucketRegex,
+            cKeyRegex
+    )};
 
-    if (boost::smatch match; boost::regex_match(url, match, host_style_url_regex)
-                             || boost::regex_match(url, match, path_style_url_regex))
-    {
-        m_region = match["region"];
-        m_bucket = match["bucket"];
-        m_key = match["key"];
-        m_end_point = match["endpoint"];
+    boost::smatch match;
+    if (boost::regex_match(url, match, host_style_url_regex)) {
+        m_style = Style::VirtualHost;
+    } else if (boost::regex_match(url, match, path_style_url_regex)) {
+        m_style = Style::Path;
     } else {
         throw OperationFailed(
                 ErrorCode_BadParam,
@@ -189,19 +204,15 @@ S3Url::S3Url(string const& url) {
         );
     }
 
-    if (cAwsEndpoint != m_end_point) {
-        throw OperationFailed(
-                ErrorCode_BadParam,
-                __FILENAME__,
-                __LINE__,
-                "Invalid S3 endpoint: " + m_end_point
-        );
-    }
-
+    m_region = match["region"];
+    m_bucket = match["bucket"];
+    m_key = match["key"];
+    m_end_point = match["endpoint"];
+    m_host = match["host"];
+    m_scheme = match["scheme"];
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
 }
 
 auto
@@ -234,14 +245,31 @@ AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& pre
     }
     auto const signature_str = convert_to_hex_string({signature.data(), signature.size()});
 
-    presigned_url = fmt::format(
-            "https://{}/{}?{}&{}={}",
-            s3_url.get_host(),
-            s3_url.get_key(),
-            canonical_query_string,
-            cXAmzSignature,
-            signature_str
-    );
+    switch (s3_url.get_style()) {
+        case S3Url::Style::VirtualHost:
+            presigned_url = fmt::format(
+                    "{}://{}/{}?{}&{}={}",
+                    s3_url.get_scheme(),
+                    s3_url.get_host(),
+                    s3_url.get_key(),
+                    canonical_query_string,
+                    cXAmzSignature,
+                    signature_str
+            );
+            break;
+        case S3Url::Style::Path:
+            presigned_url = fmt::format(
+                    "{}://{}/{}/{}?{}&{}={}",
+                    s3_url.get_scheme(),
+                    s3_url.get_host(),
+                    s3_url.get_bucket(),
+                    s3_url.get_key(),
+                    canonical_query_string,
+                    cXAmzSignature,
+                    signature_str
+            );
+            break;
+    }
     return ErrorCode_Success;
 }
 
