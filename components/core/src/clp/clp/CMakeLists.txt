@@ -180,6 +180,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(clp PRIVATE cxx_std_20)
         target_include_directories(clp
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(clp

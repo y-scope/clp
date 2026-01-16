@@ -126,6 +126,7 @@ set(
 if(CLP_BUILD_EXECUTABLES)
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
+        target_include_directories(indexer PRIVATE ../../)
         target_link_libraries(indexer
                 PRIVATE
                 absl::flat_hash_map
