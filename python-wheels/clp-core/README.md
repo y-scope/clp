@@ -1,30 +1,33 @@
 # CLP core Python Distribution
 
-This project packages the core CLP as a Python distribution, which allows users to install CLP core
-cli tools from PyPI:
+This project packages the CLP core as a Python distribution, providing the CLP core command line
+tools and a Python binding for performing CLP archive operations programmatically.
+
+## Installation
+
+To install the package:
 
 ```
-pip install clp-core
+pip install yscope-clp-core
 ```
 
-> [!IMPORTANT]
-> The current package only includes `clp-s`. Other CLP core tools will be added in future releases.
+See the PyPI project page for [release][pypi-release] details.
+
+## Scope and Compatibility
 
 > [!IMPORTANT]
-> The current package is built inside [manylinux] containers. When running in Debian to use network
-> related features, you may see the following errors:
-> ```
-> 2025-12-05T15:45:57.770-05:00 [error] Encountered curl error while ingesting https://yscope.s3.us-east-2.amazonaws.com/sample-logs/cockroachdb.clp.zst - Code: 77 - Message: error setting certificate verify locations:
-> CAfile: /etc/pki/tls/certs/ca-bundle.crt
-> CApath: none
-> ```
-> This is because the CA certificates bundle path is different in Debian-based systems. We will
-> address this issue in a future release.
+> The current package only includes the `clp-s` binary. Support for additional CLP core tools will
+> be added in future releases.
+
+> [!IMPORTANT]
+> The package is built inside [manylinux-2.28] containers to ensure broad Linux compatibility.
 
 ## Documentation
 
-For detailed documentation, check the official CLP core documentation [here][clp-core-docs].
+For detailed usage of CLP features and design documentation, see the official CLP core
+[documentation][clp-core-docs].
 
 
 [clp-core-docs]: https://docs.yscope.com/clp/main/user-docs/core-overview.html
 [manylinux]: https://github.com/pypa/manylinux
+[pypi-release]: https://pypi.org/project/yscope-clp-core
