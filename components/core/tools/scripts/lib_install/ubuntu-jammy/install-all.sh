@@ -10,6 +10,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../pipx-packages/install-all.sh"
 
 # Manually perform pipx ensurepath --prepend inside script
-export PATH="$(pipx environment --value PIPX_BIN_DIR 2>/dev/null):${PATH}"
+export PATH="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh"):${PATH}"
 
 "${script_dir}/install-packages-from-source.sh"
