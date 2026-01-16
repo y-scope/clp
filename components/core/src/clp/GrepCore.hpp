@@ -219,7 +219,6 @@ std::optional<Query> GrepCore::process_raw_query(
                     break;
                 case SubQueryMatchabilityResult::WontMatch:
                 default:
-                    // Do nothing
                     break;
             }
 
