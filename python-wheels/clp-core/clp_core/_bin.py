@@ -26,15 +26,6 @@ def _run(name: str, *args: Any) -> int:
     return subprocess.call(command)
 
 
-def _run_python(name: str, *args: Any) -> int:
-    command = [sys.executable, str(_get_executable(name))]
-    if args:
-        command += list(args)
-    else:
-        command += sys.argv[1:]
-    return subprocess.call(command)
-
-
 def clp_s() -> None:
     """Entry point that dispatches to the clp_s executable."""
     raise SystemExit(_run("clp-s"))
