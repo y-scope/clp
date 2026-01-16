@@ -198,7 +198,7 @@ std::optional<Query> GrepCore::process_raw_query(
         // - (token1 as logtype) (token2 as var)
         // - (token1 as var) (token2 as logtype)
         // - (token1 as var) (token2 as var)
-        bool type_of_one_token_changed = true;
+        bool type_of_one_token_changed{true};
         while (type_of_one_token_changed) {
             SubQuery sub_query;
 
