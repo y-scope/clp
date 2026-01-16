@@ -48,13 +48,4 @@ if (("${installed_version_major}" < "${required_version_major_min}")) \
 fi
 
 echo "pipx version ${installed_version} installed at ${pipx_bin} satisfies version requirements."
-"${pipx_bin} ensurepath --prepend"
-
-# Manually perform pipx ensurepath --prepend
-echo "Prepending pipx binary directory to \$PATH."
-PIPX_BIN_DIR="$("${pipx_bin}" environment --value PIPX_BIN_DIR 2>/dev/null || true)"
-if [ -n "${PIPX_BIN_DIR}" ]; then
-    export PATH="${PIPX_BIN_DIR}:${PATH}"
-else
-    echo "Error: failed to locate pipx binary directory; pipx may not be installed correctly."
-fi
+"${pipx_bin}" ensurepath --prepend
