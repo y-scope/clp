@@ -59,6 +59,7 @@ const CompressionJobCreationSchema = Type.Object({
     paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
     dataset: Type.Optional(DatasetNameSchema),
     timestampKey: Type.Optional(Type.String()),
+    unstructured: Type.Optional(Type.Boolean()),
 });
 
 type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;

@@ -24,6 +24,7 @@ type FormValues = {
     paths: string[];
     dataset?: string;
     timestampKey?: string;
+    unstructured?: boolean;
 };
 
 
@@ -65,6 +66,9 @@ const Compress = () => {
             }
             if ("undefined" !== typeof values.timestampKey) {
                 payload.timestampKey = values.timestampKey;
+            }
+            if (true === values.unstructured) {
+                payload.unstructured = true;
             }
         }
 
