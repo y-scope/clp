@@ -13,7 +13,7 @@ python3_bin="$(command -v python3 2>/dev/null || true)"
 pipx_bin="$(command -v pipx 2>/dev/null || true)"
 if [ -n "${pipx_bin}" ]; then
     # Prefer using pipx default python3 if available
-    pipx_python3_bin"$("${pipx_bin}" environment --value PIPX_DEFAULT_PYTHON 2>/dev/null || true)"
+    pipx_python3_bin="$("${pipx_bin}" environment --value PIPX_DEFAULT_PYTHON 2>/dev/null || true)"
     if [ -n "${pipx_python3_bin}" ]; then
         python3_bin="${pipx_python3_bin}"
     fi
@@ -25,19 +25,19 @@ if [ "$(id -u)" -ne 0 ]; then
     PIP_USER_FLAG="--user"
 fi
 if [ -n "${python3_bin}" ]; then
-    pipx_upgrade_cmd = "${python3_bin} -m pip install ${PIP_USER_FLAG} -U pipx"
+    pipx_upgrade_cmd="${python3_bin} -m pip install ${PIP_USER_FLAG} -U pipx"
     ${pipx_upgrade_cmd} >/dev/null 2>&1 || true
 fi
 
 # Find pipx path and validate version
 pipx_bin="$(command -v pipx 2>/dev/null || true)"
-if [ -z "${pipx_bin:-}" ]; then
+if [ -z "${pipx_bin}" ]; then
     echo "Error: failed to automatically install pipx. Please install it manually."
     exit 1
 fi
 
 installed_version="$("${pipx_bin}" --version)"
-IFS=. read -r installd_version_major installed_version_minor _ <<<"${installed_version}"
+IFS=. read -r installed_version_major installed_version_minor _ <<<"${installed_version}"
 
 if (("${installed_version_major}" < "${required_version_major_min}")) \
     || (("${installed_version_major}" == "${required_version_major_min}" && \
