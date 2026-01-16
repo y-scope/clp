@@ -26,7 +26,3 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     rsync \
     software-properties-common \
     unzip
-
-# Install remaining packages through pipx
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-"${script_dir}/../pipx-packages/install-all.sh"
