@@ -212,7 +212,7 @@ std::optional<Query> GrepCore::process_raw_query(
             switch (matchability) {
                 case SubQueryMatchabilityResult::SupercedesAllSubQueries:
                     // Since other sub-queries will be superceded by this one, we can stop
-                    // processing now
+                    // processing now.
                     return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
                 case SubQueryMatchabilityResult::MayMatch:
                     sub_queries.push_back(std::move(sub_query));
