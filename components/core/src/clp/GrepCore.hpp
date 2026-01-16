@@ -201,14 +201,14 @@ std::optional<Query> GrepCore::process_raw_query(
         bool type_of_one_token_changed{true};
         while (type_of_one_token_changed) {
             SubQuery sub_query;
-            auto matchability = generate_logtypes_and_vars_for_subquery(
+            auto matchability{generate_logtypes_and_vars_for_subquery(
                     logtype_dict,
                     var_dict,
                     search_string_for_sub_queries,
                     query_tokens,
                     ignore_case,
                     sub_query
-            );
+            )};
             switch (matchability) {
                 case SubQueryMatchabilityResult::SupercedesAllSubQueries:
                     // Since other sub-queries will be superceded by this one, we can stop
