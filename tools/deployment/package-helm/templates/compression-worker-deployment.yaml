@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "compression-worker"
 spec:
-  replicas: 1
+  replicas: {{ .Values.compressionWorker.replicas }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -17,6 +17,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "compression-worker"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+        "root" .
+        "component" "compressionWorker"
+      ) | nindent 6 }}
       terminationGracePeriodSeconds: 60
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
