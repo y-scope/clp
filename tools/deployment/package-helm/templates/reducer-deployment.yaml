@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
 spec:
-  replicas: 1
+  replicas: {{ .Values.reducer.replicas }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -20,6 +20,10 @@ spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       hostname: {{ include "clp.fullname" . }}-reducer
       subdomain: {{ include "clp.fullname" . }}-reducer
+      {{- include "clp.createSchedulingConfigs" (dict
+        "root" .
+        "component" "reducer"
+      ) | nindent 6 }}
       terminationGracePeriodSeconds: 10
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
