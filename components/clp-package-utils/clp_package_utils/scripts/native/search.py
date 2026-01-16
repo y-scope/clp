@@ -39,7 +39,6 @@ def create_and_monitor_job_in_db(
     results_cache: ResultsCache,
     dataset: str | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -66,10 +65,6 @@ def create_and_monitor_job_in_db(
         search_config.aggregation_config = AggregationConfig(
             count_by_time_bucket_size=count_by_time_bucket_size
         )
-    if tags:
-        tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
-        if len(tag_list) > 0:
-            search_config.tags = tag_list
 
     sql_adapter = SqlAdapter(db_config)
     job_id = submit_query_job(sql_adapter, search_config, QueryJobType.SEARCH_OR_AGGREGATION)
@@ -122,7 +117,6 @@ async def do_search_without_aggregation(
     results_cache: ResultsCache,
     dataset: str | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -152,7 +146,6 @@ async def do_search_without_aggregation(
             results_cache,
             dataset,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -190,7 +183,6 @@ async def do_search(
     results_cache: ResultsCache,
     dataset: str | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -205,7 +197,6 @@ async def do_search(
             results_cache,
             dataset,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -219,7 +210,6 @@ async def do_search(
             results_cache,
             dataset,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -248,9 +238,6 @@ def main(argv):
         type=str,
         default=None,
         help="The dataset that the archives belong to.",
-    )
-    args_parser.add_argument(
-        "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )
     args_parser.add_argument(
         "--begin-time",
@@ -325,7 +312,6 @@ def main(argv):
                 clp_config.results_cache,
                 dataset,
                 parsed_args.wildcard_query,
-                parsed_args.tags,
                 parsed_args.begin_time,
                 parsed_args.end_time,
                 parsed_args.ignore_case,
