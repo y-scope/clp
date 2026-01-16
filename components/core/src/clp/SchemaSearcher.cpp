@@ -10,6 +10,7 @@
 
 #include <clp/EncodedVariableInterpreter.hpp>
 
+namespace clp {
 using log_surgeon::SymbolId::TokenFloat;
 using log_surgeon::SymbolId::TokenInt;
 using log_surgeon::wildcard_query_parser::QueryInterpretation;
@@ -20,7 +21,6 @@ using std::set;
 using std::string;
 using std::vector;
 
-namespace clp {
 auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& interpretations)
         -> set<QueryInterpretation> {
     set<QueryInterpretation> normalized_interpretations;
