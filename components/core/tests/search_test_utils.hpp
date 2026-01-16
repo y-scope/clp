@@ -17,10 +17,13 @@
 #include "MockVariableDictionary.hpp"
 
 /**
- * Type alias for variable information in tests.
- * Elements: (is_dict_var, is_precise_var, var_dict_ids)
+ * Struct for variable information in tests.
  */
-using VarInfo = std::tuple<bool, bool, std::unordered_set<clp::variable_dictionary_id_t>>;
+struct VarInfo {
+    bool is_dict_var;
+    bool is_precise_var;
+    std::unordered_set<clp::variable_dictionary_id_t> var_dict_ids;
+};
 
 /**
  * @param entries Vector of (id, value) pairs to populate the variable dictionary.
