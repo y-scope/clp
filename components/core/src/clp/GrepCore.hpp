@@ -201,8 +201,6 @@ std::optional<Query> GrepCore::process_raw_query(
         bool type_of_one_token_changed{true};
         while (type_of_one_token_changed) {
             SubQuery sub_query;
-
-            // Compute logtypes and variables for query
             auto matchability = generate_logtypes_and_vars_for_subquery(
                     logtype_dict,
                     var_dict,
