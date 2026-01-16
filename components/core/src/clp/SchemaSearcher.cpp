@@ -95,7 +95,7 @@ auto SchemaSearcher::generate_logtype_string(
             auto const& static_token{std::get<StaticQueryToken>(token)};
             logtype_string_size += static_token.get_query_substring().size();
         } else {
-            logtype_string_size++;
+            ++logtype_string_size;
         }
     }
     logtype_string.reserve(logtype_string_size);
