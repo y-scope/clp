@@ -21,7 +21,6 @@ if [ -n "${go_task_bin}" ]; then
 else
     package_preinstalled=1
     pipx install --force "go-task-bin==${required_version}"
-    pipx ensurepath
     go_task_bin=$("${script_dir}/find-pipx-bin.sh" go-task-bin task)
     echo "Pipx Task installed at: ${go_task_bin}"
 fi

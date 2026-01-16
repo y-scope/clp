@@ -24,7 +24,6 @@ else
     # ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+
     # (see https://github.com/y-scope/clp/issues/795).
     pipx install --force "cmake>=${required_version_min},<${required_version_major_max_plus_1}"
-    pipx ensurepath
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
     cmake_bin=$("${script_dir}/find-pipx-bin.sh" cmake cmake)
     echo "Pipx CMake installed at: ${cmake_bin}"

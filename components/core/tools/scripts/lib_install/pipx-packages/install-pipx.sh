@@ -48,6 +48,7 @@ if (("${installed_version_major}" < "${required_version_major_min}")) \
 fi
 
 echo "pipx version ${installed_version} installed at ${pipx_bin} satisfies version requirements."
+"${pipx_bin} ensurepath --prepend"
 
 # Manually perform pipx ensurepath --prepend
 echo "Prepending pipx binary directory to \$PATH."
