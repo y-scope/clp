@@ -153,9 +153,9 @@ std::optional<Query> GrepCore::process_raw_query(
     } else {
         // Split search_string into tokens with wildcards
         std::vector<QueryToken> query_tokens;
-        size_t begin_pos = 0;
-        size_t end_pos = 0;
-        bool is_var;
+        size_t begin_pos{0};
+        size_t end_pos{0};
+        bool is_var{false};
         std::string search_string_for_sub_queries{search_string};
 
         // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
