@@ -275,6 +275,10 @@ def main(argv):
     else:
         logger.setLevel(logging.INFO)
 
+    if parsed_args.count and parsed_args.count_by_time is not None:
+        logger.error("--count and --count-by-time are mutually exclusive.")
+        return -1
+
     if (
         parsed_args.begin_time is not None
         and parsed_args.end_time is not None

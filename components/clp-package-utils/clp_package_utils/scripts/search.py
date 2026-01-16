@@ -82,6 +82,11 @@ def main(argv):
         "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+
+    if parsed_args.count and parsed_args.count_by_time is not None:
+        logger.error("--count and --count-by-time are mutually exclusive.")
+        return -1
+
     if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
