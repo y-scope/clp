@@ -13,6 +13,8 @@ fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
+"${script_dir}/install-pipx.sh"
+
 "${script_dir}/install-cmake.sh"
 "${script_dir}/install-go-task.sh"
 "${script_dir}/install-uv.sh"
