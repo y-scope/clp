@@ -135,6 +135,7 @@ if(PROJECT_IS_TOP_LEVEL)
         endif()
     endif()
 
+    # If previously undefined, `BUILD_TESTING` will be set to ON.
     include(CTest)
 endif()
 
