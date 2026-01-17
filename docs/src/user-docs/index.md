@@ -3,6 +3,8 @@
 These docs explain how to use and operate CLP. Use the left sidebar (if it's hidden, click the
 <i class="fa fa-bars"></i> icon) to navigate to specific docs.
 
+---
+
 ## Quick start
 
 New to CLP? Get CLP up and running quickly on a single host.
@@ -124,9 +126,9 @@ Use Spider for compression and query job task distribution.
 
 ## Core
 
-Try CLP's core binaries directly, without deploying the full package.
+Try CLP's core binaries directly, without deploying the full CLP package.
 
-There are currently two flavours of CLP, depending on the format of your logs:
+There are currently two flavors of CLP, depending on the format of your logs:
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -135,14 +137,14 @@ There are currently two flavours of CLP, depending on the format of your logs:
 :link: core-clp-s
 CLP for JSON logs
 ^^^
-A flavour of CLP for JSON logs.
+A flavor of CLP for JSON logs.
 :::
 
 :::{grid-item-card}
 :link: core-unstructured/index
 CLP for unstructured logs
 ^^^
-A flavour of CLP for unstructured (e.g., free-text) logs.
+A flavor of CLP for unstructured (e.g., free-text) logs.
 :::
 ::::
 
@@ -163,7 +165,7 @@ A container for trying CLP's core.
 
 ## Resources
 
-Find sample datasets for testing and benchmarking CLP.
+Get sample datasets for testing and benchmarking CLP.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -180,7 +182,7 @@ Log datasets for testing and benchmarking.
 
 ## Reference
 
-Look up search syntax and tools for working with compressed logs.
+References for search syntax, command line tools, and so on.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
