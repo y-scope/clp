@@ -1,22 +1,29 @@
 # Overview
 
-This guide describes the following:
+This guide describes how to deploy and run CLP on a single host.
+
+:::{tip}
+For deployments that scale across multiple machines (e.g., for higher throughput), see:
+
+* [Docker Compose deployment][docker-compose-deployment] for advanced Docker Compose configurations
+* [Kubernetes deployment][k8s-deployment] for production Kubernetes clusters
+:::
+
+The rest of the guide is organized as follows:
 
 * [CLP's system requirements](#system-requirements)
 * [How to choose a CLP flavor](#choosing-a-flavor)
 * [How to use CLP](#using-clp)
 
+:::{note}
+CLP supports deployment using Docker Compose or Kubernetes. Throughout the guide, some steps will
+differ depending on the chosen orchestration framework. These steps will have a tabbed interface to
+choose your framework.
+:::
+
 ---
 
 ## System Requirements
-
-This quick start guide covers **single-host** deployment using Docker Compose or Kubernetes with 
-Helm. For deployments that scale across multiple machines for higher throughput, see:
-
-* [Docker Compose deployment][docker-compose-deployment] for advanced Docker Compose configurations
-* [Kubernetes deployment][k8s-deployment] for production Kubernetes clusters
-
-Choose the requirements below based on your preferred orchestration method.
 
 ::::{tab-set}
 :::{tab-item} Docker Compose
@@ -54,18 +61,18 @@ ideal for local Kubernetes testing and development.
   * `containerd.io` >= 1.7.18
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
+* [`kind`][kind] >= 0.23
 * [`kubectl`][kubectl] >= 1.30
 * [Helm][Helm] >= 4.0
-* [`kind`][kind] >= 0.23
 
-To check whether the tools are installed on your system, run:
+To check whether the required tools are installed on your system, run:
 
 ```bash
 containerd --version
 docker version --format '{{.Server.Version}}'
+kind version
 kubectl version --client --output=yaml | grep gitVersion
 helm version --short
-kind version
 ```
 
 :::
