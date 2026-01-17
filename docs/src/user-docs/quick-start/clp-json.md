@@ -170,7 +170,7 @@ config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defau
 To compress logs from object storage, see [Using object storage][object-storage].
 :::
 
-### Compressing unstructured text logs
+## Compressing unstructured text logs
 
 clp-json supports compressing unstructured text logs by converting them into JSON. To enable this
 conversion, run the compression script with the `--unstructured` flag:
