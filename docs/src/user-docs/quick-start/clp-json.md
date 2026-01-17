@@ -59,12 +59,13 @@ export CLP_QUEUE_PASS=$(openssl rand -hex 16)
 export CLP_REDIS_PASS=$(openssl rand -hex 16)
 
 # Create required directories
-mkdir -p "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-         "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-         "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-         "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-         "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-         "$CLP_HOME/var/tmp"
+mkdir -p \
+    "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
+    "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
+    "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
+    "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
+    "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
+    "$CLP_HOME/var/tmp"
 
 # Create the `kind` cluster
 cat <<EOF | kind create cluster --name clp --config=-
@@ -175,8 +176,8 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
   :::
 
 * `<path...>` are paths to JSON log files or directories containing such files.
-    * Each JSON log file should contain each log event as a [separate JSON object][clp-json-format],
-      i.e., *not* as an array.
+  * Each JSON log file should contain each log event as a [separate JSON object][clp-json-format],
+    i.e., *not* as an array.
 
 The compression script will output the compression ratio of each dataset you compress, or you can
 use the UI to view overall statistics.
@@ -304,8 +305,21 @@ A complete reference for clp-json's query syntax is available on the
 
 ### Searching from the UI
 
-To search your compressed logs from CLP's UI, open [http://localhost:4000](http://localhost:4000)
-(Docker Compose) or [http://localhost:30000](http://localhost:30000) (Kubernetes) in your browser.
+To search your compressed logs from CLP's UI, open the following URL in your browser:
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+[http://localhost:4000](http://localhost:4000)
+:::
+
+:::{tab-item} Kubernetes (`kind`)
+:sync: kind
+
+[http://localhost:30000](http://localhost:30000)
+:::
+::::
 
 :::{note}
 If you changed `webui.host` or `webui.port` in the configuration, use the new values.
