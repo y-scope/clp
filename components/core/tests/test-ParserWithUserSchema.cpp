@@ -186,10 +186,10 @@ TEST_CASE("Test schema with single capture group", "[load_lexer]") {
     load_lexer_from_file(schema_file_path, lexer);
 
     auto const rule_id{lexer.m_symbol_id.at("capture")};
-    auto const capture_ids{lexer.get_capture_ids_from_rule_id(rule_id)};
-    REQUIRE(capture_ids.has_value());
-    REQUIRE(1 == capture_ids->size());
-    REQUIRE("group" == lexer.m_id_symbol.at(capture_ids->at(0)));
+    auto captures{lexer.get_captures_from_rule_id(rule_id)};
+    REQUIRE(captures.has_value());
+    REQUIRE(1 == captures->size());
+    REQUIRE("group" == captures->at(0)->get_name());
 }
 
 TEST_CASE("Error on schema rule with multiple capture groups", "[load_lexer]") {
