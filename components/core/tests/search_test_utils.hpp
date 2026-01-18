@@ -74,8 +74,7 @@ auto generate_expected_logtype_string(
  * @param id Index of the sub-query to check in `sub_queries`.
  * @param sub_queries Vector of `SubQuery` objects.
  * @param wildcard_match_required Expected wildcard match requirement.
- * @param vars_info Vector of tuples describing expected variable properties: (`is_dict_var`,
- * `is_precise_var`, `var_dict_ids`).
+ * @param vars_info Object describing expected variable properties.
  * @param logtype_ids Expected set of possible logtype IDs.
  */
 auto check_sub_query(
