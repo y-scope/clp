@@ -134,32 +134,22 @@ Wait for all pods to be ready:
 ```bash
 kubectl wait pods --all --for=condition=Ready --timeout=300s
 ```
+
+Update the following configurations in `etc/clp-config.yaml`:
+
+```yaml
+database:
+  port: 30306
+
+results_cache:
+  port: 30017
+```
 :::
 ::::
 
 ---
 
 ## Compressing unstructured text logs
-
-::::{tab-set}
-:::{tab-item} Docker Compose
-:sync: docker
-
-No additional configuration is required.
-:::
-
-:::{tab-item} Kubernetes (`kind`)
-:sync: kind
-
-Configure `etc/clp-config.yaml` to connect to the `kind`-deployed database:
-
-```yaml
-database:
-  port: 30306
-```
-
-:::
-::::
 
 To compress some unstructured text logs, run:
 
@@ -293,28 +283,6 @@ curl -X POST "http://localhost:30301/query/submit" \
 For more details on the API, see [Using the API server][api-server].
 
 ### Searching from the command line
-
-::::{tab-set}
-:::{tab-item} Docker Compose
-:sync: docker
-
-No additional configuration is required.
-:::
-
-:::{tab-item} Kubernetes (`kind`)
-:sync: kind
-
-Configure `etc/clp-config.yaml` to connect to the `kind`-deployed services:
-
-```yaml
-database:
-  port: 30306
-results_cache:
-  port: 30017
-```
-
-:::
-::::
 
 To search your compressed logs from the command line, run:
 
