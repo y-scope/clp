@@ -320,6 +320,10 @@ curl -X POST "http://localhost:30301/query/submit" \
 :::
 ::::
 
+:::{note}
+If you changed `api_server.host` or `api_server.port` in the configuration, use the new values.
+:::
+
 For more details on the API, see [Using the API server][api-server].
 
 ### Searching from the command line
