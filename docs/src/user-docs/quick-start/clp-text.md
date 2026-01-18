@@ -46,9 +46,6 @@ package:
   query_engine: "clp"
 ```
 ````
-
-For more details on Docker Compose deployment, see the
-[Docker Compose deployment guide][docker-compose-deployment].
 :::
 
 :::{tab-item} Kubernetes (`kind`)
@@ -132,18 +129,11 @@ helm install clp . \
   --set credentials.redis.password="$CLP_REDIS_PASS"
 ```
 
-```{note}
-To use sbin scripts with this deployment, do not set `allowHostAccessForSbinScripts` to `false` (it
-is `true` by default).
-```
-
 Wait for all pods to be ready:
 
 ```bash
 kubectl wait pods --all --for=condition=Ready --timeout=300s
 ```
-
-For more details on Kubernetes deployment, see the [Kubernetes deployment guide][k8s-deployment].
 :::
 ::::
 
