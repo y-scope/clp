@@ -326,6 +326,26 @@ return more results, use the [command line](#searching-from-the-command-line) or
 
 To search via the API server:
 
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+```bash
+curl -X POST "http://localhost:3001/query/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query_string": "<query>",
+    "max_num_results": 1000,
+    "timestamp_begin": null,
+    "timestamp_end": null,
+    "case_sensitive": false
+  }'
+```
+:::
+
+:::{tab-item} Kubernetes (`kind`)
+:sync: kind
+
 ```bash
 curl -X POST "http://localhost:30301/query/submit" \
   -H "Content-Type: application/json" \
@@ -337,6 +357,8 @@ curl -X POST "http://localhost:30301/query/submit" \
     "case_sensitive": false
   }'
 ```
+:::
+::::
 
 For more details on the API, see [Using the API server][api-server].
 
