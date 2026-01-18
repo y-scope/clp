@@ -5,7 +5,6 @@
 #include <set>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 
 #include <clp/LogTypeDictionaryReaderReq.hpp>
