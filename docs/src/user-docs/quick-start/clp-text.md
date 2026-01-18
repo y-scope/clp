@@ -46,6 +46,7 @@ package:
   query_engine: "clp"
 ```
 ````
+
 :::
 
 :::{tab-item} Kubernetes (`kind`)
@@ -71,12 +72,13 @@ export CLP_QUEUE_PASS=$(openssl rand -hex 16)
 export CLP_REDIS_PASS=$(openssl rand -hex 16)
 
 # Create required directories
-mkdir -p "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-         "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-         "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-         "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-         "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-         "$CLP_HOME/var/tmp"
+mkdir -p \
+    "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
+    "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
+    "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
+    "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
+    "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
+    "$CLP_HOME/var/tmp"
 
 # Create the `kind` cluster
 cat <<EOF | kind create cluster --name clp --config=-
@@ -144,6 +146,7 @@ database:
 results_cache:
   port: 30017
 ```
+
 :::
 ::::
 
@@ -221,8 +224,21 @@ A complete reference for clp-text's query syntax is available on the
 
 ### Searching from the UI
 
-To search your compressed logs from CLP's UI, open [http://localhost:4000](http://localhost:4000)
-(Docker Compose) or [http://localhost:30000](http://localhost:30000) (Kubernetes) in your browser.
+To search your compressed logs from CLP's UI, open the following URL in your browser:
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+[http://localhost:4000](http://localhost:4000)
+:::
+
+:::{tab-item} Kubernetes (`kind`)
+:sync: kind
+
+[http://localhost:30000](http://localhost:30000)
+:::
+::::
 
 :::{note}
 If you changed `webui.host` or `webui.port` in the configuration, use the new values.
@@ -339,6 +355,4 @@ kind delete cluster --name clp
 
 [api-server]: ../guides-using-the-api-server.md
 [datasets]: ../resources-datasets.md
-[docker-compose-deployment]: ../guides-docker-compose-deployment.md
-[k8s-deployment]: ../guides-k8s-deployment.md
 [text-search-syntax]: ../reference-text-search-syntax.md
