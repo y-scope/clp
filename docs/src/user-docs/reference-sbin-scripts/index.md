@@ -1,4 +1,4 @@
-# Package scripts
+# Package `sbin` scripts
 
 The CLP package provides shell scripts in the `sbin/` directory for managing and operating CLP.
 
@@ -74,4 +74,10 @@ sbin/stop-clp.sh [OPTIONS]
 |---------------------|--------------------------------------------------------------------|
 | `-c, --config PATH` | CLP package configuration file. Defaults to `etc/clp-config.yaml`. |
 
-[admin-tools]: ../reference-admin-tools.md
+:::{toctree}
+:hidden:
+
+admin-tools
+:::
+
+[admin-tools]: ./admin-tools.md
