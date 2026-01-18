@@ -398,7 +398,5 @@ kind delete cluster --name clp
 [api-server]: ../guides-using-the-api-server.md
 [clp-json-format]: ./index.md#clp-json
 [datasets]: ../resources-datasets.md
-[docker-compose-deployment]: ../guides-docker-compose-deployment.md
 [json-search-syntax]: ../reference-json-search-syntax.md
-[k8s-deployment]: ../guides-k8s-deployment.md
 [object-storage]: ../guides-using-object-storage/index.md
