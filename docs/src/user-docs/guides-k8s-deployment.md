@@ -39,14 +39,14 @@ a `kind` cluster and installing the Helm chart.
 
 For production deployments, you can use any Kubernetes distribution:
 
-* Managed Kubernetes services: [Amazon EKS][eks], [Google GKE][gke], [Azure AKS][aks]
+* Managed Kubernetes services: [Amazon EKS][eks], [Azure AKS][aks], [Google GKE][gke]
 * Self-hosted: [`kubeadm`][kubeadm], [k3s], [RKE2]
 
 #### Setting up a cluster with `kubeadm`
 
-`kubeadm` is the official Kubernetes tool for bootstrapping clusters. Follow the
+`kubeadm` is the official Kubernetes tool for bootstrapping clusters. You can follow the
 [official `kubeadm` installation guide][kubeadm] to install the prerequisites, container runtime,
-and `kubeadm` on all nodes.
+and `kubeadm` on all nodes. Then follow the steps below to create a cluster.
 
 1. **Initialize the control plane** (on the control-plane node only):
 
@@ -91,7 +91,7 @@ and `kubeadm` on all nodes.
 
 3. **Join worker nodes** (on each worker node):
 
-   Run `kubeadm join` with the token and hash you saved from step 1:
+   Run the `kubeadm join` command you saved from step 1. It should look something like:
 
    ```bash
    sudo kubeadm join <control-plane-ip>:6443 \
@@ -99,8 +99,11 @@ and `kubeadm` on all nodes.
      --discovery-token-ca-cert-hash sha256:<hash>
    ```
 
-   If you lost the command, regenerate it on the control-plane node with
-   `kubeadm token create --print-join-command`.
+   If you need to regenerate the command, on the control-plane node, run:
+
+   ```bash
+   kubeadm token create --print-join-command
+   ```
 
 ---
 
@@ -110,7 +113,8 @@ Once your cluster is ready, you can install CLP using the Helm chart.
 
 ### Getting the chart
 
-The CLP Helm chart is located in the repository at `tools/deployment/package-helm/`.
+The CLP Helm chart is located in the repository at
+[`tools/deployment/package-helm/`][clp-helm-chart].
 
 ```bash
 # Clone the repository (if you haven't already)
@@ -135,7 +139,7 @@ this section for testing or development.
 
    :::{note}
    We aim to improve the logging infrastructure so mapping log volumes will not be required in the
-   future. See [issue #1760][logging-infra-issue] for details.
+   future. See [y-scope/clp#1760][logging-infra-issue] for details.
    :::
 
 2. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
@@ -168,23 +172,26 @@ Create the required directories on all worker nodes:
 ```bash
 export CLP_HOME="/tmp/clp"
 
-mkdir -p "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-         "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-         "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-         "$CLP_HOME/var/tmp"
+mkdir -p \
+  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
+  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
+  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
+  "$CLP_HOME/var/tmp"
 ```
 
-Then on the **control-plane node**, generate credentials and install CLP:
+Then on the **control-plane node**, create the required directories, generate credentials, and
+install CLP:
 
 ```bash
 export CLP_HOME="/tmp/clp"
 
-mkdir -p "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-         "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-         "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-         "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-         "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-         "$CLP_HOME/var/tmp"
+mkdir -p \
+  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
+  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
+  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
+  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
+  "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
+  "$CLP_HOME/var/tmp"
 
 # Credentials (change these for production)
 export CLP_DB_PASS="pass"
@@ -301,7 +308,7 @@ You can control where workers are scheduled using standard Kubernetes scheduling
 
 #### Dedicated node pools
 
-To run compression workers, query workers, and reducers on separate node pools:
+To run compression workers, query workers, and reducers in separate node pools:
 
 1. Label your nodes:
 
@@ -345,7 +352,7 @@ To run compression workers, query workers, and reducers on separate node pools:
 
 #### Shared node pool
 
-To run all worker types on the same node pool:
+To run all worker types in the same node pool:
 
 1. Label your nodes:
 
@@ -392,8 +399,8 @@ To run all worker types on the same node pool:
 
 ### Common configuration options
 
-The following table lists commonly used Helm values. For a complete list, see `values.yaml` in the
-chart directory.
+The following table lists commonly used Helm values. For a complete list, see
+[`values.yaml`][clp-helm-chart-values] in the chart directory.
 
 | Parameter                                    | Description                                    | Default                           |
 |----------------------------------------------|------------------------------------------------|-----------------------------------|
@@ -430,7 +437,8 @@ chart directory.
 
 ## Verifying the deployment
 
-After installing the Helm chart, verify that all components are running correctly.
+After installing the Helm chart, you can verify that all components are running correctly as
+follows.
 
 ### Check pod status
 
@@ -444,7 +452,7 @@ kubectl get pods -w
 kubectl wait pods --all --for=condition=Ready --timeout=300s
 ```
 
-Expected output shows all pods in `Running` state:
+The output should show all pods are in the `Running` state:
 
 ```text
 NAME                                        READY   STATUS    RESTARTS   AGE
@@ -464,7 +472,7 @@ clp-webui-...                               1/1     Running   0          2m
 
 ### Check initialization jobs
 
-CLP runs initialization jobs on first deployment:
+CLP runs initialization jobs on first deployment. Check that these jobs completed successfully:
 
 ```bash
 # Check job completion
@@ -478,7 +486,7 @@ kubectl get jobs
 
 ### Access the Web UI
 
-Once all pods are ready, access the CLP Web UI: `http://<node-ip>:30000` (the value of
+Once all pods are ready, you access the CLP Web UI at: `http://<node-ip>:30000` (the value of
 `clpConfig.webui.port`)
 
 ---
@@ -509,7 +517,8 @@ How to compress and search unstructured text logs.
 :::{note}
 By default (`allowHostAccessForSbinScripts: true`), the database and results cache are exposed on
 NodePorts, allowing you to use `sbin/` scripts from the CLP package. Download a
-[release][clp-releases] matching the chart's `appVersion`, then configure `etc/clp-config.yaml`:
+[release][clp-releases] matching the chart's `appVersion`, then the following configurations in
+`etc/clp-config.yaml`:
 
 ```yaml
 database:
@@ -518,7 +527,7 @@ results_cache:
   port: 30017  # Match `clpConfig.results_cache.port` in Helm values
 ```
 
-Alternatively, use the Web UI ([clp-json][webui-clp-json]|[clp-text][webui-clp-text]) to compress
+Alternatively, use the Web UI ([clp-json][webui-clp-json] or [clp-text][webui-clp-text]) to compress
 logs and search interactively, or the [API server][api-server] to submit queries and view results
 programmatically.
 :::
@@ -570,7 +579,7 @@ helm uninstall clp
 
 :::{warning}
 Uninstalling the Helm release will delete all CLP pods and services. However, PersistentVolumes
-with `Retain` policy will preserve your data. To completely remove all data, delete the PVs and
+with the `Retain` policy will preserve your data. To completely remove all data, delete the PVs and
 the data directories manually.
 :::
 
@@ -614,6 +623,8 @@ To tear down a `kubeadm` cluster:
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
+[clp-helm-chart]: https://github.com/y-scope/clp/tree/main/tools/deployment/package-helm
+[clp-helm-chart-values]: https://github.com/y-scope/clp/blob/main/tools/deployment/package-helm/values.yaml
 [clp-releases]: https://github.com/y-scope/clp/releases
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
