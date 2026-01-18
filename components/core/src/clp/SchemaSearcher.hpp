@@ -132,8 +132,11 @@ private:
      * @param logtype_dict The logtype dictionary.
      * @param var_dict The variable dictionary.
      * @param ignore_case If true, perform a case-insensitive search.
+     * @param max_encodable_wildcard_variables The maximum number of encodable wildcard variables.
+     * This limits the allowable number of total candidate combinations. Defaults to 16.
      * @return The vector of subqueries to compare against CLP's archives.
-     * @throw clp::TraceableException If there are too many candidate combinations.
+     * @throw clp::TraceableException If there are more encodable wildcard variables than
+     * `max_encodable_wildcard_variables`.
      */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
@@ -144,7 +147,8 @@ private:
                     interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
-            bool ignore_case
+            bool ignore_case,
+            size_t max_encodable_wildcard_variables = 16
     ) -> std::vector<SubQuery>;
 
     /**
@@ -214,14 +218,14 @@ auto SchemaSearcher::generate_schema_sub_queries(
         std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations,
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
-        bool const ignore_case
+        bool const ignore_case,
+        size_t const max_encodable_wildcard_variables
 ) -> std::vector<SubQuery> {
     std::vector<SubQuery> sub_queries;
-    constexpr size_t cMaxEncodableWildcardVariables{16};
     for (auto const& interpretation : interpretations) {
         auto const logtype{interpretation.get_logtype()};
         auto const wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
-        if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
+        if (wildcard_encodable_positions.size() > max_encodable_wildcard_variables) {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
