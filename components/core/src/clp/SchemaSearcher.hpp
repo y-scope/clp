@@ -42,6 +42,25 @@ public:
         char const* what() const noexcept override { return "Too many encodable variables."; }
     };
 
+    /**
+     * Performs a wildcard-based search on a log message using a query string, producing subqueries
+     * that match the schema.
+     * - Parses the search string into a query.
+     * - Generates all possible interpretations of the query based on the schema.
+     * - Normalizes the interpretations.
+     * - Produces a set of subqueries corresponding to valid combinations of logtype variables and
+     *   dictionary variables.
+     *
+     * @tparam LogTypeDictionaryReaderType The type of object accessing the logtype dictionary.
+     * @tparam VariableDictionaryReaderType The type of object accessing the variable dictionary.
+     * @param search_string The input query string to search for in the log message.
+     * @param lexer The lexer containing the schema used to determine variable types and delimiters.
+     * @param logtype_dict A reference to the logtype dictionary.
+     * @param var_dict A reference to the variable dictionary.
+     * @param ignore_case If true, the search will be case-insensitive.
+     * @return A vector of `SubQuery` objects representing all normalized interpretations of the
+     * query that are compatible with the logtype and variable dictionaries.
+     */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType
