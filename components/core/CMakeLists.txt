@@ -701,6 +701,7 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/MockLogTypeDictionary.hpp
         tests/MockVariableDictionary.hpp
+        tests/SchemaSearcherTest.hpp
         tests/search_test_utils.cpp
         tests/search_test_utils.hpp
         tests/TestOutputCleaner.hpp
