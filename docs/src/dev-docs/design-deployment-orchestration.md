@@ -4,7 +4,9 @@ The CLP package comprises several components that are designed to be deployed in
 interdependent containers, and orchestrated by a framework that ensures the containers work together
 to facilitate CLP's different functions correctly. This document explains the architecture of the
 package components, and describes the two orchestration frameworks that CLP supports:
-[Docker Compose][docker-compose] and [Kubernetes][kubernetes] (via [Helm][helm]).
+
+* [Docker Compose][docker-compose]
+* [Kubernetes][kubernetes] (via [Helm][helm])
 
 ## Architecture
 
