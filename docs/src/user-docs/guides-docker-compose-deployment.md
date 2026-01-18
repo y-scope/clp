@@ -8,10 +8,10 @@ environments.
 
 Docker Compose can be used for:
 
-* **Single-host deployment**: Run all CLP services on a single machine. This is the simplest setup,
-  covered in the [quick-start guides](quick-start/index.md).
-* **Multi-host deployment**: Distribute CLP services across multiple machines for higher throughput
-  and scalability. This is covered in detail below.
+* A **single-host deployment**: Run all CLP services on a single machine. This is the simplest
+  setup, covered in the [quick-start guides](quick-start/index.md).
+* A **multi-host deployment**: Distribute CLP services across multiple machines for higher
+  throughput and scalability. This is covered in detail below.
 
 ---
 
@@ -20,9 +20,9 @@ Docker Compose can be used for:
 A multi-host deployment allows you to run CLP across a distributed set of hosts.
 
 :::{note}
-The instructions below use *manual* Docker Compose orchestration, which is more lightweight and
-provides fine-grained control over service placement, but requires more configuration than
-Helm-based deployments.
+The instructions below use *manual* Docker Compose orchestration. Compared to using
+[Kubernetes][kubernetes-guide] (via Helm), Docker Compose is more lightweight and provides
+fine-grained control over service placement, but requires more configuration.
 :::
 
 ## Requirements
@@ -389,6 +389,7 @@ cases, see the [SeaweedFS docs][seaweedfs-docs].
 [Docker]: https://docs.docker.com/engine/install/
 [docker-compose]: https://docs.docker.com/compose/
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
+[kubernetes-guide]: guides-k8s-deployment.md
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
 [seaweedfs-docs]: https://github.com/seaweedfs/seaweedfs/blob/master/README.md
 [seaweedfs-install-docs]: https://github.com/seaweedfs/seaweedfs?tab=readme-ov-file#quick-start-with-single-binary
