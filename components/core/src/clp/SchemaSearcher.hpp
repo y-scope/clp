@@ -28,6 +28,43 @@ namespace clp {
 class SchemaSearcherTest;
 #endif
 
+/**
+ * SchemaSearcher is responsible for generating schema-aware subqueries from wildcard query strings,
+ * given logtype and variable dictionaries.
+ *
+ * Key concepts:
+ *
+ * 1. Encodable variables:
+ * - A variable token that contains a wildcard (e.g., *1) and is of an encodable type (integer or
+ *   float).
+ * - Encodable variables introduce binary choices when generating subqueries as each can be
+ *   treated as either a dictionary variable or an encoded variable. For example:
+ *     Search query: "a *1 *2 b"
+ *     One possible interpretation: "a <int>(*1) <float>(*2) b"
+ *     Mask 00 -> "a \d \d b"
+ *     Mask 01 -> "a \d \f b"
+ *     Mask 10 -> "a \i \d b"
+ *     Mask 11 -> "a \i \f b"
+ * - To limit combinatorial explosion, the number of encodable variables is constrained (default
+ *   maximum = 16).
+ *
+ * 2. Mask encodings:
+ * - For k encodable wildcard variables, 2^k candidate logtype strings exist.
+ * - Each combination is represented with a bitmask, where each bit indicates whether the
+ *   corresponding variable is encoded (1) or dictionary-based (0).
+ *
+ * 3. SubQuery generation:
+ * - A `SubQuery` is a container for a single possible interpretation of a query, with variables
+ *   resolved to dictionary or encoded forms.
+ * - `SchemaSearcher` is responsible for creating `SubQuery` objects.
+ *
+ * Public interface:
+ * - `search(...)` is the main entry point: it takes a query string, generates all interpretations,
+ *   normalizes them, and produces `SubQuery` objects.
+ *
+ * Internal helpers (private static methods) handle normalization, wildcard scanning, logtype string
+ * generation, and per-variable processing.
+ */
 class SchemaSearcher {
 #ifdef CLP_BUILD_TESTING
     friend class SchemaSearcherTest;
@@ -98,26 +135,7 @@ private:
 
     /**
      * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
-     * to search for within the archive.
-     *
-     * A. For each interpretation we must consider encodable wildcard variables (e.g. <int>(*1)).
-     *    Each such variable introduces a binary choice:
-     *    - 0: treat as a dictionary variable (\d)
-     *    - 1: treat as an encoded variable (\i for integers, \f for floats)
-     *
-     *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. As a
-     *    result we limit k <= 16. We represent these alternatives using a bitmask.
-     *
-     *    Example:
-     *      Search query: "a *1 *2 b",
-     *      Interpretation (one of many): "a <int>(*1) <float>(*2) b"
-     *      Possible logtypes (for the above interpretation):
-     *        mask 00 -> "a \d \d b"
-     *        mask 01 -> "a \d \f b"
-     *        mask 10 -> "a \i \d b"
-     *        mask 11 -> "a \i \f b"
-     *
-     * B. Each candidate combination becomes a useful subquery only if:
+     * to search for within the archive. Each candidate combination becomes a useful subquery if:
      *   1. The logtype exists in the logtype dictionary, and
      *   2. Each variable is either:
      *     a) resolvable in the variable dictionary (for dictionary vars), or
@@ -154,10 +172,6 @@ private:
     /**
      * Scans the interpretation and returns the indices of all encodable wildcard variables.
      *
-     * An encodable variable is a variable token that:
-     *   - Contains a wildcard (e.g. *1).
-     *   - Is of an encodable type (integer or float).
-     *
      * @param interpretation The `QueryInterpretation` to scan.
      * @return A vector of positions of encodable wildcard variables.
      */
@@ -168,8 +182,6 @@ private:
     /**
      * Generates a logtype string from an interpretation, applying a mask to determine which
      * encodable wildcard positions are treated as encoded vs dictionary variables.
-     *   - 0: Treat as dictionary variable.
-     *   - 1: Treat as an encoded variable.
      *
      * @param interpretation The interpretation to convert to a logtype string.
      * @param wildcard_encodable_positions A vector of positions of encodable wildcard variables.
@@ -197,7 +209,7 @@ private:
      * @param var_dict The variable dictionary.
      * @param ignore_case If true, perform a case-insensitive search.
      * @param is_mask_encoded If the token is an encodable wildcard and is to be encoded.
-     * @param sub_query Returns the updated sub query object.
+     * @param sub_query Returns the updated `SubQuery` object.
      * @return True if the variable is encoded or is in the variable dictionary, false otherwise.
      */
     template <VariableDictionaryReaderReq VariableDictionaryReaderType>
