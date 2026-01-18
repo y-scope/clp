@@ -99,7 +99,7 @@ TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
     auto const logtype_string{clp::SchemaSearcherTest::generate_logtype_string(
             interpretation,
             wildcard_encodable_positions,
-            {false}
+            {}
     )};
     REQUIRE(logtype_string.empty());
 }
