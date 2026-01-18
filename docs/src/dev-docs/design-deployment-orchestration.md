@@ -207,6 +207,7 @@ hostnames/ports must use service discovery mechanisms.
 
 The orchestration controller (e.g., `DockerComposeController`) reads `etc/clp-config.yaml` and
 `etc/credentials.yaml`, then generates:
+
 * A container-specific CLP config file with adapted paths and service names
 * Runtime configuration (environment variables or ConfigMaps)
 * Required directories (e.g., data output directories)

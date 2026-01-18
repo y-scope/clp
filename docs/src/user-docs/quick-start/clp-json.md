@@ -30,6 +30,7 @@ To validate configuration and prepare directories without launching services, ad
 If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
 `etc/clp-config.yaml` and then run the start command again.
 ```
+
 :::
 
 :::{tab-item} Kubernetes (`kind`)
@@ -131,6 +132,7 @@ database:
 results_cache:
   port: 30017
 ```
+
 :::
 ::::
 
@@ -341,6 +343,7 @@ curl -X POST "http://localhost:3001/query/submit" \
     "case_sensitive": false
   }'
 ```
+
 :::
 
 :::{tab-item} Kubernetes (`kind`)
@@ -357,6 +360,7 @@ curl -X POST "http://localhost:30301/query/submit" \
     "case_sensitive": false
   }'
 ```
+
 :::
 ::::
 

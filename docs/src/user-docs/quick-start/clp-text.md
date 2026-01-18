@@ -299,6 +299,7 @@ curl -X POST "http://localhost:3001/query/submit" \
     "case_sensitive": false
   }'
 ```
+
 :::
 
 :::{tab-item} Kubernetes (`kind`)
@@ -315,6 +316,7 @@ curl -X POST "http://localhost:30301/query/submit" \
     "case_sensitive": false
   }'
 ```
+
 :::
 ::::
 
