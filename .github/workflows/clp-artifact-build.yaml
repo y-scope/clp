@@ -295,9 +295,10 @@ jobs:
   manylinux_2_28-x86_64-python-wheels:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
-      success()
-      || (!cancelled() && !failure() && (needs.filter-relevant-changes.outputs.clp_changed == 'true'
-      || needs.filter-relevant-changes.outputs.yscope_clp_core_changed == 'true'))
+      success() || (!cancelled() && !failure() && (
+        needs.filter-relevant-changes.outputs.clp_changed == 'true'
+        || needs.filter-relevant-changes.outputs.yscope_clp_core_changed == 'true'
+      ))
     needs:
       - "manylinux_2_28-x86_64-deps-image"
       - "filter-relevant-changes"

@@ -30,7 +30,7 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
-  G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels/yscope-clp-core"
+  G_PYTHON_WHEELS_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
   G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
@@ -603,7 +603,6 @@ tasks:
     dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
     deps: ["core"]
     cmds:
-      - "rm -rf '{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR}}'"
       - "mkdir -p '{{.TMP_DIR}}'"
       - defer: "rm -rf '{{.TMP_DIR}}'"
 
@@ -614,5 +613,4 @@ tasks:
 
       # Repair the wheel and place it in the final build directory.
       - |-
-        uv run auditwheel repair "{{.TMP_DIR}}"/*.whl \
-          --wheel-dir "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR}}"
+        uv run auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
