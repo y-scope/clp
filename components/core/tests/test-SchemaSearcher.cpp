@@ -53,7 +53,7 @@ auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> c
         -> QueryInterpretation {
     QueryInterpretation interp;
     for (auto const& token : tokens) {
-        if (holds_alternative<string>(token)) {
+        if (std::holds_alternative<string>(token)) {
             interp.append_static_token(get<string>(token));
         } else {
             auto const& [symbol, value]{get<pair<uint32_t, string>>(token)};
