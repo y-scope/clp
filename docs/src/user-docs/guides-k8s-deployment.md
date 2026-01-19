@@ -260,17 +260,16 @@ clpConfig:
   archive_output:
     target_archive_size: 536870912  # 512 MB
     compression_level: 6
+    retention_period: 43200  # (in minutes) 30 days
 
   # Enable MCP server
   mcp_server:
     port: 30800
     logging_level: "INFO"
 
-  # Configure data retention (in minutes)
-  archive_output:
-    retention_period: 10080  # 7 days
+  # Configure results cache
   results_cache:
-    retention_period: 120  # 2 hours
+    retention_period: 120  # (in minutes) 2 hours
 
 # Override credentials (use secrets in production!)
 credentials:
