@@ -1,4 +1,4 @@
-"""Wrapper for locating and invoking the bundled clp_core command line binaries."""
+"""Wrapper for locating and invoking the bundled yscope_clp_core command line binaries."""
 
 import functools
 import subprocess
@@ -14,13 +14,13 @@ def _get_clp_exe(name: str) -> Path:
     Locate a bundled CLP core executable installed with the Python distribution.
 
     Executables are installed into the package at build time by CMake under
-    `clp_core/bin`. This helper resolves the on disk path at runtime and caches
+    `yscope_clp_core/bin`. This helper resolves the on disk path at runtime and caches
     the result to avoid repeated filesystem lookups.
 
     :param name: Name of the executable to locate.
     :return: Path to the executable.
     """
-    exe = Path(str(files("clp_core") / f"bin/{name}"))
+    exe = Path(str(files("yscope_clp_core") / f"bin/{name}"))
     if exe.exists():
         return exe
     err_msg = f"No executable found for {name} at {exe}."
