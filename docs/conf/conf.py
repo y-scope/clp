@@ -92,7 +92,6 @@ html_theme_options = {
         "json_url": "https://docs.yscope.com/_static/clp-versions.json",
         "version_match": CLP_VERSION,
     },
-    "use_edit_page_button": True,
 }
 
 
