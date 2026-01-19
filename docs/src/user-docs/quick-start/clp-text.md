@@ -272,55 +272,8 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following elemen
 
 :::{note}
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
-return more results, use the [command line](#searching-from-the-command-line) or
-[API server](#searching-via-the-api-server).
+return more results, use the [command line](#searching-from-the-command-line).
 :::
-
-### Searching via the API server
-
-To search via the API server:
-
-::::{tab-set}
-:::{tab-item} Docker Compose
-:sync: docker
-
-```bash
-curl -X POST "http://localhost:3001/query/submit" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query_string": "<query>",
-    "max_num_results": 1000,
-    "timestamp_begin": null,
-    "timestamp_end": null,
-    "case_sensitive": false
-  }'
-```
-
-:::
-
-:::{tab-item} Kubernetes (`kind`)
-:sync: kind
-
-```bash
-curl -X POST "http://localhost:30301/query/submit" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query_string": "<query>",
-    "max_num_results": 1000,
-    "timestamp_begin": null,
-    "timestamp_end": null,
-    "case_sensitive": false
-  }'
-```
-
-:::
-::::
-
-:::{note}
-If you changed `api_server.host` or `api_server.port` in the configuration, use the new values.
-:::
-
-For more details on the API, see [Using the API server][api-server].
 
 ### Searching from the command line
 
@@ -377,6 +330,5 @@ kind delete cluster --name clp
 :::
 ::::
 
-[api-server]: ../guides-using-the-api-server.md
 [datasets]: ../resources-datasets.md
 [text-search-syntax]: ../reference-text-search-syntax.md
