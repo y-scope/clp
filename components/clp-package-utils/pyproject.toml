@@ -1,6 +1,6 @@
 [project]
 name = "clp-package-utils"
-version = "0.7.1-dev"
+version = "0.8.0"
 description = "Utilities for the CLP package."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"

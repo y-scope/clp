@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 
 [[package]]
@@ -317,7 +317,7 @@ wheels = [
 
 [[package]]
 name = "clp-mcp-server"
-version = "0.7.1.dev0"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiomysql" },
@@ -364,7 +364,7 @@ dev = [
 
 [[package]]
 name = "clp-py-utils"
-version = "0.7.1.dev0"
+version = "0.8.0"
 source = { editable = "../clp-py-utils" }
 dependencies = [
     { name = "boto3" },
