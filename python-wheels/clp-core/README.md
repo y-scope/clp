@@ -7,7 +7,7 @@ tools and a Python binding for performing CLP archive operations programmaticall
 
 To install the package:
 
-```
+```shell
 pip install yscope-clp-core
 ```
 
@@ -20,7 +20,7 @@ See the PyPI project page for [release][pypi-release] details.
 > be added in future releases.
 
 > [!IMPORTANT]
-> The package is built inside [manylinux-2.28] containers to ensure broad Linux compatibility.
+> The package is built inside [manylinux] 2.28 containers to ensure broad Linux compatibility.
 
 ## Documentation
 
