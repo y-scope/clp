@@ -103,6 +103,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         Perform compression and, if a binary I/O stream was provided at initialization, write the
         archive contents to that stream. Should not be called by the class user.
 
+        :raise BadCompressionInputError: If there is nothing to compress.
         :raise subprocess.CalledProcessError: If the archive compression fails.
         """
         if 0 == len(self._files_to_compress):
