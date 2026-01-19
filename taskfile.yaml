@@ -597,7 +597,7 @@ tasks:
     run: "once"
     cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
 
-  python-wheels-clp-core:
+  python-wheels-yscope-clp-core:
     deps: ["core"]
     dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
     cmds:
