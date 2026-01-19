@@ -7,9 +7,13 @@ set -o pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 "${script_dir}/install-prebuilt-packages.sh"
-
-# Install pipx packages and explicitly prepend the pipx bin directory to PATH for tooling visibility
 "${script_dir}/../pipx-packages/install-all.sh"
-export PATH="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh"):${PATH}"
 
+# Prepend the pipx bin directory to PATH so pipx-installed build tools are discoverable.
+# Required by install-packages-from-source.sh, which installs tools into the pre-baked deps images.
+# This can be removed once all library installs switch to go-task, which runs outside this script.
+# The same rationale applies to all other platforms (e.g., centos9, manylinux, musllinux, macos),
+# though the comment is omitted in those scripts.
+pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
+export PATH="${pipx_bin_dir}:${PATH}"
 "${script_dir}/install-packages-from-source.sh"
