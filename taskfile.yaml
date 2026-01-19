@@ -600,8 +600,8 @@ tasks:
   python-wheels-yscope-clp-core:
     vars:
       TMP_DIR: "tmp-{{.TASK}}"
-    deps: ["core"]
     dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
+    deps: ["core"]
     cmds:
       - "rm -rf '{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR}}'"
       - "mkdir -p '{{.TMP_DIR}}'"
