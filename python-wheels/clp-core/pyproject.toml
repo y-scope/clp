@@ -8,6 +8,9 @@ authors = [
 ]
 license = { text = "Apache License 2.0" }
 requires-python = ">=3.10"
+dependencies = [
+    "typing-extensions>=4.15.0",
+]
 
 [project.scripts]
 "clp-s" = "clp_core:clp_s"
