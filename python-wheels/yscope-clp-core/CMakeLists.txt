@@ -8,7 +8,10 @@ message(STATUS "yscope-clp-core version: ${SKBUILD_PROJECT_VERSION}")
 
 if(DEFINED ENV{YSCOPE_CLP_CORE_CLP_S_EXE})
     set(CLP_S_EXE "$ENV{YSCOPE_CLP_CORE_CLP_S_EXE}")
-    message(STATUS "Using CLP_S_EXE from environment: ${CLP_S_EXE}")
+    if(NOT EXISTS "${CLP_S_EXE}")
+        message(FATAL_ERROR "clp-s executable not found at ${CLP_S_EXE}")
+    endif()
+    message(STATUS "Using clp-s executable from environment: ${CLP_S_EXE}")
     # Install the CLP core executable into the Python wheel so the Python bindings can invoke it at
     # runtime. Using CMake `install(PROGRAMS ...)` ensures the file:
     # * retains executable permissions on install,
