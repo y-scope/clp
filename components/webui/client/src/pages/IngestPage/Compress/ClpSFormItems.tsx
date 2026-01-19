@@ -24,7 +24,7 @@ const TIMESTAMP_KEY_HELPER_TEXT = (
         >
             JSON search syntax docs
         </Typography.Link>
-        .
+        . This field is ignored when &quot;Convert to JSON&quot; is enabled.
     </>
 );
 const TIMESTAMP_KEY_PLACEHOLDER_TEXT =
@@ -67,43 +67,49 @@ const UNSTRUCTURED_HELPER_TEXT = (
  *
  * @return
  */
-const ClpSFormItems = () => (
-    <>
-        <Form.Item
-            label={"Dataset"}
-            name={"dataset"}
-            tooltip={DATASET_HELPER_TEXT}
-            rules={[
-                {
-                    // eslint-disable-next-line @typescript-eslint/require-await
-                    validator: async (_, value: unknown) => {
-                        const error = validateDatasetName(value as string);
-                        if (error) {
-                            throw new Error(error);
-                        }
+const ClpSFormItems = () => {
+    const unstructured = Form.useWatch<boolean>("unstructured");
+
+    return (
+        <>
+            <Form.Item
+                label={"Dataset"}
+                name={"dataset"}
+                tooltip={DATASET_HELPER_TEXT}
+                rules={[
+                    {
+                        // eslint-disable-next-line @typescript-eslint/require-await
+                        validator: async (_, value: unknown) => {
+                            const error = validateDatasetName(value as string);
+                            if (error) {
+                                throw new Error(error);
+                            }
+                        },
                     },
-                },
-            ]}
-        >
-            <Input placeholder={DATASET_PLACEHOLDER_TEXT}/>
-        </Form.Item>
-        <Form.Item
-            label={"Timestamp Key"}
-            name={"timestampKey"}
-            tooltip={TIMESTAMP_KEY_HELPER_TEXT}
-        >
-            <Input placeholder={TIMESTAMP_KEY_PLACEHOLDER_TEXT}/>
-        </Form.Item>
-        <Form.Item
-            label={"Unstructured Logs"}
-            name={"unstructured"}
-            tooltip={UNSTRUCTURED_HELPER_TEXT}
-            valuePropName={"checked"}
-        >
-            <Checkbox>Convert to JSON</Checkbox>
-        </Form.Item>
-    </>
-);
+                ]}
+            >
+                <Input placeholder={DATASET_PLACEHOLDER_TEXT}/>
+            </Form.Item>
+            <Form.Item
+                label={"Timestamp Key"}
+                name={"timestampKey"}
+                tooltip={TIMESTAMP_KEY_HELPER_TEXT}
+            >
+                <Input
+                    disabled={true === unstructured}
+                    placeholder={TIMESTAMP_KEY_PLACEHOLDER_TEXT}/>
+            </Form.Item>
+            <Form.Item
+                label={"Unstructured Logs"}
+                name={"unstructured"}
+                tooltip={UNSTRUCTURED_HELPER_TEXT}
+                valuePropName={"checked"}
+            >
+                <Checkbox>Convert to JSON</Checkbox>
+            </Form.Item>
+        </>
+    );
+};
 
 
 export default ClpSFormItems;

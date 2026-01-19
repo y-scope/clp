@@ -64,11 +64,10 @@ const Compress = () => {
             } else {
                 payload.dataset = values.dataset;
             }
-            if ("undefined" !== typeof values.timestampKey) {
-                payload.timestampKey = values.timestampKey;
-            }
             if (true === values.unstructured) {
                 payload.unstructured = true;
+            } else if ("undefined" !== typeof values.timestampKey) {
+                payload.timestampKey = values.timestampKey;
             }
         }
 
