@@ -301,6 +301,8 @@ jobs:
     needs:
       - "manylinux_2_28-x86_64-deps-image"
       - "filter-relevant-changes"
+    env:
+      OS_NAME: "manylinux_2_28"
     name: >-
       manylinux_2_28-x86_64-python-wheels
     continue-on-error: true
@@ -315,8 +317,6 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/run-on-image"
-        env:
-          OS_NAME: "manylinux_2_28"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
@@ -330,10 +330,14 @@ jobs:
         run: |-
           output_dir="/tmp/${{env.PYTHON_WHEELS_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
-
           mkdir -p "${output_dir}"
-          cd "$GITHUB_WORKSPACE/build/python-wheels"
-          tar cfvv "${output_dir}/wheels.tar" .
+          
+          find "$GITHUB_WORKSPACE/build/python-wheels" \
+            -type f \
+            -name '*.whl' \
+            -exec cp {} "${output_dir}/" \;
+          
+          tar cfvv "${output_dir}/python-wheels.tar" -C "${output_dir}" .
         shell: "bash"
 
       - uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
