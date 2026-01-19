@@ -21,6 +21,10 @@ inputs:
     description: "Platform VERSION_ID / VERSION_CODENAME of the container
       (e.g. jammy, focal, etc.)"
     required: false
+  arch:
+    description: "Target architecture (amd64 or arm64)"
+    default: "amd64"
+    required: false
 
 runs:
   using: "composite"
@@ -68,6 +72,10 @@ runs:
       with:
         context: "./"
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
+        platforms: "linux/${{inputs.arch}}"
+        # Disable provenance to create a simple image instead of a manifest list.
+        # This allows `docker manifest create` to combine the per-arch images.
+        provenance: false
         push: true
-        tags: "${{steps.extract-gh-meta.outputs.tags}}"
+        tags: "${{steps.extract-gh-meta.outputs.tags}}-${{inputs.arch}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
