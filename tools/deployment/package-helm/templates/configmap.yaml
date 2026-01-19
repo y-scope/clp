@@ -123,6 +123,8 @@ data:
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002
+    {{- else }}
+    log_ingestor: null
     {{- end }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}

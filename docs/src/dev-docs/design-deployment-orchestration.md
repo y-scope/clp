@@ -1,8 +1,12 @@
 # Deployment orchestration
 
-The CLP package is composed of several components that are currently designed to be deployed in a
-set of containers that are orchestrated using a framework like [Docker Compose][docker-compose].
-This document explains the architecture of that orchestration and any associated nuances.
+The CLP package comprises several components that are designed to be deployed in a set of
+interdependent containers, and orchestrated by a framework that ensures the containers work together
+to facilitate CLP's different functions correctly. This document explains the architecture of the
+package components, and describes the two orchestration frameworks that CLP supports:
+
+* [Docker Compose][docker-compose]
+* [Kubernetes][kubernetes] (via [Helm][helm])
 
 ## Architecture
 
@@ -188,102 +192,97 @@ graph LR
 **Table 2**: One-time initialization jobs in the CLP package.
 ::::
 
-## Code structure
+## Orchestration methods
 
-The orchestration code is split up into:
+CLP supports two orchestration methods: Docker Compose for single-host or manual multi-host
+deployments, and Helm for Kubernetes deployments. Both methods share the same configuration
+interface (`clp-config.yaml` and `credentials.yaml`) and support the same deployment types.
 
-* `BaseController` that defines:
-  * common logic for preparing the environment variables, configuration files, and directories
-    necessary for each service.
-  * abstract methods that orchestrator-specific derived classes must implement in order to
-    orchestrate a deployment.
-* `<Orchestrator>Controller` that implements (and/or overrides) any of the methods in
-  `BaseController` (`<Orchestrator>` is a placeholder for the specific orchestrator for which the
-  class is being implemented).
+### Configuration
 
-## Docker Compose orchestration
+Each service requires configuration values passed through config files, environment variables,
+and/or command line arguments. Since services run in containers, some values must be adapted for the
+orchestration environment. Specifically, host paths must be converted to container paths, and
+hostnames/ports must use service discovery mechanisms.
 
-This section explains how we use Docker Compose to orchestrate the CLP package and is broken into
-the following subsections:
+The orchestration controller (e.g., `DockerComposeController`) reads `etc/clp-config.yaml` and
+`etc/credentials.yaml`, then generates:
 
-* [Setting up the Docker Compose project's environment](#setting-up-the-environment)
-* [Starting and stoping the Docker Compose project](#starting-and-stopping-the-project)
-* [Deployment types](#deployment-types)
-* [Implementation details](#implementation-details)
-* [Troubleshooting](#troubleshooting)
+* A container-specific CLP config file with adapted paths and service names
+* Runtime configuration (environment variables or ConfigMaps)
+* Required directories (e.g., data output directories)
 
-### Setting up the environment
+For Docker Compose, this generates `var/log/.clp-config.yaml` and `.env`. For Kubernetes, the Helm
+chart generates a ConfigMap and Secrets from `values.yaml`.
 
-Several services require configuration values to be passed in through the CLP package's config file,
-environment variables, and/or command line arguments. Since the services are running in containers,
-some of these configuration values need to be modified for the orchestration environment.
-Specifically:
+:::{note}
+We are currently developing a `KubernetesController`, which will unify the configuration experience
+across both orchestration methods. The new controller will read `clp-config.yaml` and
+`credentials.yaml` like `DockerComposeController`, then set up the Helm release accordingly.
+:::
 
-1. Paths on the host must be converted to appropriate paths in the container.
-2. Component hostnames must be converted to service names, and component ports must be converted to the component's default ports.
-    * This ensures that in the Docker Compose configuration, services can communicate over fixed, predictable hostnames and ports rather than relying on configurable variables.
+### Secrets
 
-To achieve this, before starting the deployment, `DockerComposeController.start` generates:
+Sensitive credentials (database passwords, API keys) are stored in `etc/credentials.yaml` and
+require special handling to avoid exposure.
 
-* a CLP configuration file (`<clp-package>/var/log/.clp-config.yaml` on the host) specific to the
-  Docker Compose project environment.
-* an environment variable file (`<clp-package>/.env`) for any other configuration values.
-* any necessary directories (e.g., data output directories).
+* **Docker Compose**: Credentials are written to `.env` and passed as environment variables
+* **Kubernetes**: Credentials are stored in Kubernetes Secrets
 
-The Docker Compose project then passes those environment variables to the relevant services, either
-as environment variables or command line arguments, as necessary.
+### Dependencies
 
-### Starting and stopping the project
+As shown in [Figure 1](#figure-1), services have complex interdependencies. Both orchestrators
+ensure services start only after their dependencies are healthy.
 
-To start and stop the project, `DockerComposeController` simply invokes `docker compose up` or
-`docker compose down` as appropriate. However, to allow multiple CLP packages to be run on the same
-host, we explicitly specify a project name for the project, where the name is based on the package's
-instance ID.
+* **Docker Compose**: Uses `depends_on` with `condition: service_healthy` and container healthchecks
+* **Kubernetes**: Uses init containers (via the `clp.waitFor` helper) and readiness/liveness probes
 
-### Deployment Types
+### Storage
 
-CLP supports four deployment types determined by the `compression_scheduler.type` and
-`package.query_engine` configuration setting.
+Services require persistent storage for logs, data, archives, and streams.
 
-| Deployment Type | Compression Scheduler | Query Engine                 | Docker Compose File                |
-|-----------------|-----------------------|------------------------------|------------------------------------|
-| Base            | Celery                | [Presto][presto-integration] | `docker-compose-base.yaml`         |
-| Full            | Celery                | Native                       | `docker-compose.yaml`              |
-| Spider Base     | Spider                | [Presto][presto-integration] | `docker-compose-spider-base.yaml`  |
-| Spider Full     | Spider                | Native                       | `docker-compose-spider.yaml`       |
+* **Docker Compose**: Uses bind mounts for host directories and named volumes for database data.
+  Conditional mounts use variable interpolation to mount empty tmpfs when not needed.
+* **Kubernetes**: Uses PersistentVolumeClaims per component, with shared PVCs (`ReadWriteMany`) for
+  archives and streams. Uses `local-storage` StorageClass by default.
 
-### Implementation details
+### Deployment types
 
-One notable implementation detail is in how we handle mounts that are only necessary under certain
-configurations. For instance, the input logs mount is only necessary when the `logs_input.type` is
-`fs`. If `logs_input.type` is `s3`, we shouldn't mount some random directory from the user's
-host filesystem into the container. However, Docker doesn't provide a mechanism to perform
-conditional mounts. Instead, we use Docker's variable interpolation to conditionally mount an empty
-tmpfs mount into the container. This strategy is used wherever we need a conditional mount.
+CLP supports multiple deployment configurations based on the compression scheduler and query engine.
 
-### Troubleshooting
+| Deployment Type | Compression Scheduler | Query Engine                 |
+|-----------------|-----------------------|------------------------------|
+| Base            | Celery                | [Presto][presto-integration] |
+| Full            | Celery                | Native                       |
+| Spider Base     | Spider                | [Presto][presto-integration] |
+| Spider Full     | Spider                | Native                       |
 
-If you encounter issues with the Docker Compose deployment, first determine the instance ID for your
-deployment by checking the content of `<clp-package>/var/log/instance-id`. Then run one of the
-commands below as necessary.
+:::{note}
+Spider support is not yet available for Helm.
+:::
 
-1. Check service status:
+Docker Compose selects the appropriate compose file (e.g., `docker-compose.yaml` for Full,
+`docker-compose-spider.yaml` for Spider Full) and uses `deploy.replicas` with environment
+variables (e.g., `CLP_MCP_SERVER_ENABLED`) to toggle optional services. Helm uses conditional
+templating to include/exclude resources.
 
-   ```bash
-   docker compose --project-name clp-package-<instance-id> ps
-   ```
+## Troubleshooting
 
-2. View service logs:
+When issues arise, use the appropriate commands for your orchestration method:
 
-   ```bash
-   docker compose --project-name clp-package-<instance-id> logs <service-name>
-   ```
+* [Docker Compose debugging][docker-compose-debugging]
+* [Kubernetes Helm debugging][kubernetes-debugging]
 
-3. Validate configuration:
+## User guides
 
-   ```bash
-   docker compose config
-   ```
+* [Kubernetes deployment][kubernetes-guide]: Deploying CLP with Helm
+* [Multi-host deployment][docker-compose-multi-host]: Manual Docker Compose across multiple hosts
 
 [docker-compose]: https://docs.docker.com/compose/
+[docker-compose-debugging]: ../user-docs/guides-docker-compose-deployment.md#monitoring-and-debugging
+[helm]: https://helm.sh/
+[kubernetes]: https://kubernetes.io/
+[kubernetes-debugging]: ../user-docs/guides-k8s-deployment.md#monitoring-and-debugging
+[kubernetes-guide]: ../user-docs/guides-k8s-deployment.md
+[docker-compose-multi-host]: ../user-docs/guides-docker-compose-deployment.md#multi-host-deployment
 [presto-integration]: ../user-docs/guides-using-presto.md
