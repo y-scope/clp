@@ -598,13 +598,21 @@ tasks:
     cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
 
   python-wheels-yscope-clp-core:
+    vars:
+      TMP_DIR: "tmp-{{.TASK}}"
     deps: ["core"]
     dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
     cmds:
+      - "rm -rf '{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR}}'"
+      - "mkdir -p '{{.TMP_DIR}}'"
+      - defer: "rm -rf '{{.TMP_DIR}}'"
+
+      # Build the wheel into the temporary directory
       - |-
-        rm -rf "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR}}"
-        rm -rf tmp && mkdir -p tmp
-        uv run python3 -m build --wheel --outdir tmp
-        uv run auditwheel repair tmp/*.whl \
+        export YSCOPE_CLP_CORE_CLP_S_EXE="{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        uv run python3 -m build --wheel --outdir "{{.TMP_DIR}}"
+
+      # Repair the wheel and place it in the final build directory.
+      - |-
+        uv run auditwheel repair "{{.TMP_DIR}}"/*.whl \
           --wheel-dir "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_BUILD_DIR}}"
-        rm -rf tmp
