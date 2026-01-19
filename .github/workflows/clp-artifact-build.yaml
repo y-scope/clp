@@ -17,6 +17,7 @@ on:
 env:
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
+  PYTHON_WHEELS_ARTIFACT_NAME_PREFIX: "clp-python-wheels-"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -40,6 +41,7 @@ jobs:
       musllinux_1_2_x86_64_image_changed: "${{steps.filter.outputs.musllinux_1_2_x86_64_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
+      yscope_clp_core_changed: "${{steps.filter.outputs.yscope-clp-core}}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -99,6 +101,13 @@ jobs:
               - "taskfile.yaml"
               - "taskfiles/**"
               - "tools/scripts/deps-download/**"
+            yscope-clp-core:
+              - ".github/actions/**"
+              - ".github/workflows/clp-artifact-build.yaml"
+              - ".gitmodules"
+              - "taskfile.yaml"
+              - "taskfiles/**"
+              - "python-wheels/yscope-clp-core/**"
 
   centos-stream-9-deps-image:
     name: "centos-stream-9-deps-image"
@@ -282,6 +291,56 @@ jobs:
             --source-dir /mnt/repo/components/core
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
+
+  manylinux_2_28-x86_64-python-wheels:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true'
+      && needs.filter-relevant-changes.outputs.yscope_clp_core_changed == 'true')
+    needs:
+      - "manylinux_2_28-x86_64-deps-image"
+      - "filter-relevant-changes"
+    name: >-
+      manylinux_2_28-x86_64-python-wheels
+    continue-on-error: true
+    runs-on: *runner
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "manylinux_2_28"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            task python-wheels-yscope-clp-core
+
+      - id: "copy_wheels"
+        run: |-
+          output_dir="/tmp/${{env.PYTHON_WHEELS_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p "${output_dir}"
+          cd "$GITHUB_WORKSPACE/build/python-wheels"
+          tar cfvv "${output_dir}/wheels.tar" .
+        shell: "bash"
+
+      - uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        with:
+          name: "${{env.PYTHON_WHEELS_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{steps.copy_wheels.outputs.output_dir}}"
+          retention-days: 1
 
   musllinux_1_2-x86_64-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
