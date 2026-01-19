@@ -113,15 +113,15 @@ public:
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
-private:
     /**
      * Gets the value stored at a given index by summing up the stored deltas between the requested
      * index and the last requested index.
      * @param idx
      * @return The value stored at the requested index.
      */
-    int64_t get_value_at_idx(size_t idx);
+    [[nodiscard]] auto get_value_at_idx(size_t idx) -> int64_t;
 
+private:
     UnalignedMemSpan<int64_t> m_values;
     int64_t m_cur_value{};
     size_t m_cur_idx{};
@@ -359,6 +359,40 @@ private:
 
     UnalignedMemSpan<int64_t> m_timestamps;
     UnalignedMemSpan<int64_t> m_timestamp_encodings;
+};
+
+class TimestampColumnReader : public BaseColumnReader {
+public:
+    // Constructor
+    TimestampColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
+            : BaseColumnReader{id},
+              m_timestamp_dict{std::move(timestamp_dict)},
+              m_timestamps{id} {}
+
+    // Destructor
+    ~TimestampColumnReader() override = default;
+
+    // Methods inherited from BaseColumnReader
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
+
+    auto get_type() -> NodeType override { return NodeType::Timestamp; }
+
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
+    /**
+     * @param cur_message
+     * @return The encoded time in epoch nanoseconds.
+     */
+    [[nodiscard]] auto get_encoded_time(uint64_t cur_message) -> epochtime_t;
+
+private:
+    std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
+
+    DeltaEncodedInt64ColumnReader m_timestamps;
+    UnalignedMemSpan<uint64_t> m_timestamp_encodings;
 };
 }  // namespace clp_s
 
