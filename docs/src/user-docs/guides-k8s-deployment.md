@@ -118,7 +118,7 @@ The CLP Helm chart is located in the repository at
 
 ```bash
 # Clone the repository (if you haven't already)
-git clone https://github.com/y-scope/clp.git
+git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
 cd clp/tools/deployment/package-helm
 ```
 
@@ -586,8 +586,7 @@ To tear down a `kubeadm` cluster:
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
-[clp-helm-chart]: https://github.com/y-scope/clp/tree/main/tools/deployment/package-helm
-[clp-helm-chart-values]: https://github.com/y-scope/clp/blob/main/tools/deployment/package-helm/values.yaml
+[clp-helm-chart]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/tools/deployment/package-helm
 [clp-releases]: https://github.com/y-scope/clp/releases
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
