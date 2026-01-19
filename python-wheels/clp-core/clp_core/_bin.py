@@ -9,7 +9,7 @@ from typing import Any
 
 
 @functools.cache
-def _get_executable(name: str) -> Path:
+def _get_clp_exe(name: str) -> Path:
     """
     Locate a bundled CLP core executable installed with the Python distribution.
 
@@ -27,7 +27,7 @@ def _get_executable(name: str) -> Path:
     raise FileNotFoundError(err_msg)
 
 
-def _run(name: str, *args: Any) -> int:
+def _run_clp_exe(name: str, *args: Any) -> int:
     """
     Invoke a bundled CLP core executable as a subprocess.
 
@@ -38,7 +38,7 @@ def _run(name: str, *args: Any) -> int:
     :param args: Arguments to pass to the executable.
     :return: The subprocess exit code.
     """
-    command = [str(_get_executable(name))]
+    command = [str(_get_clp_exe(name))]
     if args:
         command += list(args)
     else:
@@ -48,4 +48,4 @@ def _run(name: str, *args: Any) -> int:
 
 def clp_s() -> None:
     """Entry point that dispatches to the clp_s executable."""
-    raise SystemExit(_run("clp-s"))
+    raise SystemExit(_run_clp_exe("clp-s"))
