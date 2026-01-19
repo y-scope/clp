@@ -205,7 +205,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 [aws-rds]: https://aws.amazon.com/rds/
 [azure-databases]: https://azure.microsoft.com/en-us/products/category/databases
-[docker-compose-orchestration]: ../dev-docs/design-deployment-orchestration.md#docker-compose-orchestration
+[docker-compose-orchestration]: guides-docker-compose-deployment.md
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
-[multi-host-guide]: guides-multi-host.md#starting-clp
+[multi-host-guide]: guides-docker-compose-deployment.md#starting-clp
