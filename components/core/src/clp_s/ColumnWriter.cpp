@@ -186,9 +186,9 @@ void DateStringColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 auto TimestampColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
-    auto const& encoded_timestamp = std::get<std::pair<epochtime_t, uint64_t>>(value);
-    auto const encoded_timestamp_size{m_timestamps.add_value(encoded_timestamp.first)};
-    m_timestamp_encodings.emplace_back(encoded_timestamp.second);
+    auto const [timestamp, encoding] = std::get<std::pair<epochtime_t, uint64_t>>(value);
+    auto const encoded_timestamp_size{m_timestamps.add_value(timestamp)};
+    m_timestamp_encodings.emplace_back(encoding);
     return encoded_timestamp_size + sizeof(uint64_t);
 }
 

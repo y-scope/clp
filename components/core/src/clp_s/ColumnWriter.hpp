@@ -263,7 +263,7 @@ private:
 class TimestampColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit TimestampColumnWriter(int32_t id) : BaseColumnWriter(id), m_timestamps{id} {}
+    explicit TimestampColumnWriter(int32_t id) : BaseColumnWriter{id}, m_timestamps{id} {}
 
     // Destructor
     ~TimestampColumnWriter() override = default;
