@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <set>
+#include <string>
 #include <vector>
 
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
