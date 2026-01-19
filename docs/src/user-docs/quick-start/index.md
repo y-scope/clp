@@ -40,68 +40,19 @@ NOTE:
 
 There are two flavors of CLP:
 
-* **[clp-json](#clp-json)** for compressing and searching **JSON** logs.
-* **[clp-text](#clp-text)** for compressing and searching **unstructured text** logs.
+* **`clp-json`** for compressing and searching **JSON** logs.
+* **`clp-text`** for compressing and searching **unstructured text** logs.
 
 :::{note}
 Both flavors contain the same binaries but are configured with different values for the
 `package.storage_engine` key in the package's config file (`etc/clp-config.yaml`).
 :::
 
-### clp-json
+Download and extract your chosen flavor from the [Releases][clp-releases] page, and then proceed to
+the [appropriate quick-start guide](#using-clp).
 
-The JSON flavor of CLP is appropriate for JSON logs, where each log event is an independent JSON
-object. For example:
-
-```json lines
-{
-  "t": {
-    "$date": "2023-03-21T23:46:37.392"
-  },
-  "ctx": "conn11",
-  "msg": "Waiting for write concern."
-}
-{
-  "t": {
-    "$date": "2023-03-21T23:46:37.392"
-  },
-  "msg": "Set last op to system time"
-}
-```
-
-The log file above contains two log events represented by two JSON objects printed one after the
-other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
-
-If you're using JSON logs, download and extract the `clp-json` release from the
-[Releases][clp-releases] page, then proceed to the [clp-json quick-start](./clp-json.md) guide.
-
-### clp-text
-
-The text flavor of CLP is appropriate for unstructured text logs, where each log event contains a
-timestamp and may span one or more lines.
-
-:::{note}
-If your logs don't contain timestamps or CLP can't automatically parse the timestamps in your logs,
-it will treat each line as an independent log event.
-:::
-
-For example:
-
-```text
-2015-03-23T15:50:17.926Z INFO container_1 Transitioned from ALLOCATED to ACQUIRED
-2015-03-23T15:50:17.927Z ERROR Scheduler: Error trying to assign container token
-java.lang.IllegalArgumentException: java.net.UnknownHostException: i-e5d112ea
-    at org.apache.hadoop.security.buildTokenService(SecurityUtil.java:374)
-    at org.apache.hadoop.ipc.Server$Handler.run(Server.java:2033)
-Caused by: java.net.UnknownHostException: i-e5d112ea
-    ... 17 more
-```
-
-The log file above contains two log events, both beginning with a timestamp. The first is a single
-line, while the second contains multiple lines.
-
-If you're using unstructured text logs, download and extract the `clp-text` release from the
-[Releases][clp-releases] page, then proceed to the [clp-text quick-start](./clp-text.md) guide.
+If you're having trouble selecting which flavor will work best for you, or you'd like to compare the
+capabilities of the two flavors, check out the [clp-text vs. clp-json](./text-v-json.md) page.
 
 ---
 

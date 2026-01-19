@@ -50,7 +50,7 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
 
 * `<path...>` are paths to JSON log files or directories containing such files.
   * Each JSON log file should contain each log event as a
-    [separate JSON object](./index.md#clp-json), i.e., *not* as an array.
+    [separate JSON object](./text-v-json.md#clp-json), i.e., *not* as an array.
 
 The compression script will output the compression ratio of each dataset you compress, or you can
 use the UI to view overall statistics.
