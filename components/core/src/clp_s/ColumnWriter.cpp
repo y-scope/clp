@@ -29,13 +29,8 @@ void Int64ColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 auto DeltaEncodedInt64ColumnWriter::add_value(int64_t value) -> size_t {
-    if (0 == m_values.size()) {
-        m_cur = value;
-        m_values.emplace_back(m_cur);
-    } else {
-        m_values.emplace_back(value - m_cur);
-        m_cur = value;
-    }
+    m_values.emplace_back(value - m_cur);
+    m_cur = value;
     return sizeof(int64_t);
 }
 
