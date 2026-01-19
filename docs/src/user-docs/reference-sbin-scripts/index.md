@@ -53,7 +53,7 @@ Restart policies are primarily meant for handling container failures.
     restarts containers that exited non-zero. Most CLP services exit cleanly (code 0) and won't
     restart, but some may restart and eventually fail without their dependencies.
   * If services restart unexpectedly after a Docker daemon restart, run `stop-clp.sh` to clean up
-    any partially started services bofore running `start-clp.sh`.
+    any partially started services before running `start-clp.sh`.
 :::
 
 ---
