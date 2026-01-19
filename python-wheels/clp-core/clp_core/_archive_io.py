@@ -8,7 +8,7 @@ from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import TracebackType
-from typing import BinaryIO, cast, IO, TextIO
+from typing import cast, IO
 
 from typing_extensions import Unpack
 
@@ -74,11 +74,11 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
                 raise ClpCoreRuntimeError(err_msg) from e
         else:
             # Create a temporary directory for the archive to live in, and feed
-            # the archive into the BinaryIO stream.
+            # the archive into the IO[bytes] stream.
             self._temp_archive_dir = TemporaryDirectory()
             self._archive_dir = Path(self._temp_archive_dir.name)
 
-    def add(self, source: str | os.PathLike[str] | BinaryIO | TextIO) -> None:
+    def add(self, source: str | os.PathLike[str] | IO[bytes] | IO[str]) -> None:
         """
         Add an input source to be included in the compressed archive.
 
@@ -121,7 +121,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
         if self._temp_archive_dir is not None:
             with _get_single_file_in_dir(self._archive_dir).open("rb") as archive_file:
-                shutil.copyfileobj(archive_file, cast("BinaryIO", self._file), length=1024 * 1024)
+                shutil.copyfileobj(archive_file, cast("IO[bytes]", self._file), length=1024 * 1024)
 
     def close(self) -> None:
         """Cleans up all temporary resources used by the archive writer."""
@@ -209,7 +209,7 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
         ]
         subprocess.run(decompress_cmd, check=True)
 
-        self._decomp_fp: TextIO | None
+        self._decomp_fp: IO[str] | None
         self._decomp_fp = _get_single_file_in_dir(Path(self._decompression_temp_dir.name)).open(
             mode="r",
             encoding=self._encoding,

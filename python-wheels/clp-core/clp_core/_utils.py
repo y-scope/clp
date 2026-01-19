@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import BinaryIO, TextIO
+from typing import IO
 
 from clp_core._except import (
     BadArchiveSourceError,
@@ -20,13 +20,13 @@ def _validate_archive_source(src: object) -> None:
     TODO: Consider replacing this with a Pydantic field validator for runtime validation.
 
     :param src:
-    :raise BadArchiveSourceError: If the source is not a str, os.PathLike, or BinaryIO.
+    :raise BadArchiveSourceError: If the source is not a str, os.PathLike, or IO[bytes].
     """
     if isinstance(src, (str, os.PathLike)):
         return
     if isinstance(src, io.IOBase) and not isinstance(src, io.TextIOBase):
         return
-    err_msg = "Expected archive source of type str | os.PathLike | BinaryIO."
+    err_msg = "Expected archive source of type str | os.PathLike | IO[bytes]."
     raise BadArchiveSourceError(err_msg)
 
 
@@ -53,7 +53,7 @@ def _get_single_file_in_dir(dir_path: Path) -> Path:
 
 
 def _write_stream_to_temp_file(
-    stream: BinaryIO | TextIO,
+    stream: IO[bytes] | IO[str],
     suffix: str | None = None,
 ) -> str:
     """

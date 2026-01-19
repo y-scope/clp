@@ -1,11 +1,11 @@
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, BinaryIO
+from typing import Any, IO
 
 from typing_extensions import TypedDict
 
-ArchiveInputSource = str | os.PathLike[str] | BinaryIO
+ArchiveInputSource = str | os.PathLike[str] | IO[bytes]
 
 
 @dataclass

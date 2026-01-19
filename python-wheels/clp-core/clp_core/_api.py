@@ -20,6 +20,7 @@ from clp_core._config import (
     DecompressionKwargs,
     SearchKwargs,
 )
+from clp_core._except import ClpCoreRuntimeError
 
 
 @overload
@@ -27,8 +28,7 @@ def open_archive(
     file: ArchiveInputSource,
     mode: Literal["wb"],
     **kwargs: Unpack[CompressionKwargs],
-) -> ClpArchiveWriter:
-    pass
+) -> ClpArchiveWriter: ...
 
 
 @overload
@@ -36,8 +36,7 @@ def open_archive(
     file: ArchiveInputSource,
     mode: Literal["r"],
     **kwargs: Unpack[DecompressionKwargs],
-) -> ClpArchiveReader:
-    pass
+) -> ClpArchiveReader: ...
 
 
 def open_archive(
@@ -65,11 +64,15 @@ def open_archive(
         and which log data is written to the archive. For "r", returns a `ClpArchiveReader`, which
         allows iteration over log events in their original order.
     :raise BadArchiveSourceError: If the archive source type is not supported.
-    :raise ClpCoreRuntimeError: If the archive handler constructor failed.
+    :raise ClpCoreRuntimeError: If the archive handler constructor failed or the archive open mode
+        is unsupported.
     """
-    if "r" == mode:
+    if mode == "r":
         return ClpArchiveReader(file, **kwargs)
-    return ClpArchiveWriter(file, **kwargs)
+    if mode == "wb":
+        return ClpArchiveWriter(file, **kwargs)
+    err_msg = f"Unsupported archive open mode `{mode}`."
+    raise ClpCoreRuntimeError(err_msg)
 
 
 def search_archive(
