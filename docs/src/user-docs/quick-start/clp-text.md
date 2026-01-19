@@ -61,7 +61,6 @@ export CLP_HOME="$HOME/clp"
 # Host port mappings
 export CLP_WEBUI_PORT=30000
 export CLP_RESULTS_CACHE_PORT=30017
-export CLP_API_SERVER_PORT=30301
 export CLP_DATABASE_PORT=30306
 export CLP_MCP_SERVER_PORT=30800
 
@@ -77,7 +76,7 @@ mkdir -p \
     "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
     "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
     "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-    "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
+    "$CLP_HOME/var/log/"{garbage_collector,mcp_server} \
     "$CLP_HOME/var/tmp"
 
 # Create the `kind` cluster
@@ -99,8 +98,6 @@ nodes:
     hostPort: $CLP_WEBUI_PORT
   - containerPort: $CLP_RESULTS_CACHE_PORT
     hostPort: $CLP_RESULTS_CACHE_PORT
-  - containerPort: $CLP_API_SERVER_PORT
-    hostPort: $CLP_API_SERVER_PORT
   - containerPort: $CLP_DATABASE_PORT
     hostPort: $CLP_DATABASE_PORT
   - containerPort: $CLP_MCP_SERVER_PORT
@@ -117,7 +114,6 @@ helm install clp . \
   --set clpConfig.package.query_engine=clp \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
-  --set clpConfig.api_server.port="$CLP_API_SERVER_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
   --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
   --set clpConfig.data_directory="$CLP_HOME/var/data" \
