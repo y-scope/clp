@@ -148,7 +148,7 @@ A flavor of CLP for unstructured (e.g., free-text) logs.
 :::
 ::::
 
-The guide below explains how to use a container to try either flavour.
+The guide below explains how to use a container to try either flavor.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
