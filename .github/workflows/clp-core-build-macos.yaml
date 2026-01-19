@@ -2,7 +2,7 @@ name: "clp-core-build-macos"
 
 on:
   pull_request:
-    paths: &trigger_paths
+    paths: &monitored_paths
       - ".github/workflows/clp-core-build-macos.yaml"
       - ".gitmodules"
       - "components/core/cmake/**"
@@ -17,7 +17,7 @@ on:
       - "taskfiles/**"
       - "tools/scripts/deps-download/**"
   push:
-    paths: *trigger_paths
+    paths: *monitored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"

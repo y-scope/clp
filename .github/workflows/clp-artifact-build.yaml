@@ -63,6 +63,7 @@ jobs:
           # image (since it would be different from the published image).
           base: "main"
           filters: |
+            # NOTE: This filter defines a reusable YAML anchor; its output is unused.
             _deps_image_common_paths: &_deps_image_common_paths
               - ".github/actions/**"
               - ".github/workflows/clp-artifact-build.yaml"
