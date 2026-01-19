@@ -32,4 +32,5 @@ if (("${installed_version_major}" < "${required_version_major_min}")) \
     exit 1
 fi
 
+cmake_bin="$(command -v cmake)"
 echo "CMake version ${installed_version} installed at ${cmake_bin} satisfies version requirements."
