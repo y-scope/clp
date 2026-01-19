@@ -15,15 +15,6 @@
 
 #include "search_test_utils.hpp"
 
-using clp::LogTypeDictionaryReaderReq;
-using clp::SubQuery;
-using clp::VariableDictionaryReaderReq;
-using log_surgeon::wildcard_query_parser::QueryInterpretation;
-using log_surgeon::wildcard_query_parser::VariableQueryToken;
-using std::set;
-using std::string;
-using std::vector;
-
 /**
  * Helper to expose `SchemaSearcher` functionality for unit-testing.
  *
@@ -37,9 +28,12 @@ using std::vector;
  * All methods forward directly to `SchemaSearcher` and are intended for testing only.
  */
 class clp::SchemaSearcherTest {
+using log_surgeon::wildcard_query_parser::QueryInterpretation;
+using log_surgeon::wildcard_query_parser::VariableQueryToken;
+
 public:
-    static auto normalize_interpretations(set<QueryInterpretation> const& interpretations)
-            -> set<QueryInterpretation> {
+    static auto normalize_interpretations(std::set<QueryInterpretation> const& interpretations)
+            -> std::set<QueryInterpretation> {
         return SchemaSearcher::normalize_interpretations(interpretations);
     }
 
@@ -48,10 +42,10 @@ public:
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
     static auto generate_schema_sub_queries(
-            set<QueryInterpretation> const& interpretations,
+            std::set<QueryInterpretation> const& interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict
-    ) -> vector<SubQuery> {
+    ) -> std::vector<SubQuery> {
         return SchemaSearcher::generate_schema_sub_queries(
                 interpretations,
                 logtype_dict,
@@ -61,15 +55,15 @@ public:
     }
 
     static auto get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
-            -> vector<size_t> {
+            -> std::vector<size_t> {
         return SchemaSearcher::get_wildcard_encodable_positions(interpretation);
     }
 
     static auto generate_logtype_string(
             QueryInterpretation const& interpretation,
-            vector<size_t> const& wildcard_encodable_positions,
-            vector<bool> const& mask_encoded_flags
-    ) -> string {
+            std::vector<size_t> const& wildcard_encodable_positions,
+            std::vector<bool> const& mask_encoded_flags
+    ) -> std::string {
         return SchemaSearcher::generate_logtype_string(
                 interpretation,
                 wildcard_encodable_positions,
