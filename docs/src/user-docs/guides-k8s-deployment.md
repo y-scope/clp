@@ -517,8 +517,8 @@ How to compress and search unstructured text logs.
 :::{note}
 By default (`allowHostAccessForSbinScripts: true`), the database and results cache are exposed on
 NodePorts, allowing you to use `sbin/` scripts from the CLP package. Download a
-[release][clp-releases] matching the chart's `appVersion`, then the following configurations in
-`etc/clp-config.yaml`:
+[release][clp-releases] matching the chart's `appVersion`, then update the following configurations
+in `etc/clp-config.yaml`:
 
 ```yaml
 database:
