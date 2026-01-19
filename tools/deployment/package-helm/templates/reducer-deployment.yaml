@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
 spec:
-  replicas: 1
+  replicas: {{ .Values.reducer.replicas }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -20,6 +20,10 @@ spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       hostname: {{ include "clp.fullname" . }}-reducer
       subdomain: {{ include "clp.fullname" . }}-reducer
+      {{- include "clp.createSchedulingConfigs" (dict
+        "root" .
+        "component" "reducer"
+      ) | nindent 6 }}
       terminationGracePeriodSeconds: 10
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
@@ -50,15 +54,15 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "reducer"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/reducer"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
           command: [
             "python3", "-u",
             "-m", "job_orchestration.reducer.reducer",

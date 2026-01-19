@@ -5,7 +5,8 @@ use crate::clp_config::package::{
     credentials::Database as DatabaseCredentials,
 };
 
-/// Creates a new `MySQL` connection pool using the provided configuration and credentials.
+/// Creates a new `MySQL` connection pool to the CLP DB using the provided configuration and
+/// credentials.
 ///
 /// # Return
 ///
@@ -17,7 +18,7 @@ use crate::clp_config::package::{
 /// Returns an error if:
 ///
 /// * Forwards [`sqlx::mysql::MySqlPoolOptions::connect_with`]'s errors on failure.
-pub async fn create_mysql_pool(
+pub async fn create_clp_db_mysql_pool(
     config: &DatabaseConfig,
     credentials: &DatabaseCredentials,
     max_connections: u32,
@@ -25,7 +26,7 @@ pub async fn create_mysql_pool(
     let mysql_options = sqlx::mysql::MySqlConnectOptions::new()
         .host(&config.host)
         .port(config.port)
-        .database(&config.name)
+        .database(&config.names.clp)
         .username(&credentials.user)
         .password(credentials.password.expose_secret());
 

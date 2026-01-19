@@ -323,9 +323,9 @@ def set_job_or_task_status(
 
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
+        row_changed = cursor.rowcount != 0
         db_conn.commit()
-        rval = cursor.rowcount != 0
-    return rval
+    return row_changed
 
 
 async def handle_cancelling_search_jobs(db_conn_pool) -> None:
@@ -363,13 +363,19 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000000.0",
             )
 
+            set_job_or_task_status_kwargs = {}
+            if job.start_time is not None:
+                set_job_or_task_status_kwargs["duration"] = (
+                    datetime.datetime.now() - job.start_time
+                ).total_seconds()
+
             if set_job_or_task_status(
                 db_conn,
                 QUERY_JOBS_TABLE_NAME,
                 job_id,
                 QueryJobStatus.CANCELLED,
                 QueryJobStatus.CANCELLING,
-                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+                **set_job_or_task_status_kwargs,
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:

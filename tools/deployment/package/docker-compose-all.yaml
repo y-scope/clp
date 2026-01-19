@@ -7,6 +7,7 @@ x-service-defaults: &service_defaults
     driver: "local"
   stop_grace_period: "60s"
   user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
+  restart: "${CLP_RESTART_POLICY:-on-failure:3}"
 
 # Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
@@ -57,7 +58,7 @@ services:
       MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
       MYSQL_PASSWORD: "${CLP_DB_PASS:?Please set a value.}"
       MYSQL_ROOT_PASSWORD: "${CLP_DB_ROOT_PASS:?Please set a value.}"
-      MYSQL_USER: "${CLP_DB_USER:?Please set a value.}"
+      MYSQL_USER: "${CLP_DB_USER:-clp-user}"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
         published: "${CLP_DB_PORT:-3306}"
@@ -80,21 +81,22 @@ services:
         "mysqladmin", "ping",
         "--silent",
         "-h", "127.0.0.1",
-        "-u", "${CLP_DB_USER:?Please set a value.}",
+        "-u", "${CLP_DB_USER:-clp-user}",
         "--password=${CLP_DB_PASS:?Please set a value.}"
       ]
 
   db-table-creator:
     <<: *service_defaults
+    restart: "on-failure:3"
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
       CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
-      SPIDER_DB_USER: "${SPIDER_DB_USER:?Please set a value.}"
+      SPIDER_DB_USER: "${SPIDER_DB_USER:-spider-user}"
     volumes:
       - *volume_clp_config_readonly
     depends_on:
@@ -118,7 +120,7 @@ services:
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS:?Please set a value.}"
-      RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER:?Please set a value.}"
+      RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER:-clp-user}"
       RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
     ports:
       - host_ip: "${CLP_QUEUE_HOST:-127.0.0.1}"
@@ -210,6 +212,7 @@ services:
 
   results-cache-indices-creator:
     <<: *service_defaults
+    restart: "on-failure:3"
     hostname: "results_cache_indices_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -242,7 +245,7 @@ services:
       "--port", "6000",
       "--storage_url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
-        user=${SPIDER_DB_USER:?Please set a value.}\
+        user=${SPIDER_DB_USER:-spider-user}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
     ]
 
@@ -251,10 +254,10 @@ services:
     hostname: "compression_scheduler"
     stop_grace_period: "300s"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
-        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
+        @queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_scheduler"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -283,8 +286,8 @@ services:
     <<: *service_defaults
     hostname: "compression_worker"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
-        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
+        @queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
@@ -343,7 +346,7 @@ services:
       "--num-workers", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "jdbc:mariadb://database:3306/\
         ${SPIDER_DB_NAME:-spider-db}?\
-        user=${SPIDER_DB_USER:?Please set a value.}\
+        user=${SPIDER_DB_USER:-spider-user}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
     ]
 
@@ -354,7 +357,7 @@ services:
       AWS_ACCESS_KEY_ID: "${CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID:-}"
       AWS_SECRET_ACCESS_KEY: "${CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY:-}"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       HOST: "0.0.0.0"
       NODE_ENV: "production"
       NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
@@ -403,7 +406,7 @@ services:
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/garbage_collector"
@@ -430,10 +433,10 @@ services:
     hostname: "query_scheduler"
     stop_grace_period: "10s"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
-        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
+        @queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/query_scheduler"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -468,8 +471,8 @@ services:
     <<: *service_defaults
     hostname: "query_worker"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
-        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
+        @queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
@@ -533,7 +536,7 @@ services:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
       - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
@@ -572,7 +575,7 @@ services:
     environment:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       RUST_LOG: "INFO"
     ports:
       - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
@@ -612,7 +615,7 @@ services:
     environment:
       CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
     ports:
       - host_ip: "${CLP_LOG_INGESTOR_HOST:-127.0.0.1}"
