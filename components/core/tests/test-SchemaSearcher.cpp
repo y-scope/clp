@@ -54,9 +54,9 @@ auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> c
     QueryInterpretation interp;
     for (auto const& token : tokens) {
         if (std::holds_alternative<string>(token)) {
-            interp.append_static_token(get<string>(token));
+            interp.append_static_token(std::get<string>(token));
         } else {
-            auto const& [symbol, value]{get<pair<uint32_t, string>>(token)};
+            auto const& [symbol, value]{std::get<pair<uint32_t, string>>(token)};
             auto const contains_wildcard{value.find_first_of("*?") != string::npos};
             interp.append_variable_token(symbol, value, contains_wildcard);
         }
