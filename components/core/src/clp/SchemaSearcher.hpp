@@ -238,7 +238,8 @@ auto SchemaSearcher::generate_schema_sub_queries(
         auto const logtype{interpretation.get_logtype()};
         auto const wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
         if (wildcard_encodable_positions.size() > max_encodable_wildcard_variables
-            || wildcard_encodable_positions.size() >= std::numeric_limits<uint64_t>::digits) {
+            || wildcard_encodable_positions.size() >= std::numeric_limits<uint64_t>::digits)
+        {
             throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
         }
         uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
