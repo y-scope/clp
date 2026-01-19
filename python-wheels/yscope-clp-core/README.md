@@ -27,7 +27,6 @@ See the PyPI project page for [release][pypi-release] details.
 For detailed usage of CLP features and design documentation, see the official CLP core
 [documentation][clp-core-docs].
 
-
 [clp-core-docs]: https://docs.yscope.com/clp/main/user-docs/core-overview.html
 [manylinux]: https://github.com/pypa/manylinux
 [pypi-release]: https://pypi.org/project/yscope-clp-core
