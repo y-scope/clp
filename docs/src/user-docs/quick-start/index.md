@@ -1,4 +1,4 @@
-# Overview
+# First steps
 
 This guide describes how to deploy and run CLP on a single host.
 
