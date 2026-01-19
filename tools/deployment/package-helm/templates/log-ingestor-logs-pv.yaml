@@ -1,0 +1,10 @@
+{{- if .Values.clpConfig.log_ingestor }}
+{{- include "clp.createStaticPv" (dict
+  "root" .
+  "component_category" "log-ingestor"
+  "name" "logs"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/log_ingestor" .Values.clpConfig.logs_directory)
+) }}
+{{- end }}
