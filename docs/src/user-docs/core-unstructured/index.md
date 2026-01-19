@@ -1,7 +1,7 @@
 # CLP for unstructured logs
 
-There are two flavours of CLP for compressing unstructured logs. The guides below explain how to use
-each flavour.
+There are two flavors of CLP for compressing unstructured logs. The guides below explain how to use
+each flavor.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -10,14 +10,14 @@ each flavour.
 :link: clp
 clp
 ^^^
-A flavour of CLP that stores logs using a simple three column format.
+A flavor of CLP that stores logs using a simple three column format.
 :::
 
 :::{grid-item-card}
 :link: glt
 glt
 ^^^
-An experimental flavour of CLP that stores logs grouped by their log type.
+An experimental flavor of CLP that stores logs grouped by their log type.
 :::
 ::::
 
