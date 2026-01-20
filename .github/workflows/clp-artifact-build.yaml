@@ -298,16 +298,15 @@ jobs:
         || needs.filter-relevant-changes.outputs.yscope_clp_core_changed == 'true'
       ))
     needs:
-      - "manylinux_2_28-x86_64-deps-image"
       - "filter-relevant-changes"
+      - "manylinux_2_28-x86_64-deps-image"
     env:
       OS_NAME: "manylinux_2_28"
-    name: >-
-      manylinux_2_28-x86_64-python-wheels
+    name: "manylinux_2_28-x86_64-python-wheels"
     continue-on-error: true
     runs-on: *runner
     steps:
-      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
         with:
           submodules: "recursive"
 
@@ -334,7 +333,7 @@ jobs:
             --directory "$GITHUB_WORKSPACE/build/python-wheels" .
         shell: "bash"
 
-      - uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+      - uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
           name: "${{env.PYTHON_WHEELS_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{steps.copy_wheels.outputs.output_dir}}"
