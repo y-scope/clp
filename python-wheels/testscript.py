@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from clp_core import open_archive, search_archive, KqlQuery
+from yscope_clp_core import open_archive, search_archive, KqlQuery
 
 import os
 tempfile.tempdir = os.path.expandvars("/tmp/$USER")

@@ -12,8 +12,8 @@ from typing import Any, cast, IO
 
 from typing_extensions import Unpack
 
-from clp_core._bin import _get_clp_exe
-from clp_core._config import (
+from yscope_clp_core._bin import _get_clp_exe
+from yscope_clp_core._config import (
     ArchiveInputSource,
     ClpQuery,
     CompressionKwargs,
@@ -22,11 +22,11 @@ from clp_core._config import (
     LogEvent,
     SearchKwargs,
 )
-from clp_core._except import (
+from yscope_clp_core._except import (
     BadCompressionInputError,
     ClpCoreRuntimeError,
 )
-from clp_core._utils import (
+from yscope_clp_core._utils import (
     _get_single_file_in_dir,
     _validate_archive_source,
     _write_stream_to_temp_file,

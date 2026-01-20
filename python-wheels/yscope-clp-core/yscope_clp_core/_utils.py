@@ -1,4 +1,4 @@
-"""Utilities used by the clp_core Python package."""
+"""Utilities used by the yscope_clp_core Python package."""
 
 import io
 import os
@@ -7,8 +7,8 @@ import tempfile
 from pathlib import Path
 from typing import IO
 
-from clp_core._config import FILE_OBJ_COPY_CHUNK_SIZE
-from clp_core._except import (
+from yscope_clp_core._config import FILE_OBJ_COPY_CHUNK_SIZE
+from yscope_clp_core._except import (
     BadArchiveSourceError,
     ClpCoreRuntimeError,
 )

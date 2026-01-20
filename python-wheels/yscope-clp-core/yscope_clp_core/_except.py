@@ -1,12 +1,12 @@
-"""Exception types used by the clp_core Python package."""
+"""Exception types used by the yscope_clp_core Python package."""
 
 
 class ClpCoreError(Exception):
-    """Base exception for clp_core."""
+    """Base exception for yscope_clp_core."""
 
 
 class ClpCoreRuntimeError(ClpCoreError, RuntimeError):
-    """Generic RuntimeError exception for clp_core."""
+    """Generic RuntimeError exception for yscope_clp_core."""
 
 
 class BadArchiveSourceError(ClpCoreError, TypeError):

@@ -1,4 +1,4 @@
-"""Public APIs for the clp_core python package."""
+"""Public APIs for the yscope_clp_core python package."""
 
 from typing import (
     Any,
@@ -8,19 +8,19 @@ from typing import (
 
 from typing_extensions import Unpack
 
-from clp_core._archive_io import (
+from yscope_clp_core._archive_io import (
     ClpArchiveReader,
     ClpArchiveWriter,
     ClpSearchResults,
 )
-from clp_core._config import (
+from yscope_clp_core._config import (
     ArchiveInputSource,
     ClpQuery,
     CompressionKwargs,
     DecompressionKwargs,
     SearchKwargs,
 )
-from clp_core._except import ClpCoreRuntimeError
+from yscope_clp_core._except import ClpCoreRuntimeError
 
 
 @overload
