@@ -776,7 +776,7 @@ tasks:
     internal: true
     vars:
       UV_PYTHON_PROJECTS:
-        #- "{{.G_INTEGRATION_TESTS_DIR}}"
+        - "{{.G_INTEGRATION_TESTS_DIR}}"
         - "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
       UV_PYTHON_PROJECTS_IGNORE_ERRORS:
         - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
@@ -787,12 +787,12 @@ tasks:
       vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
-      #- for:
-      #    var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
-      #  cmd: |-
-      #    uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
-      #    uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
-      #    uv run --directory "{{.ITEM}}" mypy . || true
+      - for:
+          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy . || true
       - for:
           - "components/core/tools/scripts"
           - "docs/conf"
