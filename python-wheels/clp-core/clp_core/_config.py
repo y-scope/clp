@@ -24,13 +24,10 @@ class ClpQuery(ABC):
     """
     Abstract base class for CLP Archive search queries.
 
-    Currently support `KqlQuery`.
+    Currently only supports `KqlQuery`.
     """
 
-    @property
-    @abstractmethod
-    def query_language(self) -> str:
-        """:return: the query language identifier."""
+    query_language: str
 
     @abstractmethod
     def get_query_string(self) -> str:
