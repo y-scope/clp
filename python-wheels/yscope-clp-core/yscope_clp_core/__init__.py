@@ -1,16 +1,16 @@
-"""Public entry points for the clp_core Python package."""
+"""Public entry points for the yscope_clp_core Python package."""
 
-from clp_core._api import (
+from yscope_clp_core._api import (
     open_archive,
     search_archive,
 )
-from clp_core._archive_io import (
+from yscope_clp_core._archive_io import (
     ClpArchiveReader,
     ClpArchiveWriter,
     ClpSearchResults,
 )
-from clp_core._bin import clp_s
-from clp_core._config import (
+from yscope_clp_core._bin import clp_s
+from yscope_clp_core._config import (
     ClpQuery,
     CompressionKwargs,
     DecompressionKwargs,
@@ -18,7 +18,7 @@ from clp_core._config import (
     LogEvent,
     SearchKwargs,
 )
-from clp_core._except import (
+from yscope_clp_core._except import (
     BadArchiveSourceError,
     BadCompressionInputError,
     ClpCoreError,

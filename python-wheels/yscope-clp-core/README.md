@@ -1,30 +1,30 @@
-# CLP core Python Distribution
+# YScope CLP (Compressed Log Processor) Core Python Distribution
 
-This project packages the core CLP as a Python distribution, which allows users to install CLP core
-cli tools from PyPI:
+This project packages [YScope CLP core][clp-core-docs] as a Python distribution, providing the CLP
+core command line tools and a Python binding for performing CLP archive operations programmatically.
 
+## Installation
+
+To install the package:
+
+```shell
+pip install yscope-clp-core
 ```
-pip install clp-core
-```
 
-> [!IMPORTANT]
-> The current package only includes `clp-s`. Other CLP core tools will be added in future releases.
+See the PyPI project page for [release][pypi-release] details.
 
-> [!IMPORTANT]
-> The current package is built inside [manylinux] containers. When running in Debian to use network
-> related features, you may see the following errors:
-> ```
-> 2025-12-05T15:45:57.770-05:00 [error] Encountered curl error while ingesting https://yscope.s3.us-east-2.amazonaws.com/sample-logs/cockroachdb.clp.zst - Code: 77 - Message: error setting certificate verify locations:
-> CAfile: /etc/pki/tls/certs/ca-bundle.crt
-> CApath: none
-> ```
-> This is because the CA certificates bundle path is different in Debian-based systems. We will
-> address this issue in a future release.
+## Scope and compatibility
+
+The current package includes:
+* The `clp-s` binary
+* Python APIs `open_archive` and `search_archive` for working with CLP archives.
 
 ## Documentation
 
-For detailed documentation, check the official CLP core documentation [here][clp-core-docs].
+For detailed usage of CLP core features and design documentation, see the official CLP documents:
 
+* [**clp-s**][clp-s-docs]: CLP for JSON logs.
 
-[clp-core-docs]: https://docs.yscope.com/clp/main/user-docs/core-overview.html
-[manylinux]: https://github.com/pypa/manylinux
+[clp-core-docs]: https://docs.yscope.com/clp/main/user-docs/index.html#core
+[clp-s-docs]: https://docs.yscope.com/clp/main/user-docs/core-clp-s
+[pypi-release]: https://pypi.org/project/yscope-clp-core
