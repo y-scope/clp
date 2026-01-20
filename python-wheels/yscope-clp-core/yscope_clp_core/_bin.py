@@ -5,7 +5,7 @@ import subprocess
 import sys
 from importlib.resources import files
 from pathlib import Path
-from typing import Any
+from typing import NoReturn
 
 
 @functools.cache
@@ -27,24 +27,18 @@ def _get_clp_exe(name: str) -> Path:
     raise FileNotFoundError(err_msg)
 
 
-def _run_clp_exe(name: str, *args: Any) -> int:
+def _run_clp_exe(name: str, args: list[str]) -> int:
     """
     Invokes a bundled CLP core executable as a subprocess.
-
-    If no arguments are provided, forwards the current process command line arguments.
 
     :param name: Name of the executable to run.
     :param args: Arguments to pass to the executable.
     :return: The subprocess exit code.
     """
-    command = [str(_get_clp_exe(name))]
-    if args:
-        command += list(args)
-    else:
-        command += sys.argv[1:]
+    command = [str(_get_clp_exe(name)), *args]
     return subprocess.call(command)
 
 
-def clp_s() -> None:
+def clp_s() -> NoReturn:
     """Entry point that dispatches to the clp_s executable."""
-    raise SystemExit(_run_clp_exe("clp-s"))
+    sys.exit(_run_clp_exe("clp-s", sys.argv[1:]))
