@@ -204,6 +204,7 @@ epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
 void TimestampDictionaryWriter::clear() {
     m_next_id = 0;
     m_string_patterns_and_ids.clear();
+    m_numeric_pattern_to_id.clear();
     m_column_id_to_range.clear();
 }
 }  // namespace clp_s
