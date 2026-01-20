@@ -60,7 +60,8 @@ class CompressionKwargs(TypedDict, total=False):
     :param compression_level: An integer from 1 to 19 controlling the level of compression; `1` is
         fastest and produces the least compression, and `19` is the slowest and produces the most
         compression. The default is `3`.
-    :param timestamp_key: Path (e.g. x.y) for the field containing the log event's timestamp.
+    :param timestamp_key: Path (e.g. x.y) for the field containing the log event's timestamp. If
+        None, no timestamp field is assumed.
     """
 
     compression_level: int
@@ -72,7 +73,7 @@ class DecompressionKwargs(TypedDict, total=False):
     Keyword arguments controlling archive decompression behavior.
 
     :param encoding: Same as the argument in the built-in `open()` function. The name of encoding
-        used to decode or encode. the file.
+        used to decode or encode the file.
     :param errors: Same as the argument in the built-in `open()` function. An optional string that
         specifies how encoding and decoding errors are to be handled.
     """
@@ -86,7 +87,7 @@ class SearchKwargs(TypedDict, total=False):
     Keyword arguments controlling archive search behavior.
 
     :param encoding: Same as the argument in the built-in `open()` function. The name of encoding
-        used to decode or encode. the file.
+        used to decode or encode the file.
     :param errors: Same as the argument in the built-in `open()` function. An optional string that
         specifies how encoding and decoding errors are to be handled.
     """
