@@ -1,6 +1,6 @@
 [project]
 name = "clp-mcp-server"
-version = "0.7.1-dev"
+version = "0.8.0"
 description = "MCP server for CLP"
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"

@@ -16,7 +16,7 @@ image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
-    tag: "main"
+    tag: "0.8.0"
 
 # - If false: Single-node deployment.
 #   - PVs use local storage bound to a single node.

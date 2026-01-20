@@ -5,4 +5,4 @@ compressed data without decompression. CLP's compression ratio is significantly 
 general-purpose compressors like gzip.
 
 For setup and usage instructions, see
-https://docs.yscope.com/clp/main/user-docs/quick-start-overview
+https://docs.yscope.com/clp/v0.8.0/user-docs/quick-start-overview
