@@ -27,5 +27,4 @@ For detailed usage of CLP core features and design documentation, see the offici
 
 [clp-core-docs]: https://docs.yscope.com/clp/main/user-docs/index.html#core
 [clp-s-docs]: https://docs.yscope.com/clp/main/user-docs/core-clp-s
-[manylinux]: https://github.com/pypa/manylinux
 [pypi-release]: https://pypi.org/project/yscope-clp-core
