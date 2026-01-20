@@ -37,9 +37,7 @@ constexpr std::string_view cTestEndToEndValidFormattedFloatInputFile{
 constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
         "test_invalid_formatted_float.jsonl"
 };
-constexpr std::string_view cTestEndToEndTimestampInputFile{
-        "test_timestamp.jsonl"
-};
+constexpr std::string_view cTestEndToEndTimestampInputFile{"test_timestamp.jsonl"};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
