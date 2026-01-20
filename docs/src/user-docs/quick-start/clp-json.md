@@ -101,6 +101,7 @@ Then, install the Helm chart:
 # Clone the repository (if you haven't already)
 git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
 cd clp/tools/deployment/package-helm
+
 helm install clp . \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
