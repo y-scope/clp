@@ -26,7 +26,7 @@ from clp_core._except import ClpCoreRuntimeError
 @overload
 def open_archive(
     file: ArchiveInputSource,
-    mode: Literal["wb"],
+    mode: Literal["w"],
     **kwargs: Unpack[CompressionKwargs],
 ) -> ClpArchiveWriter: ...
 
@@ -41,7 +41,7 @@ def open_archive(
 
 def open_archive(
     file: ArchiveInputSource,
-    mode: Literal["r", "wb"] = "r",
+    mode: Literal["r", "w"] = "r",
     **kwargs: Any,
 ) -> ClpArchiveWriter | ClpArchiveReader:
     """
@@ -56,11 +56,11 @@ def open_archive(
     :param file: Archive sink or source. Must be either a filesystem path or a binary I/O object.
         When a binary stream is provided, seeking must be performed before creating the archive
         handler. The stream is then used directly without further seek operations.
-    :param mode: Archive open mode. Use "wb" to create a new archive or overwrite an existing one,
+    :param mode: Archive open mode. Use "w" to create a new archive or overwrite an existing one,
         or "r" to open an existing archive for reading.
-    :param kwargs: Mode dependent keyword arguments for archive handler operations. For "wb", see
+    :param kwargs: Mode dependent keyword arguments for archive handler operations. For "w", see
         `CompressionKwargs`. For "r", see `DecompressionKwargs`.
-    :return: An archive handler instance. For "wb", returns a `ClpArchiveWriter`, which controls how
+    :return: An archive handler instance. For "w", returns a `ClpArchiveWriter`, which controls how
         and which log data is written to the archive. For "r", returns a `ClpArchiveReader`, which
         allows iteration over log events in their original order.
     :raise BadArchiveSourceError: If the archive source type is not supported.
@@ -69,7 +69,7 @@ def open_archive(
     """
     if mode == "r":
         return ClpArchiveReader(file, **kwargs)
-    if mode == "wb":
+    if mode == "w":
         return ClpArchiveWriter(file, **kwargs)
     err_msg = f"Unsupported archive open mode `{mode}`."
     raise ClpCoreRuntimeError(err_msg)
