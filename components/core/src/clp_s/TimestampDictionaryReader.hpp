@@ -37,6 +37,21 @@ public:
     std::string get_string_encoding(epochtime_t epoch, uint64_t format_id) const;
 
     /**
+     * Marshals and appends the `timestamp` to the `buffer` by interpreting the timestamp pattern
+     * referenced by `format_id` as a `clp_s::timestamp_parser::TimestampPattern`.
+     * @param timestamp
+     * @param format_id
+     * @param buffer
+     * @throws OperationFailed if the format indicated by `format_id` cannot be interpreted as a
+     * `clp_s::timestamp_parser::TimestampPattern`.
+     */
+    void append_timestamp_to_buffer(
+            epochtime_t timestamp,
+            uint64_t format_id,
+            std::string& buffer
+    ) const { /*NO-OP until follow-up PR*/ }
+
+    /**
      * Gets iterators for the timestamp patterns
      * @return begin and end iterators for the timestamp patterns
      */
