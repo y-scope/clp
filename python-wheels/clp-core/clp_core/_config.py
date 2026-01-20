@@ -6,6 +6,7 @@ from typing import Any, IO
 from typing_extensions import TypedDict
 
 ArchiveInputSource = str | os.PathLike[str] | IO[bytes]
+FILE_OBJ_COPY_CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
 @dataclass

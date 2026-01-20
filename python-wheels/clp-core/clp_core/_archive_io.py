@@ -18,6 +18,7 @@ from clp_core._config import (
     ClpQuery,
     CompressionKwargs,
     DecompressionKwargs,
+    FILE_OBJ_COPY_CHUNK_SIZE,
     LogEvent,
     SearchKwargs,
 )
@@ -122,7 +123,9 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
         if self._temp_archive_dir is not None:
             with _get_single_file_in_dir(self._archive_dir).open("rb") as archive_file:
-                shutil.copyfileobj(archive_file, cast("IO[bytes]", self._file), length=1024 * 1024)
+                shutil.copyfileobj(
+                    archive_file, cast("IO[bytes]", self._file), length=FILE_OBJ_COPY_CHUNK_SIZE
+                )
 
     def close(self) -> None:
         """Cleans up all temporary resources used by the archive writer."""

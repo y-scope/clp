@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import IO
 
+from clp_core._config import FILE_OBJ_COPY_CHUNK_SIZE
 from clp_core._except import (
     BadArchiveSourceError,
     ClpCoreRuntimeError,
@@ -87,7 +88,7 @@ def _write_stream_to_temp_file(
 
     temp_file_path_str = temp_file.name
     try:
-        shutil.copyfileobj(stream, temp_file, length=1024 * 1024)
+        shutil.copyfileobj(stream, temp_file, length=FILE_OBJ_COPY_CHUNK_SIZE)
     except Exception as e:
         temp_file.close()
         Path(temp_file_path_str).unlink(missing_ok=True)
