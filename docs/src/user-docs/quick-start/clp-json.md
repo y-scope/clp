@@ -98,9 +98,13 @@ EOF
 Then, install the Helm chart:
 
 ```bash
-# Clone the repository (if you haven't already)
-git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
-cd clp/tools/deployment/package-helm
+# Download and extract the Helm chart from the CLP repository.
+mkdir -p "$HOME/clp-package-helm"
+curl --silent \
+     --location https://github.com/y-scope/clp/archive/refs/heads/DOCS_VAR_CLP_GIT_REF.tar.gz \
+  | tar --extract --gzip --strip-components=4 --directory "$HOME/clp-package-helm" \
+    "clp-DOCS_VAR_CLP_GIT_REF/tools/deployment/package-helm"
+cd "$HOME/clp-package-helm"
 
 helm install clp . \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
