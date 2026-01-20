@@ -101,8 +101,8 @@ Then, install the Helm chart:
 # Download and extract the Helm chart from the CLP repository.
 mkdir -p "$HOME/clp-package-helm"
 curl \
-    --silent \
-    --location https://github.com/y-scope/clp/archive/refs/heads/DOCS_VAR_CLP_GIT_REF.tar.gz \
+  --silent \
+  --location https://github.com/y-scope/clp/archive/refs/heads/DOCS_VAR_CLP_GIT_REF.tar.gz \
   | tar \
     --extract \
     --gzip \
