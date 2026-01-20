@@ -368,8 +368,8 @@ class TimestampColumnReader : public BaseColumnReader {
 public:
     // Constructor
     TimestampColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
-            : BaseColumnReader(id),
-              m_timestamp_dict(std::move(timestamp_dict)),
+            : BaseColumnReader{id},
+              m_timestamp_dict{std::move(timestamp_dict)},
               m_timestamps{id} {}
 
     // Destructor
@@ -378,11 +378,10 @@ public:
     // Methods inherited from BaseColumnReader
     void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override { return NodeType::Timestamp; }
+    auto get_type() -> NodeType override { return NodeType::Timestamp; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 

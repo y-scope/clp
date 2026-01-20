@@ -29,14 +29,8 @@ void Int64ColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 auto DeltaEncodedInt64ColumnWriter::add_value(int64_t value) -> size_t {
-    if (0 == m_values.size()) {
-        m_cur = value;
-        m_values.emplace_back(m_cur);
-    } else {
-        auto next = value;
-        m_values.emplace_back(next - m_cur);
-        m_cur = next;
-    }
+    m_values.emplace_back(value - m_cur);
+    m_cur = value;
     return sizeof(int64_t);
 }
 
@@ -171,16 +165,16 @@ void VariableStringColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_var_dict_ids.data()), size);
 }
 
-size_t TimestampColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    auto const& encoded_timestamp = std::get<std::pair<epochtime_t, uint64_t>>(value);
-    auto encoded_timestamp_size{m_timestamps.add_value(encoded_timestamp.first)};
-    m_timestamp_encodings.emplace_back(encoded_timestamp.second);
+auto TimestampColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
+    auto const [timestamp, encoding] = std::get<std::pair<epochtime_t, uint64_t>>(value);
+    auto const encoded_timestamp_size{m_timestamps.add_value(timestamp)};
+    m_timestamp_encodings.emplace_back(encoding);
     return encoded_timestamp_size + sizeof(uint64_t);
 }
 
 void TimestampColumnWriter::store(ZstdCompressor& compressor) {
     m_timestamps.store(compressor);
-    size_t encodings_size{m_timestamp_encodings.size() * sizeof(uint64_t)};
+    size_t const encodings_size{m_timestamp_encodings.size() * sizeof(uint64_t)};
     compressor.write(reinterpret_cast<char const*>(m_timestamp_encodings.data()), encodings_size);
 }
 }  // namespace clp_s

@@ -30,7 +30,7 @@ void DeltaEncodedInt64ColumnReader::load(BufferViewReader& reader, uint64_t num_
     }
 }
 
-int64_t DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) {
+auto DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) -> int64_t {
     if (m_cur_idx == idx) {
         return m_cur_value;
     }
@@ -259,9 +259,8 @@ void TimestampColumnReader::load(BufferViewReader& reader, uint64_t num_messages
     m_timestamp_encodings = reader.read_unaligned_span<uint64_t>(num_messages);
 }
 
-std::variant<int64_t, double, std::string, uint8_t> TimestampColumnReader::extract_value(
-        uint64_t cur_message
-) {
+auto TimestampColumnReader::extract_value(uint64_t cur_message)
+        -> std::variant<int64_t, double, std::string, uint8_t> {
     std::string ret;
     m_timestamp_dict->append_timestamp_to_buffer(
             m_timestamps.get_value_at_idx(cur_message),

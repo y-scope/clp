@@ -245,13 +245,13 @@ private:
 class TimestampColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit TimestampColumnWriter(int32_t id) : BaseColumnWriter(id), m_timestamps{id} {}
+    explicit TimestampColumnWriter(int32_t id) : BaseColumnWriter{id}, m_timestamps{id} {}
 
     // Destructor
     ~TimestampColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    size_t add_value(ParsedMessage::variable_t& value) override;
+    auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     void store(ZstdCompressor& compressor) override;
 
