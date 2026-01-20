@@ -71,7 +71,7 @@ def open_archive(
         return ClpArchiveReader(file, **kwargs)
     if mode == "w":
         return ClpArchiveWriter(file, **kwargs)
-    err_msg = f"Unsupported archive open mode `{mode}`."
+    err_msg = f"Unsupported archive open mode `{mode}`. Please choose from [`r`, `w`]."
     raise ClpCoreRuntimeError(err_msg)
 
 
