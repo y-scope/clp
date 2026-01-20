@@ -1,0 +1,67 @@
+name: "clp-package-helm"
+
+on:
+  pull_request:
+    paths:
+      - "tools/deployment/package-helm/**"
+      - ".github/workflows/clp-package-helm.yaml"
+  push:
+    paths:
+      - "tools/deployment/package-helm/**"
+      - ".github/workflows/clp-package-helm.yaml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: "lint"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        with:
+          submodules: "recursive"
+
+          # Fetch all history for all branches; otherwise, `helm lint` would complain about not
+          # finding the `origin/main` branch.
+          fetch-depth: 0
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli@3.44.0"
+
+      - name: "Lint Helm charts"
+        shell: "bash"
+        run: "task lint:check-helm"
+
+  release:
+    if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+    needs: "lint"
+    name: "release"
+    runs-on: "ubuntu-24.04"
+    permissions:
+      # To create releases and push to gh-pages branch
+      contents: "write"
+    steps:
+      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: "Configure Git"
+        shell: "bash"
+        run: |-
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: "Run chart-releaser"
+        uses: "helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f"  # v1.7.0
+        with:
+          charts_dir: "tools/deployment"
+        env:
+          CR_TOKEN: "${{secrets.GITHUB_TOKEN}}"
