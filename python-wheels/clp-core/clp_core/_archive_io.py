@@ -325,7 +325,8 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         self._search_proc: subprocess.Popen[str] | None = None
         self._search_fp: IO[str] | None = None
         popen_kwargs: dict[str, Any] = {
-            "capture_output": True,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
             "text": True,
             "bufsize": 1,  # flushes each line
         }
