@@ -8,7 +8,7 @@ from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import TracebackType
-from typing import cast, IO
+from typing import Any, cast, IO
 
 from typing_extensions import Unpack
 
@@ -119,7 +119,12 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             compress_cmd.extend(["--timestamp-key", self._timestamp_key])
         compress_cmd.append(str(self._archive_dir))
         compress_cmd.extend(str(p) for p in self._files_to_compress)
-        subprocess.run(compress_cmd, check=True)
+
+        try:
+            subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE, text=True)
+        except subprocess.CalledProcessError as e:
+            err_msg = f"Compression for archive {self._archive_dir} failed: {e.stderr.strip()}"
+            raise ClpCoreRuntimeError(err_msg) from e
 
         if self._temp_archive_dir is not None:
             with _get_single_file_in_dir(self._archive_dir).open("rb") as archive_file:
@@ -211,7 +216,12 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
             str(self._archive_path),
             self._decompression_temp_dir.name,
         ]
-        subprocess.run(decompress_cmd, check=True)
+
+        try:
+            subprocess.run(decompress_cmd, check=True, stderr=subprocess.PIPE, text=True)
+        except subprocess.CalledProcessError as e:
+            err_msg = f"Decompression for archive {self._archive_path} failed: {e.stderr.strip()}"
+            raise ClpCoreRuntimeError(err_msg) from e
 
         self._decomp_fp: IO[str] | None
         self._decomp_fp = _get_single_file_in_dir(Path(self._decompression_temp_dir.name)).open(
@@ -314,15 +324,18 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
 
         self._search_proc: subprocess.Popen[str] | None = None
         self._search_fp: IO[str] | None = None
+        popen_kwargs: dict[str, Any] = {
+            "capture_output": True,
+            "text": True,
+            "bufsize": 1,  # flushes each line
+        }
+        if self._encoding is not None:
+            popen_kwargs["encoding"] = self._encoding
+        if self._errors is not None:
+            popen_kwargs["errors"] = self._errors
+
         try:
-            self._search_proc = subprocess.Popen(
-                search_cmd,
-                stdout=subprocess.PIPE,
-                text=True,
-                encoding=self._encoding,
-                errors=self._errors,
-                bufsize=1,  # flushes each line
-            )
+            self._search_proc = subprocess.Popen(search_cmd, **popen_kwargs)
         except Exception as e:
             err_msg = f"Failed to query archive at {self._archive_path}."
             raise ClpCoreRuntimeError(err_msg) from e
@@ -347,9 +360,10 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         line = self._search_fp.readline()
         if 0 == len(line):
             # Check if the search hit EOF or erred midway
-            rc = self._search_proc.wait()
+            _, stderr = self._search_proc.communicate()
+            rc = self._search_proc.returncode
             if rc != 0:
-                raise subprocess.CalledProcessError(rc, self._search_proc.args)
+                raise subprocess.CalledProcessError(rc, self._search_proc.args, stderr=stderr)
             raise StopIteration
 
         return LogEvent(kv_pairs=json.loads(line.rstrip("\n")))
