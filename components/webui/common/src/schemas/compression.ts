@@ -114,8 +114,6 @@ const ClpIoS3InputConfigSchema = Type.Object({
  */
 const ClpIoOutputConfigSchema = Type.Object({
     compression_level: Type.Number(),
-    tags: Type.Union([Type.Array(Type.String()),
-        Type.Null()]),
     target_archive_size: Type.Number(),
     target_dictionaries_size: Type.Number(),
     target_encoded_file_size: Type.Number(),
