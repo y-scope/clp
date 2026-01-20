@@ -47,10 +47,10 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     } else if (m_timestamp_column->get_type() == NodeType::Float) {
         m_get_timestamp = [this]() {
             return static_cast<epochtime_t>(
-                           std::get<double>(static_cast<FloatColumnReader*>(m_timestamp_column)
-                                                    ->extract_value(m_cur_message))
-                   )
-                   * cNanosecondsInSecond;
+                    std::get<double>(static_cast<FloatColumnReader*>(m_timestamp_column)
+                                             ->extract_value(m_cur_message))
+                    * cNanosecondsInSecond
+            );
         };
     }
 }
