@@ -382,8 +382,14 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
 
         if self._search_proc is not None:
             with suppress(OSError):
-                self._search_proc.wait()
-            self._search_proc = None
+                self._search_proc.terminate()
+            try:
+                with suppress(OSError):
+                    self._search_proc.wait(timeout=0)
+            except subprocess.TimeoutExpired:
+                self._search_proc.kill()
+            finally:
+                self._search_proc = None
 
     def __next__(self) -> LogEvent:
         return self.get_next_log_event()
