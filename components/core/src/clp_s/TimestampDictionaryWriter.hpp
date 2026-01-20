@@ -13,6 +13,7 @@
 
 #include "SchemaTree.hpp"
 #include "TimestampEntry.hpp"
+#include "TraceableException.hpp"
 
 namespace clp_s {
 class TimestampDictionaryWriter {
@@ -26,7 +27,15 @@ public:
     };
 
     // Constructors
-    TimestampDictionaryWriter() {}
+    explicit TimestampDictionaryWriter() {
+        auto quoted_patterns_result{timestamp_parser::get_all_default_quoted_timestamp_patterns()};
+        auto numeric_patterns_result{timestamp_parser::get_default_numeric_timestamp_patterns()};
+        if (quoted_patterns_result.has_error() || numeric_patterns_result.has_error()) {
+            throw OperationFailed(ErrorCode::ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        m_quoted_timestamp_patterns = std::move(quoted_patterns_result.value());
+        m_numeric_timestamp_patterns = std::move(numeric_patterns_result.value());
+    }
 
     /**
      * Writes the timestamp dictionary to a buffered stream.
@@ -111,12 +120,8 @@ private:
 
     std::unordered_map<int32_t, TimestampEntry> m_column_id_to_range;
 
-    std::vector<timestamp_parser::TimestampPattern> m_quoted_timestamp_patterns{
-            timestamp_parser::get_all_default_quoted_timestamp_patterns().assume_value()
-    };
-    std::vector<timestamp_parser::TimestampPattern> m_numeric_timestamp_patterns{
-            timestamp_parser::get_default_numeric_timestamp_patterns().assume_value()
-    };
+    std::vector<timestamp_parser::TimestampPattern> m_quoted_timestamp_patterns;
+    std::vector<timestamp_parser::TimestampPattern> m_numeric_timestamp_patterns;
 };
 }  // namespace clp_s
 
