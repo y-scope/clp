@@ -19,6 +19,7 @@ def _get_clp_exe(name: str) -> Path:
 
     :param name: Name of the executable to locate.
     :return: Path to the executable.
+    :raise FileNotFoundError: If the executable cannot be found.
     """
     exe = Path(str(files("yscope_clp_core") / f"bin/{name}"))
     if exe.exists():
