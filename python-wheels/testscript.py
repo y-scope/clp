@@ -31,20 +31,20 @@ def main0():
     in_memory_input_fd = io.StringIO()
     local_input_file = Path("input_log.jsonl")
 
-    with local_input_file.open("wb") as local_input_fd:
+    with local_input_file.open("w") as local_input_fd:
         for _ in range(10000):
             line = generate_json_line()
             in_memory_input_fd.write(line)
-            local_input_fd.write(line.encode())
+            local_input_fd.write(line)
 
     # Build an archive from the local file into an in memory buffer
     in_memory_archive_fd = io.BytesIO()
-    with open_archive(in_memory_archive_fd, mode="wb", compression_level=5) as f:
+    with open_archive(in_memory_archive_fd, mode="w", compression_level=5) as f:
         f.add(local_input_file)
 
     # Build a local archive directly from the in memory input
     local_archive = Path("archive")
-    with open_archive(local_archive, mode="wb", compression_level=12) as f:
+    with open_archive(local_archive, mode="w", compression_level=12) as f:
         in_memory_input_fd.seek(0)
         f.add(in_memory_input_fd)
 
