@@ -30,7 +30,6 @@ const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
     },
     output: {
         compression_level: settings.ArchiveOutputCompressionLevel,
-        tags: null,
         target_archive_size: settings.ArchiveOutputTargetArchiveSize,
         target_dictionaries_size: settings.ArchiveOutputTargetDictionariesSize,
         target_encoded_file_size: settings.ArchiveOutputTargetEncodedFileSize,
