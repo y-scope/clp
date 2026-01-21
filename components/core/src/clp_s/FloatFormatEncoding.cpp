@@ -76,7 +76,7 @@ auto trim_leading_zeros(std::string_view scientific_notation, size_t start, size
     }
     size_t actual_number_of_zeros_to_trim{0};
     auto const limit{
-            num_exp_digits > sci_str.length() ? size_t{0} : sci_str.length() - num_exp_digits
+            num_exp_digits > sci_str.length() ? size_t{0} : (sci_str.length() - num_exp_digits)
     };
     for (size_t i{start}; i < limit; ++i) {
         if ('0' == sci_str[i]) {

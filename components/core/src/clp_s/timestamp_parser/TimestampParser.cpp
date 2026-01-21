@@ -915,7 +915,7 @@ auto TimestampPattern::create(std::string_view pattern)
             pattern.size() >= 2 && '"' == pattern.front() && '"' == pattern.back()
     };
     size_t const start_idx{is_quoted_pattern ? size_t{1} : size_t{0}};
-    size_t const end_idx{is_quoted_pattern ? pattern.size() - 1 : pattern.size()};
+    size_t const end_idx{is_quoted_pattern ? (pattern.size() - 1) : pattern.size()};
     bool escaped{false};
     for (size_t pattern_idx{start_idx}; pattern_idx < end_idx; ++pattern_idx) {
         auto const cur_format_specifier{pattern.at(pattern_idx)};
