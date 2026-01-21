@@ -48,8 +48,9 @@ pub struct QueryConfig {
     #[serde(default)]
     pub ignore_case: bool,
 
-    /// Whether to buffer results in `MongoDB` or files. If `true`, results will be stored in
-    /// `MongoDB`.
+    /// Whether to buffer search results in `MongoDB`.
+    /// By default, search results are buffered in temporary files. When set to `true`, results will
+    /// be stored in `MongoDB` instead.
     #[serde(default)]
     pub buffer_results_in_mongodb: bool,
 }
