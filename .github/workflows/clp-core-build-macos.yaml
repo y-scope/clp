@@ -2,33 +2,22 @@ name: "clp-core-build-macos"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".github/workflows/clp-core-build-macos.yaml"
       - ".gitmodules"
       - "components/core/cmake/**"
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
+      - "components/core/tools/scripts/lib_install/pipx-packages/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "taskfile.yaml"
       - "taskfiles/**"
       - "tools/scripts/deps-download/**"
   push:
-    paths:
-      - ".github/workflows/clp-core-build-macos.yaml"
-      - ".gitmodules"
-      - "components/core/cmake/**"
-      - "components/core/CMakeLists.txt"
-      - "components/core/src/**"
-      - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos/**"
-      - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
-      - "taskfile.yaml"
-      - "taskfiles/**"
-      - "tools/scripts/deps-download/**"
+    paths: *monitored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
