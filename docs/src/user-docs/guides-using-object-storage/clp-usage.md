@@ -31,6 +31,8 @@ sbin/compress-from-s3.sh \
   formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<object-key>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<object-key>`
+* `<object-url>` can also be an object stored in an S3-compatible storage:
+  * `http://<host>:<port>/<bucket-name>/<object-key>`
 * The fields in `<object-url>` are as follows:
   * `<bucket-name>` is the name of the S3 bucket containing your logs.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
@@ -84,6 +86,8 @@ sbin/compress-from-s3.sh \
   of two formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<key-prefix>`
+* `<key-prefix-url>` can also be a key prefix from an S3-compatible storage:
+  * `http://<host>:<port>/<bucket-name>/<key-prefix>`
 * The fields in `<key-prefix-url>` are as follows:
   * `<bucket-name>` is the name of the S3 bucket containing your logs.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
