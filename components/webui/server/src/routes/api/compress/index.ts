@@ -65,6 +65,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 paths,
                 dataset,
                 timestampKey,
+                unstructured,
             } = request.body;
 
             const jobConfig: ClpIoConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
@@ -83,6 +84,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 }
                 if ("undefined" !== typeof timestampKey) {
                     jobConfig.input.timestamp_key = timestampKey;
+                }
+                if (true === unstructured) {
+                    jobConfig.input.unstructured = true;
                 }
             }
 
