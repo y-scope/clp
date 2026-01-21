@@ -3,12 +3,14 @@ name: "clp-package-helm"
 on:
   pull_request:
     paths:
-      - "tools/deployment/package-helm/**"
+      - ".cr.yaml"
       - ".github/workflows/clp-package-helm.yaml"
+      - "tools/deployment/package-helm/**"
   push:
     paths:
-      - "tools/deployment/package-helm/**"
+      - ".cr.yaml"
       - ".github/workflows/clp-package-helm.yaml"
+      - "tools/deployment/package-helm/**"
   workflow_dispatch:
 
 permissions: {}
@@ -21,7 +23,6 @@ concurrency:
 
 jobs:
   lint:
-    name: "lint"
     runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
@@ -41,9 +42,11 @@ jobs:
         run: "task lint:check-helm"
 
   release:
-    if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+    # Release from `main` and `vA.B.C` release branches.
+    if: >-
+      github.event_name != 'pull_request'
+      && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/v'))
     needs: "lint"
-    name: "release"
     runs-on: "ubuntu-24.04"
     permissions:
       # To create releases and push to gh-pages branch
@@ -62,6 +65,9 @@ jobs:
       - name: "Run chart-releaser"
         uses: "helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f"  # v1.7.0
         with:
+          config: ".cr.yaml"
           charts_dir: "tools/deployment"
+          # Only mark as the latest for release branches.
+          mark_as_latest: "${{github.ref != 'refs/heads/main'}}"
         env:
           CR_TOKEN: "${{secrets.GITHUB_TOKEN}}"
