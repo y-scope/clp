@@ -1,1 +1,0 @@
-release-name-template: "clp-package-helm-{{ .Version }}"

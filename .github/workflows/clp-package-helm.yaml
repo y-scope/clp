@@ -3,13 +3,13 @@ name: "clp-package-helm"
 on:
   pull_request:
     paths:
-      - ".cr.yaml"
       - ".github/workflows/clp-package-helm.yaml"
+      - "taskfiles/helm.yaml"
       - "tools/deployment/package-helm/**"
   push:
     paths:
-      - ".cr.yaml"
       - ".github/workflows/clp-package-helm.yaml"
+      - "taskfiles/helm.yaml"
       - "tools/deployment/package-helm/**"
   workflow_dispatch:
 
@@ -41,33 +41,62 @@ jobs:
         shell: "bash"
         run: "task lint:check-helm"
 
-  release:
-    # Release from `main` and `vA.B.C` release branches.
+  publish:
+    # Publish from `main` and `vA.B.C` release branches.
     if: >-
       github.event_name != 'pull_request'
       && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/v'))
     needs: "lint"
     runs-on: "ubuntu-24.04"
     permissions:
-      # To create releases and push to gh-pages branch
+      # To push to the `gh-pages` branch.
       contents: "write"
     steps:
       - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
         with:
-          fetch-depth: 0
+          submodules: "recursive"
 
-      - name: "Configure Git"
+      - name: "Install task"
         shell: "bash"
+        run: "npm install -g @go-task/cli@3.44.0"
+
+      - name: "Package Helm chart"
+        shell: "bash"
+        run: |-
+          version=$(
+            grep '^version:' "tools/deployment/package-helm/Chart.yaml" \
+              | sed 's/version: *"\(.*\)"/\1/'
+          )
+          echo "CHART_VERSION=$version" >> "$GITHUB_ENV"
+
+          task helm:package
+
+      - name: "Checkout branch `gh-pages`"
+        uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        with:
+          path: "gh-pages"
+          ref: "gh-pages"
+
+      - name: "Update Helm repository"
+        shell: "bash"
+        run: |-
+          . "build/toolchains/helm/env"
+          cp "build/clp-package-helm"/*.tgz "gh-pages/"
+
+          # Update index.yaml, merging with existing index if present.
+          url="${{github.server_url}}/${{github.repository}}/raw/gh-pages"
+          if [[ -f "gh-pages/index.yaml" ]]; then
+            helm repo index "gh-pages" --merge "gh-pages/index.yaml" --url "${url}"
+          else
+            helm repo index "gh-pages" --url "${url}"
+          fi
+
+      - name: "Push to gh-pages branch"
+        shell: "bash"
+        working-directory: "gh-pages"
         run: |-
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: "Run chart-releaser"
-        uses: "helm/chart-releaser-action@cae68fefc6b5f367a0275617c9f83181ba54714f"  # v1.7.0
-        with:
-          config: ".cr.yaml"
-          charts_dir: "tools/deployment"
-          # Only mark as the latest for release branches.
-          mark_as_latest: "${{github.ref != 'refs/heads/main'}}"
-        env:
-          CR_TOKEN: "${{secrets.GITHUB_TOKEN}}"
+          git add "*.tgz" "index.yaml"
+          git commit -m "ci(helm): Publish clp-${{env.CHART_VERSION}} from ${{github.ref_name}} (${{github.sha}})."
+          git push
