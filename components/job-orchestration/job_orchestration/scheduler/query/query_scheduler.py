@@ -627,7 +627,8 @@ def dispatch_job_and_update_db(
         db_conn, new_job, target_archives, clp_metadata_db_conn_params, results_cache_uri
     )
     start_time = datetime.datetime.now()
-    new_job.start_time = start_time
+    if new_job.start_time is None:
+        new_job.start_time = start_time
     set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
