@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -76,6 +77,9 @@ class PackagePathConfig:
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
+    #: Directory where decompressed logs will be stored.
+    package_decompression_dir: Path = field(init=False, repr=True)
+
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
@@ -97,6 +101,9 @@ class PackagePathConfig:
         # Initialize directory for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        object.__setattr__(
+            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -107,6 +114,7 @@ class PackagePathConfig:
 
         # Create directories if they do not already exist.
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
+        self.clp_log_dir.mkdir(parents=True, exist_ok=True)
         self.clp_log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
@@ -119,6 +127,107 @@ class PackagePathConfig:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
+    @property
+    def compress_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "compress.sh"
+
+    @property
+    def decompress_script_path(self) -> Path:
+        """:return: The absolute path to the package decompress script."""
+        return self.clp_package_dir / "sbin" / "decompress.sh"
+
+    @property
+    def search_script_path(self) -> Path:
+        """:return: The absolute path to the package search script."""
+        return self.clp_package_dir / "sbin" / "search.sh"
+
+    @property
+    def archive_manager_script_path(self) -> Path:
+        """:return: The absolute path to the package archive manager script."""
+        return self.clp_package_dir / "sbin" / "admin-tools" / "archive-manager.sh"
+
+    @property
+    def dataset_manager_script_path(self) -> Path:
+        """:return: The absolute path to the package dataset manager script."""
+        return self.clp_package_dir / "sbin" / "admin-tools" / "dataset-manager.sh"
+
+
+@dataclass(frozen=True)
+class PackageCompressionJob:
+    """A compression job for a package test."""
+
+    # The name of the job.
+    job_name: str
+
+    # The mode the job should be running in.
+    mode: str
+
+    # Script path (relative to the CLP package).
+    script_path: Path
+
+    # The path to the logs relative to tests/data/logs (either a file or directory).
+    log_path: Path
+
+    # Flags to specify in the command.
+    flags: dict[str, Any] | None
+
+    # Arguments to specify in the command.
+    args: list[str] | None
+
+
+@dataclass(frozen=True)
+class PackagePostCompressionJob:
+    """A job for a package test."""
+
+    # The name of the job.
+    job_name: str
+
+    # The PackageCompressionJob this job depends on.
+    compression_job: PackageCompressionJob
+
+    # Script path (relative to the CLP package).
+    script_path: Path
+
+    # Flags to specify in the command.
+    flags: dict[str, Any] | None
+
+    # Arguments to specify in the command.
+    args: list[str] | None
+
+    # The path to the file that holds output ground truth, relative to tests/data/ground-truths.
+    output_ground_truth_file: Path
+
+    # Special attribute for `del by-ids` admin command.
+    requires_archive_id: bool = False
+
+
+# Presto filters get their own class because they are not run on the CLP package.
+@dataclass(frozen=True)
+class PrestoFilterJob:
+    """A Presto filter job for a package test."""
+
+    # The name of the job.
+    job_name: str
+
+    # The PackageCompressionJob this job depends on.
+    compression_job: PackageCompressionJob
+
+    # The filter to run on the logs.
+    filter: str
+
+    # The path to the file that holds output ground truth.
+    output_ground_truth_file: Path
+
+
+@dataclass(frozen=True)
+class PackageJobList:
+    """List of jobs to run during a package test."""
+
+    package_compression_jobs: list[PackageCompressionJob]
+    package_post_compression_jobs: list[PackagePostCompressionJob]
+    presto_filter_jobs: list[PrestoFilterJob]
+
 
 @dataclass(frozen=True)
 class PackageConfig:
@@ -127,17 +236,20 @@ class PackageConfig:
     #: Path configuration for this package.
     path_config: PackagePathConfig
 
-    #: Name of the package operation mode.
+    #: Name of the mode of operation represented in this config.
     mode_name: str
 
     #: The list of CLP components that this package needs.
     component_list: list[str]
 
-    #: The Pydantic representation of a CLP package configuration.
+    #: The ClpConfig instance that describes this package configuration.
     clp_config: ClpConfig
 
     #: The base port from which all ports for the components are derived.
     base_port: int
+
+    #: The list of jobs that this package will run during the test.
+    package_job_list: PackageJobList | None
 
     def __post_init__(self) -> None:
         """Write the temporary config file for this package."""
@@ -164,7 +276,7 @@ class PackageConfig:
 class PackageInstance:
     """Metadata for a running instance of the CLP package."""
 
-    #: The configuration for this package instance.
+    #: Config describing this package instance.
     package_config: PackageConfig
 
     #: The instance ID of the running package.
@@ -175,11 +287,12 @@ class PackageInstance:
 
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
+        path_config = self.package_config.path_config
+
         # Validate that the temp config file exists.
         validate_file_exists(self.package_config.temp_config_file_path)
 
         # Set clp_instance_id from instance-id file.
-        path_config = self.package_config.path_config
         clp_instance_id_file_path = path_config.clp_log_dir / "instance-id"
         validate_file_exists(clp_instance_id_file_path)
         clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
