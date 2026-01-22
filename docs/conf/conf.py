@@ -126,7 +126,7 @@ def _get_helm_version_flag() -> str:
     """
     Reads the Helm chart version from Chart.yaml and returns the appropriate version flag.
 
-    :return: "--version <version>" for stable releases, or "" for dev versions.
+    :return: "--version <version>" for stable releases, or "--devel" for dev versions.
     """
     chart_yaml_path = (
         Path(__file__).parent.parent.parent / "tools/deployment/package-helm/Chart.yaml"
