@@ -78,8 +78,18 @@ jobs:
           ref: "gh-pages"
 
       - name: "Update Helm repository"
+        id: "update-helm-repo"
         shell: "bash"
         run: |-
+          chart_tgz="clp-${{env.CHART_VERSION}}.tgz"
+
+          # Skip if this chart version already exists.
+          if [[ -f "gh-pages/${chart_tgz}" ]]; then
+            echo "Chart ${chart_tgz} already exists, skipping publish."
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           . "build/toolchains/helm/env"
           cp "build/clp-package-helm"/*.tgz "gh-pages/"
 
@@ -92,6 +102,7 @@ jobs:
           fi
 
       - name: "Push to gh-pages branch"
+        if: "steps.update-helm-repo.outputs.skip_publish != 'true'"
         shell: "bash"
         working-directory: "gh-pages"
         run: |-
