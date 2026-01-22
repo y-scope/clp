@@ -18,18 +18,9 @@ export PATH="${pipx_bin_dir}:${PATH}"
 
 pipx uninstall go-task-bin >/dev/null 2>&1 || true
 pipx install "go-task-bin==${required_version}"
-go_task_bin="$(command -v task 2>/dev/null || true)"
+pipx ensurepath --prepend
 
-case "$go_task_bin" in
-    "$pipx_bin_dir"/*)
-        ;;
-    *)
-        echo "Task is not found or not from pipx: ${go_task_bin}"
-        exit 1
-        ;;
-esac
-
-installed_version=$(${go_task_bin} --silent --taskfile "${script_dir}/print-go-task-version.yaml")
+installed_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml")
 if [[ "${installed_version}" != "${required_version}" ]]; then
     echo "Error: Task version ${installed_version} is currently unsupported (must be " \
         "${required_version})."
@@ -40,4 +31,4 @@ if [[ "${installed_version}" != "${required_version}" ]]; then
     exit 1
 fi
 
-echo "Task version ${installed_version} installed at ${go_task_bin} satisfies version requirements."
+echo "Task version ${installed_version} satisfies version requirements."

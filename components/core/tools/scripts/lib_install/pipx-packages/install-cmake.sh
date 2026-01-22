@@ -18,20 +18,11 @@ export PATH="${pipx_bin_dir}:${PATH}"
 
 pipx uninstall cmake >/dev/null 2>&1 || true
 pipx install "cmake>=${required_version_min},<${required_version_major_max_plus_1}"
-cmake_bin="$(command -v cmake)"
+pipx ensurepath --prepend
 
-case "$cmake_bin" in
-    "$pipx_bin_dir"/*)
-        ;;
-    *)
-        echo "CMake is not found or not from pipx: ${cmake_bin}"
-        exit 1
-        ;;
-esac
-
-installed_version=$(${cmake_bin} -E capabilities | jq --raw-output ".version.string")
-installed_version_major=$(${cmake_bin} -E capabilities | jq --raw-output ".version.major")
-installed_version_minor=$(${cmake_bin} -E capabilities | jq --raw-output ".version.minor")
+installed_version=$(cmake -E capabilities | jq --raw-output ".version.string")
+installed_version_major=$(cmake -E capabilities | jq --raw-output ".version.major")
+installed_version_minor=$(cmake -E capabilities | jq --raw-output ".version.minor")
 
 if (("${installed_version_major}" < "${required_version_major_min}")) \
     || (("${installed_version_major}" == "${required_version_major_min}" && \
@@ -46,4 +37,4 @@ if (("${installed_version_major}" < "${required_version_major_min}")) \
     exit 1
 fi
 
-echo "CMake version ${installed_version} installed at ${cmake_bin} satisfies version requirements."
+echo "CMake version ${installed_version} satisfies version requirements."
