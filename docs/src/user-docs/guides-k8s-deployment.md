@@ -526,7 +526,11 @@ kubectl exec -it <pod-name> -- /bin/bash
 To debug Helm chart issues:
 
 ```bash
-helm install clp <repo-or-path/to/chart> --dry-run --debug
+# For debugging the published chart from the repository
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG --dry-run --debug
+
+# For debugging local chart changes during development
+helm install clp /path/to/local/chart --dry-run --debug
 ```
 
 ---
