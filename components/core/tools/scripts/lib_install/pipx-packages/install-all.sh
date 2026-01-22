@@ -15,11 +15,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 "${script_dir}/install-pipx.sh"
 
-# Prepend the pipx bin directory to PATH so pipx-installed build tools take precedence in the
-# following installation and version-check scripts.
-pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
-export PATH="${pipx_bin_dir}:${PATH}"
-
 "${script_dir}/install-cmake.sh"
 "${script_dir}/install-go-task.sh"
 "${script_dir}/install-uv.sh"

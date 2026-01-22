@@ -12,6 +12,6 @@ fi
 pipx_bin_dir_cmd_args+=(pipx environment --value PIPX_BIN_DIR)
 
 "${pipx_bin_dir_cmd_args[@]}" || {
-    echo "Failed to determine pipx bin directory via pipx environment." >&2
+    echo "Failed to determine pipx bin directory via pipx environment (require version ≥ 1.7.0)."
     exit 1
 }

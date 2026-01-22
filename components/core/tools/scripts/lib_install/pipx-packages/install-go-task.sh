@@ -12,31 +12,30 @@ fi
 # We lock to version 3.44.0 to avoid https://github.com/y-scope/clp/issues/1352
 readonly required_version="3.44.0"
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+# Prepend the pipx bin directory to PATH so pipx-installed Task takes precedence.
+pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
+export PATH="${pipx_bin_dir}:${PATH}"
 
+pipx uninstall go-task-bin >/dev/null 2>&1 || true
+pipx install "go-task-bin==${required_version}"
 go_task_bin="$(command -v task 2>/dev/null || true)"
-if [ -n "${go_task_bin}" ]; then
-    package_preinstalled=0
-    echo "Preinstalled Task found at: ${go_task_bin}"
-else
-    package_preinstalled=1
-    pipx install --force "go-task-bin==${required_version}"
-    go_task_bin=$("${script_dir}/find-pipx-bin.sh" go-task-bin task)
-    echo "Pipx Task installed at: ${go_task_bin}"
-fi
+
+case "$go_task_bin" in
+    "$pipx_bin_dir"/*)
+        ;;
+    *)
+        echo "Task is not found or not from pipx: ${go_task_bin}"
+        exit 1
+        ;;
+esac
 
 installed_version=$(${go_task_bin} --silent --taskfile "${script_dir}/print-go-task-version.yaml")
 if [[ "${installed_version}" != "${required_version}" ]]; then
-    echo "Error: Task version ${installed_version} is currently unsupported (must be" \
+    echo "Error: Task version ${installed_version} is currently unsupported (must be " \
         "${required_version})."
-
-    if ((0 == "${package_preinstalled}")); then
-        echo "Please uninstall Task and then re-run the install script."
-    else
-        echo "pipx failed to install the required version of Task."
-        echo "To uninstall, run:"
-        echo "  pipx uninstall go-task-bin"
-    fi
+    echo "pipx failed to install the required version of Task."
+    echo "To uninstall, run:"
+    echo "  pipx uninstall go-task-bin"
 
     exit 1
 fi

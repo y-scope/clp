@@ -12,18 +12,32 @@ readonly required_version_min="${required_version_major_min}.${required_version_
 readonly required_version_major_max=3
 readonly required_version_major_max_plus_1=$((required_version_major_max + 1))
 
+# Prepend the pipx bin directory to PATH so pipx-installed CMake takes precedence.
+pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
+export PATH="${pipx_bin_dir}:${PATH}"
+
 pipx uninstall cmake >/dev/null 2>&1 || true
 pipx install "cmake>=${required_version_min},<${required_version_major_max_plus_1}"
+cmake_bin="$(command -v cmake)"
 
-installed_version=$(cmake -E capabilities | jq --raw-output ".version.string")
-installed_version_major=$(cmake -E capabilities | jq --raw-output ".version.major")
-installed_version_minor=$(cmake -E capabilities | jq --raw-output ".version.minor")
+case "$cmake_bin" in
+    "$pipx_bin_dir"/*)
+        ;;
+    *)
+        echo "CMake is not found or not from pipx: ${cmake_bin}"
+        exit 1
+        ;;
+esac
+
+installed_version=$(${cmake_bin} -E capabilities | jq --raw-output ".version.string")
+installed_version_major=$(${cmake_bin} -E capabilities | jq --raw-output ".version.major")
+installed_version_minor=$(${cmake_bin} -E capabilities | jq --raw-output ".version.minor")
 
 if (("${installed_version_major}" < "${required_version_major_min}")) \
     || (("${installed_version_major}" == "${required_version_major_min}" && \
     "${installed_version_minor}" < "${required_version_minor_min}")) \
     || (("${installed_version_major}" >= "${required_version_major_max_plus_1}")); then
-    echo "Error: CMake version ${installed_version} is unsupported (require" \
+    echo "Error: CMake version ${installed_version} is unsupported (require " \
         "${required_version_min} ≤ version < ${required_version_major_max_plus_1})."
     echo "pipx failed to install the required version of CMake."
     echo "To uninstall, run:"
@@ -32,5 +46,4 @@ if (("${installed_version_major}" < "${required_version_major_min}")) \
     exit 1
 fi
 
-cmake_bin="$(command -v cmake)"
 echo "CMake version ${installed_version} installed at ${cmake_bin} satisfies version requirements."
