@@ -62,14 +62,7 @@ jobs:
 
       - name: "Package Helm chart"
         shell: "bash"
-        run: |-
-          version=$(
-            grep '^version:' "tools/deployment/package-helm/Chart.yaml" \
-              | sed 's/version: *"\(.*\)"/\1/'
-          )
-          echo "CHART_VERSION=$version" >> "$GITHUB_ENV"
-
-          task helm:package
+        run: "task helm:package"
 
       - name: "Checkout branch `gh-pages`"
         uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
@@ -77,11 +70,17 @@ jobs:
           path: "gh-pages"
           ref: "gh-pages"
 
+      - name: "Get chart version"
+        id: "get-chart-version"
+        uses: "mikefarah/yq@065b200af9851db0d5132f50bc10b1406ea5c0a8"  # v4.50.1
+        with:
+          cmd: yq '.version' 'tools/deployment/package-helm/Chart.yaml'
+
       - name: "Update Helm repository"
         id: "update-helm-repo"
         shell: "bash"
         run: |-
-          chart_tgz="clp-${{env.CHART_VERSION}}.tgz"
+          chart_tgz="clp-${{steps.get-chart-version.outputs.result}}.tgz"
 
           # Skip if this chart version already exists.
           if [[ -f "gh-pages/${chart_tgz}" ]]; then
@@ -109,7 +108,7 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
           git add "*.tgz" "index.yaml"
-          commit_message="ci(helm): Publish clp-${{env.CHART_VERSION}}"
+          commit_message="ci(helm): Publish clp-${{steps.get-chart-version.outputs.result}}"
           commit_message+=" from ${{github.ref_name}} (${{github.sha}})."
           git commit -m "$commit_message"
           git push
