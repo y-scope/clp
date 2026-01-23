@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -18,20 +19,20 @@
 #include <log_surgeon/Token.hpp>
 #include <nlohmann/json.hpp>
 
-#include "../../EncodedVariableInterpreter.hpp"
-#include "../../ir/types.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
-#include "../Constants.hpp"
-#include "TimestampPattern.hpp"
-#include "utils.hpp"
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp/ir/LogEvent.hpp>
+#include <clp/ir/types.hpp>
+#include <clp/streaming_archive/Constants.hpp>
+#include <clp/streaming_archive/writer/utils.hpp>
+#include <clp/TimestampPattern.hpp>
 
+namespace clp::streaming_archive::writer {
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
 using std::string;
 using std::vector;
 
-namespace clp::streaming_archive::writer {
 Archive::~Archive() {
     if (m_path.empty() == false || m_file != nullptr
         || m_files_with_timestamps_in_segment.empty() == false
@@ -328,7 +329,7 @@ auto Archive::add_token_to_dicts(
     switch (token_type) {
         case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
         case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-            m_logtype_dict_entry.add_constant(token_view.to_string(), 0, token_view.get_length());
+            m_logtype_dict_entry.add_static_text(token_view.to_string());
             break;
         }
         case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
@@ -403,7 +404,7 @@ auto Archive::add_token_to_dicts(
                     token_view.get_sub_token(token_view.get_start_pos(), capture_start_pos)
                             .to_string_view()
             };
-            m_logtype_dict_entry.add_constant(before_capture, 0, before_capture.size());
+            m_logtype_dict_entry.add_static_text(before_capture);
 
             variable_dictionary_id_t id{};
             m_var_dict.add_entry(
@@ -418,13 +419,13 @@ auto Archive::add_token_to_dicts(
                     token_view.get_sub_token(capture_end_pos, token_view.get_end_pos())
                             .to_string_view()
             };
-            m_logtype_dict_entry.add_constant(after_capture, 0, after_capture.size());
+            m_logtype_dict_entry.add_static_text(after_capture);
             break;
         }
     }
 }
 
-void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) {
+auto Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) -> void {
     epochtime_t timestamp{0};
     TimestampPattern const* timestamp_pattern{nullptr};
     auto const& log_buf{log_view.get_log_output_buffer()};
@@ -489,7 +490,7 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
         {
-            m_logtype_dict_entry.add_constant(token_view.get_delimiter(), 0, 1);
+            m_logtype_dict_entry.add_static_text(token_view.get_delimiter());
             token_view.increment_start_pos();
         }
         add_token_to_dicts(log_view, token_view);
