@@ -391,11 +391,13 @@ auto Archive::add_token_to_dicts(
             };
             if (capture_pos_result.has_error()) {
                 SPDLOG_ERROR(
-                        "Capture group match not found for token {} ({} {})",
+                        "Capture group match not found for token {} ({} {}). Storing token as "
+                        "static text.",
                         log_view.get_log_parser().get_id_symbol(token_type),
                         capture_pos_result.error().category().name(),
                         capture_pos_result.error().message()
                 );
+                m_logtype_dict_entry.add_static_text(token_view.to_string_view());
                 break;
             }
             auto const [capture_start_pos, capture_end_pos]{capture_pos_result.value()};
