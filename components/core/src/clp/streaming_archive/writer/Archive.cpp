@@ -342,6 +342,7 @@ auto Archive::add_token_to_dicts(
             {
                 variable_dictionary_id_t id{};
                 m_var_dict.add_entry(token_view.to_string(), id);
+                m_var_ids.push_back(id);
                 encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                 m_logtype_dict_entry.add_dictionary_var();
             } else {
@@ -360,6 +361,7 @@ auto Archive::add_token_to_dicts(
             {
                 variable_dictionary_id_t id{};
                 m_var_dict.add_entry(token_view.to_string(), id);
+                m_var_ids.push_back(id);
                 encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                 m_logtype_dict_entry.add_dictionary_var();
             } else {
