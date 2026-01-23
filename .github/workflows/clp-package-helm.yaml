@@ -90,10 +90,10 @@ jobs:
             exit 0
           fi
 
-          . "build/toolchains/helm/env"
           cp "build/clp-package-helm"/*.tgz "gh-pages/"
 
           # Update index.yaml, merging with existing index if present.
+          . "build/toolchains/helm/env"
           url="${{github.server_url}}/${{github.repository}}/raw/gh-pages"
           if [[ -f "gh-pages/index.yaml" ]]; then
             helm repo index "gh-pages" --merge "gh-pages/index.yaml" --url "${url}"
