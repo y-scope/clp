@@ -58,7 +58,8 @@ echo "pipx version ${installed_version} satisfies version requirements."
 # already appears in $PATH. Since this script may have modified $PATH earlier, we clear the $PATH
 # variable so that `pipx ensurepath` always updates the rc files.
 echo "Running pipx ensurepath."
+pipx_bin="$(command -v pipx)"
 current_path="${PATH}"
 PATH=""
-pipx ensurepath --prepend
+${pipx_bin} ensurepath --prepend
 PATH="${current_path}"
