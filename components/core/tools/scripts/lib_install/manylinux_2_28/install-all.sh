@@ -7,7 +7,6 @@ set -o pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 "${script_dir}/install-prebuilt-packages.sh"
-"${script_dir}/../pipx-packages/install-all.sh"
 
 pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
 export PATH="${pipx_bin_dir}:${PATH}"

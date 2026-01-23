@@ -7,7 +7,6 @@ set -o pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 "${script_dir}/install-prebuilt-packages.sh"
-"${script_dir}/../pipx-packages/install-all.sh"
 
 # Prepend the pipx bin directory to PATH so pipx-installed build tools take precedence.
 # Required by install-packages-from-source.sh, which installs tools into the pre-baked deps images.

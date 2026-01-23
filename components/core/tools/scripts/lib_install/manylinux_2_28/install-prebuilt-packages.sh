@@ -13,3 +13,7 @@ dnf install -y \
     openssl-devel \
     zlib-devel \
     zlib-static
+
+# Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+"${script_dir}/../pipx-packages/install-all.sh"

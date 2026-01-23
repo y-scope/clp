@@ -14,3 +14,7 @@ apk update && apk add --no-cache \
     openssl-dev \
     zlib-dev \
     zlib-static
+
+# Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+"${script_dir}/../pipx-packages/install-all.sh"

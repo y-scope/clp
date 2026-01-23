@@ -19,3 +19,7 @@ dnf install -y \
     openssl-devel \
     python3-pip \
     unzip
+
+# Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+"${script_dir}/../pipx-packages/install-all.sh"
