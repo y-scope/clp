@@ -12,14 +12,10 @@ readonly required_version_min="${required_version_major_min}.${required_version_
 readonly required_version_major_max=3
 readonly required_version_major_max_plus_1=$((required_version_major_max + 1))
 
-# Prepend the pipx bin directory to PATH so pipx-installed CMake takes precedence.
-pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
-export PATH="${pipx_bin_dir}:${PATH}"
-
 pipx uninstall cmake >/dev/null 2>&1 || true
 pipx install "cmake>=${required_version_min},<${required_version_major_max_plus_1}"
-pipx ensurepath --prepend
 
+hash -d cmake 2>/dev/null || true
 installed_version=$(cmake -E capabilities | jq --raw-output ".version.string")
 installed_version_major=$(cmake -E capabilities | jq --raw-output ".version.major")
 installed_version_minor=$(cmake -E capabilities | jq --raw-output ".version.minor")

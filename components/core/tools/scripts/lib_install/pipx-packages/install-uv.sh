@@ -8,13 +8,10 @@ readonly required_version_major_min=0
 readonly required_version_minor_min=8
 readonly required_version_min="${required_version_major_min}.${required_version_minor_min}"
 
-# Prepend the pipx bin directory to PATH so pipx-installed uv takes precedence.
-pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
-export PATH="${pipx_bin_dir}:${PATH}"
-
 pipx uninstall uv >/dev/null 2>&1 || true
 pipx install "uv>=${required_version_min}"
 
+hash -d uv 2>/dev/null || true
 installed_version=$(uv self version --output-format json | jq --raw-output ".version")
 IFS=. read -r installd_version_major installed_version_minor _ <<<"${installed_version}"
 

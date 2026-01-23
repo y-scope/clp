@@ -12,15 +12,12 @@ fi
 # We lock to version 3.44.0 to avoid https://github.com/y-scope/clp/issues/1352
 readonly required_version="3.44.0"
 
-# Prepend the pipx bin directory to PATH so pipx-installed Task takes precedence.
-pipx_bin_dir="$("${script_dir}/../pipx-packages/get-pipx-bin-dir.sh")"
-export PATH="${pipx_bin_dir}:${PATH}"
-
 pipx uninstall go-task-bin >/dev/null 2>&1 || true
 pipx install "go-task-bin==${required_version}"
-pipx ensurepath --prepend
 
+hash -d task 2>/dev/null || true
 installed_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml")
+
 if [[ "${installed_version}" != "${required_version}" ]]; then
     echo "Error: Task version ${installed_version} is currently unsupported (must be " \
         "${required_version})."

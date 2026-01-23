@@ -8,35 +8,35 @@ readonly required_version_major_min=1
 readonly required_version_minor_min=8
 readonly required_version_min="${required_version_major_min}.${required_version_minor_min}"
 
-# Get python3 path
-python3_bin="$(command -v python3 2>/dev/null || true)"
-pipx_bin="$(command -v pipx 2>/dev/null || true)"
-if [ -n "${pipx_bin}" ]; then
-    # Prefer using pipx default python3 if available
-    pipx_python3_bin="$("${pipx_bin}" environment --value PIPX_DEFAULT_PYTHON 2>/dev/null || true)"
-    if [ -n "${pipx_python3_bin}" ]; then
-        python3_bin="${pipx_python3_bin}"
-    fi
+# Get python3 path. Prefer using pipx default python3 if available.
+pipx_python3_bin="$(pipx environment --value PIPX_DEFAULT_PYTHON 2>/dev/null || true)"
+if [ -n "${pipx_python3_bin}" ]; then
+    # Manylinux / Musllinux
+    python3_bin="${pipx_python3_bin}"
+else
+    # Ubuntu / Centos / Macos
+    python3_bin="$(command -v python3)"
 fi
 
-# Attempt to perform pipx upgrade via pip install regardless of the current pipx version
+# Install pipx if missing, or upgrade it to the latest available version.
 PIP_USER_FLAG=""
-if [ "$(id -u)" -ne 0 ]; then
+if (( EUID != 0 )); then
     PIP_USER_FLAG="--user"
 fi
-if [ -n "${python3_bin}" ]; then
-    pipx_upgrade_cmd="${python3_bin} -m pip install ${PIP_USER_FLAG} -U pipx"
-    ${pipx_upgrade_cmd} >/dev/null 2>&1 || true
-fi
+pipx_install_or_upgrade_cmd=("${python3_bin}" -m pip install ${PIP_USER_FLAG} --upgrade pipx)
+"${pipx_install_or_upgrade_cmd[@]}" || {
+    echo "Error: failed to install or upgrade pipx."
+    exit 1
+}
 
-# Find pipx path and validate version
-pipx_bin="$(command -v pipx 2>/dev/null || true)"
-if [ -z "${pipx_bin}" ]; then
+# Find the most recently installed pipx and validate version
+hash -d pipx 2>/dev/null || true
+if ! command -v pipx >/dev/null 2>&1; then
     echo "Error: failed to automatically install pipx. Please install it manually."
     exit 1
 fi
 
-installed_version="$("${pipx_bin}" --version)"
+installed_version="$(pipx --version)"
 IFS=. read -r installed_version_major installed_version_minor _ <<<"${installed_version}"
 
 if (("${installed_version_major}" < "${required_version_major_min}")) \
@@ -47,5 +47,5 @@ if (("${installed_version_major}" < "${required_version_major_min}")) \
     exit 1
 fi
 
-echo "pipx version ${installed_version} installed at ${pipx_bin} satisfies version requirements."
-"${pipx_bin}" ensurepath --prepend
+echo "pipx version ${installed_version} satisfies version requirements."
+pipx ensurepath --prepend
