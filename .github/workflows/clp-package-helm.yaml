@@ -74,7 +74,7 @@ jobs:
         id: "get-chart-version"
         uses: "mikefarah/yq@065b200af9851db0d5132f50bc10b1406ea5c0a8"  # v4.50.1
         with:
-          cmd: yq '.version' 'tools/deployment/package-helm/Chart.yaml'
+          cmd: "yq '.version' 'tools/deployment/package-helm/Chart.yaml'"
 
       - name: "Update Helm repository"
         id: "update-helm-repo"
