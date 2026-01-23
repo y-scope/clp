@@ -16,6 +16,7 @@ pipx uninstall go-task-bin >/dev/null 2>&1 || true
 pipx install "go-task-bin==${required_version}"
 
 hash -d task 2>/dev/null || true
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 installed_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml")
 
 if [[ "${installed_version}" != "${required_version}" ]]; then
