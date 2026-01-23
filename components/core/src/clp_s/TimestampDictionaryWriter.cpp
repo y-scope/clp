@@ -150,11 +150,11 @@ auto TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp(
     auto const [factor, precision] = timestamp_parser::estimate_timestamp_precision(timestamp);
     auto const epoch_timestamp{timestamp * factor};
     timestamp_entry.ingest_timestamp(epoch_timestamp);
-    auto const pattern{fmt::format("\\{}", precision)};
+    auto pattern{fmt::format("\\{}", precision)};
 
     auto pattern_it{m_numeric_pattern_to_id.find(pattern)};
     if (m_numeric_pattern_to_id.end() == pattern_it) {
-        auto const pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+        auto pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
         if (pattern_result.has_error()) {
             SPDLOG_ERROR("Failed to create timestamp pattern.");
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
