@@ -388,6 +388,15 @@ auto Archive::add_token_to_dicts(
                 break;
             }
 
+            if (captures.value().empty()) {
+                SPDLOG_ERROR(
+                        "Capture group list empty for token {}. Storing token as static text.",
+                        log_view.get_log_parser().get_id_symbol(token_type)
+                );
+                m_logtype_dict_entry.add_static_text(token_view.to_string_view());
+                break;
+            }
+
             auto capture_pos_result{
                     log_view.get_capture_position(token_view, captures.value().at(0))
             };
