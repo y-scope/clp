@@ -55,9 +55,10 @@ fi
 echo "pipx version ${installed_version} satisfies version requirements."
 
 # Pipx ensurepath is idempotent and will not update shell rc files if the pipx bin directory
-# already appears in $PATH. Since this script may have modified $PATH earlier, we temporarily switch
-# to a fresh shell environment $PATH so `pipx ensurepath` gets to run reliabily.
+# already appears in $PATH. Since this script may have modified $PATH earlier, we clear the $PATH
+# variable so that `pipx ensurepath` always updates the rc files.
+echo "Running pipx ensurepath."
 current_path="${PATH}"
-PATH="$(env --ignore-environment bash -c 'echo $PATH')"
+PATH=""
 pipx ensurepath --prepend
 PATH="${current_path}"
