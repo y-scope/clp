@@ -1,0 +1,55 @@
+[project]
+name = "yscope-clp-core"
+version = "0.7.1-beta.1"
+description = "YScope CLP (Compressed Log Processor) Core Python Distribution"
+readme = "README.md"
+authors = [
+    { name = "YScope Inc.", email = "dev@yscope.com" }
+]
+license = "Apache-2.0"
+requires-python = ">=3.10"
+
+[project.scripts]
+"clp-s" = "yscope_clp_core:clp_s"
+
+[project.urls]
+"Homepage" = "https://github.com/y-scope/clp"
+"Issue Tracker" = "https://github.com/y-scope/clp/issues"
+
+[build-system]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+wheel.packages = ["yscope_clp_core"]
+wheel.py-api = "py3"
+cmake.version = ">=3.31.0"
+ninja.version = ">=1.10.0"
+cmake.verbose = true
+logging.level = "DEBUG"
+
+[dependency-groups]
+build = [
+  "auditwheel>=6.5.0",
+  "build>=1.3.0",
+  "patchelf>=0.17.2.4",
+]
+dev = [
+  "mypy>=1.16.0",
+  "ruff>=0.11.12",
+]
+
+[tool.mypy]
+strict = true
+
+# Additional output
+pretty = true
+show_error_code_links = true
+show_error_context = true
+show_error_end = true
+
+[tool.ruff]
+extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
+
+[tool.uv]
+default-groups = ["build", "dev"]

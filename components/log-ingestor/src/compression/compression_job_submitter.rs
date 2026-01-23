@@ -83,7 +83,6 @@ impl CompressionJobSubmitter {
             unstructured: ingestion_job_config.unstructured,
         };
         let output_config = OutputConfig {
-            tags: ingestion_job_config.tags.clone(),
             target_archive_size: archive_output_config.target_archive_size,
             target_dictionaries_size: archive_output_config.target_dictionaries_size,
             target_encoded_file_size: archive_output_config.target_encoded_file_size,
