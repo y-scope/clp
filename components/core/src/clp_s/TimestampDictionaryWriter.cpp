@@ -14,8 +14,8 @@
 namespace clp_s {
 void TimestampDictionaryWriter::write(std::stringstream& stream) {
     write_numeric_value<uint64_t>(stream, m_column_id_to_range.size());
-    for (auto const& range : m_column_id_to_range) {
-        range.second.write_to_stream(stream);
+    for (auto const& [id, range] : m_column_id_to_range) {
+        range.write_to_stream(stream);
     }
 
     write_numeric_value<uint64_t>(
@@ -44,10 +44,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
         std::string_view timestamp,
         bool is_json_literal
 ) -> std::pair<epochtime_t, uint64_t> {
-    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
-    if (m_column_id_to_range.end() == timestamp_entry_it) {
-        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
-    }
+    auto& [_, timestamp_entry]= *m_column_id_to_range.try_emplace(node_id, key).first;
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
     std::string generated_pattern;
@@ -106,6 +103,7 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
 
     std::string generated_pattern;
     for (auto const& [raw_pattern, pattern_and_id] : m_numeric_pattern_to_id) {
+            auto const& [pattern, id] = pattern_and_id;
         auto const parsing_result{timestamp_parser::parse_timestamp(
                 timestamp,
                 pattern_and_id.first,
@@ -127,7 +125,13 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
             generated_pattern
     )};
     if (false == parsing_result.has_value()) {
-        SPDLOG_ERROR("Failed to parse timestamp {} against known timestamp patterns.", timestamp);
+        auto const& error{quoted_pattern_result.error()};
+        SPDLOG_ERROR(
+                "Failed to parse timestamp `{}`: {} - {}",
+                timestamp,
+                error.category().name(),
+                error.message()
+        );
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
