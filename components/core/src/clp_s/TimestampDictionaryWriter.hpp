@@ -110,10 +110,9 @@ public:
     void clear();
 
 private:
-    using pattern_to_id_t = absl::flat_hash_map<std::string, uint64_t>;
-
     // Variables
-    std::vector<std::pair<timestamp_parser::TimestampPattern, uint64_t>> m_string_patterns_and_ids;
+    std::vector<std::pair<timestamp_parser::TimestampPattern, uint64_t>>
+            m_string_pattern_and_id_pairs;
     absl::flat_hash_map<std::string, std::pair<timestamp_parser::TimestampPattern, uint64_t>>
             m_numeric_pattern_to_id;
     uint64_t m_next_id{};

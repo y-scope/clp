@@ -20,9 +20,9 @@ void TimestampDictionaryWriter::write(std::stringstream& stream) {
 
     write_numeric_value<uint64_t>(
             stream,
-            m_string_patterns_and_ids.size() + m_numeric_pattern_to_id.size()
+            m_string_pattern_and_id_pairs.size() + m_numeric_pattern_to_id.size()
     );
-    for (auto const& [quoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+    for (auto const& [quoted_pattern, pattern_id] : m_string_pattern_and_id_pairs) {
         write_numeric_value<uint64_t>(stream, pattern_id);
 
         auto const raw_pattern{quoted_pattern.get_pattern()};
@@ -48,7 +48,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
     std::string generated_pattern;
-    for (auto const& [quoted_pattern, pattern_id] : m_string_patterns_and_ids) {
+    for (auto const& [quoted_pattern, pattern_id] : m_string_pattern_and_id_pairs) {
         auto const parsing_result{timestamp_parser::parse_timestamp(
                 timestamp,
                 quoted_pattern,
@@ -84,7 +84,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
     }
 
     auto const new_pattern_id{m_next_id++};
-    m_string_patterns_and_ids.emplace_back(
+    m_string_pattern_and_id_pairs.emplace_back(
             std::move(quoted_pattern_result.value()),
             new_pattern_id
     );
@@ -198,7 +198,7 @@ epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
 
 void TimestampDictionaryWriter::clear() {
     m_next_id = 0;
-    m_string_patterns_and_ids.clear();
+    m_string_pattern_and_id_pairs.clear();
     m_numeric_pattern_to_id.clear();
     m_column_id_to_range.clear();
 }
