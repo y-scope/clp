@@ -44,7 +44,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
         std::string_view timestamp,
         bool is_json_literal
 ) -> std::pair<epochtime_t, uint64_t> {
-    auto& [_, timestamp_entry]= *m_column_id_to_range.try_emplace(node_id, key).first;
+    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
     std::string generated_pattern;
@@ -59,7 +59,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
             continue;
         }
         auto const epoch_timestamp{parsing_result.value().first};
-        timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+        timestamp_entry.ingest_timestamp(epoch_timestamp);
         return {epoch_timestamp, pattern_id};
     }
 
@@ -71,12 +71,12 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
             generated_pattern
     )};
     if (false == parsing_result.has_value()) {
-        SPDLOG_ERROR("Failed to parse timestamp {} against known timestamp patterns.", timestamp);
+        SPDLOG_ERROR("Failed to parse timestamp `{}` against known timestamp patterns.", timestamp);
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
     auto const [epoch_timestamp, pattern] = parsing_result.value();
-    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+    timestamp_entry.ingest_timestamp(epoch_timestamp);
     auto const quoted_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
     if (quoted_pattern_result.has_error()) {
         SPDLOG_ERROR("Failed to create timestamp pattern.");
@@ -96,14 +96,11 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
         int32_t node_id,
         std::string_view timestamp
 ) -> std::pair<epochtime_t, uint64_t> {
-    auto timestamp_entry_it = m_column_id_to_range.find(node_id);
-    if (m_column_id_to_range.end() == timestamp_entry_it) {
-        timestamp_entry_it = m_column_id_to_range.emplace(node_id, key).first;
-    }
+    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
 
     std::string generated_pattern;
     for (auto const& [raw_pattern, pattern_and_id] : m_numeric_pattern_to_id) {
-            auto const& [pattern, id] = pattern_and_id;
+        auto const& [pattern, id] = pattern_and_id;
         auto const parsing_result{timestamp_parser::parse_timestamp(
                 timestamp,
                 pattern_and_id.first,
@@ -114,29 +111,23 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
             continue;
         }
         auto const epoch_timestamp{parsing_result.value().first};
-        timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+        timestamp_entry.ingest_timestamp(epoch_timestamp);
         return {epoch_timestamp, pattern_and_id.second};
     }
 
-    auto const parsing_result{timestamp_parser::search_known_timestamp_patterns(
+    auto const optional_parsed_timestamp{timestamp_parser::search_known_timestamp_patterns(
             timestamp,
             m_numeric_timestamp_patterns,
             true,
             generated_pattern
     )};
-    if (false == parsing_result.has_value()) {
-        auto const& error{quoted_pattern_result.error()};
-        SPDLOG_ERROR(
-                "Failed to parse timestamp `{}`: {} - {}",
-                timestamp,
-                error.category().name(),
-                error.message()
-        );
+    if (false == optional_parsed_timestamp.has_value()) {
+        SPDLOG_ERROR("Failed to parse timestamp `{}` against known timestamp patterns.", timestamp);
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
-    auto const [epoch_timestamp, pattern] = parsing_result.value();
-    timestamp_entry_it->second.ingest_timestamp(epoch_timestamp);
+    auto const [epoch_timestamp, pattern] = optional_parsed_timestamp.value();
+    timestamp_entry.ingest_timestamp(epoch_timestamp);
     auto const pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
     if (pattern_result.has_error()) {
         SPDLOG_ERROR("Failed to create timestamp pattern.");
