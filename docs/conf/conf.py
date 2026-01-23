@@ -129,7 +129,7 @@ def _get_helm_version_flag() -> str:
     :return: "--version <version>" for stable releases, or "--devel" for dev versions.
     """
     chart_yaml_path = (
-        Path(__file__).parent.parent.parent / "tools/deployment/package-helm/Chart.yaml"
+        Path(__file__).parent.parent.parent / "tools" / "deployment" / "package-helm" / "Chart.yaml"
     )
     chart = yaml.safe_load(chart_yaml_path.read_text())
 
