@@ -119,6 +119,7 @@ private:
 
     std::unordered_map<int32_t, TimestampEntry> m_column_id_to_range;
 
+    std::string m_generated_pattern;
     std::vector<timestamp_parser::TimestampPattern> m_quoted_timestamp_patterns;
     std::vector<timestamp_parser::TimestampPattern> m_numeric_timestamp_patterns;
 };

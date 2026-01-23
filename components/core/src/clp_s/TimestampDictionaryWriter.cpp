@@ -47,13 +47,12 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
     auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
-    std::string generated_pattern;
     for (auto const& [quoted_pattern, pattern_id] : m_string_pattern_and_id_pairs) {
         auto const parsing_result{timestamp_parser::parse_timestamp(
                 timestamp,
                 quoted_pattern,
                 is_json_literal,
-                generated_pattern
+                m_generated_pattern
         )};
         if (parsing_result.has_error()) {
             continue;
@@ -68,7 +67,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
             timestamp,
             m_quoted_timestamp_patterns,
             is_json_literal,
-            generated_pattern
+            m_generated_pattern
     )};
     if (false == parsing_result.has_value()) {
         SPDLOG_ERROR("Failed to parse timestamp `{}` against known timestamp patterns.", timestamp);
@@ -98,14 +97,13 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
 ) -> std::pair<epochtime_t, uint64_t> {
     auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
 
-    std::string generated_pattern;
     for (auto const& [raw_pattern, pattern_and_id] : m_numeric_pattern_to_id) {
         auto const& [pattern, id] = pattern_and_id;
         auto const parsing_result{timestamp_parser::parse_timestamp(
                 timestamp,
                 pattern_and_id.first,
                 true,
-                generated_pattern
+                m_generated_pattern
         )};
         if (parsing_result.has_error()) {
             continue;
@@ -119,7 +117,7 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
             timestamp,
             m_numeric_timestamp_patterns,
             true,
-            generated_pattern
+            m_generated_pattern
     )};
     if (false == optional_parsed_timestamp.has_value()) {
         SPDLOG_ERROR("Failed to parse timestamp `{}` against known timestamp patterns.", timestamp);
