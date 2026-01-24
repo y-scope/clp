@@ -103,6 +103,7 @@ tasks:
         EOF
 
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
+      # NOTE: Temporarily lock `nextest` to v0.9.122 as a workaround for #1906.
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
