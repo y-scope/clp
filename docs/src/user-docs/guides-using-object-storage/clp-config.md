@@ -56,6 +56,31 @@ archive_output:
   * `<type>` and the type-specific settings are described in the
     [configuring AWS authentication](#configuring-aws-authentication) section.
 
+### S3-compatible storage
+
+CLP supports archiving to S3-compatible object storage, such as MinIO and
+CephFS. To enable this, specify an `endpoint_url` within the `s3_config`
+section and remove the `region_code` key.
+
+```yaml
+archive_output:
+  storage:
+    type: "s3"
+    staging_directory: "var/data/staged-archives"  # Or a path of your choosing
+    s3_config:
+      endpoint_url: "<endpoint-url>"
+      bucket: "<bucket-name>"
+      key_prefix: "<key-prefix>"
+      aws_authentication:
+        type: "<type>"
+        # type-specific settings
+
+  # archive_output's other config keys
+```
+
+* `<endpoint-url>` is the endpoint URL of the S3-compatible storage service
+  (e.g., `http://localhost:9000` for a local MinIO instance).
+
 ## Configuration for stream storage
 
 To configure CLP to cache stream files on S3, update the `stream_output.storage` key in
@@ -142,7 +167,7 @@ aws_authentication:
 
 `<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
 
-In addition, the _top-level_ config `aws_config_directory` must be set to the directory containing
+In addition, the *top-level* config `aws_config_directory` must be set to the directory containing
 the profile configurations (typically `~/.aws`):
 
 ```yaml
