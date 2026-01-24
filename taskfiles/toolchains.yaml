@@ -108,7 +108,7 @@ tasks:
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
-        cargo install cargo-nextest
+        cargo install cargo-nextest --version 0.9.122
         rustup set auto-self-update disable
 
       # This command must be last
