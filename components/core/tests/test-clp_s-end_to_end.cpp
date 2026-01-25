@@ -105,7 +105,7 @@ void validate_archive_header() {
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::NetworkAuthOption{}
+                clp_s::ArchiveReader::Options{}
         ));
         auto const& archive_header{archive_reader.get_header()};
         REQUIRE(clp_s::cArchiveVersion == archive_header.version);
