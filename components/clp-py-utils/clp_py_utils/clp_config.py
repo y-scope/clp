@@ -14,6 +14,7 @@ from pydantic import (
     model_validator,
     PlainSerializer,
     PrivateAttr,
+    StringConstraints,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -87,7 +88,7 @@ SPIDER_DB_PASS_ENV_VAR_NAME = "SPIDER_DB_PASS"
 # Serializer
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
-NonEmptyStr = Annotated[str, Field(min_length=1)]
+NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
@@ -703,10 +704,10 @@ def _set_directory_for_storage_config(storage_config: FsStorage | S3Storage, dir
 
 class ArchiveOutput(BaseModel):
     storage: ArchiveFsStorage | ArchiveS3Storage = ArchiveFsStorage()
-    target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
-    target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MB
-    target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
-    target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
+    target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MiB
+    target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
+    target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
     compression_level: ZstdCompressionLevel = 3
     retention_period: PositiveInt | None = None
 

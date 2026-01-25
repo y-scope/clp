@@ -56,6 +56,7 @@ enum class NodeType : uint8_t {
     DeltaInteger,
     FormattedFloat,
     DictionaryFloat,
+    Timestamp,
     LogMessage = 100,
     LogType,
     CompositeVar,

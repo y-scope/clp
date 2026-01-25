@@ -51,7 +51,7 @@ void ArchiveReader::open(Path const& archive_path, Options const& options) {
 }
 
 void ArchiveReader::read_metadata() {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     auto table_metadata_reader = m_archive_reader_adaptor->checkout_reader_for_section(
             constants::cArchiveTableMetadataFile
     );

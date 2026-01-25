@@ -134,6 +134,13 @@ if(PROJECT_IS_TOP_LEVEL)
             cmake_policy(SET "CMP0144" "NEW")
         endif()
     endif()
+
+    # If previously undefined, `BUILD_TESTING` will be set to ON.
+    include(CTest)
+endif()
+
+if(BUILD_TESTING AND CLP_BUILD_TESTING)
+    set(CLP_ENABLE_TESTS ON)
 endif()
 
 if(CLP_NEED_ABSL)
@@ -740,7 +747,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 
-if(CLP_BUILD_TESTING)
+if(CLP_ENABLE_TESTS)
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}

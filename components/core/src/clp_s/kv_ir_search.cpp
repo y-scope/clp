@@ -269,7 +269,7 @@ auto search_kv_ir_stream(
 
     try {
         clp::streaming_compression::zstd::Decompressor decompressor;
-        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KB
+        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KiB
         decompressor.open(*raw_reader, cReaderBufferSize);
         YSTDLIB_ERROR_HANDLING_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,

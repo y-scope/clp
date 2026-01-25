@@ -12,7 +12,6 @@
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -150,7 +149,7 @@ public:
      * @param log_event_view
      * @throw FileWriter::OperationFailed if any write fails
      */
-    void write_msg_using_schema(log_surgeon::LogEventView const& log_event_view);
+    auto write_msg_using_schema(log_surgeon::LogEventView const& log_view) -> void;
 
     /**
      * Writes an IR log event to the current encoded file
@@ -289,6 +288,15 @@ private:
      * Updates the archive's metadata in the global metadata database.
      */
     auto update_global_metadata() -> void;
+
+    /**
+     * Inspect a log surgeon token and add its information to the logtype and variable dictionaries.
+     * @param log_view The log event containing the token.
+     * @param token_view The token to add to the dictionaries.
+     */
+    auto
+    add_token_to_dicts(log_surgeon::LogEventView const& log_view, log_surgeon::Token token_view)
+            -> void;
 
     // Variables
     boost::uuids::uuid m_id;

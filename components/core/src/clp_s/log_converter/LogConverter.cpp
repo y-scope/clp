@@ -73,10 +73,9 @@ auto LogConverter::convert_file(
 
             auto const& event{parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
-            auto timestamp{event.get_timestamp()};
-            if (timestamp.has_value()) {
+            if (auto timestamp{event.get_timestamp()}; timestamp.has_value()) {
                 auto const message_without_timestamp{
-                        std::string_view{message}.substr(timestamp.value().length())
+                        std::string_view{message}.substr(timestamp->length())
                 };
                 YSTDLIB_ERROR_HANDLING_TRYV(
                         serializer.add_message(timestamp.value(), message_without_timestamp)

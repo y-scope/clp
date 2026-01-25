@@ -2,13 +2,13 @@ import {brotliCompressSync} from "node:zlib";
 
 import type {MySQLPromisePool} from "@fastify/mysql";
 import {encode} from "@msgpack/msgpack";
+import {ClpIoConfig} from "@webui/common/schemas/compression";
 import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../../../typings/compression.js";
-import {CompressionJobConfig} from "./typings.js";
 
 
 /**
@@ -41,7 +41,7 @@ class CompressionJobDbManager {
      * @return The job's ID.
      * @throws {Error} on error.
      */
-    async submitJob (jobConfig: CompressionJobConfig): Promise<number> {
+    async submitJob (jobConfig: ClpIoConfig): Promise<number> {
         const [result] = await this.#sqlPool.query<ResultSetHeader>(
             `
             INSERT INTO ${this.#tableName} (
