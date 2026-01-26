@@ -89,18 +89,12 @@ public:
     ) -> std::pair<epochtime_t, uint64_t>;
 
     /**
-     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
-     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
-     * millisecond encoded timestamps.
-     * @return the beginning of this archive's time range as milliseconds since the UNIX epoch
+     * @return The beginning of this archive's time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_begin_timestamp() const;
 
     /**
-     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
-     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
-     * millisecond encoded timestamps.
-     * @return the end of this archive's time range as milliseconds since the UNIX epoch
+     * @return The end of this archive's time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_end_timestamp() const;
 
