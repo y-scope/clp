@@ -158,7 +158,6 @@ clpConfig:
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
-    host: "localhost"
     port: 30302
     # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
     # arrives.
