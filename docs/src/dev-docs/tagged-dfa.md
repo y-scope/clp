@@ -149,14 +149,6 @@ positions of capture groups.
 In LogSurgeon, TDFAs are used to extract sub-matches inside variables while preserving the
 deterministic and linear-time properties of the DFAs.
 
-### Capture Groups in Regex
-
-Above, we i
-
-### Tagged NFA
-
-
-
 ### Tags and Registers in the DFA
 
 Each capture group in a regex group is associated with a start and end tag. During TDFA traversal,
@@ -178,10 +170,6 @@ TDFA transitions are labeled like a standard DFA, but may also carry tag operati
 
 At each step, tag operations update the corresponding registers. Multiple tag operations may occur
 along a single transition.
-
-### Ambiguity and Leftmost-Greedy Resolution
-
-
 
 ### Match Semantics
 
