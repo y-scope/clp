@@ -317,10 +317,8 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     update_segment_indices(logtype_id, var_ids);
 }
 
-auto Archive::add_token_to_dicts(
-        log_surgeon::LogEventView const& event,
-        log_surgeon::Token token
-) -> void {
+auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_surgeon::Token token)
+        -> void {
     auto const* type_ids{token.get_type_ids()};
     if (nullptr == type_ids || type_ids->empty()) {
         throw std::runtime_error("Token has no type IDs: " + token.to_string());
@@ -397,9 +395,7 @@ auto Archive::add_token_to_dicts(
                 break;
             }
 
-            auto capture_pos_result{
-                    event.get_capture_position(token, captures.value().at(0))
-            };
+            auto capture_pos_result{event.get_capture_position(token, captures.value().at(0))};
             if (capture_pos_result.has_error()) {
                 SPDLOG_ERROR(
                         "Capture group match not found for token {} ({} {}). Storing token as "
@@ -414,8 +410,7 @@ auto Archive::add_token_to_dicts(
             auto const [capture_start_pos, capture_end_pos]{capture_pos_result.value()};
 
             auto const before_capture{
-                    token.get_sub_token(token.get_start_pos(), capture_start_pos)
-                            .to_string_view()
+                    token.get_sub_token(token.get_start_pos(), capture_start_pos).to_string_view()
             };
             m_logtype_dict_entry.add_static_text(before_capture);
 
@@ -429,8 +424,7 @@ auto Archive::add_token_to_dicts(
             m_logtype_dict_entry.add_dictionary_var();
 
             auto const after_capture{
-                    token.get_sub_token(capture_end_pos, token.get_end_pos())
-                            .to_string_view()
+                    token.get_sub_token(capture_end_pos, token.get_end_pos()).to_string_view()
             };
             m_logtype_dict_entry.add_static_text(after_capture);
             break;
