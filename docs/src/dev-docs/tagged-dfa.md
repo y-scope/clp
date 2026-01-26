@@ -46,7 +46,7 @@ name and a regex pattern. Examples include:
 | user_id         | user_id=(?<user_id>\d+)    | user_id=55 | 55     |
 ```
 
-Each regex rule is used to construct an NFA, which is eventually considered durign DFA construction.
+Each regex rule is used to construct an NFA, which is eventually considered during DFA construction.
 
 ### Priority and Ordering
 
@@ -74,7 +74,7 @@ user-defined regex rule and DFAs.
 ### Construction
 
 Each regex rule is compiled into an individual NFA:
-- Literal character produce linear sequences of states.
+- Literal character produces linear sequences of states.
 - Characters classes, quantifiers, and optional segments produce branches.
 
 The final state of the sequence is marked as an accepting state, indicating the regex has been
@@ -90,7 +90,7 @@ NFA states are connected by labeled transitions:
 - **Epsilon transitions** do not consume any character and are always taken.
 
 At this stage, a single input can lead to multiple possible next states. This nondeterminism is the
-reasons NFAs are inefficient for traversal. For runtime performance, an NFA must be converted to
+reason NFAs are inefficient for traversal. For runtime performance, an NFA must be converted to
 a DFA.
 
 ## 3. DFA
@@ -165,7 +165,7 @@ each tag corresponds to one or more registers:
 - `intermediate(tag,i)` - records transient information that may be forwarded into `final(tag)`.
 
 At various DFA states register value are set or copied into other registers based on the register
-action corresponding to the out-going symbol. Once TDFA traversal is finished, the value in the
+action corresponding to the outgoing symbol. Once TDFA traversal is finished, the value in the
 `final(tag)` register is used as the tag's value.
 
 ### Tagged Transitions
@@ -272,7 +272,7 @@ user_id=** session=AB**
 ### Logs
 
 ```text
-My log has user_id=55 session=AB23 and thats it.
+My log has user_id=55 session=AB23 and that's it.
 user_id=22 session=AC45
 user_id=41 session=AB11
 ```
@@ -280,7 +280,7 @@ user_id=41 session=AB11
 ### Logtype Dictionary
 
 ```text
-My log has user_id=<user_id> session=<session> and thats it.
+My log has user_id=<user_id> session=<session> and that's it.
 user_id=<user_id> session=<session>
 ```
 
