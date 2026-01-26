@@ -47,12 +47,11 @@ const CancelButton = () => {
                 color={"red"}
                 htmlType={"button"}
                 icon={<CloseOutlined/>}
+                aria-label={"Cancel query"}
                 size={"middle"}
                 variant={"solid"}
                 onClick={handleClick}
-            >
-                Cancel
-            </Button>
+            />
         </Tooltip>
     );
 };
