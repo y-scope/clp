@@ -78,7 +78,12 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
     timestamp_entry.ingest_timestamp(epoch_timestamp);
     auto const quoted_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
     if (quoted_pattern_result.has_error()) {
-        SPDLOG_ERROR("Failed to create timestamp pattern.");
+        auto const error{quoted_pattern_result.error()};
+        SPDLOG_ERROR(
+                "Failed to create timestamp pattern: {} - {}.",
+                error.category().name(),
+                error.message()
+        );
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
@@ -128,7 +133,12 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
     timestamp_entry.ingest_timestamp(epoch_timestamp);
     auto const pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
     if (pattern_result.has_error()) {
-        SPDLOG_ERROR("Failed to create timestamp pattern.");
+        auto const error{pattern_result.error()};
+        SPDLOG_ERROR(
+                "Failed to create timestamp pattern: {} - {}.",
+                error.category().name(),
+                error.message()
+        );
         throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
     }
 
@@ -156,7 +166,12 @@ auto TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp(
     if (m_numeric_pattern_to_id.end() == pattern_it) {
         auto pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
         if (pattern_result.has_error()) {
-            SPDLOG_ERROR("Failed to create timestamp pattern.");
+            auto const error{pattern_result.error()};
+            SPDLOG_ERROR(
+                    "Failed to create timestamp pattern: {} - {}.",
+                    error.category().name(),
+                    error.message()
+            );
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
         }
         auto const new_pattern_id{m_next_id++};

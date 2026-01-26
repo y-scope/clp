@@ -197,9 +197,7 @@ public:
      * @param node_id
      * @param timestamp
      * @param is_json_literal
-     * @return A pair containing:
-     * - The timestamp in epoch nanoseconds.
-     * - The pattern ID corresponding to the timestamp format.
+     * @return Forwards `TimestampDictionaryWriter::ingest_string_timestamp`'s return values.
      */
     [[nodiscard]] auto ingest_string_timestamp(
             std::string_view key,
