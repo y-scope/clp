@@ -202,6 +202,8 @@ contents of the log message.
 ### Schema
 
 ```
+delimiters: \n\r\t
+
 tagged_user_id:user_id=(?<user_id>\d+)
 tagged_session:session=(?<session>\w+\d+)
 ```
@@ -255,9 +257,98 @@ Variables:
 ### Schema
 
 ```
+delimiters: \n\r\t
+
 tagged_user_id:user_id=(?<user_id>\d+)
 tagged_session:session=(?<session>\w+\d+)
 ```
 
+### Query
+
+```
+user_id=** session=AB**
+```
+
+### Logs
+
+```
+My log has user_id=55 session=AB23 and thats it.
+user_id=22 session=AC45
+user_id=41 session=AB11
+```
+
+### Logtype Dictionary
+
+```
+My log has user_id=<user_id> session=<session> and thats it.
+user_id=<user_id> session=<session>
+```
+
+### Variable Dictionary
+
+```
+22
+41
+55
+AB11
+AB23
+AC45
+```
 
 
+### Normalize Query
+
+```
+user_id=* session=AB*
+```
+
+### Form All Interpretations
+
+```
+<user_id=* session=AB*>
+<user_id=*> <session=AB*>
+```
+
+### Intersect DFA Of Each Interpretation Token with Schema DFA
+
+```
+<user_id=* session=AB*> -> no match
+<user_id=*>             -> can match a `tagged_user_id`
+<session=AB*>           -> can match a `tagged_session`
+```
+
+### Subquery
+
+```
+1. user_id=* session=AB*
+2. user_id=<user_id>* session=AB*
+3. user_id=* session=<session>*
+4. user_id=<user_id>* session=<session>*
+```
+
+### Compare Against Logtype Dictionary
+
+```
+user_id=<user_id> session=<session> -> matches subquery (4)
+```
+
+
+### Compare Against Variable Dictionary
+
+```
+*   -> matches full dictionary
+AB* -> matches AB11, AB23
+```
+
+### Decompress Logtypes With the Above Form to Get Potential Matches
+
+```
+user_id=22 session=AC45
+user_id=41 session=AB11
+```
+
+### Grep Potential Matches with Original Query
+
+```
+user_id=41 session=AB11
+```
