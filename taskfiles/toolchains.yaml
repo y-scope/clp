@@ -102,6 +102,7 @@ tasks:
         export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
         EOF
 
+      # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
