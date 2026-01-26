@@ -9,8 +9,8 @@ LogSurgeon and used for compression and search in CLP.
 - [NFA](#2-nfa)
 - [DFA](#3-dfa)
 - [Tagged DFA](#4-tagged-dfa)
-- [Compression](#5-compression)
-- [Search](#6-search)
+- [Compression](#5-compression-example)
+- [Search](#6-search-example)
 
 ## 1. Schema
 
@@ -39,7 +39,7 @@ or split the log.
 Regex rules define patterns that match sequences of characters. Each regex rule contains a variable
 name and a regex pattern. Examples include:
 
-```
+```text
 | Variable Name   | Regex Pattern              | Input      |  Match |
 |-----------------|----------------------------|------------|--------|
 | float           | \-?\d+\.\d+                | 12.34      | 12.34  |
@@ -54,11 +54,11 @@ When multiple regex rules match the same input, the ordering defined in the sche
 determine priority.
 
 ### Example Schema
-```
+```regex
 delimiters: \n\r\t
 
-float:\-?\d+\.\d+
-int:\-?\d+
+float:-?\d+\.\d+
+int:-?\d+
 tagged_user_id:user_id=(?<user_id>\d+)
 ```
 
@@ -108,7 +108,7 @@ Each DFA state represents a set of possible NFA states. Transitions are labeled 
 
 For any state `S` and input symbol `c`, there is at most one transition:
 
-```
+```text
 S--c-->S'
 ```
 
@@ -201,7 +201,7 @@ contents of the log message.
 
 ### Schema
 
-```
+```regex
 delimiters: \n\r\t
 
 tagged_user_id:user_id=(?<user_id>\d+)
@@ -212,13 +212,13 @@ tagged_session:session=(?<session>\w+\d+)
 
 ### Input
 
-```
+```text
 My user_id=55 line.
 ```
 
 ### Execution
 
-```
+```text
 States          | Input     | Action/Tag Updates     | Registers
 -------------------------------------------------------------------------------
 S0              | 'M'       | [fail]                 |
@@ -245,7 +245,7 @@ S0              | '.'       | [fail]                 |
 
 ### Result
 
-```
+```text
 LogType:
   1. My user_id=<user_id> line.
 Variables:
@@ -256,7 +256,7 @@ Variables:
 
 ### Schema
 
-```
+```text
 delimiters: \n\r\t
 
 tagged_user_id:user_id=(?<user_id>\d+)
@@ -265,13 +265,13 @@ tagged_session:session=(?<session>\w+\d+)
 
 ### Query
 
-```
+```text
 user_id=** session=AB**
 ```
 
 ### Logs
 
-```
+```text
 My log has user_id=55 session=AB23 and thats it.
 user_id=22 session=AC45
 user_id=41 session=AB11
@@ -279,14 +279,14 @@ user_id=41 session=AB11
 
 ### Logtype Dictionary
 
-```
+```text
 My log has user_id=<user_id> session=<session> and thats it.
 user_id=<user_id> session=<session>
 ```
 
 ### Variable Dictionary
 
-```
+```text
 22
 41
 55
@@ -298,20 +298,20 @@ AC45
 
 ### Normalize Query
 
-```
+```text
 user_id=* session=AB*
 ```
 
 ### Form All Interpretations
 
-```
+```text
 <user_id=* session=AB*>
 <user_id=*> <session=AB*>
 ```
 
 ### Intersect DFA Of Each Interpretation Token with Schema DFA
 
-```
+```text
 <user_id=* session=AB*> -> no match
 <user_id=*>             -> can match a `tagged_user_id`
 <session=AB*>           -> can match a `tagged_session`
@@ -319,7 +319,7 @@ user_id=* session=AB*
 
 ### Subquery
 
-```
+```text
 1. user_id=* session=AB*
 2. user_id=<user_id>* session=AB*
 3. user_id=* session=<session>*
@@ -328,27 +328,27 @@ user_id=* session=AB*
 
 ### Compare Against Logtype Dictionary
 
-```
+```text
 user_id=<user_id> session=<session> -> matches subquery (4)
 ```
 
 
 ### Compare Against Variable Dictionary
 
-```
+```text
 *   -> matches full dictionary
 AB* -> matches AB11, AB23
 ```
 
 ### Decompress Logtypes With the Above Form to Get Potential Matches
 
-```
+```text
 user_id=22 session=AC45
 user_id=41 session=AB11
 ```
 
 ### Grep Potential Matches with Original Query
 
-```
+```text
 user_id=41 session=AB11
 ```
