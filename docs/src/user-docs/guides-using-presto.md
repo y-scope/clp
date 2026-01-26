@@ -87,7 +87,7 @@ Using Presto with CLP requires:
 1. Clone the CLP repository:
 
     ```bash
-    git clone https://github.com/y-scope/clp.git
+    git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
     ```
 
 2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.

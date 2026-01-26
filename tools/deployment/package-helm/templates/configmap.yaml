@@ -19,9 +19,42 @@ data:
     {{- end }}
     archive_output:
       compression_level: {{ .Values.clpConfig.archive_output.compression_level | int }}
+      {{- with .Values.clpConfig.archive_output.storage }}
       storage:
+        {{- if eq .type "fs" }}
         directory: "/var/data/archives"
         type: "fs"
+        {{- else if eq .type "s3" }}
+        type: "s3"
+        staging_directory: "/var/data/staged-archives"
+        {{- with .s3_config }}
+        s3_config:
+          {{- if .endpoint_url }}
+          endpoint_url: {{ .endpoint_url | quote }}
+          {{- end }}
+          {{- if .region_code }}
+          region_code: {{ .region_code | quote }}
+          {{- end }}
+          bucket: {{ .bucket | quote }}
+          key_prefix: {{ .key_prefix | quote }}
+          {{- with .aws_authentication }}
+          aws_authentication:
+            type: {{ .type | quote }}
+            {{- if .profile }}
+            profile: {{ .profile | quote }}
+            {{- end }}
+            {{- if .credentials }}
+            credentials:
+              access_key_id: {{ .credentials.access_key_id | quote }}
+              secret_access_key: {{ .credentials.secret_access_key | quote }}
+              {{- if .credentials.session_token }}
+              session_token: {{ .credentials.session_token | quote }}
+              {{- end }}
+            {{- end }}
+          {{- end }}{{/* with .aws_authentication */}}
+        {{- end }}{{/* with .s3_config */}}
+        {{- end }}{{/* if eq .type "fs" */}}
+      {{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
       {{- if .Values.clpConfig.archive_output.retention_period }}
       retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
       {{- else }}
@@ -53,13 +86,46 @@ data:
       host: "{{ include "clp.fullname" . }}-database"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
+        spider: {{ .Values.clpConfig.database.names.spider | quote }}
       port: 3306
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
     logs_directory: "/var/log"
+    {{- with .Values.clpConfig.logs_input }}
     logs_input:
+      {{- if eq .type "fs" }}
       directory: "/mnt/logs"
       type: "fs"
+      {{- else if eq .type "s3" }}
+      type: "s3"
+      {{- with .aws_authentication }}
+      aws_authentication:
+        type: {{ .type | quote }}
+        {{- if .profile }}
+        profile: {{ .profile | quote }}
+        {{- end }}
+        {{- if .credentials }}
+        credentials:
+          access_key_id: {{ .credentials.access_key_id | quote }}
+          secret_access_key: {{ .credentials.secret_access_key | quote }}
+          {{- if .credentials.session_token }}
+          session_token: {{ .credentials.session_token | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}{{/* with .aws_authentication */}}
+      {{- end }}{{/* if eq .type "fs" */}}
+    {{- end }}{{/* with .Values.clpConfig.logs_input */}}
+    {{- with .Values.clpConfig.log_ingestor }}
+    log_ingestor:
+      buffer_flush_threshold: {{ .buffer_flush_threshold | int }}
+      buffer_flush_timeout: {{ .buffer_flush_timeout | int }}
+      channel_capacity: {{ .channel_capacity | int }}
+      host: "localhost"
+      logging_level: {{ .logging_level | quote }}
+      port: 3002
+    {{- else }}
+    log_ingestor: null
+    {{- end }}
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
@@ -95,12 +161,50 @@ data:
       retention_period: null
       {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    {{- with .Values.clpConfig.stream_output }}
     stream_output:
+      {{- with .storage }}
       storage:
+        {{- if eq .type "fs" }}
         directory: "/var/data/streams"
         type: "fs"
-      target_uncompressed_size: {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }}
+        {{- else if eq .type "s3" }}
+        type: "s3"
+        staging_directory: "/var/data/staged-streams"
+        {{- with .s3_config }}
+        s3_config:
+          {{- if .endpoint_url }}
+          endpoint_url: {{ .endpoint_url | quote }}
+          {{- end }}
+          {{- if .region_code }}
+          region_code: {{ .region_code | quote }}
+          {{- end }}
+          bucket: {{ .bucket | quote }}
+          key_prefix: {{ .key_prefix | quote }}
+          {{- with .aws_authentication }}
+          aws_authentication:
+            type: {{ .type | quote }}
+            {{- if .profile }}
+            profile: {{ .profile | quote }}
+            {{- end }}
+            {{- if .credentials }}
+            credentials:
+              access_key_id: {{ .credentials.access_key_id | quote }}
+              secret_access_key: {{ .credentials.secret_access_key | quote }}
+              {{- if .credentials.session_token }}
+              session_token: {{ .credentials.session_token | quote }}
+              {{- end }}
+            {{- end }}
+          {{- end }}{{/* with .aws_authentication */}}
+        {{- end }}{{/* with .s3_config */}}
+        {{- end }}{{/* if eq .type "fs" */}}
+      {{- end }}{{/* with .storage */}}
+      target_uncompressed_size: {{ .target_uncompressed_size | int }}
+    {{- end }}{{/* with .Values.clpConfig.stream_output */}}
     tmp_directory: "/var/tmp"
+    {{- if .Values.clpConfig.aws_config_directory }}
+    aws_config_directory: {{ .Values.clpConfig.aws_config_directory | quote }}
+    {{- end }}
     webui:
       host: "localhost"
       port: 4000
@@ -149,7 +253,11 @@ data:
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+      {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
+      {{- else }}
+      "LogsInputRootDir": null,
+      {{- end }}
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
@@ -175,13 +283,33 @@ data:
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+      {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
+      {{- else }}
+      "LogsInputRootDir": null,
+      {{- end }}
+      {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
       "StreamFilesDir": "/var/data/streams",
+      {{- else }}
+      "StreamFilesDir": null,
+      {{- end }}
       "StreamTargetUncompressedSize":
         {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
+      {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+      {{- with .Values.clpConfig.stream_output.storage.s3_config }}
+      "StreamFilesS3Region": {{ .region_code | default "null" | quote }},
+      "StreamFilesS3PathPrefix": {{ printf "%s/%s" .bucket .key_prefix | quote }},
+      {{- if eq .aws_authentication.type "profile" }}
+      "StreamFilesS3Profile": {{ .aws_authentication.profile | quote }},
+      {{- else }}
+      "StreamFilesS3Profile": null,
+      {{- end }}
+      {{- end }}{{/* with .Values.clpConfig.stream_output.storage.s3_config */}}
+      {{- else }}
       "StreamFilesS3Region": null,
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
+      {{- end }}
       "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level | int }},
       "ArchiveOutputTargetArchiveSize":
         {{ .Values.clpConfig.archive_output.target_archive_size | int }},

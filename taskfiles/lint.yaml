@@ -777,6 +777,7 @@ tasks:
     vars:
       UV_PYTHON_PROJECTS:
         - "{{.G_INTEGRATION_TESTS_DIR}}"
+        - "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
       UV_PYTHON_PROJECTS_IGNORE_ERRORS:
         - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
         - "{{.G_COMPONENTS_DIR}}/clp-package-utils"
@@ -793,10 +794,10 @@ tasks:
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy . || true
       - for:
-          - "components/core/tools/scripts/utils"
+          - "components/core/tools/scripts"
+          - "docs/conf"
           - "tools/deployment"
           - "tools/scripts"
-          - "docs/conf"
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"

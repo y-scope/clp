@@ -36,7 +36,6 @@ pub struct S3InputConfig {
 /// Represents CLP output config.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OutputConfig {
-    pub tags: Option<Vec<NonEmptyString>>,
     pub target_archive_size: u64,
     pub target_dictionaries_size: u64,
     pub target_encoded_file_size: u64,

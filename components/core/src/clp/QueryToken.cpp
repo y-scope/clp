@@ -42,14 +42,27 @@ QueryToken::QueryToken(
                 = (m_has_prefix_greedy_wildcard || m_has_suffix_greedy_wildcard
                    || m_has_greedy_wildcard_in_middle);
 
-        if (!is_var) {
-            if (!m_contains_wildcards) {
+        if (false == is_var) {
+            m_cannot_convert_to_non_dict_var = true;
+            if (false == m_contains_wildcards) {
                 m_type = Type::Logtype;
             } else {
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::Logtype);
-                m_possible_types.push_back(Type::IntVar);
-                m_possible_types.push_back(Type::FloatVar);
+                if (EncodedVariableInterpreter::wildcard_string_could_be_representable_integer_var(
+                            m_value
+                    ))
+                {
+                    m_possible_types.push_back(Type::IntVar);
+                    m_cannot_convert_to_non_dict_var = false;
+                }
+                if (EncodedVariableInterpreter::wildcard_string_could_be_representable_float_var(
+                            m_value
+                    ))
+                {
+                    m_possible_types.push_back(Type::FloatVar);
+                    m_cannot_convert_to_non_dict_var = false;
+                }
                 m_possible_types.push_back(Type::DictionaryVar);
             }
         } else {

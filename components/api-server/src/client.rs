@@ -10,7 +10,7 @@ use clp_rust_utils::{
             credentials::Credentials,
         },
     },
-    database::mysql::create_mysql_pool,
+    database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
 };
 use futures::{Stream, StreamExt};
@@ -38,20 +38,21 @@ pub struct QueryConfig {
 
     /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
-    pub begin_timestamp: Option<i64>,
+    pub time_range_begin_millisecs: Option<i64>,
 
     /// The ending timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
-    pub end_timestamp: Option<i64>,
+    pub time_range_end_millisecs: Option<i64>,
 
     /// Whether the string match should be case-insensitive.
     #[serde(default)]
     pub ignore_case: bool,
 
-    /// Whether to write the search results to files. If `false`, results will be stored in
-    /// `MongoDB`.
+    /// Whether to buffer search results in `MongoDB`.
+    /// By default, search results are buffered in temporary files. When set to `true`, results
+    /// will be stored in `MongoDB` instead.
     #[serde(default)]
-    pub write_to_file: bool,
+    pub buffer_results_in_mongodb: bool,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -60,10 +61,10 @@ impl From<QueryConfig> for SearchJobConfig {
             dataset: value.dataset,
             query_string: value.query_string,
             max_num_results: value.max_num_results,
-            begin_timestamp: value.begin_timestamp,
-            end_timestamp: value.end_timestamp,
+            begin_timestamp: value.time_range_begin_millisecs,
+            end_timestamp: value.time_range_end_millisecs,
             ignore_case: value.ignore_case,
-            write_to_file: value.write_to_file,
+            write_to_file: !value.buffer_results_in_mongodb,
             ..Default::default()
         }
     }
@@ -89,10 +90,11 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`create_mysql_pool`]'s errors on failure.
+    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
     /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
     pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        let sql_pool = create_mysql_pool(&config.database, &credentials.database, 10).await?;
+        let sql_pool =
+            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
 
         let mongo_uri = format!(
             "mongodb://{}:{}/{}?directConnection=true",
