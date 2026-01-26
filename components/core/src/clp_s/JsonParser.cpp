@@ -44,7 +44,6 @@
 #include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
-#include <clp_s/experimental_helpers.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/JsonFileIterator.hpp>
@@ -1479,35 +1478,35 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
     logtype_entry.reserve_constant_length(view.size());
     auto starting_token_idx{log_buf->has_header() ? 0 : 1};
     for (auto token_idx{starting_token_idx}; token_idx < log_buf->pos(); token_idx++) {
-        auto token_view{log_buf->get_token(token_idx)};
-        auto const token_type{token_view.get_type_ids()->at(0)};
+        auto token{log_buf->get_token(token_idx)};
+        auto const token_type{token.get_type_ids()->at(0)};
         auto const token_name{log_parser.get_id_symbol(token_type)};
         SPDLOG_DEBUG(
                 "[clpsls] token name: {} ({}) value: {}",
                 token_name,
                 token_type,
-                token_view.to_string()
+                token.to_string()
         );
 
         if (log_buf->has_delimiters() && token_idx != starting_token_idx
             && static_cast<int>(log_surgeon::SymbolId::TokenNewline) != token_type
             && static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString) != token_type)
         {
-            logtype_entry.encode_constant(token_view.get_delimiter());
-            token_view.increment_start_pos();
+            logtype_entry.add_static_text(token.get_delimiter());
+            token.increment_start_pos();
         }
 
         switch (token_type) {
             case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
             case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-                logtype_entry.encode_constant(token_view.to_string());
+                logtype_entry.add_static_text(token.to_string());
                 break;
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
                 int32_t node_id{};
                 clp_s::encoded_variable_t encoded_var{};
                 if (clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                            token_view.to_string(),
+                            token.to_string(),
                             encoded_var
                     ))
                 {
@@ -1517,7 +1516,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(parent_node_id, NodeType::VarString, token_name);
-                    m_current_parsed_message.add_unordered_value(token_view.to_string());
+                    m_current_parsed_message.add_unordered_value(token.to_string());
                 }
                 m_current_schema.insert_unordered(node_id);
                 logtype_entry.add_int_var();
@@ -1525,7 +1524,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
                 int32_t node_id{};
-                auto token_str{token_view.to_string()};
+                auto token_str{token.to_string()};
                 auto const float_format_result{get_float_encoding(token_str)};
                 if (false == float_format_result.has_error()
                     && round_trip_is_identical(
@@ -1557,19 +1556,17 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             }
             default: {
                 auto const& lexer{event.get_log_parser().m_lexer};
-                auto opt_captures{lexer.get_captures_from_rule_id(token_type)};
-                if (false == opt_captures.has_value()) {
+                if (false == lexer.get_captures_from_rule_id(token_type).has_value()) {
                     logtype_entry.add_dictionary_var();
-                    m_current_parsed_message.add_unordered_value(token_view.to_string());
+                    m_current_parsed_message.add_unordered_value(token.to_string());
                     m_current_schema.insert_unordered(m_archive_writer->add_node(
                             parent_node_id,
                             NodeType::VarString,
                             token_name
                     ));
-                    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                            token_view.to_string_view(),
-                            token_name
-                    ));
+                    YSTDLIB_ERROR_HANDLING_TRYV(
+                            m_archive_writer->update_var_stats(token.to_string_view(), token_name)
+                    );
                     break;
                 }
 
@@ -1578,13 +1575,9 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                         NodeType::CompositeVar,
                         token_name
                 )};
-                YSTDLIB_ERROR_HANDLING_TRYV(store_capture_groups(
-                        event,
-                        token_view,
-                        opt_captures.value(),
-                        var_node_id,
-                        logtype_entry
-                ));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        store_capture_groups(event, token, var_node_id, logtype_entry)
+                );
                 m_current_schema.insert_unordered(var_node_id);
                 break;
             }
@@ -1603,7 +1596,6 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
 auto JsonParser::store_capture_groups(
         log_surgeon::LogEvent const& event,
         log_surgeon::Token root_var,
-        std::vector<log_surgeon::finite_automata::Capture const*>& captures,
         int32_t root_var_node_id,
         clp_s::LogTypeDictionaryEntry& logtype_entry
 ) -> ystdlib::error_handling::Result<void> {
@@ -1619,43 +1611,37 @@ auto JsonParser::store_capture_groups(
             m_archive_writer->update_var_stats(root_var.to_string_view(), cFullMatch)
     );
 
-    sort_capture_ids(event, root_var, captures);
     auto prev_leaf_end_pos{root_var.get_start_pos()};
-    for (auto i{0}; i < captures.size(); i++) {
-        auto const* const capture{captures[i]};
-        auto const [start_pos, end_pos]{
-                YSTDLIB_ERROR_HANDLING_TRYX(get_capture_positions(event, root_var, capture))
-        };
-
-        auto capture_view{root_var.get_sub_token(start_pos, end_pos)};
+    for (auto const capture : YSTDLIB_ERROR_HANDLING_TRYX(event.get_capture_matches(root_var))) {
+        auto capture_view{root_var.get_sub_token(capture.m_pos.m_start, capture.m_pos.m_end)};
         m_current_parsed_message.add_unordered_value(capture_view.to_string());
         m_current_schema.insert_unordered(m_archive_writer->add_node(
                 root_var_node_id,
                 NodeType::VarString,
-                capture->get_name()
+                capture.m_capture->get_name()
         ));
-        YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_var_stats(root_var.to_string_view(), capture->get_name())
-        );
+        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                root_var.to_string_view(),
+                capture.m_capture->get_name()
+        ));
         SPDLOG_DEBUG(
                 "[clpsls]\tcapture name: {} value: {}",
                 capture->get_name(),
                 capture_view.to_string()
         );
 
-        if (is_leaf_capture(event, root_var, captures, i, end_pos)) {
+        if (capture.m_leaf) {
             auto static_text{
                     root_var.get_sub_token(prev_leaf_end_pos, capture_view.get_start_pos())
             };
-            logtype_entry.encode_constant(static_text.to_string());
+            logtype_entry.add_static_text(static_text.to_string());
             logtype_entry.add_dictionary_var();
             prev_leaf_end_pos = capture_view.get_end_pos();
         }
     }
-    auto remaining_static_text{root_var};
-    remaining_static_text.set_start_pos(prev_leaf_end_pos);
-    remaining_static_text.set_end_pos(root_var.get_end_pos());
-    logtype_entry.encode_constant(remaining_static_text.to_string());
+    logtype_entry.add_static_text(
+            root_var.get_sub_token(prev_leaf_end_pos, root_var.get_end_pos()).to_string()
+    );
 
     m_current_schema.end_unordered_object(capture_start);
     return ystdlib::error_handling::success();

@@ -363,8 +363,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/DictionaryEntry.hpp
     src/clp_s/DictionaryWriter.cpp
     src/clp_s/DictionaryWriter.hpp
-    src/clp_s/experimental_helpers.cpp
-    src/clp_s/experimental_helpers.hpp
     src/clp_s/FileReader.cpp
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
