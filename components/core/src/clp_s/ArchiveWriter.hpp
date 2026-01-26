@@ -213,9 +213,7 @@ public:
      * @param key
      * @param node_id
      * @param timestamp
-     * @return A pair containing:
-     * - The timestamp in epoch nanoseconds.
-     * - The pattern ID corresponding to the timestamp format.
+     * @return Forwards `TimestampDictionaryWriter::ingest_numeric_json_timestamp`'s return values.
      */
     [[nodiscard]] auto
     ingest_numeric_json_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
@@ -228,9 +226,8 @@ public:
      * @param key
      * @param node_id
      * @param timestamp
-     * @return A pair containing:
-     * - The timestamp in epoch nanoseconds.
-     * - The pattern ID corresponding to the timestamp format.
+     * @return Forwards `TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp`'s
+     * return values.
      */
     [[nodiscard]] auto ingest_unknown_precision_epoch_timestamp(
             std::string_view key,
