@@ -54,6 +54,7 @@ When multiple regex rules match the same input, the ordering defined in the sche
 determine priority.
 
 ### Example Schema
+
 ```regex
 delimiters: \n\r\t
 
