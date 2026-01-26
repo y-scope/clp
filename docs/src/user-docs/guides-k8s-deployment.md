@@ -116,10 +116,7 @@ Once your cluster is ready, you can install CLP using the Helm chart.
 The CLP Helm chart is published to a [Helm repository][clp-helm-repo] hosted on GitHub Pages.
 
 ```bash
-# If you haven't already, add the CLP Helm repository.
 helm repo add clp https://y-scope.github.io/clp
-
-# Update the repository to get the latest chart versions.
 helm repo update clp
 ```
 

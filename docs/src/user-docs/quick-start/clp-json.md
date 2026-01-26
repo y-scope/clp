@@ -98,10 +98,7 @@ EOF
 Then, install the Helm chart:
 
 ```bash
-# If you haven't already, add the CLP Helm repository.
 helm repo add clp https://y-scope.github.io/clp
-
-# Update the repository to get the latest chart versions.
 helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
