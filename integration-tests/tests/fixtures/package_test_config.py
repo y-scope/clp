@@ -16,7 +16,12 @@ def fixt_package_test_config(
     """
     Creates and maintains a PackageTestConfig object for a specific CLP mode.
 
-    :param request:
+    This fixture is initialized on a per-module basis using `request.param`. Test code that uses
+    this fixture should set this parameter with `pytest.mark.parametrize()`.
+
+    Any fixture that depends on this one must have a scope less than or equal to `module`.
+
+    :param request: Provides access to `PackageModeConfig` selection.
     :return: An iterator that yields the PackageTestConfig object for the specified mode.
     :raise ValueError: if the CLP base port's value is invalid.
     """

@@ -19,6 +19,9 @@ def fixt_package_instance(fixt_package_test_config: PackageTestConfig) -> Iterat
     """
     Starts a CLP package instance for the given configuration and stops it during teardown.
 
+    This fixture relies on `fixt_package_test_config`, and as such, the scope of this fixture should
+    never exceed that of `fixt_package_test_config`.
+
     :param fixt_package_test_config:
     :return: Iterator that yields the running package instance.
     """
