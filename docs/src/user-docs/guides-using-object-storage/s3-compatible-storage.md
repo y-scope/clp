@@ -126,9 +126,9 @@ or for key prefix mode:
 http://<host>:<port>/<bucket-name>/<key-prefix>
 ```
 
-### Example: Compressing specific objects
+```{code-block} bash
+:caption: Example: Compressing specific objects
 
-```bash
 sbin/compress-from-s3.sh \
   --timestamp-key @timestamp \
   --dataset default \
