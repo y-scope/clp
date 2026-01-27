@@ -44,6 +44,7 @@ enum class NodeType : uint8_t {
     DeltaInteger,
     FormattedFloat,
     DictionaryFloat,
+    Timestamp,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 

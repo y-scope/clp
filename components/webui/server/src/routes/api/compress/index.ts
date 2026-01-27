@@ -30,7 +30,6 @@ const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
     },
     output: {
         compression_level: settings.ArchiveOutputCompressionLevel,
-        tags: null,
         target_archive_size: settings.ArchiveOutputTargetArchiveSize,
         target_dictionaries_size: settings.ArchiveOutputTargetDictionariesSize,
         target_encoded_file_size: settings.ArchiveOutputTargetEncodedFileSize,
@@ -66,6 +65,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 paths,
                 dataset,
                 timestampKey,
+                unstructured,
             } = request.body;
 
             const jobConfig: ClpIoConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
@@ -84,6 +84,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 }
                 if ("undefined" !== typeof timestampKey) {
                     jobConfig.input.timestamp_key = timestampKey;
+                }
+                if (true === unstructured) {
+                    jobConfig.input.unstructured = true;
                 }
             }
 
