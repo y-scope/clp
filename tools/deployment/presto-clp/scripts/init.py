@@ -286,7 +286,13 @@ def _add_clp_s3_env_vars(
 
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
-    s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_BUCKET"] = s3_bucket
+
+    # Use endpoint_url if provided, otherwise construct AWS-style URL
+    s3_end_point = _get_config_value(clp_config, f"{s3_config_key}.endpoint_url")
+    if s3_end_point is None:
+        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
+
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
 
@@ -359,6 +365,7 @@ def _generate_worker_clp_properties(
             "clp.storage-type": "PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE",
             "clp.s3-auth-provider": "PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER",
             "clp.s3-access-key-id": "PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID",
+            "clp.s3-bucket": "PRESTO_WORKER_CLPPROPERTIES_S3_BUCKET",
             "clp.s3-end-point": "PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT",
             "clp.s3-secret-access-key": "PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY",
         }
