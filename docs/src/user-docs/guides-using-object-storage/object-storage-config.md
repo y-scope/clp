@@ -1,9 +1,7 @@
 # Configuring object storage
 
 To use object storage with CLP, follow the steps below to configure the necessary IAM permissions
-and your object storage bucket(s) for each use case you require. If you use non-AWS S3-compatible
-endpoints, they should be configured with equivalent bucket access policies. During compression,
-CLP will automatically determine the appropriate endpoint URL.
+and your S3 bucket(s) for each use case you require.
 
 ## Configuration for compression
 
@@ -95,12 +93,7 @@ the fields in angle brackets (`<>`) with the appropriate values:
 The [log viewer][yscope-log-viewer] currently supports viewing [IR][uber-clp-blog-1] and JSONL
 stream files but not CLP archives; thus, to view the compressed logs from a CLP archive, CLP first
 converts the compressed logs into stream files. These streams can be cached on the filesystem, or on
-object storage.
-
-:::{note}
-Currently, the Web UI does not support viewing extracted streams stored in custom S3
-endpoints. This limitation will be addressed in a future release.
-:::
+S3.
 
 :::{note}
 A future version of the log viewer will support viewing CLP archives directly.

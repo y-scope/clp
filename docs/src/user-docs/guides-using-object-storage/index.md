@@ -2,13 +2,13 @@
 
 CLP can:
 
-* compress logs from object storage (e.g., S3);
+* compress logs from object storage (e.g., S3 and S3-compatible storage services);
 * store archives on object storage; and
 * cache stream files (used for viewing compressed logs) on object storage.
 
 This guide explains how to configure and use CLP for all three use cases. Note that you can choose
-to use object storage for any combination of the three use cases (e.g., compress logs from S3 and
-cache the stream files on S3, but store archives on the local filesystem).
+to use object storage for any combination of the three use cases (e.g., compress logs from AWS S3 and
+cache the stream files on AWS S3, but store archives on the local filesystem).
 
 :::{note}
 Currently, only [clp-json][release-choices] supports object storage. Support for `clp-text` will be
@@ -16,8 +16,8 @@ added in a future release.
 :::
 
 :::{note}
-Currently, CLP only supports using S3 as object storage. Support for other object storage services
-will be added in a future release.
+This guide focuses on AWS S3. For S3-compatible storage services (e.g., MinIO, Ceph), see the
+[S3-compatible storage guide](s3-compatible-storage.md).
 :::
 
 :::{tip}
@@ -132,6 +132,7 @@ Using CLP to compress, search, and view log files from object storage.
 object-storage-config
 clp-config
 clp-usage
+s3-compatible-storage
 :::
 
 [aws-configure-profiles]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html

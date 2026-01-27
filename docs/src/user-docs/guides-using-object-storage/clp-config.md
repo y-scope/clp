@@ -8,7 +8,7 @@ If CLP is already running, shut it down, update its configuration, and then star
 
 ## Configuration for input logs
 
-To configure CLP to compress logs from S3, update the `logs_input` key in
+To configure CLP to compress logs from AWS S3, update the `logs_input` key in
 `<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
@@ -25,7 +25,7 @@ logs_input:
 
 ## Configuration for archive storage
 
-To configure CLP to store archives on S3, update the `archive_output.storage` key in
+To configure CLP to store archives on AWS S3, update the `archive_output.storage` key in
 `<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
@@ -46,7 +46,7 @@ archive_output:
 ```
 
 * `staging_directory` is the local filesystem directory where archives will be temporarily stored
-  before being uploaded to S3.
+  before being uploaded to AWS S3.
 * `s3_config` configures both the S3 bucket where archives should be stored and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
@@ -56,34 +56,9 @@ archive_output:
   * `<type>` and the type-specific settings are described in the
     [configuring AWS authentication](#configuring-aws-authentication) section.
 
-### S3-compatible storage
-
-CLP supports archiving to S3-compatible object storage, such as MinIO and
-CephFS. To enable this, specify an `endpoint_url` within the `s3_config`
-section and remove the `region_code` key.
-
-```yaml
-archive_output:
-  storage:
-    type: "s3"
-    staging_directory: "var/data/staged-archives"  # Or a path of your choosing
-    s3_config:
-      endpoint_url: "<endpoint-url>"
-      bucket: "<bucket-name>"
-      key_prefix: "<key-prefix>"
-      aws_authentication:
-        type: "<type>"
-        # type-specific settings
-
-  # archive_output's other config keys
-```
-
-* `<endpoint-url>` is the endpoint URL of the S3-compatible storage service
-  (e.g., `http://localhost:9000` for a local MinIO instance).
-
 ## Configuration for stream storage
 
-To configure CLP to cache stream files on S3, update the `stream_output.storage` key in
+To configure CLP to cache stream files on AWS S3, update the `stream_output.storage` key in
 `<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
@@ -104,7 +79,7 @@ stream_output:
 ```
 
 * `staging_directory` is the local filesystem directory where streams will be temporarily stored
-  before being uploaded to S3.
+  before being uploaded to AWS S3.
 * `s3_config` configures both the S3 bucket where streams should be stored and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
