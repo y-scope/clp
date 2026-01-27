@@ -1612,31 +1612,33 @@ auto JsonParser::store_capture_groups(
     );
 
     auto prev_leaf_end_pos{root_var.get_start_pos()};
-    for (auto const capture : YSTDLIB_ERROR_HANDLING_TRYX(event.get_capture_matches(root_var))) {
-        auto capture_view{root_var.get_sub_token(capture.m_pos.m_start, capture.m_pos.m_end)};
-        m_current_parsed_message.add_unordered_value(capture_view.to_string());
+    for (auto const capture_match :
+         YSTDLIB_ERROR_HANDLING_TRYX(event.get_capture_matches(root_var)))
+    {
+        auto capture{
+                root_var.get_sub_token(capture_match.m_pos.m_start, capture_match.m_pos.m_end)
+        };
+        m_current_parsed_message.add_unordered_value(capture.to_string());
         m_current_schema.insert_unordered(m_archive_writer->add_node(
                 root_var_node_id,
                 NodeType::VarString,
-                capture.m_capture->get_name()
+                capture_match.m_capture->get_name()
         ));
         YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
                 root_var.to_string_view(),
-                capture.m_capture->get_name()
+                capture_match.m_capture->get_name()
         ));
         SPDLOG_DEBUG(
                 "[clpsls]\tcapture name: {} value: {}",
-                capture->get_name(),
-                capture_view.to_string()
+                capture_match.m_capture->get_name(),
+                capture.to_string()
         );
 
-        if (capture.m_leaf) {
-            auto static_text{
-                    root_var.get_sub_token(prev_leaf_end_pos, capture_view.get_start_pos())
-            };
+        if (capture_match.m_leaf) {
+            auto static_text{root_var.get_sub_token(prev_leaf_end_pos, capture.get_start_pos())};
             logtype_entry.add_static_text(static_text.to_string());
             logtype_entry.add_dictionary_var();
-            prev_leaf_end_pos = capture_view.get_end_pos();
+            prev_leaf_end_pos = capture.get_end_pos();
         }
     }
     logtype_entry.add_static_text(
