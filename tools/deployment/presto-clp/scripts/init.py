@@ -260,9 +260,6 @@ def _add_clp_s3_env_vars(
         s3_bucket = _get_required_config_value(
             clp_config, f"{s3_config_key}.bucket", clp_config_file_path
         )
-        s3_region_code = _get_required_config_value(
-            clp_config, f"{s3_config_key}.region_code", clp_config_file_path
-        )
 
         aws_auth_key = f"{s3_config_key}.aws_authentication"
         aws_auth_type_key = f"{aws_auth_key}.type"
