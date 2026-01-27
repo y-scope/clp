@@ -21,7 +21,7 @@ DATABASE_DEFAULT_PORT = 3306
 PRESTO_QUERY_MEMORY_RATIO = 0.5
 PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 
-# S3 URL constant (matching s3_utils.py)
+# S3 URL constant
 AWS_ENDPOINT = "amazonaws.com"
 
 # Set up console logging
