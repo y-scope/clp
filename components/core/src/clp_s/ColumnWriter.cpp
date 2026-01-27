@@ -6,9 +6,14 @@
 #include <cstdint>
 #include <variant>
 
+#include <fmt/format.h>
+
 #include "../clp/Defs.h"
 #include "../clp/EncodedVariableInterpreter.hpp"
-#include "../clp/ir/EncodedTextAst.hpp"
+#include "../clp/ErrorCode.hpp"
+#include "../clp/ffi/EncodedTextAst.hpp"
+#include "../clp/ffi/ir_stream/decoding_methods.hpp"
+#include "../clp/TraceableException.hpp"
 #include "ParsedMessage.hpp"
 #include "ZstdCompressor.hpp"
 
@@ -23,16 +28,14 @@ void Int64ColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-size_t DeltaEncodedInt64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    if (0 == m_values.size()) {
-        m_cur = std::get<int64_t>(value);
-        m_values.push_back(m_cur);
-    } else {
-        auto next = std::get<int64_t>(value);
-        m_values.push_back(next - m_cur);
-        m_cur = next;
-    }
+auto DeltaEncodedInt64ColumnWriter::add_value(int64_t value) -> size_t {
+    m_values.emplace_back(value - m_cur);
+    m_cur = value;
     return sizeof(int64_t);
+}
+
+size_t DeltaEncodedInt64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    return add_value(std::get<int64_t>(value));
 }
 
 void DeltaEncodedInt64ColumnWriter::store(ZstdCompressor& compressor) {
@@ -89,7 +92,6 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
 
 size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     uint64_t offset{m_encoded_vars.size()};
-    [[maybe_unused]] size_t estimated_raw_size{};
     std::vector<clp::variable_dictionary_id_t> temp_var_dict_ids;
     if (std::holds_alternative<std::string>(value)) {
         clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
@@ -99,24 +101,40 @@ size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
                 m_encoded_vars,
                 temp_var_dict_ids
         );
-    } else if (std::holds_alternative<clp::ir::EightByteEncodedTextAst>(value)) {
-        clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<clp::ir::EightByteEncodedTextAst>(value),
+    } else if (std::holds_alternative<clp::ffi::EightByteEncodedTextAst>(value)) {
+        auto const result{clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                std::get<clp::ffi::EightByteEncodedTextAst>(value),
                 m_logtype_entry,
                 *m_var_dict,
                 m_encoded_vars,
-                temp_var_dict_ids,
-                estimated_raw_size
-        );
+                temp_var_dict_ids
+        )};
+        if (result.has_error()) {
+            auto const error{result.error()};
+            throw clp::ffi::ir_stream::DecodingException(
+                    clp::ErrorCode_Failure,
+                    __FILENAME__,
+                    __LINE__,
+                    fmt::format("{}: {}", error.category().name(), error.message())
+            );
+        }
     } else {
-        clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<clp::ir::FourByteEncodedTextAst>(value),
+        auto const result{clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                std::get<clp::ffi::FourByteEncodedTextAst>(value),
                 m_logtype_entry,
                 *m_var_dict,
                 m_encoded_vars,
-                temp_var_dict_ids,
-                estimated_raw_size
-        );
+                temp_var_dict_ids
+        )};
+        if (result.has_error()) {
+            auto const error{result.error()};
+            throw clp::ffi::ir_stream::DecodingException(
+                    clp::ErrorCode_Failure,
+                    __FILENAME__,
+                    __LINE__,
+                    fmt::format("{}: {}", error.category().name(), error.message())
+            );
+        }
     }
 
     clp::logtype_dictionary_id_t id{};
@@ -159,6 +177,19 @@ void DateStringColumnWriter::store(ZstdCompressor& compressor) {
     size_t timestamps_size = m_timestamps.size() * sizeof(int64_t);
     compressor.write(reinterpret_cast<char const*>(m_timestamps.data()), timestamps_size);
     size_t encodings_size = m_timestamp_encodings.size() * sizeof(int64_t);
+    compressor.write(reinterpret_cast<char const*>(m_timestamp_encodings.data()), encodings_size);
+}
+
+auto TimestampColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
+    auto const [timestamp, encoding] = std::get<std::pair<epochtime_t, uint64_t>>(value);
+    auto const encoded_timestamp_size{m_timestamps.add_value(timestamp)};
+    m_timestamp_encodings.emplace_back(encoding);
+    return encoded_timestamp_size + sizeof(uint64_t);
+}
+
+void TimestampColumnWriter::store(ZstdCompressor& compressor) {
+    m_timestamps.store(compressor);
+    size_t const encodings_size{m_timestamp_encodings.size() * sizeof(uint64_t)};
     compressor.write(reinterpret_cast<char const*>(m_timestamp_encodings.data()), encodings_size);
 }
 }  // namespace clp_s

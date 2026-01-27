@@ -16,7 +16,7 @@ from clp_py_utils.clp_config import (
     Database,
     ResultsCache,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchJobConfig
 
@@ -39,7 +39,6 @@ def create_and_monitor_job_in_db(
     results_cache: ResultsCache,
     dataset: str | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -66,12 +65,8 @@ def create_and_monitor_job_in_db(
         search_config.aggregation_config = AggregationConfig(
             count_by_time_bucket_size=count_by_time_bucket_size
         )
-    if tags:
-        tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
-        if len(tag_list) > 0:
-            search_config.tags = tag_list
 
-    sql_adapter = SQL_Adapter(db_config)
+    sql_adapter = SqlAdapter(db_config)
     job_id = submit_query_job(sql_adapter, search_config, QueryJobType.SEARCH_OR_AGGREGATION)
     job_status = wait_for_query_job(sql_adapter, job_id)
 
@@ -122,7 +117,6 @@ async def do_search_without_aggregation(
     results_cache: ResultsCache,
     dataset: str | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -152,7 +146,6 @@ async def do_search_without_aggregation(
             results_cache,
             dataset,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -190,7 +183,6 @@ async def do_search(
     results_cache: ResultsCache,
     dataset: str | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -205,7 +197,6 @@ async def do_search(
             results_cache,
             dataset,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -219,7 +210,6 @@ async def do_search(
             results_cache,
             dataset,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -248,9 +238,6 @@ def main(argv):
         type=str,
         default=None,
         help="The dataset that the archives belong to.",
-    )
-    args_parser.add_argument(
-        "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )
     args_parser.add_argument(
         "--begin-time",
@@ -288,6 +275,10 @@ def main(argv):
     else:
         logger.setLevel(logging.INFO)
 
+    if parsed_args.count and parsed_args.count_by_time is not None:
+        logger.error("--count and --count-by-time are mutually exclusive.")
+        return -1
+
     if (
         parsed_args.begin_time is not None
         and parsed_args.end_time is not None
@@ -298,7 +289,7 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(config_file_path)
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
     except:
@@ -321,7 +312,6 @@ def main(argv):
                 clp_config.results_cache,
                 dataset,
                 parsed_args.wildcard_query,
-                parsed_args.tags,
                 parsed_args.begin_time,
                 parsed_args.end_time,
                 parsed_args.ignore_case,

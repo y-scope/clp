@@ -11,8 +11,8 @@
     "init": "npm clean-install --workspaces && npm --workspace common run build",
     "lint:check": "npm run lint:check --workspaces",
     "lint:fix": "npm run lint:fix --workspaces",
-    "dev": "concurrently \"npm run dev:*\"",
-    "dev:client": "npm --workspace client run start",
+    "dev": "concurrently -c auto \"npm run dev:*\"",
+    "dev:client": "npm --workspace client run dev",
     "dev:common": "npm --workspace common run build:watch",
     "dev:server": "npm --workspace server run dev"
   },
@@ -20,15 +20,5 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "concurrently": "^9.2.1"
-  },
-  "overrides": {
-    "react-syntax-highlighter": {
-      "refractor": {
-        "prismjs": "^1.30.0"
-      }
-    },
-    "monaco-editor": {
-      "dompurify": "3.3.0"
-    }
   }
 }

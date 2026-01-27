@@ -25,13 +25,13 @@ import pathlib
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
@@ -39,14 +39,12 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
-    get_archive_tags_table_name,
     get_archives_table_name,
     get_files_table_name,
-    get_tags_table_name,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from pydantic import ValidationError
 
 from job_orchestration.executor.query.extract_stream_task import extract_stream
@@ -84,23 +82,23 @@ from job_orchestration.scheduler.utils import kill_hanging_jobs
 logger = get_logger("search-job-handler")
 
 # Dictionary of active jobs indexed by job id
-active_jobs: Dict[str, QueryJob] = {}
+active_jobs: dict[str, QueryJob] = {}
 
 # Dictionary that maps IDs of file splits being extracted to IDs of jobs waiting for them
-active_file_split_ir_extractions: Dict[str, List[str]] = {}
+active_file_split_ir_extractions: dict[str, list[str]] = {}
 
 # Dictionary that maps IDs of clp-s archives being extracted to IDs of jobs waiting for them
-active_archive_json_extractions: Dict[str, List[str]] = {}
+active_archive_json_extractions: dict[str, list[str]] = {}
 
-reducer_connection_queue: Optional[asyncio.Queue] = None
+reducer_connection_queue: asyncio.Queue | None = None
 
 
 class StreamExtractionHandle(ABC):
     def __init__(self, job_id: str):
         self._job_id = job_id
-        self._archive_id: Optional[str] = None
+        self._archive_id: str | None = None
 
-    def get_archive_id(self) -> Optional[str]:
+    def get_archive_id(self) -> str | None:
         return self._archive_id
 
     @abstractmethod
@@ -123,7 +121,7 @@ class IrExtractionHandle(StreamExtractionHandle):
     def __init__(
         self,
         job_id: str,
-        job_config: Dict[str, Any],
+        job_config: dict[str, Any],
         db_conn,
         table_prefix: str,
     ):
@@ -170,7 +168,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
     def __init__(
         self,
         job_id: str,
-        job_config: Dict[str, Any],
+        job_config: dict[str, Any],
         db_conn,
         table_prefix: str,
     ):
@@ -220,7 +218,6 @@ def cancel_job_except_reducer(job: SearchJob):
     making it easier to avoid using locks in concurrent tasks.
     :param job:
     """
-
     if InternalJobState.RUNNING == job.state:
         job.current_sub_job_async_task_result.revoke(terminate=True)
         try:
@@ -236,7 +233,6 @@ async def release_reducer_for_job(job: SearchJob):
     Releases the reducer assigned to the given job
     :param job:
     """
-
     if job.reducer_handler_msg_queues is not None:
         # Signal the reducer to cancel the job
         msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
@@ -291,7 +287,7 @@ def set_job_or_task_status(
     table_name: str,
     job_id: str,
     status: QueryJobStatus | QueryTaskStatus,
-    prev_status: Optional[QueryJobStatus | QueryTaskStatus] = None,
+    prev_status: QueryJobStatus | QueryTaskStatus | None = None,
     **kwargs,
 ) -> bool:
     """
@@ -317,7 +313,7 @@ def set_job_or_task_status(
     else:
         raise ValueError(f"Unsupported table name {table_name}")
     update = (
-        f'UPDATE {table_name} SET {", ".join(field_set_expressions)} WHERE {id_col_name}={job_id}'
+        f"UPDATE {table_name} SET {', '.join(field_set_expressions)} WHERE {id_col_name}={job_id}"
     )
 
     if prev_status is not None:
@@ -325,9 +321,9 @@ def set_job_or_task_status(
 
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
+        row_changed = cursor.rowcount != 0
         db_conn.commit()
-        rval = cursor.rowcount != 0
-    return rval
+    return row_changed
 
 
 async def handle_cancelling_search_jobs(db_conn_pool) -> None:
@@ -365,20 +361,26 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000000.0",
             )
 
+            set_job_or_task_status_kwargs = {}
+            if job.start_time is not None:
+                set_job_or_task_status_kwargs["duration"] = (
+                    datetime.datetime.now() - job.start_time
+                ).total_seconds()
+
             if set_job_or_task_status(
                 db_conn,
                 QUERY_JOBS_TABLE_NAME,
                 job_id,
                 QueryJobStatus.CANCELLED,
                 QueryJobStatus.CANCELLING,
-                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+                **set_job_or_task_status_kwargs,
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:
                 logger.error(f"Failed to cancel job {job_id}.")
 
 
-def insert_query_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[int]:
+def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[int]:
     task_ids = []
     with contextlib.closing(db_conn.cursor()) as cursor:
         for archive_id in archive_ids:
@@ -399,7 +401,7 @@ def get_archives_for_search(
     db_conn,
     table_prefix: str,
     search_config: SearchJobConfig,
-    archive_end_ts_lower_bound: Optional[int],
+    archive_end_ts_lower_bound: int | None,
 ):
     dataset = search_config.dataset
     query = f"""SELECT id as archive_id, end_timestamp
@@ -414,23 +416,12 @@ def get_archives_for_search(
         filter_clauses.append(
             f"(end_timestamp >= {archive_end_ts_lower_bound} OR end_timestamp = 0)"
         )
-    if search_config.tags is not None:
-        archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
-        tags_table_name = get_tags_table_name(table_prefix, dataset)
-        filter_clauses.append(
-            f"id IN (SELECT archive_id FROM {archive_tags_table_name} WHERE "
-            f"tag_id IN (SELECT tag_id FROM {tags_table_name} WHERE tag_name IN "
-            f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
-        )
     if len(filter_clauses) > 0:
         query += " WHERE " + " AND ".join(filter_clauses)
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        if search_config.tags is not None:
-            cursor.execute(query, tuple(search_config.tags))
-        else:
-            cursor.execute(query)
+        cursor.execute(query)
         archives_for_search = list(cursor.fetchall())
     return archives_for_search
 
@@ -439,7 +430,7 @@ def get_archive_and_file_split_ids_for_ir_extraction(
     db_conn,
     table_prefix: str,
     extract_ir_config: ExtractIrJobConfig,
-) -> Tuple[Optional[str], Optional[str]]:
+) -> tuple[str | None, str | None]:
     orig_file_id = extract_ir_config.orig_file_id
     msg_ix = extract_ir_config.msg_ix
 
@@ -447,7 +438,7 @@ def get_archive_and_file_split_ids_for_ir_extraction(
     if len(results) == 0:
         logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         return None, None
-    elif len(results) > 1:
+    if len(results) > 1:
         logger.error(f"Multiple file splits found for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         for result in results:
             logger.error(f"{result['archive_id']}:{result['id']}")
@@ -492,7 +483,7 @@ def get_archive_and_file_split_ids(
 def archive_exists(
     db_conn,
     table_prefix: str,
-    dataset: Optional[str],
+    dataset: str | None,
     archive_id: str,
 ) -> bool:
     archives_table_name = get_archives_table_name(table_prefix, dataset)
@@ -506,10 +497,10 @@ def archive_exists(
 
 
 def get_task_group_for_job(
-    archive_ids: List[str],
-    task_ids: List[int],
+    archive_ids: list[str],
+    task_ids: list[int],
     job: QueryJob,
-    clp_metadata_db_conn_params: Dict[str, any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ):
     job_config = job.get_config().model_dump()
@@ -526,7 +517,7 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
-    elif job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
+    if job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
         return celery.group(
             extract_stream.s(
                 job_id=job.id,
@@ -538,17 +529,16 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
-    else:
-        error_msg = f"Unexpected job type: {job_type}"
-        logger.error(error_msg)
-        raise NotImplementedError(error_msg)
+    error_msg = f"Unexpected job type: {job_type}"
+    logger.error(error_msg)
+    raise NotImplementedError(error_msg)
 
 
 def dispatch_query_job(
     db_conn,
     job: QueryJob,
-    archive_ids: List[str],
-    clp_metadata_db_conn_params: Dict[str, any],
+    archive_ids: list[str],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ) -> None:
     global active_jobs
@@ -566,13 +556,15 @@ def dispatch_query_job(
 
 
 async def acquire_reducer_for_job(job: SearchJob):
-    reducer_host: Optional[str] = None
-    reducer_port: Optional[int] = None
-    reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues] = None
+    reducer_host: str | None = None
+    reducer_port: int | None = None
+    reducer_handler_msg_queues: ReducerHandlerMessageQueues | None = None
     while True:
-        reducer_host, reducer_port, reducer_handler_msg_queues = (
-            await reducer_connection_queue.get()
-        )
+        (
+            reducer_host,
+            reducer_port,
+            reducer_handler_msg_queues,
+        ) = await reducer_connection_queue.get()
         """
         Below, the task can either be cancelled before sending the job config to the reducer or
         before the reducer acknowledges the job. If the task is cancelled before we send the job
@@ -593,7 +585,7 @@ async def acquire_reducer_for_job(job: SearchJob):
             msg = await reducer_handler_msg_queues.get_from_handler()
             if msg.msg_type == ReducerHandlerMessageType.SUCCESS:
                 break
-            elif msg.msg_type != ReducerHandlerMessageType.FAILURE:
+            if msg.msg_type != ReducerHandlerMessageType.FAILURE:
                 error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
                 raise NotImplementedError(error_msg)
         except asyncio.CancelledError:
@@ -613,8 +605,8 @@ async def acquire_reducer_for_job(job: SearchJob):
 def dispatch_job_and_update_db(
     db_conn,
     new_job: QueryJob,
-    target_archives: List[str],
-    clp_metadata_db_conn_params: Dict[str, any],
+    target_archives: list[str],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     num_tasks: int,
 ) -> None:
@@ -622,7 +614,8 @@ def dispatch_job_and_update_db(
         db_conn, new_job, target_archives, clp_metadata_db_conn_params, results_cache_uri
     )
     start_time = datetime.datetime.now()
-    new_job.start_time = start_time
+    if new_job.start_time is None:
+        new_job.start_time = start_time
     set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
@@ -636,13 +629,13 @@ def dispatch_job_and_update_db(
 
 def handle_pending_query_jobs(
     db_conn_pool,
-    clp_metadata_db_conn_params: Dict[str, any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
-    existing_datasets: Set[str],
-    archive_retention_period: Optional[int],
-) -> List[asyncio.Task]:
+    existing_datasets: set[str],
+    archive_retention_period: int | None,
+) -> list[asyncio.Task]:
     global active_jobs
 
     reducer_acquisition_tasks = []
@@ -653,9 +646,10 @@ def handle_pending_query_jobs(
         and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
-    with contextlib.closing(db_conn_pool.connect()) as db_conn, contextlib.closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        contextlib.closing(db_conn_pool.connect()) as db_conn,
+        contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
             job_type = job["type"]
@@ -687,7 +681,7 @@ def handle_pending_query_jobs(
                     continue
 
                 search_config = SearchJobConfig.model_validate(job_config)
-                archive_end_ts_lower_bound: Optional[int] = None
+                archive_end_ts_lower_bound: int | None = None
                 if archive_retention_period is not None:
                     archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
                         job_creation_time - archive_retention_period * MIN_TO_SECONDS
@@ -894,7 +888,7 @@ def found_max_num_latest_results(
 
 
 async def handle_finished_search_job(
-    db_conn, job: SearchJob, task_results: Optional[Any], results_cache_uri: str
+    db_conn, job: SearchJob, task_results: Any | None, results_cache_uri: str
 ) -> None:
     global active_jobs
 
@@ -980,7 +974,7 @@ async def handle_finished_search_job(
 
 
 async def handle_finished_stream_extraction_job(
-    db_conn, job: QueryJob, task_results: List[Any]
+    db_conn, job: QueryJob, task_results: list[Any]
 ) -> None:
     global active_jobs
     global active_archive_json_extractions
@@ -992,14 +986,13 @@ async def handle_finished_stream_extraction_job(
     num_tasks = len(task_results)
     if 1 != num_tasks:
         logger.error(
-            f"Unexpected number of tasks for extraction job {job_id}. "
-            f"Expected 1, got {num_tasks}."
+            f"Unexpected number of tasks for extraction job {job_id}. Expected 1, got {num_tasks}."
         )
         new_job_status = QueryJobStatus.FAILED
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
-        if not QueryJobStatus.SUCCEEDED == task_result.status:
+        if not QueryTaskStatus.SUCCEEDED == task_result.status:
             logger.error(
                 f"Extraction task job-{job_id}-task-{task_id} failed. "
                 f"Check {task_result.error_log_path} for details."
@@ -1025,7 +1018,7 @@ async def handle_finished_stream_extraction_job(
         else:
             logger.info(f"Completed stream extraction job {job_id} with failing tasks.")
 
-    waiting_jobs: List[str]
+    waiting_jobs: list[str]
     if QueryJobType.EXTRACT_IR == job.get_type():
         extract_ir_config: ExtractIrJobConfig = job.get_config()
         waiting_jobs = active_file_split_ir_extractions.pop(extract_ir_config.file_split_id)
@@ -1101,19 +1094,19 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 
 async def handle_jobs(
     db_conn_pool,
-    clp_metadata_db_conn_params: Dict[str, any],
+    clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     stream_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
-    archive_retention_period: Optional[int],
+    archive_retention_period: int | None,
 ) -> None:
     handle_updating_task = asyncio.create_task(
         handle_job_updates(db_conn_pool, results_cache_uri, jobs_poll_delay)
     )
 
     tasks = [handle_updating_task]
-    existing_datasets: Set[str] = set()
+    existing_datasets: set[str] = set()
     while True:
         reducer_acquisition_tasks = handle_pending_query_jobs(
             db_conn_pool,
@@ -1140,7 +1133,7 @@ async def handle_jobs(
         tasks = list(pending)
 
 
-async def main(argv: List[str]) -> int:
+async def main(argv: list[str]) -> int:
     global reducer_connection_queue
 
     args_parser = argparse.ArgumentParser(description="Wait for and run query jobs.")
@@ -1160,7 +1153,7 @@ async def main(argv: List[str]) -> int:
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -1171,7 +1164,7 @@ async def main(argv: List[str]) -> int:
 
     reducer_connection_queue = asyncio.Queue(32)
 
-    sql_adapter = SQL_Adapter(clp_config.database)
+    sql_adapter = SqlAdapter(clp_config.database)
 
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.QUERY)
@@ -1202,8 +1195,7 @@ async def main(argv: List[str]) -> int:
             return -1
 
         logger.info(
-            f"Connected to archive database"
-            f" {clp_config.database.host}:{clp_config.database.port}."
+            f"Connected to archive database {clp_config.database.host}:{clp_config.database.port}."
         )
         logger.info(f"{QUERY_SCHEDULER_COMPONENT_NAME} started.")
         batch_size = clp_config.query_scheduler.num_archives_to_search_per_sub_job
@@ -1237,7 +1229,7 @@ async def main(argv: List[str]) -> int:
             except Exception:
                 logger.exception("job_handler failed.")
     except Exception:
-        logger.exception(f"Uncaught exception in job handling loop.")
+        logger.exception("Uncaught exception in job handling loop.")
 
     return 0
 

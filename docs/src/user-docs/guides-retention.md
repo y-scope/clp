@@ -51,13 +51,13 @@ The following settings affect how CLP's data retention operates:
 * [Search result retention period](#search-result-retention-period)
 * [Garbage collector sweep interval](#garbage-collector-sweep-interval)
 
-All settings can be configured in `etc/clp-config.yml` which is located in the CLP package
+All settings can be configured in `etc/clp-config.yaml` which is located in the CLP package
 directory.
 
 ### Archive retention period
 
 This setting determines how long an archive should be retained before it is automatically deleted.
-To configure it, modify the value of `archive_output.retention_period` in `etc/clp-config.yml`.
+To configure it, modify the value of `archive_output.retention_period` in `etc/clp-config.yaml`.
 
 For example, to configure an archive retention period of 30 days (43,200 minutes), use:
 
@@ -126,7 +126,7 @@ $$adjusted\_retention\_period = retention\_period - signed\_utc\_offset$$
 
 This setting determines how long search results should be retained before they are automatically
 deleted. To configure it, modify the value of `results_cache.retention_period` in
-`etc/clp-config.yml`.
+`etc/clp-config.yaml`.
 
 For example, to configure a search result retention period of 1 day (1,440 minutes), use:
 
@@ -161,7 +161,7 @@ is the timestamp at which the search completed.
 
 This setting determines how often the garbage collector wakes up to check for and delete expired
 data. To configure it, modify the value of `garbage_collector.sweep_interval` in
-`etc/clp-config.yml`.
+`etc/clp-config.yaml`.
 
 For example, to configure a sweep interval of 3 hours (180 minutes) for archives and 15 minutes for
 search results, use:

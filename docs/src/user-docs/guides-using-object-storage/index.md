@@ -20,6 +20,12 @@ Currently, CLP only supports using S3 as object storage. Support for other objec
 will be added in a future release.
 :::
 
+:::{tip}
+If you're using object storage because the host(s) on which you're running CLP are ephemeral,
+consider also using [external databases](../guides-external-database.md) for metadata storage (to
+ensure data persistence in case of host replacements).
+:::
+
 ## Prerequisites
 
 1. This guide assumes you're able to configure, start, stop, and use CLP as described in the

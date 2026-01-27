@@ -20,11 +20,10 @@ server. It also serves the [log-viewer].
 
     ```shell
     cd components/webui
-    (cd client && npm i)
-    (cd server && npm i)
+    npm run init
     ```
 
-    If you add a package manually to `package.json` or `package.json` changes for some other reason, 
+    If you add a package manually to `package.json` or `package.json` changes for some other reason,
     you should rerun the commands above.
 
 ## Running
@@ -33,7 +32,7 @@ server. It also serves the [log-viewer].
 
     ```shell
     cd components/webui/client
-    npm run start
+    npm run dev
     ```
 
 2. To run the server during development:

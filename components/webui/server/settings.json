@@ -3,6 +3,7 @@
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
     "SqlDbQueryJobsTableName": "query_jobs",
+    "SqlDbCompressionJobsTableName": "compression_jobs",
 
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
@@ -12,13 +13,21 @@
 
     "ClientDir": "../client/dist",
     "LogViewerDir": "../yscope-log-viewer/dist",
+    "LogsInputRootDir": "/mnt/logs",
     "StreamFilesDir": "../../../build/clp-package/var/data/streams",
     "StreamTargetUncompressedSize": 134217728,
     "StreamFilesS3Region": null,
     "StreamFilesS3PathPrefix": null,
     "StreamFilesS3Profile": null,
 
-    "ClpQueryEngine": "clp",
+    "ArchiveOutputCompressionLevel": 3,
+    "ArchiveOutputTargetArchiveSize": 268435456,
+    "ArchiveOutputTargetDictionariesSize": 33554432,
+    "ArchiveOutputTargetEncodedFileSize": 268435456,
+    "ArchiveOutputTargetSegmentSize": 268435456,
+
+    "ClpQueryEngine": "clp-s",
+    "ClpStorageEngine": "clp-s",
     "PrestoHost": "localhost",
     "PrestoPort": 8889
 }

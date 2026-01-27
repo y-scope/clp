@@ -19,6 +19,9 @@ set(
         ../ffi/encoding_methods.cpp
         ../ffi/encoding_methods.hpp
         ../ffi/encoding_methods.inc
+        ../ffi/EncodedTextAst.hpp
+        ../ffi/EncodedTextAstError.cpp
+        ../ffi/EncodedTextAstError.hpp
         ../ffi/ir_stream/byteswap.hpp
         ../ffi/ir_stream/decoding_methods.cpp
         ../ffi/ir_stream/decoding_methods.hpp
@@ -27,6 +30,7 @@ set(
         ../ffi/ir_stream/encoding_methods.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
+        ../ffi/StringBlob.hpp
         ../FileDescriptor.cpp
         ../FileDescriptor.hpp
         ../FileReader.cpp
@@ -176,6 +180,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(clp PRIVATE cxx_std_20)
         target_include_directories(clp
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(clp

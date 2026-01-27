@@ -28,6 +28,8 @@
 #include "CommandLineArguments.hpp"
 #include "InputConfig.hpp"
 #include "search/ast/Expression.hpp"
+#include "search/ast/SetTimestampLiteralPrecision.hpp"
+#include "search/ast/TimestampLiteral.hpp"
 
 // This include has a circular dependency with the `.inc` file.
 // The following clang-tidy suppression should be removed once the circular dependency is resolved.
@@ -36,6 +38,8 @@
 
 using clp_s::KvIrSearchError;
 using clp_s::KvIrSearchErrorEnum;
+using clp_s::search::ast::SetTimestampLiteralPrecision;
+using clp_s::search::ast::TimestampLiteral;
 using KvIrSearchErrorCategory = ystdlib::error_handling::ErrorCategory<KvIrSearchErrorEnum>;
 
 namespace clp_s {
@@ -268,9 +272,12 @@ auto search_kv_ir_stream(
         );
     }
 
+    SetTimestampLiteralPrecision date_precision_pass{TimestampLiteral::Precision::Milliseconds};
+    query = date_precision_pass.run(query);
+
     try {
         clp::streaming_compression::zstd::Decompressor decompressor;
-        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KB
+        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KiB
         decompressor.open(*raw_reader, cReaderBufferSize);
         YSTDLIB_ERROR_HANDLING_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,

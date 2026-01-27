@@ -15,9 +15,7 @@ def mock_clp_config() -> Any:
     """Provides a mock CLP configuration for testing."""
     return SimpleNamespace(
         results_cache=SimpleNamespace(
-            host="results-cache",
-            port=27017,
-            db_name="clp-query-results"
+            host="results-cache", port=27017, db_name="clp-query-results"
         ),
         database=SimpleNamespace(host="database", port=3306, name="clp-db"),
         webui=SimpleNamespace(host="localhost", port=4000),
@@ -69,9 +67,11 @@ async def test_read_job_status_not_found(mock_clp_config: Any) -> None:
     """Tests reading job status for a non-existent query."""
     connector = ClpConnector(mock_clp_config)
     mock = AsyncMock(side_effect=ValueError("not found"))
-    with patch.object(connector, "read_job_status", mock), \
-         pytest.raises(ValueError, match="not found"):
-            await connector.read_job_status("999")
+    with (
+        patch.object(connector, "read_job_status", mock),
+        pytest.raises(ValueError, match="not found"),
+    ):
+        await connector.read_job_status("999")
 
 
 @pytest.mark.asyncio
@@ -79,27 +79,24 @@ async def test_wait_query_completion_succeeded(mock_clp_config: Any) -> None:
     """Tests waiting for a query to complete successfully."""
     connector = ClpConnector(mock_clp_config)
     # Simulate status: PENDING -> RUNNING -> SUCCEEDED
-    statuses = [
-        QueryJobStatus.PENDING,
-        QueryJobStatus.RUNNING,
-        QueryJobStatus.SUCCEEDED
-    ]
+    statuses = [QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.SUCCEEDED]
     connector.read_job_status = AsyncMock(side_effect=statuses)
     with patch("asyncio.sleep", AsyncMock()):
         await connector.wait_query_completion("42")
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("fail_status", "exc_type"), [
-    (QueryJobStatus.FAILED, RuntimeError),
-    (QueryJobStatus.CANCELLED, RuntimeError),
-    (QueryJobStatus.KILLED, RuntimeError),
-    (999, RuntimeError),  # unknown status
-])
+@pytest.mark.parametrize(
+    ("fail_status", "exc_type"),
+    [
+        (QueryJobStatus.FAILED, RuntimeError),
+        (QueryJobStatus.CANCELLED, RuntimeError),
+        (QueryJobStatus.KILLED, RuntimeError),
+        (999, RuntimeError),  # unknown status
+    ],
+)
 async def test_wait_query_completion_failure_cases(
-    fail_status: QueryJobStatus,
-    exc_type: type[Exception],
-    mock_clp_config: Any
+    fail_status: QueryJobStatus, exc_type: type[Exception], mock_clp_config: Any
 ) -> None:
     """Tests waiting for a query that ends in failure, cancellation, or unknown status."""
     connector = ClpConnector(mock_clp_config)
@@ -139,14 +136,16 @@ async def test_read_results_adds_link_field(mock_clp_config: Any) -> None:
     assert len(results) == len(mock_docs)
     for original, result in zip(mock_docs, results, strict=True):
         expected_link = (
-            f'http://{mock_clp_config.webui.host}:{mock_clp_config.webui.port}'
-            f'/streamFile?type=json&streamId={original["archive_id"]}'
-            f'&dataset=default&logEventIdx={original["log_event_ix"]}'
+            f"http://{mock_clp_config.webui.host}:{mock_clp_config.webui.port}"
+            f"/streamFile?type=json&streamId={original['archive_id']}"
+            f"&dataset=default&logEventIdx={original['log_event_ix']}"
         )
         assert result["link"] == expected_link
 
 
 T = TypeVar("T")
+
+
 async def _aiter(it: Iterable[T]) -> AsyncGenerator[T, None]:
     """
     Yields items from an iterable asynchronously.

@@ -16,11 +16,19 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
+clp = [
+    "clp-mcp-server",
+    "clp-package-utils",
+    "clp-py-utils",
+    "job-orchestration",
+]
 dev = [
     "mypy>=1.16.0",
     "ruff>=0.11.12",
     "pytest>=8.4.1",
     "pytest-env>=1.1.5",
+    "PyYAML>=6.0.3",
+    "types-PyYAML>=6.0.12.20250915",
 ]
 
 [tool.mypy]
@@ -33,39 +41,13 @@ show_error_context = true
 show_error_end = true
 
 [tool.ruff]
-line-length = 100
+extend = "../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
 
-[tool.ruff.lint]
-select = ["ALL"]
-ignore = [
-    "ANN401",  # Allow using `Any` type for function signatures
-    "COM812",  # Redundant and conflicts with ruff format
-    "D203",  # No blank line before docstrings (D211)
-    "D205",  # Breaks if summary is larger than one line due to wrapping or if no summary exists
-    "D212",  # Enforce docstring summary line on the next line after quotes (D213)
-    "D400",  # First line of docstrings may not end in period
-    "D401",  # Docstrings should be written in present tense (not imperative)
-    "D415",  # First line of docstrings may not end in a period, question mark, or exclamation point
-    "FBT",  # Allow bool positional parameters since other value positions are allowed
-    "FIX002",  # Allow todo statements
-    "PERF401",  # Allow for loops when creating lists
-    "PERF403",  # Allow for loops when creating dicts
-    "S311",  # Allow usage of `random` package
-    "S603",  # Automatically trust inputs of subprocess execution
-    "SIM102",  # Allow collapsible if statements for readability
-    "SIM300",  # Skip Yoda-condition format fixes
-    "TD002",  # Author unnecessary for todo statement
-    "TD003",  # Issue link unnecessary for todo statement
-    "UP015",  # Explicit open modes are helpful
-]
-isort.order-by-type = false
+[tool.uv]
+default-groups = ["clp", "dev"]
 
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = [
-    "S101",  # Allow usage of pytest `assert`
-    "TC003",  # Ignore performance overhead of imports only used for type checking
-]
-
-[tool.ruff.format]
-docstring-code-format = true
-docstring-code-line-length = 100
+[tool.uv.sources]
+clp-mcp-server = { path = "../components/clp-mcp-server", editable = true }
+clp-package-utils = { path = "../components/clp-package-utils", editable = true }
+clp-py-utils = { path = "../components/clp-py-utils", editable = true }
+job-orchestration = { path = "../components/job-orchestration", editable = true }

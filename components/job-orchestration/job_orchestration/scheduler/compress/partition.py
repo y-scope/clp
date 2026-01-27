@@ -1,6 +1,6 @@
 import copy
 import pathlib
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import brotli
 import msgpack
@@ -22,14 +22,14 @@ class PathsToCompressBuffer:
         clp_io_config: ClpIoConfig,
         clp_metadata_db_connection_config: dict,
     ):
-        self.__files: List[FileMetadata] = []
-        self.__tasks: List[Dict[str, Any]] = []
-        self.__partition_info: List[Dict[str, Any]] = []
+        self.__files: list[FileMetadata] = []
+        self.__tasks: list[dict[str, Any]] = []
+        self.__partition_info: list[dict[str, Any]] = []
         self.__maintain_file_ordering: bool = maintain_file_ordering
         if empty_directories_allowed:
-            self.__empty_directories: Optional[List[str]] = []
+            self.__empty_directories: list[str] | None = []
         else:
-            self.__empty_directories: Optional[List[str]] = None
+            self.__empty_directories: list[str] | None = None
         self.__total_file_size: int = 0
         self.__target_archive_size: int = clp_io_config.output.target_archive_size
         self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
@@ -37,7 +37,6 @@ class PathsToCompressBuffer:
         self.num_tasks = 0
         self.__task_arguments = {
             "job_id": scheduling_job_id,
-            "tag_ids": None,
             "task_id": -1,
             "clp_io_config_json": clp_io_config.model_dump_json(exclude_none=True),
             "paths_to_compress_json": None,

@@ -18,23 +18,28 @@ vars:
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
+  G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR: "{{.ROOT_DIR}}/python-wheels/yscope-clp-core"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
+  G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
   G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
-  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+  G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
+  G_PYTHON_WHEELS_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels"
+  G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
   G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
+  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.5.2-dev"
+  G_PACKAGE_VERSION: "0.8.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -43,6 +48,8 @@ vars:
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
+  G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
+  G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
   G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
   G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-common-node-modules.md5"
   G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
@@ -52,7 +59,7 @@ vars:
 
 tasks:
   default:
-    deps: ["docker-images:package"]
+    deps: ["package"]
 
   clean:
     cmds:
@@ -69,6 +76,7 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-rust"
       - task: "clean-webui"
       - task: "tests:integration:cache-clear"
 
@@ -83,14 +91,16 @@ tasks:
       - task: "package-tar"
         vars:
           FLAVOUR: "json"
-          STORAGE_ENGINE: "clp-s"
 
   clp-text-pkg-tar:
     cmds:
       - task: "package-tar"
         vars:
           FLAVOUR: "text"
-          STORAGE_ENGINE: "clp"
+
+  clean-rust:
+    cmds:
+      - "rm -rf '{{.G_RUST_BUILD_DIR}}'"
 
   clean-webui:
     cmds:
@@ -101,85 +111,54 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
 
   package:
-    env:
-      NODE_ENV: "production"
     vars:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/package-venv.md5"
-      - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
-      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
+      - "{{.G_BUILD_DIR}}/clp-package-image.id"
+      - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
+      - "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
+      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
       - "{{.TASKFILE}}"
-      - "components/clp-mcp-server/dist/*.whl"
-      - "components/clp-package-utils/dist/*.whl"
-      - "components/clp-py-utils/dist/*.whl"
-      - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "core"
-      - "clp-mcp-server"
-      - "clp-package-utils"
-      - "clp-py-utils"
-      - "deps:spider"
-      - "init"
-      - "job-orchestration"
-      - "package-venv"
+      - "docker-images:package"
+      - "generate-config-schemas"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-      - "webui"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
-      - |-
-        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
-        pip3 install --upgrade \
-          components/clp-mcp-server/dist/*.whl \
-          components/clp-package-utils/dist/*.whl \
-          components/clp-py-utils/dist/*.whl \
-          components/job-orchestration/dist/*.whl \
-          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
-      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
-        rsync -a
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
-        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
-        "{{.OUTPUT_DIR}}/bin/"
+        rsync --archive
+        "components/package-template/src/"
+        "{{.OUTPUT_DIR}}"
       - >-
-        rsync -a
-        "{{.G_NODEJS_22_BIN_DIR}}/node"
-        "{{.OUTPUT_DIR}}/bin/node-22"
-      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
+        rsync --archive
+        "{{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml"
+        "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
       - >-
-        rsync -a
-        "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/webui"
-      - |-
-        cd "{{.OUTPUT_DIR}}/var/www/webui"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
+        rsync --archive --mkpath
+        "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/usr/share/config-schemas/"
       - >-
-        rsync -a
+        rsync --archive --mkpath
+        "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
+        "{{.OUTPUT_DIR}}/var/www/webui/client/"
+      - >-
+        rsync --archive --mkpath
+        "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
+        "{{.OUTPUT_DIR}}/var/www/webui/server/dist/"
+      - >-
+        rsync --archive
         "tools/deployment/package/"
+        "{{.OUTPUT_DIR}}"
+      - >-
+        rsync --archive
+        "{{.G_BUILD_DIR}}/clp-package-image.id"
         "{{.OUTPUT_DIR}}"
       - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
@@ -229,6 +208,15 @@ tasks:
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "log-converter", "reducer-server"]
 
+  # NOTE: We rely on cargo for checksumming. It automatically rebuilds when source files change or
+  # when a binary is missing.
+  rust:
+    deps: ["toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    cmd: |-
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo build --release --bins
+
   clp-mcp-server:
     - task: "uv-component"
       vars:
@@ -244,14 +232,34 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
+  generate-config-schemas:
+    vars:
+      OUTPUT_DIR: "{{.G_CONFIG_SCHEMA_BUILD_DIR}}"
+    cmds:
+      - |-
+        rm -rf "{{.OUTPUT_DIR}}"
+        mkdir -p "{{.OUTPUT_DIR}}"
+        ./tools/scripts/generate-config-schemas.py "{{.OUTPUT_DIR}}"
+
   job-orchestration:
     - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
+  package-build-deps:
+    deps:
+      - "core"
+      - "deps:spider"
+      - "init"
+      - "python-libs"
+      - "rust"
+      - "webui"
+
   webui:
+    env:
+      NODE_ENV: "production"
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
       - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
@@ -290,6 +298,9 @@ tasks:
         rsync -a package.json "{{.OUTPUT_DIR}}/server/"
       - |-
         rsync -a package.json package-lock.json "{{.OUTPUT_DIR}}/"
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
@@ -458,7 +469,7 @@ tasks:
       OUTPUT_DIR: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}"
       OUTPUT_FILE: "{{.OUTPUT_DIR}}.tar.gz"
     requires:
-      vars: ["FLAVOUR", "STORAGE_ENGINE"]
+      vars: ["FLAVOUR"]
     sources:
       - "{{.G_BUILD_DIR}}/package.md5"
       - "{{.TASKFILE}}"
@@ -472,36 +483,57 @@ tasks:
       # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
       - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
 
-      # Set the storage engine for the package
-      - task: "utils:misc:replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
-          SED_EXP: >-
-            s/([[:space:]]*storage_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-      - task: "utils:misc:replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
-          SED_EXP: >-
-            s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-
-      # Set the query engine for the package
-      # NOTE: We set `query_engine` to `STORAGE_ENGINE` intentionally since compatible CLP storage
-      # and query engines have the same name.
-      - task: "utils:misc:replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
-          SED_EXP: >-
-            s/([[:space:]]*query_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-      - task: "utils:misc:replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
-          SED_EXP: >-
-            s/(\#[[:space:]]*query_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+      # Apply the config template for the selected FLAVOUR
+      - >-
+        mv
+        "{{.OUTPUT_DIR}}/etc/clp-config.template.{{.FLAVOUR}}.yaml"
+        "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
+      - "rm {{.OUTPUT_DIR}}/etc/clp-config.template.*.yaml"
 
       - >-
         tar czf '{{.OUTPUT_FILE}}'
         --directory '{{.G_BUILD_DIR}}'
         --dereference '{{.VERSIONED_PACKAGE_NAME}}'
+
+  python-libs:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_PYTHON_LIBS_CHECKSUM_FILE}}"
+      OUTPUT_DIR: "{{.G_PYTHON_LIBS_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.TASKFILE}}"
+      - "components/clp-mcp-server/dist/*.whl"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "clp-mcp-server"
+      - "clp-package-utils"
+      - "clp-py-utils"
+      - "init"
+      - "job-orchestration"
+      - "package-venv"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - |-
+        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade \
+          components/clp-mcp-server/dist/*.whl \
+          components/clp-package-utils/dist/*.whl \
+          components/clp-py-utils/dist/*.whl \
+          components/job-orchestration/dist/*.whl \
+          -t "{{.OUTPUT_DIR}}"
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   package-venv:
     internal: true
@@ -564,3 +596,22 @@ tasks:
     silent: true
     run: "once"
     cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
+
+  python-wheels-yscope-clp-core:
+    vars:
+      TMP_DIR: "{{.G_BUILD_DIR}}/tmp-{{.TASK}}"
+    dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
+    deps: ["core"]
+    cmds:
+      - "mkdir -p '{{.TMP_DIR}}'"
+      - defer: "rm -rf '{{.TMP_DIR}}'"
+
+      # Build the wheel into the temporary directory
+      - |-
+        export YSCOPE_CLP_CORE_CLP_S_EXE="{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+        uv run --no-cache python3 -m build --wheel --outdir "{{.TMP_DIR}}"
+
+      # Repair the wheel and place it in the final build directory.
+      - |-
+        uv run --no-cache \
+          auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"

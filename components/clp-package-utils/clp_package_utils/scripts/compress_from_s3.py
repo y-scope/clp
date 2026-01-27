@@ -11,9 +11,11 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     dump_container_config,
@@ -51,12 +53,14 @@ def _generate_url_list(
         url_list_file.write(f"{subcommand}\n")
 
         if parsed_args.inputs_from is None:
-            for url in parsed_args.inputs:
-                url_list_file.write(f"{url}\n")
+            url_list_file.writelines(f"{url}\n" for url in parsed_args.inputs)
             return len(parsed_args.inputs) != 0
 
         no_url_found = True
-        with open(parsed_args.inputs_from, "r") as input_file:
+        resolved_inputs_from_path = resolve_host_path_in_container(
+            pathlib.Path(parsed_args.inputs_from)
+        )
+        with open(resolved_inputs_from_path, "r") as input_file:
             for line in input_file:
                 stripped_url = line.strip()
                 if "" == stripped_url:
@@ -99,9 +103,6 @@ def _generate_compress_cmd(
         compress_cmd.append(parsed_args.timestamp_key)
     if parsed_args.unstructured:
         compress_cmd.append("--unstructured")
-    if parsed_args.tags is not None:
-        compress_cmd.append("--tags")
-        compress_cmd.append(parsed_args.tags)
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
 
@@ -139,7 +140,6 @@ def _validate_s3_key_prefix_args(
     :param parsed_args:
     :param args_parser:
     """
-
     if parsed_args.inputs_from is None:
         if len(parsed_args.inputs) == 0:
             args_parser.error("No URL specified.")
@@ -186,9 +186,6 @@ def main(argv):
         help="Treat all inputs as unstructured text logs.",
     )
     args_parser.add_argument(
-        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
-    )
-    args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
 
@@ -222,8 +219,8 @@ def main(argv):
 
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
+        clp_config.validate_logs_dir(True)
 
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except Exception:
@@ -234,7 +231,7 @@ def main(argv):
     if clp_config.logs_input.type != StorageType.S3:
         logger.error(
             "S3 compression expects `logs_input.type` to be `%s`, but `%s` is found. Please update"
-            " `clp-config.yml`.",
+            " `clp-config.yaml`.",
             StorageType.S3,
             clp_config.logs_input.type,
         )
@@ -286,24 +283,24 @@ def main(argv):
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
+    necessary_mounts = [mounts.data_dir, mounts.logs_dir]
 
     while True:
-        container_url_list_filename = f"{uuid.uuid4()}.txt"
-        container_url_list_path = clp_config.logs_directory / container_url_list_filename
-        url_list_path_on_container = (
-            container_clp_config.logs_directory / container_url_list_filename
-        )
-        if not container_url_list_path.exists():
+        url_list_filename = f"{uuid.uuid4()}.txt"
+        url_list_path_on_host = clp_config.logs_directory / url_list_filename
+        resolved_url_list_path_on_host = resolve_host_path_in_container(url_list_path_on_host)
+        url_list_path_on_container = container_clp_config.logs_directory / url_list_filename
+        if not resolved_url_list_path_on_host.exists():
             break
 
-    if not _generate_url_list(parsed_args.subcommand, container_url_list_path, parsed_args):
+    if not _generate_url_list(parsed_args.subcommand, resolved_url_list_path_on_host, parsed_args):
         logger.error("No S3 URLs given for compression.")
         return -1
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -314,15 +311,19 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
     else:
-        container_url_list_path.unlink()
+        resolved_url_list_path_on_host.unlink()
 
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
+
     return ret_code
 
 

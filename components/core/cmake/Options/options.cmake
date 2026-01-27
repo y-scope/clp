@@ -84,6 +84,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+    "Build clp_s::timestamp_parser"
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     "Build clp_s::timestamp_pattern."
     ON
@@ -160,6 +166,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
@@ -321,12 +328,6 @@ function(set_clp_s_search_dependencies)
     )
 endfunction()
 
-function(validate_clp_s_search_ast_dependencies)
-    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH_AST
-        CLP_BUILD_CLP_S_TIMESTAMPPATTERN
-    )
-endfunction()
-
 function(set_clp_s_search_ast_dependencies)
     set_clp_need_flags(
         CLP_NEED_SIMDJSON
@@ -337,6 +338,7 @@ function(validate_clp_s_search_kql_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
@@ -357,6 +359,20 @@ function(set_clp_s_search_sql_dependencies)
     set_clp_need_flags(
         CLP_NEED_ANTLR
         CLP_NEED_SPDLOG
+    )
+endfunction()
+
+function(validate_clp_s_timestamp_parser_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_CLP_STRING_UTILS
+    )
+endfunction()
+
+function(set_clp_s_timestamp_parser_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_DATE
+        CLP_NEED_FMT
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -430,7 +446,6 @@ function(validate_and_setup_all_clp_dependency_flags)
     endif()
 
     if (CLP_BUILD_CLP_S_SEARCH_AST)
-        validate_clp_s_search_ast_dependencies()
         set_clp_s_search_ast_dependencies()
     endif()
 
@@ -442,6 +457,11 @@ function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_CLP_S_SEARCH_SQL)
         validate_clp_s_search_sql_dependencies()
         set_clp_s_search_sql_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_TIMESTAMP_PARSER)
+        validate_clp_s_timestamp_parser_dependencies()
+        set_clp_s_timestamp_parser_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_TIMESTAMPPATTERN)

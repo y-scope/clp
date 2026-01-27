@@ -54,6 +54,11 @@ services:
       file: "docker-compose-all.yaml"
       service: "garbage-collector"
 
+  api-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "api-server"
+
   query-scheduler:
     extends:
       file: "docker-compose-all.yaml"
@@ -73,3 +78,8 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "mcp-server"
+
+  log-ingestor:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "log-ingestor"

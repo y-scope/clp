@@ -17,6 +17,7 @@
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
 #include "Defs.hpp"
+#include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
 #include "TraceableException.hpp"
 
@@ -41,6 +42,34 @@ public:
     }
 
     void write(std::string_view message) override { std::cout << message; }
+};
+
+/**
+ * Output handler that writes to a file.
+ */
+class FileOutputHandler : public ::clp_s::search::OutputHandler {
+public:
+    // Constructors
+    explicit FileOutputHandler(std::string const& path, bool should_output_metadata = false)
+            : ::clp_s::search::OutputHandler(should_output_metadata, true),
+              m_file_writer() {
+        m_file_writer.open(path, FileWriter::OpenMode::CreateForWriting);
+    }
+
+    ~FileOutputHandler() { m_file_writer.close(); }
+
+    // Methods inherited from OutputHandler
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override;
+
+    void write(std::string_view message) override { write(message, 0, {}, 0); }
+
+private:
+    FileWriter m_file_writer;
 };
 
 /**

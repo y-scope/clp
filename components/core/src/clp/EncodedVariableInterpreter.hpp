@@ -7,7 +7,9 @@
 #include <vector>
 
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include "ffi/EncodedTextAst.hpp"
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ir/EncodedTextAst.hpp"
 #include "ir/LogEvent.hpp"
@@ -117,6 +119,23 @@ public:
     static void convert_encoded_float_to_string(encoded_variable_t encoded_var, std::string& value);
 
     /**
+     * @param value
+     * @return Whether the given wildcard string could correspond to a representable integer
+     * variable.
+     */
+    [[nodiscard]] static auto wildcard_string_could_be_representable_integer_var(
+            std::string_view value
+    ) -> bool;
+
+    /**
+     * @param value
+     * @return Whether the given wildcard string could correspond to a representable float variable.
+     */
+    [[nodiscard]] static auto wildcard_string_could_be_representable_float_var(
+            std::string_view value
+    ) -> bool;
+
+    /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding
      * them to the variable dictionary if necessary)
      * @tparam LogTypeDictionaryEntryType
@@ -143,10 +162,10 @@ public:
      * Encodes the given IR EncodedTextAst, constructing a logtype dictionary entry, and adding any
      * dictionary variables to the dictionary. NOTE: Four-byte encoded variables will be converted
      * to eight-byte encoded variables.
-     * @tparam EncodedVariableType The type of the encoded variables in the log event.
+     * @tparam encoded_variable_t The type of the encoded variables in the log event.
      * @tparam LogTypeDictionaryEntryType
      * @tparam VariableDictionaryWriterType
-     * @param log_event
+     * @param log_message
      * @param logtype_dict_entry
      * @param var_dict
      * @param encoded_vars A container to store the encoded variables in
@@ -155,18 +174,49 @@ public:
      * would occupy if it was not encoded in CLP's IR
      */
     template <
-            typename EncodedVariableType,
+            ir::EncodedVariableTypeReq encoded_variable_t,
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
             VariableDictionaryWriterReq VariableDictionaryWriterType
     >
     static void encode_and_add_to_dictionary(
-            ir::EncodedTextAst<EncodedVariableType> const& log_message,
+            ir::EncodedTextAst<encoded_variable_t> const& log_message,
             LogTypeDictionaryEntryType& logtype_dict_entry,
             VariableDictionaryWriterType& var_dict,
             std::vector<ir::eight_byte_encoded_variable_t>& encoded_vars,
             std::vector<variable_dictionary_id_t>& var_ids,
             size_t& raw_num_bytes
     );
+
+    /**
+     * Encodes the given ffi EncodedTextAst, constructing a logtype dictionary entry, and adding any
+     * dictionary variables to the dictionary.
+     *
+     * NOTE: Four-byte encoded variables will be converted to eight-byte encoded variables.
+     *
+     * @tparam encoded_variable_t
+     * @tparam LogTypeDictionaryEntryType
+     * @tparam VariableDictionaryWriterType
+     * @param encoded_text_ast
+     * @param logtype_dict_entry The logtype dictionary entry to populate.
+     * @param var_dict The variable dictionary to add any dictionary variables to.
+     * @param encoded_vars A container to store the encoded variables in.
+     * @param var_ids A container to store the dictionary IDs for dictionary variables.
+     * @return A result containing the estimated number of bytes that this EncodedTextAST would
+     * occupy if it was not encoded in CLP's IR, or an error code indicating the failure:
+     * - Forwards `ffi::EncodedTextAst::decode`'s return values on failure.
+     */
+    template <
+            ir::EncodedVariableTypeReq encoded_variable_t,
+            LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
+            VariableDictionaryWriterReq VariableDictionaryWriterType
+    >
+    [[nodiscard]] static auto encode_and_add_to_dictionary(
+            ffi::EncodedTextAst<encoded_variable_t> const& encoded_text_ast,
+            LogTypeDictionaryEntryType& logtype_dict_entry,
+            VariableDictionaryWriterType& var_dict,
+            std::vector<ir::eight_byte_encoded_variable_t>& encoded_vars,
+            std::vector<variable_dictionary_id_t>& var_ids
+    ) -> ystdlib::error_handling::Result<size_t>;
 
     /**
      * Decodes all variables and decompresses them into a message
@@ -303,12 +353,12 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
 }
 
 template <
-        typename EncodedVariableType,
+        ir::EncodedVariableTypeReq encoded_variable_t,
         LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
         VariableDictionaryWriterReq VariableDictionaryWriterType
 >
 void EncodedVariableInterpreter::encode_and_add_to_dictionary(
-        ir::EncodedTextAst<EncodedVariableType> const& log_message,
+        ir::EncodedTextAst<encoded_variable_t> const& log_message,
         LogTypeDictionaryEntryType& logtype_dict_entry,
         VariableDictionaryWriterType& var_dict,
         std::vector<ir::eight_byte_encoded_variable_t>& encoded_vars,
@@ -325,27 +375,27 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         logtype_dict_entry.add_constant(value, begin_pos, length);
     };
 
-    auto encoded_int_handler = [&](EncodedVariableType encoded_var) {
+    auto encoded_int_handler = [&](encoded_variable_t encoded_var) {
         raw_num_bytes += ffi::decode_integer_var(encoded_var).length();
         logtype_dict_entry.add_int_var();
 
         ir::eight_byte_encoded_variable_t eight_byte_encoded_var{};
-        if constexpr (std::is_same_v<EncodedVariableType, ir::eight_byte_encoded_variable_t>) {
+        if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
             eight_byte_encoded_var = encoded_var;
-        } else {  // std::is_same_v<EncodedVariableType, ir::four_byte_encoded_variable_t>
+        } else {  // std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
             eight_byte_encoded_var = ffi::encode_four_byte_integer_as_eight_byte(encoded_var);
         }
         encoded_vars.push_back(eight_byte_encoded_var);
     };
 
-    auto encoded_float_handler = [&](EncodedVariableType encoded_var) {
+    auto encoded_float_handler = [&](encoded_variable_t encoded_var) {
         raw_num_bytes += ffi::decode_float_var(encoded_var).length();
         logtype_dict_entry.add_float_var();
 
         ir::eight_byte_encoded_variable_t eight_byte_encoded_var{};
-        if constexpr (std::is_same_v<EncodedVariableType, ir::eight_byte_encoded_variable_t>) {
+        if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
             eight_byte_encoded_var = encoded_var;
-        } else {  // std::is_same_v<EncodedVariableType, ir::four_byte_encoded_variable_t>
+        } else {  // std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
             eight_byte_encoded_var = ffi::encode_four_byte_float_as_eight_byte(encoded_var);
         }
         encoded_vars.push_back(eight_byte_encoded_var);
@@ -355,11 +405,11 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         raw_num_bytes += dict_var.length();
 
         ir::eight_byte_encoded_variable_t encoded_var{};
-        if constexpr (std::is_same_v<EncodedVariableType, ir::eight_byte_encoded_variable_t>) {
+        if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
             encoded_var = encode_var_dict_id(
                     add_dict_var(dict_var, logtype_dict_entry, var_dict, var_ids)
             );
-        } else {  // std::is_same_v<EncodedVariableType, ir::four_byte_encoded_variable_t>
+        } else {  // std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
             encoded_var = encode_var(dict_var, logtype_dict_entry, var_dict, var_ids);
         }
         encoded_vars.push_back(encoded_var);
@@ -374,6 +424,74 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
             encoded_float_handler,
             dict_var_handler
     );
+}
+
+template <
+        ir::EncodedVariableTypeReq encoded_variable_t,
+        LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
+        VariableDictionaryWriterReq VariableDictionaryWriterType
+>
+auto EncodedVariableInterpreter::encode_and_add_to_dictionary(
+        ffi::EncodedTextAst<encoded_variable_t> const& encoded_text_ast,
+        LogTypeDictionaryEntryType& logtype_dict_entry,
+        VariableDictionaryWriterType& var_dict,
+        std::vector<ir::eight_byte_encoded_variable_t>& encoded_vars,
+        std::vector<variable_dictionary_id_t>& var_ids
+) -> ystdlib::error_handling::Result<size_t> {
+    logtype_dict_entry.clear();
+    logtype_dict_entry.reserve_constant_length(encoded_text_ast.get_logtype().length());
+
+    size_t raw_num_bytes{0};
+
+    auto constant_handler = [&](std::string_view constant) {
+        raw_num_bytes += constant.length();
+        logtype_dict_entry.add_constant(constant, 0, constant.length());
+    };
+
+    auto encoded_int_handler = [&](encoded_variable_t encoded_var) {
+        raw_num_bytes += ffi::decode_integer_var(encoded_var).length();
+        logtype_dict_entry.add_int_var();
+
+        ir::eight_byte_encoded_variable_t eight_byte_encoded_var{};
+        if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
+            eight_byte_encoded_var = encoded_var;
+        } else {  // std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
+            eight_byte_encoded_var = ffi::encode_four_byte_integer_as_eight_byte(encoded_var);
+        }
+        encoded_vars.push_back(eight_byte_encoded_var);
+    };
+
+    auto encoded_float_handler = [&](encoded_variable_t encoded_var) {
+        raw_num_bytes += ffi::decode_float_var(encoded_var).length();
+        logtype_dict_entry.add_float_var();
+
+        ir::eight_byte_encoded_variable_t eight_byte_encoded_var{};
+        if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
+            eight_byte_encoded_var = encoded_var;
+        } else {  // std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
+            eight_byte_encoded_var = ffi::encode_four_byte_float_as_eight_byte(encoded_var);
+        }
+        encoded_vars.push_back(eight_byte_encoded_var);
+    };
+
+    auto dict_var_handler = [&](std::string_view dict_var) {
+        raw_num_bytes += dict_var.length();
+        if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
+            encoded_vars.emplace_back(encode_var_dict_id(
+                    add_dict_var(dict_var, logtype_dict_entry, var_dict, var_ids)
+            ));
+        } else {  // std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
+            encoded_vars.emplace_back(encode_var(dict_var, logtype_dict_entry, var_dict, var_ids));
+        }
+    };
+
+    YSTDLIB_ERROR_HANDLING_TRYV(encoded_text_ast.template decode<false>(
+            constant_handler,
+            encoded_int_handler,
+            encoded_float_handler,
+            dict_var_handler
+    ));
+    return raw_num_bytes;
 }
 
 template <

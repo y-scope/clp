@@ -1,5 +1,8 @@
 version: "3"
 
+includes:
+  toolchains: "toolchains.yaml"
+
 vars:
   # Ignore https://github.com/msgpack/msgpack-c/issues/1098
   G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098: >-
@@ -11,6 +14,7 @@ tasks:
   check:
     cmds:
       - task: "check-cpp-full"
+      - task: "check-helm"
       - task: "check-js"
       - task: "check-py"
       - task: "check-rust"
@@ -29,6 +33,7 @@ tasks:
   fix:
     cmds:
       - task: "fix-cpp-full"
+      - task: "fix-helm"
       - task: "fix-js"
       - task: "fix-py"
       - task: "fix-rust"
@@ -50,6 +55,22 @@ tasks:
       - task: "fix-py"
       - task: "fix-rust"
       - task: "fix-yaml"
+
+  helm:
+    aliases:
+      - "check-helm"
+      - "fix-helm"
+    deps:
+      - "toolchains:helm"
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        ct lint \
+          --chart-dirs="tools/deployment" \
+          --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
+          --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
     sources: &js_source_files
@@ -74,7 +95,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: "--check --diff"
           RUFF_CHECK_FLAGS: ""
           RUFF_FORMAT_FLAGS: "--diff"
 
@@ -82,7 +102,6 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: ""
           RUFF_CHECK_FLAGS: "--fix"
           RUFF_FORMAT_FLAGS: ""
 
@@ -95,16 +114,17 @@ tasks:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
-          .github \
-          .yamllint.yml \
-          components/core/.clang-format \
-          components/core/config \
-          components/core/tools/ \
-          components/package-template/src/etc \
-          docs \
-          taskfile.yaml \
-          taskfiles \
-          tools/deployment
+          --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
+          ".github" \
+          "components/core/.clang-format" \
+          "components/core/config" \
+          "components/core/tools/" \
+          "components/package-template/src/etc" \
+          "docs" \
+          "taskfile.yaml" \
+          "taskfiles" \
+          "tools/deployment/package" \
+          "tools/deployment/presto-clp"
 
   check-cpp-format:
     sources: &cpp_source_files
@@ -225,8 +245,6 @@ tasks:
             - "clp/clp/utils.cpp"
             - "clp/clp/utils.hpp"
             - "clp/CommandLineArgumentsBase.hpp"
-            - "clp/CurlDownloadHandler.cpp"
-            - "clp/CurlDownloadHandler.hpp"
             - "clp/CurlEasyHandle.hpp"
             - "clp/CurlStringList.hpp"
             - "clp/database_utils.cpp"
@@ -454,8 +472,6 @@ tasks:
             - "clp_s/search/ast/ConstantProp.hpp"
             - "clp_s/search/ast/ConvertToExists.cpp"
             - "clp_s/search/ast/ConvertToExists.hpp"
-            - "clp_s/search/ast/DateLiteral.cpp"
-            - "clp_s/search/ast/DateLiteral.hpp"
             - "clp_s/search/ast/EmptyExpr.cpp"
             - "clp_s/search/ast/EmptyExpr.hpp"
             - "clp_s/search/ast/Expression.cpp"
@@ -476,6 +492,8 @@ tasks:
             - "clp_s/search/ast/SearchUtils.hpp"
             - "clp_s/search/ast/StringLiteral.cpp"
             - "clp_s/search/ast/StringLiteral.hpp"
+            - "clp_s/search/ast/TimestampLiteral.cpp"
+            - "clp_s/search/ast/TimestampLiteral.hpp"
             - "clp_s/search/ast/Transformation.hpp"
             - "clp_s/search/antlr_common/ErrorListener.hpp"
             - "clp_s/search/EvaluateTimestampIndex.cpp"
@@ -759,29 +777,37 @@ tasks:
     vars:
       UV_PYTHON_PROJECTS:
         - "{{.G_INTEGRATION_TESTS_DIR}}"
+        - "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
+      UV_PYTHON_PROJECTS_IGNORE_ERRORS:
+        - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
+        - "{{.G_COMPONENTS_DIR}}/clp-package-utils"
+        - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
+        - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
-      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
+      vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
       - for:
-          - "components/clp-mcp-server/clp_mcp_server"
-          - "components/clp-package-utils/clp_package_utils"
-          - "components/clp-py-utils/clp_py_utils"
-          - "components/core/tools/scripts/utils"
-          - "components/job-orchestration/job_orchestration"
+          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy . || true
+      - for:
+          - "components/core/tools/scripts"
+          - "docs/conf"
           - "tools/deployment"
           - "tools/scripts"
-          - "docs/conf"
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
-          black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_CHECK_FLAGS}} .
+          ruff format {{.RUFF_FORMAT_FLAGS}} .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
 
   check-rust:
@@ -791,60 +817,68 @@ tasks:
 
   fix-rust:
     cmds:
-      - task: "fix-rust-format"
+      # `fix-rust-static` must come before `fix-rust-format` to ensure that any fixes made by the
+      # static analysis tool (Clippy) are also formatted.
       - task: "fix-rust-static"
+      - task: "fix-rust-format"
 
   check-rust-format:
     cmds:
-      - task: "rust-workspace-fmt"
+      - task: "cargo-workspace-fmt"
         vars:
-          RUSTFMT_FLAGS: "--check"
+          CARGO_FMT_FLAGS: "--check"
 
   fix-rust-format:
     cmds:
-      - task: "rust-workspace-fmt"
+      - task: "cargo-workspace-fmt"
         vars:
-          RUSTFMT_FLAGS: ""
+          CARGO_FMT_FLAGS: ""
 
   check-rust-static:
     cmds:
-      - task: "rust-workspace-clippy"
+      - task: "cargo-workspace-clippy"
         vars:
-          RUST_CLIPPY_FLAGS: "-- -D warnings"
+          CARGO_CLIPPY_FLAGS: "-- -D warnings"
 
   fix-rust-static:
     cmds:
-      - task: "rust-workspace-clippy"
+      - task: "cargo-workspace-clippy"
         vars:
-          RUST_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
+          CARGO_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
 
   rust-lint-configs:
     internal: true
     run: "once"
-    cmd: |
+    cmd: |-
       cp \
         {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
         {{.ROOT_DIR}}/.rustfmt.toml
 
-  rust-workspace-fmt:
+  # Runs `cargo +nightly fmt` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_FMT_FLAGS The flags to pass to the `cargo +nightly fmt` command.
+  cargo-workspace-fmt:
     internal: true
-    deps: ["rust-lint-configs", ":toolchains:rust"]
-    dir: "{{.ROOT_DIR}}"
     requires:
-      vars: ["RUSTFMT_FLAGS"]
+      vars: ["CARGO_FMT_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["rust-lint-configs", "toolchains:rust"]
     cmd: |-
-      . "$HOME/.cargo/env"
-      cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo +nightly fmt --all -- {{.CARGO_FMT_FLAGS}}
 
-  rust-workspace-clippy:
+  # Runs `cargo +nightly clippy` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_CLIPPY_FLAGS The flags to pass to the `cargo +nightly clippy` command.
+  cargo-workspace-clippy:
     internal: true
-    deps: [":toolchains:rust"]
-    dir: "{{.ROOT_DIR}}"
     requires:
-      vars: ["RUST_CLIPPY_FLAGS"]
+      vars: ["CARGO_CLIPPY_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
     cmd: |-
-      . "$HOME/.cargo/env"
-      cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo +nightly clippy --all-targets --all-features {{.CARGO_CLIPPY_FLAGS}}
 
   venv:
     internal: true

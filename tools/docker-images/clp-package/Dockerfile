@@ -27,6 +27,20 @@ RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
 
-COPY --link --chown=${UID} ./build/clp-package ${CLP_HOME}
+COPY --link --chown=${UID} ./components/package-template/src/ .
+COPY --link --chown=${UID} ./build/core/clg bin/
+COPY --link --chown=${UID} ./build/core/clo bin/
+COPY --link --chown=${UID} ./build/core/clp bin/
+COPY --link --chown=${UID} ./build/core/clp-s bin/
+COPY --link --chown=${UID} ./build/core/indexer bin/
+COPY --link --chown=${UID} ./build/core/log-converter bin/
+COPY --link --chown=${UID} ./build/core/reducer-server bin/
 COPY --link --chown=${UID} ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* \
-    ${CLP_HOME}/lib/
+    lib/
+COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_scheduler bin/
+COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_worker bin/
+COPY --link --chown=${UID} ./build/nodejs-22/bin/node bin/node-22
+COPY --link --chown=${UID} ./build/python-libs/ lib/python3/site-packages/
+COPY --link --chown=${UID} ./build/rust-targets/release/api_server bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/log-ingestor bin/
+COPY --link --chown=${UID} ./build/webui/ var/www/webui/

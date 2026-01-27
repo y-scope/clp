@@ -38,14 +38,14 @@ components/core/tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 
 ## Build
 
-There are two flavours of the CLP package:
+There are two flavors of the CLP package:
 
 1. `clp-json` for managing JSON logs
 2. `clp-text` for managing text logs
 
 :::{note}
-Both flavours contain the same binaries but are configured with different values for the
-`package.storage_engine` key.
+Both flavors contain the same binaries but are configured with different values for the
+`package.storage_engine` and `package.query_engine` key.
 :::
 
 To build the package, run:
@@ -54,11 +54,12 @@ To build the package, run:
 task
 ```
 
-The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+The build will be in `build/clp-package` and defaults to using the storage and query engines for
+`clp-json`.
 
 :::{note}
-The `task` command runs `task docker-images:package` under the hood. In addition to the build, a
-Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
+The `task` command runs `task package` under the hood. In addition to the build, a Docker image
+named `clp-package:dev-<user>-<unique-id>` will also be created.
 :::
 
 :::{note}
@@ -68,15 +69,15 @@ package scripts, see the [Deployment orchestration][design-deployment-orchestrat
 more information.
 :::
 
-To build a releasable tar of either flavour, run:
+To build a releasable tar of either flavor, run:
 
 ```shell
-task clp-<flavour>-pkg-tar
+task clp-<flavor>-pkg-tar
 ```
 
-where `<flavour>` is `json` or `text`.
+where `<flavor>` is `json` or `text`.
 
-The tar will be written to `build/clp-<flavour>-<os>-<arch>-v<version>.tar.gz`, with appropriate
+The tar will be written to `build/clp-<flavor>-<os>-<arch>-v<version>.tar.gz`, with appropriate
 values for the fields in angle brackets.
 
 ## Cleanup

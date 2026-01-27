@@ -129,7 +129,7 @@ regex-utils
 :::
 
 [CMake]: https://cmake.org/
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#795]: https://github.com/y-scope/clp/issues/795

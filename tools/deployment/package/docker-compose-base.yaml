@@ -53,3 +53,13 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "garbage-collector"
+
+  api-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "api-server"
+
+  log-ingestor:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "log-ingestor"

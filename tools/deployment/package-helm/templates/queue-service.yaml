@@ -1,0 +1,15 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp.fullname" . }}-queue
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "queue"
+spec:
+  clusterIP: "None"
+  selector:
+    {{- include "clp.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "queue"
+  ports:
+    - port: 5672
+      targetPort: "queue"

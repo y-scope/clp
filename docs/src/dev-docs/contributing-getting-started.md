@@ -13,6 +13,6 @@ The general process is as follows:
 * Submit a pull-request for your change. One or more CLP developers will review your change.
 * Respond to the review(s).
 
-[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&projects=&template=bug-report.yml
+[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&projects=&template=bug-report.yaml
 [clp-fork]: https://github.com/y-scope/clp/fork
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yaml

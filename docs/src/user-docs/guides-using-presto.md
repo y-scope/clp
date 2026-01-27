@@ -33,7 +33,7 @@ Using Presto with CLP requires:
 
 1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package,
    but don't start the package just yet.
-2. Before starting the package, update the package's config file (`etc/clp-config.yml`) as follows:
+2. Before starting the package, update the package's config file (`etc/clp-config.yaml`) as follows:
 
     * Set the `package.query_engine` key to `"presto"`.
 
@@ -87,7 +87,7 @@ Using Presto with CLP requires:
 1. Clone the CLP repository:
 
     ```bash
-    git clone https://github.com/y-scope/clp.git
+    git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
     ```
 
 2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
@@ -196,7 +196,7 @@ SELECT foo.bar FROM default LIMIT 1;
 ### Querying from CLP's UI
 
 CLP's UI should be available at [http://localhost:4000](http://localhost:4000) (if you changed
-`webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
+`webui.host` or `webui.port` in `etc/clp-config.yaml`, use the new values).
 
 [Figure 1](#figure-1) shows the search page after applying a filter.
 

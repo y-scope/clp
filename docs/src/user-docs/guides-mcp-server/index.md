@@ -22,7 +22,7 @@ This guide assumes:
 ## Starting the MCP Server
 
 1. Configure `clp-json` to run the MCP server by locating the `mcp_server` section in
-   `etc/clp-config.yml`
+   `etc/clp-config.yaml`
 
     ```yaml
     #mcp_server: null

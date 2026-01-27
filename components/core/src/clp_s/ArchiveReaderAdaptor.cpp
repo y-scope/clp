@@ -190,7 +190,7 @@ ErrorCode ArchiveReaderAdaptor::try_read_header(clp::ReaderInterface& reader) {
     if (0
         != std::memcmp(
                 m_archive_header.magic_number,
-                cStructuredSFAMagicNumber,
+                cStructuredSFAMagicNumber.data(),
                 sizeof(cStructuredSFAMagicNumber)
         ))
     {

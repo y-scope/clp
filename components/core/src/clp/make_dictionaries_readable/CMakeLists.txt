@@ -2,8 +2,28 @@ set(
         MAKE_DICTIONARIES_READABLE_SOURCES
         ../dictionary_utils.cpp
         ../dictionary_utils.hpp
+        ../Defs.h
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
+        ../ErrorCode.hpp
+        ../EncodedVariableInterpreter.cpp
+        ../EncodedVariableInterpreter.hpp
+        ../ffi/encoding_methods.cpp
+        ../ffi/encoding_methods.hpp
+        ../ffi/encoding_methods.inc
+        ../ffi/EncodedTextAst.hpp
+        ../ffi/EncodedTextAstError.cpp
+        ../ffi/EncodedTextAstError.hpp
+        ../ffi/ir_stream/byteswap.hpp
+        ../ffi/ir_stream/decoding_methods.cpp
+        ../ffi/ir_stream/decoding_methods.hpp
+        ../ffi/ir_stream/decoding_methods.inc
+        ../ffi/ir_stream/protocol_constants.hpp
+        ../ffi/ir_stream/utils.cpp
+        ../ffi/ir_stream/utils.hpp
+        ../ffi/SchemaTree.cpp
+        ../ffi/SchemaTree.hpp
+        ../ffi/StringBlob.hpp
         ../FileDescriptor.cpp
         ../FileDescriptor.hpp
         ../FileReader.cpp
@@ -12,11 +32,17 @@ set(
         ../FileWriter.hpp
         ../ir/parsing.cpp
         ../ir/parsing.hpp
+        ../ir/parsing.inc
+        ../ir/types.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
+        ../Query.cpp
+        ../Query.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
+        ../Platform.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
@@ -27,11 +53,17 @@ set(
         ../streaming_compression/passthrough/Decompressor.hpp
         ../streaming_compression/zstd/Decompressor.cpp
         ../streaming_compression/zstd/Decompressor.hpp
+        ../type_utils.hpp
+        ../TraceableException.hpp
+        ../TimestampPattern.cpp
+        ../TimestampPattern.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
         CommandLineArguments.cpp
@@ -42,13 +74,17 @@ set(
 if(CLP_BUILD_EXECUTABLES)
         add_executable(make-dictionaries-readable ${MAKE_DICTIONARIES_READABLE_SOURCES})
         target_compile_features(make-dictionaries-readable PRIVATE cxx_std_20)
+        target_include_directories(make-dictionaries-readable PRIVATE ../../)
         target_link_libraries(make-dictionaries-readable
                 PRIVATE
-                Boost::filesystem Boost::program_options
-                log_surgeon::log_surgeon
-                spdlog::spdlog
                 clp::string_utils
+                Boost::filesystem Boost::program_options
+                date::date
+                log_surgeon::log_surgeon
+                nlohmann_json::nlohmann_json
+                spdlog::spdlog
                 ystdlib::containers
+                ystdlib::error_handling
                 ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory

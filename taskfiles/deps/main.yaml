@@ -42,8 +42,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
@@ -102,8 +100,8 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
           CMAKE_PACKAGE_NAME: "spider"
-          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
-          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          TAR_SHA256: "ef24c3271565864e630ac2c650fc46c62f0dd74d1a4c896fbdc67e5f37d9177e"
+          TAR_URL: "https://github.com/y-scope/spider/archive/32711f9.tar.gz"
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
@@ -118,8 +116,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"

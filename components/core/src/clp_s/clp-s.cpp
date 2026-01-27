@@ -30,6 +30,8 @@
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
+#include "search/ast/SetTimestampLiteralPrecision.hpp"
+#include "search/ast/TimestampLiteral.hpp"
 #include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
@@ -181,6 +183,11 @@ bool search_archive(
         return true;
     }
 
+    ast::SetTimestampLiteralPrecision date_precision_pass{
+            ast::TimestampLiteral::Precision::Milliseconds
+    };
+    expr = date_precision_pass.run(expr);
+
     // Narrow against schemas
     auto match_pass = std::make_shared<SchemaMatch>(
             archive_reader->get_schema_tree(),
@@ -228,6 +235,12 @@ bool search_archive(
     std::unique_ptr<OutputHandler> output_handler;
     try {
         switch (command_line_arguments.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::File:
+                output_handler = std::make_unique<clp_s::FileOutputHandler>(
+                        command_line_arguments.get_file_output_path(),
+                        true
+                );
+                break;
             case CommandLineArguments::OutputHandlerType::Network:
                 output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
                         command_line_arguments.get_network_dest_host(),

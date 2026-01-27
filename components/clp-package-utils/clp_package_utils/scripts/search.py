@@ -10,9 +10,11 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     dump_container_config,
@@ -55,9 +57,6 @@ def main(argv):
         help="The dataset that the archives belong to.",
     )
     args_parser.add_argument(
-        "-t", "--tags", help="Comma-separated list of tags of archives to search."
-    )
-    args_parser.add_argument(
         "--begin-time",
         type=int,
         help="Time range filter lower-bound (inclusive) as milliseconds from the UNIX epoch.",
@@ -83,6 +82,11 @@ def main(argv):
         "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+
+    if parsed_args.count and parsed_args.count_by_time is not None:
+        logger.error("--count and --count-by-time are mutually exclusive.")
+        return -1
+
     if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
@@ -91,8 +95,8 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -128,10 +132,11 @@ def main(argv):
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.logs_dir]
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -150,9 +155,6 @@ def main(argv):
     if dataset is not None:
         search_cmd.append("--dataset")
         search_cmd.append(dataset)
-    if parsed_args.tags:
-        search_cmd.append("--tags")
-        search_cmd.append(parsed_args.tags)
     if parsed_args.begin_time is not None:
         search_cmd.append("--begin-time")
         search_cmd.append(str(parsed_args.begin_time))
@@ -173,14 +175,17 @@ def main(argv):
         search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Search failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 

@@ -12,7 +12,7 @@
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../clp_s/search/ast/FilterOperation.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
-#include "../../../ir/EncodedTextAst.hpp"
+#include "../../../ffi/EncodedTextAst.hpp"
 #include "../../SchemaTree.hpp"
 #include "../../Value.hpp"
 #include "ErrorCode.hpp"
@@ -121,7 +121,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param value
  * @return A result containing a boolean indicating whether the filter condition is satisfied on
  * success, or an error code indicating the failure:
- * - ErrorCodeEnum::EncodedTextAstDecodingFailure on failure to decode the given encoded text AST.
+ * - Forwards `EncodedTextAst::to_string`'s return values.
  */
 [[nodiscard]] auto evaluate_clp_string_filter_op(
         FilterOperation op,
@@ -259,23 +259,13 @@ auto evaluate_clp_string_filter_op(
         return false;
     }
 
-    auto const optional_value_operand{
-            value.is<clp::ir::EightByteEncodedTextAst>()
-                    ? value.get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                              .decode_and_unparse()
-                    : value.get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                              .decode_and_unparse()
-    };
-    if (false == optional_value_operand.has_value()) {
-        return ErrorCode{ErrorCodeEnum::EncodedTextAstDecodingFailure};
-    }
+    auto const value_operand{YSTDLIB_ERROR_HANDLING_TRYX(
+            value.is<clp::ffi::EightByteEncodedTextAst>()
+                    ? value.get_immutable_view<clp::ffi::EightByteEncodedTextAst>().to_string()
+                    : value.get_immutable_view<clp::ffi::FourByteEncodedTextAst>().to_string()
+    )};
 
-    return evaluate_string_filter_op(
-            op,
-            filter_operand,
-            *optional_value_operand,
-            case_sensitive_match
-    );
+    return evaluate_string_filter_op(op, filter_operand, value_operand, case_sensitive_match);
 }
 }  // namespace
 
@@ -283,13 +273,13 @@ auto schema_tree_node_type_to_literal_types(SchemaTree::Node::Type node_type)
         -> clp_s::search::ast::literal_type_bitmask_t {
     switch (node_type) {
         case SchemaTree::Node::Type::Int:
-            return LiteralType::IntegerT;
+            return LiteralType::IntegerT | LiteralType::TimestampT;
         case SchemaTree::Node::Type::Float:
-            return LiteralType::FloatT;
+            return LiteralType::FloatT | LiteralType::TimestampT;
         case SchemaTree::Node::Type::Bool:
             return LiteralType::BooleanT;
         case SchemaTree::Node::Type::Str:
-            return LiteralType::ClpStringT | LiteralType::VarStringT | LiteralType::EpochDateT;
+            return LiteralType::ClpStringT | LiteralType::VarStringT;
         case SchemaTree::Node::Type::UnstructuredArray:
             return LiteralType::ArrayT;
         case SchemaTree::Node::Type::Obj:
@@ -373,7 +363,7 @@ auto evaluate_filter_against_literal_type_value_pair(
                     *value,
                     case_sensitive_match
             );
-        case LiteralType::EpochDateT:
+        case LiteralType::TimestampT:
         case LiteralType::ArrayT:
             return ErrorCode{ErrorCodeEnum::LiteralTypeUnsupported};
         case LiteralType::NullT:

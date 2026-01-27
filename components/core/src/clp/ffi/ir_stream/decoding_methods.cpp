@@ -6,7 +6,11 @@
 #include <string>
 #include <string_view>
 
+#include <boost/outcome/std_result.hpp>
+
 #include "../../ir/types.hpp"
+#include "../EncodedTextAst.hpp"
+#include "../StringBlob.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
@@ -19,6 +23,124 @@ using std::string;
 using std::vector;
 
 namespace clp::ffi::ir_stream {
+namespace {
+/**
+ * Deserializes a logtype from the given reader and appends it to the given string blob.
+ * @param reader
+ * @param encoded_tag
+ * @param string_blob The string blob to append the deserialized logtype to.
+ * @return IRErrorCode_Success on success.
+ * @return IRErrorCode_Corrupted_IR if the encoded tag is invalid.
+ * @return IRErrorCode_Incomplete_IR if the reader doesn't contain enough data to deserialize.
+ */
+[[nodiscard]] auto deserialize_and_append_logtype(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        StringBlob& string_blob
+) -> IRErrorCode;
+
+/**
+ * Deserializes a dictionary variable from the given reader and appends it to the given string blob.
+ * @param reader
+ * @param encoded_tag
+ * @param string_blob The string blob to append the deserialized logtype to.
+ * @return IRErrorCode_Success on success.
+ * @return IRErrorCode_Corrupted_IR if the encoded tag is invalid.
+ * @return IRErrorCode_Incomplete_IR if the reader doesn't contain enough data to deserialize.
+ */
+[[nodiscard]] auto deserialize_and_append_dict_var(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        StringBlob& string_blob
+) -> IRErrorCode;
+
+auto deserialize_and_append_logtype(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        StringBlob& string_blob
+) -> IRErrorCode {
+    size_t logtype_length{};
+    switch (encoded_tag) {
+        case cProtocol::Payload::LogtypeStrLenUByte: {
+            uint8_t length{};
+            if (false == deserialize_int(reader, length)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            logtype_length = length;
+            break;
+        }
+        case cProtocol::Payload::LogtypeStrLenUShort: {
+            uint16_t length{};
+            if (false == deserialize_int(reader, length)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            logtype_length = length;
+            break;
+        }
+        case cProtocol::Payload::LogtypeStrLenInt: {
+            // NOTE: Using `int32_t` to match `serialize_logtype`.
+            int32_t length{};
+            if (false == deserialize_int(reader, length)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            logtype_length = length;
+            break;
+        }
+        default:
+            return IRErrorCode_Corrupted_IR;
+    }
+
+    auto const optional_error_code{string_blob.read_from(reader, logtype_length)};
+    if (optional_error_code.has_value()) {
+        return IRErrorCode_Incomplete_IR;
+    }
+    return IRErrorCode_Success;
+}
+
+auto deserialize_and_append_dict_var(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        StringBlob& string_blob
+) -> IRErrorCode {
+    size_t dict_var_length{};
+    switch (encoded_tag) {
+        case cProtocol::Payload::VarStrLenUByte: {
+            uint8_t length{};
+            if (false == deserialize_int(reader, length)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            dict_var_length = length;
+            break;
+        }
+        case cProtocol::Payload::VarStrLenUShort: {
+            uint16_t length{};
+            if (false == deserialize_int(reader, length)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            dict_var_length = length;
+            break;
+        }
+        case cProtocol::Payload::VarStrLenInt: {
+            // NOTE: Using `int32_t` to match `DictionaryVariableHandler`.
+            int32_t length{};
+            if (false == deserialize_int(reader, length)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            dict_var_length = length;
+            break;
+        }
+        default:
+            return IRErrorCode_Corrupted_IR;
+    }
+
+    auto const optional_error_code{string_blob.read_from(reader, dict_var_length)};
+    if (optional_error_code.has_value()) {
+        return IRErrorCode_Incomplete_IR;
+    }
+    return IRErrorCode_Success;
+}
+}  // namespace
+
 /**
  * @tparam encoded_variable_t Type of the encoded variable
  * @param tag
@@ -402,6 +524,49 @@ auto deserialize_encoded_text_ast(
     return IRErrorCode_Success;
 }
 
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+[[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode> {
+    StringBlob string_blob;
+    vector<encoded_variable_t> encoded_vars;
+    bool is_encoded_var{};
+    while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
+        if (is_encoded_var) {
+            encoded_variable_t encoded_variable{};
+            if (false == deserialize_int(reader, encoded_variable)) {
+                return IRErrorCode_Incomplete_IR;
+            }
+            encoded_vars.push_back(encoded_variable);
+        } else {
+            if (auto const error_code{
+                        deserialize_and_append_dict_var(reader, encoded_tag, string_blob)
+                };
+                IRErrorCode_Success != error_code)
+            {
+                return error_code;
+            }
+        }
+        if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+            return IRErrorCode_Incomplete_IR;
+        }
+    }
+
+    if (auto const error_code{deserialize_and_append_logtype(reader, encoded_tag, string_blob)};
+        IRErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+
+    auto encoded_text_ast_result = EncodedTextAst<encoded_variable_t>::create(
+            std::move(encoded_vars),
+            std::move(string_blob)
+    );
+    if (encoded_text_ast_result.has_error()) {
+        return IRErrorCode_Corrupted_IR;
+    }
+    return std::move(encoded_text_ast_result.value());
+}
+
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) {
     char buffer[cProtocol::MagicNumberLength];
     auto error_code = reader.try_read_exact_length(buffer, cProtocol::MagicNumberLength);
@@ -583,4 +748,14 @@ template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
         std::vector<eight_byte_encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars
 ) -> IRErrorCode;
+
+template auto deserialize_encoded_text_ast<four_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> boost::outcome_v2::std_checked<EncodedTextAst<four_byte_encoded_variable_t>, IRErrorCode>;
+
+template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> boost::outcome_v2::std_checked<EncodedTextAst<eight_byte_encoded_variable_t>, IRErrorCode>;
 }  // namespace clp::ffi::ir_stream
