@@ -10,7 +10,7 @@ LogSurgeon and used for compression and search in CLP.
 - [DFA](#3-dfa)
 - [Tagged DFA](#4-tagged-dfa)
 - [Compression](#5-compression-example)
-- [Search](#6-search-example)
+- [Search](#6-search)
 
 ## 1. Schema
 
@@ -58,8 +58,8 @@ determine priority.
 ```regex
 delimiters: \n\r\t
 
-float:-?\d+\.\d+
 int:-?\d+
+float:-?\d+\.\d+
 tagged_user_id:user_id=(?<user_id>\d+)
 ```
 
@@ -241,41 +241,147 @@ Variables:
   1. user_id: 55
 ```
 
-## 6. Search Example
+## 6. Search
 
-### Schema
+The search problem is to find which logs match a given wildcard query. Logs are already compressed
+into an archive with a logtype and variable dictionary, so the search algorithm compares the query
+against these dictionaries to minimize archive decompression.
 
-```text
+```
+                     ------------------
+                     | Wildcard Query |
+                     ------------------
+                             |
+                             V
+ ---------------------------------------------------------
+ | Log Surgeon (LS)                                      |
+ | - Parses query using schema                           |
+ | - Generates interpretations using dynamic programming |
+ |    - Static-text tokens                               |
+ |    - Variable tokens: <variable>(value) (TDFA-based)  |
+ ---------------------------------------------------------
+                             |
+                             V
+              -------------------------------
+              | CLP: generate subqueries    |
+              | - Encoded variables         |
+              | - Dictionary variables      |
+              | - 2^k wildcard combinations |
+              -------------------------------
+                             |
+                             V
+        -------------------------------------------
+        | CLP: compare against dictionaries       |
+        | - Logtype dictionary                    |
+        | - Variable dictionary                   |
+        | - Only decompress archives with matches |
+        -------------------------------------------
+                             |
+                             V
+             ---------------------------------
+             | CLP: grep decompressed logs   |
+             | - Filtered by original query  |
+             | - Output matched logs         |
+             ---------------------------------
+```
+
+
+### A. Get Query Interpretations from Log Surgeon
+
+Log Surgeon converts a query into **interpretations**, where each token may be:
+- Static-text (literal),
+- Variable (`<variable>(value)`) as determined by the schema and TDFA intersection.
+
+It uses a **dynamic programming algorithm** over all the substrings of the query to minimize the
+number ot TDFA intersections needed to generate the complete set of interpretations.
+
+#### Schema Example:
+
+```regex
 delimiters: \n\r\t
 
+int:-?\d+
+float:-?\d+\.\d+
 tagged_user_id:user_id=(?<user_id>\d+)
 tagged_session:session=(?<session>\w+\d+)
 ```
 
-### Query
+#### Query Example:
 
 ```text
-user_id=** session=AB**
+12* user_id=* 34.56 session=AB*
 ```
 
-### Logs
+#### Interpretations Produced by Log Surgeon:
 
 ```text
-My log has user_id=55 session=AB23 and that's it.
-user_id=22 session=AC45
-user_id=41 session=AB11
+12* user_id=* <float>(34.56) session=AB*
+12* user_id=<user_id>(*)* <float>(34.56) session=AB*
+12* user_id=* <float>(34.56) session=<session>(AB*)*
+12* user_id=<user_id>(*)* <float>(34.56) session=<session>(AB*)*
+<int>(12*) user_id=* <float>(34.56) session=AB*
+<int>(12*) user_id=<user_id>(*)* <float>(34.56) session=AB*
+<int>(12*) user_id=* <float>(34.56) session=<session>(AB*)*
+<int>(12*) user_id=<user_id>(*)* <float>(34.56) session=<session>(AB*)*
+<float>(12*) user_id=* <float>(34.56) session=AB*
+<float>(12*) user_id=<user_id>(*)* <float>(34.56) session=AB*
+<float>(12*) user_id=* <float>(34.56) session=<session>(AB*)*
+<float>(12*) user_id=<user_id>(*)* <float>(34.56) session=<session>(AB*)*
 ```
 
-### Logtype Dictionary
+### B. Generate Subqueries with Encoded Variables
+
+For literal integer/float variables, the interpretation considers the variable to be encoded
+directly into the archive if it is encodable (e.g., integer of 16 characters or fewer). However, if
+the variables have a wildcard, CLP generates the **2^k combinations** of:
+- **Encoded variables** (stored in the archive)
+- **Dictionary variables** (stored in the variable dictionary)
+
+#### Example subqueries for the query above:
 
 ```text
-My log has user_id=<user_id> session=<session> and that's it.
-user_id=<user_id> session=<session>
+12* user_id=* <encoded>(34.56) session=AB*
+12* user_id=<dict>(*)* <encoded>(34.56) session=AB*
+12* user_id=* <encoded>(34.56) session=<dict>(AB*)*
+12* user_id=<dict>(*)* <encoded>(34.56) session=<dict>(AB*)*
+<dict>(12*)* user_id=* <encoded>(34.56) session=AB*
+<dict>(12*)* user_id=<dict>(*)* <encoded>(34.56) session=AB*
+<dict>(12*)* user_id=* <encoded>(34.56) session=<dict>(AB*)*
+<dict>(12*)* user_id=<dict>(*)* <encoded>(34.56) session=<dict>(AB*)*
+<encoded>(12*)* user_id=* <encoded>(34.56) session=AB*
+<encoded>(12*)* user_id=<dict>(*)* <encoded>(34.56) session=AB*
+<encoded>(12*)* user_id=* <encoded>(34.56) session=<dict>(AB*)*
+<encoded>(12*)* user_id=<dict>(*)* <encoded>(34.56) session=<dict>(AB*)*
 ```
 
-### Variable Dictionary
+| Note: <dict> denotes a dictionary variable, <encoded> denotes an encoded variable.
+
+### C. Validate Against Dictionaries
+
+#### Logs:
 
 ```text
+My log has user_id=55 34.56 session=AB23 and that's it.
+123 user_id=22 34.56 session=AC45
+123 user_id=41 34.56 session=AB11
+123456789123456789 user_id=88 34.56 session=AB22
+12a user_id=141 34.56 session=AB11
+
+```
+
+#### Logtype Dictionary:
+
+```text
+My log has user_id=<dict> <encoded> session=<dict> and that's it.
+<dict> user_id=<dict> <encoded> session=<dict>
+<encoded> user_id=<dict> <encoded> session=<dict>
+12a user_id=<dict> <encoded> session=<dict>
+```
+
+#### Variable Dictionary:
+
+```text
+123456789123456789
 22
 41
 55
@@ -284,60 +390,31 @@ AB23
 AC45
 ```
 
-
-### Normalize Query
+#### Logtypes matching the subqueries:
 
 ```text
-user_id=* session=AB*
+<dict> user_id=<dict> <encoded> session=<dict>
+<encoded> user_id=<dict> <encoded> session=<dict>
+12a user_id=<dict> <encoded> session=<dict>
 ```
 
-### Form All Interpretations
+- Each dictionary variable (`<dict>`) is validated against the variable dictionary.
+- An Archive is only decompressed if at least one of the subqueries matches a logtype and all the
+subqueries dictionary variables are in variable dictionary.
+
+#### Decompressed Logs:
 
 ```text
-<user_id=* session=AB*>
-<user_id=*> <session=AB*>
+123 user_id=22 34.56 session=AC45
+123 user_id=41 34.56 session=AB11
+123456789123456789 user_id=88 34.56 session=AB22
+12a user_id=141 34.56 session=AB11
 ```
 
-### Intersect DFA Of Each Interpretation Token with Schema DFA
+### D.Grep against the original query:
 
 ```text
-<user_id=* session=AB*> -> no match
-<user_id=*>             -> can match a `tagged_user_id`
-<session=AB*>           -> can match a `tagged_session`
-```
-
-### Subquery
-
-```text
-1. user_id=* session=AB*
-2. user_id=<user_id>* session=AB*
-3. user_id=* session=<session>*
-4. user_id=<user_id>* session=<session>*
-```
-
-### Compare Against Logtype Dictionary
-
-```text
-user_id=<user_id> session=<session> -> matches subquery (4)
-```
-
-
-### Compare Against Variable Dictionary
-
-```text
-*   -> matches full dictionary
-AB* -> matches AB11, AB23
-```
-
-### Decompress Logtypes With the Above Form to Get Potential Matches
-
-```text
-user_id=22 session=AC45
-user_id=41 session=AB11
-```
-
-### Grep Potential Matches with Original Query
-
-```text
-user_id=41 session=AB11
+123 user_id=41 34.56 session=AB11
+123456789123456789 user_id=88 34.56 session=AB22
+12a user_id=141 34.56 session=AB11
 ```
