@@ -113,8 +113,8 @@ aws_authentication:
 
 ## Compressing logs from S3-compatible storage
 
-To compress logs from S3-compatible storage, use the `sbin/compress-from-s3.sh` script with object
-URLs in the following format:
+To compress logs from S3-compatible storage, use the `sbin/compress-from-s3.sh` script with
+"path-style" object URLs:
 
 ```text
 http://<host>:<port>/<bucket-name>/<object-key>
