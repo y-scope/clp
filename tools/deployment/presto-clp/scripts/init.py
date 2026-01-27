@@ -21,6 +21,9 @@ DATABASE_DEFAULT_PORT = 3306
 PRESTO_QUERY_MEMORY_RATIO = 0.5
 PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 
+# S3 URL constant (matching s3_utils.py)
+AWS_ENDPOINT = "amazonaws.com"
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -278,19 +281,39 @@ def _add_clp_s3_env_vars(
         s3_secret_access_key = _get_required_config_value(
             clp_config, f"{s3_credentials_key}.secret_access_key", clp_config_file_path
         )
-        s3_endpoint_url = _get_required_config_value(
-            clp_config, f"{s3_config_key}.endpoint_url", clp_config_file_path
-        )
     except KeyError:
         return False
+
+    s3_endpoint_url = _get_config_value(clp_config, f"{s3_config_key}.endpoint_url")
+    s3_region_code = _get_config_value(clp_config, f"{s3_config_key}.region_code")
+    s3_end_point = _handle_s3_endpoint_url(s3_endpoint_url, s3_region_code, s3_bucket)
 
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_BUCKET"] = s3_bucket
-    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_endpoint_url
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
 
     return True
+
+
+def _handle_s3_endpoint_url(
+    endpoint_url: str | None, region_code: str | None, bucket_name: str
+) -> str:
+    """
+    Returns the S3 endpoint URL, or constructs an AWS S3 URL if not provided.
+
+    :param endpoint_url:
+    :param region_code: AWS region code, or None.
+    :param bucket_name: S3 bucket name (used to construct AWS S3 URL).
+    :return: The S3 endpoint URL.
+    """
+    if endpoint_url is not None:
+        return endpoint_url
+
+    if region_code is None:
+        return f"https://{bucket_name}.s3.{AWS_ENDPOINT}/"
+    return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/"
 
 
 def _add_memory_env_vars(env_vars: dict[str, str]) -> bool:
