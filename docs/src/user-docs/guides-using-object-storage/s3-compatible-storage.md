@@ -136,9 +136,9 @@ sbin/compress-from-s3.sh \
   http://10.0.0.1:9000/bucket/logs/app.log
 ```
 
-### Example: Compressing all objects under a prefix
+```{code-block} bash
+:caption: Example: Compressing all objects under a prefix
 
-```bash
 sbin/compress-from-s3.sh \
   --timestamp-key timestamp \
   --dataset default \
