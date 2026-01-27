@@ -1,1 +1,1 @@
-"""Top-level package for clp-json package integration tests."""
+"""Integration tests for the clp-json package."""

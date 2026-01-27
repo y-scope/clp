@@ -49,5 +49,5 @@ def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
     """Tests package startup."""
     validate_package_instance(fixt_package_instance)
 
-    log_msg = "test_clp_text_startup is running successfully."
+    log_msg = "test_clp_text_startup was successful."
     logger.info(log_msg)

@@ -1,1 +1,1 @@
-"""Top-level package for clp-text package integration tests."""
+"""Integration tests for the clp-text package."""

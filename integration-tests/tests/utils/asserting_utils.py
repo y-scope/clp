@@ -45,15 +45,11 @@ def validate_package_instance(package_instance: PackageInstance) -> None:
 
     :param package_instance:
     """
-    if not package_instance.instance_validated:
-        # Ensure that all package components are running.
-        _validate_package_running(package_instance)
+    # Ensure that all package components are running.
+    _validate_package_running(package_instance)
 
-        # Ensure that the package is running in the correct mode.
-        _validate_running_mode_correct(package_instance)
-
-        # Switch validation indicator to True.
-        package_instance.instance_validated = True
+    # Ensure that the package is running in the correct mode.
+    _validate_running_mode_correct(package_instance)
 
 
 def _validate_package_running(package_instance: PackageInstance) -> None:

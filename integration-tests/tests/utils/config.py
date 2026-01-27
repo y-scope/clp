@@ -181,10 +181,6 @@ class PackageInstance:
     #: The path to the .clp-config.yaml file constructed by the package during spin up.
     shared_config_file_path: Path = field(init=False, repr=True)
 
-    #: Flag indicating whether this package instance has completed all validation checks. When set,
-    #: subsequent tests reusing the same instance can skip redundant validation.
-    instance_validated: bool = False
-
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the temp config file exists.
