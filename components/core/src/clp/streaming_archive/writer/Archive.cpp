@@ -456,8 +456,6 @@ auto Archive::write_msg_using_schema(log_surgeon::LogEventView const& event) -> 
             change_ts_pattern(timestamp_pattern);
             m_old_ts_pattern = const_cast<TimestampPattern*>(timestamp_pattern);
         }
-    } else {
-        timestamp_pattern = nullptr;
     }
     if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
         split_file_and_archive(
