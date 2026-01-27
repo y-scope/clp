@@ -122,7 +122,7 @@ Traversal proceeds left-to-right over the input:
 1. Start in the initial DFA state.
 2. For each input symbol:
    - follow the unique matching transition,
-   - or fail if no transition exists.
+   - or fail if no valid transitions exists.
 3. If no failure occurs above, end in a single final state.
 
 No backtracking or ambiguity resolution occurs during traversal. This makes DFA execution:
@@ -188,24 +188,104 @@ contents of the log message.
 
 ## 5. Compression Example
 
-### Schema
+The compression problem is to convert raw logs into a compact archives, with each archive containing
+metadata in the form of a logtype and variable dictionary. The dictionaries allow search queries to
+later operate efficiently, by only decompressing matching archives. To solve this problem, a schema
+is used by Log Surgeon to generate a TDFA and interpret the logs.
+
+```
+       ----------        -----------
+       | Schema |        | Raw Log |
+       ----------        -----------
+           |                  |
+           V                  V
+ --------------------------------------------
+ | Log Surgeon                              |
+ | - Generates a TDFA from the schema       |
+ | - Parses the log using schema            |
+ |    - Capture groups allow for submatches |
+ | - Outputs logtype and variables          |
+ --------------------------------------------
+                     |
+                     V
+     --------------------------------
+     | CLP: compress log            |
+     | - Update logtype dictionary  |
+     | - Update variable dictionary |
+     | - Add log to archive         |
+     --------------------------------
+```
+
+This example shows how a TDFA produced from a schema extracts structured variables from raw text
+while preserving the surrounding static-text.
+
+### A. Schema
 
 ```regex
 delimiters: \n\r\t
 
 tagged_user_id:user_id=(?<user_id>\d+)
-tagged_session:session=(?<session>\w+\d+)
+tagged_user_name:user=(?<user_name>\w+)
 ```
 
-### TDFA
-
-### Input
+### B. TDFA
 
 ```text
-My user_id=55 line.
+                                                                                   [R0=R6, set R1]
+                             [R4=-1,R5=-1]                  [set R6]               [R2=R4, R3=R5]
+S0-u->S1-s->S2-e->S3-r->S4-_->S5-i->S6-d->S7-=->S8-[0-9]->S9-[0-9]->S10----[^0-9]->(tagged_user_id)
+                        |                                 |          ^   |               ^
+                        |                                 |          |_[0-9]             |
+                        |                                 |                              |
+                        |                                 |           [set R6]           |
+                        |                                 -------------[^0-9]-------------
+                        |
+                        |                                                   [R0=R7, R1=R8]
+                        |     [R7=-1,R8=-1]    [Set R9]                     [R2=R9, set R3]
+                        --=->S10-[A-Za-z]->S11-[A-Za-z]->S12----[^A-Za-z]->(tagged_user_name)
+                                            |            ^    |                 ^
+                                            |            |_[A-Za-z]             |
+                                            |                                   |
+                                            |             [Set R9]              |
+                                            --------------[^A-Za-z]--------------
 ```
 
-### Execution
+**Explanation:**
+- The TDFA shows the shared path of `user` from `S0` to `S4`.
+- A branch occurs immediately after `user`, depending on whether the next character is `_`
+  (`tagged_user_id`) or `=` (`tagged_user_name`).
+- Upon entering one of the two branches, the TDFA does not immediately commit capture register
+  updates because it uses a 1-symbol lookahead for register operations:
+  - For the `tagged_user_id` path, only after reading `i` does it negate the intermediate registers
+    of `tagged_user_name` (`R4`, `R5`).
+  - For the `tagged_user_name` path, onlt after reading an alphabet character does it negate the
+    intermediate registers of `tagged_user_id` (`R7`, `R8`).
+- In the `tagged_user_id` branch, due to 1-lookahead semantics, the intermediate start register `R6`
+  is not set when the first digit is consumed. Instead, it is set on all out-going transitions from
+  `S9`. The same behavior occurs with `R9` on the `tagged_user_name` branch.
+- Reaching states such as S9, S10, S11, S12, indicates the input is currently in an accepting
+  configuration, but the capture is not yet finalized.
+- The true end of the capture occurs when the input leaves the character class ([^0-9] or [^A-Za-z])
+  as this marks the match no longer continues.
+- At this transition:
+  -  The final transition operations are performed (e.g., `S9` performs its delayed `set R6`
+     operation).
+  -  The accepting operations are performed. For example, in the `tagged_user_id` case:
+    -  `R6` is copied into the final start register `R0`.
+    -  The final end register `R1` is set to the current position.
+    -  The final registers of `tagged_user_name` (`R2`, `R3`) copy the negated values from `R4` and
+       `R5`.
+
+### C. Input Log Line
+
+```text
+My user_id=56 line.
+```
+
+### D. TDFA Execution
+
+The TDFA processes the line character by character, updates **states** and **registers** for
+captured variables.
 
 ```text
 States          | Input     | Action/Tag Updates     | Registers
@@ -222,8 +302,8 @@ S5              | 'i'       | -> S6                  |
 S6              | 'd'       | -> S7                  |
 S7              | '='       | -> S8                  |
 S8              | '5'       | -> S9 + Set R2         | R2 = 8
-S9              | '5'       | -> S10                 |
-S10 [accepting] |           | Set R3, R2->R0, R3->R1 | R1 = R3 = 10, R3 = R2 = 8
+S9 [accepting]  | '6'       | -> S9                  |
+S9 [accepting]  | ' '       | Set R1, R2->R0         | R1 = 10, R3 = R2 = 8
 S0              | ' '       | [fail]                 |
 S0              | 'l'       | [fail]                 |
 S0              | 'i'       | [fail]                 |
@@ -232,14 +312,41 @@ S0              | 'e'       | [fail]                 |
 S0              | '.'       | [fail]                 |
 ```
 
-### Result
+**Explanation**:
+- `My ` is emitted as **static-text** because no valid transitions exists from `S0` for these
+  characters.
+- The space after `My` is a delimiter, so Log Surgeon restarts matching from the start state at the
+  next position.
+- `user_id=` drives deterministic transitions `S0->S8`, matching the schema's static prefix.
+- Reading `5` transitions to `S9` and triggers a **register operation** for the start tag, storing
+  the current position in **intermediate register** R2.
+- Reading `6` remains in `S9`, extending the capture.
+- When a delimiter is encountered for which no valid transition exists from an accepting state:
+  - The TDFA reports a successful match.
+  - Cleanup register operations are performed:
+    -  Stores the current position in `R1`, the **final register** for the end tag.
+    -  Copies  `R2` into `R0`, the **final register** for the start tag.
+- Remaining characters, ` line.`, are emitted as static-text.
 
+The finalized register values allow Log Surgeon to replace the matched substring with the variable
+placeholder while preserving the surrounding static-text.
+
+### E. Resulting Compressed Log
+
+After TDFA execution Log Surgeon produces:
 ```text
 LogType:
   1. My user_id=<user_id> line.
 Variables:
-  1. user_id: 55
+  1. user_id: 56
 ```
+
+- The **logtype** replaces captured values from the variable with `<user_id>` and the context in the
+  variable (e.g. `user_id=`), is considered static-text.
+- The **variable dictionary** stores the actual captured values.
+
+The metadata of structure (logtype dictionary) and data (variable dictionary) is what enables
+efficient search without decompressing every archive.
 
 ## 6. Search
 
@@ -254,7 +361,7 @@ against these dictionaries to minimize archive decompression.
                              |
                              V
  ---------------------------------------------------------
- | Log Surgeon (LS)                                      |
+ | Log Surgeon                                           |
  | - Parses query using schema                           |
  | - Generates interpretations using dynamic programming |
  |    - Static-text tokens                               |
