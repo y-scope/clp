@@ -12,11 +12,11 @@ This guide covers S3-compatible storage specifically. For AWS S3, see the
 
 S3-compatible storage currently supports the following use cases:
 
-| Use case | Supported |
-| -------- | --------- |
-| Compress logs from S3-compatible storage | Yes |
-| Store archives on S3-compatible storage | Yes |
-| Cache stream files on S3-compatible storage | No |
+| Use case                                    | Supported |
+| ------------------------------------------- | --------- |
+| Compress logs from S3-compatible storage    | Yes       |
+| Store archives on S3-compatible storage     | Yes       |
+| Cache stream files on S3-compatible storage | No        |
 
 :::{note}
 Stream file caching on S3-compatible storage is not currently supported. The Web UI cannot view
