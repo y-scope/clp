@@ -327,19 +327,19 @@ auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_sur
     switch (token_type) {
         case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
         case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-            m_logtype_dict_entry.add_static_text(token.to_string());
+            m_logtype_dict_entry.add_static_text(token.to_string_view());
             break;
         }
         case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
             encoded_variable_t encoded_var{};
             if (false
                 == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                        token.to_string(),
+                        token.to_string_view(),
                         encoded_var
                 ))
             {
                 variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string(), id);
+                m_var_dict.add_entry(token.to_string_view(), id);
                 m_var_ids.push_back(id);
                 encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                 m_logtype_dict_entry.add_dictionary_var();
@@ -353,12 +353,12 @@ auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_sur
             encoded_variable_t encoded_var{};
             if (false
                 == EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                        token.to_string(),
+                        token.to_string_view(),
                         encoded_var
                 ))
             {
                 variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string(), id);
+                m_var_dict.add_entry(token.to_string_view(), id);
                 m_var_ids.push_back(id);
                 encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
                 m_logtype_dict_entry.add_dictionary_var();
@@ -379,7 +379,7 @@ auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_sur
             auto captures{lexer.get_captures_from_rule_id(token_type)};
             if (false == captures.has_value()) {
                 variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string(), id);
+                m_var_dict.add_entry(token.to_string_view(), id);
                 m_var_ids.push_back(id);
                 m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
                 m_logtype_dict_entry.add_dictionary_var();
