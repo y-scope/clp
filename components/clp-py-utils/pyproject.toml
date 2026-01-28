@@ -8,7 +8,7 @@ requires-python = ">=3.10"
 dependencies = [
     "boto3>=1.42.36",
     "mariadb>=1.1.14",
-    "mysql-connector-python>=9.6.0",
+    "mysql-connector-python>=9.5.0",
     "pydantic>=2.12.5",
     "python-Levenshtein>=0.27.3",
     "PyYAML>=6.0.3",
