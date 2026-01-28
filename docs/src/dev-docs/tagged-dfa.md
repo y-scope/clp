@@ -122,7 +122,7 @@ Traversal proceeds left-to-right over the input:
 1. Start in the initial DFA state.
 2. For each input symbol:
    - follow the unique matching transition,
-   - or fail if no valid transitions exists.
+   - or fail if no valid transitions exist.
 3. If no failure occurs above, end in a single final state.
 
 No backtracking or ambiguity resolution occurs during traversal. This makes DFA execution:
