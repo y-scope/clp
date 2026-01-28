@@ -90,13 +90,14 @@ impl Client {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::ConfigIsNone`] if `config.api_server` is `None`.
     /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
     /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self.config.api_server` is `None`.
     pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
+        if config.api_server.is_none() {
+            return Err(ClientError::ConfigIsNone);
+        }
+
         let sql_pool =
             create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
 
@@ -106,13 +107,11 @@ impl Client {
         );
         let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
 
-        let client = Self {
+        Ok(Self {
             config: config.clone(),
             mongodb_client: mongo_client,
             sql_pool,
-        };
-        client.get_api_server_config();
-        Ok(client)
+        })
     }
 
     /// Submits a search or aggregation query as a job.
@@ -127,10 +126,6 @@ impl Client {
     ///
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self.config.api_server` is `None`.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.dataset.is_none() {
@@ -175,10 +170,6 @@ impl Client {
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self.config.api_server` is `None`.
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
