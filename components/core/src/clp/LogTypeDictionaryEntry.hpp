@@ -93,7 +93,7 @@ public:
     void add_escape();
 
     /**
-     * Adds static text to the logtype escaping any placeholder characters.
+     * Adds static text to the logtype, escaping any placeholder characters.
      */
     auto add_static_text(std::string_view static_text) -> void;
 
