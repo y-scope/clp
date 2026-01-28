@@ -1,6 +1,6 @@
-# Configuring object storage
+# Configuring AWS S3
 
-To use object storage with CLP, follow the steps below to configure the necessary IAM permissions
+To use AWS S3 with CLP, follow the steps below to configure the necessary IAM permissions
 and your S3 bucket(s) for each use case you require.
 
 ## Configuration for compression

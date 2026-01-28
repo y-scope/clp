@@ -91,8 +91,8 @@ The subsections below explain how to configure your object storage bucket and CL
 :gutter: 2
 
 :::{grid-item-card}
-:link: object-storage-config
-Configuring object storage
+:link: aws-s3-config
+Configuring AWS S3
 ^^^
 Configuring your object storage bucket and IAM permissions for each use case.
 :::
@@ -105,16 +105,16 @@ Configuring CLP to use object storage for each use case.
 :::
 ::::
 
-## Using CLP with object storage
+## Using CLP with AWS S3
 
-The subsection below explains how to use CLP with object storage for each use case:
+The subsection below explains how to use CLP with AWS S3 for each use case:
 
 ::::{grid} 1 1 1 1
 :gutter: 2
 
 :::{grid-item-card}
-:link: clp-usage
-Using CLP with object storage
+:link: using-clp-with-aws-s3
+Using CLP with AWS S3
 ^^^
 Using CLP to compress, search, and view log files from object storage.
 :::
@@ -123,9 +123,9 @@ Using CLP to compress, search, and view log files from object storage.
 :::{toctree}
 :hidden:
 
-object-storage-config
+aws-s3-config
 clp-config
-clp-usage
+using-clp-with-aws-s3
 :::
 
 [aws-configure-profiles]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html

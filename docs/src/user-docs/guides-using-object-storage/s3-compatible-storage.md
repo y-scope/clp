@@ -35,7 +35,7 @@ are not supported for S3-compatible storage.
 ### Configuring your S3-compatible storage
 
 Configure your S3-compatible storage service with bucket access policies equivalent to the
-[AWS IAM policies](aws-s3/object-storage-config.md) described for each use case:
+[AWS IAM policies](aws-s3/aws-s3-config.md) described for each use case:
 
 * For compression: read access (`GetObject`) and list access (`ListBucket`) to the bucket/prefix
   containing your logs.

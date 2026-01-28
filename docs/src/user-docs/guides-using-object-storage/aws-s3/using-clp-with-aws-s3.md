@@ -1,4 +1,4 @@
-# Using CLP with object storage
+# Using CLP with AWS S3
 
 To compress logs from AWS S3, follow the steps in the section below. For all other operations, you
 should be able to use CLP as described in the
@@ -98,4 +98,4 @@ addressed in a future release.
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [aws-s3-object-key]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-[compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
+[compression-iam-policy]: ./aws-s3-config.md#configuration-for-compression

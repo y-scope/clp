@@ -1,6 +1,6 @@
 # Configuring CLP
 
-To use object storage with CLP, follow the steps below to configure each use case you require.
+To use AWS S3 with CLP, follow the steps below to configure each use case you require.
 
 :::{note}
 If CLP is already running, shut it down, update its configuration, and then start it again.
