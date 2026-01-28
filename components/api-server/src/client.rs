@@ -121,6 +121,10 @@ impl Client {
     ///
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.config.api_server` is `None`.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.dataset.is_none() {
@@ -130,8 +134,12 @@ impl Client {
             }
         }
         if search_job_config.max_num_results == 0 {
-            search_job_config.max_num_results =
-                self.config.api_server.default_max_num_query_results;
+            search_job_config.max_num_results = self
+                .config
+                .api_server
+                .as_ref()
+                .expect("api_server configuration is missing")
+                .default_max_num_query_results;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -165,6 +173,10 @@ impl Client {
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.config.api_server` is `None`.
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
@@ -176,8 +188,13 @@ impl Client {
         >,
         ClientError,
     > {
-        let mut delay_ms = self.config.api_server.query_job_polling.initial_backoff_ms;
-        let max_delay_ms = self.config.api_server.query_job_polling.max_backoff_ms;
+        let api_server_config = self
+            .config
+            .api_server
+            .as_ref()
+            .expect("api_server configuration is missing");
+        let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
+        let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
         loop {
             match self.get_status(search_job_id).await? {
                 QueryJobStatus::Succeeded => {

@@ -24,10 +24,8 @@ fn read_config_and_credentials(
     args: &Args,
 ) -> anyhow::Result<(package::config::Config, package::credentials::Credentials)> {
     let config_path = std::path::Path::new(args.config.as_str());
-    let config: package::config::Config = yaml::from_path(config_path).context(format!(
-        "Config file {} does not exist",
-        config_path.display()
-    ))?;
+    let config: package::config::Config = yaml::from_path(config_path)
+        .context(format!("Cannot load config file {}", config_path.display()))?;
 
     let credentials = package::credentials::Credentials {
         database: package::credentials::Database {
@@ -83,10 +81,14 @@ async fn main() -> anyhow::Result<()> {
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = set_up_logging()?;
 
+    let api_server_config = config
+        .api_server
+        .as_ref()
+        .expect("api_server configuration is missing");
     let addr = format!(
         "{}:{}",
-        args.host.unwrap_or_else(|| config.api_server.host.clone()),
-        args.port.unwrap_or(config.api_server.port)
+        args.host.unwrap_or_else(|| api_server_config.host.clone()),
+        args.port.unwrap_or(api_server_config.port)
     );
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
