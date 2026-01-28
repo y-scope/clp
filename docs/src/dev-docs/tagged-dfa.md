@@ -39,7 +39,7 @@ or split the log.
 Regex rules define patterns that match sequences of characters. Each regex rule contains a variable
 name and a regex pattern. Examples include:
 
-```text
+```none
 | Variable Name   | Regex Pattern              | Input      |  Match |
 |-----------------|----------------------------|------------|--------|
 | float           | \-?\d+\.\d+                | 12.34      | 12.34  |
@@ -55,7 +55,7 @@ determine priority.
 
 ### Example Schema
 
-```regex
+```none
 delimiters: \n\r\t
 
 int:-?\d+
@@ -109,7 +109,7 @@ Each DFA state represents a set of possible NFA states. Transitions are labeled 
 
 For any state `S` and input symbol `c`, there is at most one transition:
 
-```text
+```none
 S--c-->S'
 ```
 
@@ -216,7 +216,7 @@ metadata in the form of a logtype and variable dictionary. The dictionaries allo
 later operate efficiently, by only decompressing matching archives. To solve this problem, a schema
 is used by Log Surgeon to generate a TDFA and interpret the logs.
 
-```
+```none
        ----------        -----------
        | Schema |        | Raw Log |
        ----------        -----------
@@ -244,7 +244,7 @@ while preserving the surrounding static-text.
 
 ### A. Schema
 
-```regex
+```none
 delimiters: \n\r\t
 
 tagged_user_id:user_id=(?<user_id>\d+)
@@ -253,7 +253,7 @@ tagged_user_name:user=(?<user_name>\w+)
 
 ### B. TDFA
 
-```text
+```none
                                                                                    [R0=R6, set R1]
                              [R4=-1,R5=-1]                  [set R6]               [R2=R4, R3=R5]
 S0-u->S1-s->S2-e->S3-r->S4-_->S5-i->S6-d->S7-=->S8-[0-9]->S9-[0-9]->S10----[^0-9]->(tagged_user_id)
@@ -301,7 +301,7 @@ S0-u->S1-s->S2-e->S3-r->S4-_->S5-i->S6-d->S7-=->S8-[0-9]->S9-[0-9]->S10----[^0-9
 
 ### C. Input Log Line
 
-```text
+```none
 My user_id=56 line.
 ```
 
@@ -310,7 +310,7 @@ My user_id=56 line.
 The TDFA processes the line character by character, updates **states** and **registers** for
 captured variables.
 
-```text
+```none
 States          | Input     | Action/Tag Updates                | Registers
 ---------------------------------------------------------------------------------------------------
 S0              | 'M'       | [fail]                            |
@@ -364,7 +364,8 @@ placeholder while preserving the surrounding static-text.
 ### E. Resulting Compressed Log
 
 After TDFA execution Log Surgeon produces:
-```text
+
+```none
 LogType:
   1. My user_id=<user_id> line.
 Variables:
@@ -384,7 +385,7 @@ The search problem is to find which logs match a given wildcard query. Logs are 
 into an archive with a logtype and variable dictionary, so the search algorithm compares the query
 against these dictionaries to minimize archive decompression.
 
-```
+```none
                      ------------------
                      | Wildcard Query |
                      ------------------
@@ -434,7 +435,7 @@ number of TDFA intersections needed to generate the complete set of interpretati
 
 #### Schema Example:
 
-```regex
+```none
 delimiters: \n\r\t
 
 int:-?\d+
@@ -445,13 +446,13 @@ tagged_session:session=(?<session>\w+\d+)
 
 #### Query Example:
 
-```text
+```none
 12* user_id=* 34.56 session=AB*
 ```
 
 #### Interpretations Produced by Log Surgeon:
 
-```text
+```none
 12* user_id=* <float>(34.56) session=AB*
 12* user_id=<user_id>(*)* <float>(34.56) session=AB*
 12* user_id=* <float>(34.56) session=<session>(AB*)*
@@ -476,7 +477,7 @@ the variables have a wildcard, CLP generates the **2^k combinations** of:
 
 #### Example subqueries for the query above:
 
-```text
+```none
 12* user_id=* <encoded>(34.56) session=AB*
 12* user_id=<dict>(*)* <encoded>(34.56) session=AB*
 12* user_id=* <encoded>(34.56) session=<dict>(AB*)*
@@ -497,7 +498,7 @@ the variables have a wildcard, CLP generates the **2^k combinations** of:
 
 #### Logs:
 
-```text
+```none
 My log has user_id=55 34.56 session=AB23 and that's it.
 123 user_id=22 34.56 session=AC45
 123 user_id=41 34.56 session=AB11
@@ -508,7 +509,7 @@ My log has user_id=55 34.56 session=AB23 and that's it.
 
 #### Logtype Dictionary:
 
-```text
+```none
 My log has user_id=<dict> <encoded> session=<dict> and that's it.
 <dict> user_id=<dict> <encoded> session=<dict>
 <encoded> user_id=<dict> <encoded> session=<dict>
@@ -517,7 +518,7 @@ My log has user_id=<dict> <encoded> session=<dict> and that's it.
 
 #### Variable Dictionary:
 
-```text
+```none
 123456789123456789
 22
 41
@@ -529,7 +530,7 @@ AC45
 
 #### Logtypes matching the subqueries:
 
-```text
+```none
 <dict> user_id=<dict> <encoded> session=<dict>
 <encoded> user_id=<dict> <encoded> session=<dict>
 12a user_id=<dict> <encoded> session=<dict>
@@ -541,7 +542,7 @@ subqueries dictionary variables are in variable dictionary.
 
 #### Decompressed Logs:
 
-```text
+```none
 123 user_id=22 34.56 session=AC45
 123 user_id=41 34.56 session=AB11
 123456789123456789 user_id=88 34.56 session=AB22
@@ -550,7 +551,7 @@ subqueries dictionary variables are in variable dictionary.
 
 ### D.Grep against the original query:
 
-```text
+```none
 123 user_id=41 34.56 session=AB11
 123456789123456789 user_id=88 34.56 session=AB22
 12a user_id=141 34.56 session=AB11
