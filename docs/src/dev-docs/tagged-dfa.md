@@ -549,7 +549,7 @@ subqueries dictionary variables are in variable dictionary.
 12a user_id=141 34.56 session=AB11
 ```
 
-### D.Grep against the original query:
+### D. Grep against the original query:
 
 ```none
 123 user_id=41 34.56 session=AB11
