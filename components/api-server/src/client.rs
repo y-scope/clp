@@ -92,6 +92,10 @@ impl Client {
     ///
     /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
     /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.config.api_server` is `None`.
     pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
         let sql_pool =
             create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
@@ -102,11 +106,13 @@ impl Client {
         );
         let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
 
-        Ok(Self {
+        let client = Self {
             config: config.clone(),
             mongodb_client: mongo_client,
             sql_pool,
-        })
+        };
+        client.get_api_server_config();
+        Ok(client)
     }
 
     /// Submits a search or aggregation query as a job.
@@ -134,12 +140,8 @@ impl Client {
             }
         }
         if search_job_config.max_num_results == 0 {
-            search_job_config.max_num_results = self
-                .config
-                .api_server
-                .as_ref()
-                .expect("api_server configuration is missing")
-                .default_max_num_query_results;
+            search_job_config.max_num_results =
+                self.get_api_server_config().default_max_num_query_results;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -188,11 +190,7 @@ impl Client {
         >,
         ClientError,
     > {
-        let api_server_config = self
-            .config
-            .api_server
-            .as_ref()
-            .expect("api_server configuration is missing");
+        let api_server_config = self.get_api_server_config();
         let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
         let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
         loop {
@@ -458,6 +456,20 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
+    }
+
+    /// Returns a reference to the API server configuration.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.config.api_server` is `None`.
+    const fn get_api_server_config(
+        &self,
+    ) -> &clp_rust_utils::clp_config::package::config::ApiServer {
+        self.config
+            .api_server
+            .as_ref()
+            .expect("api_server configuration is missing")
     }
 }
 
