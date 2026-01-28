@@ -449,7 +449,9 @@ impl Client {
         Ok(mapped)
     }
 
-    /// Returns a reference to the API server configuration.
+    /// # Returns
+    ///
+    /// A reference to the API server configuration.
     ///
     /// # Panics
     ///
