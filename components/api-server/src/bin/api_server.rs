@@ -25,7 +25,7 @@ fn read_config_and_credentials(
 ) -> anyhow::Result<(package::config::Config, package::credentials::Credentials)> {
     let config_path = std::path::Path::new(args.config.as_str());
     let config: package::config::Config = yaml::from_path(config_path)
-        .context(format!("Cannot load config file {}", config_path.display()))?;
+        .context(format!("cannot load config file {}", config_path.display()))?;
 
     let credentials = package::credentials::Credentials {
         database: package::credentials::Database {
