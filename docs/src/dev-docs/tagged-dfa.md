@@ -288,8 +288,8 @@ S0-u->S1-s->S2-e->S3-r->S4-_->S5-i->S6-d->S7-=->S8-[0-9]->S9-[0-9]->S10----[^0-9
   `S9`. The same behavior occurs with `R9` on the `tagged_user_name` branch.
 - Reaching states such as S9, S10, S11, S12, indicates the input is currently in an accepting
   configuration, but the capture is not yet finalized.
-- The true end of the capture occurs when the input leaves the character class ([^0-9] or [^A-Za-z])
-  as this marks the match no longer continues.
+- The true end of the capture occurs when the input leaves the character class (`[^0-9]` or
+  `[^A-Za-z]`) as this marks the match no longer continues.
 - At this transition:
   -  The final transition operations are performed (e.g., `S9` performs its delayed `set R6`
      operation).
