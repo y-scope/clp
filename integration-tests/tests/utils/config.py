@@ -120,7 +120,7 @@ class PackagePathConfig:
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
 
-@dataclass
+@dataclass(frozen=True)
 class PackageModeConfig:
     """Mode configuration for the CLP package."""
 
@@ -134,7 +134,7 @@ class PackageModeConfig:
     component_list: list[str]
 
 
-@dataclass
+@dataclass(frozen=True)
 class PackageTestConfig:
     """Metadata for a specific test of the CLP package."""
 
@@ -168,7 +168,7 @@ class PackageTestConfig:
         tmp_path.replace(temp_config_file_path)
 
 
-@dataclass
+@dataclass(frozen=True)
 class PackageInstance:
     """Metadata for a running instance of the CLP package."""
 
