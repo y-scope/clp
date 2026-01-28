@@ -40,8 +40,10 @@ public:
      * identified by `format_id` as a `clp_s::TimestampPattern`.
      * @param epoch
      * @param format_id
+     * @return The string encoding for the given epoch and format ID.
      */
-    auto get_deprecated_timestamp_string_encoding(epochtime_t epoch, uint64_t format_id) const
+    [[nodiscard]] auto
+    get_deprecated_timestamp_string_encoding(epochtime_t epoch, uint64_t format_id) const
             -> std::string;
 
     /**

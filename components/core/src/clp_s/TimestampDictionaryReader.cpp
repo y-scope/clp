@@ -72,7 +72,7 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
             return error;
         }
         m_deprecated_patterns.emplace(id, TimestampPattern(0, pattern));
-        auto const timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+        auto timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
         if (timestamp_pattern_result.has_error()) {
             m_timestamp_patterns.emplace(id, std::nullopt);
         } else {
