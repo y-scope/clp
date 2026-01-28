@@ -301,7 +301,7 @@ def _resolve_s3_endpoint_url(
     endpoint_url: str | None, region_code: str | None, bucket_name: str
 ) -> str:
     """
-    Returns the S3 endpoint URL, or constructs an AWS S3 URL if not provided.
+    Returns the resolved S3 endpoint URL, or constructs an AWS S3 URL if not provided.
 
     :param endpoint_url: Custom S3 endpoint URL.
     :param region_code: AWS region code.
