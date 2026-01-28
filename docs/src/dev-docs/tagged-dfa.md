@@ -291,13 +291,13 @@ S0-u->S1-s->S2-e->S3-r->S4-_->S5-i->S6-d->S7-=->S8-[0-9]->S9-[0-9]->S10----[^0-9
 - The true end of the capture occurs when the input leaves the character class (`[^0-9]` or
   `[^A-Za-z]`) as this marks the match no longer continues.
 - At this transition:
-  -  The final transition operations are performed (e.g., `S9` performs its delayed `set R6`
-     operation).
-  -  The accepting operations are performed. For example, in the `tagged_user_id` case:
-    -  `R6` is copied into the final start register `R0`.
-    -  The final end register `R1` is set to the current position.
-    -  The final registers of `tagged_user_name` (`R2`, `R3`) copy the negated values from `R4` and
-       `R5`.
+  - The final transition operations are performed (e.g., `S9` performs its delayed `set R6`
+    operation).
+  - The accepting operations are performed. For example, in the `tagged_user_id` case:
+    - `R6` is copied into the final start register `R0`.
+    - The final end register `R1` is set to the current position.
+    - The final registers of `tagged_user_name` (`R2`, `R3`) copy the negated values from `R4` and
+      `R5`.
 
 ### C. Input Log Line
 
