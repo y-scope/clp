@@ -30,9 +30,7 @@ CLP_TEXT_MODE = PackageModeConfig(
         api_server=None,
         log_ingestor=None,
     ),
-    component_list=[
-        *CLP_BASE_COMPONENTS,
-    ],
+    component_list=(*CLP_BASE_COMPONENTS,),
 )
 
 

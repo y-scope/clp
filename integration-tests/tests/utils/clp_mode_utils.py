@@ -35,7 +35,7 @@ def _to_docker_compose_service_name(name: str) -> str:
 # assemble mode-specific component lists (see tests/package_tests/*/test_*.py).
 # TODO: Modify these component lists when the Presto Docker Compose project is integrated with the
 # CLP Docker compose project.
-CLP_BASE_COMPONENTS = [
+CLP_BASE_COMPONENTS: tuple[str, ...] = (
     _to_docker_compose_service_name(DB_COMPONENT_NAME),
     _to_docker_compose_service_name(QUEUE_COMPONENT_NAME),
     _to_docker_compose_service_name(REDIS_COMPONENT_NAME),
@@ -47,7 +47,7 @@ CLP_BASE_COMPONENTS = [
     _to_docker_compose_service_name(QUERY_SCHEDULER_COMPONENT_NAME),
     _to_docker_compose_service_name(QUERY_WORKER_COMPONENT_NAME),
     _to_docker_compose_service_name(GARBAGE_COLLECTOR_COMPONENT_NAME),
-]
+)
 
 CLP_API_SERVER_COMPONENT = _to_docker_compose_service_name(API_SERVER_COMPONENT_NAME)
 

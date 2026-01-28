@@ -131,7 +131,7 @@ class PackageModeConfig:
     clp_config: ClpConfig
 
     #: The list of CLP components that this package needs.
-    component_list: list[str]
+    component_list: tuple[str, ...]
 
 
 @dataclass(frozen=True)

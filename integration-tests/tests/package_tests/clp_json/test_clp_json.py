@@ -28,7 +28,7 @@ CLP_JSON_MODE = PackageModeConfig(
             query_engine=QueryEngine.CLP_S,
         ),
     ),
-    component_list=[*CLP_BASE_COMPONENTS, CLP_API_SERVER_COMPONENT],
+    component_list=(*CLP_BASE_COMPONENTS, CLP_API_SERVER_COMPONENT),
 )
 
 
