@@ -115,11 +115,11 @@ async fn health() -> String {
         example = json!({
             "query_string": "*",
             "dataset": "default",
-            "begin_timestamp": 0,
-            "end_timestamp": 17_356_896,
+            "time_range_begin_millisecs": 0,
+            "time_range_end_millisecs": 17_356_896,
             "ignore_case": true,
             "max_num_results": 0,
-            "write_to_file": false
+            "buffer_results_in_mongodb": true
         })),
     responses(
         (

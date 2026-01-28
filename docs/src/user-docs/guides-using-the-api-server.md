@@ -35,7 +35,6 @@ following commands to submit a query to clp-json and stream the results.
           "dataset": "default",
           "ignore_case": false,
           "max_num_results": 100,
-          "write_to_file": false
        }'
    ```
 
@@ -57,11 +56,11 @@ following commands to submit a query to clp-json and stream the results.
    Example streamed output:
 
    ```text
-   data: {"timestamp": 1633036800, "message": "Example log message"}
+   data: {"timestamp": 1767225600000, "message": "Example log message"}
 
-   data: {"timestamp": 1633036810, "message": "Another matched log line"}
+   data: {"timestamp": 1767225600010, "message": "Another matched log line"}
 
-   data: {"timestamp": 1633036820, "message": "No logs found" }
+   data: {"timestamp": 1767225600020, "message": "No logs found" }
    ```
 
 [OpenAPI]: https://swagger.io/specification/

@@ -127,6 +127,9 @@ auto generate_matchable_kql_expressions(
             matchable_kql_expressions.emplace_back(
                     fmt::format("{}: {}", column_query_with_namespace, cRefTestInt)
             );
+            matchable_kql_expressions.emplace_back(
+                    fmt::format("{}: timestamp(\"{}\")", column_query_with_namespace, cRefTestInt)
+            );
             auto [it, inserted] = expected_column_resolutions.try_emplace(
                     column_query_with_namespace,
                     std::set<SchemaTree::Node::id_t>{}
@@ -144,6 +147,13 @@ auto generate_matchable_kql_expressions(
         {
             matchable_kql_expressions.emplace_back(
                     fmt::format("{}: {:.2f}", column_query_with_namespace, cRefTestFloat)
+            );
+            matchable_kql_expressions.emplace_back(
+                    fmt::format(
+                            "{}: timestamp(\"{:.3f}\")",
+                            column_query_with_namespace,
+                            cRefTestFloat
+                    )
             );
             auto [it, inserted] = expected_column_resolutions.try_emplace(
                     column_query_with_namespace,
