@@ -2,7 +2,7 @@
 
 To compress logs from AWS S3, follow the steps in the section below. For all other operations, you
 should be able to use CLP as described in the
-[clp-json quick-start guide](../../quick-start/clp-json).
+[clp-json quick-start guide](../../quick-start/clp-json.md).
 
 ## Compressing logs from AWS S3
 
