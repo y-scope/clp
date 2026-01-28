@@ -1,11 +1,11 @@
-# Using S3-compatible storage
+# S3-compatible storage
 
 In addition to AWS S3, CLP supports archiving to and compressing logs from S3-compatible object
 storage services such as MinIO and Ceph.
 
 :::{note}
 This guide covers S3-compatible storage specifically. For AWS S3, see the
-[main object storage guide](index.md).
+[AWS S3 guide](aws-s3/index.md).
 :::
 
 ## Supported features
@@ -35,7 +35,7 @@ are not supported for S3-compatible storage.
 ### Configuring your S3-compatible storage
 
 Configure your S3-compatible storage service with bucket access policies equivalent to the
-[AWS IAM policies](object-storage-config.md) described for each use case:
+[AWS IAM policies](aws-s3/object-storage-config.md) described for each use case:
 
 * For compression: read access (`GetObject`) and list access (`ListBucket`) to the bucket/prefix
   containing your logs.

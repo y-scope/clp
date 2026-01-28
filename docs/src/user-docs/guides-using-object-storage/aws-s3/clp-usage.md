@@ -1,12 +1,13 @@
 # Using CLP with object storage
 
 To compress logs from AWS S3, follow the steps in the section below. For all other operations, you
-should be able to use CLP as described in the [clp-json quick-start guide](../quick-start/clp-json).
+should be able to use CLP as described in the
+[clp-json quick-start guide](../../quick-start/clp-json).
 
 ## Compressing logs from AWS S3
 
-To compress logs from AWS S3, use the `sbin/compress-from-s3.sh` script. The script supports two modes
-of operation:
+To compress logs from AWS S3, use the `sbin/compress-from-s3.sh` script. The script supports two
+modes of operation:
 
 * [**s3-object** mode](#s3-object-compression-mode): Compress S3 objects specified by their full
   S3 URLs.
@@ -42,9 +43,8 @@ sbin/compress-from-s3.sh \
     There must be no duplicate object keys across all `<object-url>` arguments.
     :::
 
-
 * For a description of other fields, see the [clp-json quick-start
-  guide](../quick-start/clp-json.md#compressing-json-logs).
+  guide](../../quick-start/clp-json.md#compressing-json-logs).
 
 Instead of specifying input object URLs explicitly in the command, you may specify them in a text
 file and then pass the file into the command using the `--inputs-from` flag, like so:
