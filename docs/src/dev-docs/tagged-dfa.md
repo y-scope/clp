@@ -1,7 +1,7 @@
 # Tagged Deterministic Finite Automata
 
 This document explains the inner workings of the deterministic finite automaton (DFA) implemented in
-LogSurgeon and used for compression and search in CLP.
+Log Surgeon and used for compression and search in CLP.
 
 ## Contents
 
@@ -69,8 +69,8 @@ A nondeterministic finite automaton (NFA) is a state machine where each state ca
 outgoing transitions from the same input symbol, including epsilon transitions (transitions that
 consume no input).
 
-In LogSurgeon, NFAs are built from the regex rules. They form an intermediate representation between
-user-defined regex rule and DFAs.
+In Log Surgeon, NFAs are built from the regex rules. They form an intermediate representation
+between user-defined regex rule and DFAs.
 
 ### Construction
 
@@ -100,7 +100,7 @@ A deterministic finite automaton (DFA) consists of a finite set of states connec
 transitions. At any point during traversal, the automaton is in exactly one state, and for a given
 input symbol there is at most one outgoing transition.
 
-In LogSurgeon, DFAs are used as the execution model for lexing logs.
+In Log Surgeon, DFAs are used as the execution model for lexing logs.
 
 ### States and Transitions
 
@@ -146,30 +146,53 @@ A tagged DFA (TDFA) extends a standard DFA by attaching **tags** to transitions 
 allow the automaton to record semantic information during traversal, such as the start and end
 positions of capture groups.
 
-In LogSurgeon, TDFAs are used to extract sub-matches inside variables while preserving the
-deterministic and linear-time properties of the DFAs.
+In Log Surgeon, TDFAs are used to extract sub-matches inside variables while preserving the
+**deterministic** and **linear-time** properties of standard DFAs.
 
-### Tags and Registers in the DFA
+### Tags and Registers
 
-Each capture group in a regex group is associated with a start and end tag. During TDFA traversal,
-each tag corresponds to one or more registers:
+Each capture group in regex is associated with **start** and **end** tags. During TDFA traversal,
+each tag is represented by **registers**:
 
-- `final(tag)` - records the final value of the tag to be used post-lexing.
-- `intermediate(tag,i)` - records transient information that may be forwarded into `final(tag)`.
+- **intermediate registers** - records transient information.
+- **final register** - records the final value of the tag to be used post-lexing.
 
-At various DFA states register value are set or copied into other registers based on the register
-action corresponding to the outgoing symbol. Once TDFA traversal is finished, the value in the
-`final(tag)` register is used as the tag's value.
+There are three types of register operations:
+
+- **Set operations** - Assign the current input position to a register.
+- **Negate operations** - Mark a register as invalid.
+- **Copy operations** - Copy a value from one register to another.
+
+At various DFA transitions, register values are set, negated, or copied into other registers based
+on the register operation. Once TDFA traversal is finished, the value in the tag's
+**final register** is used as the tag's value.
 
 ### Tagged Transitions
 
-TDFA transitions are labeled like a standard DFA, but may also carry tag operations:
+TDFA transitions are labeled like a standard DFA, but may also carry **register operations** (set,
+negate, copy). Multiple tag operations can occur along a single transition.
 
-- **Positive tag operations** - applied when the transition is taken
-- **Negative tag operations** - applied when a branch is rejected
+A key implementation detail for efficiency is that register operations are assigned using
+a 1-symbol lookahead. That is, instead of executing operations upon entering a state, operations
+are applied only on out-going transitions that stay along the desired capture path. For example,
+consider the following two regexes:
 
-At each step, tag operations update the corresponding registers. Multiple tag operations may occur
-along a single transition.
+- `tagged_user_digit:user_id=(?<user_digit>\d)`,
+- `tagged_user_id:user_id=(?<user_id>\d+)`,
+
+and the input:
+
+- `user_id=56`.
+
+Upon reaching `5`:
+
+- With a 0-lookahead, registers for both variable captures would be set immediately.
+- With a 1-lookahead, we wait until seeing the `6`, then sets a register for the start of the
+  `tagged_user_id` and negate the registers for `tagged_user_digit`.
+
+In general, TDFAs can use an **n-lookahead**, but each extra symbol of lookahead increases
+cumulative runtime overhead. Using **1-lookahead** is common practice, as it experimentally provides
+the best trade-off between minimizing register operations and keeping lookahead overhead low.
 
 ### Match Semantics
 
@@ -258,7 +281,7 @@ S0-u->S1-s->S2-e->S3-r->S4-_->S5-i->S6-d->S7-=->S8-[0-9]->S9-[0-9]->S10----[^0-9
   updates because it uses a 1-symbol lookahead for register operations:
   - For the `tagged_user_id` path, only after reading `i` does it negate the intermediate registers
     of `tagged_user_name` (`R4`, `R5`).
-  - For the `tagged_user_name` path, onlt after reading an alphabet character does it negate the
+  - For the `tagged_user_name` path, only after reading an alphabet character does it negate the
     intermediate registers of `tagged_user_id` (`R7`, `R8`).
 - In the `tagged_user_id` branch, due to 1-lookahead semantics, the intermediate start register `R6`
   is not set when the first digit is consumed. Instead, it is set on all out-going transitions from
@@ -288,28 +311,29 @@ The TDFA processes the line character by character, updates **states** and **reg
 captured variables.
 
 ```text
-States          | Input     | Action/Tag Updates     | Registers
--------------------------------------------------------------------------------
-S0              | 'M'       | [fail]                 |
-S0              | 'y'       | [fail]                 |
-S0              | ' '       | [fail]                 |
-S0              | 'u'       | -> S1                  |
-S1              | 's'       | -> S2                  |
-S2              | 'e'       | -> S3                  |
-S3              | 'r'       | -> S4                  |
-S4              | '_'       | -> S5                  |
-S5              | 'i'       | -> S6                  |
-S6              | 'd'       | -> S7                  |
-S7              | '='       | -> S8                  |
-S8              | '5'       | -> S9 + Set R2         | R2 = 8
-S9 [accepting]  | '6'       | -> S9                  |
-S9 [accepting]  | ' '       | Set R1, R2->R0         | R1 = 10, R3 = R2 = 8
-S0              | ' '       | [fail]                 |
-S0              | 'l'       | [fail]                 |
-S0              | 'i'       | [fail]                 |
-S0              | 'n'       | [fail]                 |
-S0              | 'e'       | [fail]                 |
-S0              | '.'       | [fail]                 |
+States          | Input     | Action/Tag Updates                | Registers
+---------------------------------------------------------------------------------------------------
+S0              | 'M'       | [fail]                            |
+S0              | 'y'       | [fail]                            |
+S0              | ' '       | [fail]                            |
+S0              | 'u'       | -> S1                             |
+S1              | 's'       | -> S2                             |
+S2              | 'e'       | -> S3                             |
+S3              | 'r'       | -> S4                             |
+S4              | '_'       | -> S5                             |
+S5              | 'i'       | Negate R4, R5 -> S6               | R4 = -1, R5 = -1
+S6              | 'd'       | -> S7                             |
+S7              | '='       | -> S8                             |
+S8              | '5'       | -> S9                             |
+S9 [accepting]  | '6'       | Set R6 -> S10                     | R6 = 8
+S9 [accepting]  | ' '       |                                   |
+Accepting Ops   |           | R0 = R6, Set R1, R2 = R4, R3 = R5 | R0 = 8, R1 = 10, R2 = -1, R3 = -1
+S0              | ' '       | [fail]                            |
+S0              | 'l'       | [fail]                            |
+S0              | 'i'       | [fail]                            |
+S0              | 'n'       | [fail]                            |
+S0              | 'e'       | [fail]                            |
+S0              | '.'       | [fail]                            |
 ```
 
 **Explanation**:
@@ -317,15 +341,21 @@ S0              | '.'       | [fail]                 |
   characters.
 - The space after `My` is a delimiter, so Log Surgeon restarts matching from the start state at the
   next position.
-- `user_id=` drives deterministic transitions `S0->S8`, matching the schema's static prefix.
-- Reading `5` transitions to `S9` and triggers a **register operation** for the start tag, storing
-  the current position in **intermediate register** R2.
-- Reading `6` remains in `S9`, extending the capture.
-- When a delimiter is encountered for which no valid transition exists from an accepting state:
+- `user_` drives deterministic transitions `S0->S5`, matching the schema's static prefix.
+- Reading `i` transitions to `S6`, and triggers the 1-lookahead branching register operations to
+  negate the **intermediate registers** `R4` and `R5`.
+- `d=` drives deterministic transitions `S6->S8`, matching the schema's static prefix.
+- Reading `5` transitions to `S9`. At this point, the **intermediate register** `R6` is **not yet
+  set** because of the 1-lookahead delay.
+- Reading `6` transitions to `S10` and triggers a **register operation** for the start tag, storing
+  the pre-transition position, `8`, in R6.
+- Reading ` ` has no valid transition. Since ` ` is a delimiter, and `S10` is accepting:
   - The TDFA reports a successful match.
   - Cleanup register operations are performed:
-    -  Stores the current position in `R1`, the **final register** for the end tag.
-    -  Copies  `R2` into `R0`, the **final register** for the start tag.
+    - Copies  `R6` into `R0`, the **final start register** for `tagged_user_id`.
+    - Stores the end position, `10` into `R1`, the **final end register** for `tagged_user_id`.
+    - Copies `R4` into `R2` the **final start register** for `tagged_user_name`.
+    - Copies `R5` into `R3` the **final end register** for `tagged_user_name`.
 - Remaining characters, ` line.`, are emitted as static-text.
 
 The finalized register values allow Log Surgeon to replace the matched substring with the variable
@@ -399,8 +429,8 @@ Log Surgeon converts a query into **interpretations**, where each token may be:
 - Static-text (literal),
 - Variable (`<variable>(value)`) as determined by the schema and TDFA intersection.
 
-It uses a **dynamic programming algorithm** over all the substrings of the query to minimize the
-number ot TDFA intersections needed to generate the complete set of interpretations.
+It uses a **dynamic programming algorithm** over all the substrings of the query, to minimize the
+number of TDFA intersections needed to generate the complete set of interpretations.
 
 #### Schema Example:
 
