@@ -337,7 +337,7 @@ S0              | '.'       | [fail]                            |
 ```
 
 **Explanation**:
-- `My ` is emitted as **static-text** because no valid transitions exists from `S0` for these
+- `My ` is emitted as **static-text** because no valid transitions exist from `S0` for these
   characters.
 - The space after `My` is a delimiter, so Log Surgeon restarts matching from the start state at the
   next position.
