@@ -1,7 +1,7 @@
-# Tagged Deterministic Finite Automata
+# Schema-Based Compression and Search
 
-This document explains the inner workings of the deterministic finite automaton (DFA) implemented in
-Log Surgeon and used for compression and search in CLP.
+This document explains the inner workings of the schema-based deterministic finite automaton (DFA)
+implemented in Log Surgeon and how it is used for compression and search in CLP.
 
 ## Contents
 
