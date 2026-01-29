@@ -7,6 +7,9 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+#include <vector>
+
+#include <clp_s/DictionaryEntry.hpp>
 
 #include "../clp/ffi/EncodedTextAst.hpp"
 #include "Defs.hpp"
@@ -25,7 +28,8 @@ public:
                     bool,
                     std::pair<uint64_t, epochtime_t>,
                     std::pair<epochtime_t, uint64_t>,
-                    std::pair<double, float_format_t>>;
+                    std::pair<double, float_format_t>,
+                    clp_s::LogTypeDictionaryEntry>;
 
     // Constructor
     ParsedMessage() : m_schema_id(-1) {}

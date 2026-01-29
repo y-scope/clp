@@ -86,6 +86,8 @@ set(
         ../DictionaryReader.hpp
         ../DictionaryEntry.cpp
         ../DictionaryEntry.hpp
+        ../ErrorCode.cpp
+        ../ErrorCode.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
