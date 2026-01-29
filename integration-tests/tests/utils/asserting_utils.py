@@ -141,7 +141,6 @@ def verify_compression(
         run_and_assert(decompress_cmd)
 
         # Verify content equality.
-        decompression_dir = package_test_config.path_config.package_decompression_dir
         path_to_dataset = compression_job.path_to_dataset
         output_path = decompression_dir / path_to_dataset.relative_to(path_to_dataset.anchor)
 
