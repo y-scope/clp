@@ -57,11 +57,16 @@ def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
 @pytest.mark.compression
 def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
+    Validate that the `clp-text` package successfully compresses the `text-multifile` dataset.
 
     :param fixt_package_instance:
     """
     validate_package_instance(fixt_package_instance)
+
+    # Clear archives before compressing.
+    package_test_config = fixt_package_instance.package_test_config
+    package_path_config = package_test_config.path_config
+    package_path_config.clear_package_archives()
 
     # Compress a dataset.
     compression_job = PackageCompressionJob(
@@ -77,7 +82,6 @@ def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInsta
         options=None,
         positional_args=None,
     )
-    package_test_config = fixt_package_instance.package_test_config
     run_package_compression_script(compression_job, package_test_config)
 
     # Check the correctness of compression.
@@ -86,6 +90,5 @@ def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInsta
     log_msg = "test_clp_text_compression_text_multifile was successful."
     logger.info(log_msg)
 
-    # Clean up.
-    package_path_config = package_test_config.path_config
+    # Clear archives.
     package_path_config.clear_package_archives()

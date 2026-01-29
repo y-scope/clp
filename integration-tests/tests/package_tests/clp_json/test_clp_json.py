@@ -65,6 +65,11 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     """
     validate_package_instance(fixt_package_instance)
 
+    # Clear archives before compressing.
+    package_test_config = fixt_package_instance.package_test_config
+    package_path_config = package_test_config.path_config
+    package_path_config.clear_package_archives()
+
     # Compress a dataset.
     compression_job = PackageCompressionJob(
         path_to_dataset=(
@@ -82,7 +87,6 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
         },
         positional_args=None,
     )
-    package_test_config = fixt_package_instance.package_test_config
     run_package_compression_script(compression_job, package_test_config)
 
     # Check the correctness of compression.
@@ -91,8 +95,7 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     log_msg = "test_clp_json_compression_json_multifile was successful."
     logger.info(log_msg)
 
-    # Clean up.
-    package_path_config = package_test_config.path_config
+    # Clear archives.
     package_path_config.clear_package_archives()
 
 

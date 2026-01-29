@@ -16,6 +16,9 @@ def clean_directory(directory: Path) -> None:
 
     :param directory:
     """
+    if not directory.exists():
+        return
+
     for item in directory.iterdir():
         if item.is_file() or item.is_symlink():
             item.unlink()

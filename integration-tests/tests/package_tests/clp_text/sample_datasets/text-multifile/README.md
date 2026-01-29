@@ -1,7 +1,7 @@
 # Description of logs
 
 **Type**
-Unstructured text 
+Unstructured text
 
 **Number of files**
 5

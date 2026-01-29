@@ -143,11 +143,10 @@ def verify_compression(
         # Verify content equality.
         decompression_dir = package_test_config.path_config.package_decompression_dir
         path_to_dataset = compression_job.path_to_dataset
-        output_path = decompression_dir / path_to_dataset
+        output_path = decompression_dir / path_to_dataset.relative_to(path_to_dataset.anchor)
 
-        assert is_dir_tree_content_equal(
-            path_to_dataset,
-            output_path,
-        ), f"Mismatch between clp input {path_to_dataset} and output {output_path}."
+        if not is_dir_tree_content_equal(path_to_dataset, output_path):
+            err_msg = f"Mismatch between clp input {path_to_dataset} and output {output_path}."
+            pytest.fail(err_msg)
 
         unlink(decompression_dir)
