@@ -6,6 +6,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include <spdlog/spdlog.h>
+
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
 
 #include "search/ast/SearchUtils.hpp"
@@ -97,13 +99,14 @@ void TimestampDictionaryReader::append_timestamp_to_buffer(
         uint64_t format_id,
         std::string& buffer
 ) const {
-    auto const& pattern{m_timestamp_patterns.at(format_id)};
-    if (false == pattern.has_value()) {
+    auto const& optional_pattern{m_timestamp_patterns.at(format_id)};
+    if (false == optional_pattern.has_value()) {
+        SPDLOG_ERROR("Can not marshal timestamp - no valid timestamp pattern for format id.");
         throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
     }
 
     auto const marshal_result{
-            timestamp_parser::marshal_timestamp(timestamp, pattern.value(), buffer)
+            timestamp_parser::marshal_timestamp(timestamp, optional_pattern.value(), buffer)
     };
     if (marshal_result.has_error()) {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
