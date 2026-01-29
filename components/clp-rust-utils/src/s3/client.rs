@@ -29,11 +29,12 @@ pub async fn create_new_client(
         None,
         "clp-credential-provider",
     );
-    let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let mut config_builder = Builder::from(&base_config)
-        .credentials_provider(credential)
-        .region(Some(Region::new(region_id.to_string())))
-        .force_path_style(true);
+    let base_config = aws_config::defaults(BehaviorVersion::latest())
+        .credentials_provider(credential.clone())
+        .region(Region::new(region_id.to_string()))
+        .load()
+        .await;
+    let mut config_builder = Builder::from(&base_config).force_path_style(true);
     config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     let config = config_builder.build();
     Client::from_conf(config)
