@@ -330,12 +330,13 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::UnstructuredArray:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_array_dict));
                 break;
-            case NodeType::DateString:
-                writer->append_column(new DateStringColumnWriter(id));
-                break;
             case NodeType::DeltaInteger:
                 writer->append_column(new DeltaEncodedInt64ColumnWriter(id));
                 break;
+            case NodeType::Timestamp:
+                writer->append_column(new TimestampColumnWriter(id));
+                break;
+            case NodeType::DeprecatedDateString:
             case NodeType::Metadata:
             case NodeType::NullValue:
             case NodeType::Object:
