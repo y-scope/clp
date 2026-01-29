@@ -88,10 +88,12 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     # Check the correctness of compression.
     verify_compression(compression_job, package_test_config)
 
-    log_msg = "test_clp_json_compression was successful."
+    log_msg = "test_clp_json_compression_json_multifile was successful."
     logger.info(log_msg)
 
-    # TODO: clean up clp-package/var/data, clp-package/var/log, and clp-package/var/tmp
+    # Clean up.
+    package_path_config = package_test_config.path_config
+    package_path_config.clear_package_archives()
 
 
 @pytest.mark.search

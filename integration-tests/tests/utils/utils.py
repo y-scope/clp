@@ -10,6 +10,19 @@ from typing import Any, IO
 import yaml
 
 
+def clean_directory(directory: Path) -> None:
+    """
+    Removes the contents of `directory` without removing `directory` itself.
+
+    :param directory:
+    """
+    for item in directory.iterdir():
+        if item.is_file() or item.is_symlink():
+            item.unlink()
+        elif item.is_dir():
+            shutil.rmtree(item)
+
+
 def get_binary_path(name: str) -> str:
     """
     :param name: Name of the program binary to locate.

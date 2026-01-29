@@ -1,0 +1,15 @@
+1972-12-11T05:33:00.000 apollo-17 d05 e000 lunar module Challenger fully powered and configured for undocking; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T05:42:35.999 apollo-17 d05 e001 commander and lunar module pilot transfer from command module America; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T05:52:11.998 apollo-17 d05 e002 pressure checks on docking tunnel and hatches completed successfully; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:01:47.997 apollo-17 d05 e003 lunar module undocks cleanly and performs separation maneuver; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:11:23.996 apollo-17 d05 e004 descent orbit insertion burn shapes path toward Taurus Littrow site; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:20:59.995 apollo-17 d05 e005 powered descent initiation with main engine throttle ramp sequence; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:30:35.994 apollo-17 d05 e006 landing radar acquisition confirms altitude and rate data availability; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:40:11.993 apollo-17 d05 e007 final approach over Taurus Littrow with manual targeting adjustments; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:49:47.992 apollo-17 d05 e008 contact light indicates lunar surface reached and engine shutdown commanded; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T06:59:23.991 apollo-17 d05 e009 touchdown on lunar surface confirmed with stable attitude and no tipping; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T07:08:59.990 apollo-17 d05 e010 post landing checklist executed with guidance system remaining powered; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T07:18:35.989 apollo-17 d05 e011 cabin depressurization planned for first extravehicular activity timeline; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T07:28:11.988 apollo-17 d05 e012 lunar module systems show stable temperatures in landed configuration; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T07:37:47.987 apollo-17 d05 e013 surface communications link established through relay in command module; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-11T07:47:23.986 apollo-17 d05 e014 crew reports initial impressions of local lunar terrain and lighting; all primary systems nominal; communications lock; navigation solution within expected error

@@ -1,0 +1,15 @@
+1972-12-12T05:33:00.000 apollo-17 d06 e000 cabin depressurization begins in preparation for first surface excursion; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T05:42:35.999 apollo-17 d06 e001 commander egresses to lunar surface and descends the ladder; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T05:52:11.998 apollo-17 d06 e002 lunar module pilot joins commander on surface after hatch operations; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:01:47.997 apollo-17 d06 e003 American flag deployment completed near lunar module with photography; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:11:23.996 apollo-17 d06 e004 lunar rover deployment and checkout concluded with mobility test drive; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:20:59.995 apollo-17 d06 e005 ALSEP experiment package deployed at planned distance from lunar module; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:30:35.994 apollo-17 d06 e006 gravimeter and seismic instruments positioned and powered on; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:40:11.993 apollo-17 d06 e007 crew collects documented geological samples near landing site; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:49:47.992 apollo-17 d06 e008 panoramic photography of Taurus Littrow valley recorded for analysis; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T06:59:23.991 apollo-17 d06 e009 communications relay confirms voice and biomedical data throughout EVA; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T07:08:59.990 apollo-17 d06 e010 lunar dust accumulation noted on suits and hardware during traverses; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T07:18:35.989 apollo-17 d06 e011 crew returns to lunar module and performs post EVA debrief with control; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T07:28:11.988 apollo-17 d06 e012 airlock and cabin repressurization sequence restores shirt sleeve environment; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T07:37:47.987 apollo-17 d06 e013 consumables usage for first EVA compared against mission allocations; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-12T07:47:23.986 apollo-17 d06 e014 sleep period scheduled following extensive surface activity and reporting; all primary systems nominal; communications lock; navigation solution within expected error

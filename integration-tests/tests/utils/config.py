@@ -15,6 +15,7 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.utils import (
+    clean_directory,
     unlink,
     validate_dir_exists,
     validate_file_exists,
@@ -135,6 +136,11 @@ class PackagePathConfig:
     def decompress_script_path(self) -> Path:
         """:return: The absolute path to the package decompress script."""
         return self.clp_package_dir / "sbin" / "decompress.sh"
+
+    def clear_package_archives(self) -> None:
+        """Removes the contents of `clp-package/var/data/archives`."""
+        archives_dir = self.clp_package_dir / "var" / "data" / "archives"
+        clean_directory(archives_dir)
 
 
 @dataclass(frozen=True)
