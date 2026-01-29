@@ -1,6 +1,6 @@
 # Configuring CLP
 
-To use object storage with CLP, follow the steps below to configure each use case you require.
+To use AWS S3 with CLP, follow the steps below to configure each use case you require.
 
 :::{note}
 If CLP is already running, shut it down, update its configuration, and then start it again.
@@ -8,7 +8,7 @@ If CLP is already running, shut it down, update its configuration, and then star
 
 ## Configuration for input logs
 
-To configure CLP to compress logs from S3, update the `logs_input` key in
+To configure CLP to compress logs from AWS S3, update the `logs_input` key in
 `<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
@@ -25,7 +25,7 @@ logs_input:
 
 ## Configuration for archive storage
 
-To configure CLP to store archives on S3, update the `archive_output.storage` key in
+To configure CLP to store archives on AWS S3, update the `archive_output.storage` key in
 `<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
@@ -46,7 +46,7 @@ archive_output:
 ```
 
 * `staging_directory` is the local filesystem directory where archives will be temporarily stored
-  before being uploaded to S3.
+  before being uploaded to AWS S3.
 * `s3_config` configures both the S3 bucket where archives should be stored and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
@@ -58,7 +58,7 @@ archive_output:
 
 ## Configuration for stream storage
 
-To configure CLP to cache stream files on S3, update the `stream_output.storage` key in
+To configure CLP to cache stream files on AWS S3, update the `stream_output.storage` key in
 `<package>/etc/clp-config.yaml` with the values in the code block below, replacing the fields in
 angle brackets (`<>`) with the appropriate values:
 
@@ -79,7 +79,7 @@ stream_output:
 ```
 
 * `staging_directory` is the local filesystem directory where streams will be temporarily stored
-  before being uploaded to S3.
+  before being uploaded to AWS S3.
 * `s3_config` configures both the S3 bucket where streams should be stored and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
@@ -142,7 +142,7 @@ aws_authentication:
 
 `<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
 
-In addition, the _top-level_ config `aws_config_directory` must be set to the directory containing
+In addition, the *top-level* config `aws_config_directory` must be set to the directory containing
 the profile configurations (typically `~/.aws`):
 
 ```yaml
