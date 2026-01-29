@@ -8,8 +8,3 @@
 1972-12-16T06:40:11.993 apollo-17 d10 e007 crew performs housekeeping and stowage reconfiguration for entry phase; all primary systems nominal; communications lock; navigation solution within expected error
 1972-12-16T06:49:47.992 apollo-17 d10 e008 biomedical data indicates crew adapting well after lunar surface stay; all primary systems nominal; communications lock; navigation solution within expected error
 1972-12-16T06:59:23.991 apollo-17 d10 e009 fuel cell reactant status supports remaining mission with margin; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-16T07:08:59.990 apollo-17 d10 e010 navigation computer updated with latest state vector from ground; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-16T07:18:35.989 apollo-17 d10 e011 small correction burn considered and judged unnecessary at this time; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-16T07:28:11.988 apollo-17 d10 e012 camera imagery captures Moon receding into distance from command module; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-16T07:37:47.987 apollo-17 d10 e013 experiment results packaged and secured for Earth recovery and study; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-16T07:47:23.986 apollo-17 d10 e014 sleep periods adjusted to align with planned reentry ground support; all primary systems nominal; communications lock; navigation solution within expected error

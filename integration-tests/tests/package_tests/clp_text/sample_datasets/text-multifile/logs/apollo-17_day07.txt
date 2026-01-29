@@ -8,8 +8,3 @@
 1972-12-13T06:40:11.993 apollo-17 d07 e007 navigation data from rover used to refine local lunar topographic maps; all primary systems nominal; communications lock; navigation solution within expected error
 1972-12-13T06:49:47.992 apollo-17 d07 e008 communications remain stable during extended traverse distance from LM; all primary systems nominal; communications lock; navigation solution within expected error
 1972-12-13T06:59:23.991 apollo-17 d07 e009 crew notes color contrasts and layering in valley walls and boulders; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-13T07:08:59.990 apollo-17 d07 e010 time limits require planned truncation of some sampling stops; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-13T07:18:35.989 apollo-17 d07 e011 return drive to lunar module occurs with continual systems monitoring; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-13T07:28:11.988 apollo-17 d07 e012 post EVA cleanup efforts manage dust and stow tools back in cabin; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-13T07:37:47.987 apollo-17 d07 e013 experiment readouts show expected power levels and data acquisition; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-13T07:47:23.986 apollo-17 d07 e014 overnight monitoring of deployed instruments continues from Earth; all primary systems nominal; communications lock; navigation solution within expected error

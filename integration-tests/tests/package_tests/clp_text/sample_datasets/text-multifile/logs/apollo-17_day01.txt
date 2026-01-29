@@ -8,8 +8,3 @@
 1972-12-07T06:40:11.993 apollo-17 d01 e007 parking orbit achieved around Earth after third stage cutoff; all primary systems nominal; communications lock; navigation solution within expected error
 1972-12-07T06:49:47.992 apollo-17 d01 e008 systems checkout in Earth orbit confirms command and service module health; all primary systems nominal; communications lock; navigation solution within expected error
 1972-12-07T06:59:23.991 apollo-17 d01 e009 translunar injection burn ignition on third stage SIVB; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-07T07:08:59.990 apollo-17 d01 e010 translunar injection burn complete with nominal velocity for lunar transfer; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-07T07:18:35.989 apollo-17 d01 e011 command and service module separates and performs transposition and docking; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-07T07:28:11.988 apollo-17 d01 e012 lunar module Challenger extraction from SIVB and tunnel pressurization; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-07T07:37:47.987 apollo-17 d01 e013 spacecraft stack confirmed on translunar trajectory departing Earth orbit; all primary systems nominal; communications lock; navigation solution within expected error
-1972-12-07T07:47:23.986 apollo-17 d01 e014 SIVB disposal maneuver targets heliocentric trajectory for spent stage; all primary systems nominal; communications lock; navigation solution within expected error
