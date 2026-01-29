@@ -104,7 +104,6 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
         This function is automatically invoked when the writer is closed or upon exiting its
         context. If compression has already been performed, this function becomes a no-op.
-
         :raise ClpCoreRuntimeError: If the archive compression fails.
         :raise ClpCoreRuntimeError: If the compressed data cannot be written to archive stream.
         :raise ClpCoreValueError: If there is nothing to compress.
@@ -151,6 +150,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         If the archive is still open, this method first performs compression before marking the
         writer as closed and performing cleanup. This method is idempotent and safe to call multiple
         times.
+        :raise: Propagates `compress()`'s exceptions.
         """
         if self._open:
             self.compress()
@@ -183,7 +183,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         :param exc_type:
         :param exc_val:
         :param exc_tb:
-        :raise ClpCoreRuntimeError: If compression fails.
+        :raise: Propagates `compress()`'s exceptions.
         """
         try:
             if exc_type is None:
