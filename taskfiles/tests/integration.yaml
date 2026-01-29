@@ -9,6 +9,7 @@ tasks:
       - task: "clp-py-project-imports"
       - task: "core"
       - task: "package"
+      - task: "python-wheels-yscope-clp-core"
 
   cache-clear:
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
