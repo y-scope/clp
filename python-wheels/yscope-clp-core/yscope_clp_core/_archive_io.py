@@ -76,7 +76,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         if isinstance(source, (str, os.PathLike)):
             self._files_to_compress.append(Path(source))
         elif isinstance(source, io.IOBase):
-            temp_file_path = Path(_write_stream_to_temp_file(source, suffix=".log"))
+            temp_file_path = _write_stream_to_temp_file(source, suffix=".log")
             self._files_to_compress.append(temp_file_path)
             self._temp_files_to_compress.append(temp_file_path)
         else:
