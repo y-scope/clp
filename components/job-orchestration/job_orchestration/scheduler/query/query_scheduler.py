@@ -859,7 +859,7 @@ def handle_pending_query_jobs(
 def try_getting_task_result(async_task_result):
     if not async_task_result.ready():
         return None
-    return async_task_result.get()
+    return async_task_result.get(interval=0.005)
 
 
 def found_max_num_latest_results(
@@ -1087,9 +1087,13 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
     while True:
+        interval_start_time = datetime.datetime.now()
         await handle_cancelling_search_jobs(db_conn_pool)
         await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
-        await asyncio.sleep(jobs_poll_delay)
+        interval_end_time = datetime.datetime.now()
+        await asyncio.sleep(
+            jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
+        )
 
 
 async def handle_jobs(
