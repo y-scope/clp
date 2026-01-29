@@ -1,3 +1,5 @@
+"""Commonly shard package class and data types."""
+
 import io
 import os
 from typing import Annotated, Any, cast, Final, IO, TypedDict

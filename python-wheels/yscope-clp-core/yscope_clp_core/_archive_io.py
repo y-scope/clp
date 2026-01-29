@@ -1,7 +1,10 @@
+"""Classes for handling archive operations including compression, decompression and search."""
+
 import io
 import os
 import shutil
 import subprocess
+import sys
 from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -15,6 +18,11 @@ from yscope_clp_core._constants import FILE_OBJ_COPY_CHUNK_SIZE
 from yscope_clp_core._except import ClpCoreRuntimeError, ClpCoreTypeError
 from yscope_clp_core._types import ArchiveSource, ArchiveSourceAdapter, CompressionKwargs
 from yscope_clp_core._utils import _get_single_file_in_dir, _write_stream_to_temp_file
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
@@ -127,7 +135,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
                 self._temp_archive_dir.cleanup()
             self._temp_archive_dir = None
 
-    def __enter__(self) -> "ClpArchiveWriter":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(

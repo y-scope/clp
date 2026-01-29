@@ -1,4 +1,4 @@
-"""Exception types used by the yscope_clp_core Python package."""
+"""Package exception types."""
 
 
 class ClpCoreError(Exception):

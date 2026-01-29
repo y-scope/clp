@@ -1,4 +1,4 @@
-"""Public APIs for the yscope_clp_core python package."""
+"""Core public interfact containing functions intended for external use."""
 
 from typing import Literal
 

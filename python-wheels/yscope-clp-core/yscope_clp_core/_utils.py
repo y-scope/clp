@@ -1,3 +1,5 @@
+"""Shared package utilities."""
+
 import io
 import shutil
 import tempfile
