@@ -121,38 +121,46 @@ class PackagePathConfig:
 
 
 @dataclass(frozen=True)
-class PackageConfig:
-    """Metadata for a specific configuration of the CLP package."""
-
-    #: Path configuration for this package.
-    path_config: PackagePathConfig
+class PackageModeConfig:
+    """Mode configuration for the CLP package."""
 
     #: Name of the package operation mode.
     mode_name: str
 
-    #: The list of CLP components that this package needs.
-    component_list: list[str]
-
-    #: The Pydantic representation of a CLP package configuration.
+    #: The Pydantic representation of the package operation mode.
     clp_config: ClpConfig
 
-    #: The base port from which all ports for the components are derived.
+    #: The list of CLP components that this package needs.
+    component_list: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PackageTestConfig:
+    """Metadata for a specific test of the CLP package."""
+
+    #: Path configuration for this package test.
+    path_config: PackagePathConfig
+
+    #: Mode configuration for this package test.
+    mode_config: PackageModeConfig
+
+    #: The base port from which all port assignments are derived.
     base_port: int
 
     def __post_init__(self) -> None:
-        """Write the temporary config file for this package."""
+        """Write the temporary config file for this package test."""
         self._write_temp_config_file()
 
     @property
     def temp_config_file_path(self) -> Path:
         """:return: The absolute path to the temporary configuration file for the package."""
-        return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yaml"
+        return self.path_config.temp_config_dir / f"clp-config-{self.mode_config.mode_name}.yaml"
 
     def _write_temp_config_file(self) -> None:
-        """Writes the temporary config file for this package."""
+        """Writes the temporary config file for this package test."""
         temp_config_file_path = self.temp_config_file_path
 
-        payload = self.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
+        payload = self.mode_config.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
 
         tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as f:
@@ -165,7 +173,7 @@ class PackageInstance:
     """Metadata for a running instance of the CLP package."""
 
     #: The configuration for this package instance.
-    package_config: PackageConfig
+    package_test_config: PackageTestConfig
 
     #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
@@ -176,10 +184,10 @@ class PackageInstance:
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the temp config file exists.
-        validate_file_exists(self.package_config.temp_config_file_path)
+        validate_file_exists(self.package_test_config.temp_config_file_path)
 
         # Set clp_instance_id from instance-id file.
-        path_config = self.package_config.path_config
+        path_config = self.package_test_config.path_config
         clp_instance_id_file_path = path_config.clp_log_dir / "instance-id"
         validate_file_exists(clp_instance_id_file_path)
         clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
