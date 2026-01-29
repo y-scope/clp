@@ -38,7 +38,6 @@ def fixt_package_test_config(
         path_config=fixt_package_path_config,
         mode_config=mode_config,
         base_port=base_port,
-        package_job_list=package_job_list,
     )
 
     try:

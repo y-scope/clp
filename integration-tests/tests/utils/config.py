@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
-from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -147,9 +146,6 @@ class PackageTestConfig:
 
     #: The base port from which all port assignments are derived.
     base_port: int
-
-    #: The list of jobs that this package will run during the test.
-    package_job_list: PackageJobList | None
 
     def __post_init__(self) -> None:
         """Write the temporary config file for this package test."""
