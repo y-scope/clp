@@ -54,10 +54,11 @@ def test_archive_writer(
     ]
     run_and_assert(decompress_cmd)
 
+    # TODO: Replace hard-coded paths with programmatic file discovery.
     input_path = postgresql.extraction_dir / "postgresql" / "postgresql.log"
     output_path = test_paths.decompression_dir / "original"
     assert is_json_file_structurally_equal(input_path, output_path), (
-        f"Mismatch between clp-s input {input_path} and output {output_path}."
+        f"Mismatch between yscope-clp-core input {input_path} and output {output_path}."
     )
 
     test_paths.clear_test_outputs()
