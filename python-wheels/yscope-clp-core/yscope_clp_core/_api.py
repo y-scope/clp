@@ -26,12 +26,11 @@ def open_archive(
     :param file: Archive source. Must be either a filesystem path or a binary IO stream. If a stream
         is provided, any necessary seeking must be performed before creating the archive handler.
         The stream is then used directly without further seeking opeartions.
-    :param mode: Archive open mode.
-        * "w": Create a new archive or overwrite an existing one.
-    :param kwargs: Mode dependent keyword arguments for archive handler operations.
-        * "w": See `CompressionKwargs`.
-    :return: An archive handler instance.
-        * "w": A `ClpArchiveWriter` that controls how and which log data is written to the archive.
+    :param mode: Archive open mode. For "w", create a new archive or overwrite an existing one.
+    :param kwargs: Mode dependent keyword arguments for archive handler operations. For "w", see
+        `CompressionKwargs`.
+    :return: An archive handler instance. For "w", returns a `ClpArchiveWriter` that controls how
+        and which log data is written to the archive.
     :raise ClpCoreRuntimeError: If the archive handler construction fails or the archive open mode
         is unsupported.
     """

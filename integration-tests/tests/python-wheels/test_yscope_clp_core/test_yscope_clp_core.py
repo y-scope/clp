@@ -39,8 +39,12 @@ def test_archive_writer(
         integration_test_path_config=integration_test_path_config,
     )
 
-    with open_archive(test_paths.compression_dir, mode="w") as writer:
-        writer.add(test_paths.logs_source_dir)
+    test_paths.clear_test_outputs()
+
+    writer = open_archive(test_paths.compression_dir, mode="w")
+    writer.add(test_paths.logs_source_dir)
+    writer.compress()
+    writer.close()
 
     decompress_cmd = [
         str(clp_core_path_config.clp_s_binary_path),
