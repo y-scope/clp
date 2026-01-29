@@ -183,8 +183,7 @@ bool search_archive(
         return true;
     }
 
-    constexpr auto cDatestringDeprecationVersion{clp_s::make_archive_version(0, 5, 0)};
-    if (archive_reader->get_header().version < cDatestringDeprecationVersion) {
+    if (archive_reader->get_header().version < clp_s::cNewTimestampFormatVersion) {
         ast::SetTimestampLiteralPrecision date_precision_pass{
                 ast::TimestampLiteral::Precision::Milliseconds
         };
