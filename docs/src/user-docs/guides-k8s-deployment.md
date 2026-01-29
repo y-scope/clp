@@ -322,6 +322,8 @@ To run compression workers, query workers, and reducers in separate node pools:
    ```{code-block} yaml
    :caption: dedicated-scheduling.yaml
 
+   distributedDeployment: true
+
    compressionWorker:
      replicas: 2
      scheduling:
@@ -344,9 +346,7 @@ To run compression workers, query workers, and reducers in separate node pools:
 3. Install:
 
    ```bash
-   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
-     -f dedicated-scheduling.yaml \
-     --set distributedDeployment=true
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f dedicated-scheduling.yaml
    ```
 
 #### Shared node pool
@@ -363,6 +363,8 @@ To run all worker types in the same node pool:
 
    ```{code-block} yaml
    :caption: shared-scheduling.yaml
+
+   distributedDeployment: true
 
    compressionWorker:
      replicas: 2
@@ -393,9 +395,7 @@ To run all worker types in the same node pool:
 3. Install:
 
    ```bash
-   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
-     -f shared-scheduling.yaml \
-     --set distributedDeployment=true
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
 ---

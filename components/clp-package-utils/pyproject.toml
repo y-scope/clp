@@ -6,12 +6,12 @@ authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "Brotli>=1.1.0",
+    "Brotli>=1.2.0",
     "click>=8.3.1",
     "msgpack>=1.1.2",
-    "psutil>=7.1.0",
-    "pydantic>=2.12.3",
-    "pymongo>=4.15.3",
+    "psutil>=7.2.1",
+    "pydantic>=2.12.5",
+    "pymongo>=4.16.0",
     "PyYAML>=6.0.3",
 ]
 
