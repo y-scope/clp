@@ -11,6 +11,7 @@ readonly required_version_min="${required_version_major_min}.${required_version_
 pipx uninstall uv >/dev/null 2>&1 || true
 pipx install "uv>=${required_version_min}"
 
+# Clear any cached path so the shell resolves the updated binary
 hash -d uv 2>/dev/null || true
 installed_version=$(uv self version --output-format json | jq --raw-output ".version")
 IFS=. read -r installed_version_major installed_version_minor _ <<<"${installed_version}"

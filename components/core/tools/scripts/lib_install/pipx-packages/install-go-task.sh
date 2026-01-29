@@ -4,17 +4,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-if ! command -v pipx >/dev/null 2>&1; then
-    echo "Error: pipx not found."
-    exit 1
-fi
-
 # We lock to version 3.44.0 to avoid https://github.com/y-scope/clp/issues/1352
 readonly required_version="3.44.0"
 
 pipx uninstall go-task-bin >/dev/null 2>&1 || true
 pipx install "go-task-bin==${required_version}"
 
+# Clear any cached path so the shell resolves the updated binary
 hash -d task 2>/dev/null || true
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 installed_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml")

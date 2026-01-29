@@ -15,6 +15,7 @@ readonly required_version_major_max_plus_1=$((required_version_major_max + 1))
 pipx uninstall cmake >/dev/null 2>&1 || true
 pipx install "cmake>=${required_version_min},<${required_version_major_max_plus_1}"
 
+# Clear any cached path so the shell resolves the updated binary
 hash -d cmake 2>/dev/null || true
 installed_version=$(cmake -E capabilities | jq --raw-output ".version.string")
 installed_version_major=$(cmake -E capabilities | jq --raw-output ".version.major")
