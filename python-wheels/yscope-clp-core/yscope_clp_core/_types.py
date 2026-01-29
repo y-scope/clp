@@ -1,4 +1,4 @@
-"""Commonly shard package class and data types."""
+"""Commonly shared package class and data types."""
 
 import io
 import os
@@ -42,7 +42,7 @@ ArchiveSourceAdapter: Final[TypeAdapter[ArchiveSource]] = TypeAdapter(
 
 class CompressionKwargs(TypedDict, total=False):
     """
-    Keyword arguments use by `ClpArchiveWriter` to control archive compression behavior.
+    Keyword arguments used by `ClpArchiveWriter` to control archive compression behavior.
     :param compression_level: An integer from 1 to 19 controlling the level of compression; `1` is
         fastest and produces the least compression, and `19` is the slowest and produces the most
         compression. The default is `3`.

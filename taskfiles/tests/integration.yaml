@@ -43,5 +43,5 @@ tasks:
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     deps: ["::python-wheels-yscope-clp-core"]
     cmd: |-
-      uv pip install --force-reinstall {{.G_PYTHON_WHEELS_BUILD_DIR}}/*.whl
+      uv pip install --force-reinstall {{.G_PYTHON_WHEELS_BUILD_DIR}}/yscope_clp_core-*.whl
       uv run pytest -m yscope_clp_core

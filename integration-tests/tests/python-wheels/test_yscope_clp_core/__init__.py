@@ -1,1 +1,1 @@
-"""Integration tests verifying the correctness the CLP core python binding library."""
+"""Integration tests verifying the correctness of the CLP core python binding library."""

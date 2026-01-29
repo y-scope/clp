@@ -1,4 +1,4 @@
-"""Core public interfact containing functions intended for external use."""
+"""Core public interface containing functions intended for external use."""
 
 from typing import Literal
 
@@ -25,7 +25,7 @@ def open_archive(
 
     :param file: Archive source. Must be either a filesystem path or a binary IO stream. If a stream
         is provided, any necessary seeking must be performed before creating the archive handler.
-        The stream is then used directly without further seeking opeartions.
+        The stream is then used directly without further seeking operations.
     :param mode: Archive open mode. For "w", create a new archive or overwrite an existing one.
     :param kwargs: Mode dependent keyword arguments for archive handler operations. For "w", see
         `CompressionKwargs`.

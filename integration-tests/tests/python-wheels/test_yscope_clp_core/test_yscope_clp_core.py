@@ -1,4 +1,4 @@
-"""Integration tests verifying the correctness the CLP core python binding library."""
+"""Integration tests verifying the correctness of the CLP core python binding library."""
 
 import pytest
 from yscope_clp_core import open_archive
@@ -24,10 +24,10 @@ def test_archive_writer(
     Test the archive writer mode of yscope_clp_core.open_archive.
 
     This is a lightweight sanity test intended only to verify that yscope_clp_core can be installed
-    into python envrionment and that its basic functionality works. This test is coarsly written and
-    will be refined in future updates.
-    Right now, we simply checks that an archive produced by the writer can be successfully
-    decompressed by clp-s with structurally identical output.
+    into a Python environment and that its basic functionality works. This test is coarsely written
+    and will be refined in future updates.
+    Right now, we simply check that an archive produced by the writer can be successfully
+    decompressed by clp-s with output being structurally identical to compression input.
 
     :param clp_core_path_config:
     :param postgresql:

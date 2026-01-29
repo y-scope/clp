@@ -65,7 +65,7 @@ def _write_stream_to_temp_file(
     encoding = getattr(stream, "encoding", None)
     errors = getattr(stream, "errors", None)
 
-    temp_file_path: Path | None
+    temp_file_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode=mode,
