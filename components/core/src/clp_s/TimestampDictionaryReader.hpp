@@ -31,9 +31,10 @@ public:
     /**
      * Reads the timestamp dictionary from a decompressor
      * @param decompressor
+     * @param archive_version
      * @return ErrorCodeSuccess on success, and the relevant ErrorCode otherwise
      */
-    ErrorCode read(ZstdDecompressor& decompressor);
+    [[nodiscard]] auto read(ZstdDecompressor& decompressor, uint32_t archive_version) -> ErrorCode;
 
     /**
      * Gets the string encoding for a given epoch and format ID by interpreting the pattern
@@ -84,8 +85,7 @@ private:
 
     // Variables
     std::unordered_map<uint64_t, TimestampPattern> m_deprecated_patterns;
-    std::unordered_map<uint64_t, std::optional<timestamp_parser::TimestampPattern>>
-            m_timestamp_patterns;
+    std::unordered_map<uint64_t, timestamp_parser::TimestampPattern> m_timestamp_patterns;
     std::vector<TimestampEntry> m_entries;
     tokenized_column_to_range_t m_tokenized_column_to_range;
 

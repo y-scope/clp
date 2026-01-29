@@ -11,10 +11,12 @@
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
 
 #include "search/ast/SearchUtils.hpp"
+#include "SingleFileArchiveDefs.hpp"
 #include "TimestampPattern.hpp"
 
 namespace clp_s {
-ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
+auto TimestampDictionaryReader::read(ZstdDecompressor& decompressor, uint32_t archive_version)
+        -> ErrorCode {
     ErrorCode error;
     uint64_t range_index_size;
     error = decompressor.try_read_numeric_value<uint64_t>(range_index_size);
@@ -73,11 +75,21 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
         if (ErrorCodeSuccess != error) {
             return error;
         }
-        m_deprecated_patterns.emplace(id, TimestampPattern(0, pattern));
-        auto timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
-        if (timestamp_pattern_result.has_error()) {
-            m_timestamp_patterns.emplace(id, std::nullopt);
+
+        if (archive_version < cNewTimestampFormatVersion) {
+            m_deprecated_patterns.emplace(id, TimestampPattern(0, pattern));
         } else {
+            auto timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+            if (timestamp_pattern_result.has_error()) {
+                auto const& timestamp_error{timestamp_pattern_result.error()};
+                SPDLOG_ERROR(
+                        "Error loading timestamp pattern `{}` - {} - {}",
+                        pattern,
+                        timestamp_error.category().name(),
+                        timestamp_error.message()
+                );
+                return ErrorCodeCorrupt;
+            }
             m_timestamp_patterns.emplace(id, std::move(timestamp_pattern_result.value()));
         }
     }
@@ -99,15 +111,8 @@ void TimestampDictionaryReader::append_timestamp_to_buffer(
         uint64_t format_id,
         std::string& buffer
 ) const {
-    auto const& optional_pattern{m_timestamp_patterns.at(format_id)};
-    if (false == optional_pattern.has_value()) {
-        SPDLOG_ERROR("Can not marshal timestamp - no valid timestamp pattern for format id.");
-        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
-    }
-
-    auto const marshal_result{
-            timestamp_parser::marshal_timestamp(timestamp, optional_pattern.value(), buffer)
-    };
+    auto const& pattern{m_timestamp_patterns.at(format_id)};
+    auto const marshal_result{timestamp_parser::marshal_timestamp(timestamp, pattern, buffer)};
     if (marshal_result.has_error()) {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }

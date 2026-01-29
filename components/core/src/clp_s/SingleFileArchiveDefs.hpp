@@ -49,6 +49,9 @@ constexpr uint32_t cArchiveVersion{
         make_archive_version(cArchiveMajorVersion, cArchiveMinorVersion, cArchivePatchVersion)
 };
 
+// Record
+constexpr uint32_t cNewTimestampFormatVersion{make_archive_version(0, 5, 0)};
+
 // define the magic number
 constexpr std::array<uint8_t, 4> cStructuredSFAMagicNumber{0xFD, 0x2F, 0xC5, 0x30};
 
