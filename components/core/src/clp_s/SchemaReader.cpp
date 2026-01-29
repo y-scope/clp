@@ -19,37 +19,36 @@ void SchemaReader::append_unordered_column(BaseColumnReader* column_reader) {
 
 void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     constexpr epochtime_t cNanosecondsInMillisecond{1000 * 1000LL};
-    constexpr epochtime_t cNanosecondsInSecond{1000 * 1000 * 1000LL};
+    constexpr epochtime_t cMillisecondsInSecond{1000LL};
     m_timestamp_column = column_reader;
     if (m_timestamp_column->get_type() == NodeType::Timestamp) {
         m_get_timestamp = [this]() {
             return static_cast<TimestampColumnReader*>(m_timestamp_column)
-                    ->get_encoded_time(m_cur_message);
+                           ->get_encoded_time(m_cur_message)
+                   / cNanosecondsInMillisecond;
         };
     } else if (m_timestamp_column->get_type() == NodeType::DeprecatedDateString) {
         m_get_timestamp = [this]() {
             return static_cast<DeprecatedDateStringColumnReader*>(m_timestamp_column)
-                           ->get_encoded_time(m_cur_message)
-                   * cNanosecondsInMillisecond;
+                    ->get_encoded_time(m_cur_message);
+            ;
         };
     } else if (m_timestamp_column->get_type() == NodeType::Integer) {
         m_get_timestamp = [this]() {
             return std::get<int64_t>(static_cast<Int64ColumnReader*>(m_timestamp_column)
-                                             ->extract_value(m_cur_message))
-                   * cNanosecondsInMillisecond;
+                                             ->extract_value(m_cur_message));
         };
     } else if (m_timestamp_column->get_type() == NodeType::DeltaInteger) {
         m_get_timestamp = [this]() {
             return std::get<int64_t>(static_cast<DeltaEncodedInt64ColumnReader*>(m_timestamp_column)
-                                             ->extract_value(m_cur_message))
-                   * cNanosecondsInMillisecond;
+                                             ->extract_value(m_cur_message));
         };
     } else if (m_timestamp_column->get_type() == NodeType::Float) {
         m_get_timestamp = [this]() {
             return static_cast<epochtime_t>(
                     std::get<double>(static_cast<FloatColumnReader*>(m_timestamp_column)
                                              ->extract_value(m_cur_message))
-                    * cNanosecondsInSecond
+                    * cMillisecondsInSecond
             );
         };
     }
