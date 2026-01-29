@@ -28,4 +28,4 @@ uninstall them, you will need to do so manually.
 
 [CMake]: https://cmake.org/
 [pipx-install-script]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/core/tools/scripts/lib_install/pipx-packages/install-all.sh
-[src-install-script]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/core/tools/scripts/lib_install/centos-stream-9/install-packages-from-source.sh
+[src-install-script]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/core/tools/scripts/lib_install/ubuntu-jammy/install-packages-from-source.sh
