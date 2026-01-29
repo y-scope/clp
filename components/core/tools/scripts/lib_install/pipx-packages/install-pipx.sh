@@ -47,7 +47,7 @@ IFS=. read -r installed_version_major installed_version_minor _ <<<"${installed_
 if (("${installed_version_major}" < "${required_version_major_min}")) \
     || (("${installed_version_major}" == "${required_version_major_min}" && \
     "${installed_version_minor}" < "${required_version_minor_min}")); then
-    echo "Error: pipx version ${installed_version} is unsupported (require version" \
+    echo "Error: pipx version ${installed_version} is unsupported (require version " \
         "≥ ${required_version_min})."
     exit 1
 fi

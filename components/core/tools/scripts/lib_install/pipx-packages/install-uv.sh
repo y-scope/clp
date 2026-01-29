@@ -13,9 +13,9 @@ pipx install "uv>=${required_version_min}"
 
 hash -d uv 2>/dev/null || true
 installed_version=$(uv self version --output-format json | jq --raw-output ".version")
-IFS=. read -r installd_version_major installed_version_minor _ <<<"${installed_version}"
+IFS=. read -r installed_version_major installed_version_minor _ <<<"${installed_version}"
 
-if (("${installd_version_major}" == "${required_version_major_min}" && \
+if (("${installed_version_major}" == "${required_version_major_min}" && \
     "${installed_version_minor}" < "${required_version_minor_min}")); then
     echo "Error: uv version ${installed_version} is unsupported (require version " \
         "≥ ${required_version_min})."
