@@ -188,6 +188,8 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         try:
             if exc_type is None:
                 self.compress()
+            else:
+                self._open = False
         except Exception as e:
             err_msg = f"Failed to compress archive {self._archive_dir}."
             raise ClpCoreRuntimeError(err_msg) from e
