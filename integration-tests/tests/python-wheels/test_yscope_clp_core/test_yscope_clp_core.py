@@ -1,6 +1,7 @@
 """Integration tests verifying the correctness the CLP core python binding library."""
 
 import pytest
+from yscope_clp_core import open_archive
 
 from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
@@ -10,7 +11,6 @@ from tests.utils.config import (
     IntegrationTestPathConfig,
 )
 from tests.utils.utils import is_json_file_structurally_equal
-from yscope_clp_core import open_archive
 
 pytestmark = pytest.mark.yscope_clp_core
 
