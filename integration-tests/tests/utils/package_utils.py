@@ -1,21 +1,21 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
 from tests.utils.asserting_utils import run_and_assert
-from tests.utils.config import PackageConfig
+from tests.utils.config import PackageTestConfig
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 
 
-def start_clp_package(package_config: PackageConfig) -> None:
+def start_clp_package(package_test_config: PackageTestConfig) -> None:
     """
     Starts an instance of the CLP package.
 
-    :param package_config:
+    :param package_test_config:
     :raise: Propagates `run_and_assert`'s errors.
     """
-    path_config = package_config.path_config
+    path_config = package_test_config.path_config
     start_script_path = path_config.start_script_path
-    temp_config_file_path = package_config.temp_config_file_path
+    temp_config_file_path = package_test_config.temp_config_file_path
 
     # fmt: off
     start_cmd = [
@@ -26,16 +26,16 @@ def start_clp_package(package_config: PackageConfig) -> None:
     run_and_assert(start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
 
 
-def stop_clp_package(package_config: PackageConfig) -> None:
+def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     """
     Stops the running instance of the CLP package.
 
-    :param package_config:
+    :param package_test_config:
     :raise: Propagates `run_and_assert`'s errors.
     """
-    path_config = package_config.path_config
+    path_config = package_test_config.path_config
     stop_script_path = path_config.stop_script_path
-    temp_config_file_path = package_config.temp_config_file_path
+    temp_config_file_path = package_test_config.temp_config_file_path
 
     # fmt: off
     stop_cmd = [

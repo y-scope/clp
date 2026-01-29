@@ -61,8 +61,12 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * The logs input type in the CLP configuration is unsupported.
-    /// * Forwards [`clp_rust_utils::database::mysql::create_mysql_pool`]'s return values on
+    /// * Forwards [`clp_rust_utils::database::mysql::create_clp_db_mysql_pool`]'s return values on
     ///   failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `clp_config.log_ingestor` is `None`.
     pub async fn from_config(
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
@@ -78,19 +82,21 @@ impl IngestionJobManagerState {
                 ));
             }
         };
-        let mysql_pool = clp_rust_utils::database::mysql::create_mysql_pool(
+        let mysql_pool = clp_rust_utils::database::mysql::create_clp_db_mysql_pool(
             &clp_config.database,
             &clp_credentials.database,
             10,
         )
         .await?;
+        let log_ingestor_config = clp_config
+            .log_ingestor
+            .as_ref()
+            .expect("log_ingestor configuration is missing");
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
-            buffer_flush_timeout: Duration::from_secs(
-                clp_config.log_ingestor.buffer_flush_timeout_sec,
-            ),
-            buffer_flush_threshold: clp_config.log_ingestor.buffer_flush_threshold,
-            channel_capacity: clp_config.log_ingestor.channel_capacity,
+            buffer_flush_timeout: Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
+            buffer_flush_threshold: log_ingestor_config.buffer_flush_threshold,
+            channel_capacity: log_ingestor_config.channel_capacity,
             aws_credentials,
             archive_output_config: clp_config.archive_output,
             mysql_pool,

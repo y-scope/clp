@@ -38,11 +38,6 @@ pub mod s3 {
         /// Whether to treat the ingested objects as unstructured logs. Defaults to `false`.
         #[serde(default = "default_unstructured")]
         pub unstructured: bool,
-
-        /// Tags to apply on the compressed archives. Defaults to `None`.
-        #[serde(default)]
-        #[schema(value_type = Vec<String>, min_length = 1)]
-        pub tags: Option<Vec<NonEmptyString>>,
     }
 
     /// Configuration for a SQS listener job.

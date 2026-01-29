@@ -396,7 +396,7 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
     }
 
     bool const is_negative{'-' == str.at(0ULL)};
-    size_t num_decimal_digits{is_negative ? 1ULL : 0ULL};
+    size_t num_decimal_digits{is_negative ? size_t{1} : size_t{0}};
     if (num_decimal_digits >= str.length()
         || false == clp::string_utils::is_decimal_digit(str.at(num_decimal_digits)))
     {
@@ -658,7 +658,8 @@ auto marshal_date_time_timestamp(
             }
             case 'p': {  // Part of day (AM/PM).
                 auto const part_of_day_idx{
-                        time_of_day.hours().count() >= cMaxParsedHour12HourClock ? 1ULL : 0ULL
+                        time_of_day.hours().count() >= cMaxParsedHour12HourClock ? size_t{1}
+                                                                                 : size_t{0}
                 };
                 buffer.append(cPartsOfDay.at(part_of_day_idx));
                 break;
@@ -910,11 +911,11 @@ auto TimestampPattern::create(std::string_view pattern)
     uint16_t month_name_bracket_pattern_length{};
     uint16_t weekday_name_bracket_pattern_length{};
 
-    bool const quoted_pattern{
+    bool const is_quoted_pattern{
             pattern.size() >= 2 && '"' == pattern.front() && '"' == pattern.back()
     };
-    size_t const start_idx{quoted_pattern ? 1ULL : 0ULL};
-    size_t const end_idx{quoted_pattern ? pattern.size() - 1ULL : pattern.size()};
+    size_t const start_idx{is_quoted_pattern ? size_t{1} : size_t{0}};
+    size_t const end_idx{is_quoted_pattern ? (pattern.size() - 1) : pattern.size()};
     bool escaped{false};
     for (size_t pattern_idx{start_idx}; pattern_idx < end_idx; ++pattern_idx) {
         auto const cur_format_specifier{pattern.at(pattern_idx)};
@@ -1089,7 +1090,8 @@ auto TimestampPattern::create(std::string_view pattern)
             month_name_bracket_pattern_length,
             weekday_name_bracket_pattern_length,
             uses_date_type_representation,
-            uses_twelve_hour_clock
+            uses_twelve_hour_clock,
+            is_quoted_pattern
     };
 }
 
@@ -1163,7 +1165,6 @@ auto parse_timestamp(
         bool is_json_literal,
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
-    size_t pattern_idx{};
     size_t timestamp_idx{};
 
     int parsed_year{cDefaultYear};
@@ -1183,7 +1184,12 @@ auto parse_timestamp(
 
     bool escaped{false};
     auto const raw_pattern{pattern.get_pattern()};
-    for (; pattern_idx < raw_pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
+    bool const should_skip_quotes{pattern.is_quoted_pattern() && false == is_json_literal};
+    size_t pattern_idx{should_skip_quotes ? size_t{1} : size_t{0}};
+    size_t const pattern_end_idx{
+            raw_pattern.length() - (should_skip_quotes ? size_t{1} : size_t{0})
+    };
+    for (; pattern_idx < pattern_end_idx && timestamp_idx < timestamp.size(); ++pattern_idx) {
         if (false == escaped) {
             if ('\\' == raw_pattern[pattern_idx]) {
                 escaped = true;
@@ -1759,7 +1765,7 @@ auto parse_timestamp(
     }
 
     // Do not allow trailing unmatched content.
-    if (pattern_idx != raw_pattern.size() || timestamp_idx != timestamp.size()) {
+    if (pattern_idx != pattern_end_idx || timestamp_idx != timestamp.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 

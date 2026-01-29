@@ -18,6 +18,7 @@ tasks:
           - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
           - "{{.G_COMPONENTS_DIR}}/job-orchestration"
           - "{{.G_INTEGRATION_TESTS_DIR}}"
+          - "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
         task: "uv-lock"
         vars:
           PROJECT_DIR: "{{.ITEM}}"
