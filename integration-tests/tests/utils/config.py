@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -76,6 +77,9 @@ class PackagePathConfig:
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
+    #: Directory where decompressed logs will be stored.
+    package_decompression_dir: Path = field(init=False, repr=True)
+
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
@@ -97,6 +101,9 @@ class PackagePathConfig:
         # Initialize directory for package tests.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        object.__setattr__(
+            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -118,6 +125,30 @@ class PackagePathConfig:
     def stop_script_path(self) -> Path:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
+
+    @property
+    def compress_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "compress.sh"
+
+    @property
+    def decompress_script_path(self) -> Path:
+        """:return: The absolute path to the package decompress script."""
+        return self.clp_package_dir / "sbin" / "decompress.sh"
+
+
+@dataclass(frozen=True)
+class PackageCompressionJob:
+    """A compression job for a package test."""
+
+    #: The absolute path to the dataset (either a file or directory).
+    path_to_dataset: Path
+
+    #: Options to specify in the compression command, with their corresponding values.
+    options: dict[str, Any] | None
+
+    #: Positional arguments to specify in the compression command (do not put paths to compress)
+    positional_args: list[str] | None
 
 
 @dataclass(frozen=True)

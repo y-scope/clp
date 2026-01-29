@@ -12,9 +12,12 @@ from clp_py_utils.clp_config import (
 
 from tests.utils.asserting_utils import (
     validate_package_instance,
+    verify_compression,
 )
 from tests.utils.clp_mode_utils import CLP_API_SERVER_COMPONENT, CLP_BASE_COMPONENTS
-from tests.utils.config import PackageInstance, PackageModeConfig
+from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
+from tests.utils.package_utils import run_package_compression_script
+from tests.utils.utils import resolve_path_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -54,19 +57,41 @@ def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
 
 
 @pytest.mark.compression
-def test_clp_json_compression(fixt_package_instance: PackageInstance) -> None:
+def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the `clp-json` package successfully compresses some dataset.
+    Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
 
     :param fixt_package_instance:
     """
     validate_package_instance(fixt_package_instance)
 
-    # TODO: compress some dataset and check the correctness of compression.
-    assert True
+    # Compress a dataset.
+    compression_job = PackageCompressionJob(
+        path_to_dataset=(
+            resolve_path_env_var("INTEGRATION_TESTS_DIR")
+            / "tests"
+            / "package_tests"
+            / "clp_json"
+            / "sample_datasets"
+            / "json-multifile"
+            / "logs"
+        ),
+        options={
+            "--timestamp-key": "timestamp",
+            "--dataset": "json_multifile",
+        },
+        positional_args=None,
+    )
+    package_test_config = fixt_package_instance.package_test_config
+    run_package_compression_script(compression_job, package_test_config)
+
+    # Check the correctness of compression.
+    verify_compression(compression_job, package_test_config)
 
     log_msg = "test_clp_json_compression was successful."
     logger.info(log_msg)
+
+    # TODO: clean up clp-package/var/data, clp-package/var/log, and clp-package/var/tmp
 
 
 @pytest.mark.search
@@ -78,7 +103,9 @@ def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
     """
     validate_package_instance(fixt_package_instance)
 
-    # TODO: compress some dataset and check the correctness of compression.
+    # TODO: compress a dataset
+
+    # TODO: check the correctness of the compression
 
     # TODO: search through that dataset and check the correctness of the search results.
 
@@ -86,3 +113,5 @@ def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
 
     log_msg = "test_clp_json_search was successful."
     logger.info(log_msg)
+
+    # TODO: clean up clp-package/var/data, clp-package/var/log, and clp-package/var/tmp
