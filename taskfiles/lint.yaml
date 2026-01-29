@@ -785,7 +785,7 @@ tasks:
         - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
       vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
-    deps: ["venv"]
+    deps: ["venv", ":tests:integration:install-python-wheels-yscope-clp-core"]
     cmds:
       - for:
           var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
