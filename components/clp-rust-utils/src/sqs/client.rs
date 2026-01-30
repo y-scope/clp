@@ -18,7 +18,7 @@ pub async fn create_new_client(
     region_id: &str,
     endpoint: Option<&NonEmptyString>,
 ) -> Client {
-    let credential = Credentials::new(
+    let credentials = Credentials::new(
         access_key_id,
         secret_access_key,
         None,
@@ -26,7 +26,7 @@ pub async fn create_new_client(
         "clp-credentials-provider",
     );
     let base_config = aws_config::defaults(BehaviorVersion::latest())
-        .credentials_provider(credential)
+        .credentials_provider(credentials)
         .region(Region::new(region_id.to_string()))
         .load()
         .await;
