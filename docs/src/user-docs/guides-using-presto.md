@@ -198,46 +198,72 @@ SELECT foo.bar FROM default LIMIT 1;
 CLP's UI should be available at [http://localhost:4000](http://localhost:4000) (if you changed
 `webui.host` or `webui.port` in `etc/clp-config.yaml`, use the new values).
 
-[Figure 1](#figure-1) shows the search page after applying a filter.
+When you're using Presto with CLP's UI, you can query your logs in one of two modes:
+[**Guided**](#guided-mode) or [**Manual**](#manual-mode).
+
+#### **Guided** mode
+
+**Guided** mode provides you with some structured fields to help you construct common filters
+quickly. [Figure 1](#figure-1) shows **Guided** mode after applying a filter.
 
 (figure-1)=
 :::{card}
 
-:::{image} clp-presto-ui.png
+:::{image} clp-presto-ui-guided.png
 
 +++
-**Figure 1**: The search page in CLP's Presto UI.
+**Figure 1**: **Guided** mode in CLP's Presto UI.
 :::
 
 The numbered circles in [Figure 1](#figure-1) correspond to the following elements:
 
-1. **The filter input boxes**. Fill in the boxes to construct your filter. The state of the query
-   boxes shown in the image correspond to the following Presto command:
-
-   ```SQL
-   SELECT timestamp, error_severity, message
-   FROM postgresql
-   WHERE error_severity LIKE '%DEBUG%'
-   ORDER BY timestamp ASC
-   ```
-
+1. **The filter input boxes**. Fill in the boxes to construct your filter. The indicators on each
+   field (e.g., `SELECT`, `FROM`) are common SQL keywords.
 2. **The time range selector**. CLP will filter for log events that are in the specified time range.
-   You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`) from the dropdown, or
-   choose `Custom` and set the start time and end time directly.
-3. **The "Freeform" selector**. Click this button if you'd like to construct a filter from scratch,
-   without the aid of the filter input boxes.
-4. **The filter results timeline**. After you apply a filter, the timeline will show the
+   You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`), or specify a custom range
+   with the calendar.
+3. **The filter results timeline**. After you apply a filter, the timeline will show the
    distribution of results across your chosen time range.
    * You can click and drag to zoom into a time range.
    * When you mouse over a bar in the timeline, a popup will display the range and the number of
-     search results in that range.
-5. **The results table**. The table will display the log events that match your filter.
-6. **The query inspector**. Click this button if you'd like to see the full Presto filter generated
-   by the information you've entered into the filter input boxes.
+     results in that range.
+4. **The results table**. The scrollable table will display the log events that match your filter.
+5. **The query inspector**. Click this button if you'd like to see the full Presto filter generated
+   by the information you've entered into the filter input boxes. For example, the state of the
+   query boxes shown in the image correspond to the following Presto command:
 
-:::{note}
-The UI can only run one query at a time, and queries must not end with a `;`.
+   ```SQL
+   SELECT timestamp, error_severity, message FROM postgresql_logs
+   WHERE to_unixtime(timestamp) BETWEEN
+   1679876795.719
+   AND 1679877135.936 AND (error_severity = 'DEBUG' AND message LIKE '%Transaction%')
+   ORDER BY timestamp ASC
+   LIMIT 1000
+   ```
+
+6. **The mode selector**. Click [**Manual**](#manual-mode) if you'd like to query in **Manual**
+   mode.
+
+#### **Manual** mode
+
+**Manual** mode allows you to specify custom SQL filters to query your logs more expressively.
+[Figure 2](#figure-2) shows **Manual** mode after applying a custom filter.
+
+(figure-2)=
+:::{card}
+
+:::{image} clp-presto-ui-manual.png
+
++++
+**Figure 2**: **Manual** mode in CLP's Presto UI.
 :::
+
+The numbered circles in [Figure 2](#figure-2) correspond to the following elements:
+
+1. **The custom filter input box**. Type your custom filter into the box. Note that the UI can only
+   run one filter query at a time, and queries must not end with a `;`.
+2. **The results table**. The scrollable table will display the log events that match your filter.
+3. **The mode selector**. Click [**Guided**](#guided-mode) if you'd like to query in Guided mode.
 
 ### Querying from the Presto CLI
 
