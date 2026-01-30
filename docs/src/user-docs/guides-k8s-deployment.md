@@ -113,13 +113,11 @@ Once your cluster is ready, you can install CLP using the Helm chart.
 
 ### Getting the chart
 
-The CLP Helm chart is located in the repository at
-[`tools/deployment/package-helm/`][clp-helm-chart].
+The CLP Helm chart is published to a [Helm repository][clp-helm-repo] hosted on GitHub Pages.
 
 ```bash
-# Clone the repository (if you haven't already)
-git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
-cd clp/tools/deployment/package-helm
+helm repo add clp https://y-scope.github.io/clp
+helm repo update clp
 ```
 
 #### Production cluster requirements (optional)
@@ -204,7 +202,7 @@ export CLP_COMPRESSION_WORKER_REPLICAS=1
 export CLP_QUERY_WORKER_REPLICAS=1
 export CLP_REDUCER_REPLICAS=1
 
-helm install clp . \
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.data_directory="$CLP_HOME/var/data" \
   --set clpConfig.logs_directory="$CLP_HOME/var/log" \
   --set clpConfig.tmp_directory="$CLP_HOME/var/tmp" \
@@ -225,7 +223,7 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 `/etc/fstab`), enable distributed storage mode and configure multiple worker replicas:
 
 ```bash
-helm install clp . \
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set distributedDeployment=true \
   --set compressionWorker.replicas=3 \
   --set queryWorker.replicas=3 \
@@ -288,7 +286,7 @@ credentials:
 Install with custom values:
 
 ```bash
-helm install clp . -f custom-values.yaml
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f custom-values.yaml
 ```
 
 ::::{tip}
@@ -348,7 +346,7 @@ To run compression workers, query workers, and reducers in separate node pools:
 3. Install:
 
    ```bash
-   helm install clp . -f dedicated-scheduling.yaml
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f dedicated-scheduling.yaml
    ```
 
 #### Shared node pool
@@ -397,7 +395,7 @@ To run all worker types in the same node pool:
 3. Install:
 
    ```bash
-   helm install clp . -f shared-scheduling.yaml
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
 ---
@@ -524,7 +522,11 @@ kubectl exec -it <pod-name> -- /bin/bash
 To debug Helm chart issues:
 
 ```bash
-helm install clp . --dry-run --debug
+# For debugging the published chart from the repository
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG --dry-run --debug
+
+# For debugging local chart changes during development
+helm install clp /path/to/local/chart --dry-run --debug
 ```
 
 ---
@@ -590,7 +592,7 @@ To tear down a `kubeadm` cluster:
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
-[clp-helm-chart]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/tools/deployment/package-helm
+[clp-helm-repo]: https://y-scope.github.io/clp
 [clp-releases]: https://github.com/y-scope/clp/releases
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
