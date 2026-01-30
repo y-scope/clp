@@ -601,7 +601,7 @@ tasks:
     vars:
       TMP_DIR: "{{.G_BUILD_DIR}}/tmp-{{.TASK}}"
     dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
-    deps: ["core"]
+    #deps: ["core"]
     cmds:
       - "mkdir -p '{{.TMP_DIR}}'"
       - defer: "rm -rf '{{.TMP_DIR}}'"
