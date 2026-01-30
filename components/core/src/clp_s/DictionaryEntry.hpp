@@ -177,11 +177,6 @@ public:
     void decode_log_type();
 
     /**
-     * Encode a constant to the log type by escaping any necessary characters.
-     */
-    auto encode_constant(std::string_view constant) -> void;
-
-    /**
      * Checks if the entry has been initialized
      * @return true if the entry has been initialized, false otherwise
      */

@@ -204,13 +204,6 @@ void LogTypeDictionaryEntry::decode_log_type() {
     decode_log_type(escaped_value);
 }
 
-auto LogTypeDictionaryEntry::encode_constant(std::string_view constant) -> void {
-    auto escape_handler = [&]([[maybe_unused]] string_view constant,
-                              [[maybe_unused]] size_t char_to_escape_pos,
-                              [[maybe_unused]] string& logtype) -> void { add_escape(); };
-    append_constant_to_logtype(constant, escape_handler, m_value);
-}
-
 size_t VariableDictionaryEntry::get_data_size() const {
     return sizeof(m_id) + m_value.length();
 }
