@@ -1,4 +1,6 @@
-{{- if .Values.clpConfig.log_ingestor }}
+{{- if and
+  (.Values.clpConfig.log_ingestor)
+  (eq .Values.clpConfig.logs_input.type "s3") }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:

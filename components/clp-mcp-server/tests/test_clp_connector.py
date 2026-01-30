@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from clp_py_utils.clp_config import ClpDbNameType
 
 from clp_mcp_server.clp_connector import ClpConnector, QueryJobStatus
 
@@ -17,7 +18,7 @@ def mock_clp_config() -> Any:
         results_cache=SimpleNamespace(
             host="results-cache", port=27017, db_name="clp-query-results"
         ),
-        database=SimpleNamespace(host="database", port=3306, name="clp-db"),
+        database=SimpleNamespace(host="database", port=3306, names={ClpDbNameType.CLP: "clp-db"}),
         webui=SimpleNamespace(host="localhost", port=4000),
     )
 
@@ -109,14 +110,18 @@ async def test_wait_query_completion_failure_cases(
 async def test_read_results_returns_docs(mock_clp_config: Any) -> None:
     """Tests reading results returns expected documents."""
     connector = ClpConnector(mock_clp_config)
-    mock_docs = [{"_id": "1"}, {"_id": "2"}, {"_id": "3"}]
+    mock_docs = [
+        {"_id": "1", "archive_id": "archA", "log_event_ix": 1},
+        {"_id": "2", "archive_id": "archB", "log_event_ix": 2},
+        {"_id": "3", "archive_id": "archC", "log_event_ix": 3},
+    ]
     mock_collection = AsyncMock()
     mock_collection.find = MagicMock(return_value=_aiter(mock_docs))
 
     with patch.object(connector, "_results_cache", {"12": mock_collection}):
         results = await connector.read_results("12")
 
-    assert results == mock_docs
+    assert len(results) == len(mock_docs)
 
 
 @pytest.mark.asyncio

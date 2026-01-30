@@ -1,0 +1,3 @@
+delimiters: \r\n
+
+capture:[A-Za-z]+(?<group>\d+)
