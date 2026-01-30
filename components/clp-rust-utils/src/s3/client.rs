@@ -27,7 +27,7 @@ pub async fn create_new_client(
         secret_access_key,
         None,
         None,
-        "clp-credential-provider",
+        "clp-credentials-provider",
     );
     let base_config = aws_config::defaults(BehaviorVersion::latest())
         .credentials_provider(credential)
