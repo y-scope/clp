@@ -76,12 +76,12 @@ concept LogTypeDictionaryEntryReq = requires(
     { entry.add_dictionary_var() } -> std::same_as<void>;
 
     /**
-     * Adds an escape character
+     * Adds an escape character.
      */
     { entry.add_escape() } -> std::same_as<void>;
 
     /**
-     * Adds static text to the logtype escaping any placeholder characters.
+     * Adds static text to the logtype, escaping any placeholder characters.
      */
     { entry.add_static_text(static_text) } -> std::same_as<void>;
 
