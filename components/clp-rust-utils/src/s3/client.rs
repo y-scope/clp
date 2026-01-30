@@ -30,7 +30,7 @@ pub async fn create_new_client(
         "clp-credential-provider",
     );
     let base_config = aws_config::defaults(BehaviorVersion::latest())
-        .credentials_provider(credential.clone())
+        .credentials_provider(credential)
         .region(Region::new(region_id.to_string()))
         .load()
         .await;

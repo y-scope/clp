@@ -27,7 +27,7 @@ pub async fn create_new_client(
     );
     let base_config = aws_config::defaults(BehaviorVersion::latest())
         .credentials_provider(credential)
-        .region(Some(Region::new(region_id.to_string())))
+        .region(Region::new(region_id.to_string()))
         .load()
         .await;
     let mut config_builder = Builder::from(&base_config);
