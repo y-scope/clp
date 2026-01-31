@@ -57,7 +57,7 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
-    mode_name = package_instance.package_config.mode_name
+    mode_name = package_instance.package_test_config.mode_config.mode_name
     logger.info("Validating that all components of the '%s' package are running...", mode_name)
 
     # Get list of services currently running in the Compose project.
