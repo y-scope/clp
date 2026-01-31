@@ -1,7 +1,7 @@
 # Configuring AWS S3
 
-To use AWS S3 with CLP, follow the steps below to configure the necessary IAM permissions
-and your S3 bucket(s) for each use case you require.
+To use AWS S3 with CLP, follow the steps below to configure the necessary IAM permissions and your
+S3 bucket(s) for each use case you require.
 
 ## Configuration for compression
 
@@ -93,13 +93,13 @@ the fields in angle brackets (`<>`) with the appropriate values:
 The [log viewer][yscope-log-viewer] currently supports viewing [IR][uber-clp-blog-1] and JSONL
 stream files but not CLP archives; thus, to view the compressed logs from a CLP archive, CLP first
 converts the compressed logs into stream files. These streams can be cached on the filesystem, or on
-S3.
+AWS S3.
 
 :::{note}
 A future version of the log viewer will support viewing CLP archives directly.
 :::
 
-Storing streams on S3 requires both configuring the CLP IAM user and setting up a cross-origin
+Storing streams on AWS S3 requires both configuring the CLP IAM user and setting up a cross-origin
 resource sharing (CORS) policy for the S3 bucket.
 
 ### IAM user configuration
@@ -132,8 +132,8 @@ the fields in angle brackets (`<>`) with the appropriate values:
 
 ### Cross-origin resource sharing (CORS) configuration
 
-For CLP's log viewer to be able to access the cached stream files from S3 over the internet, the S3
-bucket must have a CORS policy configured.
+For CLP's log viewer to be able to access the cached stream files from AWS S3 over the internet, the
+S3 bucket must have a CORS policy configured.
 
 Add the CORS configuration below to your bucket by following [this guide][aws-cors-guide]:
 

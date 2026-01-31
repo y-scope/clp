@@ -1,8 +1,6 @@
 # AWS S3
 
-This guide explains how to configure and use CLP with AWS S3. Note that you can choose
-to use object storage for any combination of the three use cases (e.g., compress logs from AWS S3
-and cache the stream files on AWS S3, but store archives on the local filesystem).
+This guide explains how to configure and use CLP with AWS S3.
 
 :::{note}
 Currently, only [clp-json][release-choices] supports object storage. Support for `clp-text` will be
@@ -20,6 +18,33 @@ consider also using [external databases](../../guides-external-database.md) for 
 ensure data persistence in case of host replacements).
 :::
 
+## Supported uses
+
+[Table 1](#table-1) shows the supported uses of AWS S3 in CLP.
+
+(table-1)=
+::::{card}
+
+:::{table}
+:align: left
+
+| Use case                                    | Supported                                               |
+|---------------------------------------------|---------------------------------------------------------|
+| Compress logs from S3-compatible storage    | <i class="fa fa-circle-check" style="color: green"></i> |
+| Store archives on S3-compatible storage     | <i class="fa fa-circle-check" style="color: green"></i> |
+| Cache stream files on S3-compatible storage | <i class="fa fa-circle-check" style="color: green"></i> |
+
+:::
+
++++
+**Table 1**: The supported uses of AWS S3 in CLP.
+::::
+
+:::{note}
+You can choose to use AWS S3 for any combination of the three use cases above (e.g., compress logs
+from AWS S3 and cache the stream files on AWS S3, but store archives on the local filesystem).
+:::
+
 ## Prerequisites
 
 1. This guide assumes you're able to configure, start, stop, and use CLP as described in the
@@ -31,8 +56,8 @@ ensure data persistence in case of host replacements).
    the necessary permissions to access the S3 buckets and prefixes mentioned above.
 
    :::{note}
-   You may use a single authentication method for all the use cases above, or a separate one for
-   each.
+   You may use a single authentication method for all the [use cases](#supported-uses) above, or a
+   separate one for each.
    :::
 
 ### Supported AWS authentication methods
@@ -85,7 +110,7 @@ Follow [this guide][aws-ec2-attach-iam-role] to attach an IAM role to an instanc
 
 ## Configuration
 
-The subsections below explain how to configure your object storage bucket and CLP for each use case:
+The subsections below explain how to configure your AWS S3 bucket and CLP for each use case:
 
 ::::{grid} 1 1 1 1
 :gutter: 2
@@ -94,14 +119,14 @@ The subsections below explain how to configure your object storage bucket and CL
 :link: aws-s3-config
 Configuring AWS S3
 ^^^
-Configuring your object storage bucket and IAM permissions for each use case.
+Configuring your AWS S3 bucket and IAM permissions for each use case.
 :::
 
 :::{grid-item-card}
 :link: clp-config
 Configuring CLP
 ^^^
-Configuring CLP to use object storage for each use case.
+Configuring CLP to use AWS S3 for each use case.
 :::
 ::::
 
@@ -116,7 +141,7 @@ The subsection below explains how to use CLP with AWS S3 for each use case:
 :link: using-clp-with-aws-s3
 Using CLP with AWS S3
 ^^^
-Using CLP to compress, search, and view log files from object storage.
+Using CLP to compress, search, and view log files from AWS S3.
 :::
 ::::
 
