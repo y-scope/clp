@@ -48,6 +48,7 @@ tasks:
         vars:
           WITH_CORE: "{{.WITH_CORE}}"
     cmd: |-
+      uv venv --allow-existing
       uv pip install --force-reinstall {{.G_PYTHON_WHEELS_BUILD_DIR}}/yscope_clp_core-*.whl
 
   python-wheels-yscope-clp-core:
