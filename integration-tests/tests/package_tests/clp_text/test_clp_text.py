@@ -1,7 +1,5 @@
 """Tests for the clp-text package."""
 
-import logging
-
 import pytest
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -15,9 +13,6 @@ from tests.utils.asserting_utils import (
 )
 from tests.utils.clp_mode_utils import CLP_BASE_COMPONENTS
 from tests.utils.config import PackageInstance, PackageModeConfig
-
-logger = logging.getLogger(__name__)
-
 
 # Mode description for this module.
 CLP_TEXT_MODE = PackageModeConfig(
@@ -38,14 +33,17 @@ CLP_TEXT_MODE = PackageModeConfig(
 pytestmark = [
     pytest.mark.package,
     pytest.mark.clp_text,
-    pytest.mark.parametrize("fixt_package_test_config", [CLP_TEXT_MODE], indirect=True),
+    pytest.mark.parametrize(
+        "fixt_package_test_config", [CLP_TEXT_MODE], indirect=True, ids=[CLP_TEXT_MODE.mode_name]
+    ),
 ]
 
 
 @pytest.mark.startup
 def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
-    """Tests package startup."""
-    validate_package_instance(fixt_package_instance)
+    """
+    Validates that the `clp-text` package starts up successfully.
 
-    log_msg = "test_clp_text_startup was successful."
-    logger.info(log_msg)
+    :param fixt_package_instance:
+    """
+    validate_package_instance(fixt_package_instance)

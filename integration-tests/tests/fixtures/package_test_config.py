@@ -28,6 +28,7 @@ def fixt_package_test_config(
     mode_config: PackageModeConfig = request.param
     mode_name = mode_config.mode_name
     clp_config_obj = mode_config.clp_config
+
     logger.info("Setting up the '%s' package...", mode_name)
 
     # Assign ports based on the clp base port CLI option.

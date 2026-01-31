@@ -38,13 +38,6 @@ def fixt_package_instance(
         start_clp_package(request, fixt_package_test_config)
         instance = PackageInstance(package_test_config=fixt_package_test_config)
         yield instance
-    except RuntimeError:
-        base_port = fixt_package_test_config.base_port
-        pytest.fail(
-            f"Failed to start the {mode_name} package. This could mean that one of the ports"
-            f" derived from base_port={base_port} was unavailable. You can specify a new value for"
-            " base_port with the '--base-port' flag."
-        )
     finally:
         logger.info("Stopping the '%s' package...", mode_name)
         stop_clp_package(request, fixt_package_test_config)

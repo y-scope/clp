@@ -19,7 +19,7 @@ pytest_plugins = [
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """
-    Adds options for pytest.
+    Adds options for `pytest`.
 
     :param parser:
     """
@@ -30,25 +30,31 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Base port for CLP package integration tests.",
     )
 
+    # Sets up a unique log file for this test run, and stores the path to the file.
     test_run_id = str(uuid.uuid4())[-4:]
-    log_file_name = Path("__pytest_logs") / f"testrun_{test_run_id}.log"
+    log_file_path = Path("__pytest_logs") / f"testrun_{test_run_id}.log"
     parser.addini(
         "log_file_path",
         help="Path to the log file for this test.",
         type="paths",
-        default=log_file_name,
+        default=log_file_path,
     )
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
-    """Prettify the name of the test for output purposes."""
-    item._nodeid = f"{BOLD}{BLUE}Running test: {item.name}{RESET}"  # noqa: SLF001
+    """
+    Prettifies the name of the test for output purposes.
+
+    :param item:
+    """
+    item._nodeid = f"{BOLD}{BLUE}{item.name}{RESET}"  # noqa: SLF001
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_report_header(config: pytest.Config) -> str:
     """
-    Adds a field to the header at the start of the test run.
+    Adds a field to the header at the start of the test run that reports the path to the log file
+    for this test run.
 
     :param config:
     """
@@ -56,10 +62,10 @@ def pytest_report_header(config: pytest.Config) -> str:
     return f"Log file path for this test run: {log_file_path}"
 
 
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+@pytest.hookimpl(wrapper=True)
 def pytest_runtest_setup(item: pytest.Item) -> Iterator[None]:
     """
-    Sets the output file for the logger to the log file path for this test run.
+    Sets `log_file_path` as the output file for the logger.
 
     :param item:
     """

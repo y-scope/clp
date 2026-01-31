@@ -42,6 +42,9 @@ def validate_package_instance(package_instance: PackageInstance) -> None:
 
     :param package_instance:
     """
+    mode_name = package_instance.package_test_config.mode_config.mode_name
+    logger.info("Validating that the '%s' package is running correctly...", mode_name)
+
     # Ensure that all package components are running.
     _validate_package_running(package_instance)
 
@@ -58,7 +61,7 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
     mode_name = package_instance.package_test_config.mode_config.mode_name
-    logger.info("Validating that all components of the '%s' package are running...", mode_name)
+    logger.debug("Validating that all components of the '%s' package are running...", mode_name)
 
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
@@ -70,6 +73,7 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     if required_components == running_services:
         return
 
+    # Construct error message.
     err_msg = f"Component validation failed for the {mode_name} package test."
 
     missing_components = required_components - running_services
@@ -96,7 +100,7 @@ def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
     mode_name = package_instance.package_test_config.mode_config.mode_name
-    logger.info(
+    logger.debug(
         "Validating that the '%s' package is running in the correct configuration...", mode_name
     )
 

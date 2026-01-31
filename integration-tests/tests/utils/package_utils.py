@@ -39,7 +39,7 @@ def start_clp_package(
         run_and_assert(request, start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
     except SubprocessError:
         mode_name = package_test_config.mode_config.mode_name
-        err_msg = f"The {mode_name} package failed to start."
+        err_msg = f"The '{mode_name}' package failed to start."
         logger.error(construct_log_err_msg(err_msg))
         pytest.fail(err_msg)
 
@@ -68,6 +68,6 @@ def stop_clp_package(
         run_and_assert(request, stop_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
     except SubprocessError:
         mode_name = package_test_config.mode_config.mode_name
-        err_msg = f"The {mode_name} package failed to stop."
+        err_msg = f"The '{mode_name}' package failed to stop."
         logger.error(construct_log_err_msg(err_msg))
         pytest.fail(err_msg)
