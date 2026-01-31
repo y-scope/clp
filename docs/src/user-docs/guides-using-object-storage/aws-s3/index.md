@@ -28,11 +28,11 @@ ensure data persistence in case of host replacements).
 :::{table}
 :align: left
 
-| Use case                                    | Supported                                               |
-|---------------------------------------------|---------------------------------------------------------|
-| Compress logs from S3-compatible storage    | <i class="fa fa-circle-check" style="color: green"></i> |
-| Store archives on S3-compatible storage     | <i class="fa fa-circle-check" style="color: green"></i> |
-| Cache stream files on S3-compatible storage | <i class="fa fa-circle-check" style="color: green"></i> |
+| Use case                     | Supported                                               |
+|------------------------------|---------------------------------------------------------|
+| Compress logs from AWS S3    | <i class="fa fa-circle-check" style="color: green"></i> |
+| Store archives on AWS S3     | <i class="fa fa-circle-check" style="color: green"></i> |
+| Cache stream files on AWS S3 | <i class="fa fa-circle-check" style="color: green"></i> |
 
 :::
 
