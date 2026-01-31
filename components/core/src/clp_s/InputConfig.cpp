@@ -275,11 +275,11 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
  */
 auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
     constexpr size_t cMaxUtf8CodepointBytes = 4ULL;
-    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1ULL;
+    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1;
 
     size_t cur_byte{
             peek_size < cMaxRunWithoutFullUtf8Codepoint
-                    ? 0ULL
+                    ? size_t{0}
                     : (peek_size - cMaxRunWithoutFullUtf8Codepoint)
     };
 
@@ -353,7 +353,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
 
 [[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
         -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
-    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     constexpr size_t cMaxNestedFormatDepth = 5;
     if (nullptr == reader) {
         return {{}, FileType::Unknown};

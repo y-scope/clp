@@ -57,9 +57,6 @@ def main(argv):
         help="The dataset that the archives belong to.",
     )
     args_parser.add_argument(
-        "-t", "--tags", help="Comma-separated list of tags of archives to search."
-    )
-    args_parser.add_argument(
         "--begin-time",
         type=int,
         help="Time range filter lower-bound (inclusive) as milliseconds from the UNIX epoch.",
@@ -85,6 +82,11 @@ def main(argv):
         "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+
+    if parsed_args.count and parsed_args.count_by_time is not None:
+        logger.error("--count and --count-by-time are mutually exclusive.")
+        return -1
+
     if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
@@ -153,9 +155,6 @@ def main(argv):
     if dataset is not None:
         search_cmd.append("--dataset")
         search_cmd.append(dataset)
-    if parsed_args.tags:
-        search_cmd.append("--tags")
-        search_cmd.append(parsed_args.tags)
     if parsed_args.begin_time is not None:
         search_cmd.append("--begin-time")
         search_cmd.append(str(parsed_args.begin_time))
