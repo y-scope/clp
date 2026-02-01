@@ -584,7 +584,6 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
       db-table-creator:
