@@ -22,6 +22,12 @@ vars:
   G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR: "{{.ROOT_DIR}}/python-wheels/yscope-clp-core"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
+  # Documentation paths
+  G_DOCS_DIR: "{{.ROOT_DIR}}/docs"
+  G_DOCS_SRC_DIR: "{{.G_DOCS_DIR}}/src"
+  G_DOCS_SRC_STATIC_DIR: "{{.G_DOCS_SRC_DIR}}/_static"
+  G_DOCS_SRC_STATIC_GENERATED_DIR: "{{.G_DOCS_SRC_STATIC_DIR}}/generated"
+
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
