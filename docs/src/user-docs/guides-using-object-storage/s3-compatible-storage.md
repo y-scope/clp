@@ -154,3 +154,9 @@ sbin/compress-from-s3.sh \
   s3-key-prefix \
   http://10.0.0.1:9000/bucket/logs/
 ```
+
+:::{tip}
+You can also specify input URLs in a text file using the `--inputs-from` flag. See the
+[AWS S3 usage guide](aws-s3/using-clp-with-aws-s3.md#s3-object-compression-mode) for more details on
+this and other options.
+:::
