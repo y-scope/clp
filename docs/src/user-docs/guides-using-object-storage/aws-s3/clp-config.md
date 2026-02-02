@@ -47,8 +47,8 @@ archive_output:
 
 * `staging_directory` is the local filesystem directory where archives will be temporarily stored
   before being uploaded to AWS S3.
-* `s3_config` configures both the S3 bucket where archives should be stored and the credentials
-  for accessing it.
+* `s3_config` configures both the S3 bucket where archives should be stored and the authentication
+  method for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
@@ -80,8 +80,8 @@ stream_output:
 
 * `staging_directory` is the local filesystem directory where streams will be temporarily stored
   before being uploaded to AWS S3.
-* `s3_config` configures both the S3 bucket where streams should be stored and the credentials
-  for accessing it.
+* `s3_config` configures both the S3 bucket where streams should be stored and the authentication
+  method for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all streams will be stored within the bucket and
