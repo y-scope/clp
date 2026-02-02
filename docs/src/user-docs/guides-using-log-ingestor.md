@@ -83,10 +83,9 @@ For configuration details and the request body, see the
 To ensure correct and efficient ingestion, the scanner relies on the following assumptions:
 
 * **Lexicographical order**: Every new object added to the S3 bucket has a key that is
-  lexicographically greater than the previously added object. For example, using timestamp-prefixed
-  keys like `2024-01-01T00:00:00-app.log` ensures new logs are always lexicographically greater. If
-  a new object with key `log0` is added after `log2`, it will be ignored because it is not
-  lexicographically greater than the last ingested key.
+  lexicographically greater than the previously added object. For example, objects with keys `log1`
+  and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`,
+  it will be ignored because it is not lexicographically greater than the last ingested key.
 * **Immutability**: Objects under the specified prefix are immutable. Once an object is created, it
   is not modified or overwritten.
 :::
