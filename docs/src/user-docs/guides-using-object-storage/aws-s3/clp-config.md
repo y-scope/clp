@@ -23,6 +23,12 @@ logs_input:
 `<type>` and the type-specific settings are described in the
 [configuring AWS authentication](#configuring-aws-authentication) section.
 
+:::{note}
+Unlike archive and stream storage, the S3 bucket and key prefix for input logs are not specified in
+the configuration file. Instead, they are specified at compression time via object URLs passed to
+[`sbin/compress-from-s3.sh`](using-clp-with-aws-s3.md#compressing-logs-from-aws-s3).
+:::
+
 ## Configuration for archive storage
 
 To configure CLP to store archives on AWS S3, update the `archive_output.storage` key in
