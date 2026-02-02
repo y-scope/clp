@@ -301,6 +301,9 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             auto var_stats{archive_reader->get_experimental_stats().m_var_stats};
             for (clp::variable_dictionary_id_t i{0}; i < var_stats.size(); ++i) {
                 auto stat{var_stats.at(i)};
+                if (0 == stat.get_count()) {
+                    continue;
+                }
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"type\":\"{}\",\"variable\":\"{}\"}}\n",
                         i,

@@ -4,12 +4,15 @@
 #include <filesystem>
 #include <memory>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveStats.hpp>
 #include <clp_s/Defs.hpp>
@@ -19,6 +22,8 @@
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
+
+#include "clp_s/ParsedMessage.hpp"
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -345,9 +350,6 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::ClpString:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
-            case NodeType::LogType:
-                writer->append_column(new LogTypeColumnWriter(id, m_log_dict));
-                break;
             case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
                 break;
@@ -494,19 +496,26 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto ArchiveWriter::update_logtype_stats(clp_s::LogTypeDictionaryEntry logtype)
+auto ArchiveWriter::add_dict_var_to_logtype(
+        std::string_view var,
+        LogTypeDictionaryEntry& logtype,
+        std::vector<encoded_variable_t>& encoded_vars
+) -> void {
+    encoded_vars.push_back(
+            clp::EncodedVariableInterpreter::encode_and_add_dict_var(var, logtype, *m_var_dict)
+    );
+}
+
+auto ArchiveWriter::update_logtype_stats(LogTypeDictionaryEntry& logtype)
         -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t> {
     if (false == m_experimental_stats.has_value()) {
         return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
     }
 
     clp::logtype_dictionary_id_t id{};
-    auto new_entry{m_log_dict->add_entry(logtype, id)};
+    m_log_dict->add_entry(logtype, id);
     auto& logtype_stats{m_experimental_stats.value().m_logtype_stats};
-    if (new_entry) {
-        logtype_stats.at_or_create(id);
-    }
-    logtype_stats.at(id).increment_count();
+    logtype_stats.at_or_create(id).increment_count();
     return id;
 }
 
@@ -517,16 +526,17 @@ auto ArchiveWriter::update_var_stats(std::string_view value, std::string_view ty
     }
 
     clp::variable_dictionary_id_t id{};
-    auto new_entry{m_var_dict->add_entry(value, id)};
+    m_var_dict->add_entry(value, id);
     auto& var_stats{m_experimental_stats.value().m_var_stats};
-    if (new_entry) {
-        var_stats.at_or_create(id).set_type(type);
-    }
-    var_stats.at(id).increment_count();
+    var_stats.at_or_create(id, {type}).increment_count();
     return id;
 }
 
 auto ArchiveWriter::close_experimenal_stats() -> ystdlib::error_handling::Result<size_t> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+    }
+
     FileWriter writer{};
     writer.open(
             m_archive_path + std::string{constants::cArchiveStatsFile},

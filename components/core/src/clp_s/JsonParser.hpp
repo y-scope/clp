@@ -249,7 +249,7 @@ private:
      * @param event The log event containing the `root_var` and the `captures`.
      * @param root_var The root log surgeon variable token for the `captures`.
      * @param root_var_node_id The clp-s node ID representing the `root_var` of the capture groups.
-     * @param logtype_entry The logtype dictionary entry being built for `event`.
+     * @param logtype_entry The logtype parsed message being built for `event`.
      * @return A result containing an error code indicating the failure:
      * - Forwards `update_logtype_stats`'s return values on failure.
      * - Forwards `get_capture_positions`'s return values on failure.
@@ -258,7 +258,7 @@ private:
             log_surgeon::LogEvent const& event,
             log_surgeon::Token root_var,
             int32_t root_var_node_id,
-            clp_s::LogTypeDictionaryEntry& logtype_entry
+            ParsedMessage::LogType& logtype
     ) -> ystdlib::error_handling::Result<void>;
 
     std::vector<Path> m_input_paths;

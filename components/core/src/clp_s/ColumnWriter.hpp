@@ -220,21 +220,6 @@ private:
     std::vector<clp::encoded_variable_t> m_encoded_vars;
 };
 
-class LogTypeColumnWriter : public BaseColumnWriter {
-public:
-    LogTypeColumnWriter(int32_t id, std::shared_ptr<LogTypeDictionaryWriter> log_dict)
-            : BaseColumnWriter(id),
-              m_log_dict{std::move(log_dict)} {}
-
-    auto add_value(ParsedMessage::variable_t& value) -> size_t override;
-
-    auto store(ZstdCompressor& compressor) -> void override;
-
-private:
-    std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
-    std::vector<clp::logtype_dictionary_id_t> m_logtypes;
-};
-
 class VariableStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructor

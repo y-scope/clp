@@ -200,39 +200,6 @@ UnalignedMemSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_m
     return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables());
 }
 
-auto LogTypeColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_logtypes = reader.read_unaligned_span<uint64_t>(num_messages);
-}
-
-auto LogTypeColumnReader::extract_value(uint64_t cur_message)
-        -> std::variant<int64_t, double, std::string, uint8_t> {
-    std::string message;
-    extract_string_value_into_buffer(cur_message, message);
-    return message;
-}
-
-auto
-LogTypeColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
-        -> void {
-    auto const value{m_logtypes[cur_message]};
-    auto& entry{m_log_dict->get_entry(static_cast<clp::logtype_dictionary_id_t>(value))};
-
-    if (false == entry.initialized()) {
-        entry.decode_log_type();
-    }
-
-    buffer.append(entry.get_value());
-}
-
-auto LogTypeColumnReader::extract_escaped_string_value_into_buffer(
-        uint64_t cur_message,
-        std::string& buffer
-) -> void {
-    std::string tmp;
-    extract_string_value_into_buffer(cur_message, tmp);
-    StringUtils::escape_json_string(buffer, tmp);
-}
-
 void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_variables = reader.read_unaligned_span<uint64_t>(num_messages);
 }

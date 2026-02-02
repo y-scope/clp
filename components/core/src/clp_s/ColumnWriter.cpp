@@ -1,21 +1,21 @@
 #include "ColumnWriter.hpp"
 
-#include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cstdint>
+#include <type_traits>
 #include <variant>
+#include <vector>
 
 #include <fmt/format.h>
 
-#include "../clp/Defs.h"
-#include "../clp/EncodedVariableInterpreter.hpp"
-#include "../clp/ErrorCode.hpp"
-#include "../clp/ffi/EncodedTextAst.hpp"
-#include "../clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../clp/TraceableException.hpp"
-#include "ParsedMessage.hpp"
-#include "ZstdCompressor.hpp"
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp/ErrorCode.hpp>
+#include <clp/ffi/EncodedTextAst.hpp>
+#include <clp/ffi/ir_stream/decoding_methods.hpp>
+#include <clp/TraceableException.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/ZstdCompressor.hpp>
 
 namespace clp_s {
 size_t Int64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
@@ -90,58 +90,74 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    uint64_t offset{m_encoded_vars.size()};
+auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
+    auto const offset{m_encoded_vars.size()};
     std::vector<clp::variable_dictionary_id_t> temp_var_dict_ids;
-    if (std::holds_alternative<std::string>(value)) {
-        clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<std::string>(value),
-                m_logtype_entry,
-                *m_var_dict,
-                m_encoded_vars,
-                temp_var_dict_ids
-        );
-    } else if (std::holds_alternative<clp::ffi::EightByteEncodedTextAst>(value)) {
-        auto const result{clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<clp::ffi::EightByteEncodedTextAst>(value),
-                m_logtype_entry,
-                *m_var_dict,
-                m_encoded_vars,
-                temp_var_dict_ids
-        )};
-        if (result.has_error()) {
-            auto const error{result.error()};
-            throw clp::ffi::ir_stream::DecodingException(
-                    clp::ErrorCode_Failure,
-                    __FILENAME__,
-                    __LINE__,
-                    fmt::format("{}: {}", error.category().name(), error.message())
-            );
-        }
-    } else {
-        auto const result{clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<clp::ffi::FourByteEncodedTextAst>(value),
-                m_logtype_entry,
-                *m_var_dict,
-                m_encoded_vars,
-                temp_var_dict_ids
-        )};
-        if (result.has_error()) {
-            auto const error{result.error()};
-            throw clp::ffi::ir_stream::DecodingException(
-                    clp::ErrorCode_Failure,
-                    __FILENAME__,
-                    __LINE__,
-                    fmt::format("{}: {}", error.category().name(), error.message())
-            );
-        }
-    }
+
+    std::visit(
+            [&](auto&& v) -> void {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, std::string>) {
+                    clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                            v,
+                            m_logtype_entry,
+                            *m_var_dict,
+                            m_encoded_vars,
+                            temp_var_dict_ids
+                    );
+                } else if constexpr (std::is_same_v<T, clp::ffi::EightByteEncodedTextAst>) {
+                    auto const result{clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                            v,
+                            m_logtype_entry,
+                            *m_var_dict,
+                            m_encoded_vars,
+                            temp_var_dict_ids
+                    )};
+                    if (result.has_error()) {
+                        auto const error{result.error()};
+                        throw clp::ffi::ir_stream::DecodingException(
+                                clp::ErrorCode_Failure,
+                                __FILENAME__,
+                                __LINE__,
+                                fmt::format("{}: {}", error.category().name(), error.message())
+                        );
+                    }
+                } else if constexpr (std::is_same_v<T, clp::ffi::FourByteEncodedTextAst>) {
+                    auto const result{clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                            v,
+                            m_logtype_entry,
+                            *m_var_dict,
+                            m_encoded_vars,
+                            temp_var_dict_ids
+                    )};
+                    if (result.has_error()) {
+                        auto const error{result.error()};
+                        throw clp::ffi::ir_stream::DecodingException(
+                                clp::ErrorCode_Failure,
+                                __FILENAME__,
+                                __LINE__,
+                                fmt::format("{}: {}", error.category().name(), error.message())
+                        );
+                    }
+                } else if constexpr (std::is_same_v<T, clp_s::ParsedMessage::LogType>) {
+                    m_logtype_entry = v.m_dict_entry;
+                    m_encoded_vars = v.m_encoded_vars;
+                } else {
+                    throw clp_s::TraceableException(
+                            clp_s::ErrorCodeBadParam,
+                            __FILENAME__,
+                            __LINE__
+                    );
+                }
+            },
+            value
+    );
 
     clp::logtype_dictionary_id_t id{};
     m_log_dict->add_entry(m_logtype_entry, id);
     auto encoded_id = encode_log_dict_id(id, offset);
     m_logtypes.push_back(encoded_id);
-    return sizeof(int64_t) + sizeof(int64_t) * (m_encoded_vars.size() - offset);
+    return sizeof(int64_t) + (sizeof(int64_t) * (m_encoded_vars.size() - offset));
 }
 
 void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
@@ -151,22 +167,6 @@ void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
     size_t num_encoded_vars = m_encoded_vars.size();
     compressor.write_numeric_value(num_encoded_vars);
     compressor.write(reinterpret_cast<char const*>(m_encoded_vars.data()), encoded_vars_size);
-}
-
-auto LogTypeColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
-    auto logtype_dict_entry{std::get<clp_s::LogTypeDictionaryEntry>(value)};
-    clp::logtype_dictionary_id_t id{};
-    m_log_dict->add_entry(logtype_dict_entry, id);
-    m_logtypes.push_back(id);
-    return sizeof(clp::logtype_dictionary_id_t);
-}
-
-auto LogTypeColumnWriter::store(ZstdCompressor& compressor) -> void {
-    compressor.write(
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            reinterpret_cast<char const*>(m_logtypes.data()),
-            m_logtypes.size() * sizeof(clp::logtype_dictionary_id_t)
-    );
 }
 
 size_t VariableStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
@@ -186,7 +186,6 @@ size_t DateStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_timestamps.push_back(encoded_timestamp.second);
     m_timestamp_encodings.push_back(encoded_timestamp.first);
     return 2 * sizeof(int64_t);
-    ;
 }
 
 void DateStringColumnWriter::store(ZstdCompressor& compressor) {

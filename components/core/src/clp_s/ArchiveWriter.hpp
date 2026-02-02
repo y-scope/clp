@@ -14,6 +14,7 @@
 
 #include <clp/Defs.h>
 #include <clp_s/ArchiveStats.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 
 #include "../clp/streaming_archive/Constants.hpp"
@@ -214,12 +215,25 @@ public:
     }
 
     /**
+     * Add `var` to the variable dictionary and then update the logtype dictionary entry and encoded
+     * variable list.
+     * @param var
+     * @param logtype
+     * @param encoded_vars
+     */
+    auto add_dict_var_to_logtype(
+            std::string_view var,
+            LogTypeDictionaryEntry& logtype,
+            std::vector<encoded_variable_t>& encoded_vars
+    ) -> void;
+
+    /**
      * Update the stats for the given log type, adding it to the log type dictionary if necessary.
      * @param logtype
      * @return The log type ID on success.
      * @return ClpsErrorCodeEnum::Unsupported if experimental stats are not enabled.
      */
-    auto update_logtype_stats(clp_s::LogTypeDictionaryEntry logtype)
+    auto update_logtype_stats(LogTypeDictionaryEntry& logtype)
             -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t>;
 
     /**

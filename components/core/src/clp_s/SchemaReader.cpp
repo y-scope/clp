@@ -472,7 +472,6 @@ size_t SchemaReader::generate_structured_array_template(
                     break;
                 }
                 case NodeType::ClpString:
-                case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -564,7 +563,6 @@ size_t SchemaReader::generate_structured_object_template(
                     break;
                 }
                 case NodeType::ClpString:
-                case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -691,7 +689,6 @@ void SchemaReader::generate_json_template(int32_t id) {
             }
             case NodeType::ClpString:
             case NodeType::DateString:
-            case NodeType::LogType:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
@@ -772,7 +769,6 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                     column_idx++;
                     break;
                 }
-                case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                     m_reordered_columns.push_back(m_columns[column_idx]);
@@ -847,7 +843,6 @@ auto SchemaReader::generate_composite_var_template(int32_t var_id)
                 column_idx++;
                 break;
             }
-            case NodeType::LogType:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_columns[column_idx]);

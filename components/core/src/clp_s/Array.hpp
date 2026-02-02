@@ -22,6 +22,8 @@ public:
 
     auto at_or_create(Index id) -> Element&;
 
+    auto at_or_create(Index id, Element e) -> Element&;
+
     auto clear() -> void { return m_array.clear(); }
 
     template <typename... Args>
@@ -65,8 +67,14 @@ auto Array<Element, Index>::decompress(ZstdDecompressor& decompressor)
 
 template <typename Element, typename Index>
 auto Array<Element, Index>::at_or_create(Index id) -> Element& {
+    return at_or_create(id, {});
+}
+
+template <typename Element, typename Index>
+auto Array<Element, Index>::at_or_create(Index id, Element e) -> Element& {
     if (m_array.size() <= id) {
         m_array.resize(id + 1);
+        m_array.at(id) = e;
     }
     return m_array.at(id);
 }
