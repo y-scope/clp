@@ -10,6 +10,7 @@ from tests.utils.config import (
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
+from tests.utils.utils import remove_path
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +48,17 @@ def _download_and_extract_dataset(
     integration_test_path_config: IntegrationTestPathConfig,
     name: str,
     tarball_url: str,
-    has_leading_directory_component: bool = True,
+    strip_leading_dir: bool = True,
 ) -> IntegrationTestLogs:
     """
-    :param request:
-    :param integration_test_path_config:
-    "param name:
-    :param tarball_url:
-    :param has_leading_directory_component: Whether all files inside the tarball are stored under a
-    single top level directory. Defaults to True.
-    :return: The IntegrationTestPathConfig object with its associated logs properly downloaded,
-    extracted, and permission changed to be overritable.
+    :param request: Provides access to the pytest cache.
+    :param integration_test_path_config: See `IntegrationTestPathConfig`.
+    :param name: Dataset name.
+    :param tarball_url: Dataset tarball URL.
+    :param strip_leading_dir: Whether to strip a single top-level directory from the tarball
+        contents. Defaults to True.
+    :return: An IntegrationTestLogs instance with the dataset downloaded, extracted, and file
+        permissions adjusted for test use.
     """
     integration_test_logs = IntegrationTestLogs(
         name=name,
@@ -68,8 +69,8 @@ def _download_and_extract_dataset(
         logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
         return integration_test_logs
 
-    integration_test_logs.tarball_path.unlink(missing_ok=True)
-    shutil.rmtree(integration_test_logs.extraction_dir)
+    remove_path(integration_test_logs.tarball_path)
+    remove_path(integration_test_logs.extraction_dir)
     integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
 
     tarball_path_str = str(integration_test_logs.tarball_path)
