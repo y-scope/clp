@@ -93,11 +93,6 @@ public:
     void add_escape();
 
     /**
-     * Adds static text to the logtype, escaping any placeholder characters.
-     */
-    auto add_static_text(std::string_view static_text) -> void;
-
-    /**
      * Parses next variable from a message, constructing the constant part of the message's logtype
      * as well
      * @param msg
@@ -108,12 +103,12 @@ public:
      * @param var
      * @return true if another variable was found, false otherwise
      */
-    auto parse_next_var(
+    bool parse_next_var(
             std::string_view msg,
             size_t& var_begin_pos,
             size_t& var_end_pos,
             std::string_view& var
-    ) -> bool;
+    );
 
     /**
      * Reserves space for a constant of the given length

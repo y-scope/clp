@@ -1,20 +1,16 @@
 #include "LogTypeDictionaryEntry.hpp"
 
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <string_view>
+#include "EncodedVariableInterpreter.hpp"
+#include "ir/parsing.hpp"
+#include "ir/types.hpp"
+#include "type_utils.hpp"
+#include "Utils.hpp"
 
-#include <clp/EncodedVariableInterpreter.hpp>
-#include <clp/ir/parsing.hpp>
-#include <clp/ir/types.hpp>
-#include <clp/type_utils.hpp>
-
-namespace clp {
 using clp::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
+namespace clp {
 size_t LogTypeDictionaryEntry::get_placeholder_info(
         size_t placeholder_ix,
         VariablePlaceholder& placeholder
@@ -38,7 +34,7 @@ size_t LogTypeDictionaryEntry::get_data_size() const {
 }
 
 void LogTypeDictionaryEntry::add_constant(
-        string_view value_containing_constant,
+        std::string_view value_containing_constant,
         size_t begin_pos,
         size_t length
 ) {
@@ -66,29 +62,27 @@ void LogTypeDictionaryEntry::add_escape() {
     ++m_num_escaped_placeholders;
 }
 
-auto LogTypeDictionaryEntry::add_static_text(string_view static_text) -> void {
-    ir::append_constant_to_logtype(
-            static_text,
-            [&]([[maybe_unused]] string_view constant,
-                [[maybe_unused]] size_t char_to_escape_pos,
-                [[maybe_unused]] string& logtype) -> void { add_escape(); },
-            m_value
-    );
-}
-
-auto LogTypeDictionaryEntry::parse_next_var(
-        string_view msg,
+bool LogTypeDictionaryEntry::parse_next_var(
+        std::string_view msg,
         size_t& var_begin_pos,
         size_t& var_end_pos,
-        string_view& var
-) -> bool {
-    auto const last_var_end_pos{var_end_pos};
-    auto escape_handler = [&]([[maybe_unused]] string_view constant,
-                              [[maybe_unused]] size_t char_to_escape_pos,
-                              [[maybe_unused]] string& logtype) -> void { add_escape(); };
+        std::string_view& var
+) {
+    auto last_var_end_pos = var_end_pos;
+    // clang-format off
+    auto escape_handler = [&](
+            [[maybe_unused]] string_view constant,
+            [[maybe_unused]] size_t char_to_escape_pos,
+            string& logtype
+    ) -> void {
+        m_placeholder_positions.push_back(logtype.size());
+        ++m_num_escaped_placeholders;
+        logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+    };
+    // clang-format on
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
-        auto const constant{msg.substr(last_var_end_pos, var_begin_pos - last_var_end_pos)};
+        auto constant = msg.substr(last_var_end_pos, var_begin_pos - last_var_end_pos);
         ir::append_constant_to_logtype(constant, escape_handler, m_value);
 
         var = msg.substr(var_begin_pos, var_end_pos - var_begin_pos);
@@ -96,7 +90,7 @@ auto LogTypeDictionaryEntry::parse_next_var(
     }
     if (last_var_end_pos < msg.length()) {
         // Append to log type: from end of last variable to end
-        auto const constant{msg.substr(last_var_end_pos, msg.length() - last_var_end_pos)};
+        auto constant = msg.substr(last_var_end_pos, msg.length() - last_var_end_pos);
         ir::append_constant_to_logtype(constant, escape_handler, m_value);
     }
 
