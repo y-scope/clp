@@ -155,7 +155,7 @@ TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]"
 
 TEST_CASE("Test creating log parser from config schema", "[LALR1Parser][LogParser]") {
     auto const schema_file_path = get_config_schema_files_dir() / "schemas.txt";
-    generate_log_parser(schema_file_path.string());
+    REQUIRE_NOTHROW(generate_log_parser(schema_file_path.string()));
 }
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
