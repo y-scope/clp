@@ -622,8 +622,8 @@ tasks:
       # Repair the wheel and place it in the final build directory
       - |-
         {{- if eq "true" .WITH_CORE}}
-        uv run --no-cache \
-          auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
+          uv run --no-cache \
+            auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
         {{- else}}
           cp "{{.TMP_DIR}}"/*.whl "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
         {{- end}}
