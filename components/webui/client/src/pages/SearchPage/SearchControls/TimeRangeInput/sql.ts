@@ -1,10 +1,12 @@
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import {
+    CLP_STORAGE_ENGINES,
+    SqlTableSuffix,
+} from "@webui/common/config";
 import {Nullable} from "@webui/common/utility-types";
 import dayjs, {Dayjs} from "dayjs";
 
 import {querySql} from "../../../../api/sql";
 import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
-import {SqlTableSuffix} from "../../../../config/sql-table-suffix";
 import {settings} from "../../../../settings";
 import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../../../IngestPage/sqlConfig";
 import {DEFAULT_TIME_RANGE} from "./utils";

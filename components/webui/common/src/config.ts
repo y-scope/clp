@@ -28,10 +28,28 @@ enum STORAGE_TYPE {
  */
 const CLP_DEFAULT_DATASET_NAME = "default";
 
+/**
+ * Table suffixes for CLP database tables.
+ * Matches constants in `clp_py_utils.clp_metadata_db_utils`.
+ */
+enum SqlTableSuffix {
+    ARCHIVES = "archives",
+    COLUMN_METADATA = "column_metadata",
+    DATASETS = "datasets",
+    FILES = "files",
+}
+
+/**
+ * Matching the default `clp_table_prefix` in `clp_py_utils.clp_config`.
+ */
+const CLP_DEFAULT_TABLE_PREFIX = "clp_";
+
 
 export {
     CLP_DEFAULT_DATASET_NAME,
+    CLP_DEFAULT_TABLE_PREFIX,
     CLP_QUERY_ENGINES,
     CLP_STORAGE_ENGINES,
+    SqlTableSuffix,
     STORAGE_TYPE,
 };

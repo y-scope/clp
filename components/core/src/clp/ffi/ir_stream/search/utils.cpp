@@ -273,13 +273,13 @@ auto schema_tree_node_type_to_literal_types(SchemaTree::Node::Type node_type)
         -> clp_s::search::ast::literal_type_bitmask_t {
     switch (node_type) {
         case SchemaTree::Node::Type::Int:
-            return LiteralType::IntegerT;
+            return LiteralType::IntegerT | LiteralType::TimestampT;
         case SchemaTree::Node::Type::Float:
-            return LiteralType::FloatT;
+            return LiteralType::FloatT | LiteralType::TimestampT;
         case SchemaTree::Node::Type::Bool:
             return LiteralType::BooleanT;
         case SchemaTree::Node::Type::Str:
-            return LiteralType::ClpStringT | LiteralType::VarStringT | LiteralType::EpochDateT;
+            return LiteralType::ClpStringT | LiteralType::VarStringT;
         case SchemaTree::Node::Type::UnstructuredArray:
             return LiteralType::ArrayT;
         case SchemaTree::Node::Type::Obj:
@@ -363,7 +363,7 @@ auto evaluate_filter_against_literal_type_value_pair(
                     *value,
                     case_sensitive_match
             );
-        case LiteralType::EpochDateT:
+        case LiteralType::TimestampT:
         case LiteralType::ArrayT:
             return ErrorCode{ErrorCodeEnum::LiteralTypeUnsupported};
         case LiteralType::NullT:

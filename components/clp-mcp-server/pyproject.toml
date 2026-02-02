@@ -1,17 +1,17 @@
 [project]
 name = "clp-mcp-server"
-version = "0.6.1-dev"
+version = "0.8.1-dev"
 description = "MCP server for CLP"
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "aiomysql>=0.2.0",
-    "click>=8.3.0",
-    "fastmcp>=2.12.4",
+    "aiomysql>=0.3.2",
+    "click>=8.3.1",
+    "fastmcp>=2.14.4",
     "msgpack>=1.1.2",
     "paginate>=0.5.7",
-    "pymongo>=4.15.3",
+    "pymongo>=4.16.0",
 ]
 
 [project.scripts]
@@ -27,9 +27,9 @@ clp = [
 ]
 dev = [
     "mypy>=1.16.0",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.2.0",
-    "pytest-env>=1.1.5",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-env>=1.2.0",
     "pytest-repeat>=0.9.4",
     "ruff>=0.11.12",
 ]
@@ -47,7 +47,7 @@ show_error_context = true
 show_error_end = true
 
 [tool.ruff]
-extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
+extend = "../../ruff.toml"
 
 [tool.uv]
 default-groups = ["clp", "dev"]

@@ -1,0 +1,181 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API Server",
+    "description": "API Server for CLP",
+    "contact": {
+      "name": "YScope"
+    },
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [],
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/query": {
+      "post": {
+        "tags": [],
+        "description": "Submits a new query job.",
+        "operationId": "query",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryConfig"
+              },
+              "example": {
+                "query_string": "*",
+                "dataset": "default",
+                "time_range_begin_millisecs": 0,
+                "time_range_end_millisecs": 17356896,
+                "ignore_case": true,
+                "max_num_results": 0,
+                "buffer_results_in_mongodb": true
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The URI to fetch the results of the submitted query.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResultsUri"
+                },
+                "example": {
+                  "query_results_uri": "/query_results/1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/query_results/{search_job_id}": {
+      "get": {
+        "tags": [],
+        "description": "Streams the results of a previously submitted query as Server-Sent Events (SSE).",
+        "operationId": "query_results",
+        "parameters": [
+          {
+            "name": "search_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream of query results. Each event contains a single line of the query result in JSON format.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "data: {\"timestamp\": 1633036800, \"message\": \"Example log message\"}\\n"
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "QueryConfig": {
+        "type": "object",
+        "description": "Defines the request configuration for submitting a search query.",
+        "required": [
+          "query_string"
+        ],
+        "properties": {
+          "buffer_results_in_mongodb": {
+            "type": "boolean",
+            "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
+          },
+          "dataset": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The dataset to search within. If not provided, only `default` dataset will be searched."
+          },
+          "ignore_case": {
+            "type": "boolean",
+            "description": "Whether the string match should be case-insensitive."
+          },
+          "max_num_results": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The maximum number of results to return. Set to `0` for no limit.",
+            "minimum": 0
+          },
+          "query_string": {
+            "type": "string",
+            "description": "The search query as a KQL string."
+          },
+          "time_range_begin_millisecs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The beginning timestamp (in epoch milliseconds) for the search range (inclusive)."
+          },
+          "time_range_end_millisecs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The ending timestamp (in epoch milliseconds) for the search range (inclusive)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryResultsUri": {
+        "type": "object",
+        "required": [
+          "query_results_uri"
+        ],
+        "properties": {
+          "query_results_uri": {
+            "type": "string",
+            "description": "The uri to get the query results."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

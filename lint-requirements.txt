@@ -1,6 +1,11 @@
-black>=24.4.2
+# C++
 clang-format>=21.1.2
 # Lock to v19.x until we can upgrade our code to fix new v20 issues.
 clang-tidy~=19.1
+
+# Python
 ruff>=0.4.4
+
+# YAML
+yamale>=6.1.0
 yamllint>=1.35.1

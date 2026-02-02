@@ -5,19 +5,16 @@ from typing import Any
 
 import aiomysql
 import msgpack
-from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME
+from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME, ClpDbNameType
 from pymongo import AsyncMongoClient
 
-from .constants import (
+from clp_mcp_server.constants import (
     POLLING_INTERVAL_SECONDS,
     QueryJobStatus,
     QueryJobType,
     SEARCH_MAX_NUM_RESULTS,
 )
-from .settings import (
-    CLP_DB_PASS,
-    CLP_DB_USER,
-)
+from clp_mcp_server.settings import CLP_DB_PASS, CLP_DB_USER
 
 
 class ClpConnector:
@@ -35,7 +32,7 @@ class ClpConnector:
             "port": clp_config.database.port,
             "user": CLP_DB_USER,
             "password": CLP_DB_PASS,
-            "db": clp_config.database.name,
+            "db": clp_config.database.names[ClpDbNameType.CLP],
         }
 
         self._webui_addr = f"http://{clp_config.webui.host}:{clp_config.webui.port}"

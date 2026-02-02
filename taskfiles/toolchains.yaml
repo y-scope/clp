@@ -1,9 +1,12 @@
 version: "3"
 
 includes:
+  remote: "../tools/yscope-dev-utils/exports/taskfiles/utils/remote.yaml"
   utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
+  G_HELM_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/helm"
+  G_HELM_TOOLCHAIN_ENV_FILE: "{{.G_HELM_TOOLCHAIN_DIR}}/env"
   G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
   G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
 
@@ -15,6 +18,42 @@ vars:
   G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-rust.md5"
 
 tasks:
+  helm:
+    run: "once"
+    vars:
+      CHART_TESTING_VERSION: "3.14.0"
+    cmds:
+      - "mkdir -p '{{.G_HELM_TOOLCHAIN_DIR}}'"
+      - task: "remote:download-and-extract-tar"
+        vars:
+          OUTPUT_DIR: "{{.G_HELM_TOOLCHAIN_DIR}}"
+          URL: "https://github.com/helm/chart-testing/releases/download/v{{.CHART_TESTING_VERSION}}\
+          /chart-testing_{{.CHART_TESTING_VERSION}}_{{OS}}_{{ARCH}}.tar.gz"
+          FILE_SHA256: >-
+            {{- if and (eq OS "linux") (eq ARCH "amd64") -}}
+              d16f0583616885423826241164ce1f6589c6fe5332fa74f374ebd2bd3cb3fe1f
+            {{- else if and (eq OS "linux") (eq ARCH "arm64") -}}
+              7b035bbbd0768fba33983e81c15445e33e9c8281d329100852a342ecfd0b16b7
+            {{- else if and (eq OS "darwin") (eq ARCH "arm64") -}}
+              db10dbbb42b110c7a5da5a3202908f32ad2ca6ad600d423426dc7886d09aad07
+            {{- else -}}
+              unsupported
+            {{- end }}
+          INCLUDE_PATTERNS: ["ct", "etc/chart_schema.yaml"]
+          NUM_COMPONENTS_TO_STRIP: "0"
+      - |-
+        export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
+        export HELM_INSTALL_DIR="{{.G_HELM_TOOLCHAIN_DIR}}"
+        curl --proto "=https" --tlsv1.2 --silent --show-error --fail \
+        https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash -s -- --no-sudo
+
+      # Create an environment file to configure the custom Helm toolchain location.
+      - |-
+        cat <<"EOF" > "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        #!/bin/sh
+        export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
+        EOF
+
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
     label: "toolchains-rust"
@@ -55,11 +94,13 @@ tasks:
       - |-
         cat <<EOF > "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         #!/bin/sh
+        # Set up environment for Rust toolchain
         export CARGO_HOME="{{.G_CARGO_HOME}}"
         export RUSTUP_HOME="{{.G_RUSTUP_HOME}}"
         . "{{.G_CARGO_HOME}}/env"
+        # Set up environment variable for Rust build directory
+        export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
         EOF
-        chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
 
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
@@ -67,7 +108,7 @@ tasks:
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
-        cargo install cargo-nextest
+        cargo install --locked cargo-nextest
         rustup set auto-self-update disable
 
       # This command must be last

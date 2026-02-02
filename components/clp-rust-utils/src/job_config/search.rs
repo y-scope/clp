@@ -14,7 +14,6 @@ pub struct SearchJobConfig {
     pub dataset: Option<String>,
     pub query_string: String,
     pub max_num_results: u32,
-    pub tags: Option<Vec<String>>,
     pub begin_timestamp: Option<i64>,
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,

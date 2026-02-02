@@ -1,0 +1,8 @@
+{{- include "clp.createStaticPv" (dict
+  "root" .
+  "component_category" "compression-worker"
+  "name" "tmp"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" .Values.clpConfig.tmp_directory
+) }}
