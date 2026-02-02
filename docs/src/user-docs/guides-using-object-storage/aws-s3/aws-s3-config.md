@@ -44,7 +44,7 @@ the fields in angle brackets (`<>`) with the appropriate values:
   compressed, you can append a trailing slash (`/`) after the `<all-logs-prefix>` value. This will
   prevent CLP from compressing logs with prefixes like `logs-private`. However, note that to
   compress all logs under the `logs/` prefix, you will need to include the trailing slash when
-  invoking [`sbin/compress-from-s3.sh`][compressing-logs-from-aws-s3].
+  invoking [sbin/compress-from-s3.sh][compressing-logs-from-aws-s3].
   :::
 
 ## Configuration for archive storage
