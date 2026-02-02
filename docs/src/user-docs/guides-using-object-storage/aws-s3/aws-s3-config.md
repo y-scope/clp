@@ -44,7 +44,7 @@ the fields in angle brackets (`<>`) with the appropriate values:
   compressed, you can append a trailing slash (`/`) after the `<all-logs-prefix>` value. This will
   prevent CLP from compressing logs with prefixes like `logs-private`. However, note that to
   compress all logs under the `logs/` prefix, you will need to include the trailing slash when
-  invoking `sbin/compress.sh` below.
+  invoking [`sbin/compress-from-s3.sh`][compressing-logs-from-aws-s3].
   :::
 
 ## Configuration for archive storage
@@ -165,5 +165,6 @@ the specific list of hosts that will access the web interface.
 [aws-cors-guide]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html
 [aws-permission-sets]: https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsetsconcept.html
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
+[compressing-logs-from-aws-s3]: using-clp-with-aws-s3.md#compressing-logs-from-aws-s3
 [uber-clp-blog-1]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer
