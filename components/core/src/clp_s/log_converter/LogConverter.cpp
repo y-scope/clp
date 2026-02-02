@@ -32,7 +32,7 @@ constexpr std::string_view cTimestampSchema{
         R"((Dec(ember){0,1}))[ /\-]\d{2,4})[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
         R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1})"
 };
-constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n\[\(:)"};
+constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
 }  // namespace
 
 auto LogConverter::convert_file(
