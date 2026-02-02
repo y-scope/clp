@@ -1,7 +1,6 @@
 """Session-scoped test log fixtures shared across integration tests."""
 
 import logging
-import shutil
 import subprocess
 
 import pytest
@@ -10,7 +9,10 @@ from tests.utils.config import (
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
-from tests.utils.utils import remove_path
+from tests.utils.utils import (
+    get_binary_path,
+    remove_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,14 +53,17 @@ def _download_and_extract_dataset(
     strip_leading_dir: bool = True,
 ) -> IntegrationTestLogs:
     """
+    Download and extract a dataset tarball for setting up the `IntegrationTestLogs` fixture, and
+    adjust its file permissions for test use.
+
     :param request: Provides access to the pytest cache.
     :param integration_test_path_config: See `IntegrationTestPathConfig`.
     :param name: Dataset name.
     :param tarball_url: Dataset tarball URL.
     :param strip_leading_dir: Whether to strip a single top-level directory from the tarball
         contents. Defaults to True.
-    :return: An IntegrationTestLogs instance with the dataset downloaded, extracted, and file
-        permissions adjusted for test use.
+    :return: An IntegrationTestLogs instance describing the downloaded and extracted logs.
+    :raises subprocess.CalledProcessError: If `curl`, `tar x`, or `chmod` fails.
     """
     integration_test_logs = IntegrationTestLogs(
         name=name,
@@ -76,14 +81,9 @@ def _download_and_extract_dataset(
     tarball_path_str = str(integration_test_logs.tarball_path)
     extract_path_str = str(integration_test_logs.extraction_dir)
 
-    curl_bin = shutil.which("curl")
-    if curl_bin is None:
-        err_msg = "curl executable not found"
-        raise RuntimeError(err_msg)
-
     # fmt: off
     curl_cmd = [
-        curl_bin,
+        get_binary_path("curl"),
         "--fail",
         "--location",
         "--output", tarball_path_str,
@@ -93,30 +93,21 @@ def _download_and_extract_dataset(
     # fmt: on
     subprocess.run(curl_cmd, check=True)
 
-    tar_bin = shutil.which("tar")
-    if tar_bin is None:
-        err_msg = "tar executable not found"
-        raise RuntimeError(err_msg)
-
     # fmt: off
     extract_cmd = [
-        tar_bin,
+        get_binary_path("tar"),
         "--extract",
         "--gzip",
         "--file", tarball_path_str,
         "-C", extract_path_str,
     ]
     # fmt: on
-    if has_leading_directory_component:
+    if strip_leading_dir:
         extract_cmd.extend(["--strip-components", "1"])
     subprocess.run(extract_cmd, check=True)
 
-    chmod_bin = shutil.which("chmod")
-    if chmod_bin is None:
-        err_msg = "chmod executable not found"
-        raise RuntimeError(err_msg)
-
     # Allow the downloaded and extracted contents to be deletable or overwritable
+    chmod_bin = get_binary_path("chmod")
     subprocess.run([chmod_bin, "-R", "gu+w", tarball_path_str], check=True)
     subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
