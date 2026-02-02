@@ -49,10 +49,11 @@ from AWS S3 and cache the stream files on AWS S3, but store archives on the loca
 
 1. This guide assumes you're able to configure, start, stop, and use CLP as described in the
    [clp-json quick-start guide](../../quick-start/clp-json.md).
-2. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
-3. An S3 bucket and key prefix where you wish to store compressed archives.
-4. An S3 bucket and key prefix where you wish to cache stream files.
-5. A [supported AWS authentication method](#supported-aws-authentication-methods) configured with
+2. Depending on which [use cases](#supported-uses) you require:
+   * An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
+   * An S3 bucket and key prefix where you wish to store compressed archives.
+   * An S3 bucket and key prefix where you wish to cache stream files.
+3. A [supported AWS authentication method](#supported-aws-authentication-methods) configured with
    the necessary permissions to access the S3 buckets and prefixes mentioned above.
 
    :::{note}
