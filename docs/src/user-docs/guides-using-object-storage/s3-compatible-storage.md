@@ -149,7 +149,7 @@ sbin/compress-from-s3.sh \
 :caption: Example: Compressing all objects under a prefix
 
 sbin/compress-from-s3.sh \
-  --timestamp-key timestamp \
+  --timestamp-key @timestamp \
   --dataset default \
   s3-key-prefix \
   http://10.0.0.1:9000/bucket/logs/
