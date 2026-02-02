@@ -10,7 +10,7 @@ from typing import Any, IO
 import yaml
 
 
-def clean_directory(directory: Path) -> None:
+def clear_directory(directory: Path) -> None:
     """
     Removes the contents of `directory` without removing `directory` itself.
 
@@ -20,10 +20,7 @@ def clean_directory(directory: Path) -> None:
         return
 
     for item in directory.iterdir():
-        if item.is_file() or item.is_symlink():
-            item.unlink()
-        elif item.is_dir():
-            shutil.rmtree(item)
+        remove_path(item)
 
 
 def get_binary_path(name: str) -> str:
@@ -107,6 +104,23 @@ def load_yaml_to_dict(path: Path) -> dict[str, Any]:
         raise TypeError(err_msg)
 
     return target_dict
+
+
+def remove_path(path_to_remove: Path) -> None:
+    """
+    Remove a file, directory, or symlink at `path_to_remove` if it exists.
+
+    :param path_to_remove:
+    :raise: Propagates `pathlib.Path.unlink`'s exceptions.
+    :raise: Propagates `shutil.rmtree`'s exceptions.
+    """
+    if not path_to_remove.exists():
+        return
+
+    if path_to_remove.is_dir() and not path_to_remove.is_symlink():
+        shutil.rmtree(path_to_remove)
+    else:
+        path_to_remove.unlink()
 
 
 def resolve_path_env_var(var_name: str) -> Path:

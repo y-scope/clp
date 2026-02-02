@@ -15,7 +15,7 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.utils import (
-    clean_directory,
+    clear_directory,
     unlink,
     validate_dir_exists,
     validate_file_exists,
@@ -140,7 +140,7 @@ class PackagePathConfig:
     def clear_package_archives(self) -> None:
         """Removes the contents of `clp-package/var/data/archives`."""
         archives_dir = self.clp_package_dir / "var" / "data" / "archives"
-        clean_directory(archives_dir)
+        clear_directory(archives_dir)
 
 
 @dataclass(frozen=True)

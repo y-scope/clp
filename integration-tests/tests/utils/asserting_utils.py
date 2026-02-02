@@ -6,13 +6,14 @@ import subprocess
 from typing import Any
 
 import pytest
+from clp_package_utils.general import EXTRACT_FILE_CMD
 from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
 from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageCompressionJob, PackageInstance, PackageTestConfig
 from tests.utils.docker_utils import list_running_services_in_compose_project
-from tests.utils.utils import is_dir_tree_content_equal, load_yaml_to_dict, unlink
+from tests.utils.utils import clear_directory, is_dir_tree_content_equal, load_yaml_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
         pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
 
 
-def verify_compression(
+def verify_package_compression(
     compression_job: PackageCompressionJob,
     package_test_config: PackageTestConfig,
 ) -> None:
@@ -119,7 +120,7 @@ def verify_compression(
     """
     mode = package_test_config.mode_config.mode_name
 
-    if mode in ("clp-json", "clp-presto"):
+    if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
         assert True
     elif mode == "clp-text":
@@ -128,11 +129,14 @@ def verify_compression(
         decompress_script_path = path_config.decompress_script_path
         decompression_dir = path_config.package_decompression_dir
         temp_config_file_path = package_test_config.temp_config_file_path
+
+        clear_directory(decompression_dir)
+
         decompress_cmd = [
             str(decompress_script_path),
             "--config",
             str(temp_config_file_path),
-            "x",
+            EXTRACT_FILE_CMD,
             "--extraction-dir",
             str(decompression_dir),
         ]
@@ -144,8 +148,9 @@ def verify_compression(
         path_to_dataset = compression_job.path_to_dataset
         output_path = decompression_dir / path_to_dataset.relative_to(path_to_dataset.anchor)
 
-        if not is_dir_tree_content_equal(path_to_dataset, output_path):
-            err_msg = f"Mismatch between clp input {path_to_dataset} and output {output_path}."
-            pytest.fail(err_msg)
-
-        unlink(decompression_dir)
+        try:
+            if not is_dir_tree_content_equal(path_to_dataset, output_path):
+                err_msg = f"Mismatch between clp input {path_to_dataset} and output {output_path}."
+                pytest.fail(err_msg)
+        finally:
+            clear_directory(decompression_dir)

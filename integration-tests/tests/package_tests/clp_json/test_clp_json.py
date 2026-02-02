@@ -12,7 +12,7 @@ from clp_py_utils.clp_config import (
 
 from tests.utils.asserting_utils import (
     validate_package_instance,
-    verify_compression,
+    verify_package_compression,
 )
 from tests.utils.clp_mode_utils import CLP_API_SERVER_COMPONENT, CLP_BASE_COMPONENTS
 from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
@@ -73,11 +73,11 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     # Compress a dataset.
     compression_job = PackageCompressionJob(
         path_to_dataset=(
-            resolve_path_env_var("INTEGRATION_TESTS_DIR")
+            resolve_path_env_var("INTEGRATION_TESTS_PROJECT_ROOT")
             / "tests"
             / "package_tests"
             / "clp_json"
-            / "sample_datasets"
+            / "data"
             / "json-multifile"
             / "logs"
         ),
@@ -90,7 +90,7 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     run_package_compression_script(compression_job, package_test_config)
 
     # Check the correctness of compression.
-    verify_compression(compression_job, package_test_config)
+    verify_package_compression(compression_job, package_test_config)
 
     log_msg = "test_clp_json_compression_json_multifile was successful."
     logger.info(log_msg)
