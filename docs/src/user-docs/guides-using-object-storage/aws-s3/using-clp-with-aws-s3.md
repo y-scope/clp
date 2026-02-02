@@ -1,7 +1,7 @@
 # Using CLP with AWS S3
 
-To compress logs from AWS S3, follow the steps in the section below. For all other operations, you
-should be able to use CLP as described in the
+To compress logs from AWS S3, follow the steps in the section below. For all other operations (e.g.,
+searching, viewing logs in the Web UI), use CLP as described in the
 [clp-json quick-start guide](../../quick-start/clp-json.md).
 
 ## Compressing logs from AWS S3
