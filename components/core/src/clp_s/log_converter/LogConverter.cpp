@@ -73,12 +73,13 @@ auto LogConverter::convert_file(
 
             auto const& event{parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
-            if (auto timestamp{event.get_timestamp()}; timestamp.has_value()) {
+            if (nullptr != event.get_timestamp()) {
+                auto const timestamp{event.get_timestamp()->to_string_view()};
                 auto const message_without_timestamp{
-                        std::string_view{message}.substr(timestamp->length())
+                        std::string_view{message}.substr(timestamp.length())
                 };
                 YSTDLIB_ERROR_HANDLING_TRYV(
-                        serializer.add_message(timestamp.value(), message_without_timestamp)
+                        serializer.add_message(timestamp, message_without_timestamp)
                 );
             } else {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));

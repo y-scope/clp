@@ -257,9 +257,9 @@ bool GrepCore::get_bounds_of_next_potential_var(
                         return false;
                     }
                     search_token = SearchToken{token.value()};
-                    search_token.m_type_ids_set.insert(search_token.get_type_ids()->at(0));
+                    search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
                 }
-                auto const& type = search_token.get_type_ids()->at(0);
+                auto const& type = search_token.m_type_ids_ptr->at(0);
                 if (type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
                     && type != static_cast<int>(log_surgeon::SymbolId::TokenEnd))
                 {

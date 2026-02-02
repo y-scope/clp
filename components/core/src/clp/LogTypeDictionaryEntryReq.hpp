@@ -24,8 +24,7 @@ concept LogTypeDictionaryEntryReq = requires(
         std::string_view& parsed_var_ref,
         size_t begin_pos,
         size_t placeholder_idx,
-        ir::VariablePlaceholder& placeholder_ref,
-        std::string_view static_text
+        ir::VariablePlaceholder& placeholder_ref
 ) {
     /**
      * Clears all internal state.
@@ -74,16 +73,6 @@ concept LogTypeDictionaryEntryReq = requires(
      * Adds a dictionary variable placeholder to the constant part of the logtype.
      */
     { entry.add_dictionary_var() } -> std::same_as<void>;
-
-    /**
-     * Adds an escape character.
-     */
-    { entry.add_escape() } -> std::same_as<void>;
-
-    /**
-     * Adds static text to the logtype, escaping any placeholder characters.
-     */
-    { entry.add_static_text(static_text) } -> std::same_as<void>;
 
     /**
      * @return The constant part of the logtype.
