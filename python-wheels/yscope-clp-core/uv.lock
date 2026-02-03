@@ -323,8 +323,11 @@ wheels = [
 
 [[package]]
 name = "yscope-clp-core"
-version = "0.7.1b1"
+version = "0.7.1b2"
 source = { editable = "." }
+dependencies = [
+    { name = "typing-extensions" },
+]
 
 [package.dev-dependencies]
 build = [
@@ -338,6 +341,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "typing-extensions", specifier = ">=4.15.0" }]
 
 [package.metadata.requires-dev]
 build = [
