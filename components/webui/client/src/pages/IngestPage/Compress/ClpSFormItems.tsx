@@ -18,7 +18,7 @@ const TIMESTAMP_KEY_HELPER_TEXT = (
         the command line without a timestamp filter. Certain characters require escaping. See the
         {" "}
         <Typography.Link
-            href={"https://docs.yscope.com/clp/main/user-docs/reference-json-search-syntax.html#characters-that-require-escaping"}
+            href={"https://docs.yscope.com/clp/v0.9.0/user-docs/reference-json-search-syntax.html#characters-that-require-escaping"}
             rel={"noopener"}
             target={"_blank"}
         >
