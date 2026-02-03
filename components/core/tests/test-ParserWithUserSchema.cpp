@@ -40,6 +40,7 @@ auto run_clp_compress(
         std::filesystem::path const& output_path,
         std::filesystem::path const& input_path
 ) -> int;
+[[nodiscard]] auto get_config_schema_files_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_tests_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_test_schema_files_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_test_queries_dir() -> std::filesystem::path;
@@ -48,6 +49,11 @@ auto run_clp_compress(
 auto get_tests_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
     return std::filesystem::canonical(current_file_path.parent_path());
+}
+
+auto get_config_schema_files_dir() -> std::filesystem::path {
+    std::filesystem::path const current_file_path{__FILE__};
+    return std::filesystem::canonical(current_file_path.parent_path().parent_path()) / "config";
 }
 
 auto get_test_schema_files_dir() -> std::filesystem::path {
@@ -145,6 +151,11 @@ TEST_CASE("Test creating schema parser", "[LALR1Parser][SchemaParser]") {
 TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]") {
     auto const schema_file_path = get_test_schema_files_dir() / "schema_with_delimiters.txt";
     generate_log_parser(schema_file_path.string());
+}
+
+TEST_CASE("Test creating log parser from config schema", "[LALR1Parser][LogParser]") {
+    auto const schema_file_path = get_config_schema_files_dir() / "schemas.txt";
+    REQUIRE_NOTHROW(generate_log_parser(schema_file_path.string()));
 }
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
