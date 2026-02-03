@@ -334,7 +334,7 @@ wheels = [
 
 [[package]]
 name = "clp-mcp-server"
-version = "0.8.1.dev0"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiomysql" },
@@ -381,7 +381,7 @@ dev = [
 
 [[package]]
 name = "clp-py-utils"
-version = "0.8.1.dev0"
+version = "0.9.0"
 source = { editable = "../clp-py-utils" }
 dependencies = [
     { name = "boto3" },
