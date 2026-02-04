@@ -37,6 +37,8 @@ set(
         ../../clp/ffi/SchemaTree.cpp
         ../../clp/ffi/SchemaTree.hpp
         ../../clp/ffi/StringBlob.hpp
+        ../../clp/FileDescriptor.cpp
+        ../../clp/FileDescriptor.hpp
         ../../clp/FileReader.cpp
         ../../clp/FileReader.hpp
         ../../clp/GlobalMetadataDBConfig.cpp
@@ -64,6 +66,8 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/ReadOnlyMemoryMappedFile.cpp
+        ../../clp/ReadOnlyMemoryMappedFile.hpp
         ../../clp/streaming_compression/Constants.hpp
         ../../clp/streaming_compression/Decompressor.hpp
         ../../clp/streaming_compression/zstd/Decompressor.cpp
@@ -73,6 +77,8 @@ set(
         ../../clp/time_types.hpp
         ../../clp/TraceableException.hpp
         ../../clp/type_utils.hpp
+        ../../clp/utf8_utils.cpp
+        ../../clp/utf8_utils.hpp
         ../../clp/VariableDictionaryEntryReq.hpp
         ../../clp/VariableDictionaryReaderReq.hpp
         ../../clp/VariableDictionaryWriterReq.hpp
@@ -81,6 +87,9 @@ set(
         ../ArchiveReader.hpp
         ../ArchiveReaderAdaptor.cpp
         ../ArchiveReaderAdaptor.hpp
+        ../ArchiveStats.cpp
+        ../ArchiveStats.hpp
+        ../Array.hpp
         ../ColumnReader.cpp
         ../ColumnReader.hpp
         ../DictionaryReader.hpp
@@ -92,6 +101,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../FloatFormatEncoding.cpp
+        ../FloatFormatEncoding.hpp
         ../InputConfig.cpp
         ../InputConfig.hpp
         ../PackedStreamReader.cpp
