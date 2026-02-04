@@ -1027,7 +1027,6 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
         }
         return EvaluatedValue::Unknown;
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
-        // TODO clpsls: skip if expression points to log type column
         if ((filter->get_operation() == FilterOperation::EXISTS
              || filter->get_operation() == FilterOperation::NEXISTS)
             && (!filter->get_column()->has_unresolved_tokens()

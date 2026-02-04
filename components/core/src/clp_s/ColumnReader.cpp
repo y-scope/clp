@@ -7,11 +7,11 @@
 
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
-
-#include "BufferViewReader.hpp"
-#include "ColumnWriter.hpp"
-#include "FloatFormatEncoding.hpp"
-#include "Utils.hpp"
+#include <clp_s/BufferViewReader.hpp>
+#include <clp_s/ColumnWriter.hpp>
+#include <clp_s/FloatFormatEncoding.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/Utils.hpp>
 
 namespace clp_s {
 void Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
@@ -145,8 +145,9 @@ std::variant<int64_t, double, std::string, uint8_t> ClpStringColumnReader::extra
     return message;
 }
 
-void
-ClpStringColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
+auto
+ClpStringColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+        -> void {
     auto value = m_logtypes[cur_message];
     int64_t logtype_id = ClpStringColumnWriter::get_encoded_log_dict_id(value);
     auto& entry = m_log_dict->get_entry(logtype_id);
@@ -170,7 +171,7 @@ void ClpStringColumnReader::extract_escaped_string_value_into_buffer(
         uint64_t cur_message,
         std::string& buffer
 ) {
-    if (false == m_is_array) {
+    if (NodeType::UnstructuredArray != m_type) {
         // TODO: escape while decoding instead of after.
         std::string tmp;
         extract_string_value_into_buffer(cur_message, tmp);

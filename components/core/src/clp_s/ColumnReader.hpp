@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <variant>
 
 #include "BufferViewReader.hpp"
@@ -235,27 +236,21 @@ private:
 
 class ClpStringColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     ClpStringColumnReader(
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
-            bool is_array = false
+            NodeType type
     )
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
-              m_is_array(is_array) /*, encoded_vars_index_(0)*/ {}
-
-    // Destructor
-    ~ClpStringColumnReader() override = default;
+              m_type(type) {}
 
     // Methods inherited from BaseColumnReader
     void load(BufferViewReader& reader, uint64_t num_messages) override;
 
-    NodeType get_type() override {
-        return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
-    }
+    auto get_type() -> NodeType override { return m_type; }
 
     std::variant<int64_t, double, std::string, uint8_t> extract_value(
             uint64_t cur_message
@@ -287,7 +282,7 @@ private:
     UnalignedMemSpan<uint64_t> m_logtypes;
     UnalignedMemSpan<int64_t> m_encoded_vars;
 
-    bool m_is_array;
+    NodeType m_type;
 };
 
 class VariableStringColumnReader : public BaseColumnReader {

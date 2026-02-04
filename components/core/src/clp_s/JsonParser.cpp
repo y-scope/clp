@@ -1457,8 +1457,6 @@ bool JsonParser::check_and_log_curl_error(
 
 auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
         -> ystdlib::error_handling::Result<void> {
-    static constexpr std::string_view cLogType{"LogType"};
-
     (*m_log_surgeon_parser).reset();
     size_t offset{};
     std::string str{view};
@@ -1530,17 +1528,23 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
                 int32_t node_id{};
-                auto const float_format_result{get_float_encoding(token.to_string_view())};
-                if (false == float_format_result.has_error()
+                encoded_variable_t encoded_var{};
+                if (auto const float_format{get_float_encoding(token.to_string_view())};
+                    float_format.has_value()
                     && round_trip_is_identical(
                             token.to_string_view(),
                             std::stod(token.to_string()),
-                            float_format_result.value()
+                            float_format.value()
+                    )
+                    && clp::EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                            token.to_string_view(),
+                            encoded_var
                     ))
+
                 {
                     m_current_parsed_message.add_unordered_value(
                             std::stod(token.to_string()),
-                            float_format_result.value()
+                            float_format.value()
                     );
                     node_id = m_archive_writer->add_node(
                             parent_node_id,
@@ -1548,7 +1552,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                             token_name
                     );
                     logtype.m_dict_entry.add_float_var();
-                    logtype.m_encoded_vars.push_back(float_format_result.value());
+                    logtype.m_encoded_vars.push_back(encoded_var);
                 } else {
                     m_current_parsed_message.add_unordered_value(token.to_string_view());
                     node_id = m_archive_writer->add_node(
@@ -1599,11 +1603,21 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
         }
     }
 
+    // TODO change the logtype to have var names, potentially share columns since encoded_vars
+    // should be identical.
     m_current_parsed_message.add_unordered_value(logtype);
-    m_current_schema.insert_unordered(
-            m_archive_writer->add_node(parent_node_id, NodeType::ClpString, cLogType)
-    );
+    m_current_schema.insert_unordered(m_archive_writer->add_node(
+            parent_node_id,
+            NodeType::ClpString,
+            constants::cLogTypeNodeName
+    ));
     YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(logtype.m_dict_entry));
+    m_current_parsed_message.add_unordered_value(logtype);
+    m_current_schema.insert_unordered(m_archive_writer->add_node(
+            parent_node_id,
+            NodeType::ClpString,
+            constants::cFullMatchNodeName
+    ));
     m_current_schema.end_unordered_object(msg_start);
     return ystdlib::error_handling::success();
 }
@@ -1614,20 +1628,21 @@ auto JsonParser::store_capture_groups(
         int32_t root_var_node_id,
         ParsedMessage::LogType& logtype
 ) -> ystdlib::error_handling::Result<void> {
-    static constexpr std::string_view cFullMatch{"FullMatch"};
     auto const& log_parser{m_log_surgeon_parser->get_log_parser()};
     auto const root_var_type{root_var.get_type_ids()->at(0)};
     auto const root_var_name{log_parser.get_id_symbol(root_var_type)};
 
     auto capture_start{m_current_schema.start_unordered_object(NodeType::CompositeVar)};
 
-    m_current_schema.insert_unordered(
-            m_archive_writer->add_node(root_var_node_id, NodeType::VarString, cFullMatch)
-    );
+    m_current_schema.insert_unordered(m_archive_writer->add_node(
+            root_var_node_id,
+            NodeType::VarString,
+            constants::cFullMatchNodeName
+    ));
     m_current_parsed_message.add_unordered_value(root_var.to_string_view());
     YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
             root_var.to_string_view(),
-            fmt::format("{}.{}", root_var_name, cFullMatch)
+            fmt::format("{}.{}", root_var_name, constants::cFullMatchNodeName)
     ));
 
     auto prev_leaf_end_pos{root_var.get_start_pos()};

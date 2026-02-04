@@ -289,7 +289,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats.size(); ++i) {
                 auto stat{logtype_stats.at(i)};
                 auto message{fmt::format(
-                        "{{\"id\":{},\"count\":{},\"logtype\":\"{}\"}}\n",
+                        "{{\"id\":{},\"count\":{},\"log_type\":\"{}\"}}\n",
                         i,
                         stat.get_count(),
                         logtype_dict->get_value(i)

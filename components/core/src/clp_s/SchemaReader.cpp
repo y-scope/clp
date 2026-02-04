@@ -769,6 +769,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                     column_idx++;
                     break;
                 }
+                case NodeType::ClpString:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                     m_reordered_columns.push_back(m_columns[column_idx]);
@@ -779,7 +780,6 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                 case NodeType::LogMessage:
                 case NodeType::Object:
                 case NodeType::StructuredArray:
-                case NodeType::ClpString:
                 case NodeType::NullValue:
                 case NodeType::DateString:
                 case NodeType::UnstructuredArray:

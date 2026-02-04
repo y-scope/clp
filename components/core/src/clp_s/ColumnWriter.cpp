@@ -141,7 +141,11 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
                     }
                 } else if constexpr (std::is_same_v<T, clp_s::ParsedMessage::LogType>) {
                     m_logtype_entry = v.m_dict_entry;
-                    m_encoded_vars = v.m_encoded_vars;
+                    m_encoded_vars.insert(
+                            m_encoded_vars.end(),
+                            v.m_encoded_vars.begin(),
+                            v.m_encoded_vars.end()
+                    );
                 } else {
                     throw clp_s::TraceableException(
                             clp_s::ErrorCodeBadParam,
