@@ -108,7 +108,7 @@ def _download_and_extract_dataset(
 
     # Allow the downloaded and extracted contents to be deletable or overwritable
     chmod_bin = get_binary_path("chmod")
-    subprocess.run([chmod_bin, "-R", "gu+w", tarball_path_str], check=True)
+    subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
     subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)

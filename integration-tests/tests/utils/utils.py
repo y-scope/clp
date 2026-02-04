@@ -101,10 +101,11 @@ def remove_path(path_to_remove: Path) -> None:
     :raise: Propagates `pathlib.Path.unlink`'s exceptions.
     :raise: Propagates `shutil.rmtree`'s exceptions.
     """
-    if not path_to_remove.exists():
+    if path_to_remove.is_symlink():
+        path_to_remove.unlink()
+    elif not path_to_remove.exists():
         return
-
-    if path_to_remove.is_dir() and not path_to_remove.is_symlink():
+    elif path_to_remove.is_dir():
         shutil.rmtree(path_to_remove)
     else:
         path_to_remove.unlink()
