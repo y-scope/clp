@@ -119,7 +119,7 @@ SQS listener ingestion jobs carry the following limitations:
 :::
 
 [aws-s3-event-notifications]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html#step2-enable-notification
-[clp-s3-logs-input-config]: ./guides-using-object-storage/clp-config.md#configuration-for-input-logs
+[clp-s3-logs-input-config]: ./guides-using-object-storage/aws-s3/clp-config.md#configuration-for-input-logs
 [s3-scanner-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json#/IngestionJob/create_s3_scanner_job
 [sqs]: https://docs.aws.amazon.com/sqs/
 [sqs-listener-api]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/log-ingestor-openapi.json#/IngestionJob/create_sqs_listener_job
