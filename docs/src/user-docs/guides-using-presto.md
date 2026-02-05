@@ -131,13 +131,13 @@ Using Presto with CLP requires:
 5. Start a Presto cluster by running:
 
     ```bash
-    docker compose up --detach
+    docker compose up --wait
     ```
 
     * To use more than one Presto worker, you can use the `--scale` option as follows:
 
       ```bash
-      docker compose up --scale presto-worker=<num-workers>
+      docker compose up --wait --scale presto-worker=<num-workers>
       ```
 
       * Replace `<num-workers>` with the number of Presto worker nodes you want to run.
