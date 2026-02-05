@@ -24,7 +24,7 @@
 #include <clp/VariableDictionaryReaderReq.hpp>
 
 namespace clp {
-#ifdef CLP_BUILD_TESTING
+#ifdef CLP_ENABLE_TESTS_IN_CPP
 class SchemaSearcherTest;
 #endif
 
@@ -66,7 +66,7 @@ class SchemaSearcherTest;
  * generation, and per-variable processing.
  */
 class SchemaSearcher {
-#ifdef CLP_BUILD_TESTING
+#ifdef CLP_ENABLE_TESTS_IN_CPP
     friend class SchemaSearcherTest;
 #endif
 
