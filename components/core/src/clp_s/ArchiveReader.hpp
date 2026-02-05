@@ -2,10 +2,16 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <map>
+#include <optional>
 #include <set>
 #include <span>
 #include <string_view>
 #include <utility>
+#include <vector>
+
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ArchiveStats.hpp>
 
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
@@ -27,15 +33,26 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    struct Options {
+        Options() = default;
+
+        Options(NetworkAuthOption network_auth, bool experimental)
+                : m_network_auth{network_auth},
+                  m_experimental{experimental} {}
+
+        NetworkAuthOption m_network_auth{};
+        bool m_experimental{false};
+    };
+
     // Constructor
     ArchiveReader() : m_is_open(false) {}
 
     /**
      * Opens an archive for reading.
      * @param archive_path
-     * @param network_auth
+     * @param options
      */
-    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+    void open(Path const& archive_path, Options const& options);
 
     /**
      * Reads the dictionaries and metadata.
@@ -76,6 +93,11 @@ public:
         m_array_dict->read_entries(lazy);
         return m_array_dict;
     }
+
+    /**
+     * Reads the experimental statistics from the archive.
+     */
+    auto read_experimental_stats() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Reads the metadata from the archive.
@@ -149,7 +171,11 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+
+    auto get_experimental_stats() const -> std::optional<ExperimentalStats> const& {
+        return m_experimental_stats;
+    }
 
 private:
     /**
@@ -223,6 +249,8 @@ private:
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
+
+    std::optional<ExperimentalStats> m_experimental_stats;
 };
 }  // namespace clp_s
 
