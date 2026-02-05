@@ -1,5 +1,6 @@
 """Functions for facilitating the port connections for the CLP package."""
 
+import logging
 import socket
 from dataclasses import dataclass
 from typing import Any
@@ -8,6 +9,10 @@ from clp_py_utils.clp_config import (
     ClpConfig,
     REDUCER_COMPONENT_NAME,
 )
+
+from tests.utils.logging_utils import construct_log_err_msg
+
+logger = logging.getLogger(__name__)
 
 # Port constants.
 MIN_NON_PRIVILEGED_PORT = 1024
@@ -76,6 +81,7 @@ def _check_ports_available(host: str, port_range: range) -> None:
                 f"Port '{port}' in the desired range ({range_str}) is already in use. "
                 "Choose a different port range for the test environment."
             )
+            logger.error(construct_log_err_msg(err_msg))
             raise ValueError(err_msg)
 
 
@@ -160,7 +166,8 @@ def _validate_port_range_bounds(port_range: range) -> None:
         required_range_str = _format_port_range(port_range)
         valid_range_str = _format_port_range(VALID_PORT_RANGE)
         err_msg = (
-            f"The port range derived from --base-port ({required_range_str}) must fall within"
+            f"The port range derived from '--base-port' ({required_range_str}) must fall within"
             f" the range of valid ports ({valid_range_str})."
         )
+        logger.error(construct_log_err_msg(err_msg))
         raise ValueError(err_msg)
