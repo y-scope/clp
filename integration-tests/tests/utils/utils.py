@@ -93,6 +93,24 @@ def load_yaml_to_dict(path: Path) -> dict[str, Any]:
     return target_dict
 
 
+def remove_path(path_to_remove: Path) -> None:
+    """
+    Remove a file, directory, or symlink at `path_to_remove` if it exists.
+
+    :param path_to_remove:
+    :raise: Propagates `pathlib.Path.unlink`'s exceptions.
+    :raise: Propagates `shutil.rmtree`'s exceptions.
+    """
+    if path_to_remove.is_symlink():
+        path_to_remove.unlink()
+    elif not path_to_remove.exists():
+        return
+    elif path_to_remove.is_dir():
+        shutil.rmtree(path_to_remove)
+    else:
+        path_to_remove.unlink()
+
+
 def resolve_path_env_var(var_name: str) -> Path:
     """
     :param var_name: Name of the environment variable holding a path.

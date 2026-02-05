@@ -1,7 +1,6 @@
 """Session-scoped test log fixtures shared across integration tests."""
 
 import logging
-import shutil
 import subprocess
 
 import pytest
@@ -10,7 +9,10 @@ from tests.utils.config import (
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
-from tests.utils.utils import unlink
+from tests.utils.utils import (
+    get_binary_path,
+    remove_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,21 @@ def _download_and_extract_dataset(
     integration_test_path_config: IntegrationTestPathConfig,
     name: str,
     tarball_url: str,
+    strip_leading_dir: bool = True,
 ) -> IntegrationTestLogs:
+    """
+    Download and extract a dataset tarball for setting up the `IntegrationTestLogs` fixture, and
+    adjust its file permissions for test use.
+
+    :param request: Provides access to the pytest cache.
+    :param integration_test_path_config: See `IntegrationTestPathConfig`.
+    :param name: Dataset name.
+    :param tarball_url: Dataset tarball URL.
+    :param strip_leading_dir: Whether to strip a single top-level directory from the tarball
+        contents. Defaults to True.
+    :return: An IntegrationTestLogs instance describing the downloaded and extracted logs.
+    :raises subprocess.CalledProcessError: If `curl`, `tar x`, or `chmod` fails.
+    """
     integration_test_logs = IntegrationTestLogs(
         name=name,
         tarball_url=tarball_url,
@@ -58,38 +74,42 @@ def _download_and_extract_dataset(
         logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
         return integration_test_logs
 
-    curl_bin = shutil.which("curl")
-    if curl_bin is None:
-        err_msg = "curl executable not found"
-        raise RuntimeError(err_msg)
+    remove_path(integration_test_logs.tarball_path)
+    remove_path(integration_test_logs.extraction_dir)
+    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
 
-    try:
-        # fmt: off
-        curl_cmds = [
-            curl_bin,
-            "--fail",
-            "--location",
-            "--output", str(integration_test_logs.tarball_path),
-            "--show-error",
-            tarball_url,
-        ]
-        # fmt: on
-        subprocess.run(curl_cmds, check=True)
+    tarball_path_str = str(integration_test_logs.tarball_path)
+    extract_path_str = str(integration_test_logs.extraction_dir)
 
-        unlink(integration_test_logs.extraction_dir)
-        shutil.unpack_archive(
-            integration_test_logs.tarball_path, integration_test_logs.extraction_dir
-        )
-    except Exception as e:
-        err_msg = f"Failed to download and extract dataset `{name}`."
-        raise RuntimeError(err_msg) from e
+    # fmt: off
+    curl_cmd = [
+        get_binary_path("curl"),
+        "--fail",
+        "--location",
+        "--output", tarball_path_str,
+        "--show-error",
+        tarball_url,
+    ]
+    # fmt: on
+    subprocess.run(curl_cmd, check=True)
 
-    # Allow the extracted content to be deletable or overwritable
-    chmod_bin = shutil.which("chmod")
-    if chmod_bin is None:
-        err_msg = "chmod executable not found"
-        raise RuntimeError(err_msg)
-    subprocess.run([chmod_bin, "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
+    # fmt: off
+    extract_cmd = [
+        get_binary_path("tar"),
+        "--extract",
+        "--gzip",
+        "--file", tarball_path_str,
+        "-C", extract_path_str,
+    ]
+    # fmt: on
+    if strip_leading_dir:
+        extract_cmd.extend(["--strip-components", "1"])
+    subprocess.run(extract_cmd, check=True)
+
+    # Allow the downloaded and extracted contents to be deletable or overwritable
+    chmod_bin = get_binary_path("chmod")
+    subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
+    subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)
