@@ -20,6 +20,7 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::ClpString:
+        case NodeType::LogType:
             return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:
             return clp_s::search::ast::LiteralType::VarStringT;

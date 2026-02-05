@@ -5,7 +5,6 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <ystdlib/error_handling/Result.hpp>

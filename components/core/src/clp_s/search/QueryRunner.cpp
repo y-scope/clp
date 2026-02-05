@@ -76,7 +76,10 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
         auto* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
         auto* var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
         auto* date_reader = dynamic_cast<DateStringColumnReader*>(column_reader);
-        if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
+        if (nullptr != clp_reader
+            && (NodeType::ClpString == clp_reader->get_type()
+                || NodeType::LogType == clp_reader->get_type()))
+        {
             m_clp_string_readers[column_id].push_back(clp_reader);
         } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
             m_var_string_readers[column_id].push_back(var_reader);
@@ -946,7 +949,8 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             if (col->matches_type(node_to_literal_type(tree_node_type))) {
                 auto literal_type = node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
-                if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
+                if (NodeType::ClpString != tree_node_type && NodeType::LogType != tree_node_type
+                    && NodeType::VarString != tree_node_type
                     && NodeType::DateString != tree_node_type)
                 {
                     m_wildcard_to_searched_basic_columns[col].insert(node);

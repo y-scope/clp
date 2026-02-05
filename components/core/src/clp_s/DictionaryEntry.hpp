@@ -79,8 +79,9 @@ public:
      * @param placeholder
      * @return The placeholder's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t
-    get_placeholder_info(size_t placeholder_ix, clp::ir::VariablePlaceholder& placeholder) const;
+    auto
+    get_placeholder_info(size_t placeholder_ix, clp::ir::VariablePlaceholder& placeholder) const
+            -> size_t;
 
     /**
      * Adds a constant to the logtype
@@ -94,18 +95,21 @@ public:
      * Adds an int variable placeholder
      */
     void add_int_var();
+
     /**
      * Adds a float variable placeholder
      */
     void add_float_var();
+
     /**
      * Adds a dictionary variable placeholder
      */
     void add_dictionary_var();
+
     /**
      * Adds an escape character
      */
-    void add_escape();
+    auto add_escape() -> void;
 
     /**
      * Adds static text to the logtype, escaping any placeholder characters.
@@ -116,7 +120,7 @@ public:
      * Gets the size (in-memory) of the data contained in this entry
      * @return Size of the data contained in this entry
      */
-    size_t get_data_size() const;
+    auto get_data_size() const -> size_t;
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype

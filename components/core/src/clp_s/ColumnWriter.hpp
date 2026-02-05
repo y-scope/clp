@@ -2,12 +2,11 @@
 #define CLP_S_COLUMNWRITER_HPP
 
 #include <utility>
-#include <variant>
 #include <vector>
 
-#include <clp_s/ArchiveStats.hpp>
+#include <clp/Defs.h>
+#include <clp_s/DictionaryEntry.hpp>
 
-#include "../clp/Defs.h"
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
 #include "FloatFormatEncoding.hpp"

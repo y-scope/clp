@@ -7,13 +7,13 @@
 #include <utility>
 #include <variant>
 
-#include "BufferViewReader.hpp"
-#include "DictionaryReader.hpp"
-#include "FloatFormatEncoding.hpp"
-#include "SchemaTree.hpp"
-#include "TimestampDictionaryReader.hpp"
-#include "Utils.hpp"
-#include "ZstdDecompressor.hpp"
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/BufferViewReader.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/FloatFormatEncoding.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
+#include <clp_s/Utils.hpp>
 
 namespace clp_s {
 class BaseColumnReader {
@@ -240,40 +240,42 @@ public:
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
-            NodeType type
+            NodeType type,
+            VariableStats const* var_stats
     )
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
-              m_type(type) {}
+              m_type(type),
+              m_var_stats(var_stats) {}
 
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
     auto get_type() -> NodeType override { return m_type; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
-    void
-    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
     /**
      * Gets the encoded id of the variable
      * @param cur_message
      * @return The encoded logtype id
      */
-    int64_t get_encoded_id(uint64_t cur_message);
+    auto get_encoded_id(uint64_t cur_message) -> int64_t;
 
     /**
      * Gets the encoded variables
      * @param cur_message
      * @return Encoded variables in a span
      */
-    UnalignedMemSpan<int64_t> get_encoded_vars(uint64_t cur_message);
+    auto get_encoded_vars(uint64_t cur_message) -> UnalignedMemSpan<int64_t>;
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -283,6 +285,7 @@ private:
     UnalignedMemSpan<int64_t> m_encoded_vars;
 
     NodeType m_type;
+    VariableStats const* m_var_stats;
 };
 
 class VariableStringColumnReader : public BaseColumnReader {
@@ -319,7 +322,7 @@ public:
      * @param cur_message
      * @return The encoded logtype id
      */
-    int64_t get_variable_id(uint64_t cur_message);
+    uint64_t get_variable_id(uint64_t cur_message);
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;

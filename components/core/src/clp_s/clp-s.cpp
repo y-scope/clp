@@ -283,32 +283,35 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             return 2;
         }
         archive_reader->read_dictionaries_and_metadata();
+        auto const stats{archive_reader->get_experimental_stats()};
+        if (false == stats.has_value()) {
+            SPDLOG_ERROR("Failed to get experimental stats");
+            return 3;
+        }
         if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery == query) {
             auto logtype_dict{archive_reader->get_log_type_dictionary()};
-            auto logtype_stats{archive_reader->get_experimental_stats().m_logtype_stats};
-            for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats.size(); ++i) {
-                auto stat{logtype_stats.at(i)};
+            for (clp::logtype_dictionary_id_t i{0}; i < stats->m_logtype_stats.size(); ++i) {
+                auto logtype_stat{stats->m_logtype_stats.at(i)};
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"log_type\":\"{}\"}}\n",
                         i,
-                        stat.get_count(),
+                        logtype_stat.get_count(),
                         logtype_dict->get_value(i)
                 )};
                 output_handler.value()->write(message);
             }
         } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery == query) {
             auto var_dict{archive_reader->get_variable_dictionary()};
-            auto var_stats{archive_reader->get_experimental_stats().m_var_stats};
-            for (clp::variable_dictionary_id_t i{0}; i < var_stats.size(); ++i) {
-                auto stat{var_stats.at(i)};
-                if (0 == stat.get_count()) {
+            for (clp::variable_dictionary_id_t i{0}; i < stats->m_var_stats.size(); ++i) {
+                auto var_stat{stats->m_var_stats.at(i)};
+                if (0 == var_stat.get_count()) {
                     continue;
                 }
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"type\":\"{}\",\"variable\":\"{}\"}}\n",
                         i,
-                        stat.get_count(),
-                        stat.get_type(),
+                        var_stat.get_count(),
+                        var_stat.get_type(),
                         var_dict->get_value(i)
                 )};
                 output_handler.value()->write(message);
@@ -316,7 +319,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         }
         if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
             SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
-            return 3;
+            return 4;
         }
         archive_reader->close();
     }

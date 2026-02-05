@@ -20,6 +20,8 @@ class Array {
 public:
     [[nodiscard]] auto at(Index i) -> Element& { return m_array.at(i); }
 
+    [[nodiscard]] auto at(Index i) const -> Element const& { return m_array.at(i); }
+
     auto at_or_create(Index id) -> Element&;
 
     auto at_or_create(Index id, Element e) -> Element&;

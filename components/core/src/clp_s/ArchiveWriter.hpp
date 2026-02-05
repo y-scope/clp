@@ -219,13 +219,9 @@ public:
      * variable list.
      * @param var
      * @param logtype
-     * @param encoded_vars
      */
-    auto add_dict_var_to_logtype(
-            std::string_view var,
-            LogTypeDictionaryEntry& logtype,
-            std::vector<encoded_variable_t>& encoded_vars
-    ) -> void;
+    auto add_dict_var_to_logtype(std::string_view var, LogTypeDictionaryEntry& logtype)
+            -> encoded_variable_t;
 
     /**
      * Update the stats for the given log type, adding it to the log type dictionary if necessary.

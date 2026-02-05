@@ -1517,11 +1517,10 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                     node_id = m_archive_writer
                                       ->add_node(parent_node_id, NodeType::VarString, token_name);
                     m_current_parsed_message.add_unordered_value(token.to_string_view());
-                    m_archive_writer->add_dict_var_to_logtype(
+                    logtype.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
                             token.to_string_view(),
-                            logtype.m_dict_entry,
-                            logtype.m_encoded_vars
-                    );
+                            logtype.m_dict_entry
+                    ));
                 }
                 m_current_schema.insert_unordered(node_id);
                 break;
@@ -1560,11 +1559,10 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                             NodeType::DictionaryFloat,
                             token_name
                     );
-                    m_archive_writer->add_dict_var_to_logtype(
+                    logtype.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
                             token.to_string_view(),
-                            logtype.m_dict_entry,
-                            logtype.m_encoded_vars
-                    );
+                            logtype.m_dict_entry
+                    ));
                 }
                 m_current_schema.insert_unordered(node_id);
                 break;
@@ -1578,11 +1576,10 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                             NodeType::VarString,
                             token_name
                     ));
-                    m_archive_writer->add_dict_var_to_logtype(
+                    logtype.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
                             token.to_string_view(),
-                            logtype.m_dict_entry,
-                            logtype.m_encoded_vars
-                    );
+                            logtype.m_dict_entry
+                    ));
                     YSTDLIB_ERROR_HANDLING_TRYV(
                             m_archive_writer->update_var_stats(token.to_string_view(), token_name)
                     );
@@ -1603,12 +1600,10 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
         }
     }
 
-    // TODO change the logtype to have var names, potentially share columns since encoded_vars
-    // should be identical.
     m_current_parsed_message.add_unordered_value(logtype);
     m_current_schema.insert_unordered(m_archive_writer->add_node(
             parent_node_id,
-            NodeType::ClpString,
+            NodeType::LogType,
             constants::cLogTypeNodeName
     ));
     YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(logtype.m_dict_entry));
@@ -1671,11 +1666,10 @@ auto JsonParser::store_capture_groups(
         if (capture_match.m_leaf) {
             auto static_text{root_var.get_sub_token(prev_leaf_end_pos, capture.get_start_pos())};
             logtype.m_dict_entry.add_static_text(static_text.to_string_view());
-            m_archive_writer->add_dict_var_to_logtype(
+            logtype.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
                     capture.to_string_view(),
-                    logtype.m_dict_entry,
-                    logtype.m_encoded_vars
-            );
+                    logtype.m_dict_entry
+            ));
             prev_leaf_end_pos = capture.get_end_pos();
         }
     }

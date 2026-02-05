@@ -22,7 +22,7 @@ using clp::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
-size_t LogTypeDictionaryEntry::get_data_size() const {
+auto LogTypeDictionaryEntry::get_data_size() const -> size_t {
     // NOTE: sizeof(vector[0]) is executed at compile time so there's no risk of an exception at
     // runtime
     return sizeof(m_id) + m_value.length()
@@ -204,7 +204,7 @@ void LogTypeDictionaryEntry::decode_log_type() {
     decode_log_type(escaped_value);
 }
 
-size_t VariableDictionaryEntry::get_data_size() const {
+auto VariableDictionaryEntry::get_data_size() const -> size_t {
     return sizeof(m_id) + m_value.length();
 }
 

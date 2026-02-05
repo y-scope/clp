@@ -348,6 +348,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(new DictionaryFloatColumnWriter(id, m_var_dict));
                 break;
             case NodeType::ClpString:
+            case NodeType::LogType:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
             case NodeType::VarString:
@@ -496,14 +497,9 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto ArchiveWriter::add_dict_var_to_logtype(
-        std::string_view var,
-        LogTypeDictionaryEntry& logtype,
-        std::vector<encoded_variable_t>& encoded_vars
-) -> void {
-    encoded_vars.push_back(
-            clp::EncodedVariableInterpreter::encode_and_add_dict_var(var, logtype, *m_var_dict)
-    );
+auto ArchiveWriter::add_dict_var_to_logtype(std::string_view var, LogTypeDictionaryEntry& logtype)
+        -> encoded_variable_t {
+    return clp::EncodedVariableInterpreter::encode_and_add_dict_var(var, logtype, *m_var_dict);
 }
 
 auto ArchiveWriter::update_logtype_stats(LogTypeDictionaryEntry& logtype)

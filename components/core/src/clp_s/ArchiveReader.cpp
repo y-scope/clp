@@ -1,7 +1,9 @@
 #include "ArchiveReader.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <fmt/core.h>
@@ -221,9 +223,15 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new BooleanColumnReader(column_id);
             break;
         case NodeType::ClpString:
+        case NodeType::LogType:
         case NodeType::UnstructuredArray:
-            column_reader
-                    = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict, node.get_type());
+            column_reader = new ClpStringColumnReader(
+                    column_id,
+                    m_var_dict,
+                    m_log_dict,
+                    node.get_type(),
+                    m_experimental_stats.has_value() ? &m_experimental_stats->m_var_stats : nullptr
+            );
             break;
         case NodeType::DateString:
             column_reader = new DateStringColumnReader(column_id, get_timestamp_dictionary());
@@ -290,11 +298,14 @@ void ArchiveReader::append_unordered_reader_columns(
                 column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
                 break;
             case NodeType::ClpString:
+            case NodeType::LogType:
                 column_reader = new ClpStringColumnReader(
                         column_id,
                         m_var_dict,
                         m_log_dict,
-                        NodeType::ClpString
+                        node.get_type(),
+                        m_experimental_stats.has_value() ? &m_experimental_stats->m_var_stats
+                                                         : nullptr
                 );
                 break;
             case NodeType::VarString:

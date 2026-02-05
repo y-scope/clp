@@ -140,6 +140,7 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
                         );
                     }
                 } else if constexpr (std::is_same_v<T, clp_s::ParsedMessage::LogType>) {
+                    m_logtype_entry.clear();
                     m_logtype_entry = v.m_dict_entry;
                     m_encoded_vars.insert(
                             m_encoded_vars.end(),

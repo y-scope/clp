@@ -95,6 +95,11 @@ public:
     }
 
     /**
+     * Reads the experimental statistics from the archive.
+     */
+    auto read_experimental_stats() -> ystdlib::error_handling::Result<void>;
+
+    /**
      * Reads the metadata from the archive.
      */
     void read_metadata();
@@ -166,10 +171,10 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
 
-    auto get_experimental_stats() -> ExperimentalStats const& {
-        return m_experimental_stats.value();
+    auto get_experimental_stats() const -> std::optional<ExperimentalStats> const& {
+        return m_experimental_stats;
     }
 
 private:
@@ -221,11 +226,6 @@ private:
      * @return a buffer containing the decompressed stream identified by stream_id
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
-
-    /**
-     * Reads the experimental statistics from the archive.
-     */
-    auto read_experimental_stats() -> ystdlib::error_handling::Result<void>;
 
     bool m_is_open;
     std::string m_archive_id;
