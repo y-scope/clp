@@ -36,7 +36,7 @@ const Jobs = () => {
                 dataSource={jobs}
                 pagination={false}
                 rowKey={(record) => record.key}
-                scroll={{y: 400, x: true}}
+                scroll={{y: 400, x: 1}}
                 tableLayout={"fixed"}/>
         </DashboardCard>
     );
