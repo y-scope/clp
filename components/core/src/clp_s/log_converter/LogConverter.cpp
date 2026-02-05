@@ -26,13 +26,14 @@ namespace {
  * minus sign for timezone offsets.
  */
 constexpr std::string_view cTimestampSchema{
-        R"(timestamp:(\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
+        R"(header:(?<timestamp>((\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
         R"(((Jan(uary){0,1})|(Feb(ruary){0,1})|(Mar(ch){0,1})|(Apr(il){0,1})|(May)|(Jun(e){0,1})|)"
         R"((Jul(y){0,1})|(Aug(ust){0,1})|(Sep(tember){0,1})|(Oct(ober){0,1})|(Nov(ember){0,1})|)"
-        R"((Dec(ember){0,1}))[ /\-]\d{2,4})[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
-        R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1})"
+        R"((Dec(ember){0,1}))[ /\-]\d{2,4}))[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
+        R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1}))"
 };
-constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n\[\(:)"};
+
+constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
 }  // namespace
 
 auto LogConverter::convert_file(
@@ -73,13 +74,12 @@ auto LogConverter::convert_file(
 
             auto const& event{parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
-            if (nullptr != event.get_timestamp()) {
-                auto const timestamp{event.get_timestamp()->to_string_view()};
+            if (auto timestamp{event.get_timestamp()}; timestamp.has_value()) {
                 auto const message_without_timestamp{
-                        std::string_view{message}.substr(timestamp.length())
+                        std::string_view{message}.substr(timestamp->length())
                 };
                 YSTDLIB_ERROR_HANDLING_TRYV(
-                        serializer.add_message(timestamp, message_without_timestamp)
+                        serializer.add_message(timestamp.value(), message_without_timestamp)
                 );
             } else {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));

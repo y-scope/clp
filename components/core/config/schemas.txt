@@ -1,5 +1,5 @@
 // Delimiters
-delimiters: \t\r\n!"#$%&'\(\)\*,:;<>?@\[\]\^_`\{\|\}~
+delimiters: \t\r\n!"#$%&'()*,:;<>?@[]^_`{}|~
 
 // Timestamps (using the `timestamp` keyword)
 // E.g. 2015-01-31 15:50:45,392
@@ -16,4 +16,4 @@ float:\-{0,1}[0-9]+\.[0-9]+
 // Dictionary variables
 hex:[a-fA-F]+
 hasNumber:.*\d.*
-equals:.*=.*[a-zA-Z0-9].*
+equals:[a-zA-Z0-9]+=(?<var>.*[a-zA-Z0-9].*)

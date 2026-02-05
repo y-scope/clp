@@ -108,8 +108,10 @@ EOF
 Then, install the Helm chart with clp-text configuration:
 
 ```bash
-cd tools/deployment/package-helm
-helm install clp . \
+helm repo add clp https://y-scope.github.io/clp
+helm repo update clp
+
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.package.storage_engine=clp \
   --set clpConfig.package.query_engine=clp \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \

@@ -76,7 +76,7 @@ Using Presto with CLP requires:
 
    :::{note}
    Currently, the Presto integration only supports the
-   [credentials](guides-using-object-storage/clp-config.md#credentials) authentication type.
+   [credentials](guides-using-object-storage/aws-s3/clp-config.md#credentials) authentication type.
    :::
 
 4. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
@@ -87,7 +87,7 @@ Using Presto with CLP requires:
 1. Clone the CLP repository:
 
     ```bash
-    git clone https://github.com/y-scope/clp.git
+    git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
     ```
 
 2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.

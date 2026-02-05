@@ -48,6 +48,18 @@ public:
 
     auto add_dictionary_var() -> void { clp::EncodedVariableInterpreter::add_dict_var(m_value); }
 
+    auto add_escape() -> void { clp::EncodedVariableInterpreter::add_escape(m_value); }
+
+    auto add_static_text(std::string_view static_text) -> void {
+        clp::ir::append_constant_to_logtype(
+                static_text,
+                [&]([[maybe_unused]] std::string_view constant,
+                    [[maybe_unused]] size_t char_to_escape_pos,
+                    [[maybe_unused]] std::string& logtype) -> void { add_escape(); },
+                m_value
+        );
+    }
+
     [[nodiscard]] auto get_value() const -> std::string const& { return m_value; }
 
     [[nodiscard]] auto get_num_variables() const -> size_t { return 0; }
