@@ -5,7 +5,7 @@ compression and decompression.
 
 import pytest
 
-from tests.utils.asserting_utils import run_and_assert
+from tests.utils.asserting_utils import run_and_log_to_file
 from tests.utils.config import (
     ClpCorePathConfig,
     CompressionTestPathConfig,
@@ -73,10 +73,10 @@ def test_clp_identity_transform(
         src_path,
     ]
     # fmt: on
-    run_and_assert(request, compression_cmd)
+    run_and_log_to_file(request, compression_cmd)
 
     decompression_cmd = [bin_path, "x", compression_path, decompression_path]
-    run_and_assert(request, decompression_cmd)
+    run_and_log_to_file(request, decompression_cmd)
 
     input_path = test_paths.logs_source_dir
     output_path = test_paths.decompression_dir
@@ -150,5 +150,5 @@ def _clp_s_compress_and_decompress(
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
 
-    run_and_assert(request, [bin_path, "c", compression_path, src_path])
-    run_and_assert(request, [bin_path, "x", compression_path, decompression_path])
+    run_and_log_to_file(request, [bin_path, "c", compression_path, src_path])
+    run_and_log_to_file(request, [bin_path, "x", compression_path, decompression_path])

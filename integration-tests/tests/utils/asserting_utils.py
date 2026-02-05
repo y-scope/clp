@@ -18,7 +18,7 @@ from tests.utils.utils import load_yaml_to_dict
 logger = logging.getLogger(__name__)
 
 
-def run_and_assert(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> None:
+def run_and_log_to_file(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> None:
     """
     Runs a command with subprocess.
 

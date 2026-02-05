@@ -1,12 +1,13 @@
 """Global pytest setup."""
 
-import uuid
+import datetime
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 from tests.utils.logging_utils import BLUE, BOLD, RESET
+from tests.utils.utils import resolve_path_env_var
 
 # Make the fixtures defined in `tests/fixtures/` globally available without imports.
 pytest_plugins = [
@@ -17,6 +18,7 @@ pytest_plugins = [
 ]
 
 
+@pytest.hookimpl()
 def pytest_addoption(parser: pytest.Parser) -> None:
     """
     Adds options for `pytest`.
@@ -31,13 +33,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
     # Sets up a unique log file for this test run, and stores the path to the file.
-    test_run_id = str(uuid.uuid4())[-4:]
-    log_file_path = Path("__pytest_logs") / f"testrun_{test_run_id}.log"
+    now = datetime.datetime.now()  # noqa: DTZ005
+    test_run_id = now.strftime("%Y-%m-%d-%H-%M-%S")
+    log_file_path = (
+        resolve_path_env_var("CLP_BUILD_DIR")
+        / "integration-tests"
+        / "test_logs"
+        / f"testrun_{test_run_id}.log"
+    )
     parser.addini(
         "log_file_path",
         help="Path to the log file for this test.",
-        type="paths",
-        default=log_file_path,
+        type="string",
+        default=str(log_file_path),
     )
 
 
@@ -47,7 +55,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
     :param item:
     """
-    item._nodeid = f"{BOLD}{BLUE}{item.name}{RESET}"  # noqa: SLF001
+    item._nodeid = f"{BOLD}{BLUE}{item.nodeid}{RESET}"  # noqa: SLF001
 
 
 @pytest.hookimpl(tryfirst=True)

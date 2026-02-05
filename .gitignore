@@ -6,4 +6,3 @@ __pycache__/
 .task/
 build/
 dist/
-__*
