@@ -70,15 +70,12 @@ def run_package_compression_script(
     ]
 
     if compression_job.options is not None:
-        for option, option_value in compression_job.options.items():
-            compress_cmd.append(option)
-            if option_value is not None:
-                compress_cmd.append(str(option_value))
+        compress_cmd.extend(compression_job.options)
 
     if compression_job.positional_args is not None:
         compress_cmd.extend(compression_job.positional_args)
 
-    compress_cmd.append(str(compression_job.path_to_dataset))
+    compress_cmd.append(str(compression_job.path_to_original_dataset))
 
     # Run compression command for this job and assert that it succeeds.
     run_and_assert(compress_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
