@@ -6,6 +6,7 @@ import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
 import NativeControls from "./Native/NativeControls";
 import FreeformControls from "./Presto/Freeform/FreeformControls";
 import GuidedControls from "./Presto/Guided/GuidedControls";
+import SqlInterfaceSelector from "./Presto/SqlInterfaceSelector";
 
 
 /**
@@ -26,18 +27,18 @@ const SearchControls = () => {
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
     const isPrestoGuided = sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
-    let controls;
     if (SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO) {
-        controls = <NativeControls/>;
-    } else if (isPrestoGuided) {
-        controls = <GuidedControls/>;
-    } else {
-        controls = <FreeformControls/>;
+        return (
+            <form onSubmit={handleSubmit}>
+                <NativeControls/>
+            </form>
+        );
     }
 
     return (
         <form onSubmit={handleSubmit}>
-            {controls}
+            <SqlInterfaceSelector/>
+            {isPrestoGuided ? <GuidedControls/> : <FreeformControls/>}
         </form>
     );
 };
