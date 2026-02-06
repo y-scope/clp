@@ -2,6 +2,7 @@
 
 #include <charconv>
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <set>
@@ -161,6 +162,241 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     }
     name = path_segments_view.back();
     return true;
+}
+
+BufferSanitizeResult StringUtils::sanitize_json_buffer(
+        char*& buf,
+        size_t& buf_size,
+        size_t buf_occupied,
+        size_t simdjson_padding
+) {
+    // Early return for empty or null buffer
+    if (nullptr == buf || 0 == buf_occupied) {
+        return {buf_occupied, {}};
+    }
+
+    // Sanitize by escaping control characters inside JSON strings. Uses a lazy-copy approach:
+    // only allocate the output string when the first control character is found, and copy
+    // valid ranges in bulk rather than byte-by-byte for efficiency.
+    //
+    // Note: If the buffer contains unmatched quotes (e.g., truncated JSON), the string state
+    // tracking may be incorrect, potentially escaping control characters outside of actual
+    // JSON strings. This is acceptable since such malformed JSON will fail parsing anyway.
+    std::string sanitized;
+    std::map<char, size_t> sanitized_char_counts;
+    bool in_string = false;
+    bool escape_next = false;
+    size_t copy_start = 0;
+
+    for (size_t i = 0; i < buf_occupied; ++i) {
+        char const c = buf[i];
+
+        if (escape_next) {
+            escape_next = false;
+            continue;
+        }
+
+        if ('\\' == c && in_string) {
+            escape_next = true;
+            continue;
+        }
+
+        if ('"' == c) {
+            in_string = !in_string;
+            continue;
+        }
+
+        // Escape control characters (0x00-0x1F) inside strings to \u00XX format
+        if (in_string && static_cast<unsigned char>(c) < 0x20) {
+            if (sanitized.empty()) {
+                // First control char found - allocate with extra space for escapes
+                sanitized.reserve(buf_occupied + 64);
+            }
+            // Copy the valid range before this control character
+            sanitized.append(buf + copy_start, i - copy_start);
+            char_to_escaped_four_char_hex(sanitized, c);
+            ++sanitized_char_counts[c];
+            copy_start = i + 1;
+        }
+    }
+
+    // If no sanitization was needed, return early without any allocation
+    if (sanitized.empty()) {
+        return {buf_occupied, {}};
+    }
+
+    // Copy any remaining content after the last control character
+    sanitized.append(buf + copy_start, buf_occupied - copy_start);
+
+    // Grow buffer if needed to hold sanitized content
+    if (sanitized.size() > buf_size) {
+        size_t const new_buf_size = sanitized.size();
+        char* new_buf = new char[new_buf_size + simdjson_padding];
+        delete[] buf;
+        buf = new_buf;
+        buf_size = new_buf_size;
+    }
+
+    // Copy sanitized content to buffer
+    std::memcpy(buf, sanitized.data(), sanitized.size());
+    return {sanitized.size(), std::move(sanitized_char_counts)};
+}
+
+namespace {
+/**
+ * Checks if a byte is a valid UTF-8 continuation byte (10xxxxxx pattern).
+ * @param byte The byte to check
+ * @return true if the byte is a valid continuation byte (0x80-0xBF)
+ */
+constexpr bool is_continuation_byte(unsigned char byte) {
+    return (byte & 0xC0) == 0x80;
+}
+
+/**
+ * Validates a UTF-8 sequence starting at the given position and returns the sequence length.
+ * @param buf The buffer containing the UTF-8 data
+ * @param pos Current position in the buffer
+ * @param buf_occupied Total bytes in the buffer
+ * @return The length of the valid UTF-8 sequence (1-4), or 0 if invalid
+ */
+size_t validate_utf8_sequence(char const* buf, size_t pos, size_t buf_occupied) {
+    auto const byte = static_cast<unsigned char>(buf[pos]);
+    size_t remaining = buf_occupied - pos;
+
+    // ASCII (0x00-0x7F)
+    if (byte <= 0x7F) {
+        return 1;
+    }
+
+    // Invalid: continuation byte without leader, or invalid lead bytes
+    if (byte < 0xC2 || byte > 0xF4) {
+        return 0;
+    }
+
+    // 2-byte sequence (0xC2-0xDF)
+    if (byte <= 0xDF) {
+        if (remaining < 2 || !is_continuation_byte(static_cast<unsigned char>(buf[pos + 1]))) {
+            return 0;
+        }
+        return 2;
+    }
+
+    // 3-byte sequence (0xE0-0xEF)
+    if (byte <= 0xEF) {
+        if (remaining < 3) {
+            return 0;
+        }
+        auto const byte2 = static_cast<unsigned char>(buf[pos + 1]);
+        auto const byte3 = static_cast<unsigned char>(buf[pos + 2]);
+
+        if (!is_continuation_byte(byte2) || !is_continuation_byte(byte3)) {
+            return 0;
+        }
+
+        // Check for overlong encoding (E0 requires second byte >= 0xA0)
+        if (byte == 0xE0 && byte2 < 0xA0) {
+            return 0;
+        }
+
+        // Check for surrogate code points (ED with second byte >= 0xA0 means 0xD800-0xDFFF)
+        if (byte == 0xED && byte2 >= 0xA0) {
+            return 0;
+        }
+
+        return 3;
+    }
+
+    // 4-byte sequence (0xF0-0xF4)
+    if (remaining < 4) {
+        return 0;
+    }
+    auto const byte2 = static_cast<unsigned char>(buf[pos + 1]);
+    auto const byte3 = static_cast<unsigned char>(buf[pos + 2]);
+    auto const byte4 = static_cast<unsigned char>(buf[pos + 3]);
+
+    if (!is_continuation_byte(byte2) || !is_continuation_byte(byte3)
+        || !is_continuation_byte(byte4))
+    {
+        return 0;
+    }
+
+    // Check for overlong encoding (F0 requires second byte >= 0x90)
+    if (byte == 0xF0 && byte2 < 0x90) {
+        return 0;
+    }
+
+    // Check for code points > U+10FFFF (F4 requires second byte <= 0x8F)
+    if (byte == 0xF4 && byte2 > 0x8F) {
+        return 0;
+    }
+
+    return 4;
+}
+}  // namespace
+
+BufferSanitizeResult StringUtils::sanitize_utf8_buffer(
+        char*& buf,
+        size_t& buf_size,
+        size_t buf_occupied,
+        size_t simdjson_padding
+) {
+    // Early return for empty or null buffer
+    if (nullptr == buf || 0 == buf_occupied) {
+        return {buf_occupied, {}};
+    }
+
+    // Sanitize by replacing invalid UTF-8 sequences with U+FFFD. Uses a lazy-copy approach:
+    // only allocate the output string when the first invalid sequence is found, and copy
+    // valid ranges in bulk rather than byte-by-byte for efficiency.
+    constexpr std::string_view cUtf8ReplacementChar{"\xEF\xBF\xBD", 3};
+    constexpr char cInvalidUtf8Key = static_cast<char>(0xFF);
+
+    std::string sanitized;
+    std::map<char, size_t> sanitized_char_counts;
+    size_t copy_start = 0;
+
+    size_t i = 0;
+    while (i < buf_occupied) {
+        size_t const seq_len = validate_utf8_sequence(buf, i, buf_occupied);
+        if (seq_len > 0) {
+            // Valid sequence - advance position (will be copied in bulk later)
+            i += seq_len;
+        } else {
+            // Invalid sequence - need to sanitize
+            if (sanitized.empty()) {
+                // First invalid sequence found - allocate with extra space for replacements
+                sanitized.reserve(buf_occupied + 64);
+            }
+            // Copy the valid range before this invalid byte
+            sanitized.append(buf + copy_start, i - copy_start);
+            sanitized.append(cUtf8ReplacementChar);
+            ++sanitized_char_counts[cInvalidUtf8Key];
+            // Skip one byte and continue (maximal subpart replacement strategy)
+            ++i;
+            copy_start = i;
+        }
+    }
+
+    // If no sanitization was needed, return early without any allocation
+    if (sanitized.empty()) {
+        return {buf_occupied, {}};
+    }
+
+    // Copy any remaining valid content after the last invalid byte
+    sanitized.append(buf + copy_start, buf_occupied - copy_start);
+
+    // Grow buffer if needed to hold sanitized content
+    if (sanitized.size() > buf_size) {
+        size_t const new_buf_size = sanitized.size();
+        char* new_buf = new char[new_buf_size + simdjson_padding];
+        delete[] buf;
+        buf = new_buf;
+        buf_size = new_buf_size;
+    }
+
+    // Copy sanitized content to buffer
+    std::memcpy(buf, sanitized.data(), sanitized.size());
+    return {sanitized.size(), std::move(sanitized_char_counts)};
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
