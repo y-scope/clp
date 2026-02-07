@@ -78,20 +78,21 @@ auto TimestampDictionaryReader::read(ZstdDecompressor& decompressor, uint32_t ar
 
         if (archive_version < cNewTimestampFormatVersion) {
             m_deprecated_patterns.emplace(id, TimestampPattern(0, pattern));
-        } else {
-            auto timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
-            if (timestamp_pattern_result.has_error()) {
-                auto const& timestamp_error{timestamp_pattern_result.error()};
-                SPDLOG_ERROR(
-                        "Error loading timestamp pattern `{}` - {} - {}",
-                        pattern,
-                        timestamp_error.category().name(),
-                        timestamp_error.message()
-                );
-                return ErrorCodeCorrupt;
-            }
-            m_timestamp_patterns.emplace(id, std::move(timestamp_pattern_result.value()));
+            continue;
         }
+
+        auto timestamp_pattern_result{timestamp_parser::TimestampPattern::create(pattern)};
+        if (timestamp_pattern_result.has_error()) {
+            auto const& timestamp_error{timestamp_pattern_result.error()};
+            SPDLOG_ERROR(
+                    "Error loading timestamp pattern `{}` - {} - {}",
+                    pattern,
+                    timestamp_error.category().name(),
+                    timestamp_error.message()
+            );
+            return ErrorCodeCorrupt;
+        }
+        m_timestamp_patterns.emplace(id, std::move(timestamp_pattern_result.value()));
     }
     return ErrorCodeSuccess;
 }
