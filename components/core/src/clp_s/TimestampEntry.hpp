@@ -56,13 +56,6 @@ public:
      * @param timestamp the timestamp to be ingested
      */
     void ingest_timestamp(epochtime_t timestamp);
-    void ingest_timestamp(double timestamp);
-
-    /**
-     * Merge a timestamp range potentially adjusting the start and end bounds for this
-     * @param timestamp the timestamp to be ingested
-     */
-    void merge_range(TimestampEntry const& entry);
 
     /**
      * Write the timestamp entry to a buffered stream.
@@ -103,18 +96,16 @@ public:
     }
 
     /**
-     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
-     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
-     * millisecond encoded timestamps.
-     * @return the beginning of the time range as milliseconds since the UNIX epoch
+     * NOTE: The returned timestamp is not guaranteed to be millisecond precision for archives
+     * older than 0.5.0.
+     * @return The beginning of the time range as milliseconds since the UNIX epoch.
      */
     epochtime_t get_begin_timestamp() const;
 
     /**
-     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
-     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
-     * millisecond encoded timestamps.
-     * @return the end of the time range as milliseconds since the UNIX epoch
+     * NOTE: The returned timestamp is not guaranteed to be millisecond precision for archives
+     * older than 0.5.0.
+     * @return The end of the time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_end_timestamp() const;
 
