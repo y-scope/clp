@@ -8,6 +8,7 @@ includes:
   deps: "taskfiles/deps/main.yaml"
   docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
+  helm: "taskfiles/helm.yaml"
   lint: "taskfiles/lint.yaml"
   tests: "taskfiles/tests/main.yaml"
   toolchains: "taskfiles/toolchains.yaml"
@@ -39,7 +40,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.8.1-dev"
+  G_PACKAGE_VERSION: "0.9.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
