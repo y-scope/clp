@@ -77,6 +77,16 @@ See the relevant README for your OS:
 * [macOS](macos-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
+:::{caution}
+Version constrained build tools ([CMake], [Task], [uv]) are installed via [pipx] for all OS. The
+[script][pipx-install-script] updates your shell rc files so that pipx installed tools always take
+precedence, even if your environment already contains existing versions. If you prefer to use your
+own versions instead, simply run `pipx uninstall` afterwards to remove any tools you do not want.
+
+Individual scripts under [pipx-packages] are not intended to be run on their own. Always invoke the
+top level [install-all.sh][pipx-install-script] instead.
+:::
+
 Want to build natively on an OS not listed here? You can file a [feature request][feature-req].
 
 #### Docker Environment
@@ -130,6 +140,9 @@ regex-utils
 
 [CMake]: https://cmake.org/
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
+[pipx]: https://pipx.pypa.io
+[pipx-install-script]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/core/tools/scripts/lib_install/pipx-packages/install-all.sh
+[pipx-packages]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/core/tools/scripts/lib_install/pipx-packages
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
