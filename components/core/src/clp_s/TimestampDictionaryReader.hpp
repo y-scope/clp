@@ -29,12 +29,13 @@ public:
 
     // Methods
     /**
-     * Reads the timestamp dictionary from a decompressor
+     * Reads the timestamp dictionary from a decompressor.
      * @param decompressor
-     * @param archive_version
+     * @param has_deprecated_timestamp_format
      * @return ErrorCodeSuccess on success, and the relevant ErrorCode otherwise
      */
-    [[nodiscard]] auto read(ZstdDecompressor& decompressor, uint32_t archive_version) -> ErrorCode;
+    [[nodiscard]] auto read(ZstdDecompressor& decompressor, bool has_deprecated_timestamp_format)
+            -> ErrorCode;
 
     /**
      * Gets the string encoding for a given epoch and format ID by interpreting the pattern

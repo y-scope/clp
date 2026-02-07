@@ -15,8 +15,10 @@
 #include "TimestampPattern.hpp"
 
 namespace clp_s {
-auto TimestampDictionaryReader::read(ZstdDecompressor& decompressor, uint32_t archive_version)
-        -> ErrorCode {
+auto TimestampDictionaryReader::read(
+        ZstdDecompressor& decompressor,
+        bool has_deprecated_timestamp_format
+) -> ErrorCode {
     ErrorCode error;
     uint64_t range_index_size;
     error = decompressor.try_read_numeric_value<uint64_t>(range_index_size);
@@ -76,7 +78,7 @@ auto TimestampDictionaryReader::read(ZstdDecompressor& decompressor, uint32_t ar
             return error;
         }
 
-        if (archive_version < cNewTimestampFormatVersion) {
+        if (has_deprecated_timestamp_format) {
             m_deprecated_patterns.emplace(id, TimestampPattern(0, pattern));
             continue;
         }

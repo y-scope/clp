@@ -183,7 +183,7 @@ bool search_archive(
         return true;
     }
 
-    if (archive_reader->get_header().version < clp_s::cNewTimestampFormatVersion) {
+    if (archive_reader->has_deprecated_timestamp_format()) {
         ast::SetTimestampLiteralPrecision date_precision_pass{
                 ast::TimestampLiteral::Precision::Milliseconds
         };
