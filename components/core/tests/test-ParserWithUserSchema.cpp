@@ -191,16 +191,15 @@ TEST_CASE("Test lexer", "[Search]") {
     }
 }
 
-TEST_CASE("Test schema with single capture group", "[load_lexer]") {
+TEST_CASE("Error on schema rule with a single capture group", "[load_lexer]") {
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     ByteLexer lexer;
-    load_lexer_from_file(schema_file_path, lexer);
-
-    auto const rule_id{lexer.m_symbol_id.at("capture")};
-    auto captures{lexer.get_captures_from_rule_id(rule_id)};
-    REQUIRE(captures.has_value());
-    REQUIRE(1 == captures->size());
-    REQUIRE("group" == captures->at(0)->get_name());
+    REQUIRE_THROWS_WITH(
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
+                    + ":3: error: the schema rule 'capture' has a regex pattern containing capture "
+                      "groups (found 1).\n"
+    );
 }
 
 TEST_CASE("Error on schema rule with multiple capture groups", "[load_lexer]") {
@@ -209,43 +208,21 @@ TEST_CASE("Error on schema rule with multiple capture groups", "[load_lexer]") {
     REQUIRE_THROWS_WITH(
             load_lexer_from_file(schema_file_path, lexer),
             schema_file_path.string()
-                    + ":3: error: the schema rule 'multicapture' has a regex pattern containing > "
-                      "1 capture groups (found 2).\n"
+                    + ":3: error: the schema rule 'multicapture' has a regex pattern containing "
+                      "capture groups (found 2).\n"
     );
 }
 
-TEST_CASE("Verify dictionary contents", "[Compression]") {
+TEST_CASE("Verify CLP compression fails with capture groups", "[Compression]") {
     auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
     std::filesystem::create_directory(cTestArchiveDirectory);
 
-    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
-
-    std::vector<std::filesystem::path> archive_paths;
-    for (auto const& entry : std::filesystem::directory_iterator{cTestArchiveDirectory}) {
-        auto const& path{entry.path()};
-        if (false == path.string().ends_with(clp::streaming_archive::cMetadataDBFileName)) {
-            archive_paths.emplace_back(path);
-        }
-    }
-    REQUIRE(1 == archive_paths.size());
-
-    clp::streaming_archive::reader::Archive archive_reader;
-    archive_reader.open(archive_paths.at(0));
-    archive_reader.refresh_dictionaries();
-
-    auto const& logtype_dict{archive_reader.get_logtype_dictionary()};
-    REQUIRE(1 == logtype_dict.get_entries().size());
-    REQUIRE(fmt::format(
-                    "2016-05-08 07:34:05.251 MyDog{} APet{} test.txt\n",
-                    clp::enum_to_underlying_type(clp::ir::VariablePlaceholder::Dictionary),
-                    clp::enum_to_underlying_type(clp::ir::VariablePlaceholder::Dictionary)
-            )
-            == logtype_dict.get_value(0));
-
-    auto const& var_dict{archive_reader.get_var_dictionary()};
-    REQUIRE(2 == var_dict.get_entries().size());
-    REQUIRE("123" == var_dict.get_value(0));
-    REQUIRE("4123" == var_dict.get_value(1));
+    REQUIRE_THROWS_WITH(
+            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
+            schema_file_path.string()
+                    + ": error: the schema rule 'capture' has a regex pattern containing capture "
+                      "groups.\n"
+    );
 }
