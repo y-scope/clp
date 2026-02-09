@@ -345,7 +345,29 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
+                other => panic!("Expected Credentials, got {:?}", other),
             },
+            LogsInput::Fs { .. } => panic!("Expected S3"),
+        }
+    }
+
+    #[test]
+    fn deserialize_logs_input_s3_ec2_config() {
+        let logs_input_config_json = serde_json::json!({
+            "type": "s3",
+            "aws_authentication": {
+                "type": "ec2",
+            }
+        });
+
+        let deserialized =
+            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())
+                .expect("failed to deserialize `LogsInput` from JSON");
+
+        match deserialized {
+            LogsInput::S3 { config } => {
+                assert_eq!(config.aws_authentication, crate::clp_config::AwsAuthentication::Ec2);
+            }
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }
     }

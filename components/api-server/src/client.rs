@@ -3,12 +3,9 @@ use std::pin::Pin;
 use async_stream::stream;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
-    clp_config::{
-        AwsAuthentication,
-        package::{
-            config::{Config, StorageEngine, StreamOutputStorage},
-            credentials::Credentials,
-        },
+    clp_config::package::{
+        config::{Config, StorageEngine, StreamOutputStorage},
+        credentials::Credentials,
     },
     database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
@@ -340,8 +337,6 @@ impl Client {
             unreachable!();
         };
 
-        let AwsAuthentication::Credentials { credentials } = &s3_config.aws_authentication;
-
         let s3_config = s3_config.clone();
         if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
             return Err(ClientError::Aws {
@@ -350,15 +345,14 @@ impl Client {
             });
         }
 
-        let credentials = credentials.clone();
+        let region_str = s3_config
+            .region_code
+            .as_ref()
+            .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str);
         let s3_client = clp_rust_utils::s3::create_new_client(
-            credentials.access_key_id.as_str(),
-            credentials.secret_access_key.as_str(),
-            s3_config
-                .region_code
-                .as_ref()
-                .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
+            region_str,
             s3_config.endpoint_url.as_ref(),
+            s3_config.aws_authentication.credentials_pair(),
         )
         .await;
 
