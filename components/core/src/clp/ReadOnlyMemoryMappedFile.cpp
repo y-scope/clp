@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include "FileDescriptor.hpp"
+#include "spdlog_with_specializations.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -30,6 +31,11 @@ ReadOnlyMemoryMappedFile::ReadOnlyMemoryMappedFile(std::string_view path) noexce
         m_buf_size = file_size;
     } catch (TraceableException const& ex) {
         m_errno = errno;
+        SPDLOG_ERROR(
+                "ReadOnlyMemoryMappedFile: File descriptor error with path: {}. Error: {}",
+                segment_path.c_str(),
+                ex.what()
+        );
     }
 }
 

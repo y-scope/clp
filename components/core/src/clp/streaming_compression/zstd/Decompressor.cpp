@@ -1,6 +1,7 @@
 #include "Decompressor.hpp"
 
 #include <algorithm>
+#include <cstring>
 
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"

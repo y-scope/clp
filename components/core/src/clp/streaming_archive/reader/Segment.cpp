@@ -5,14 +5,11 @@
 
 #include <cerrno>
 #include <climits>
-
-#include <boost/filesystem.hpp>
-#include <fmt/format.h>
+#include <cstring>
 
 #include "../../ErrorCode.hpp"
 #include "../../FileReader.hpp"
 #include "../../spdlog_with_specializations.hpp"
-#include "../../TraceableException.hpp"
 
 using std::make_unique;
 using std::string;
@@ -48,20 +45,15 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     }
 
     // Create read-only memory mapped file
-    try {
-        m_memory_mapped_segment_file.emplace(segment_path);
-    } catch (TraceableException const& ex) {
-        auto const error_code{ex.get_error_code()};
-        auto const formatted_error{
-                ErrorCode_errno == error_code
-                        ? fmt::format("errno={}", errno)
-                        : fmt::format("error_code={}, message={}", error_code, ex.what())
-        };
+    m_memory_mapped_segment_file.emplace(segment_path);
+    if (false == m_memory_mapped_segment_file.value().is_open()) {
+        auto const error_number{m_memory_mapped_segment_file.value().get_errno()};
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
-                "segment with path: {}. Error: {}",
+                "segment with path: {}. errno = {} ({}).",
                 segment_path.c_str(),
-                formatted_error
+                error_number,
+                std::strerror(error_number)
         );
         return ErrorCode_Failure;
     }

@@ -33,9 +33,7 @@ public:
      * @return The errno captured from the last system call failure. A value of 0 indicates that no
      * error occurred.
      */
-    [[nodiscard]] auto get_errno() const -> int {
-        return m_errno;
-    }
+    [[nodiscard]] auto get_errno() const -> int { return m_errno; }
 
     /**
      * @return A view of the mapped file in memory, or an empty span if the file is not mapped.
