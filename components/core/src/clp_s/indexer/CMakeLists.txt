@@ -130,7 +130,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_link_libraries(indexer
                 PRIVATE
                 absl::flat_hash_map
-                Boost::iostreams Boost::program_options Boost::url
+                Boost::program_options Boost::url
                 ${CURL_LIBRARIES}
                 clp::string_utils
                 date::date

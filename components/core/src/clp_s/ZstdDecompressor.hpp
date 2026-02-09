@@ -6,10 +6,10 @@
 #include <memory>
 #include <string>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <zstd.h>
 
 #include "../clp/ReaderInterface.hpp"
+#include "../clp/ReadOnlyMemoryMappedFile.hpp"
 #include "Decompressor.hpp"
 #include "TraceableException.hpp"
 
@@ -129,7 +129,7 @@ private:
     // Compressed stream variables
     ZSTD_DStream* m_decompression_stream;
 
-    boost::iostreams::mapped_file_source m_memory_mapped_compressed_file;
+    std::unique_ptr<clp::ReadOnlyMemoryMappedFile> m_memory_mapped_file;
     FileReader* m_file_reader;
     clp::ReaderInterface* m_reader;
     size_t m_file_reader_initial_pos;
