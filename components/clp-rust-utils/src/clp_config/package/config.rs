@@ -345,7 +345,9 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
-                other => panic!("Expected Credentials, got {:?}", other),
+                other @ crate::clp_config::AwsAuthentication::Ec2 => {
+                    panic!("Expected Credentials, got {other:?}")
+                }
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }
@@ -366,7 +368,10 @@ mod tests {
 
         match deserialized {
             LogsInput::S3 { config } => {
-                assert_eq!(config.aws_authentication, crate::clp_config::AwsAuthentication::Ec2);
+                assert_eq!(
+                    config.aws_authentication,
+                    crate::clp_config::AwsAuthentication::Ec2
+                );
             }
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }

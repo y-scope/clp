@@ -21,8 +21,8 @@ pub async fn create_new_client(
     endpoint: Option<&NonEmptyString>,
     credentials: Option<(&str, &str)>,
 ) -> Client {
-    let mut config_defaults = aws_config::defaults(BehaviorVersion::latest())
-        .region(Region::new(region_id.to_string()));
+    let mut config_defaults =
+        aws_config::defaults(BehaviorVersion::latest()).region(Region::new(region_id.to_string()));
     if let Some((access_key_id, secret_access_key)) = credentials {
         config_defaults = config_defaults.credentials_provider(Credentials::new(
             access_key_id,

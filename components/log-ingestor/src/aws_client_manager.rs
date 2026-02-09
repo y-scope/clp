@@ -2,8 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
-use clp_rust_utils::aws::AWS_DEFAULT_REGION;
-use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::{aws::AWS_DEFAULT_REGION, clp_config::AwsAuthentication};
 use non_empty_string::NonEmptyString;
 
 /// A marker trait for AWS client types.
@@ -51,17 +50,11 @@ impl SqsClientWrapper {
         Self { client }
     }
 
-    pub async fn create(
-        region: Option<&NonEmptyString>,
-        aws_auth: &AwsAuthentication,
-    ) -> Self {
+    pub async fn create(region: Option<&NonEmptyString>, aws_auth: &AwsAuthentication) -> Self {
         let region_str = region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-        let sqs_client = clp_rust_utils::sqs::create_new_client(
-            region_str,
-            None,
-            aws_auth.credentials_pair(),
-        )
-        .await;
+        let sqs_client =
+            clp_rust_utils::sqs::create_new_client(region_str, None, aws_auth.credentials_pair())
+                .await;
         Self::from(sqs_client)
     }
 }

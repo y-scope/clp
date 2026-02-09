@@ -27,7 +27,8 @@ impl AwsAuthentication {
     /// Returns the access key pair as `Some((access_key_id, secret_access_key))` for explicit
     /// credentials, or `None` for authentication methods that rely on the default credential
     /// provider chain.
-    pub fn credentials_pair(&self) -> Option<(&str, &str)> {
+    #[must_use]
+    pub const fn credentials_pair(&self) -> Option<(&str, &str)> {
         match self {
             Self::Credentials { credentials } => Some((
                 credentials.access_key_id.as_str(),
