@@ -3,11 +3,11 @@
 #include <sys/mman.h>
 
 #include <cerrno>
-#include <string>
 #include <string_view>
 
+#include <spdlog/spdlog.h>
+
 #include "FileDescriptor.hpp"
-#include "spdlog_with_specializations.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -33,7 +33,7 @@ ReadOnlyMemoryMappedFile::ReadOnlyMemoryMappedFile(std::string_view path) noexce
         m_errno = errno;
         SPDLOG_ERROR(
                 "ReadOnlyMemoryMappedFile: File descriptor error with path: {}. Error: {}",
-                segment_path.c_str(),
+                path.data(),
                 ex.what()
         );
     }
