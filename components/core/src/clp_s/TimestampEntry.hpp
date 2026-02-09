@@ -42,13 +42,14 @@ public:
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin) {}
 
-    TimestampEntry(std::string_view key_name)
+    TimestampEntry(std::string_view key_name, int32_t node_id)
             : m_encoding(UnkownTimestampEncoding),
               m_epoch_start_double(cDoubleEpochTimeMax),
               m_epoch_end_double(cDoubleEpochTimeMin),
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin),
-              m_key_name(key_name) {}
+              m_key_name(key_name),
+              m_column_ids{node_id} {}
 
     /**
      * Ingest a timestamp potentially adjusting the start and end bounds for this
@@ -88,12 +89,6 @@ public:
     std::string get_key_name() const { return m_key_name; }
 
     std::unordered_set<int32_t> const& get_column_ids() const { return m_column_ids; }
-
-    void insert_column_id(int32_t column_id) { m_column_ids.insert(column_id); }
-
-    void insert_column_ids(std::unordered_set<int32_t> const& column_ids) {
-        m_column_ids.insert(column_ids.begin(), column_ids.end());
-    }
 
     /**
      * NOTE: The returned timestamp is not guaranteed to be millisecond precision for archives

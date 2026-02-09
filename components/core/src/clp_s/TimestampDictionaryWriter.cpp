@@ -44,7 +44,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
         std::string_view timestamp,
         bool is_json_literal
 ) -> std::pair<epochtime_t, uint64_t> {
-    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
+    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key, node_id).first;
 
     // Try parsing the timestamp as one of the previously seen timestamp patterns
     for (auto const& [quoted_pattern, pattern_id] : m_string_pattern_and_id_pairs) {
@@ -100,7 +100,7 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
         int32_t node_id,
         std::string_view timestamp
 ) -> std::pair<epochtime_t, uint64_t> {
-    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
+    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key, node_id).first;
 
     for (auto const& [raw_pattern, pattern_and_id] : m_numeric_pattern_to_id) {
         auto const& [pattern, id] = pattern_and_id;
@@ -155,7 +155,7 @@ auto TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp(
         int32_t node_id,
         int64_t timestamp
 ) -> std::pair<epochtime_t, uint64_t> {
-    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key).first;
+    auto& [_, timestamp_entry] = *m_column_id_to_range.try_emplace(node_id, key, node_id).first;
 
     auto const [factor, precision] = timestamp_parser::estimate_timestamp_precision(timestamp);
     auto const epoch_timestamp{timestamp * factor};
