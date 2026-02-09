@@ -417,7 +417,6 @@ tasks:
             - "clp_s/CommandLineArguments.hpp"
             - "clp_s/Compressor.hpp"
             - "clp_s/Decompressor.hpp"
-            - "clp_s/DictionaryEntry.cpp"
             - "clp_s/DictionaryEntry.hpp"
             - "clp_s/DictionaryReader.hpp"
             - "clp_s/DictionaryWriter.cpp"
