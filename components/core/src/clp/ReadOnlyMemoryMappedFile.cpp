@@ -4,43 +4,38 @@
 
 #include <cerrno>
 #include <string_view>
+#include <system_error>
 
-#include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "FileDescriptor.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
-ReadOnlyMemoryMappedFile::ReadOnlyMemoryMappedFile(std::string_view path) noexcept {
+auto ReadOnlyMemoryMappedFile::create(std::string_view path)
+        -> ystdlib::error_handling::Result<ReadOnlyMemoryMappedFile> {
     try {
         FileDescriptor const fd{path, FileDescriptor::OpenMode::ReadOnly};
         auto const file_size{fd.get_size()};
         if (0 == file_size) {
             // `mmap` doesn't allow mapping an empty file, so we don't need to call it.
-            return;
+            return ReadOnlyMemoryMappedFile{nullptr, file_size};
         }
 
         // TODO: optionally provide a hint for the mmap location
         auto* mmap_ptr{mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd.get_raw_fd(), 0)};
         if (MAP_FAILED == mmap_ptr) {
-            m_errno = errno;
-            return;
+            return std::error_code(errno, std::system_category());
         }
 
-        m_data = mmap_ptr;
-        m_buf_size = file_size;
+        return ReadOnlyMemoryMappedFile{mmap_ptr, file_size};
     } catch (TraceableException const& ex) {
-        m_errno = errno;
-        SPDLOG_ERROR(
-                "ReadOnlyMemoryMappedFile: File descriptor error with path: {}. Error: {}",
-                path.data(),
-                ex.what()
-        );
+        return std::error_code(errno, std::system_category());
     }
 }
 
 ReadOnlyMemoryMappedFile::~ReadOnlyMemoryMappedFile() {
-    if (false == is_open()) {
+    if (nullptr == m_data) {
         return;
     }
     // We skip error checking since the only likely reason for `munmap` to fail is if we give it

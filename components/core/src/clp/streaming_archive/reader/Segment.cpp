@@ -3,13 +3,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <cerrno>
 #include <climits>
-#include <cstring>
+#include <utility>
+
+#include <spdlog/spdlog.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../FileReader.hpp"
-#include "../../spdlog_with_specializations.hpp"
 
 using std::make_unique;
 using std::string;
@@ -45,18 +45,18 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     }
 
     // Create read-only memory mapped file
-    m_memory_mapped_segment_file.emplace(segment_path);
-    if (false == m_memory_mapped_segment_file.value().is_open()) {
-        auto const error_number{m_memory_mapped_segment_file.value().get_errno()};
+    auto result{clp::ReadOnlyMemoryMappedFile::create(segment_path)};
+    if (result.has_error()) {
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
                 "segment with path: {}. errno = {} ({}).",
                 segment_path.c_str(),
-                error_number,
-                std::strerror(error_number)
+                result.error().value(),
+                result.error().message()
         );
         return ErrorCode_Failure;
     }
+    m_memory_mapped_segment_file = std::move(result.value());
 
     auto const view{m_memory_mapped_segment_file.value().get_view()};
     m_decompressor.open(view.data(), view.size());

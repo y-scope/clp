@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <span>
 #include <string_view>
+#include <utility>
+
+#include <ystdlib/error_handling/Result.hpp>
 
 namespace clp {
 /**
@@ -12,48 +15,53 @@ namespace clp {
  */
 class ReadOnlyMemoryMappedFile {
 public:
-    // Constructors
+    // Factory functions
     /**
      * @param path The path of the file to map.
+     * @return A result containing the newly constructed `ReadOnlyMemoryMappedFile` on success, or
+     * an error code indicating failure:
+     * - std::errc
      */
-    explicit ReadOnlyMemoryMappedFile(std::string_view path) noexcept;
+    static auto create(std::string_view path)
+            -> ystdlib::error_handling::Result<ReadOnlyMemoryMappedFile>;
 
     // Destructor
     ~ReadOnlyMemoryMappedFile();
 
-    // Disable copy/move constructors/assignment operators
+    // Delete copy constructor and assignment operator
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile const&) = delete;
-    ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile&&) = delete;
     auto operator=(ReadOnlyMemoryMappedFile const&) -> ReadOnlyMemoryMappedFile& = delete;
-    auto operator=(ReadOnlyMemoryMappedFile&&) -> ReadOnlyMemoryMappedFile& = delete;
 
-    /**
-     * @return The errno captured from the last system call failure. A value of 0 indicates that no
-     * error occurred.
-     */
-    [[nodiscard]] auto get_errno() const -> int { return m_errno; }
+    // Move constructor and assignment operator
+    ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile&& rhs) noexcept
+            : m_data(std::exchange(rhs.m_data, nullptr)),
+              m_buf_size(std::exchange(rhs.m_buf_size, 0)) {}
+
+    auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept -> ReadOnlyMemoryMappedFile& {
+        if (this != &rhs) {
+            m_data = std::exchange(rhs.m_data, nullptr);
+            m_buf_size = std::exchange(rhs.m_buf_size, 0);
+        }
+        return *this;
+    }
 
     /**
      * @return A view of the mapped file in memory, or an empty span if the file is not mapped.
      */
     [[nodiscard]] auto get_view() const -> std::span<char> {
-        if (false == is_open()) {
+        if (nullptr == m_data) {
             return {};
         }
         return std::span<char>{static_cast<char*>(m_data), m_buf_size};
     }
 
-    /**
-     * @return Whether the file is currently memory mapped and viewable.
-     */
-    [[nodiscard]] auto is_open() const -> bool {
-        return m_data != nullptr && m_buf_size != 0 && 0 == m_errno;
-    }
-
 private:
+    // Constructors
+    ReadOnlyMemoryMappedFile(void* data, size_t buf_size) : m_data{data}, m_buf_size{buf_size} {}
+
+    // Members
     void* m_data{nullptr};
     size_t m_buf_size{0};
-    int m_errno{0};
 };
 }  // namespace clp
 
