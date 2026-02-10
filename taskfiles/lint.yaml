@@ -408,7 +408,6 @@ tasks:
             - "clp_s/ArchiveWriter.hpp"
             - "clp_s/BufferViewReader.hpp"
             - "clp_s/clp-s.cpp"
-            - "clp_s/ColumnReader.hpp"
             - "clp_s/ColumnWriter.cpp"
             - "clp_s/ColumnWriter.hpp"
             - "clp_s/CommandLineArguments.cpp"

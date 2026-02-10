@@ -216,7 +216,7 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
             break;
         case NodeType::VarString:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
             break;
         case NodeType::Boolean:
             column_reader = new BooleanColumnReader(column_id);
@@ -309,8 +309,7 @@ void ArchiveReader::append_unordered_reader_columns(
                 );
                 break;
             case NodeType::VarString:
-                column_reader
-                        = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
+                column_reader = new VariableStringColumnReader(column_id, m_var_dict);
                 break;
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(column_id);

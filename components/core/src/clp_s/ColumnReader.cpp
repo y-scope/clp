@@ -14,6 +14,7 @@
 #include <clp/ir/types.hpp>
 #include <clp/LogTypeDictionaryEntryReq.hpp>
 #include <clp/type_utils.hpp>
+#include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ArchiveStats.hpp>
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/ColumnWriter.hpp>
@@ -21,8 +22,6 @@
 #include <clp_s/FloatFormatEncoding.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/Utils.hpp>
-
-#include "clp_s/ArchiveReader.hpp"
 
 namespace clp_s {
 auto Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
