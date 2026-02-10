@@ -201,7 +201,7 @@ async fn cancel_query(
     match client.cancel_search_job(search_job_id).await {
         Ok(()) => {
             tracing::info!(
-                "Successfully submitted cancellation for search job ID: {}",
+                "Successfully submitted cancellation request for search job ID: {}",
                 search_job_id
             );
             Ok(StatusCode::OK)
