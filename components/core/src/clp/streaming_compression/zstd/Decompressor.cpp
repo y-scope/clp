@@ -179,9 +179,8 @@ auto Decompressor::open(std::string const& compressed_file_path) -> ErrorCode {
     if (result.has_error()) {
         SPDLOG_ERROR(
                 "streaming_compression::zstd::Decompressor: Unable to memory map the compressed "
-                "file with path: {}. errno = {} ({}).",
+                "file with path: {}. Error: {}",
                 compressed_file_path.c_str(),
-                result.error().value(),
                 result.error().message()
         );
         return ErrorCode_Failure;

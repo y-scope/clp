@@ -250,10 +250,9 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     auto result{clp::ReadOnlyMemoryMappedFile::create(compressed_file_path)};
     if (result.has_error()) {
         SPDLOG_ERROR(
-                "ZstdDecompressor: Unable to memory map the compressed file with path: {}. errno = "
-                "{} ({}).",
+                "ZstdDecompressor: Unable to memory map the compressed file with path: {}. Error: "
+                "{}.",
                 compressed_file_path.c_str(),
-                result.error().value(),
                 result.error().message()
         );
         return ErrorCodeFailure;

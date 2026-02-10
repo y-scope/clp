@@ -1,6 +1,8 @@
 #ifndef CLP_READONLYMEMORYMAPPEDFILE_HPP
 #define CLP_READONLYMEMORYMAPPEDFILE_HPP
 
+#include <sys/mman.h>
+
 #include <cstddef>
 #include <span>
 #include <string_view>
