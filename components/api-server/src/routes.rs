@@ -190,6 +190,10 @@ async fn query_results(
             status = OK,
             description = "The cancellation request was submitted successfully."
         ),
+        (
+            status = NOT_FOUND,
+            description = "No cancellable query job with the given ID was found."
+        ),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -222,23 +226,31 @@ async fn cancel_query(
 enum HandlerError {
     #[error("Internal server error")]
     InternalServer,
+    #[error("Not found")]
+    NotFound,
 }
 
-trait IntoHandlerError {}
-
-impl IntoHandlerError for axum::Error {}
-
-impl IntoHandlerError for ClientError {}
-
-impl<T: IntoHandlerError> From<T> for HandlerError {
-    fn from(_: T) -> Self {
+impl From<axum::Error> for HandlerError {
+    fn from(_: axum::Error) -> Self {
         Self::InternalServer
+    }
+}
+
+impl From<ClientError> for HandlerError {
+    fn from(err: ClientError) -> Self {
+        match err {
+            ClientError::SearchJobNotFound => Self::NotFound,
+            _ => Self::InternalServer,
+        }
     }
 }
 
 /// Converts [`HandlerError`] into an HTTP response.
 impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
-        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        match self {
+            Self::NotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
     }
 }

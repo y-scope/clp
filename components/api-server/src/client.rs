@@ -223,18 +223,15 @@ impl Client {
 
     /// Submits a cancellation request for a search job.
     ///
-    /// # Returns
-    ///
-    /// Returns `Ok(())` on success, regardless of whether the job was actually updated  (e.g., if
-    /// the job was already completed, no rows would be updated).
-    ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::SearchJobNotFound`] if no matching job was found (e.g., the job doesn't
+    ///   exist or is not in a cancellable state).
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
-        sqlx::query(&format!(
+        let result = sqlx::query(&format!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
         ))
         .bind::<i32>(QueryJobStatus::Cancelling.into())
@@ -243,6 +240,10 @@ impl Client {
         .bind::<i32>(QueryJobStatus::Running.into())
         .execute(&self.sql_pool)
         .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(ClientError::SearchJobNotFound);
+        }
 
         Ok(())
     }
