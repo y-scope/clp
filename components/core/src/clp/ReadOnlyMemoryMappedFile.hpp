@@ -33,8 +33,7 @@ public:
 
     // Delete copy constructor and assignment operator
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile const&) = delete;
-    [[nodiscard]] auto operator=(ReadOnlyMemoryMappedFile const&)
-            -> ReadOnlyMemoryMappedFile& = delete;
+    auto operator=(ReadOnlyMemoryMappedFile const&) -> ReadOnlyMemoryMappedFile& = delete;
 
     // Move constructor and assignment operator
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile&& rhs) noexcept
