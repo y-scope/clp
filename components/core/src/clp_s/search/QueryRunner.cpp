@@ -74,20 +74,20 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
              & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
-        if (auto const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
+        if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
             nullptr != clp_reader && NodeType::ClpString == clp_reader->get_type())
         {
             m_clp_string_readers[column_id].push_back(clp_reader);
-        } else if (auto const var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
+        } else if (auto* const var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
                    nullptr != var_reader)
         {
             m_var_string_readers[column_id].push_back(var_reader);
-        } else if (auto const timestamp_reader
+        } else if (auto* const timestamp_reader
                    = dynamic_cast<TimestampColumnReader*>(column_reader);
                    nullptr != timestamp_reader)
         {
             m_timestamp_readers.emplace(column_id, timestamp_reader);
-        } else if (auto* deprecated_date_reader
+        } else if (auto* const deprecated_date_reader
                    = dynamic_cast<DeprecatedDateStringColumnReader*>(column_reader);
                    nullptr != deprecated_date_reader)
         {
