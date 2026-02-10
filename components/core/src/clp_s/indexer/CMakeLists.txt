@@ -64,6 +64,8 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/ReadOnlyMemoryMappedFile.cpp
+        ../../clp/ReadOnlyMemoryMappedFile.hpp
         ../../clp/streaming_compression/Constants.hpp
         ../../clp/streaming_compression/Decompressor.hpp
         ../../clp/streaming_compression/zstd/Decompressor.cpp

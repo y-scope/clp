@@ -20,9 +20,12 @@ public:
      * @param path The path of the file to map.
      * @return A result containing the newly constructed `ReadOnlyMemoryMappedFile` on success, or
      * an error code indicating failure:
-     * - std::errc
+     * - A system error corresponding to the `errno` value set by a failed `mmap` call. See also:
+     *   https://man7.org/linux/man-pages/man2/mmap.2.html
+     * - A system error corresponding to the `errno` value set by failed `FileDescriptor`
+     *   operations.
      */
-    static auto create(std::string_view path)
+    [[nodiscard]] static auto create(std::string_view path)
             -> ystdlib::error_handling::Result<ReadOnlyMemoryMappedFile>;
 
     // Destructor
@@ -30,14 +33,16 @@ public:
 
     // Delete copy constructor and assignment operator
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile const&) = delete;
-    auto operator=(ReadOnlyMemoryMappedFile const&) -> ReadOnlyMemoryMappedFile& = delete;
+    [[nodiscard]] auto operator=(ReadOnlyMemoryMappedFile const&)
+            -> ReadOnlyMemoryMappedFile& = delete;
 
     // Move constructor and assignment operator
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile&& rhs) noexcept
-            : m_data(std::exchange(rhs.m_data, nullptr)),
-              m_buf_size(std::exchange(rhs.m_buf_size, 0)) {}
+            : m_data{std::exchange(rhs.m_data, nullptr)},
+              m_buf_size{std::exchange(rhs.m_buf_size, 0)} {}
 
-    auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept -> ReadOnlyMemoryMappedFile& {
+    [[nodiscard]] auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept
+            -> ReadOnlyMemoryMappedFile& {
         if (this != &rhs) {
             m_data = std::exchange(rhs.m_data, nullptr);
             m_buf_size = std::exchange(rhs.m_buf_size, 0);
