@@ -225,8 +225,8 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// Returns `Ok(())` on success, regardless of whether the job was actually updated
-    /// (e.g., if the job was already completed, no rows would be updated).
+    /// Returns `Ok(())` on success, regardless of whether the job was actually updated  (e.g., if
+    /// the job was already completed, no rows would be updated).
     ///
     /// # Errors
     ///
