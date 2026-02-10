@@ -49,9 +49,8 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     if (result.has_error()) {
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
-                "segment with path: {}. errno = {} ({}).",
+                "segment with path: {}. Error: {}",
                 segment_path.c_str(),
-                result.error().value(),
                 result.error().message()
         );
         return ErrorCode_Failure;
