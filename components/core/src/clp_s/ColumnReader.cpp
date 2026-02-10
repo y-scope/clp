@@ -22,110 +22,9 @@
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/Utils.hpp>
 
+#include "clp_s/ArchiveReader.hpp"
+
 namespace clp_s {
-namespace {
-/**
- * Decodes variable placeholders from `logtype_dict_entry` replacing them with their type names.
- * @tparam LogTypeDictionaryEntryType
- * @tparam EncodedVariableContainerType A random access list of `clp::encoded_variable_t`.
- * @param logtype_dict_entry
- * @param encoded_vars
- * @param var_stats
- * @return A result containing a logtype string with variable type names, or an error code
- * indicating the failure:
- * - `std::errc::bad_message` if the logtype information is malformed.
- */
-template <
-        clp::LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-        typename EncodedVariableContainerType
->
-static auto decode_logtype_with_variable_types(
-        LogTypeDictionaryEntryType const& logtype_dict_entry,
-        EncodedVariableContainerType const& encoded_vars,
-        VariableStats const& var_stats
-) -> ystdlib::error_handling::Result<std::string>;
-
-template <
-        clp::LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-        typename EncodedVariableContainerType
->
-auto decode_logtype_with_variable_types(
-        LogTypeDictionaryEntryType const& logtype_dict_entry,
-        EncodedVariableContainerType const& encoded_vars,
-        VariableStats const& var_stats
-) -> ystdlib::error_handling::Result<std::string> {
-    std::string logtype;
-    auto const& logtype_value = logtype_dict_entry.get_value();
-    size_t const num_vars = logtype_dict_entry.get_num_variables();
-    if (num_vars != encoded_vars.size()) {
-        SPDLOG_ERROR(
-                "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given "
-                "for decoding.",
-                logtype_value.c_str(),
-                num_vars,
-                encoded_vars.size()
-        );
-        return std::errc::bad_message;
-    }
-
-    size_t constant_begin_pos{0};
-    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
-    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
-         ++placeholder_ix)
-    {
-        clp::ir::VariablePlaceholder var_placeholder{};
-        auto const placeholder_position{
-                logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder)
-        };
-        logtype.append(
-                logtype_value,
-                constant_begin_pos,
-                placeholder_position - constant_begin_pos
-        );
-
-        switch (var_placeholder) {
-            case clp::ir::VariablePlaceholder::Integer: {
-                logtype.append("<int>");
-                ++var_ix;
-                break;
-            }
-            case clp::ir::VariablePlaceholder::Float: {
-                logtype.append("<float>");
-                ++var_ix;
-                break;
-            }
-            case clp::ir::VariablePlaceholder::Dictionary: {
-                auto const id{
-                        clp::EncodedVariableInterpreter::decode_var_dict_id(encoded_vars[var_ix])
-                };
-                auto const& stat{var_stats.at(id)};
-                logtype.append(fmt::format("<{}>", stat.get_type()));
-                ++var_ix;
-                break;
-            }
-            case clp::ir::VariablePlaceholder::Escape: {
-                break;
-            }
-            default: {
-                SPDLOG_ERROR(
-                        "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
-                        "placeholder 0x{:x}",
-                        logtype_value,
-                        clp::enum_to_underlying_type(var_placeholder)
-                );
-                return std::errc::bad_message;
-            }
-        }
-        constant_begin_pos = placeholder_position + 1;
-    }
-
-    if (constant_begin_pos < logtype_value.length()) {
-        logtype.append(logtype_value, constant_begin_pos, logtype_value.length());
-    }
-    return logtype;
-}
-}  // namespace
-
 auto Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
     m_values = reader.read_unaligned_span<int64_t>(num_messages);
 }
@@ -266,7 +165,9 @@ ClpStringColumnReader::extract_string_value_into_buffer(uint64_t cur_message, st
     auto encoded_vars{m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables())};
 
     if (NodeType::LogType == m_type) {
-        if (auto logtype{decode_logtype_with_variable_types(entry, encoded_vars, *m_var_stats)};
+        if (auto logtype{
+                    ArchiveReader::decode_logtype_with_variable_types(entry, *m_logtype_stats)
+            };
             logtype.has_value())
         {
             buffer.append(logtype.value());

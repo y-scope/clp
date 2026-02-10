@@ -241,13 +241,13 @@ public:
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
             NodeType type,
-            VariableStats const* var_stats
+            LogTypeStats const* logtype_stats
     )
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
               m_type(type),
-              m_var_stats(var_stats) {}
+              m_logtype_stats(logtype_stats) {}
 
     // Methods inherited from BaseColumnReader
     auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
@@ -285,7 +285,7 @@ private:
     UnalignedMemSpan<int64_t> m_encoded_vars;
 
     NodeType m_type;
-    VariableStats const* m_var_stats;
+    LogTypeStats const* m_logtype_stats;
 };
 
 class VariableStringColumnReader : public BaseColumnReader {

@@ -2,11 +2,11 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <map>
+#include <memory>
 #include <optional>
-#include <set>
 #include <span>
+#include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
@@ -14,6 +14,7 @@
 #include <clp_s/ArchiveStats.hpp>
 
 #include "ArchiveReaderAdaptor.hpp"
+#include "clp_s/DictionaryEntry.hpp"
 #include "DictionaryReader.hpp"
 #include "InputConfig.hpp"
 #include "PackedStreamReader.hpp"
@@ -176,6 +177,20 @@ public:
     auto get_experimental_stats() const -> std::optional<ExperimentalStats> const& {
         return m_experimental_stats;
     }
+
+    /**
+     * Decodes variable placeholders from `logtype_dict_entry` replacing them with their type names.
+     * @param logtype_dict_entry Only supports clp-s entry due to the requirement of experimental
+     * features for the type names.
+     * @param logtype_stats Contains the type names for all logtypes.
+     * @return A result containing a logtype string with variable type names, or an error code
+     * indicating the failure:
+     * - `std::errc::bad_message` if the logtype information is malformed.
+     */
+    static auto decode_logtype_with_variable_types(
+            LogTypeDictionaryEntry const& logtype_dict_entry,
+            LogTypeStats const& logtype_stats
+    ) -> ystdlib::error_handling::Result<std::string>;
 
 private:
     /**

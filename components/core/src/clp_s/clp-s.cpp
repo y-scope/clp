@@ -291,12 +291,23 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery == query) {
             auto logtype_dict{archive_reader->get_log_type_dictionary()};
             for (clp::logtype_dictionary_id_t i{0}; i < stats->m_logtype_stats.size(); ++i) {
-                auto logtype_stat{stats->m_logtype_stats.at(i)};
+                auto logtype{clp_s::ArchiveReader::decode_logtype_with_variable_types(
+                        logtype_dict->get_entry(i),
+                        stats->m_logtype_stats
+                )};
+                if (logtype.has_error()) {
+                    SPDLOG_ERROR(
+                            "Failed to get log type for ID {}: {}",
+                            i,
+                            logtype.error().message()
+                    );
+                    return 4;
+                }
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"log_type\":\"{}\"}}\n",
                         i,
-                        logtype_stat.get_count(),
-                        logtype_dict->get_value(i)
+                        stats->m_logtype_stats.at(i).get_count(),
+                        logtype.value()
                 )};
                 output_handler.value()->write(message);
             }
@@ -319,7 +330,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         }
         if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
             SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
-            return 4;
+            return 5;
         }
         archive_reader->close();
     }

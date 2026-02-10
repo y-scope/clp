@@ -19,6 +19,7 @@
 
 #include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
+#include "clp_s/ParsedMessage.hpp"
 #include "DictionaryWriter.hpp"
 #include "RangeIndexWriter.hpp"
 #include "Schema.hpp"
@@ -225,11 +226,11 @@ public:
 
     /**
      * Update the stats for the given log type, adding it to the log type dictionary if necessary.
-     * @param logtype
+     * @param clp_str
      * @return The log type ID on success.
      * @return ClpsErrorCodeEnum::Unsupported if experimental stats are not enabled.
      */
-    auto update_logtype_stats(LogTypeDictionaryEntry& logtype)
+    auto update_logtype_stats(ParsedMessage::ClpString& clp_str)
             -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t>;
 
     /**

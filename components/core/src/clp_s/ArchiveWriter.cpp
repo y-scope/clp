@@ -502,16 +502,16 @@ auto ArchiveWriter::add_dict_var_to_logtype(std::string_view var, LogTypeDiction
     return clp::EncodedVariableInterpreter::encode_and_add_dict_var(var, logtype, *m_var_dict);
 }
 
-auto ArchiveWriter::update_logtype_stats(LogTypeDictionaryEntry& logtype)
+auto ArchiveWriter::update_logtype_stats(ParsedMessage::ClpString& clp_str)
         -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t> {
     if (false == m_experimental_stats.has_value()) {
         return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
     }
 
     clp::logtype_dictionary_id_t id{};
-    m_log_dict->add_entry(logtype, id);
+    m_log_dict->add_entry(clp_str.m_logtype, id);
     auto& logtype_stats{m_experimental_stats.value().m_logtype_stats};
-    logtype_stats.at_or_create(id).increment_count();
+    logtype_stats.at_or_create(id, clp_str.m_var_type_names).increment_count();
     return id;
 }
 

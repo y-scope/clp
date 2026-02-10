@@ -22,8 +22,6 @@ public:
 
     [[nodiscard]] auto at(Index i) const -> Element const& { return m_array.at(i); }
 
-    auto at_or_create(Index id) -> Element&;
-
     auto at_or_create(Index id, Element e) -> Element&;
 
     auto clear() -> void { return m_array.clear(); }
@@ -65,11 +63,6 @@ auto Array<Element, Index>::decompress(ZstdDecompressor& decompressor)
         m_array.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(Element::decompress(decompressor)));
     }
     return ystdlib::error_handling::success();
-}
-
-template <typename Element, typename Index>
-auto Array<Element, Index>::at_or_create(Index id) -> Element& {
-    return at_or_create(id, {});
 }
 
 template <typename Element, typename Index>

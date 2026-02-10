@@ -18,9 +18,13 @@
 namespace clp_s {
 class ParsedMessage {
 public:
-    struct LogType {
-        clp_s::LogTypeDictionaryEntry m_dict_entry;
+    /**
+     * Tracks building up a ClpString node during parsing a log event.
+     */
+    struct ClpString {
+        clp_s::LogTypeDictionaryEntry m_logtype;
         std::vector<clp::encoded_variable_t> m_encoded_vars;
+        std::vector<std::string_view> m_var_type_names;
     };
 
     using variable_t = std::
@@ -33,7 +37,7 @@ public:
                     std::pair<uint64_t, epochtime_t>,
                     std::pair<epochtime_t, uint64_t>,
                     std::pair<double, float_format_t>,
-                    LogType>;
+                    ClpString>;
 
     void set_id(int32_t schema_id) { m_schema_id = schema_id; }
 

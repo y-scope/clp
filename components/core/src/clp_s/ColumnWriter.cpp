@@ -139,20 +139,16 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
                                 fmt::format("{}: {}", error.category().name(), error.message())
                         );
                     }
-                } else if constexpr (std::is_same_v<T, clp_s::ParsedMessage::LogType>) {
+                } else if constexpr (std::is_same_v<T, ParsedMessage::ClpString>) {
                     m_logtype_entry.clear();
-                    m_logtype_entry = v.m_dict_entry;
+                    m_logtype_entry = v.m_logtype;
                     m_encoded_vars.insert(
                             m_encoded_vars.end(),
                             v.m_encoded_vars.begin(),
                             v.m_encoded_vars.end()
                     );
                 } else {
-                    throw clp_s::TraceableException(
-                            clp_s::ErrorCodeBadParam,
-                            __FILENAME__,
-                            __LINE__
-                    );
+                    throw TraceableException(ErrorCodeBadParam, __FILENAME__, __LINE__);
                 }
             },
             value
@@ -160,7 +156,7 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
 
     clp::logtype_dictionary_id_t id{};
     m_log_dict->add_entry(m_logtype_entry, id);
-    auto encoded_id = encode_log_dict_id(id, offset);
+    auto encoded_id{encode_log_dict_id(id, offset)};
     m_logtypes.push_back(encoded_id);
     return sizeof(int64_t) + (sizeof(int64_t) * (m_encoded_vars.size() - offset));
 }

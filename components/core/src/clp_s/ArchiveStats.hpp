@@ -5,11 +5,13 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/Defs.h>
+#include <clp/LogTypeDictionaryEntryReq.hpp>
 #include <clp/streaming_archive/Constants.hpp>
 #include <clp_s/Array.hpp>
 #include <clp_s/Defs.hpp>
@@ -86,6 +88,11 @@ private:
  */
 class LogTypeStat {
 public:
+    LogTypeStat() = default;
+
+    LogTypeStat(std::vector<std::string_view> const& type_names)
+            : m_var_type_names(type_names.begin(), type_names.end()) {}
+
     [[nodiscard]] auto compress(ZstdCompressor& compressor) const
             -> ystdlib::error_handling::Result<void>;
 
@@ -96,8 +103,13 @@ public:
 
     auto increment_count() -> void { ++m_count; }
 
+    [[nodiscard]] auto get_var_type_names() const -> std::vector<std::string> const& {
+        return m_var_type_names;
+    }
+
 private:
     size_t m_count{};
+    std::vector<std::string> m_var_type_names;
 };
 
 using LogTypeStats = Array<LogTypeStat, clp::logtype_dictionary_id_t>;

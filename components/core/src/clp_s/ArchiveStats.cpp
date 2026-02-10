@@ -12,6 +12,11 @@ namespace clp_s {
 auto LogTypeStat::compress(ZstdCompressor& compressor) const
         -> ystdlib::error_handling::Result<void> {
     compressor.write_numeric_value(m_count);
+    compressor.write_numeric_value(m_var_type_names.size());
+    for (auto const& var : m_var_type_names) {
+        compressor.write_numeric_value(var.size());
+        compressor.write_string(var);
+    }
     return ystdlib::error_handling::success();
 }
 
@@ -20,6 +25,21 @@ auto LogTypeStat::decompress(ZstdDecompressor& decompressor)
     LogTypeStat stat{};
     if (ErrorCodeSuccess != decompressor.try_read_numeric_value(stat.m_count)) {
         return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+
+    size_t var_count{};
+    if (ErrorCodeSuccess != decompressor.try_read_numeric_value(var_count)) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+    stat.m_var_type_names.resize(var_count);
+    for (auto& type_name : stat.m_var_type_names) {
+        size_t type_name_size{};
+        if (ErrorCodeSuccess != decompressor.try_read_numeric_value(type_name_size)) {
+            return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+        }
+        if (ErrorCodeSuccess != decompressor.try_read_string(type_name_size, type_name)) {
+            return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+        }
     }
     return stat;
 }
