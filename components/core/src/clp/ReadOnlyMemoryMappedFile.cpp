@@ -30,6 +30,8 @@ auto ReadOnlyMemoryMappedFile::create(std::string_view path)
 
         return ReadOnlyMemoryMappedFile{mmap_ptr, file_size};
     } catch (TraceableException const& ex) {
+        // TODO: Rewrite `FileDescriptor` constructor and `get_size()` to capture errno at the point
+        // of failure
         return std::error_code(errno, std::system_category());
     }
 }

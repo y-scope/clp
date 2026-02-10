@@ -44,6 +44,9 @@ public:
     [[nodiscard]] auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept
             -> ReadOnlyMemoryMappedFile& {
         if (this != &rhs) {
+            if (m_data != nullptr) {
+                munmap(m_data, m_buf_size);
+            }
             m_data = std::exchange(rhs.m_data, nullptr);
             m_buf_size = std::exchange(rhs.m_buf_size, 0);
         }
