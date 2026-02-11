@@ -601,7 +601,6 @@ auto EncodedVariableInterpreter::encode_and_search_dictionary(
 ) -> bool {
     auto const length{var_str.length()};
     if (0 == length) {
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
