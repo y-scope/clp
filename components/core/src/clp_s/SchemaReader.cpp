@@ -4,8 +4,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <fmt/core.h>
-#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ErrorCode.hpp>
