@@ -95,6 +95,9 @@
           "200": {
             "description": "The cancellation request was submitted successfully."
           },
+          "404": {
+            "description": "No cancellable query job with the given ID was found."
+          },
           "500": {
             "description": ""
           }

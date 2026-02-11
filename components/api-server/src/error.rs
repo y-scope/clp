@@ -25,8 +25,8 @@ pub enum ClientError {
     #[error("api_server configuration is missing")]
     ConfigIsNone,
 
-    #[error("No cancellable search job found")]
-    SearchJobNotFound,
+    #[error("Search job not found: {0}")]
+    SearchJobNotFound(u64),
 }
 
 /// Empty trait to mark errors that indicate malformed data.

@@ -246,7 +246,7 @@ impl Client {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(ClientError::SearchJobNotFound);
+            return Err(ClientError::SearchJobNotFound(search_job_id));
         }
 
         Ok(())

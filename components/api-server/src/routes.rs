@@ -239,7 +239,7 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound => Self::NotFound,
+            ClientError::SearchJobNotFound(_) => Self::NotFound,
             _ => Self::InternalServer,
         }
     }
