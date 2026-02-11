@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string>
 #include <type_traits>
 #include <variant>
 #include <vector>
