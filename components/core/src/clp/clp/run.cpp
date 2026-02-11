@@ -70,6 +70,10 @@ int run(int argc, char const* argv[]) {
                 }
 
                 auto const& captures{optional_captures.value()};
+                if (captures.empty()) {
+                    continue;
+                }
+
                 if ("header" == rule_name && 1 == captures.size()
                     && "timestamp" == captures[0]->get_name())
                 {
