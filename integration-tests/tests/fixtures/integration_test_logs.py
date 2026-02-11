@@ -45,25 +45,25 @@ def postgresql(
     )
 
 
-def _download_and_extract_dataset(
+def _download_and_extract_gzip_dataset(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
     name: str,
     tarball_url: str,
-    strip_leading_dir: bool = True,
+    keep_leading_dir: bool = False,
 ) -> IntegrationTestLogs:
     """
-    Download and extract a dataset tarball for setting up the `IntegrationTestLogs` fixture, and
-    adjust its file permissions for test use.
+    Download and extract a gzip-compressed dataset tarball for setting up the `IntegrationTestLogs`
+    fixture. Adjust its file permissions for test use.
 
     :param request: Provides access to the pytest cache.
     :param integration_test_path_config: See `IntegrationTestPathConfig`.
     :param name: Dataset name.
     :param tarball_url: Dataset tarball URL.
-    :param strip_leading_dir: Whether to strip a single top-level directory from the tarball
-        contents. Defaults to True.
-    :return: An IntegrationTestLogs instance describing the downloaded and extracted logs.
-    :raises subprocess.CalledProcessError: If `curl`, `tar x`, or `chmod` fails.
+    :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
+        Defaults to False to avoid an unnecessary extra directory level.
+    :return: An IntegrationTestLogs instance providing metadata for the downloaded logs.
+    :raises subprocess.CalledProcessError: If `curl`, `tar`, or `chmod` fails.
     """
     integration_test_logs = IntegrationTestLogs(
         name=name,
@@ -99,14 +99,15 @@ def _download_and_extract_dataset(
         "--extract",
         "--gzip",
         "--file", tarball_path_str,
-        "-C", extract_path_str,
+        "--directory", extract_path_str,
     ]
     # fmt: on
-    if strip_leading_dir:
+    if not keep_leading_dir:
         extract_cmd.extend(["--strip-components", "1"])
     subprocess.run(extract_cmd, check=True)
 
-    # Allow the downloaded and extracted contents to be deletable or overwritable
+    # Allow the downloaded and extracted contents to be deletable or overwritable by adding write
+    # permissions for both the user and the group.
     chmod_bin = get_binary_path("chmod")
     subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
     subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
