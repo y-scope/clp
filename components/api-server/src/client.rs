@@ -223,6 +223,10 @@ impl Client {
 
     /// Submits a cancellation request for a search job.
     ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
