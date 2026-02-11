@@ -35,6 +35,7 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
+        .routes(routes!(cancel_query))
         .with_state(client)
         .split_for_parts();
     let api_json = api.to_json()?;
@@ -52,7 +53,7 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
 mod api_doc {
     // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
     // documentation. Importing the paths directly prevents this issue.
-    use super::{__path_health, __path_query, __path_query_results};
+    use super::{__path_cancel_query, __path_health, __path_query, __path_query_results};
 
     #[derive(utoipa::OpenApi)]
     #[openapi(
@@ -61,7 +62,7 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results)
+        paths(health, query, query_results, cancel_query)
     )]
     pub struct ApiDoc;
 }
@@ -180,28 +181,76 @@ async fn query_results(
     Ok(Sse::new(event_stream).keep_alive(KeepAlive::default()))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/query/{search_job_id}",
+    description = "Cancels a previously submitted query job.",
+    responses(
+        (
+            status = OK,
+            description = "The cancellation request was submitted successfully."
+        ),
+        (
+            status = NOT_FOUND,
+            description = "No cancellable query job with the given ID was found."
+        ),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn cancel_query(
+    State(client): State<Client>,
+    Path(search_job_id): Path<u64>,
+) -> Result<StatusCode, HandlerError> {
+    tracing::info!("Cancelling search job ID: {}", search_job_id);
+    match client.cancel_search_job(search_job_id).await {
+        Ok(()) => {
+            tracing::info!(
+                "Successfully submitted cancellation request for search job ID: {}",
+                search_job_id
+            );
+            Ok(StatusCode::OK)
+        }
+        Err(err) => {
+            tracing::error!(
+                "Failed to cancel search job ID {}: {:?}",
+                search_job_id,
+                err
+            );
+            Err(err.into())
+        }
+    }
+}
+
 /// Generic errors for request handlers.
 #[derive(Error, Debug)]
 enum HandlerError {
     #[error("Internal server error")]
     InternalServer,
+    #[error("Not found")]
+    NotFound,
 }
 
-trait IntoHandlerError {}
-
-impl IntoHandlerError for axum::Error {}
-
-impl IntoHandlerError for ClientError {}
-
-impl<T: IntoHandlerError> From<T> for HandlerError {
-    fn from(_: T) -> Self {
+impl From<axum::Error> for HandlerError {
+    fn from(_: axum::Error) -> Self {
         Self::InternalServer
+    }
+}
+
+impl From<ClientError> for HandlerError {
+    fn from(err: ClientError) -> Self {
+        match err {
+            ClientError::SearchJobNotFound(_) => Self::NotFound,
+            _ => Self::InternalServer,
+        }
     }
 }
 
 /// Converts [`HandlerError`] into an HTTP response.
 impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
-        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        match self {
+            Self::NotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
     }
 }
