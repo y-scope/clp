@@ -153,12 +153,7 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
     lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenNewline)]
             = log_surgeon::cTokenNewline;
 
-    lexer.add_rule(
-            lexer.m_symbol_id["newLine"],
-            std::move(make_unique<RegexASTLiteral<ByteNfaState>>(
-                    RegexASTLiteral<ByteNfaState>('\n')
-            ))
-    );
+    lexer.add_rule(lexer.m_symbol_id["newLine"], make_unique<RegexASTLiteral<ByteNfaState>>('\n'));
 
     for (auto const& delimiters_ast : schema_ast->m_delimiters) {
         auto* delimiters_ptr = dynamic_cast<log_surgeon::DelimiterStringAST*>(delimiters_ast.get());
