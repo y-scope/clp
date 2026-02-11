@@ -1,6 +1,7 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
