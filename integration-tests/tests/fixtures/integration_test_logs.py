@@ -23,7 +23,7 @@ def hive_24hr(
     integration_test_path_config: IntegrationTestPathConfig,
 ) -> IntegrationTestLogs:
     """Provides shared `hive_24hr` test logs."""
-    return _download_and_extract_dataset(
+    return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
         name="hive-24hr",
@@ -37,7 +37,7 @@ def postgresql(
     integration_test_path_config: IntegrationTestPathConfig,
 ) -> IntegrationTestLogs:
     """Provides shared `postgresql` test logs."""
-    return _download_and_extract_dataset(
+    return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
         name="postgresql",
