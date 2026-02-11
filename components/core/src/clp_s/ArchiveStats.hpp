@@ -90,7 +90,7 @@ class LogTypeStat {
 public:
     LogTypeStat() = default;
 
-    LogTypeStat(std::vector<std::string_view> const& type_names)
+    LogTypeStat(std::vector<std::string> const& type_names)
             : m_var_type_names(type_names.begin(), type_names.end()) {}
 
     [[nodiscard]] auto compress(ZstdCompressor& compressor) const
