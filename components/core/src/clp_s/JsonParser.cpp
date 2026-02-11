@@ -144,6 +144,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
+          m_sanitize_invalid_json(option.sanitize_invalid_json),
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
@@ -223,7 +224,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
         }
 
         cur_field = *object_it_stack.top();
-        cur_key = cur_field.unescaped_key(true);
+        cur_key = cur_field.unescaped_key(m_sanitize_invalid_json);
         cur_value = cur_field.value();
 
         switch (cur_value.type()) {
@@ -302,7 +303,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                 break;
             }
             case simdjson::ondemand::json_type::string: {
-                std::string_view value = cur_value.get_string(true);
+                std::string_view value = cur_value.get_string(m_sanitize_invalid_json);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
@@ -407,7 +408,7 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                 break;
             }
             case simdjson::ondemand::json_type::string: {
-                std::string_view value = cur_value.get_string(true);
+                std::string_view value = cur_value.get_string(m_sanitize_invalid_json);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
                 } else {
@@ -452,7 +453,7 @@ void JsonParser::parse_line(
     do {
         if (false == object_stack.empty()) {
             cur_field = *object_it_stack.top();
-            cur_key = cur_field.unescaped_key(true);
+            cur_key = cur_field.unescaped_key(m_sanitize_invalid_json);
             line = cur_field.value();
         }
 
@@ -555,7 +556,7 @@ void JsonParser::parse_line(
                 break;
             }
             case simdjson::ondemand::json_type::string: {
-                std::string_view value = line.get_string(true);
+                std::string_view value = line.get_string(m_sanitize_invalid_json);
                 auto const matches_timestamp
                         = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
                 if (matches_timestamp) {
@@ -668,7 +669,8 @@ auto JsonParser::ingest_json(
         Path const& path,
         std::string const& archive_creator_id
 ) -> bool {
-    JsonFileIterator json_file_iterator(*reader, m_max_document_size);
+    JsonFileIterator
+            json_file_iterator(*reader, m_max_document_size, m_sanitize_invalid_json, path.path);
     if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
         SPDLOG_ERROR(
                 "Encountered error - {} - while trying to parse {} after parsing 0 bytes",
