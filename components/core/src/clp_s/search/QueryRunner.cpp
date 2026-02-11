@@ -17,6 +17,7 @@
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
+#include "ast/Integral.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
@@ -28,6 +29,7 @@ using clp_s::search::ast::DescriptorList;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::Integral;
 using clp_s::search::ast::Literal;
 using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
@@ -1214,6 +1216,11 @@ auto QueryRunner::evaluate_timestamp_filter(
     int64_t op_value{};
     if (false == operand->as_int(op_value, op)) {
         return false;
+    }
+
+    if (nullptr != dynamic_cast<ast::Integral*>(operand.get())) {
+        constexpr int64_t cNanosecondsInMillisecond{1000 * 1000};
+        op_value *= cNanosecondsInMillisecond;
     }
 
     return evaluate_int_filter_core(op, reader->get_encoded_time(m_cur_message), op_value);
