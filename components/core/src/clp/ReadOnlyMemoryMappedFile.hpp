@@ -1,8 +1,6 @@
 #ifndef CLP_READONLYMEMORYMAPPEDFILE_HPP
 #define CLP_READONLYMEMORYMAPPEDFILE_HPP
 
-#include <sys/mman.h>
-
 #include <cstddef>
 #include <span>
 #include <string_view>
@@ -37,22 +35,13 @@ public:
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile const&) = delete;
     auto operator=(ReadOnlyMemoryMappedFile const&) -> ReadOnlyMemoryMappedFile& = delete;
 
-    // Move constructor and assignment operator
+    // Move constructor
     ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile&& rhs) noexcept
             : m_data{std::exchange(rhs.m_data, nullptr)},
               m_buf_size{std::exchange(rhs.m_buf_size, 0)} {}
 
-    [[nodiscard]] auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept
-            -> ReadOnlyMemoryMappedFile& {
-        if (this != &rhs) {
-            if (nullptr != m_data) {
-                munmap(m_data, m_buf_size);
-            }
-            m_data = std::exchange(rhs.m_data, nullptr);
-            m_buf_size = std::exchange(rhs.m_buf_size, 0);
-        }
-        return *this;
-    }
+    // Delete move assignment operator
+    auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept -> ReadOnlyMemoryMappedFile& = delete;
 
     /**
      * @return A view of the mapped file in memory, or an empty span if the file is not mapped.
