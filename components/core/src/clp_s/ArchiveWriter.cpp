@@ -307,34 +307,34 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
         auto const& node = m_schema_tree.get_node(id);
         switch (node.get_type()) {
             case NodeType::Integer:
-                writer->append_column(new Int64ColumnWriter(id));
+                writer->append_column(std::make_unique<Int64ColumnWriter>(id));
                 break;
             case NodeType::Float:
-                writer->append_column(new FloatColumnWriter(id));
+                writer->append_column(std::make_unique<FloatColumnWriter>(id));
                 break;
             case NodeType::FormattedFloat:
-                writer->append_column(new FormattedFloatColumnWriter(id));
+                writer->append_column(std::make_unique<FormattedFloatColumnWriter>(id));
                 break;
             case NodeType::DictionaryFloat:
-                writer->append_column(new DictionaryFloatColumnWriter(id, m_var_dict));
+                writer->append_column(std::make_unique<DictionaryFloatColumnWriter>(id, m_var_dict));
                 break;
             case NodeType::ClpString:
-                writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
+                writer->append_column(std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_log_dict));
                 break;
             case NodeType::VarString:
-                writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
+                writer->append_column(std::make_unique<VariableStringColumnWriter>(id, m_var_dict));
                 break;
             case NodeType::Boolean:
-                writer->append_column(new BooleanColumnWriter(id));
+                writer->append_column(std::make_unique<BooleanColumnWriter>(id));
                 break;
             case NodeType::UnstructuredArray:
-                writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_array_dict));
+                writer->append_column(std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_array_dict));
                 break;
             case NodeType::DateString:
-                writer->append_column(new DateStringColumnWriter(id));
+                writer->append_column(std::make_unique<DateStringColumnWriter>(id));
                 break;
             case NodeType::DeltaInteger:
-                writer->append_column(new DeltaEncodedInt64ColumnWriter(id));
+                writer->append_column(std::make_unique<DeltaEncodedInt64ColumnWriter>(id));
                 break;
             case NodeType::Metadata:
             case NodeType::NullValue:
