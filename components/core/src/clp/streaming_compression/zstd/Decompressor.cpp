@@ -175,17 +175,19 @@ auto Decompressor::open(std::string const& compressed_file_path) -> ErrorCode {
     m_input_type = InputType::MemoryMappedCompressedFile;
 
     // Create read-only memory mapping for compressed_file_path
-    auto result{clp::ReadOnlyMemoryMappedFile::create(compressed_file_path)};
+    auto result{ReadOnlyMemoryMappedFile::create(compressed_file_path)};
     if (result.has_error()) {
+        auto const error{result.error()};
         SPDLOG_ERROR(
                 "streaming_compression::zstd::Decompressor: Unable to memory map the compressed "
-                "file with path: {}. Error: {}",
+                "file with path: {}. Error: {} - {}",
                 compressed_file_path.c_str(),
-                result.error().message()
+                error.category().name(),
+                error.message()
         );
         return ErrorCode_Failure;
     }
-    m_memory_mapped_file = std::move(result.value());
+    m_memory_mapped_file.emplace(std::move(result.value()));
 
     // Configure input stream
     auto const file_view{m_memory_mapped_file.value().get_view()};

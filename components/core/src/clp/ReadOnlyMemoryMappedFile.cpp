@@ -25,7 +25,7 @@ auto ReadOnlyMemoryMappedFile::create(std::string_view path)
         // TODO: optionally provide a hint for the mmap location
         auto* mmap_ptr{mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd.get_raw_fd(), 0)};
         if (MAP_FAILED == mmap_ptr) {
-            return std::error_code(errno, std::system_category());
+            return static_cast<std::errc>(errno);
         }
 
         return ReadOnlyMemoryMappedFile{mmap_ptr, file_size};
@@ -33,7 +33,7 @@ auto ReadOnlyMemoryMappedFile::create(std::string_view path)
         // TODO: Rewrite `FileDescriptor` constructor and `get_size()`
         // with `ystdlib::error_handling::result` for capturing errno at the point of failure and
         // better error propagation.
-        return std::error_code(errno, std::system_category());
+        return static_cast<std::errc>(errno);
     }
 }
 

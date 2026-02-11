@@ -249,15 +249,17 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     // Create read-only memory mapping for compressed_file_path
     auto result{clp::ReadOnlyMemoryMappedFile::create(compressed_file_path)};
     if (result.has_error()) {
+        auto const error{result.error()};
         SPDLOG_ERROR(
                 "ZstdDecompressor: Unable to memory map the compressed file with path: {}. Error: "
-                "{}.",
+                "{} - {}",
                 compressed_file_path.c_str(),
-                result.error().message()
+                error.category().name(),
+                error.message()
         );
         return ErrorCodeFailure;
     }
-    m_memory_mapped_file = std::move(result.value());
+    m_memory_mapped_file.emplace(std::move(result.value()));
 
     // Configure input stream
     auto const file_view{m_memory_mapped_file.value().get_view()};

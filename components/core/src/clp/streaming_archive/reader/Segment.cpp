@@ -47,15 +47,17 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     // Create read-only memory mapped file
     auto result{clp::ReadOnlyMemoryMappedFile::create(segment_path)};
     if (result.has_error()) {
+        auto const error{result.error()};
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
-                "segment with path: {}. Error: {}",
+                "segment with path: {}. Error: {} - {}",
                 segment_path.c_str(),
-                result.error().message()
+                error.category().name(),
+                error.message()
         );
         return ErrorCode_Failure;
     }
-    m_memory_mapped_segment_file = std::move(result.value());
+    m_memory_mapped_segment_file.emplace(std::move(result.value()));
 
     auto const view{m_memory_mapped_segment_file.value().get_view()};
     m_decompressor.open(view.data(), view.size());

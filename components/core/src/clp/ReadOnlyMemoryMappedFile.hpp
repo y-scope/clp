@@ -21,11 +21,11 @@ public:
     /**
      * @param path The path of the file to map.
      * @return A result containing the newly constructed `ReadOnlyMemoryMappedFile` on success, or
-     * an error code indicating failure:
-     * - A system error corresponding to the `errno` value set by a failed `mmap` call. See also:
-     *   https://man7.org/linux/man-pages/man2/mmap.2.html
-     * - A system error corresponding to the `errno` value set by failed `FileDescriptor`
-     *   operations.
+     * an error code indicating the failure:
+     * - An instance of `std::errc` representing one of the following errors:
+     *   - The `errno` value set by a failed `mmap` call. See also:
+     *     https://man7.org/linux/man-pages/man2/mmap.2.html
+     *   - The `errno` value set by failed `FileDescriptor` operations.
      */
     [[nodiscard]] static auto create(std::string_view path)
             -> ystdlib::error_handling::Result<ReadOnlyMemoryMappedFile>;
@@ -45,7 +45,7 @@ public:
     [[nodiscard]] auto operator=(ReadOnlyMemoryMappedFile&& rhs) noexcept
             -> ReadOnlyMemoryMappedFile& {
         if (this != &rhs) {
-            if (m_data != nullptr) {
+            if (nullptr != m_data) {
                 munmap(m_data, m_buf_size);
             }
             m_data = std::exchange(rhs.m_data, nullptr);
