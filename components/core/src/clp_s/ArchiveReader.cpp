@@ -215,15 +215,8 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::DictionaryFloat:
             column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
             break;
-        case NodeType::VarString:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
-            break;
-        case NodeType::Boolean:
-            column_reader = new BooleanColumnReader(column_id);
-            break;
         case NodeType::ClpString:
         case NodeType::LogType:
-        case NodeType::UnstructuredArray:
             column_reader = new ClpStringColumnReader(
                     column_id,
                     m_var_dict,
@@ -231,6 +224,21 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
                     node.get_type(),
                     m_experimental_stats.has_value() ? &m_experimental_stats->m_logtype_stats
                                                      : nullptr
+            );
+            break;
+        case NodeType::VarString:
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
+            break;
+        case NodeType::Boolean:
+            column_reader = new BooleanColumnReader(column_id);
+            break;
+        case NodeType::UnstructuredArray:
+            column_reader = new ClpStringColumnReader(
+                    column_id,
+                    m_var_dict,
+                    m_array_dict,
+                    node.get_type(),
+                    nullptr
             );
             break;
         case NodeType::DateString:
