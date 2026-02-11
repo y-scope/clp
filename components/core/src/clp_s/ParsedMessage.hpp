@@ -39,7 +39,7 @@ public:
                     std::pair<double, float_format_t>,
                     ClpString>;
 
-    void set_id(int32_t schema_id) { m_schema_id = schema_id; }
+    auto set_id(int32_t schema_id) -> void { m_schema_id = schema_id; }
 
     /**
      * Adds a value to the message for a given MST node ID.
@@ -48,11 +48,11 @@ public:
      * @param value
      */
     template <typename T>
-    inline void add_value(int32_t node_id, T const& value) {
+    auto add_value(int32_t node_id, T const& value) -> void {
         m_message.emplace(node_id, value);
     }
 
-    inline void add_value(int32_t node_id, std::string_view value) {
+    auto add_value(int32_t node_id, std::string_view value) -> void {
         m_message.emplace(node_id, std::string{value});
     }
 
@@ -62,7 +62,7 @@ public:
      * @param encoding_id
      * @param value
      */
-    inline void add_value(int32_t node_id, uint64_t encoding_id, epochtime_t value) {
+    auto add_value(int32_t node_id, uint64_t encoding_id, epochtime_t value) -> void {
         m_message.emplace(node_id, std::make_pair(encoding_id, value));
     }
 
@@ -72,7 +72,7 @@ public:
      * @param value
      * @param format
      */
-    inline void add_value(int32_t node_id, double value, float_format_t format) {
+    auto add_value(int32_t node_id, double value, float_format_t format) -> void {
         m_message.emplace(node_id, std::make_pair(value, format));
     }
 
@@ -83,11 +83,11 @@ public:
      * @param value
      */
     template <typename T>
-    inline void add_unordered_value(T const& value) {
+    auto add_unordered_value(T const& value) -> void {
         m_unordered_message.emplace_back(value);
     }
 
-    inline void add_unordered_value(std::string_view value) {
+    auto add_unordered_value(std::string_view value) -> void {
         m_unordered_message.emplace_back(std::string{value});
     }
 
@@ -97,14 +97,14 @@ public:
      * @param value
      * @param format
      */
-    inline void add_unordered_value(double value, float_format_t format) {
+    auto add_unordered_value(double value, float_format_t format) -> void {
         m_unordered_message.emplace_back(std::make_pair(value, format));
     }
 
     /**
      * Clears the message
      */
-    void clear() {
+    auto clear() -> void {
         m_schema_id = -1;
         m_message.clear();
         m_unordered_message.clear();
@@ -113,12 +113,12 @@ public:
     /**
      * @return The content of the message
      */
-    std::map<int32_t, variable_t>& get_content() { return m_message; }
+    auto get_content() -> std::map<int32_t, variable_t>& { return m_message; }
 
     /**
      * @return the unordered content of the message
      */
-    std::vector<variable_t>& get_unordered_content() { return m_unordered_message; }
+    auto get_unordered_content() -> std::vector<variable_t>& { return m_unordered_message; }
 
 private:
     int32_t m_schema_id{-1};

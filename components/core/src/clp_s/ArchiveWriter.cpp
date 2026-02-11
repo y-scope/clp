@@ -19,11 +19,10 @@
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/FileWriter.hpp>
+#include <clp_s/ParsedMessage.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
-
-#include "clp_s/ParsedMessage.hpp"
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {

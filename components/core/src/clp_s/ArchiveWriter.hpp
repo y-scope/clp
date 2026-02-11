@@ -1,6 +1,7 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -13,21 +14,20 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/Defs.h>
+#include <clp/streaming_archive/Constants.hpp>
+#include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveStats.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
-
-#include "../clp/streaming_archive/Constants.hpp"
-#include "archive_constants.hpp"
-#include "clp_s/ParsedMessage.hpp"
-#include "DictionaryWriter.hpp"
-#include "RangeIndexWriter.hpp"
-#include "Schema.hpp"
-#include "SchemaMap.hpp"
-#include "SchemaTree.hpp"
-#include "SchemaWriter.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryWriter.hpp"
+#include <clp_s/DictionaryWriter.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/RangeIndexWriter.hpp>
+#include <clp_s/Schema.hpp>
+#include <clp_s/SchemaMap.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SchemaWriter.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryWriter.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
