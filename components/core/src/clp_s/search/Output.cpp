@@ -76,6 +76,8 @@ bool Output::filter() {
         }
     }
 
+    std::ignore = m_archive_reader->read_experimental_stats();
+
     m_query_runner.global_init();
     m_archive_reader->open_packed_streams();
 

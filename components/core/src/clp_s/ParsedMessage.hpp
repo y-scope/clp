@@ -7,15 +7,26 @@
 #include <string_view>
 #include <utility>
 #include <variant>
+#include <vector>
 
-#include "../clp/ffi/EncodedTextAst.hpp"
-#include "Defs.hpp"
-#include "FloatFormatEncoding.hpp"
+#include <clp/Defs.h>
+#include <clp/ffi/EncodedTextAst.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/FloatFormatEncoding.hpp>
 
 namespace clp_s {
 class ParsedMessage {
 public:
-    // Types
+    /**
+     * Tracks building up a ClpString node during parsing a log event.
+     */
+    struct ClpString {
+        clp_s::LogTypeDictionaryEntry m_logtype;
+        std::vector<clp::encoded_variable_t> m_encoded_vars;
+        std::vector<std::string> m_var_type_names;
+    };
+
     using variable_t = std::
             variant<int64_t,
                     double,
@@ -25,13 +36,8 @@ public:
                     bool,
                     std::pair<uint64_t, epochtime_t>,
                     std::pair<epochtime_t, uint64_t>,
-                    std::pair<double, float_format_t>>;
-
-    // Constructor
-    ParsedMessage() : m_schema_id(-1) {}
-
-    // Destructor
-    ~ParsedMessage() = default;
+                    std::pair<double, float_format_t>,
+                    ClpString>;
 
     void set_id(int32_t schema_id) { m_schema_id = schema_id; }
 
@@ -115,7 +121,7 @@ public:
     std::vector<variable_t>& get_unordered_content() { return m_unordered_message; }
 
 private:
-    int32_t m_schema_id;
+    int32_t m_schema_id{-1};
     std::map<int32_t, variable_t> m_message;
     std::vector<variable_t> m_unordered_message;
 };

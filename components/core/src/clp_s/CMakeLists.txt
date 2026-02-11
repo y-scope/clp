@@ -131,6 +131,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp::string_utils
                 log_surgeon::log_surgeon
                 ystdlib::containers
+                ystdlib::error_handling
                 ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
@@ -140,7 +141,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 nlohmann_json::nlohmann_json
                 OpenSSL::Crypto
                 spdlog::spdlog
-                ystdlib::error_handling
         )
 endif()
 
@@ -190,6 +190,7 @@ set(
         CLP_S_IO_SOURCES
         Compressor.hpp
         Decompressor.hpp
+        ErrorCode.cpp
         ErrorCode.hpp
         FileReader.cpp
         FileReader.hpp
@@ -229,8 +230,11 @@ endif()
 set(
         CLP_S_ARCHIVE_WRITER_SOURCES
         archive_constants.hpp
+        ArchiveStats.cpp
+        ArchiveStats.hpp
         ArchiveWriter.cpp
         ArchiveWriter.hpp
+        Array.hpp
         ColumnWriter.cpp
         ColumnWriter.hpp
         Defs.hpp
@@ -238,6 +242,7 @@ set(
         DictionaryEntry.hpp
         DictionaryWriter.cpp
         DictionaryWriter.hpp
+        ErrorCode.cpp
         ErrorCode.hpp
         FloatFormatEncoding.cpp
         FloatFormatEncoding.hpp
@@ -308,6 +313,7 @@ set(
         DictionaryEntry.cpp
         DictionaryEntry.hpp
         DictionaryReader.hpp
+        ErrorCode.cpp
         ErrorCode.hpp
         FloatFormatEncoding.cpp
         FloatFormatEncoding.hpp
@@ -360,6 +366,7 @@ endif()
 
 set(
         CLP_S_JSON_CONSTRUCTOR_SOURCES
+        ErrorCode.cpp
         ErrorCode.hpp
         JsonConstructor.cpp
         JsonConstructor.hpp
@@ -378,6 +385,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
+                ystdlib::error_handling
                 ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
@@ -389,6 +397,7 @@ endif()
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
         Defs.hpp
+        ErrorCode.cpp
         ErrorCode.hpp
         TimestampPattern.cpp
         TimestampPattern.hpp
@@ -405,6 +414,8 @@ if(CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
         target_include_directories(clp_s_timestamp_pattern PUBLIC ../)
         target_link_libraries(
                 clp_s_timestamp_pattern
+                PUBLIC
+                ystdlib::error_handling
                 PRIVATE
                 clp::string_utils
                 date::date
@@ -416,6 +427,7 @@ set(
         CLP_S_EXE_SOURCES
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        ErrorCode.cpp
         ErrorCode.hpp
         kv_ir_search.cpp
         kv_ir_search.hpp
@@ -435,6 +447,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_link_libraries(
                 clp-s
                 PRIVATE
+                Boost::filesystem
                 Boost::program_options
                 clp_s::archive_reader
                 clp_s::archive_writer
