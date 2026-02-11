@@ -184,14 +184,13 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
     for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
 
-        // Currently, we only support at most a single capture group in each variable. If a capture
-        // group is present its match will be treated as the variable rather than the full match.
-        auto const num_captures = rule->m_regex_ptr->get_subtree_positive_captures().size();
-        if (1 < num_captures) {
+        // Capture groups are temporarily disabled, until NFA intersection supports for search.
+        auto const num_captures{rule->m_regex_ptr->get_subtree_positive_captures().size()};
+        if (0 < num_captures) {
             throw std::runtime_error(
                     schema_file_path + ":" + std::to_string(rule->m_line_num + 1)
                     + ": error: the schema rule '" + rule->m_name
-                    + "' has a regex pattern containing > 1 capture groups (found "
+                    + "' has a regex pattern containing capture groups (found "
                     + std::to_string(num_captures) + ").\n"
             );
         }
