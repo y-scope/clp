@@ -32,6 +32,7 @@ auto ReadOnlyMemoryMappedFile::create(std::string_view path)
         // TODO: Rewrite `FileDescriptor` constructor and `get_size()`
         // with `ystdlib::error_handling::result` for capturing errno at the point of failure and
         // better error propagation.
+        // Issue: #1971
         return static_cast<std::errc>(errno);
     }
 }
