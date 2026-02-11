@@ -1,31 +1,21 @@
 #include "Utils.hpp"
 
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
-#include <set>
 #include <string>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <spdlog/spdlog.h>
-#include <string_utils/string_utils.hpp>
 
 #include "spdlog_with_specializations.hpp"
 
 namespace clp {
-using std::list;
 using log_surgeon::finite_automata::ByteNfaState;
-using log_surgeon::finite_automata::RegexASTCat;
 using log_surgeon::finite_automata::RegexASTLiteral;
-using log_surgeon::finite_automata::RegexASTOr;
-using log_surgeon::utf8::cCharStartOfFile;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -165,11 +155,9 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
 
     lexer.add_rule(
             lexer.m_symbol_id["newLine"],
-            std::move(
-                    make_unique<RegexASTLiteral<ByteNfaState>>(
-                            RegexASTLiteral<ByteNfaState>('\n')
-                    )
-            )
+            std::move(make_unique<RegexASTLiteral<ByteNfaState>>(
+                    RegexASTLiteral<ByteNfaState>('\n')
+            ))
     );
 
     for (auto const& delimiters_ast : schema_ast->m_delimiters) {
