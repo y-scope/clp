@@ -28,7 +28,7 @@ auto ReadOnlyMemoryMappedFile::create(std::string_view path)
         }
 
         return ReadOnlyMemoryMappedFile{mmap_ptr, file_size};
-    } catch (TraceableException const& ex) {
+    } catch (TraceableException const&) {
         // TODO: Rewrite `FileDescriptor` constructor and `get_size()`
         // with `ystdlib::error_handling::result` for capturing errno at the point of failure and
         // better error propagation.
