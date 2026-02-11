@@ -242,14 +242,13 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
             if (evaluate_epoch_date_filter(op, m_deprecated_datestring_reader, literal)) {
                 return true;
             }
-        } else {
-            for (auto entry : m_timestamp_readers) {
-                if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
-                    continue;
-                }
-                if (evaluate_timestamp_filter(op, entry.second, literal)) {
-                    return true;
-                }
+        }
+        for (auto const& entry : m_timestamp_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
+            if (evaluate_timestamp_filter(op, entry.second, literal)) {
+                return true;
             }
         }
     }
