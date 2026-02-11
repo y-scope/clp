@@ -99,7 +99,7 @@ public:
     /**
      * Adds an escape character
      */
-    void add_escape();
+    auto add_escape() -> void;
 
     /**
      * Adds static text to the logtype, escaping any placeholder characters.

@@ -1,21 +1,22 @@
 #include "ColumnWriter.hpp"
 
-#include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cstdint>
+#include <string>
+#include <type_traits>
 #include <variant>
+#include <vector>
 
 #include <fmt/format.h>
 
-#include "../clp/Defs.h"
-#include "../clp/EncodedVariableInterpreter.hpp"
-#include "../clp/ErrorCode.hpp"
-#include "../clp/ffi/EncodedTextAst.hpp"
-#include "../clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../clp/TraceableException.hpp"
-#include "ParsedMessage.hpp"
-#include "ZstdCompressor.hpp"
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp/ErrorCode.hpp>
+#include <clp/ffi/EncodedTextAst.hpp>
+#include <clp/ffi/ir_stream/decoding_methods.hpp>
+#include <clp/TraceableException.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/ZstdCompressor.hpp>
 
 namespace clp_s {
 size_t Int64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
@@ -90,8 +91,8 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    uint64_t offset{m_encoded_vars.size()};
+auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
+    auto const offset{m_encoded_vars.size()};
     std::vector<clp::variable_dictionary_id_t> temp_var_dict_ids;
     if (std::holds_alternative<std::string>(value)) {
         clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
@@ -139,9 +140,9 @@ size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
 
     clp::logtype_dictionary_id_t id{};
     m_log_dict->add_entry(m_logtype_entry, id);
-    auto encoded_id = encode_log_dict_id(id, offset);
+    auto encoded_id{encode_log_dict_id(id, offset)};
     m_logtypes.push_back(encoded_id);
-    return sizeof(int64_t) + sizeof(int64_t) * (m_encoded_vars.size() - offset);
+    return sizeof(int64_t) + (sizeof(int64_t) * (m_encoded_vars.size() - offset));
 }
 
 void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
@@ -170,7 +171,6 @@ size_t DateStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_timestamps.push_back(encoded_timestamp.second);
     m_timestamp_encodings.push_back(encoded_timestamp.first);
     return 2 * sizeof(int64_t);
-    ;
 }
 
 void DateStringColumnWriter::store(ZstdCompressor& compressor) {

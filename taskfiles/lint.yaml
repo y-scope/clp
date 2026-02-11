@@ -256,7 +256,6 @@ tasks:
             - "clp/DictionaryReader.hpp"
             - "clp/DictionaryWriter.hpp"
             - "clp/EncodedVariableInterpreter.cpp"
-            - "clp/EncodedVariableInterpreter.hpp"
             - "clp/ErrorCode.hpp"
             - "clp/ffi/encoding_methods.cpp"
             - "clp/ffi/encoding_methods.hpp"

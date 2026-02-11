@@ -2,20 +2,24 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <map>
-#include <set>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
-#include <utility>
+#include <vector>
 
-#include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryReader.hpp"
-#include "InputConfig.hpp"
-#include "PackedStreamReader.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaReader.hpp"
-#include "search/Projection.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryReader.hpp"
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/PackedStreamReader.hpp>
+#include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaReader.hpp>
+#include <clp_s/search/Projection.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s {
 class ArchiveReader {
