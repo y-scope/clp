@@ -22,7 +22,6 @@ auto ReadOnlyMemoryMappedFile::create(std::string_view path)
             return ReadOnlyMemoryMappedFile{nullptr, file_size};
         }
 
-        // TODO: optionally provide a hint for the mmap location
         auto* mmap_ptr{mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd.get_raw_fd(), 0)};
         if (MAP_FAILED == mmap_ptr) {
             return static_cast<std::errc>(errno);
