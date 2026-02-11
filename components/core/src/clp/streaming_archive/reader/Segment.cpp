@@ -45,7 +45,7 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     }
 
     // Create read-only memory mapped file
-    auto result{clp::ReadOnlyMemoryMappedFile::create(segment_path)};
+    auto result{ReadOnlyMemoryMappedFile::create(segment_path)};
     if (result.has_error()) {
         auto const error{result.error()};
         SPDLOG_ERROR(
