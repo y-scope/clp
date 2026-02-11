@@ -217,7 +217,7 @@ if(CLP_BUILD_CLP_S_IO)
         target_link_libraries(
                 clp_s_io
                 PRIVATE
-                Boost::iostreams Boost::url
+                Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
                 simdjson::simdjson
