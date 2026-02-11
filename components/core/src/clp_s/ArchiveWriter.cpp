@@ -251,17 +251,14 @@ void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t meta
 
 void
 ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message) {
-    SchemaWriter* schema_writer;
     auto it = m_id_to_schema_writer.find(schema_id);
-    if (it != m_id_to_schema_writer.end()) {
-        schema_writer = it->second;
-    } else {
-        schema_writer = new SchemaWriter();
-        initialize_schema_writer(schema_writer, schema);
-        m_id_to_schema_writer[schema_id] = schema_writer;
+    if (it == m_id_to_schema_writer.end()) {
+        auto schema_writer = std::make_unique<SchemaWriter>();
+        initialize_schema_writer(schema_writer.get(), schema);
+        it = m_id_to_schema_writer.emplace(schema_id, std::move(schema_writer)).first;
     }
 
-    m_encoded_message_size += schema_writer->append_message(message);
+    m_encoded_message_size += it->second->append_message(message);
     ++m_next_log_event_id;
 }
 
@@ -427,7 +424,6 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
                 it->second->get_num_messages()
         );
         current_stream_offset += it->second->get_total_uncompressed_size();
-        delete it->second;
 
         if (current_stream_offset > m_min_table_size || schemas.size() == schema_metadata.size()) {
             stream_metadata.emplace_back(current_table_file_offset, current_stream_offset);
