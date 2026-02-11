@@ -2,15 +2,18 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <memory>
 #include <sstream>
+#include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "archive_constants.hpp"
-#include "Defs.hpp"
-#include "SchemaTree.hpp"
-#include "SingleFileArchiveDefs.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {

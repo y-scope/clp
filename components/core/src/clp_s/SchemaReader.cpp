@@ -3,9 +3,9 @@
 #include <stack>
 #include <string>
 
-#include "archive_constants.hpp"
-#include "BufferViewReader.hpp"
-#include "Schema.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/BufferViewReader.hpp>
+#include <clp_s/Schema.hpp>
 
 namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {

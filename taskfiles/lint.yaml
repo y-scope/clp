@@ -443,7 +443,6 @@ tasks:
             - "clp_s/OutputHandlerImpl.hpp"
             - "clp_s/PackedStreamReader.cpp"
             - "clp_s/PackedStreamReader.hpp"
-            - "clp_s/ParsedMessage.hpp"
             - "clp_s/ReaderUtils.cpp"
             - "clp_s/ReaderUtils.hpp"
             - "clp_s/Schema.cpp"

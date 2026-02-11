@@ -1,25 +1,29 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
 
-#include "../clp/streaming_archive/Constants.hpp"
-#include "archive_constants.hpp"
-#include "DictionaryWriter.hpp"
-#include "RangeIndexWriter.hpp"
-#include "Schema.hpp"
-#include "SchemaMap.hpp"
-#include "SchemaTree.hpp"
-#include "SchemaWriter.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryWriter.hpp"
+#include <clp/streaming_archive/Constants.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryWriter.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/RangeIndexWriter.hpp>
+#include <clp_s/Schema.hpp>
+#include <clp_s/SchemaMap.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SchemaWriter.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryWriter.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -73,19 +77,19 @@ public:
         return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
     }
 
-    auto get_id() const -> std::string const& { return m_id; }
+    [[nodiscard]] auto get_id() const -> std::string const& { return m_id; }
 
-    auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
+    [[nodiscard]] auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
 
-    auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
+    [[nodiscard]] auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
 
-    auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
+    [[nodiscard]] auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
 
-    auto get_compressed_size() const -> size_t { return m_compressed_size; }
+    [[nodiscard]] auto get_compressed_size() const -> size_t { return m_compressed_size; }
 
-    auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
+    [[nodiscard]] auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
 
-    auto get_is_split() const -> bool { return m_is_split; }
+    [[nodiscard]] auto get_is_split() const -> bool { return m_is_split; }
 
 private:
     std::string m_id;

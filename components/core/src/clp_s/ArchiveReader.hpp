@@ -153,7 +153,7 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
 
 private:
     /**
