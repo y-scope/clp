@@ -122,30 +122,6 @@ def resolve_path_env_var(var_name: str) -> Path:
     return Path(get_env_var(var_name)).expanduser().resolve()
 
 
-def unlink(rm_path: Path, force: bool = True) -> None:
-    """
-    Remove a file or directory at `path`.
-
-    :param rm_path:
-    :param force: Whether to force remove with sudo priviledges in case the normal operation fails.
-                  Defaults to True.
-    """
-    try:
-        shutil.rmtree(rm_path)
-    except FileNotFoundError:
-        pass
-    except PermissionError:
-        if not force:
-            raise
-
-        sudo_rm_cmds = ["sudo", "rm", "-rf", str(rm_path)]
-        try:
-            subprocess.run(sudo_rm_cmds, check=True)
-        except subprocess.CalledProcessError as e:
-            err_msg = f"Failed to remove {rm_path} due to lack of superuser privileges (sudo)."
-            raise OSError(err_msg) from e
-
-
 def validate_dir_exists(dir_path: Path) -> None:
     """
     :param dir_path:
