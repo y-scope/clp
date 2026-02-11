@@ -163,7 +163,7 @@ clpConfig:
     # arrives.
     buffer_flush_timeout: 300
     # The log buffer size (in bytes) that triggers a flush for compression.
-    buffer_flush_threshold: 268435456  # 256 MiB
+    buffer_flush_threshold: 4294967296  # 4 GiB
     # The capacity of the internal channel used for communication between an ingestion job and the
     # log buffer.
     channel_capacity: 10
