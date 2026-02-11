@@ -316,10 +316,14 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(std::make_unique<FormattedFloatColumnWriter>(id));
                 break;
             case NodeType::DictionaryFloat:
-                writer->append_column(std::make_unique<DictionaryFloatColumnWriter>(id, m_var_dict));
+                writer->append_column(
+                        std::make_unique<DictionaryFloatColumnWriter>(id, m_var_dict)
+                );
                 break;
             case NodeType::ClpString:
-                writer->append_column(std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_log_dict));
+                writer->append_column(
+                        std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_log_dict)
+                );
                 break;
             case NodeType::VarString:
                 writer->append_column(std::make_unique<VariableStringColumnWriter>(id, m_var_dict));
@@ -328,7 +332,9 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(std::make_unique<BooleanColumnWriter>(id));
                 break;
             case NodeType::UnstructuredArray:
-                writer->append_column(std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_array_dict));
+                writer->append_column(
+                        std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_array_dict)
+                );
                 break;
             case NodeType::DateString:
                 writer->append_column(std::make_unique<DateStringColumnWriter>(id));
