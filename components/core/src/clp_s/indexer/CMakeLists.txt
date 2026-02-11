@@ -64,6 +64,8 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/ReadOnlyMemoryMappedFile.cpp
+        ../../clp/ReadOnlyMemoryMappedFile.hpp
         ../../clp/streaming_compression/Constants.hpp
         ../../clp/streaming_compression/Decompressor.hpp
         ../../clp/streaming_compression/zstd/Decompressor.cpp
@@ -130,7 +132,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_link_libraries(indexer
                 PRIVATE
                 absl::flat_hash_map
-                Boost::iostreams Boost::program_options Boost::url
+                Boost::program_options Boost::url
                 ${CURL_LIBRARIES}
                 clp::string_utils
                 date::date
