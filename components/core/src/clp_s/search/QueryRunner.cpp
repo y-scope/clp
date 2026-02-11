@@ -63,7 +63,8 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
 void QueryRunner::clear_readers() {
     m_clp_string_readers.clear();
     m_var_string_readers.clear();
-    m_datestring_readers.clear();
+    m_timestamp_readers.clear();
+    m_deprecated_datestring_reader = nullptr;
     m_basic_readers.clear();
 }
 
@@ -73,16 +74,25 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
              & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
-        auto* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
-        auto* var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
-        auto* date_reader = dynamic_cast<DateStringColumnReader*>(column_reader);
-        if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
+        if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
+            nullptr != clp_reader && NodeType::ClpString == clp_reader->get_type())
+        {
             m_clp_string_readers[column_id].push_back(clp_reader);
-        } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
+        } else if (auto* const var_reader
+                   = dynamic_cast<VariableStringColumnReader*>(column_reader);
+                   nullptr != var_reader)
+        {
             m_var_string_readers[column_id].push_back(var_reader);
-        } else if (nullptr != date_reader) {
-            // Datestring readers with a given column ID are guaranteed not to repeat
-            m_datestring_readers.emplace(column_id, date_reader);
+        } else if (auto* const timestamp_reader
+                   = dynamic_cast<TimestampColumnReader*>(column_reader);
+                   nullptr != timestamp_reader)
+        {
+            m_timestamp_readers.emplace(column_id, timestamp_reader);
+        } else if (auto* const deprecated_date_reader
+                   = dynamic_cast<DeprecatedDateStringColumnReader*>(column_reader);
+                   nullptr != deprecated_date_reader)
+        {
+            m_deprecated_datestring_reader = deprecated_date_reader;
         } else {
             m_basic_readers[column_id].push_back(column_reader);
         }
@@ -228,11 +238,16 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     }
 
     if (column->matches_type(LiteralType::TimestampT)) {
-        for (auto entry : m_datestring_readers) {
+        if (nullptr != m_deprecated_datestring_reader) {
+            if (evaluate_epoch_date_filter(op, m_deprecated_datestring_reader, literal)) {
+                return true;
+            }
+        }
+        for (auto entry : m_timestamp_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
             }
-            if (evaluate_epoch_date_filter(op, entry.second, literal)) {
+            if (evaluate_timestamp_filter(op, entry.second, literal)) {
                 return true;
             }
         }
@@ -307,12 +322,22 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
                     get_cached_decompressed_unstructured_array(column_id),
                     literal
             );
-        case LiteralType::TimestampT:
-            return evaluate_epoch_date_filter(
+        case LiteralType::TimestampT: {
+            if (nullptr != m_deprecated_datestring_reader
+                && m_deprecated_datestring_reader->get_id() == column_id)
+            {
+                return evaluate_epoch_date_filter(
+                        expr->get_operation(),
+                        m_deprecated_datestring_reader,
+                        literal
+                );
+            }
+            return evaluate_timestamp_filter(
                     expr->get_operation(),
-                    m_datestring_readers[column_id],
+                    m_timestamp_readers.at(column_id),
                     literal
             );
+        }
             // case LiteralType::NullT:
             //  null checks are always turned into existence operators --
             //  no need to evaluate here
@@ -947,7 +972,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
                 auto literal_type = node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
                 if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
-                    && NodeType::DateString != tree_node_type)
+                    && NodeType::DeprecatedDateString != tree_node_type)
                 {
                     m_wildcard_to_searched_basic_columns[col].insert(node);
                 }
@@ -1162,7 +1187,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
 
 bool QueryRunner::evaluate_epoch_date_filter(
         FilterOperation op,
-        DateStringColumnReader* reader,
+        DeprecatedDateStringColumnReader* reader,
         std::shared_ptr<Literal>& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -1170,6 +1195,23 @@ bool QueryRunner::evaluate_epoch_date_filter(
     }
 
     int64_t op_value;
+    if (false == operand->as_int(op_value, op)) {
+        return false;
+    }
+
+    return evaluate_int_filter_core(op, reader->get_encoded_time(m_cur_message), op_value);
+}
+
+auto QueryRunner::evaluate_timestamp_filter(
+        ast::FilterOperation op,
+        TimestampColumnReader* reader,
+        std::shared_ptr<ast::Literal>& operand
+) -> bool {
+    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+        return true;
+    }
+
+    int64_t op_value{};
     if (false == operand->as_int(op_value, op)) {
         return false;
     }

@@ -133,6 +133,7 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::iostreams Boost::program_options Boost::url
                 ${CURL_LIBRARIES}
                 clp::string_utils
+                clp_s::timestamp_parser
                 date::date
                 MariaDBClient::MariaDBClient
                 msgpack-cxx
