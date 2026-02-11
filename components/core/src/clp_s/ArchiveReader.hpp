@@ -182,14 +182,6 @@ public:
         return get_header().has_deprecated_timestamp_format();
     }
 
-    /**
-     * @return Whether this archive can contain columns with the deprecated DateString timestamp
-     * format.
-     */
-    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
-        return get_header().has_deprecated_timestamp_format();
-    }
-
 private:
     /**
      * Reads archive metadata and prepares the archive reader for subsequent archive reads.
