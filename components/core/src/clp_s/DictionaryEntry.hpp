@@ -7,9 +7,11 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "../clp/Defs.h"
 #include "../clp/ir/types.hpp"
+#include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 #include "ZstdCompressor.hpp"
 #include "ZstdDecompressor.hpp"
