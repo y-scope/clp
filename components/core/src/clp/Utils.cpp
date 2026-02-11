@@ -190,11 +190,9 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
         // Capture groups are temporarily disabled, until NFA intersection supports for search.
         auto const& captures{rule->m_regex_ptr->get_subtree_positive_captures()};
         auto const num_captures{captures.size()};
-        if ("header" == rule->m_name ) {
-            if ((1 == num_captures && "timestamp" == captures[0]->get_name()) || 0 == num_captures)
-            {
-                continue;
-            }
+        if ("header" == rule->m_name && 1 == num_captures && "timestamp" == captures[0]->get_name())
+        {
+            continue;
         }
         if (0 < num_captures) {
             throw std::runtime_error(
