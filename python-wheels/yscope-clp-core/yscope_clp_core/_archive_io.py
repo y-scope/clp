@@ -355,7 +355,8 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         Return the next log event produced by the search query.
 
         :raise StopIteration: When no more matching log events are available.
-        :raise ClpCoreRuntimeError: If the search results stream has been closed.
+        :raise ClpCoreRuntimeError: If the search results stream has been closed, or the stream
+            cleanup fails.
         :raise subprocess.CalledProcessError: If the search process exits with a non-zero status.
         """
         proc = self._search_proc
@@ -366,11 +367,24 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         line = proc.stdout.readline()
         if 0 == len(line):
             # Check if the search hit EOF or erred midway
-            stderr = self._kill_proc_and_reap_stderr()
+            cleanup_error: OSError | ValueError | None = None
+            stderr = ""
+            try:
+                stderr = self._kill_proc_and_reap_stderr()
+            except (OSError, ValueError) as e:
+                cleanup_error = e
 
             rc = proc.returncode
             if rc != 0:
+                if cleanup_error is not None:
+                    raise subprocess.CalledProcessError(
+                        rc, proc.args, stderr=stderr
+                    ) from cleanup_error
                 raise subprocess.CalledProcessError(rc, proc.args, stderr=stderr)
+
+            if cleanup_error is not None:
+                err_msg = f"Failed to clean up search process for archive at {self._archive_path}."
+                raise ClpCoreRuntimeError(err_msg) from cleanup_error
 
             raise StopIteration
 
@@ -378,12 +392,13 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
 
     def close(self) -> None:
         """Stop the search process, drain its stderr, and clean up temporary archive files."""
-        self._kill_proc_and_reap_stderr()
-
-        # Cleans up the temporary archive only after the search process has exited
-        if self._archive_is_temp:
-            with suppress(OSError):
-                self._archive_path.unlink()
+        try:
+            self._kill_proc_and_reap_stderr()
+        finally:
+            # Cleans up the temporary archive only after attempting process shutdown
+            if self._archive_is_temp:
+                with suppress(OSError):
+                    self._archive_path.unlink()
 
     def _kill_proc_and_reap_stderr(self) -> str:
         """
@@ -398,6 +413,7 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
 
         :return: The subprocess stderr captured during shutdown, or an empty string if no process
             existed or no stderr was produced.
+        :raise: Propagates `subprocess.Popen.communicate()`'s exceptions.
         """
         proc = self._search_proc
         self._search_proc = None
