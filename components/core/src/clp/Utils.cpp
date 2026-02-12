@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <set>
+#include <string>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -140,10 +141,8 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
     lexer.m_symbol_id[log_surgeon::cTokenInt] = static_cast<int>(log_surgeon::SymbolId::TokenInt);
     lexer.m_symbol_id[log_surgeon::cTokenFloat]
             = static_cast<int>(log_surgeon::SymbolId::TokenFloat);
-    lexer.m_symbol_id[log_surgeon::cTokenFirstTimestamp]
-            = static_cast<int>(log_surgeon::SymbolId::TokenFirstTimestamp);
-    lexer.m_symbol_id[log_surgeon::cTokenNewlineTimestamp]
-            = static_cast<int>(log_surgeon::SymbolId::TokenNewlineTimestamp);
+    lexer.m_symbol_id[log_surgeon::cTokenHeader]
+            = static_cast<int>(log_surgeon::SymbolId::TokenHeader);
     // cTokenNewline is not added in schema_vars and can be explicitly added as '\n' to catch the
     // end of non-timestamped log messages
     lexer.m_symbol_id[log_surgeon::cTokenNewline]
@@ -155,10 +154,8 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
     lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenInt)] = log_surgeon::cTokenInt;
     lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenFloat)]
             = log_surgeon::cTokenFloat;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenFirstTimestamp)]
-            = log_surgeon::cTokenFirstTimestamp;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenNewlineTimestamp)]
-            = log_surgeon::cTokenNewlineTimestamp;
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenHeader)]
+            = log_surgeon::cTokenHeader;
     lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenNewline)]
             = log_surgeon::cTokenNewline;
 
@@ -186,6 +183,17 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
     }
     for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
+
+        // Capture groups are temporarily disabled, until NFA intersection supports for search.
+        auto const num_captures{rule->m_regex_ptr->get_subtree_positive_captures().size()};
+        if (0 < num_captures) {
+            throw std::runtime_error(
+                    schema_file_path + ":" + std::to_string(rule->m_line_num + 1)
+                    + ": error: the schema rule '" + rule->m_name
+                    + "' has a regex pattern containing capture groups (found "
+                    + std::to_string(num_captures) + ").\n"
+            );
+        }
 
         if ("timestamp" == rule->m_name) {
             continue;

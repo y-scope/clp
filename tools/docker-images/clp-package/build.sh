@@ -30,6 +30,7 @@ new_image_id=""
 
 build_cmd=(
     docker build
+    --pull
     --iidfile "$temp_iid_file"
     "$repo_root"
     --file "${script_dir}/Dockerfile"

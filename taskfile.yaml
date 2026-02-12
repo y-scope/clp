@@ -8,6 +8,7 @@ includes:
   deps: "taskfiles/deps/main.yaml"
   docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
+  helm: "taskfiles/helm.yaml"
   lint: "taskfiles/lint.yaml"
   tests: "taskfiles/tests/main.yaml"
   toolchains: "taskfiles/toolchains.yaml"
@@ -39,7 +40,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.7.1-dev"
+  G_PACKAGE_VERSION: "0.9.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -599,7 +600,7 @@ tasks:
 
   python-wheels-yscope-clp-core:
     vars:
-      TMP_DIR: "tmp-{{.TASK}}"
+      TMP_DIR: "{{.G_BUILD_DIR}}/tmp-{{.TASK}}"
     dir: "{{.G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR}}"
     deps: ["core"]
     cmds:
@@ -609,8 +610,9 @@ tasks:
       # Build the wheel into the temporary directory
       - |-
         export YSCOPE_CLP_CORE_CLP_S_EXE="{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        uv run python3 -m build --wheel --outdir "{{.TMP_DIR}}"
+        uv run --no-cache python3 -m build --wheel --outdir "{{.TMP_DIR}}"
 
       # Repair the wheel and place it in the final build directory.
       - |-
-        uv run auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
+        uv run --no-cache \
+          auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"

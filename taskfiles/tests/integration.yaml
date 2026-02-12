@@ -21,7 +21,7 @@ tasks:
       CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
       CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
-    deps: ["::core"]
+    #deps: ["::core"]
     cmd: "uv run pytest -m core"
 
   clp-py-project-imports:

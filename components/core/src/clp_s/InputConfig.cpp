@@ -275,11 +275,11 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
  */
 auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
     constexpr size_t cMaxUtf8CodepointBytes = 4ULL;
-    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1ULL;
+    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1;
 
     size_t cur_byte{
             peek_size < cMaxRunWithoutFullUtf8Codepoint
-                    ? 0ULL
+                    ? size_t{0}
                     : (peek_size - cMaxRunWithoutFullUtf8Codepoint)
     };
 
