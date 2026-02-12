@@ -165,9 +165,17 @@ async fn submit_clp_compression_job_and_wait_for_completion(
                 match status {
                     CompressionJobStatus::Failed => {
                         tracing::error!(
-                            "Compression job {} failed. Status message: {:?}",
+                            "Compression job {} failed. Status message: {}",
                             job_id,
-                            status_message
+                            status_message.unwrap_or_else(|| "None".to_string())
+                        );
+                        return;
+                    }
+                    CompressionJobStatus::Killed => {
+                        tracing::error!(
+                            "Compression job {} was killed. Status message: {}",
+                            job_id,
+                            status_message.unwrap_or_else(|| "None".to_string())
                         );
                         return;
                     }
