@@ -74,6 +74,36 @@
         }
       }
     },
+    "/query/{search_job_id}": {
+      "delete": {
+        "tags": [],
+        "description": "Cancels a previously submitted query job.",
+        "operationId": "cancel_query",
+        "parameters": [
+          {
+            "name": "search_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cancellation request was submitted successfully."
+          },
+          "404": {
+            "description": "No cancellable query job with the given ID was found."
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/query_results/{search_job_id}": {
       "get": {
         "tags": [],
