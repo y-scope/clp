@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, suppress
 from pathlib import Path
@@ -31,6 +32,11 @@ from yscope_clp_core._utils import (
     _validate_archive_source,
     _write_stream_to_temp_file,
 )
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
@@ -143,7 +149,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
                 self._temp_archive_dir.cleanup()
             self._temp_archive_dir = None
 
-    def __enter__(self) -> "ClpArchiveWriter":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
@@ -267,7 +273,7 @@ class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterato
     def __iter__(self) -> "ClpArchiveReader":
         return self
 
-    def __enter__(self) -> "ClpArchiveReader":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
@@ -394,10 +400,10 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
     def __next__(self) -> LogEvent:
         return self.get_next_log_event()
 
-    def __iter__(self) -> "ClpSearchResults":
+    def __iter__(self) -> Self:
         return self
 
-    def __enter__(self) -> "ClpSearchResults":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
