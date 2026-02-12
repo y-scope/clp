@@ -328,8 +328,6 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
             self._query.get_query_string(),
         ]
 
-        self._search_proc: subprocess.Popen[str] | None = None
-        self._search_fp: IO[str] | None = None
         popen_kwargs: dict[str, Any] = {
             "stdout": subprocess.PIPE,
             "stderr": subprocess.PIPE,
@@ -341,14 +339,14 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         if self._errors is not None:
             popen_kwargs["errors"] = self._errors
 
+        self._search_proc: subprocess.Popen[str] | None = None
         try:
             self._search_proc = subprocess.Popen(search_cmd, **popen_kwargs)
         except Exception as e:
             err_msg = f"Failed to query archive at {self._archive_path}."
             raise ClpCoreRuntimeError(err_msg) from e
 
-        self._search_fp = self._search_proc.stdout
-        if self._search_fp is None:
+        if self._search_proc.stdout is None:
             err_msg = "Cannot read the search results stream."
             raise ClpCoreRuntimeError(err_msg)
 
@@ -360,42 +358,65 @@ class ClpSearchResults(AbstractContextManager["ClpSearchResults", None], Iterato
         :raise ClpCoreRuntimeError: If the search results stream has been closed.
         :raise subprocess.CalledProcessError: If the search process exits with a non-zero status.
         """
-        if self._search_fp is None or self._search_proc is None:
+        proc = self._search_proc
+        if proc is None or proc.stdout is None:
             err_msg = f"ClpSearchResults streaming for archive at {self._archive_path} is closed."
             raise ClpCoreRuntimeError(err_msg)
 
-        line = self._search_fp.readline()
+        line = proc.stdout.readline()
         if 0 == len(line):
             # Check if the search hit EOF or erred midway
-            _, stderr = self._search_proc.communicate()
-            rc = self._search_proc.returncode
+            stderr = self._kill_proc_and_reap_stderr()
+
+            rc = proc.returncode
             if rc != 0:
-                raise subprocess.CalledProcessError(rc, self._search_proc.args, stderr=stderr)
+                raise subprocess.CalledProcessError(rc, proc.args, stderr=stderr)
+
             raise StopIteration
 
         return LogEvent(kv_pairs=json.loads(line.rstrip("\n")))
 
     def close(self) -> None:
-        """Cleans up all temporary resources used by the archive search handler."""
+        """Stop the search process, drain its stderr, and clean up temporary archive files."""
+        self._kill_proc_and_reap_stderr()
+
+        # Cleans up the temporary archive only after the search process has exited
         if self._archive_is_temp:
             with suppress(OSError):
                 self._archive_path.unlink()
 
-        if self._search_fp is not None:
-            with suppress(OSError):
-                self._search_fp.close()
-            self._search_fp = None
+    def _kill_proc_and_reap_stderr(self) -> str:
+        """
+        Terminate the active search subprocess (if any), reap it, and return stderr text.
 
-        if self._search_proc is not None:
-            with suppress(OSError):
-                self._search_proc.terminate()
+        Shutdown flow:
+        1. Detach `self._search_proc` immediately to make cleanup idempotent.
+        2. If the process is still running, send `terminate()` first.
+        3. Call `communicate()` with timeout to reap the process and drain stdout/stderr.
+        4. If graceful shutdown times out, send `kill()` and call `communicate()` again.
+        5. If the process already exited, call `communicate()` once to drain any buffered pipes.
+
+        :return: The subprocess stderr captured during shutdown, or an empty string if no process
+            existed or no stderr was produced.
+        """
+        proc = self._search_proc
+        self._search_proc = None
+        if proc is None:
+            return ""
+
+        if proc.poll() is None:
+            with suppress(ProcessLookupError):
+                proc.terminate()
             try:
-                with suppress(OSError):
-                    self._search_proc.wait(timeout=0)
+                _, stderr = proc.communicate(timeout=1)
             except subprocess.TimeoutExpired:
-                self._search_proc.kill()
-            finally:
-                self._search_proc = None
+                with suppress(ProcessLookupError):
+                    proc.kill()
+                _, stderr = proc.communicate()
+        else:
+            _, stderr = proc.communicate()
+
+        return stderr if stderr is not None else ""
 
     def __next__(self) -> LogEvent:
         return self.get_next_log_event()
