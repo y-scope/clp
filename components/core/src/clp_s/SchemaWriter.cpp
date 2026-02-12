@@ -5,7 +5,7 @@
 namespace clp_s {
 void SchemaWriter::append_column(std::unique_ptr<BaseColumnWriter> column_writer) {
     m_total_uncompressed_size += column_writer->get_total_header_size();
-    m_columns.push_back(std::move(column_writer));
+    m_columns.emplace_back(std::move(column_writer));
 }
 
 size_t SchemaWriter::append_message(ParsedMessage& message) {
