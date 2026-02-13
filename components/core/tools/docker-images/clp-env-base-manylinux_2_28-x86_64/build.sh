@@ -7,9 +7,13 @@ set -o pipefail
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 component_root="${script_dir}/../../../"
 
+# Corporate proxy support — see proxy-lib.sh for details.
+source "${script_dir}/../proxy-lib.sh"
+prepare_ca_cert_for_build "$component_root"
+trap 'cleanup_ca_cert "$component_root"' EXIT
+
 build_cmd=(
     docker buildx build
-    --pull
     --platform linux/amd64
     --tag clp-core-dependencies-x86-manylinux_2_28:dev
     "$component_root"
@@ -17,13 +21,9 @@ build_cmd=(
     --load
 )
 
-if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null ;
-then
-    build_cmd+=(
-        --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD)"
-        --label "org.opencontainers.image.source=$(git -C "$script_dir" remote get-url origin)"
-    )
-fi
-
-echo "Running: ${build_cmd[*]}"
-"${build_cmd[@]}"
+# Optional env vars:
+#   HTTP_PROXY / HTTPS_PROXY / NO_PROXY / ALL_PROXY — Forwarded into the build container
+#   DNF_MIRROR_BASE_URL — Override AlmaLinux mirrors (organization-internal or regional)
+#   DOCKER_NETWORK      — Override Docker network mode (auto: host for localhost proxies)
+#   DOCKER_PULL=true    — Force pull the latest base image from the registry
+finalize_build build_cmd "$script_dir" DNF_MIRROR_BASE_URL
