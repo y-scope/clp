@@ -254,17 +254,14 @@ void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t meta
 
 void
 ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message) {
-    SchemaWriter* schema_writer;
     auto it = m_id_to_schema_writer.find(schema_id);
-    if (it != m_id_to_schema_writer.end()) {
-        schema_writer = it->second;
-    } else {
-        schema_writer = new SchemaWriter();
-        initialize_schema_writer(schema_writer, schema);
-        m_id_to_schema_writer[schema_id] = schema_writer;
+    if (it == m_id_to_schema_writer.end()) {
+        auto schema_writer = std::make_unique<SchemaWriter>();
+        initialize_schema_writer(schema_writer.get(), schema);
+        it = m_id_to_schema_writer.emplace(schema_id, std::move(schema_writer)).first;
     }
 
-    m_encoded_message_size += schema_writer->append_message(message);
+    m_encoded_message_size += it->second->append_message(message);
     ++m_next_log_event_id;
 }
 
@@ -310,34 +307,40 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
         auto const& node = m_schema_tree.get_node(id);
         switch (node.get_type()) {
             case NodeType::Integer:
-                writer->append_column(new Int64ColumnWriter(id));
+                writer->append_column(std::make_unique<Int64ColumnWriter>(id));
                 break;
             case NodeType::Float:
-                writer->append_column(new FloatColumnWriter(id));
+                writer->append_column(std::make_unique<FloatColumnWriter>(id));
                 break;
             case NodeType::FormattedFloat:
-                writer->append_column(new FormattedFloatColumnWriter(id));
+                writer->append_column(std::make_unique<FormattedFloatColumnWriter>(id));
                 break;
             case NodeType::DictionaryFloat:
-                writer->append_column(new DictionaryFloatColumnWriter(id, m_var_dict));
+                writer->append_column(
+                        std::make_unique<DictionaryFloatColumnWriter>(id, m_var_dict)
+                );
                 break;
             case NodeType::ClpString:
-                writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
+                writer->append_column(
+                        std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_log_dict)
+                );
                 break;
             case NodeType::VarString:
-                writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
+                writer->append_column(std::make_unique<VariableStringColumnWriter>(id, m_var_dict));
                 break;
             case NodeType::Boolean:
-                writer->append_column(new BooleanColumnWriter(id));
+                writer->append_column(std::make_unique<BooleanColumnWriter>(id));
                 break;
             case NodeType::UnstructuredArray:
-                writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_array_dict));
+                writer->append_column(
+                        std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_array_dict)
+                );
                 break;
             case NodeType::DateString:
-                writer->append_column(new DateStringColumnWriter(id));
+                writer->append_column(std::make_unique<DateStringColumnWriter>(id));
                 break;
             case NodeType::DeltaInteger:
-                writer->append_column(new DeltaEncodedInt64ColumnWriter(id));
+                writer->append_column(std::make_unique<DeltaEncodedInt64ColumnWriter>(id));
                 break;
             case NodeType::Metadata:
             case NodeType::NullValue:
@@ -424,7 +427,6 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
                 it->second->get_num_messages()
         );
         current_stream_offset += it->second->get_total_uncompressed_size();
-        delete it->second;
 
         if (current_stream_offset > m_min_table_size || schemas.size() == schema_metadata.size()) {
             stream_metadata.emplace_back(current_table_file_offset, current_stream_offset);
