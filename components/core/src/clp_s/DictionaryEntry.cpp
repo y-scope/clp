@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
@@ -211,7 +212,7 @@ auto VariableDictionaryEntry::get_data_size() const -> size_t {
     return sizeof(m_id) + m_value.length();
 }
 
-void VariableDictionaryEntry::write_to_file(ZstdCompressor& compressor) const {
+auto VariableDictionaryEntry::write_to_file(ZstdCompressor& compressor) const -> void {
     compressor.write_numeric_value<uint64_t>(m_value.length());
     compressor.write_string(m_value);
 }

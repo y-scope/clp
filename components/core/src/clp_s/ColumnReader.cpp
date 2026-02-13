@@ -215,7 +215,7 @@ auto ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) -> UnalignedM
     return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables());
 }
 
-void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+auto VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
     m_variables = reader.read_unaligned_span<uint64_t>(num_messages);
 }
 
@@ -224,10 +224,10 @@ auto VariableStringColumnReader::extract_value(uint64_t cur_message)
     return m_var_dict->get_value(m_variables[cur_message]);
 }
 
-void VariableStringColumnReader::extract_string_value_into_buffer(
+auto VariableStringColumnReader::extract_string_value_into_buffer(
         uint64_t cur_message,
         std::string& buffer
-) {
+) -> void {
     buffer.append(m_var_dict->get_value(m_variables[cur_message]));
 }
 
