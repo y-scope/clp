@@ -347,7 +347,7 @@ void SchemaMatch::populate_schema_mapping() {
             if (false == m_column_to_descriptor.count(column_id)) {
                 continue;
             }
-            for (auto descriptor : m_column_to_descriptor[column_id]) {
+            for (auto const& descriptor : m_column_to_descriptor[column_id]) {
                 if (false == descriptor->is_pure_wildcard()) {
                     auto [schema_to_column_id_it, _]
                             = m_descriptor_to_schema.try_emplace(descriptor.get());
