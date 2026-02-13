@@ -11,7 +11,6 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/Defs.h>
-#include <clp/LogTypeDictionaryEntryReq.hpp>
 #include <clp/streaming_archive/Constants.hpp>
 #include <clp_s/Array.hpp>
 #include <clp_s/Defs.hpp>
