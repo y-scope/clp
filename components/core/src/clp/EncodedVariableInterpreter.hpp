@@ -55,8 +55,9 @@ public:
         }
     };
 
-    static auto encode_var_dict_id(variable_dictionary_id_t id) -> encoded_variable_t;
-    static auto decode_var_dict_id(encoded_variable_t encoded_var) -> variable_dictionary_id_t;
+    [[nodiscard]] static auto encode_var_dict_id(variable_dictionary_id_t id) -> encoded_variable_t;
+    [[nodiscard]] static auto decode_var_dict_id(encoded_variable_t encoded_var)
+            -> variable_dictionary_id_t;
 
     /**
      * Adds a dictionary variable placeholder to the given logtype

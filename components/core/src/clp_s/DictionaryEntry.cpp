@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
