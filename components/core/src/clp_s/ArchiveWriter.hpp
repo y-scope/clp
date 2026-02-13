@@ -2,7 +2,7 @@
 #define CLP_S_ARCHIVEWRITER_HPP
 
 #include <cstddef>
-#include <optional>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -328,7 +328,7 @@ private:
     SchemaMap m_schema_map;
     SchemaTree m_schema_tree;
 
-    std::map<int32_t, SchemaWriter*> m_id_to_schema_writer;
+    std::map<int32_t, std::unique_ptr<SchemaWriter>> m_id_to_schema_writer;
 
     FileWriter m_tables_file_writer;
     FileWriter m_table_metadata_file_writer;
