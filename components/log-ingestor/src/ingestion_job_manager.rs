@@ -37,6 +37,9 @@ pub enum Error {
     #[error("Custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
 
+    #[error("Invalid `num_concurrent_listener_tasks`: {0}`")]
+    InvalidNumConcurrentListenerTasks(u16),
+
     #[error("A region code must be specified when using the default AWS endpoint")]
     MissingRegionCode,
 }
@@ -144,6 +147,9 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::CustomEndpointUrlNotSupported`] if a custom endpoint URL is given.
+    /// * [`Error::InvalidNumConcurrentListenerTasks`] if the given number of concurrent listener
+    ///   tasks is invalid.
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
     pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
         let ingestion_job_config = config.base.clone();
@@ -152,6 +158,12 @@ impl IngestionJobManagerState {
                 "SQS listener ingestion jobs do not support custom endpoint URLs yet. Endpoint \
                  URL: {endpoint_url}"
             )));
+        }
+        // NOTE: This limit must be kept in sync with the limit in the config definition.
+        if config.num_concurrent_listener_tasks < 1 || config.num_concurrent_listener_tasks > 32 {
+            return Err(Error::InvalidNumConcurrentListenerTasks(
+                config.num_concurrent_listener_tasks,
+            ));
         }
         let sqs_client_manager = SqsClientWrapper::create(
             config.base.region.as_ref(),
@@ -162,9 +174,9 @@ impl IngestionJobManagerState {
         self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
-                sqs_client_manager,
-                config,
-                sender,
+                &sqs_client_manager,
+                &config,
+                &sender,
             );
             IngestionJob::SqsListener(listener)
         })

@@ -50,6 +50,30 @@ pub mod s3 {
         /// to this ingestion job.
         #[schema(value_type = String, min_length = 1)]
         pub queue_url: NonEmptyString,
+
+        /// The number of concurrent listener tasks to run.
+        ///
+        /// Each listener task is an asynchronous coroutine that continuously polls the configured
+        /// SQS queue and processes incoming S3 event notifications.
+        ///
+        /// Defaults to `1`.
+        #[serde(default = "default_num_concurrent_listener_tasks")]
+        #[schema(minimum = 1, maximum = 32)]
+        pub num_concurrent_listener_tasks: u16,
+
+        /// The long polling wait time, in seconds, for receiving messages from the SQS queue.
+        ///
+        /// This value controls how long an SQS `ReceiveMessage` call will wait for a message to
+        /// arrive before returning a response. Enabling long polling can reduce empty responses
+        /// and lower overall request costs.
+        ///
+        /// AWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than
+        /// 20 seconds will be truncated to 20 seconds.
+        ///
+        /// Defaults to `20`.
+        #[serde(default = "default_sqs_wait_time_sec")]
+        #[schema(minimum = 0, maximum = 20)]
+        pub wait_time_sec: u16,
     }
 
     /// Configuration for a S3 scanner job.
@@ -75,5 +99,13 @@ pub mod s3 {
 
     const fn default_scanning_interval_sec() -> u32 {
         30
+    }
+
+    const fn default_num_concurrent_listener_tasks() -> u16 {
+        1
+    }
+
+    const fn default_sqs_wait_time_sec() -> u16 {
+        20
     }
 }

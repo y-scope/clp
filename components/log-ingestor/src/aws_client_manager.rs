@@ -19,7 +19,7 @@ impl AwsClientType for S3Client {}
 ///
 /// * [`Client`]: The AWS SKD client type. Must implement the [`AwsClientType`].
 #[async_trait]
-pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + 'static {
+pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + Clone + 'static {
     /// Retrieves an AWS client instance. The specific behavior depends on the implementation.
     ///
     /// # Returns:
@@ -33,6 +33,7 @@ pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + 'static {
 }
 
 /// A simple wrapper around an `SqsClient` that implements the `AwsClientManagerType` trait.
+#[derive(Clone)]
 pub struct SqsClientWrapper {
     client: SqsClient,
 }
@@ -67,6 +68,7 @@ impl SqsClientWrapper {
 }
 
 /// A simple wrapper around an `S3Client` that implements the `AwsClientManagerType` trait.
+#[derive(Clone)]
 pub struct S3ClientWrapper {
     client: S3Client,
 }
