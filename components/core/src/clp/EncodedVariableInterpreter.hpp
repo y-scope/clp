@@ -152,13 +152,13 @@ public:
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
             VariableDictionaryWriterReq VariableDictionaryWriterType
     >
-    static void encode_and_add_to_dictionary(
+    static auto encode_and_add_to_dictionary(
             std::string_view message,
             LogTypeDictionaryEntryType& logtype_dict_entry,
             VariableDictionaryWriterType& var_dict,
             std::vector<encoded_variable_t>& encoded_vars,
             std::vector<variable_dictionary_id_t>& var_ids
-    );
+    ) -> void;
 
     /**
      * Encodes the given IR EncodedTextAst, constructing a logtype dictionary entry, and adding any
@@ -180,14 +180,14 @@ public:
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
             VariableDictionaryWriterReq VariableDictionaryWriterType
     >
-    static void encode_and_add_to_dictionary(
+    static auto encode_and_add_to_dictionary(
             ir::EncodedTextAst<encoded_variable_t> const& log_message,
             LogTypeDictionaryEntryType& logtype_dict_entry,
             VariableDictionaryWriterType& var_dict,
             std::vector<ir::eight_byte_encoded_variable_t>& encoded_vars,
             std::vector<variable_dictionary_id_t>& var_ids,
             size_t& raw_num_bytes
-    );
+    ) -> void;
 
     /**
      * Encodes the given ffi EncodedTextAst, constructing a logtype dictionary entry, and adding any
