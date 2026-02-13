@@ -20,9 +20,7 @@
 #include <clp/FileReader.hpp>
 #include <clp/ir/types.hpp>
 #include <clp/LogSurgeonReader.hpp>
-#include <clp/streaming_archive/Constants.hpp>
 #include <clp/streaming_archive/reader/Archive.hpp>
-#include <clp/type_utils.hpp>
 #include <clp/Utils.hpp>
 
 #include "TestOutputCleaner.hpp"
@@ -85,6 +83,7 @@ auto run_clp_compress(
             input_path_str.data(),
             nullptr
     };
+    spdlog::drop_all();
     return clp::clp::run(static_cast<int>(argv.size() - 1), argv.data());
 }
 }  // namespace
@@ -191,7 +190,7 @@ TEST_CASE("Test lexer", "[Search]") {
     }
 }
 
-TEST_CASE("Error on schema rule with a single capture group", "[load_lexer]") {
+TEST_CASE("Error on schema rule with a single non-header capture group", "[load_lexer]") {
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     ByteLexer lexer;
     REQUIRE_THROWS_WITH(
@@ -202,7 +201,7 @@ TEST_CASE("Error on schema rule with a single capture group", "[load_lexer]") {
     );
 }
 
-TEST_CASE("Error on schema rule with multiple capture groups", "[load_lexer]") {
+TEST_CASE("Error on schema rule with multiple non-header capture groups", "[load_lexer]") {
     auto const schema_file_path{get_test_schema_files_dir() / "multiple_capture_groups.txt"};
     ByteLexer lexer;
     REQUIRE_THROWS_WITH(
@@ -213,7 +212,7 @@ TEST_CASE("Error on schema rule with multiple capture groups", "[load_lexer]") {
     );
 }
 
-TEST_CASE("Verify CLP compression fails with capture groups", "[Compression]") {
+TEST_CASE("Verify CLP compression fails with non-header capture groups", "[Compression]") {
     auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
@@ -223,6 +222,87 @@ TEST_CASE("Verify CLP compression fails with capture groups", "[Compression]") {
             run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
             schema_file_path.string()
                     + ": error: the schema rule 'capture' has a regex pattern containing capture "
+                      "groups.\n"
+    );
+}
+
+TEST_CASE("Succeed on header rule with no capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_no_capture.txt"};
+    ByteLexer lexer;
+    REQUIRE_NOTHROW(load_lexer_from_file(schema_file_path, lexer));
+}
+
+TEST_CASE("Succeed on header rule with a single timestamp capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp.txt"};
+    ByteLexer lexer;
+    REQUIRE_NOTHROW(load_lexer_from_file(schema_file_path, lexer));
+}
+
+TEST_CASE("Error on header rule with a single non-timestamp capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_int.txt"};
+    ByteLexer lexer;
+    REQUIRE_THROWS_WITH(
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
+                    + ":3: error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups (found 1).\n"
+    );
+}
+
+
+TEST_CASE("Error on header rule with a timestamp and non-timestamp capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp_and_int.txt"};
+    ByteLexer lexer;
+    REQUIRE_THROWS_WITH(
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
+                    + ":3: error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups (found 2).\n"
+    );
+}
+
+TEST_CASE("Verify CLP compression succeeds with non-capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_no_capture.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
+
+    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
+}
+
+TEST_CASE("Verify CLP compression succeeds with timestamp capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
+
+    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
+}
+
+TEST_CASE("Verify CLP compression fails with non-timestamp capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_int.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
+
+    REQUIRE_THROWS_WITH(
+            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
+            schema_file_path.string()
+                    + ": error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups.\n"
+    );
+}
+
+TEST_CASE("Verify CLP compression fails with multi-capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp_and_int.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
+
+    REQUIRE_THROWS_WITH(
+            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
+            schema_file_path.string()
+                    + ": error: the schema rule 'header' has a regex pattern containing capture "
                       "groups.\n"
     );
 }
