@@ -98,9 +98,12 @@ finalize_build() {
         && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
     then
         _build_cmd_ref+=(
-            --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD)"
-            --label "org.opencontainers.image.source=$(git -C "$script_dir" remote get-url origin)"
+            --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD 2>/dev/null)"
         )
+        local remote_url
+        if remote_url="$(git -C "$script_dir" remote get-url origin 2>/dev/null)"; then
+            _build_cmd_ref+=(--label "org.opencontainers.image.source=${remote_url}")
+        fi
     fi
 
     echo "Running: ${_build_cmd_ref[*]}"
@@ -131,7 +134,7 @@ add_proxy_build_args() {
     for var in "${proxy_vars[@]}"; do
         if [[ -n "${!var:-}" ]]; then
             _build_cmd+=(--build-arg "${var}=${!var}")
-            if [[ "${!var}" =~ (localhost|127\.0\.0\.1) ]]; then
+            if [[ "${!var}" =~ (://localhost[:/]|://127\.0\.0\.1[:/]|://\[::1\][:/]) ]]; then
                 has_localhost_proxy=true
             fi
         fi
