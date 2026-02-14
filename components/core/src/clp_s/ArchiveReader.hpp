@@ -151,6 +151,14 @@ public:
      */
     bool has_log_order() { return m_log_event_idx_column_id >= 0; }
 
+    /**
+     * @return Whether this archive can contain columns with the deprecated DateString timestamp
+     * format.
+     */
+    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
+        return get_header().has_deprecated_timestamp_format();
+    }
+
 private:
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.

@@ -9,55 +9,23 @@
 using clp_s::search::ast::FilterOperation;
 
 namespace clp_s {
+namespace {
+// Constants
+constexpr epochtime_t cNanosecondsInMillisecond{1'000'000};
+}  // namespace
+
 void TimestampEntry::ingest_timestamp(epochtime_t timestamp) {
-    if (m_encoding == DoubleEpoch) {
-        if (timestamp < std::ceil(m_epoch_start_double)) {
-            m_epoch_start_double = timestamp;
-        }
-        if (timestamp > std::floor(m_epoch_end_double)) {
-            m_epoch_end_double = timestamp;
-        }
-
-        return;
-    }
-
-    if (m_encoding == UnkownTimestampEncoding) {
-        m_encoding = Epoch;
-    }
-
-    if (timestamp < m_epoch_start) {
-        m_epoch_start = timestamp;
-    }
-    if (timestamp > m_epoch_end) {
-        m_epoch_end = timestamp;
-    }
-}
-
-void TimestampEntry::ingest_timestamp(double timestamp) {
-    if (m_encoding == UnkownTimestampEncoding) {
-        m_encoding = DoubleEpoch;
-    } else if (m_encoding == Epoch) {
-        m_encoding = DoubleEpoch;
-        m_epoch_start_double = m_epoch_start;
-        m_epoch_end_double = m_epoch_end;
-    }
-
-    if (timestamp < m_epoch_start_double) {
-        m_epoch_start_double = timestamp;
-    }
-    if (timestamp > m_epoch_end_double) {
-        m_epoch_end_double = timestamp;
-    }
-}
-
-void TimestampEntry::merge_range(TimestampEntry const& entry) {
-    if (entry.m_encoding == Epoch) {
-        ingest_timestamp(entry.m_epoch_start);
-        ingest_timestamp(entry.m_epoch_end);
-    } else if (entry.m_encoding == DoubleEpoch) {
-        ingest_timestamp(entry.m_epoch_start_double);
-        ingest_timestamp(entry.m_epoch_end_double);
-    }
+    m_encoding = Epoch;
+    auto const whole_milliseconds_in_timestamp{timestamp / cNanosecondsInMillisecond};
+    auto const remainder_nanoseconds_in_timestamp{timestamp % cNanosecondsInMillisecond};
+    auto const millisecond_timestamp_upper_bound{
+            whole_milliseconds_in_timestamp + (remainder_nanoseconds_in_timestamp > 0 ? 1 : 0)
+    };
+    auto const millisecond_timestamp_lower_bound{
+            whole_milliseconds_in_timestamp - (remainder_nanoseconds_in_timestamp < 0 ? 1 : 0)
+    };
+    m_epoch_start = std::min(m_epoch_start, millisecond_timestamp_lower_bound);
+    m_epoch_end = std::max(m_epoch_end, millisecond_timestamp_upper_bound);
 }
 
 void TimestampEntry::write_to_stream(std::stringstream& stream) const {
