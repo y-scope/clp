@@ -309,7 +309,7 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following elemen
 3. **The time range selector**. CLP will search for log events that are in the specified time range.
    You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`) from the dropdown, or
    choose `Custom` and set the start time and end time directly.
-4. **The dataset selector**. CLP will search for log events that belong to the selected dataset.
+4. **The dataset selector**. CLP will search for log events that belong to the selected datasets.
 5. **The search results timeline**. After a query, the timeline will show the number of results
    across the time range of your query.
    * You can click and drag to zoom into a time range.
@@ -385,6 +385,9 @@ To narrow your search to a specific time range:
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
   * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
 * Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
+
+To search within specific datasets, add `--datasets <dataset1> [<dataset2> ...]`. If not specified,
+the `default` dataset will be searched.
 
 To perform case-insensitive searches, add the `--ignore-case` flag.
 
