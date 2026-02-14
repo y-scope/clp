@@ -175,9 +175,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.model_validate(job_config)
         self._archive_id = self.__job_config.archive_id
-        extraction_dataset = (
-            self.__job_config.datasets[0] if self.__job_config.datasets else None
-        )
+        extraction_dataset = self.__job_config.datasets[0] if self.__job_config.datasets else None
         if not archive_exists(db_conn, table_prefix, extraction_dataset, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
@@ -420,22 +418,17 @@ def get_archives_for_search(
     if len(filter_clauses) > 0:
         where_clause = " WHERE " + " AND ".join(filter_clauses)
 
-    all_archives = []
+    union_parts = []
     for ds in datasets:
-        query = f"""SELECT id as archive_id, end_timestamp
-                FROM {get_archives_table_name(table_prefix, ds)}
-                """
-        query += where_clause
-        query += " ORDER BY end_timestamp DESC"
+        table = get_archives_table_name(table_prefix, ds)
+        union_parts.append(
+            f"SELECT id AS archive_id, end_timestamp, '{ds}' AS dataset FROM {table}{where_clause}"
+        )
+    query = " UNION ALL ".join(union_parts) + " ORDER BY end_timestamp DESC"
 
-        with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-            cursor.execute(query)
-            for row in cursor.fetchall():
-                row["dataset"] = ds
-                all_archives.append(row)
-
-    all_archives.sort(key=lambda a: a["end_timestamp"], reverse=True)
-    return all_archives
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        cursor.execute(query)
+        return cursor.fetchall()
 
 
 def get_archive_and_file_split_ids_for_ir_extraction(
