@@ -95,7 +95,7 @@ finalize_build() {
     fi
 
     if command -v git >/dev/null \
-        && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null
+        && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
     then
         _build_cmd_ref+=(
             --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD)"
