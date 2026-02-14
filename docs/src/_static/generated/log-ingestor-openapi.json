@@ -337,7 +337,7 @@
               "wait_time_sec": {
                 "type": "integer",
                 "format": "int32",
-                "description": "The long polling wait time, in seconds, for receiving messages from the SQS queue.\n\nThis value controls how long an SQS `ReceiveMessage` call will wait for a message to\narrive before returning a response. Enabling long polling can reduce empty responses\nand lower overall request costs.\n\nAWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than\n20 seconds will be truncated to 20 seconds.\n\nDefaults to `20`.",
+                "description": "The long polling wait time, in seconds, for receiving messages from the SQS queue.\n\nThis value controls how long an SQS `ReceiveMessage` call will wait for a message to\narrive before returning a response. Enabling long polling can reduce empty responses\nand lower overall request costs.\n\nAWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than\n20 seconds will be considered invalid.\n\nDefaults to `20`.",
                 "maximum": 20,
                 "minimum": 0
               }

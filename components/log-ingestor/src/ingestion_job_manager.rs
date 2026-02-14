@@ -153,10 +153,8 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::CustomEndpointUrlNotSupported`] if a custom endpoint URL is given.
-    /// * [`Error::InvalidNumConcurrentListenerTasks`] if the given number of concurrent listener
-    ///   tasks is invalid.
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
+    /// * Forwards [`ValidatedSqsListenerConfig::validate_and_create`]'s return values on failure.
     pub async fn create_sqs_listener_job(
         &self,
         raw_config: SqsListenerConfig,
