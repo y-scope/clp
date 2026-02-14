@@ -18,19 +18,20 @@ const SPEED_DEFAULT = {latency: 0, speed: 0};
 const QuerySpeed = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const searchJobId = useSearchStore((state) => state.searchJobId);
-    const cachedDataset = useSearchStore((state) => state.cachedDataset);
+    const cachedDatasets = useSearchStore((state) => state.cachedDatasets);
 
     const {data = SPEED_DEFAULT} = useQuery({
         queryKey: [
             "speed",
             searchJobId,
-            cachedDataset,
+            cachedDatasets,
         ],
         queryFn: async () => {
             if (null === searchJobId) {
                 return SPEED_DEFAULT;
             }
-            const {bytes, duration} = await fetchQuerySpeed(cachedDataset ?? "", searchJobId);
+            const datasetName = cachedDatasets[0] ?? "";
+            const {bytes, duration} = await fetchQuerySpeed(datasetName, searchJobId);
 
             if (null === bytes || null === duration) {
                 return SPEED_DEFAULT;

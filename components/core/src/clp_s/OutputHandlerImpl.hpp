@@ -128,19 +128,22 @@ public:
                 std::string_view message,
                 epochtime_t timestamp,
                 std::string_view archive_id,
-                int64_t log_event_idx
+                int64_t log_event_idx,
+                std::string_view dataset
         )
                 : original_path(original_path),
                   message(message),
                   timestamp(timestamp),
                   archive_id(archive_id),
-                  log_event_idx(log_event_idx) {}
+                  log_event_idx(log_event_idx),
+                  dataset(dataset) {}
 
         std::string original_path;
         std::string message;
         epochtime_t timestamp;
         std::string archive_id;
         int64_t log_event_idx;
+        std::string dataset;
     };
 
     struct QueryResultGreaterTimestampComparator {
@@ -165,6 +168,7 @@ public:
             std::string const& collection,
             uint64_t batch_size,
             uint64_t max_num_results,
+            std::string dataset,
             bool should_output_metadata = true
     );
 
@@ -191,6 +195,7 @@ private:
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
     uint64_t m_max_num_results;
+    std::string m_dataset;
     std::priority_queue<
             std::unique_ptr<QueryResult>,
             std::vector<std::unique_ptr<QueryResult>>,

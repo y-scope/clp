@@ -66,7 +66,7 @@ class AggregationConfig(BaseModel):
 
 
 class QueryJobConfig(BaseModel):
-    dataset: str | None = None
+    datasets: list[str] | None = None
 
 
 class ExtractIrJobConfig(QueryJobConfig):

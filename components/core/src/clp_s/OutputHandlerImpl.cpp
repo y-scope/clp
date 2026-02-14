@@ -70,11 +70,13 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         string const& collection,
         uint64_t batch_size,
         uint64_t max_num_results,
+        string dataset,
         bool should_output_timestamp
 )
         : ::clp_s::search::OutputHandler(should_output_timestamp, true),
           m_batch_size(batch_size),
-          m_max_num_results(max_num_results) {
+          m_max_num_results(max_num_results),
+          m_dataset(std::move(dataset)) {
     try {
         auto mongo_uri = mongocxx::uri(uri);
         m_client = mongocxx::client(mongo_uri);
@@ -114,6 +116,10 @@ ErrorCode ResultsCacheOutputHandler::flush() {
                                     bsoncxx::builder::basic::kvp(
                                             constants::results_cache::search::cLogEventIx,
                                             result.log_event_idx
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cDataset,
+                                            std::move(result.dataset)
                                     )
                             )
                     )
@@ -154,7 +160,8 @@ void ResultsCacheOutputHandler::write(
                         message,
                         timestamp,
                         archive_id,
-                        log_event_idx
+                        log_event_idx,
+                        m_dataset
                 )
         );
     } else if (m_latest_results.top()->timestamp < timestamp) {
@@ -165,7 +172,8 @@ void ResultsCacheOutputHandler::write(
                         message,
                         timestamp,
                         archive_id,
-                        log_event_idx
+                        log_event_idx,
+                        m_dataset
                 )
         );
     }

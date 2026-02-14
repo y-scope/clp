@@ -14,6 +14,7 @@ import {getStreamId} from "../utils";
 interface SearchResult {
     _id: string;
     archive_id: string;
+    dataset: string;
     filePath: string;
     log_event_ix: number;
     message: string;
@@ -54,6 +55,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         key: "message",
         render: (_, record) => (
             <Message
+                dataset={record.dataset}
                 logEventIdx={record.log_event_ix}
                 message={record.message}
                 streamId={getStreamId(record)}

@@ -2,9 +2,16 @@
     display: flex;
 }
 
+.selectContainer {
+    min-width: 108px;
+}
+
+.selectContainerExpanded {
+    width: 200px;
+}
+
 .select {
-    width: 100px;
-    min-width: 100px;
+    width: 100%;
 }
 
 .select :global(.ant-select-selector) {

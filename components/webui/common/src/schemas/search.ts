@@ -13,10 +13,7 @@ import {
  * Schema for request to create a new query job.
  */
 const QueryJobCreationSchema = Type.Object({
-    // Type.Null must come before Type.String;
-    // otherwise, `{dataset: null}` gets converted to `{dataset: ""}`.
-    dataset: Type.Union([Type.Null(),
-        Type.String()]),
+    datasets: Type.Array(Type.String()),
     ignoreCase: Type.Boolean(),
     queryString: StringSchema,
     timeRangeBucketSizeMillis: Type.Integer(),

@@ -35,9 +35,9 @@ const SubmitButton = () => {
         (state) => state.queryIsCaseSensitive,
     );
     const queryString = useSearchStore((state) => state.queryString);
-    const selectDataset = useSearchStore((state) => state.selectDataset);
-    const updateCachedDataset = useSearchStore(
-        (state) => state.updateCachedDataset,
+    const selectDatasets = useSearchStore((state) => state.selectDatasets);
+    const updateCachedDatasets = useSearchStore(
+        (state) => state.updateCachedDatasets,
     );
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -67,8 +67,8 @@ const SubmitButton = () => {
         updateTimelineConfig(newTimelineConfig);
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if (null !== selectDataset) {
-                updateCachedDataset(selectDataset);
+            if (0 < selectDatasets.length) {
+                updateCachedDatasets(selectDatasets);
             } else {
                 console.error(
                     "Cannot submit a clp-s query without a dataset selection.",
@@ -79,7 +79,7 @@ const SubmitButton = () => {
         }
 
         handleQuerySubmit({
-            dataset: selectDataset,
+            datasets: selectDatasets,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
@@ -102,15 +102,15 @@ const SubmitButton = () => {
         timeRangeOption,
         updateTimeRange,
         messageApi,
-        selectDataset,
-        updateCachedDataset,
+        selectDatasets,
+        updateCachedDatasets,
     ]);
 
     const isQueryStringEmpty = "" === queryString;
 
     // Submit button must be disabled if there are no datasets since clp-s requires dataset option
     // for queries.
-    const isNoDatasetsAndClpS = null === selectDataset &&
+    const isNoDatasetsAndClpS = 0 === selectDatasets.length &&
         CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
 
     let tooltipTitle = "";

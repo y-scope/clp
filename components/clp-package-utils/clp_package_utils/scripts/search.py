@@ -51,10 +51,11 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
-        "--dataset",
+        "--datasets",
         type=str,
+        nargs="+",
         default=None,
-        help="The dataset that the archives belong to.",
+        help="The datasets that the archives belong to.",
     )
     args_parser.add_argument(
         "--begin-time",
@@ -113,16 +114,17 @@ def main(argv):
         )
         return -1
 
-    dataset = parsed_args.dataset
+    datasets = parsed_args.datasets
     if StorageEngine.CLP_S == storage_engine:
-        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        datasets = [CLP_DEFAULT_DATASET_NAME] if datasets is None else datasets
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
-            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+            for ds in datasets:
+                validate_dataset_name(clp_db_connection_params["table_prefix"], ds)
         except Exception as e:
             logger.error(e)
             return -1
-    elif dataset is not None:
+    elif datasets is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
 
@@ -152,9 +154,9 @@ def main(argv):
     # fmt: on
     if parsed_args.verbose:
         search_cmd.append("--verbose")
-    if dataset is not None:
-        search_cmd.append("--dataset")
-        search_cmd.append(dataset)
+    if datasets is not None:
+        search_cmd.append("--datasets")
+        search_cmd.extend(datasets)
     if parsed_args.begin_time is not None:
         search_cmd.append("--begin-time")
         search_cmd.append(str(parsed_args.begin_time))

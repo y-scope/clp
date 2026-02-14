@@ -72,13 +72,13 @@ def submit_query_job(
         return db_cursor.lastrowid
 
 
-def validate_dataset_exists(db_config: Database, dataset: str) -> None:
+def validate_datasets_exist(db_config: Database, datasets: list[str]) -> None:
     """
-    Validates that `dataset` exists in the metadata database.
+    Validates that all datasets in ``datasets`` exist in the metadata database.
 
     :param db_config:
-    :param dataset:
-    :raise: ValueError if the dataset doesn't exist.
+    :param datasets:
+    :raise: ValueError if any dataset doesn't exist.
     """
     sql_adapter = SqlAdapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
@@ -87,8 +87,10 @@ def validate_dataset_exists(db_config: Database, dataset: str) -> None:
         closing(sql_adapter.create_connection(True)) as db_conn,
         closing(db_conn.cursor(dictionary=True)) as db_cursor,
     ):
-        if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
-            raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+        existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+        for dataset in datasets:
+            if dataset not in existing_datasets:
+                raise ValueError(f"Dataset `{dataset}` doesn't exist.")
 
 
 def wait_for_query_job(sql_adapter: SqlAdapter, job_id: int) -> QueryJobStatus:

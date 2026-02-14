@@ -17,10 +17,13 @@ import {SEARCH_UI_STATE} from "../../../../../SearchState/typings";
  * @return
  */
 const TimestampKeySelect = (selectProps: SelectProps<string>) => {
-    const dataset = useSearchStore((state) => state.selectDataset);
+    const selectDatasets = useSearchStore((state) => state.selectDatasets);
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
     const updateTimestampKey = usePrestoSearchState((state) => state.updateTimestampKey);
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const dataset = 0 < selectDatasets.length ?
+        selectDatasets[0] :
+        null;
 
     // Access cached timestamp keys fetched by useTimestampKeyInit hook in GuidedControls.
     const {data: timestampKeys} = useQuery({

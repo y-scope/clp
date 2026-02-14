@@ -1,4 +1,3 @@
-import {Nullable} from "@webui/common/utility-types";
 import {Dayjs} from "dayjs";
 import {create} from "zustand";
 
@@ -17,7 +16,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
-    cachedDataset: null,
+    cachedDatasets: [] as string[],
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
@@ -25,7 +24,7 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
     searchJobId: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
-    selectDataset: null,
+    selectDatasets: [] as string[],
     timeRange: DEFAULT_TIME_RANGE,
     timeRangeOption: DEFAULT_TIME_RANGE_OPTION,
     timelineConfig: computeTimelineConfig(DEFAULT_TIME_RANGE),
@@ -38,11 +37,11 @@ interface SearchState {
     aggregationJobId: string | null;
 
     /**
-     * Clp-s dataset filter submitted as part of query. There is a separate state for the submitted
-     * dataset so modifications to the selector do not change dataset used in extract stream job for
-     * log viewer links.
+     * Clp-s datasets submitted as part of query. There is a separate state for the submitted
+     * datasets so modifications to the selector do not change datasets used in extract stream job
+     * for log viewer links.
      */
-    cachedDataset: Nullable<string>;
+    cachedDatasets: string[];
 
     /**
      * The number of search results from server metadata.
@@ -80,9 +79,9 @@ interface SearchState {
     searchUiState: SEARCH_UI_STATE;
 
     /**
-     * Clp-s dataset filter shown in UI selector.
+     * Clp-s datasets shown in UI selector.
      */
-    selectDataset: string | null;
+    selectDatasets: string[];
 
     /**
      * Time range for search query.
@@ -102,7 +101,7 @@ interface SearchState {
     timelineConfig: TimelineConfig;
 
     updateAggregationJobId: (id: string | null) => void;
-    updateCachedDataset: (dataset: string) => void;
+    updateCachedDatasets: (datasets: string[]) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
@@ -110,7 +109,7 @@ interface SearchState {
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
-    updateSelectDataset: (dataset: string | null) => void;
+    updateSelectDatasets: (datasets: string[]) => void;
     updateTimeRange: (range: [Dayjs, Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
@@ -121,8 +120,8 @@ const useSearchStore = create<SearchState>((set) => ({
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
     },
-    updateCachedDataset: (dataset) => {
-        set({cachedDataset: dataset});
+    updateCachedDatasets: (datasets) => {
+        set({cachedDatasets: datasets});
     },
     updateNumSearchResultsMetadata: (num) => {
         set({numSearchResultsMetadata: num});
@@ -145,8 +144,8 @@ const useSearchStore = create<SearchState>((set) => ({
     updateSearchUiState: (state) => {
         set({searchUiState: state});
     },
-    updateSelectDataset: (dataset) => {
-        set({selectDataset: dataset});
+    updateSelectDatasets: (datasets) => {
+        set({selectDatasets: datasets});
     },
     updateTimeRange: (range) => {
         set({timeRange: range});

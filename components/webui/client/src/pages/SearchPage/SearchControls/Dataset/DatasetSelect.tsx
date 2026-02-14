@@ -7,6 +7,8 @@ import {
     SelectProps,
 } from "antd";
 
+import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
+
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {fetchDatasetNames} from "./sql";
@@ -19,8 +21,8 @@ import {fetchDatasetNames} from "./sql";
  * @return
  */
 const DatasetSelect = (selectProps: SelectProps) => {
-    const dataset = useSearchStore((state) => state.selectDataset);
-    const updateDataset = useSearchStore((state) => state.updateSelectDataset);
+    const datasets = useSearchStore((state) => state.selectDatasets);
+    const updateDatasets = useSearchStore((state) => state.updateSelectDatasets);
     const searchUiState = useSearchStore((state) => state.searchUiState);
 
     const [messageApi, contextHolder] = message.useMessage();
@@ -32,14 +34,17 @@ const DatasetSelect = (selectProps: SelectProps) => {
 
     useEffect(() => {
         if (isSuccess) {
-            if ("undefined" !== typeof data[0] && null === dataset) {
-                updateDataset(data[0]);
+            if ("undefined" !== typeof data[0] && 0 === datasets.length) {
+                const fallback = data.includes(CLP_DEFAULT_DATASET_NAME) ?
+                    CLP_DEFAULT_DATASET_NAME :
+                    data[0];
+                updateDatasets([fallback]);
             }
         }
     }, [isSuccess,
         data,
-        dataset,
-        updateDataset]);
+        datasets,
+        updateDatasets]);
 
     useEffect(() => {
         if (error) {
@@ -57,15 +62,26 @@ const DatasetSelect = (selectProps: SelectProps) => {
                 key: "noData",
                 content: "No data has been ingested. Please ingest data to search.",
             });
-            updateDataset(null);
+            updateDatasets([]);
         }
     }, [data,
         isSuccess,
         messageApi,
-        updateDataset]);
+        updateDatasets]);
 
-    const handleDatasetChange = (value: string) => {
-        updateDataset(value);
+    const handleDatasetChange = (value: string[]) => {
+        if (0 === value.length) {
+            const fallback = (data || []).includes(CLP_DEFAULT_DATASET_NAME) ?
+                CLP_DEFAULT_DATASET_NAME :
+                data?.[0];
+
+            if ("undefined" !== typeof fallback) {
+                updateDatasets([fallback]);
+
+                return;
+            }
+        }
+        updateDatasets(value);
     };
 
     return (
@@ -73,10 +89,11 @@ const DatasetSelect = (selectProps: SelectProps) => {
             {contextHolder}
             <Select
                 loading={isPending}
+                mode={"multiple"}
                 options={(data || []).map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"middle"}
-                value={dataset}
+                value={datasets}
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING

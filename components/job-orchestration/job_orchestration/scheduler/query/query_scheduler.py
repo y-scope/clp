@@ -175,7 +175,10 @@ class JsonExtractionHandle(StreamExtractionHandle):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.model_validate(job_config)
         self._archive_id = self.__job_config.archive_id
-        if not archive_exists(db_conn, table_prefix, self.__job_config.dataset, self._archive_id):
+        extraction_dataset = (
+            self.__job_config.datasets[0] if self.__job_config.datasets else None
+        )
+        if not archive_exists(db_conn, table_prefix, extraction_dataset, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
     def get_stream_id(self) -> str:
@@ -402,11 +405,8 @@ def get_archives_for_search(
     table_prefix: str,
     search_config: SearchJobConfig,
     archive_end_ts_lower_bound: int | None,
+    datasets: list[str],
 ):
-    dataset = search_config.dataset
-    query = f"""SELECT id as archive_id, end_timestamp
-            FROM {get_archives_table_name(table_prefix, dataset)}
-            """
     filter_clauses = []
     if search_config.end_timestamp is not None:
         filter_clauses.append(f"begin_timestamp <= {search_config.end_timestamp}")
@@ -416,14 +416,26 @@ def get_archives_for_search(
         filter_clauses.append(
             f"(end_timestamp >= {archive_end_ts_lower_bound} OR end_timestamp = 0)"
         )
+    where_clause = ""
     if len(filter_clauses) > 0:
-        query += " WHERE " + " AND ".join(filter_clauses)
-    query += " ORDER BY end_timestamp DESC"
+        where_clause = " WHERE " + " AND ".join(filter_clauses)
 
-    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        cursor.execute(query)
-        archives_for_search = list(cursor.fetchall())
-    return archives_for_search
+    all_archives = []
+    for ds in datasets:
+        query = f"""SELECT id as archive_id, end_timestamp
+                FROM {get_archives_table_name(table_prefix, ds)}
+                """
+        query += where_clause
+        query += " ORDER BY end_timestamp DESC"
+
+        with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+            cursor.execute(query)
+            for row in cursor.fetchall():
+                row["dataset"] = ds
+                all_archives.append(row)
+
+    all_archives.sort(key=lambda a: a["end_timestamp"], reverse=True)
+    return all_archives
 
 
 def get_archive_and_file_split_ids_for_ir_extraction(
@@ -497,7 +509,7 @@ def archive_exists(
 
 
 def get_task_group_for_job(
-    archive_ids: list[str],
+    archives: list[dict],
     task_ids: list[int],
     job: QueryJob,
     clp_metadata_db_conn_params: dict[str, any],
@@ -509,25 +521,27 @@ def get_task_group_for_job(
         return celery.group(
             search.s(
                 job_id=job.id,
-                archive_id=archive_ids[i],
+                archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
                 job_config=job_config,
+                dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
             )
-            for i in range(len(archive_ids))
+            for i in range(len(archives))
         )
     if job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
         return celery.group(
             extract_stream.s(
                 job_id=job.id,
-                archive_id=archive_ids[i],
+                archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
                 job_config=job_config,
+                dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
             )
-            for i in range(len(archive_ids))
+            for i in range(len(archives))
         )
     error_msg = f"Unexpected job type: {job_type}"
     logger.error(error_msg)
@@ -537,15 +551,16 @@ def get_task_group_for_job(
 def dispatch_query_job(
     db_conn,
     job: QueryJob,
-    archive_ids: list[str],
+    archives: list[dict],
     clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ) -> None:
     global active_jobs
+    archive_ids = [a["archive_id"] for a in archives]
     task_ids = insert_query_tasks_into_db(db_conn, job.id, archive_ids)
 
     task_group = get_task_group_for_job(
-        archive_ids,
+        archives,
         task_ids,
         job,
         clp_metadata_db_conn_params,
@@ -605,7 +620,7 @@ async def acquire_reducer_for_job(job: SearchJob):
 def dispatch_job_and_update_db(
     db_conn,
     new_job: QueryJob,
-    target_archives: list[str],
+    target_archives: list[dict],
     clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     num_tasks: int,
@@ -633,6 +648,7 @@ def handle_pending_query_jobs(
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
+    max_datasets_per_query: int | None,
     existing_datasets: set[str],
     archive_retention_period: int | None,
 ) -> list[asyncio.Task]:
@@ -657,12 +673,12 @@ def handle_pending_query_jobs(
             job_creation_time = job["creation_time"].timestamp()
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
-            dataset = QueryJobConfig.model_validate(job_config).dataset
-            if dataset is not None and dataset not in existing_datasets:
-                # NOTE: This assumes we never delete a dataset.
-                existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
-                if dataset not in existing_datasets:
-                    logger.error(f"Dataset `{dataset}` doesn't exist.")
+            datasets = QueryJobConfig.model_validate(job_config).datasets
+            if datasets is not None:
+                # Deduplicate
+                datasets = list(dict.fromkeys(datasets))
+                if len(datasets) == 0:
+                    logger.error(f"Job {job_id} has an empty datasets list.")
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
@@ -674,6 +690,43 @@ def handle_pending_query_jobs(
                     ):
                         logger.error(f"Failed to set job {job_id} as failed.")
                     continue
+
+                # Enforce max_datasets_per_query limit
+                if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
+                    logger.error(
+                        f"Job {job_id} requests {len(datasets)} datasets,"
+                        f" exceeding max_datasets_per_query={max_datasets_per_query}."
+                    )
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed.")
+                    continue
+
+                # NOTE: This assumes we never delete a dataset.
+                missing = set(datasets) - existing_datasets
+                if missing:
+                    existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
+                    missing = set(datasets) - existing_datasets
+                    if missing:
+                        logger.error(f"Datasets {missing} don't exist.")
+                        if not set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.FAILED,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            duration=0,
+                        ):
+                            logger.error(f"Failed to set job {job_id} as failed.")
+                        continue
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
@@ -688,7 +741,7 @@ def handle_pending_query_jobs(
                     )
 
                 archives_for_search = get_archives_for_search(
-                    db_conn, table_prefix, search_config, archive_end_ts_lower_bound
+                    db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
                 )
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
@@ -803,10 +856,11 @@ def handle_pending_query_jobs(
 
                 new_stream_extraction_job = job_handle.create_stream_extraction_job()
                 archive_id = job_handle.get_archive_id()
+                extraction_dataset = datasets[0] if datasets else None
                 dispatch_job_and_update_db(
                     db_conn,
                     new_stream_extraction_job,
-                    [archive_id],
+                    [{"archive_id": archive_id, "dataset": extraction_dataset}],
                     clp_metadata_db_conn_params,
                     results_cache_uri,
                     1,
@@ -839,18 +893,16 @@ def handle_pending_query_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            archive_ids_for_search = [archive["archive_id"] for archive in archives_for_search]
-
             dispatch_job_and_update_db(
                 db_conn,
                 job,
-                archive_ids_for_search,
+                archives_for_search,
                 clp_metadata_db_conn_params,
                 results_cache_uri,
                 job.num_archives_to_search,
             )
             logger.info(
-                f"Dispatched job {job_id} with {len(archive_ids_for_search)} archives to search."
+                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
 
     return reducer_acquisition_tasks
@@ -1103,6 +1155,7 @@ async def handle_jobs(
     stream_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
+    max_datasets_per_query: int | None,
     archive_retention_period: int | None,
 ) -> None:
     handle_updating_task = asyncio.create_task(
@@ -1118,6 +1171,7 @@ async def handle_jobs(
             results_cache_uri,
             stream_collection_name,
             num_archives_to_search_per_sub_job,
+            max_datasets_per_query,
             existing_datasets,
             archive_retention_period,
         )
@@ -1213,6 +1267,7 @@ async def main(argv: list[str]) -> int:
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
+                max_datasets_per_query=clp_config.query_scheduler.max_datasets_per_query,
                 archive_retention_period=clp_config.archive_output.retention_period,
             )
         )
