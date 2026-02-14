@@ -1,15 +1,14 @@
 import {useEffect} from "react";
 
 import {useQuery} from "@tanstack/react-query";
+import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
 import {
     message,
     Select,
     SelectProps,
 } from "antd";
 
-import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
-
-import useSearchStore from "../../SearchState/index";
+import useSearchStore from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {fetchDatasetNames} from "./sql";
 
@@ -38,6 +37,7 @@ const DatasetSelect = (selectProps: SelectProps) => {
                 const fallback = data.includes(CLP_DEFAULT_DATASET_NAME) ?
                     CLP_DEFAULT_DATASET_NAME :
                     data[0];
+
                 updateDatasets([fallback]);
             }
         }

@@ -32,12 +32,10 @@ FROM ${settings.SqlDbClpArchivesTableName}
  * @return
  */
 const buildClpsTimeRangeSql = (datasetNames: string[]): string => {
-    const unionParts = datasetNames.map((name) =>
-        `SELECT
+    const unionParts = datasetNames.map((name) => `SELECT
   MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP}) AS begin_timestamp,
   MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP}) AS end_timestamp
-FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.ARCHIVES}`
-    );
+FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.ARCHIVES}`);
 
     return `SELECT
   MIN(begin_timestamp) AS begin_timestamp,

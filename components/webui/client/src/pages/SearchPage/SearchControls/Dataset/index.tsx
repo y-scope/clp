@@ -16,15 +16,16 @@ const Dataset = () => {
     return (
         <div className={styles["datasetContainer"]}>
             <InputLabel>Dataset</InputLabel>
-            <div className={`${styles["selectContainer"]}${expanded ?
-                ` ${styles["selectContainerExpanded"]}` :
-                ""}`}
+            <div
+                className={`${styles["selectContainer"]}${expanded ?
+                    ` ${styles["selectContainerExpanded"]}` :
+                    ""}`}
             >
                 <DatasetSelect
                     className={styles["select"] || ""}
-                    maxTagCount={expanded ?
-                        "responsive" :
-                        undefined}/>
+                    {...(expanded ?
+                        {maxTagCount: "responsive"} :
+                        {})}/>
             </div>
         </div>
     );
