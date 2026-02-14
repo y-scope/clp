@@ -9,7 +9,13 @@ use clp_rust_utils::{
             credentials::Credentials as ClpCredentials,
         },
     },
-    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
+    job_config::ingestion::s3::{
+        BaseConfig,
+        ConfigError,
+        S3ScannerConfig,
+        SqsListenerConfig,
+        ValidatedSqsListenerConfig,
+    },
     s3::ObjectMetadata,
 };
 use non_empty_string::NonEmptyString;
@@ -37,8 +43,8 @@ pub enum Error {
     #[error("Custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
 
-    #[error("Invalid `num_concurrent_listener_tasks`: {0}")]
-    InvalidNumConcurrentListenerTasks(u16),
+    #[error("Invalid job config: {0}")]
+    InvalidConfig(#[from] ConfigError),
 
     #[error("A region code must be specified when using the default AWS endpoint")]
     MissingRegionCode,
@@ -151,22 +157,20 @@ impl IngestionJobManagerState {
     /// * [`Error::InvalidNumConcurrentListenerTasks`] if the given number of concurrent listener
     ///   tasks is invalid.
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
-    pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
-        let ingestion_job_config = config.base.clone();
+    pub async fn create_sqs_listener_job(
+        &self,
+        raw_config: SqsListenerConfig,
+    ) -> Result<Uuid, Error> {
+        let config = ValidatedSqsListenerConfig::validate_and_create(raw_config)?;
+        let ingestion_job_config = config.get().base.clone();
         if let Some(endpoint_url) = &ingestion_job_config.endpoint_url {
             return Err(Error::CustomEndpointUrlNotSupported(format!(
                 "SQS listener ingestion jobs do not support custom endpoint URLs yet. Endpoint \
                  URL: {endpoint_url}"
             )));
         }
-        // NOTE: This limit must be kept in sync with the limit in the config definition.
-        if config.num_concurrent_listener_tasks < 1 || config.num_concurrent_listener_tasks > 32 {
-            return Err(Error::InvalidNumConcurrentListenerTasks(
-                config.num_concurrent_listener_tasks,
-            ));
-        }
         let sqs_client_manager = SqsClientWrapper::create(
-            config.base.region.as_ref(),
+            config.get().base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
         )

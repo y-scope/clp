@@ -1,7 +1,17 @@
 pub mod s3 {
     use non_empty_string::NonEmptyString;
     use serde::{Deserialize, Serialize};
+    use thiserror::Error;
     use utoipa::ToSchema;
+
+    #[derive(Error, Debug)]
+    pub enum ConfigError {
+        #[error("Invalid `num_concurrent_listener_tasks`: {0}")]
+        InvalidNumConcurrentListenerTasks(u16),
+
+        #[error("Invalid `wait_time_sec`: {0}")]
+        InvalidSqsWaitTime(u16),
+    }
 
     /// Base configuration for ingesting logs from S3.
     #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -74,6 +84,46 @@ pub mod s3 {
         #[serde(default = "default_sqs_wait_time_sec")]
         #[schema(minimum = 0, maximum = 20)]
         pub wait_time_sec: u16,
+    }
+
+    /// Wrapper around [`SqsListenerConfig`] that guarantees the configuration is valid.
+    #[derive(Debug, Clone)]
+    pub struct ValidatedSqsListenerConfig {
+        config: SqsListenerConfig,
+    }
+
+    impl ValidatedSqsListenerConfig {
+        /// Validates and creates a new instance of [`ValidatedSqsListenerConfig`] from the given
+        /// [`SqsListenerConfig`].
+        ///
+        /// # Returns
+        ///
+        /// The validated config wrapper on success.
+        ///
+        /// # Errors
+        ///
+        /// Returns an error if:
+        ///
+        /// * [`ConfigError::InvalidNumConcurrentListenerTasks`] if
+        ///   `config.num_concurrent_listener_tasks` is invalid.
+        /// * [`ConfigError::InvalidSqsWaitTime`] if `config.wait_time_sec` is invalid.
+        pub fn validate_and_create(config: SqsListenerConfig) -> Result<Self, ConfigError> {
+            if config.num_concurrent_listener_tasks < 1 || config.num_concurrent_listener_tasks > 32
+            {
+                return Err(ConfigError::InvalidNumConcurrentListenerTasks(
+                    config.num_concurrent_listener_tasks,
+                ));
+            }
+            if config.wait_time_sec > 20 {
+                return Err(ConfigError::InvalidSqsWaitTime(config.wait_time_sec));
+            }
+            Ok(Self { config })
+        }
+
+        #[must_use]
+        pub const fn get(&self) -> &SqsListenerConfig {
+            &self.config
+        }
     }
 
     /// Configuration for a S3 scanner job.

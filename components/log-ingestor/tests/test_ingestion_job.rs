@@ -5,7 +5,12 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
 use clp_rust_utils::{
-    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
+    job_config::ingestion::s3::{
+        BaseConfig,
+        S3ScannerConfig,
+        SqsListenerConfig,
+        ValidatedSqsListenerConfig,
+    },
     s3::ObjectMetadata,
     types::non_empty_string::ExpectedNonEmpty,
 };
@@ -163,7 +168,8 @@ async fn run_sqs_listener_test(
     let sqs_listener = SqsListener::spawn(
         job_id,
         &SqsClientWrapper::from(sqs_client),
-        &sqs_listener_config,
+        &ValidatedSqsListenerConfig::validate_and_create(sqs_listener_config)
+            .expect("invalid SQS listener config"),
         &sender,
     );
 
@@ -219,7 +225,7 @@ async fn test_sqs_listener() -> Result<()> {
     let job_id = Uuid::new_v4();
     let prefix = get_testing_prefix_as_non_empty_string(&job_id);
 
-    let num_tasks_to_test = vec![1, 4, 16, 64];
+    let num_tasks_to_test = vec![1, 4, 16, 32];
 
     for num_tasks in num_tasks_to_test {
         // NOTE: There is only one SQS queue for testing, so we need to make sure test cases are

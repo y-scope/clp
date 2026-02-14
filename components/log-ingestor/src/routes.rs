@@ -90,7 +90,7 @@ impl IntoResponse for Error {
                     (axum::http::StatusCode::CONFLICT, self.to_string())
                 }
                 IngestionJobManagerError::CustomEndpointUrlNotSupported(_)
-                | IngestionJobManagerError::InvalidNumConcurrentListenerTasks(_)
+                | IngestionJobManagerError::InvalidConfig(_)
                 | IngestionJobManagerError::MissingRegionCode => {
                     (axum::http::StatusCode::BAD_REQUEST, self.to_string())
                 }

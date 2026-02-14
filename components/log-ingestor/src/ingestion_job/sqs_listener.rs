@@ -3,7 +3,7 @@ use std::cmp::min;
 use anyhow::Result;
 use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
 use clp_rust_utils::{
-    job_config::ingestion::s3::SqsListenerConfig,
+    job_config::ingestion::s3::ValidatedSqsListenerConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
@@ -22,7 +22,7 @@ type TaskId = usize;
 /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
 struct Task<SqsClientManager: AwsClientManagerType<Client>> {
     sqs_client_manager: SqsClientManager,
-    config: SqsListenerConfig,
+    config: ValidatedSqsListenerConfig,
     sender: mpsc::Sender<ObjectMetadata>,
     id: TaskId,
 }
@@ -47,7 +47,8 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
         const MAX_NUM_MESSAGES_TO_FETCH: i32 = 10;
         const MAX_WAIT_TIME_SEC: u16 = 20;
-        let wait_time_sec = i32::from(min(self.config.wait_time_sec, MAX_WAIT_TIME_SEC));
+        let config = self.config.get();
+        let wait_time_sec = i32::from(min(config.wait_time_sec, MAX_WAIT_TIME_SEC));
 
         loop {
             select! {
@@ -59,7 +60,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
                 // Listen to SQS messages.
                 result = self.sqs_client_manager.get().await?
                     .receive_message()
-                    .queue_url(self.config.queue_url.as_str())
+                    .queue_url(config.queue_url.as_str())
                     .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
                     .wait_time_seconds(wait_time_sec).send() => {
                     self.process_sqs_response(result?).await?;
@@ -119,7 +120,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
                     .get()
                     .await?
                     .delete_message()
-                    .queue_url(self.config.queue_url.as_str())
+                    .queue_url(self.config.get().queue_url.as_str())
                     .receipt_handle(receipt_handle)
                     .send()
                     .await?;
@@ -140,7 +141,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///   * [`Self::is_relevant_object`] evaluates to `false`.
     fn extract_object_metadata(&self, record: Record) -> Option<ObjectMetadata> {
         if !record.event_name.starts_with("ObjectCreated:")
-            || self.config.base.bucket_name != record.s3.bucket.name.as_str()
+            || self.config.get().base.bucket_name != record.s3.bucket.name.as_str()
             || !self.is_relevant_object(record.s3.object.key.as_str())
         {
             return None;
@@ -156,7 +157,8 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///
     /// Whether the object key corresponds to a relevant object based on the listener's prefix.
     fn is_relevant_object(&self, object_key: &str) -> bool {
-        !object_key.ends_with('/') && object_key.starts_with(self.config.base.key_prefix.as_str())
+        !object_key.ends_with('/')
+            && object_key.starts_with(self.config.get().base.key_prefix.as_str())
     }
 }
 
@@ -229,16 +231,12 @@ impl SqsListener {
     pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
         id: Uuid,
         sqs_client_manager: &SqsClientManager,
-        config: &SqsListenerConfig,
+        config: &ValidatedSqsListenerConfig,
         sender: &mpsc::Sender<ObjectMetadata>,
     ) -> Self {
-        let mut task_handles = Vec::with_capacity(usize::from(config.num_concurrent_listener_tasks));
-        assert!(
-            config.num_concurrent_listener_tasks != 0,
-            "The number of concurrent listener tasks must be a positive integer. The upper level \
-             caller should ensure the configuration is valid."
-        );
-        for task_id in 0..config.num_concurrent_listener_tasks {
+        let num_tasks = usize::from(config.get().num_concurrent_listener_tasks);
+        let mut task_handles = Vec::with_capacity(num_tasks);
+        for task_id in 0..num_tasks {
             let task = Task {
                 sqs_client_manager: sqs_client_manager.clone(),
                 config: config.clone(),
@@ -262,8 +260,6 @@ impl SqsListener {
         for task_handle in self.task_handles {
             let task_id = task_handle.task_id;
             match task_handle.join_handle.await {
-                Ok(task_result) => {
-            match task_handle.join_handle.await {
                 Ok(Ok(())) => {
                     tracing::info!(
                         job_id = ? self.id,
@@ -272,8 +268,7 @@ impl SqsListener {
                     );
                 }
                 Ok(Err(_)) => {
-                    // We don't need to log the error here because the underlying task will
-                    // log it.
+                    // We don't need to log the error here because the underlying task will log it.
                     tracing::warn!(
                         job_id = ? self.id,
                         task_id = ? task_id,
@@ -287,8 +282,6 @@ impl SqsListener {
                         task_id = ? task_id,
                         "SQS listener task panicked."
                     );
-                }
-            }
                 }
             }
         }
