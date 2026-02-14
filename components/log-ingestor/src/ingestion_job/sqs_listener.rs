@@ -232,7 +232,7 @@ impl SqsListener {
         config: &SqsListenerConfig,
         sender: &mpsc::Sender<ObjectMetadata>,
     ) -> Self {
-        let mut task_handles = Vec::with_capacity(config.num_concurrent_listener_tasks as usize);
+        let mut task_handles = Vec::with_capacity(usize::from(config.num_concurrent_listener_tasks));
         assert!(
             config.num_concurrent_listener_tasks != 0,
             "The number of concurrent listener tasks must be a positive integer. The upper level \
@@ -243,7 +243,7 @@ impl SqsListener {
                 sqs_client_manager: sqs_client_manager.clone(),
                 config: config.clone(),
                 sender: sender.clone(),
-                id: task_id as TaskId,
+                id: TaskId::from(task_id),
             };
             let task_handle = TaskHandle::spawn(task, id);
             task_handles.push(task_handle);
@@ -263,33 +263,32 @@ impl SqsListener {
             let task_id = task_handle.task_id;
             match task_handle.join_handle.await {
                 Ok(task_result) => {
-                    match task_result {
-                        Ok(()) => {
-                            tracing::info!(
-                                job_id = ? self.id,
-                                task_id = ? task_id,
-                                "SQS listener task cancelled successfully."
-                            );
-                        }
-                        Err(_) => {
-                            // We don't need to log the error here because the underlying task will
-                            // log it.
-                            tracing::warn!(
-                                job_id = ? self.id,
-                                task_id = ? task_id,
-                                "SQS listener task cancelled successfully, but the task execution \
-                                failed with an error."
-                            );
-                        }
-                    }
+            match task_handle.join_handle.await {
+                Ok(Ok(())) => {
+                    tracing::info!(
+                        job_id = ? self.id,
+                        task_id = ? task_id,
+                        "SQS listener task completed successfully."
+                    );
+                }
+                Ok(Err(_)) => {
+                    // We don't need to log the error here because the underlying task will
+                    // log it.
+                    tracing::warn!(
+                        job_id = ? self.id,
+                        task_id = ? task_id,
+                        "SQS listener task completed with an error."
+                    );
                 }
                 Err(err) => {
                     tracing::warn!(
                         error = ? err,
                         job_id = ? self.id,
                         task_id = ? task_id,
-                        "SQS listener task failed to cancel."
+                        "SQS listener task panicked."
                     );
+                }
+            }
                 }
             }
         }

@@ -37,7 +37,7 @@ pub enum Error {
     #[error("Custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
 
-    #[error("Invalid `num_concurrent_listener_tasks`: {0}`")]
+    #[error("Invalid `num_concurrent_listener_tasks`: {0}")]
     InvalidNumConcurrentListenerTasks(u16),
 
     #[error("A region code must be specified when using the default AWS endpoint")]
