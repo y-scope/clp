@@ -26,9 +26,9 @@ tasks:
       - "{{.G_BUILD_DIR}}/docs-venv.md5"
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
-      - "conf/**/*"
-      - "src/**/*"
-    dir: "{{.ROOT_DIR}}/docs"
+      - "{{.G_DOCS_DIR}}/conf/**/*"
+      - "{{.G_DOCS_SRC_DIR}}/**/*"
+    dir: "{{.G_DOCS_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
