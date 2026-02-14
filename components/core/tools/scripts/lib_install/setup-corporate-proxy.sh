@@ -41,3 +41,7 @@ else
     echo "setup-corporate-proxy: WARNING: no recognized CA trust update tool found." >&2
     exit 1
 fi
+
+# Remove the staging file — it's no longer needed after installation into the
+# trust store.
+rm "$ca_cert"
