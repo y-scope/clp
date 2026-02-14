@@ -47,20 +47,20 @@ FROM (${unionParts.join("\nUNION ALL\n")}) AS combined`;
  * Fetches the earliest and latest log entry timestamps ("all time" range)
  * from the configured storage engine (CLP or CLPS).
  *
- * @param selectDatasets
+ * @param selectedDatasets
  * @return
  */
-const fetchAllTimeRange = async (selectDatasets: string[]): Promise<[Dayjs, Dayjs]> => {
+const fetchAllTimeRange = async (selectedDatasets: string[]): Promise<[Dayjs, Dayjs]> => {
     let sql: string;
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         sql = buildClpTimeRangeSql();
     } else {
-        if (0 === selectDatasets.length) {
+        if (0 === selectedDatasets.length) {
             console.error("Cannot fetch \"All Time\" time range. No selected datasets.");
 
             return DEFAULT_TIME_RANGE;
         }
-        sql = buildClpsTimeRangeSql(selectDatasets);
+        sql = buildClpsTimeRangeSql(selectedDatasets);
     }
     const resp = await querySql<
         {

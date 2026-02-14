@@ -34,9 +34,9 @@ const GuidedRunButton = () => {
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const timeRange = useSearchStore((state) => state.timeRange);
-    const {selectDatasets} = useSearchStore.getState();
-    const from = 0 < selectDatasets.length ?
-        selectDatasets[0] :
+    const {selectedDatasets} = useSearchStore.getState();
+    const from = 0 < selectedDatasets.length ?
+        selectedDatasets[0] :
         null;
 
     const select = usePrestoSearchState((state) => state.select);

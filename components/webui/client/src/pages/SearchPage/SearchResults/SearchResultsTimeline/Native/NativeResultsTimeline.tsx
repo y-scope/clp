@@ -26,7 +26,7 @@ const NativeResultsTimeline = () => {
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
     const queryString = useSearchStore((state) => state.queryString);
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const selectDatasets = useSearchStore((state) => state.selectDatasets);
+    const selectedDatasets = useSearchStore((state) => state.selectedDatasets);
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
     const aggregationResults = useAggregationResults();
@@ -37,7 +37,7 @@ const NativeResultsTimeline = () => {
             updateTimeRange,
             updateTimeRangeOption,
             updateTimelineConfig,
-            updateCachedDatasets,
+            updateQueriedDatasets,
         } = useSearchStore.getState();
 
         // Update range picker selection to match zoomed range.
@@ -51,8 +51,8 @@ const NativeResultsTimeline = () => {
         }
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if (0 < selectDatasets.length) {
-                updateCachedDatasets(selectDatasets);
+            if (0 < selectedDatasets.length) {
+                updateQueriedDatasets(selectedDatasets);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
 
@@ -61,7 +61,7 @@ const NativeResultsTimeline = () => {
         }
 
         handleQuerySubmit({
-            datasets: selectDatasets,
+            datasets: selectedDatasets,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
@@ -71,7 +71,7 @@ const NativeResultsTimeline = () => {
     }, [
         queryIsCaseSensitive,
         queryString,
-        selectDatasets,
+        selectedDatasets,
     ]);
 
     useEffect(() => {

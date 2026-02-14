@@ -89,8 +89,8 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<
         dayjs().utc(),
     ],
     [TIME_RANGE_OPTION.ALL_TIME]: async () => {
-        const {selectDatasets} = useSearchStore.getState();
-        return fetchAllTimeRange(selectDatasets);
+        const {selectedDatasets} = useSearchStore.getState();
+        return fetchAllTimeRange(selectedDatasets);
     },
 
     // Custom option is just a placeholder for typing purposes, its DayJs values should not

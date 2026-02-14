@@ -20,9 +20,9 @@ import {fetchDatasetNames} from "./sql";
  * @return
  */
 const DatasetSelect = (selectProps: SelectProps) => {
-    const datasets = useSearchStore((state) => state.selectDatasets);
-    const updateDatasets = useSearchStore((state) => state.updateSelectDatasets);
+    const datasets = useSearchStore((state) => state.selectedDatasets);
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const updateDatasets = useSearchStore((state) => state.updateSelectedDatasets);
 
     const [messageApi, contextHolder] = message.useMessage();
 

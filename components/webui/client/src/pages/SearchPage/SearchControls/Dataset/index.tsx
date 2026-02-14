@@ -10,7 +10,7 @@ import styles from "./index.module.css";
  * @return
  */
 const Dataset = () => {
-    const datasets = useSearchStore((state) => state.selectDatasets);
+    const datasets = useSearchStore((state) => state.selectedDatasets);
     const expanded = 1 < datasets.length;
 
     return (
