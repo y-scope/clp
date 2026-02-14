@@ -74,7 +74,7 @@ def submit_query_job(
 
 def validate_datasets_exist(db_config: Database, datasets: list[str]) -> None:
     """
-    Validates that all datasets in ``datasets`` exist in the metadata database.
+    Validates that all datasets in `datasets` exist in the metadata database.
 
     :param db_config:
     :param datasets:
