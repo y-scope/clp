@@ -1,14 +1,22 @@
 #include "ArchiveReader.hpp"
 
-#include <filesystem>
-#include <string_view>
+#include <memory>
+#include <system_error>
+#include <utility>
+#include <vector>
 
-#include "archive_constants.hpp"
-#include "ArchiveReaderAdaptor.hpp"
-#include "InputConfig.hpp"
-#include "ReaderUtils.hpp"
+#include <fmt/core.h>
+#include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
-using std::string_view;
+#include <clp/ir/types.hpp>
+#include <clp/type_utils.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/ReaderUtils.hpp>
 
 namespace clp_s {
 void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
