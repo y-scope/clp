@@ -159,10 +159,12 @@ async fn test_sqs_listener() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
 
     let sqs_client = clp_rust_utils::sqs::create_new_client(
-        aws_config.access_key_id.as_str(),
-        aws_config.secret_access_key.as_str(),
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
+        Some((
+            aws_config.access_key_id.as_str(),
+            aws_config.secret_access_key.as_str(),
+        )),
     )
     .await;
 
@@ -194,10 +196,12 @@ async fn test_sqs_listener() -> Result<()> {
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.access_key_id.as_str(),
-        aws_config.secret_access_key.as_str(),
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
+        Some((
+            aws_config.access_key_id.as_str(),
+            aws_config.secret_access_key.as_str(),
+        )),
     )
     .await;
 
@@ -240,10 +244,12 @@ async fn test_s3_scanner() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.access_key_id.as_str(),
-        aws_config.secret_access_key.as_str(),
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
+        Some((
+            aws_config.access_key_id.as_str(),
+            aws_config.secret_access_key.as_str(),
+        )),
     )
     .await;
 
