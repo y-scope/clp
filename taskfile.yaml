@@ -105,8 +105,6 @@ tasks:
 
   clean-webui:
     cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
@@ -353,10 +351,8 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  # NOTE: The webui has five different node_modules directories, and we generate a checksum file for
-  # each one. The directories are:
-  # * client
-  # * common
+  # NOTE: The webui has three different node_modules directories, and we generate a checksum file
+  # for each one. The directories are:
   # * server
   # * log-viewer submodule
   # * the top-level one we call "package"
@@ -364,8 +360,6 @@ tasks:
     internal: true
     vars:
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
-      CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
-      COMMON_OUTPUT_DIR: "{{.SRC_DIR}}/common/node_modules"
       LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
@@ -377,25 +371,12 @@ tasks:
       - "**/{,client,common,server,yscope-log-viewer}/package-lock.json"
     dir: "{{.SRC_DIR}}"
     generates:
-      - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
-      - "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
       - "deps:log-viewer"
       - "nodejs-22"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
-          EXCLUDE_PATTERNS: &webui_node_modules_checksum_exclude_patterns
-            - ".tmp"
-            - ".vite-temp"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.COMMON_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
@@ -415,15 +396,6 @@ tasks:
         cd yscope-log-viewer
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # These commands must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
-          EXCLUDE_PATTERNS: *webui_node_modules_checksum_exclude_patterns
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.COMMON_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
