@@ -18,7 +18,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     libmariadb-dev \
     libssl-dev \
     openjdk-11-jdk \
-    pipx \
     pkg-config \
     python3 \
     python3-dev \
