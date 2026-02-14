@@ -51,8 +51,6 @@ vars:
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
   G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
-  G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
-  G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-common-node-modules.md5"
   G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
     "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
   G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
