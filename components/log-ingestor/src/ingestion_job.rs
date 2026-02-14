@@ -23,11 +23,13 @@ impl IngestionJob {
     /// Returns an error if the underlying job fails to shut down properly:
     ///
     /// * Forwards [`S3Scanner::shutdown_and_join`]'s return value on failure.
-    /// * Forwards [`SqsListener::shutdown_and_join`]'s return value on failure.
     pub async fn shutdown_and_join(self) -> Result<()> {
         match self {
             Self::S3Scanner(s3_scanner) => s3_scanner.shutdown_and_join().await,
-            Self::SqsListener(sqs_listener) => sqs_listener.shutdown_and_join().await,
+            Self::SqsListener(sqs_listener) => {
+                let _: () = sqs_listener.shutdown_and_join().await;
+                Ok(())
+            }
         }
     }
 
