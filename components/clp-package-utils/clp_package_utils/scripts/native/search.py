@@ -27,7 +27,7 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
-    validate_dataset_exists,
+    validate_datasets_exist,
     wait_for_query_job,
 )
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__file__)
 def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
-    dataset: str | None,
+    datasets: list[str] | None,
     wildcard_query: str,
     begin_timestamp: int | None,
     end_timestamp: int | None,
@@ -48,7 +48,7 @@ def create_and_monitor_job_in_db(
     count_by_time_bucket_size: int | None,
 ):
     search_config = SearchJobConfig(
-        dataset=dataset,
+        datasets=datasets,
         query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
@@ -115,7 +115,7 @@ def get_worker_connection_handler(raw_output: bool):
 async def do_search_without_aggregation(
     db_config: Database,
     results_cache: ResultsCache,
-    dataset: str | None,
+    datasets: list[str] | None,
     wildcard_query: str,
     begin_timestamp: int | None,
     end_timestamp: int | None,
@@ -144,7 +144,7 @@ async def do_search_without_aggregation(
             create_and_monitor_job_in_db,
             db_config,
             results_cache,
-            dataset,
+            datasets,
             wildcard_query,
             begin_timestamp,
             end_timestamp,
@@ -181,7 +181,7 @@ async def do_search_without_aggregation(
 async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
-    dataset: str | None,
+    datasets: list[str] | None,
     wildcard_query: str,
     begin_timestamp: int | None,
     end_timestamp: int | None,
@@ -195,7 +195,7 @@ async def do_search(
         await do_search_without_aggregation(
             db_config,
             results_cache,
-            dataset,
+            datasets,
             wildcard_query,
             begin_timestamp,
             end_timestamp,
@@ -208,7 +208,7 @@ async def do_search(
             create_and_monitor_job_in_db,
             db_config,
             results_cache,
-            dataset,
+            datasets,
             wildcard_query,
             begin_timestamp,
             end_timestamp,
@@ -234,10 +234,11 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
-        "--dataset",
+        "--datasets",
         type=str,
+        nargs="+",
         default=None,
-        help="The dataset that the archives belong to.",
+        help="The datasets that the archives belong to.",
     )
     args_parser.add_argument(
         "--begin-time",
@@ -297,10 +298,10 @@ def main(argv):
         return -1
 
     database_config: Database = clp_config.database
-    dataset = parsed_args.dataset
-    if dataset is not None:
+    datasets = parsed_args.datasets
+    if datasets is not None:
         try:
-            validate_dataset_exists(database_config, dataset)
+            validate_datasets_exist(database_config, datasets)
         except Exception as e:
             logger.error(e)
             return -1
@@ -310,7 +311,7 @@ def main(argv):
             do_search(
                 database_config,
                 clp_config.results_cache,
-                dataset,
+                datasets,
                 parsed_args.wildcard_query,
                 parsed_args.begin_time,
                 parsed_args.end_time,

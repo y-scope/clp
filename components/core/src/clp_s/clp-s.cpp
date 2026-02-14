@@ -265,7 +265,8 @@ bool search_archive(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
                         command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results()
+                        command_line_arguments.get_max_num_results(),
+                        command_line_arguments.get_dataset()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
