@@ -1,3 +1,14 @@
 .sqlInterfaceButton {
-    width: 190px;
+    width: 100%;
+    margin-bottom: 0px;
+}
+
+.sqlInterfaceButton :global(.ant-tabs-nav) {
+    margin-bottom: 8px;
+}
+
+.tabLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }

@@ -13,15 +13,26 @@
     margin-left: 2px;
 }
 
-.runRow {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-}
-
 .buttons {
     display: flex;
     flex-direction: row;
     gap: 5px;
+}
+
+.inputsAndRunRow {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.inputGrow {
+    flex: 1;
+    min-width: 0;
+}
+
+.runColumn {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    align-self: stretch;
 }
