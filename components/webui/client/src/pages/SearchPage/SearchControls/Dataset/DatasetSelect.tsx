@@ -1,4 +1,7 @@
-import {useEffect} from "react";
+import {
+    useCallback,
+    useEffect,
+} from "react";
 
 import {useQuery} from "@tanstack/react-query";
 import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
@@ -31,19 +34,32 @@ const DatasetSelect = (selectProps: SelectProps) => {
         queryFn: fetchDatasetNames,
     });
 
-    useEffect(() => {
-        if (isSuccess) {
-            if ("undefined" !== typeof data[0] && 0 === datasets.length) {
-                const fallback = data.includes(CLP_DEFAULT_DATASET_NAME) ?
-                    CLP_DEFAULT_DATASET_NAME :
-                    data[0];
+    /**
+     * Returns a single-element fallback dataset list, preferring the default dataset name.
+     * Returns an empty array if no datasets are available.
+     *
+     * @return
+     */
+    const getFallbackDatasets = useCallback((): string[] => {
+        const available = data || [];
+        if (0 === available.length) {
+            return [];
+        }
 
-                updateDatasets([fallback]);
-            }
+        return available.includes(CLP_DEFAULT_DATASET_NAME) ?
+            [CLP_DEFAULT_DATASET_NAME] :
+            [available[0] as string];
+    }, [data]);
+
+    // Set the initial selection when data first loads.
+    useEffect(() => {
+        if (isSuccess && 0 === datasets.length) {
+            updateDatasets(getFallbackDatasets());
         }
     }, [isSuccess,
         data,
         datasets,
+        getFallbackDatasets,
         updateDatasets]);
 
     useEffect(() => {
@@ -70,18 +86,9 @@ const DatasetSelect = (selectProps: SelectProps) => {
         updateDatasets]);
 
     const handleDatasetChange = (value: string[]) => {
-        if (0 === value.length) {
-            const fallback = (data || []).includes(CLP_DEFAULT_DATASET_NAME) ?
-                CLP_DEFAULT_DATASET_NAME :
-                data?.[0];
-
-            if ("undefined" !== typeof fallback) {
-                updateDatasets([fallback]);
-
-                return;
-            }
-        }
-        updateDatasets(value);
+        updateDatasets(0 === value.length ?
+            getFallbackDatasets() :
+            value);
     };
 
     return (
