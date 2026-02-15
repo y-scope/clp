@@ -147,8 +147,8 @@ activate_build_family() {
     done
 
     # Point build/ and .task/ at the target family
-    ln -sfn "build-${target_family}" "${repo_root}/build"
-    ln -sfn ".task-${target_family}" "${repo_root}/.task"
+    ln --symbolic --force --no-dereference "build-${target_family}" "${repo_root}/build"
+    ln --symbolic --force --no-dereference ".task-${target_family}" "${repo_root}/.task"
 }
 
 # --- Build for each format and architecture ----------------------------------
