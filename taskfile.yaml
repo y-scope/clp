@@ -351,16 +351,15 @@ tasks:
   webui-node-modules:
     internal: true
     vars:
-      SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
-      LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
-      PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
+      LOG_VIEWER_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules"
+      PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
     sources:
       - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
       - "**/{,client,common,server,yscope-log-viewer}/package.json"
-      - "**/{,client,common,server,yscope-log-viewer}/package-lock.json"
-    dir: "{{.SRC_DIR}}"
+      - "**/{,yscope-log-viewer}/package-lock.json"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
@@ -381,6 +380,9 @@ tasks:
       - |-
         cd yscope-log-viewer
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
+      # Test that node_modules have been deduplicated
+      - for: ["client", "common", "server"]
+        cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
       # These commands must be last
       - task: "utils:checksum:compute"
         vars:
