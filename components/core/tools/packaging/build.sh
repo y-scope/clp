@@ -75,7 +75,7 @@ IFS=',' read -ra format_list <<< "${format}"
 # Validate formats early (before any side effects like stale-package cleanup)
 for _fmt in "${format_list[@]}"; do
     _fmt=$(echo "${_fmt}" | xargs)
-    if [[ ! " ${valid_formats} " =~ " ${_fmt} " ]]; then
+    if [[ ! " ${valid_formats} " =~ \ ${_fmt}\  ]]; then
         echo "ERROR: Unsupported format: ${_fmt} (use deb, rpm, apk, or all)" >&2
         exit 1
     fi
@@ -204,7 +204,7 @@ for cur_format in "${format_list[@]}"; do
 
     # Clean if requested (once per build family, before iterating architectures).
     # deb and rpm share manylinux_2_28 — skip if already cleaned this run.
-    if [[ "${clean}" == "true" ]] && [[ ! " ${cleaned_families:-} " =~ " ${base_image_family} " ]]; then
+    if [[ "${clean}" == "true" ]] && [[ ! " ${cleaned_families:-} " =~ \ ${base_image_family}\  ]]; then
         echo "==> Cleaning build artifacts..."
         rm -rf "${repo_root}/build" "${repo_root}/.task"
         rm -rf "${repo_root}"/build-* "${repo_root}"/.task-*
@@ -315,6 +315,10 @@ for cur_format in "${format_list[@]}"; do
         # Copy the package to the output directory (only the current format to
         # avoid leaking stale packages of other formats from the build directory)
         echo "==> Copying package to ${output_dir}..."
+        if ! find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" | grep --quiet .; then
+            echo "ERROR: No .${cur_format} package found in ${repo_root}/build" >&2
+            exit 1
+        fi
         find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" \
             -exec cp {} "${output_dir}/" \;
         echo ""
