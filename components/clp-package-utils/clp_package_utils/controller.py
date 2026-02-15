@@ -188,10 +188,17 @@ class BaseController(ABC):
 
         # Connection config
         env_vars |= {
-            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
             "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
-            "CLP_DB_PORT": str(self._clp_config.database.port),
         }
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_DB_PORT": str(self._clp_config.database.port),
+                "CLP_EXTRA_HOST_DATABASE_NAME": DB_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_DATABASE_ADDR": _get_ip_from_hostname(
+                    self._clp_config.database.host
+                ),
+            }
+
         if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
             env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
 
@@ -261,10 +268,14 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
-        env_vars |= {
-            "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
-            "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
-        }
+        if BundledService.QUEUE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
+                "CLP_EXTRA_HOST_QUEUE_NAME": QUEUE_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_QUEUE_ADDR": _get_ip_from_hostname(
+                    self._clp_config.queue.host
+                ),
+            }
 
         # Credentials
         env_vars |= {
@@ -343,10 +354,14 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
-        env_vars |= {
-            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
-            "CLP_REDIS_PORT": str(self._clp_config.redis.port),
-        }
+        if BundledService.REDIS not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_REDIS_PORT": str(self._clp_config.redis.port),
+                "CLP_EXTRA_HOST_REDIS_NAME": REDIS_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_REDIS_ADDR": _get_ip_from_hostname(
+                    self._clp_config.redis.host
+                ),
+            }
 
         # Credentials
         env_vars |= {
@@ -442,9 +457,15 @@ class BaseController(ABC):
         # Connection config
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
-            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
-            "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
         }
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+                "CLP_EXTRA_HOST_RESULTS_CACHE_NAME": RESULTS_CACHE_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_RESULTS_CACHE_ADDR": _get_ip_from_hostname(
+                    self._clp_config.results_cache.host
+                ),
+            }
 
         return env_vars
 

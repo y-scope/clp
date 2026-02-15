@@ -39,7 +39,12 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yaml"
 #
-#bundled: ["database", "queue", "redis", "results_cache"]
+## Remove any bundled services below if you wish to use your own.
+#bundled:
+#  - "database"
+#  - "queue"
+#  - "redis"
+#  - "results_cache"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
