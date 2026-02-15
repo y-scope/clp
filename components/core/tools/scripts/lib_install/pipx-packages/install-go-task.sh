@@ -16,7 +16,7 @@ readonly required_version_min="${required_version_major_min}.${required_version_
 package_preinstalled=0
 if ! command -v task >/dev/null 2>&1; then
     package_preinstalled=1
-    pipx install --force "go-task-bin==${required_version}"
+    pipx install --force "go-task-bin>=${required_version_min}"
     pipx ensurepath
 fi
 
