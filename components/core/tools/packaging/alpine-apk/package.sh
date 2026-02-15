@@ -104,7 +104,7 @@ cd "${abuild_dir}"
 # -d: disable dependency checking
 # -P: set PKGDEST (where the .apk is written)
 abuild -F checksum
-REPODEST="/tmp/clp-apk-out" abuild -F -d -P "/tmp/clp-apk-out"
+abuild -F -d -P "/tmp/clp-apk-out"
 
 # Copy the built package to the output directory
 find /tmp/clp-apk-out -name "*.apk" -exec cp {} "${output_dir}/" \;

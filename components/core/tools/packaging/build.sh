@@ -20,7 +20,7 @@
 #   --arch ARCH     Target architecture: aarch64, x86_64, or all (default: host)
 #   --cores N       Parallel build jobs (default: nproc)
 #   --version VER   Package version (default: from taskfile.yaml)
-#   --output DIR    Output directory for packages (default: ./build)
+#   --output DIR    Output directory for packages (default: ./packages)
 #   --clean         Remove build artifacts before building
 #   --help          Show this help message
 
@@ -35,7 +35,7 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 format="all"
 cores="$(nproc 2>/dev/null || echo 4)"
 version=""
-output_dir="${repo_root}/build"
+output_dir="${repo_root}/packages"
 target_arches=""
 clean=false
 
@@ -43,11 +43,16 @@ clean=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --format)  format="$2";        shift 2 ;;
-        --arch)    target_arches="$2"; shift 2 ;;
-        --cores)   cores="$2";         shift 2 ;;
-        --version) version="$2";       shift 2 ;;
-        --output)  output_dir="$2";    shift 2 ;;
+        --format)  [[ -n "${2:-}" ]] || { echo "ERROR: --format requires a value" >&2; exit 1; }
+                   format="$2";        shift 2 ;;
+        --arch)    [[ -n "${2:-}" ]] || { echo "ERROR: --arch requires a value" >&2; exit 1; }
+                   target_arches="$2"; shift 2 ;;
+        --cores)   [[ -n "${2:-}" ]] || { echo "ERROR: --cores requires a value" >&2; exit 1; }
+                   cores="$2";         shift 2 ;;
+        --version) [[ -n "${2:-}" ]] || { echo "ERROR: --version requires a value" >&2; exit 1; }
+                   version="$2";       shift 2 ;;
+        --output)  [[ -n "${2:-}" ]] || { echo "ERROR: --output requires a value" >&2; exit 1; }
+                   output_dir="$2";    shift 2 ;;
         --clean)   clean=true;         shift ;;
         --help)    sed -n '/^# Usage:/,/^[^#]/{ /^#/s/^# \?//p; }' "$0"; exit 0 ;;
         *)         echo "Unknown option: $1"; echo "Use --help for usage"; exit 1 ;;
@@ -113,8 +118,11 @@ echo "    Arches:   ${arch_list[*]}"
 echo "    Output:   ${output_dir}"
 echo ""
 
-# Remove stale packages from the output directory
-rm -f "${output_dir}"/clp-core*.deb "${output_dir}"/clp-core*.rpm "${output_dir}"/clp-core*.apk
+# Remove stale packages from the output directory (only for formats being built)
+for _fmt in "${format_list[@]}"; do
+    _fmt=$(echo "${_fmt}" | xargs)
+    rm -f "${output_dir}"/clp-core*."${_fmt}"
+done
 
 # --- Helper: point build/ and .task/ at the right image family ---------------
 #
@@ -128,6 +136,15 @@ activate_build_family() {
 
     # Create family-specific directories if they don't exist
     mkdir -p "${repo_root}/build-${target_family}" "${repo_root}/.task-${target_family}"
+
+    # Remove any real directory at the symlink target (ln -sfn cannot atomically
+    # replace a real directory — it would create the symlink inside it instead).
+    for dir_name in build .task; do
+        local target="${repo_root}/${dir_name}"
+        if [[ -d "${target}" && ! -L "${target}" ]]; then
+            rm -rf "${target}"
+        fi
+    done
 
     # Point build/ and .task/ at the target family
     ln -sfn "build-${target_family}" "${repo_root}/build"

@@ -44,6 +44,8 @@ lib_install_dir="${LIB_INSTALL_DIR:-/usr/lib/clp}"
 
 # --- Constants ---------------------------------------------------------------
 
+# Keep in sync with CMakeLists.txt build targets and the %files list in
+# universal-rpm/package.sh.
 BINARIES=(clg clo clp clp-s indexer log-converter reducer-server)
 
 # Libraries provided by the base system (libc, libstdc++, libgcc).
@@ -62,8 +64,8 @@ echo "==> Collecting shared library dependencies..."
 for bin in "${BINARIES[@]}"; do
     bin_path="${BIN_DIR}/${bin}"
     if [[ ! -f "${bin_path}" ]]; then
-        echo "    WARNING: ${bin} not found at ${bin_path} (skipping)"
-        continue
+        echo "ERROR: ${bin} not found at ${bin_path}" >&2
+        exit 1
     fi
 
     ldd "${bin_path}" 2>/dev/null | while read -r line; do

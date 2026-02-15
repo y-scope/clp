@@ -69,8 +69,6 @@ Description: CLP core universal binaries for log compression and search
  Debian 10+, Ubuntu 20.04+, and other glibc-based Debian derivatives.
  .
  Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
- .
- License: Apache-2.0
 CTRL
 
 # --- Build .deb --------------------------------------------------------------
