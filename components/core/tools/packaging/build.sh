@@ -169,6 +169,7 @@ for cur_format in "${format_list[@]}"; do
         rpm)
             format_dir="${script_dir}/universal-rpm"
             base_image_family="manylinux_2_28"
+            # Shares the deb Dockerfile (installs both dpkg and rpm-build)
             dockerfile_dir="${script_dir}/universal-deb"
             builder_image_prefix="clp-manylinux-pkg-builder"
             ;;
@@ -190,6 +191,14 @@ for cur_format in "${format_list[@]}"; do
     fi
 
     activate_build_family "${base_image_family}"
+
+    # Clean if requested (once per format, before iterating architectures)
+    if [[ "${clean}" == "true" ]]; then
+        echo "==> Cleaning build artifacts..."
+        rm -rf "${repo_root}/build" "${repo_root}/.task"
+        rm -rf "${repo_root}"/build-* "${repo_root}"/.task-*
+        activate_build_family "${base_image_family}"
+    fi
 
     for target_arch in "${arch_list[@]}"; do
         target_arch=$(echo "${target_arch}" | xargs)
@@ -229,13 +238,6 @@ for cur_format in "${format_list[@]}"; do
         echo "========================================"
         echo "Building ${cur_format} for ${target_arch}"
         echo "========================================"
-
-        # Clean if requested
-        if [[ "${clean}" == "true" ]]; then
-            echo "==> Cleaning build artifacts..."
-            rm -rf "${repo_root}/build" "${repo_root}/.task"
-            rm -rf "${repo_root}"/build-* "${repo_root}"/.task-*
-        fi
 
         # Build the base image if not present
         if ! docker image inspect "${base_image_tag}" &>/dev/null; then

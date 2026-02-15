@@ -68,7 +68,12 @@ for bin in "${BINARIES[@]}"; do
         exit 1
     fi
 
-    ldd "${bin_path}" 2>/dev/null | while read -r line; do
+    ldd_output=$(ldd "${bin_path}" 2>&1) || {
+        echo "ERROR: ldd failed for ${bin}" >&2
+        echo "${ldd_output}" >&2
+        exit 1
+    }
+    echo "${ldd_output}" | while read -r line; do
         # Extract library path from ldd output (works on both glibc and musl).
         # glibc format: "libfoo.so.1 => /usr/lib/libfoo.so.1 (0x...)"
         # musl format:  "libfoo.so => /usr/lib/libfoo.so (0x...)"
