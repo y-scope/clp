@@ -97,7 +97,9 @@ def _make_clp_s_command_and_env_vars(
     ]
 
     if dataset is None:
-        dataset = extract_json_config.dataset
+        dataset = (
+            extract_json_config.datasets[0] if extract_json_config.datasets else None
+        )
     if StorageType.S3 == storage_type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"

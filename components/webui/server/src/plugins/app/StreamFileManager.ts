@@ -83,7 +83,9 @@ class StreamFileManager {
             };
         } else if (QUERY_JOB_TYPE.EXTRACT_JSON === jobType) {
             jobConfig = {
-                dataset: dataset,
+                datasets: null !== dataset ?
+                    [dataset] :
+                    null,
                 archive_id: streamId,
                 target_chunk_size: targetUncompressedSize,
             };
