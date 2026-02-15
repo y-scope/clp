@@ -347,9 +347,8 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  # NOTE: The webui has three different node_modules directories, and we generate a checksum file
-  # for each one. The directories are:
-  # * server
+  # NOTE: The webui has two different node_modules directories, and we generate a checksum file for
+  # each one. The directories are:
   # * log-viewer submodule
   # * the top-level one we call "package"
   webui-node-modules:
