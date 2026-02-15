@@ -54,7 +54,6 @@ vars:
   G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
     "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
   G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
-  G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-server-node-modules.md5"
 
 tasks:
   default:
@@ -104,7 +103,6 @@ tasks:
   clean-webui:
     cmds:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
 
   package:
@@ -261,7 +259,6 @@ tasks:
     sources:
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-      - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/*"
       - exclude: "**/dist/**/*"
@@ -357,7 +354,6 @@ tasks:
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
-      SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
     sources:
       - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
@@ -368,7 +364,6 @@ tasks:
     generates:
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-      - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
       - "deps:log-viewer"
       - "nodejs-22"
@@ -380,10 +375,6 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
     cmds:
       - task: "clean-webui"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
@@ -399,10 +390,6 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
 
   nodejs:
     internal: true
