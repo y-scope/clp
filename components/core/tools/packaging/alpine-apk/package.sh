@@ -74,8 +74,10 @@ mkdir -p "${abuild_dir}"
 
 # abuild requires a signing key; add it to trusted keys so the post-build
 # repository index step succeeds.
-abuild-keygen -an 2>/dev/null || true
-cp /root/.abuild/*.rsa.pub /etc/apk/keys/ 2>/dev/null || true
+if ! abuild-keygen -an 2>&1; then
+    echo "WARN: abuild-keygen failed (key may already exist)" >&2
+fi
+cp /root/.abuild/*.rsa.pub /etc/apk/keys/
 
 # Create APKBUILD that copies our pre-bundled staging directory
 cat > "${abuild_dir}/APKBUILD" <<APKBUILD

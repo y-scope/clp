@@ -68,8 +68,18 @@ fi
 
 # --- Resolve defaults --------------------------------------------------------
 
+valid_formats="deb rpm apk"
 [[ "${format}" == "all" ]] && format="deb,rpm,apk"
 IFS=',' read -ra format_list <<< "${format}"
+
+# Validate formats early (before any side effects like stale-package cleanup)
+for _fmt in "${format_list[@]}"; do
+    _fmt=$(echo "${_fmt}" | xargs)
+    if [[ ! " ${valid_formats} " =~ " ${_fmt} " ]]; then
+        echo "ERROR: Unsupported format: ${_fmt} (use deb, rpm, apk, or all)" >&2
+        exit 1
+    fi
+done
 
 output_dir="$(mkdir -p "${output_dir}" && cd "${output_dir}" && pwd)"
 
@@ -192,12 +202,14 @@ for cur_format in "${format_list[@]}"; do
 
     activate_build_family "${base_image_family}"
 
-    # Clean if requested (once per format, before iterating architectures)
-    if [[ "${clean}" == "true" ]]; then
+    # Clean if requested (once per build family, before iterating architectures).
+    # deb and rpm share manylinux_2_28 — skip if already cleaned this run.
+    if [[ "${clean}" == "true" ]] && [[ ! " ${cleaned_families:-} " =~ " ${base_image_family} " ]]; then
         echo "==> Cleaning build artifacts..."
         rm -rf "${repo_root}/build" "${repo_root}/.task"
         rm -rf "${repo_root}"/build-* "${repo_root}"/.task-*
         activate_build_family "${base_image_family}"
+        cleaned_families="${cleaned_families:-} ${base_image_family}"
     fi
 
     for target_arch in "${arch_list[@]}"; do
@@ -263,6 +275,7 @@ for cur_format in "${format_list[@]}"; do
         #   - abuild -F works without fakeroot (avoids musllinux compatibility issues)
         # Disable _FORTIFY_SOURCE for best performance. On Alpine/musllinux this
         # also avoids a GCC LTO incompatibility with fortify-headers.
+        # Safe to overwrite CFLAGS/CXXFLAGS since the container has no prior flags.
         docker run --rm \
             --platform "${docker_platform}" \
             -v "${repo_root}:/clp" \
@@ -288,6 +301,8 @@ for cur_format in "${format_list[@]}"; do
                 echo "==> Building core binaries..."
                 CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK="${CORES}" task core
 
+                # BIN_DIR must match the CMake binary output directory (task core
+                # builds into /clp/build/core).
                 echo "==> Packaging..."
                 BIN_DIR=/clp/build/core \
                 OUTPUT_DIR=/clp/build \
@@ -318,17 +333,17 @@ for cur_format in "${format_list[@]}"; do
     case "${cur_format}" in
         deb)
             echo "Test deb:"
-            echo "  docker run --rm -v ${output_dir}:/pkgs debian:bookworm bash -c \\"
+            echo "  docker run --rm -v '${output_dir}':/pkgs debian:bookworm bash -c \\"
             echo "    'dpkg -i /pkgs/clp-core_*.deb && clp-s --help'"
             ;;
         rpm)
             echo "Test rpm:"
-            echo "  docker run --rm -v ${output_dir}:/pkgs almalinux:9 bash -c \\"
+            echo "  docker run --rm -v '${output_dir}':/pkgs almalinux:9 bash -c \\"
             echo "    'rpm -i /pkgs/clp-core-*.rpm && clp-s --help'"
             ;;
         apk)
             echo "Test apk:"
-            echo "  docker run --rm -v ${output_dir}:/pkgs alpine:3.20 sh -c \\"
+            echo "  docker run --rm -v '${output_dir}':/pkgs alpine:3.20 sh -c \\"
             echo "    'apk add --allow-untrusted /pkgs/clp-core-*.apk && clp-s --help'"
             ;;
     esac

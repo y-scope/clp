@@ -95,7 +95,7 @@ done
 echo "==> Patching bundled libraries..."
 for lib in "${STAGING_DIR}${lib_install_dir}/"*.so*; do
     [[ -f "${lib}" ]] || continue
-    patchelf --set-rpath "${lib_install_dir}" "${lib}" 2>/dev/null || true
+    patchelf --set-rpath "${lib_install_dir}" "${lib}"
 done
 
 # --- Install and patch binaries ----------------------------------------------
