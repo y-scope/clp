@@ -7,7 +7,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -520,7 +519,7 @@ template <
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>> {
+) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrErrorCode> {
     static_assert(
             std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
@@ -547,7 +546,7 @@ auto Serializer<encoded_variable_t>::create(
     );
     if (optional_user_defined_metadata.has_value()) {
         if (false == optional_user_defined_metadata.value().is_object()) {
-            return std::errc::protocol_not_supported;
+            return IrErrorCode{IrErrorCodeEnum::UnsupportedUserDefinedMetadata};
         }
         metadata.emplace(
                 string{cProtocol::Metadata::UserDefinedMetadataKey},
@@ -556,7 +555,7 @@ auto Serializer<encoded_variable_t>::create(
     }
 
     if (false == serialize_metadata(metadata, ir_buf)) {
-        return std::errc::protocol_error;
+        return IrErrorCode{IrErrorCodeEnum::MetadataSerializationFailure};
     }
 
     return serializer;
@@ -574,7 +573,7 @@ template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,
         msgpack::object_map const& user_gen_kv_pairs_map
-) -> bool {
+) -> ystdlib::error_handling::Result<void, IrErrorCode> {
     m_auto_gen_keys_schema_tree.take_snapshot();
     m_user_gen_keys_schema_tree.take_snapshot();
     TransactionManager revert_manager{
@@ -592,7 +591,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
     // Serialize auto-generated kv pairs
     auto auto_gen_schema_tree_node_serialization_method
             = [this](SchemaTree::NodeLocator const& locator) -> bool {
-        return this->serialize_schema_tree_node<true>(locator);
+        return !this->serialize_schema_tree_node<true>(locator).has_error();
     };
 
     auto auto_gen_node_id_value_pairs_serialization_method
@@ -647,13 +646,13 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                            auto_gen_empty_map_serialization_method
                    ))
     {
-        return false;
+        return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
     }
 
     // Serialize user-generated kv pairs
     auto user_gen_schema_tree_node_serialization_method
             = [this](SchemaTree::NodeLocator const& locator) -> bool {
-        return this->serialize_schema_tree_node<false>(locator);
+        return !this->serialize_schema_tree_node<false>(locator).has_error();
     };
 
     auto user_gen_node_id_value_pairs_serialization_method
@@ -710,7 +709,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                     user_gen_empty_map_serialization_method
             ))
         {
-            return false;
+            return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
         }
     }
 
@@ -732,14 +731,14 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
     );
 
     revert_manager.mark_success();
-    return true;
+    return ystdlib::error_handling::success();
 }
 
 template <typename encoded_variable_t>
 template <bool is_auto_generated_node>
 auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
-) -> bool {
+) -> ystdlib::error_handling::Result<void, IrErrorCode> {
     switch (locator.get_type()) {
         case SchemaTree::Node::Type::Int:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeInt);
@@ -760,8 +759,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeObj);
             break;
         default:
-            // Unknown type
-            return false;
+            return IrErrorCode{IrErrorCodeEnum::SchemaTreeNodeSerializationFailure};
     }
 
     if (false
@@ -772,20 +770,23 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
                 cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt
         >(locator.get_parent_id(), m_schema_tree_node_buf))
     {
-        return false;
+        return IrErrorCode{IrErrorCodeEnum::SchemaTreeNodeSerializationFailure};
     }
 
-    return serialize_string(locator.get_key_name(), m_schema_tree_node_buf);
+    if (false == serialize_string(locator.get_key_name(), m_schema_tree_node_buf)) {
+        return IrErrorCode{IrErrorCodeEnum::SchemaTreeNodeSerializationFailure};
+    }
+    return ystdlib::error_handling::success();
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<eight_byte_encoded_variable_t>>;
+) -> ystdlib::error_handling::Result<Serializer<eight_byte_encoded_variable_t>, IrErrorCode>;
 template auto Serializer<four_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<four_byte_encoded_variable_t>>;
+) -> ystdlib::error_handling::Result<Serializer<four_byte_encoded_variable_t>, IrErrorCode>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
         -> void;
@@ -795,22 +796,22 @@ template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOff
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,
         msgpack::object_map const& user_gen_kv_pairs_map
-) -> bool;
+) -> ystdlib::error_handling::Result<void, IrErrorCode>;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,
         msgpack::object_map const& user_gen_kv_pairs_map
-) -> bool;
+) -> ystdlib::error_handling::Result<void, IrErrorCode>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node<true>(
         SchemaTree::NodeLocator const& locator
-) -> bool;
+) -> ystdlib::error_handling::Result<void, IrErrorCode>;
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node<false>(
         SchemaTree::NodeLocator const& locator
-) -> bool;
+) -> ystdlib::error_handling::Result<void, IrErrorCode>;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node<true>(
         SchemaTree::NodeLocator const& locator
-) -> bool;
+) -> ystdlib::error_handling::Result<void, IrErrorCode>;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node<false>(
         SchemaTree::NodeLocator const& locator
-) -> bool;
+) -> ystdlib::error_handling::Result<void, IrErrorCode>;
 }  // namespace clp::ffi::ir_stream

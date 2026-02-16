@@ -14,6 +14,10 @@ enum class IrErrorCodeEnum : uint8_t {
     DecodingMethodFailure,
     EndOfStream,
     IncompleteStream,
+    MetadataSerializationFailure,
+    SchemaTreeNodeSerializationFailure,
+    KeyValuePairSerializationFailure,
+    UnsupportedUserDefinedMetadata,
 };
 
 using IrErrorCode = ystdlib::error_handling::ErrorCode<IrErrorCodeEnum>;
