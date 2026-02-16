@@ -1,9 +1,11 @@
 mod s3_scanner;
 mod sqs_listener;
+mod state;
 
 use anyhow::Result;
 pub use s3_scanner::*;
 pub use sqs_listener::*;
+pub use state::*;
 
 /// Enum for different types of ingestion jobs.
 pub enum IngestionJob {

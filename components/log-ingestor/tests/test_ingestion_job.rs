@@ -16,7 +16,7 @@ use clp_rust_utils::{
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::SqsListener,
+    ingestion_job::{NoopIngestionJobState, SqsListener},
 };
 use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
@@ -171,6 +171,7 @@ async fn run_sqs_listener_test(
         &ValidatedSqsListenerConfig::validate_and_create(sqs_listener_config)
             .expect("invalid SQS listener config"),
         &sender,
+        NoopIngestionJobState::default(),
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(

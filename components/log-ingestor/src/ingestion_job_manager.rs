@@ -25,7 +25,7 @@ use uuid::Uuid;
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     compression::{Buffer, CompressionJobSubmitter, Listener},
-    ingestion_job::{IngestionJob, S3Scanner},
+    ingestion_job::{IngestionJob, IngestionJobState, NoopIngestionJobState, S3Scanner},
 };
 
 /// Errors for ingestion job manager operations.
@@ -136,7 +136,7 @@ impl IngestionJobManagerState {
             config.base.endpoint_url.as_ref(),
         )
         .await;
-        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {
+        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender, _state| {
             let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
             IngestionJob::S3Scanner(scanner)
         })
@@ -175,12 +175,13 @@ impl IngestionJobManagerState {
             self.inner.aws_credentials.secret_access_key.as_str(),
         )
         .await;
-        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
+        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender, state| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
                 &sqs_client_manager,
                 &config,
                 &sender,
+                state,
             );
             IngestionJob::SqsListener(listener)
         })
@@ -197,6 +198,7 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
+    /// * TODO
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
     /// * Forwards [`IngestionJob::shutdown_and_join`]'s return value on failure.
     /// * Forwards [`Listener::shutdown_and_join`]'s return value on failure.
@@ -207,6 +209,7 @@ impl IngestionJobManagerState {
 
         match job_to_remove {
             Some(entry) => {
+                entry.state.end().await?;
                 entry.ingestion_job.shutdown_and_join().await?;
                 tracing::debug!("Ingestion job {} shut down.", job_id);
                 entry.listener.shutdown_and_join().await?;
@@ -243,13 +246,15 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
+    /// * TODO
     async fn create_s3_ingestion_job<JobCreationCallback>(
         &self,
         ingestion_job_config: BaseConfig,
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
-        JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
+        JobCreationCallback:
+            FnOnce(Uuid, mpsc::Sender<ObjectMetadata>, NoopIngestionJobState) -> IngestionJob, {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
             // TODO: We should avoid being verbose for checking each field one by one (tracked by
@@ -286,16 +291,19 @@ impl IngestionJobManagerState {
         // designed to be shared among multiple ingestion jobs in the future.
         let job_listener = self.create_listener(&ingestion_job_config);
         let sender = job_listener.get_new_sender();
+        let state = NoopIngestionJobState::default();
+        state.start().await?;
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
-                ingestion_job: create_ingestion_job(job_id, sender),
+                ingestion_job: create_ingestion_job(job_id, sender, state.clone()),
                 listener: job_listener,
                 bucket_name: ingestion_job_config.bucket_name,
                 region: ingestion_job_config.region,
                 key_prefix: ingestion_job_config.key_prefix,
                 endpoint_url: ingestion_job_config.endpoint_url,
                 dataset: ingestion_job_config.dataset,
+                state,
             },
         );
         drop(job_table);
@@ -341,6 +349,7 @@ struct IngestionJobTableEntry {
     key_prefix: NonEmptyString,
     endpoint_url: Option<NonEmptyString>,
     dataset: Option<NonEmptyString>,
+    state: NoopIngestionJobState,
 }
 
 /// # Returns:
