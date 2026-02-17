@@ -78,7 +78,7 @@ pub mod s3 {
         /// and lower overall request costs.
         ///
         /// AWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than
-        /// 20 seconds will be truncated to 20 seconds.
+        /// 20 seconds will be considered invalid.
         ///
         /// Defaults to `20`.
         #[serde(default = "default_sqs_wait_time_sec")]
