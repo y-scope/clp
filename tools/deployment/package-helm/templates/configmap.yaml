@@ -310,7 +310,8 @@ data:
       "StreamFilesS3PathPrefix": null,
       "StreamFilesS3Profile": null,
       {{- end }}
-      "ArchiveOutputCompressionLevel": {{ .Values.clpConfig.archive_output.compression_level | int }},
+      "ArchiveOutputCompressionLevel":
+        {{ .Values.clpConfig.archive_output.compression_level | int }},
       "ArchiveOutputTargetArchiveSize":
         {{ .Values.clpConfig.archive_output.target_archive_size | int }},
       "ArchiveOutputTargetDictionariesSize":
