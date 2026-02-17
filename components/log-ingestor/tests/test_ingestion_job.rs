@@ -122,7 +122,6 @@ async fn upload_and_receive(
         .await
         .expect("Error while awaiting creation")
         .expect("Error during S3 object creation");
-
     (objects_to_create, objects_received)
 }
 
