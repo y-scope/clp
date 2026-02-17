@@ -24,11 +24,12 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 installed_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml")
 IFS=. read -r installed_version_major installed_version_minor _ <<<"${installed_version}"
 
-if (("${installed_version_major}" < "${required_version_major_min}")) \
-    || (("${installed_version_major}" == "${required_version_major_min}" && \
-    "${installed_version_minor}" < "${required_version_minor_min}")); then
-    echo "Error: Task version ${installed_version} is unsupported (require version" \
-        "≥ ${required_version_min})."
+is_major_older=$(( installed_version_major < required_version_major_min ))
+is_minor_older=$(( installed_version_major == required_version_major_min
+    && installed_version_minor < required_version_minor_min ))
+if (( is_major_older || is_minor_older )); then
+    echo "Error: Task version ${installed_version} is unsupported (requires version" \
+        ">= ${required_version_min})."
 
     if ((0 == "${package_preinstalled}")); then
         echo "Please uninstall Task and then re-run the install script."
