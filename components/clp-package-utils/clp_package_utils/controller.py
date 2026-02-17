@@ -272,9 +272,7 @@ class BaseController(ABC):
             env_vars |= {
                 "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
                 "CLP_EXTRA_HOST_QUEUE_NAME": QUEUE_COMPONENT_NAME,
-                "CLP_EXTRA_HOST_QUEUE_ADDR": _get_ip_from_hostname(
-                    self._clp_config.queue.host
-                ),
+                "CLP_EXTRA_HOST_QUEUE_ADDR": _get_ip_from_hostname(self._clp_config.queue.host),
             }
 
         # Credentials
@@ -358,9 +356,7 @@ class BaseController(ABC):
             env_vars |= {
                 "CLP_REDIS_PORT": str(self._clp_config.redis.port),
                 "CLP_EXTRA_HOST_REDIS_NAME": REDIS_COMPONENT_NAME,
-                "CLP_EXTRA_HOST_REDIS_ADDR": _get_ip_from_hostname(
-                    self._clp_config.redis.host
-                ),
+                "CLP_EXTRA_HOST_REDIS_ADDR": _get_ip_from_hostname(self._clp_config.redis.host),
             }
 
         # Credentials
