@@ -12,7 +12,8 @@ x-service-defaults: &service_defaults
     - "${CLP_EXTRA_HOST_DATABASE_NAME:-noop-db}=${CLP_EXTRA_HOST_DATABASE_ADDR:-127.0.0.2}"
     - "${CLP_EXTRA_HOST_QUEUE_NAME:-noop-queue}=${CLP_EXTRA_HOST_QUEUE_ADDR:-127.0.0.2}"
     - "${CLP_EXTRA_HOST_REDIS_NAME:-noop-redis}=${CLP_EXTRA_HOST_REDIS_ADDR:-127.0.0.2}"
-    - "${CLP_EXTRA_HOST_RESULTS_CACHE_NAME:-noop-rc}=${CLP_EXTRA_HOST_RESULTS_CACHE_ADDR:-127.0.0.2}"
+    - "${CLP_EXTRA_HOST_RESULTS_CACHE_NAME:-noop-rc}=\
+      ${CLP_EXTRA_HOST_RESULTS_CACHE_ADDR:-127.0.0.2}"
 
 # Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
@@ -231,7 +232,8 @@ services:
       "python3",
       "-u",
       "-m", "clp_py_utils.initialize-results-cache",
-      "--uri", "mongodb://${CLP_EXTRA_HOST_RESULTS_CACHE_ADDR:-results_cache}:${CLP_RESULTS_CACHE_PORT:-27017}/${CLP_RESULTS_CACHE_DB_NAME:-clp-query-results}",
+      "--uri", "mongodb://${CLP_EXTRA_HOST_RESULTS_CACHE_ADDR:-results_cache}\
+        :${CLP_RESULTS_CACHE_PORT:-27017}/${CLP_RESULTS_CACHE_DB_NAME:-clp-query-results}",
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
