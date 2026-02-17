@@ -105,6 +105,8 @@
 #  rate_limit: 1000
 #
 #mcp_server: null
+##  host: "localhost"
+##  port: 8000
 #
 ## Where archives should be output to
 #archive_output:
