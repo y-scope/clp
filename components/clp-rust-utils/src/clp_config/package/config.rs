@@ -239,7 +239,7 @@ impl Default for LogIngestor {
             host: "localhost".to_owned(),
             port: 3002,
             buffer_flush_timeout_sec: 300,
-            buffer_flush_threshold: 256 * 1024 * 1024,
+            buffer_flush_threshold: 4096 * 1024 * 1024, // 4 GiB
             channel_capacity: 10,
             logging_level: "INFO".to_owned(),
         }
