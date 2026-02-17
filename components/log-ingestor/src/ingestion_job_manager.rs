@@ -295,6 +295,8 @@ impl IngestionJobManagerState {
         // designed to be shared among multiple ingestion jobs in the future.
         let job_listener = self.create_listener(&ingestion_job_config);
         let sender = job_listener.get_new_sender();
+
+        // TODO: Relocate `start` before the ingestion job spawning after fixing #1733
         let state = NoopIngestionJobState::default();
         state.start().await?;
         job_table.insert(
