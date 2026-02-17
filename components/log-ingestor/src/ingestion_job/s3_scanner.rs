@@ -133,16 +133,15 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
             return Ok(response.is_truncated.unwrap_or(false));
         }
 
-        let last_ingested_key: String = object_metadata_to_ingest
+        let last_ingested_key: &str = object_metadata_to_ingest
             .last()
             .expect("`object_metadata_to_ingest` should not be empty")
             .key
-            .clone()
-            .into();
+            .as_str();
         self.state
-            .ingest(&object_metadata_to_ingest, last_ingested_key.as_str())
+            .ingest(&object_metadata_to_ingest, last_ingested_key)
             .await?;
-        self.start_after = Some(last_ingested_key);
+        self.start_after = Some(last_ingested_key.into());
         self.sender.send(object_metadata_to_ingest).await?;
 
         Ok(response.is_truncated.unwrap_or(false))
