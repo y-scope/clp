@@ -156,6 +156,8 @@
 #
 ## Presto client config
 #presto: null
+##  host: <presto-coordinator-ip>  # default: "localhost"
+##  port: <presto-coordinator-port>  # default: 8889
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
