@@ -49,7 +49,7 @@ namespace clp::string_utils {
 /**
  * Replaces the given characters in the given value with the given replacements
  * 
- * @param characters_to_escape
+ * @param characters_to_replace The characters to replace
  * @param replacement_characters
  * @param value
  * @param escape Whether to precede the replacement with a '\' (e.g., so that a
@@ -57,7 +57,7 @@ namespace clp::string_utils {
  * @return The string with replacements
  */
 [[nodiscard]] auto replace_characters(
-        char const* characters_to_escape,
+        char const* characters_to_replace,
         char const* replacement_characters,
         std::string const& value,
         bool escape
