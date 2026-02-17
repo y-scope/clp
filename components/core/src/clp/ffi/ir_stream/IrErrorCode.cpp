@@ -22,6 +22,10 @@ auto IrErrorCategory::message(IrErrorCodeEnum error_enum) const -> std::string {
         case IrErrorCodeEnum::IncompleteStream:
             return "The IR stream ended with a truncated IR unit or did not terminate with an "
                    "end-of-stream IR unit.";
+        case IrErrorCodeEnum::CorruptedIR:
+            return "The IR stream contains corrupted IR.";
+        case IrErrorCodeEnum::UnsupportedFormat:
+            return "The IR stream uses an unsupported metadata format, version, or structure.";
         default:
             return "Unknown error code enum.";
     }

@@ -74,20 +74,15 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     // Process any packets before the log event
     ffi::ir_stream::encoded_tag_t tag{};
     while (true) {
-        auto ir_error_code = ffi::ir_stream::deserialize_tag(m_reader, tag);
-        if (ffi::ir_stream::IRErrorCode_Incomplete_IR == ir_error_code) {
-            return std::errc::result_out_of_range;
-        }
-
+        YSTDLIB_ERROR_HANDLING_TRYV(ffi::ir_stream::deserialize_tag(m_reader, tag));
         if (ffi::ir_stream::cProtocol::Eof == tag) {
             return std::errc::no_message;
         }
 
         if (ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {
-            ir_error_code = ffi::ir_stream::deserialize_utc_offset_change(m_reader, m_utc_offset);
-            if (ffi::ir_stream::IRErrorCode_Incomplete_IR == ir_error_code) {
-                return std::errc::result_out_of_range;
-            }
+            YSTDLIB_ERROR_HANDLING_TRYV(
+                    ffi::ir_stream::deserialize_utc_offset_change(m_reader, m_utc_offset)
+            );
         } else {
             // Packet must be a log event
             break;

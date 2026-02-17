@@ -12,6 +12,7 @@
 #include "../../time_types.hpp"
 #include "../EncodedTextAst.hpp"
 #include "../encoding_methods.hpp"
+#include "IrErrorCode.hpp"
 
 namespace clp::ffi::ir_stream {
 using encoded_tag_t = int8_t;
@@ -64,10 +65,11 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * Deserializes the tag for the next packet.
  * @param reader
  * @param tag Returns the tag of the next packet.
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrErrorCodeEnum::IncompleteStream if the reader doesn't contain enough data to deserialize.
  */
-[[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
+[[nodiscard]] auto deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag)
+        -> ystdlib::error_handling::Result<void, IrErrorCode>;
 
 /**
  * Deserializes a log event from the given stream
@@ -206,10 +208,11 @@ IRErrorCode deserialize_preamble(
  * Deserializes a UTC offset change packet.
  * @param reader
  * @param utc_offset The deserialized UTC offset.
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success
+ * @return IrErrorCodeEnum::IncompleteStream if reader doesn't contain enough data to deserialize
  */
-IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+auto deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset)
+        -> ystdlib::error_handling::Result<void, IrErrorCode>;
 
 /**
  * Validates whether the given protocol version can be supported by the current build.

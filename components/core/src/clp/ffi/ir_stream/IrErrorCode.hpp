@@ -14,6 +14,8 @@ enum class IrErrorCodeEnum : uint8_t {
     DecodingMethodFailure,
     EndOfStream,
     IncompleteStream,
+    CorruptedIR,
+    UnsupportedFormat,
 };
 
 using IrErrorCode = ystdlib::error_handling::ErrorCode<IrErrorCodeEnum>;

@@ -778,7 +778,7 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t tag;
 
     // Test if message can be decoded properly
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
+    REQUIRE(deserialize_tag(ir_buffer, tag).has_value());
     REQUIRE(IRErrorCode::IRErrorCode_Success
             == deserialize_log_event<TestType>(ir_buffer, tag, decoded_message, timestamp));
     REQUIRE(message == decoded_message);
@@ -787,7 +787,7 @@ TEMPLATE_TEST_CASE(
 
     // Test corrupted IR
     ir_buffer.seek_from_begin(encoded_message_start_pos + 1);
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
+    REQUIRE(deserialize_tag(ir_buffer, tag).has_value());
     REQUIRE(IRErrorCode::IRErrorCode_Corrupted_IR
             == deserialize_log_event<TestType>(ir_buffer, tag, message, timestamp));
 
@@ -797,7 +797,7 @@ TEMPLATE_TEST_CASE(
             size_checked_pointer_cast<char const>(ir_buf.data()),
             ir_buf.size()
     };
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(incomplete_preamble_buffer, tag));
+    REQUIRE(deserialize_tag(incomplete_preamble_buffer, tag).has_value());
     REQUIRE(
             IRErrorCode::IRErrorCode_Incomplete_IR
             == deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp)
@@ -841,7 +841,7 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
             ir_with_extra_escape.size()
     };
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_with_extra_escape_buffer, tag));
+    REQUIRE(deserialize_tag(ir_with_extra_escape_buffer, tag).has_value());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == deserialize_log_event<eight_byte_encoded_variable_t>(
                     ir_with_extra_escape_buffer,
@@ -858,8 +858,7 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
             size_checked_pointer_cast<char const>(ir_with_extra_placeholder.data()),
             ir_with_extra_placeholder.size()
     };
-    REQUIRE(IRErrorCode::IRErrorCode_Success
-            == deserialize_tag(ir_with_extra_placeholder_buffer, tag));
+    REQUIRE(deserialize_tag(ir_with_extra_placeholder_buffer, tag).has_value());
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == deserialize_log_event<eight_byte_encoded_variable_t>(
                     ir_with_extra_placeholder_buffer,
@@ -897,7 +896,7 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
     string decoded_message;
     encoded_tag_t tag;
     epoch_time_ms_t decoded_delta_ts{};
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
+    REQUIRE(deserialize_tag(ir_buffer, tag).has_value());
     REQUIRE(IRErrorCode::IRErrorCode_Success
             == deserialize_log_event<four_byte_encoded_variable_t>(
                     ir_buffer,
@@ -1031,11 +1030,10 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t tag;
     epoch_time_ms_t prev_ts{preamble_ts};
     for (auto const& log_event : test_log_events) {
-        REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
+        REQUIRE(deserialize_tag(complete_ir_buffer, tag).has_value());
         if (clp::ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {
-            REQUIRE(IRErrorCode::IRErrorCode_Success
-                    == deserialize_utc_offset_change(complete_ir_buffer, utc_offset));
-            REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
+            REQUIRE(deserialize_utc_offset_change(complete_ir_buffer, utc_offset).has_value());
+            REQUIRE(deserialize_tag(complete_ir_buffer, tag).has_value());
         }
 
         REQUIRE(IRErrorCode::IRErrorCode_Success
@@ -1054,7 +1052,7 @@ TEMPLATE_TEST_CASE(
         REQUIRE(log_event.get_timestamp() == timestamp);
         REQUIRE(log_event.get_utc_offset() == utc_offset);
     }
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
+    REQUIRE(deserialize_tag(complete_ir_buffer, tag).has_value());
     REQUIRE(clp::ffi::ir_stream::cProtocol::Eof == tag);
     REQUIRE(complete_ir_buffer.get_pos() == ir_buf.size());
 }
@@ -1180,16 +1178,13 @@ TEMPLATE_TEST_CASE(
     REQUIRE((expected_metadata == metadata));
 
     encoded_tag_t encoded_tag{};
-    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    REQUIRE((deserialize_tag(buffer_reader, encoded_tag).has_value()));
     REQUIRE((clp::ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == encoded_tag));
     UtcOffset utc_offset_change{0};
-    REQUIRE(
-            (IRErrorCode::IRErrorCode_Success
-             == deserialize_utc_offset_change(buffer_reader, utc_offset_change))
-    );
+    REQUIRE((deserialize_utc_offset_change(buffer_reader, utc_offset_change).has_value()));
     REQUIRE((cBeijingUtcOffset == utc_offset_change));
 
-    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    REQUIRE((deserialize_tag(buffer_reader, encoded_tag).has_value()));
     REQUIRE((clp::ffi::ir_stream::cProtocol::Eof == encoded_tag));
 
     char eof{};
@@ -1419,7 +1414,7 @@ TEMPLATE_TEST_CASE(
 
         BufferReader reader{size_checked_pointer_cast<char>(output_buf.data()), output_buf.size()};
         encoded_tag_t tag{};
-        REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(reader, tag)));
+        REQUIRE((deserialize_tag(reader, tag).has_value()));
         auto const result{cDeserializationMethodToTest(tag, reader)};
         REQUIRE_FALSE(result.has_error());
         auto const [is_auto_generated, deserialized_node_id]{result.value()};

@@ -24,6 +24,8 @@ set(
         ../ffi/EncodedTextAstError.hpp
         ../ffi/ir_stream/byteswap.hpp
         ../ffi/ir_stream/decoding_methods.cpp
+        ../ffi/ir_stream/IrErrorCode.cpp
+        ../ffi/ir_stream/IrErrorCode.hpp
         ../ffi/ir_stream/decoding_methods.hpp
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
