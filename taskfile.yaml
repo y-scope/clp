@@ -102,7 +102,10 @@ tasks:
 
   clean-webui:
     cmds:
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
 
   package:
@@ -380,9 +383,13 @@ tasks:
       - |-
         cd yscope-log-viewer
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
-      # Test that node_modules have been deduplicated
+
+      # Verify that npm fully hoisted all workspace packages to the root node_modules. If this
+      # fails, a peer dependency conflict is forcing npm to create a per-workspace node_modules, and
+      # you should check the npm install output and resolve any hoisting conflicts.
       - for: ["client", "common", "server"]
         cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
+
       # These commands must be last
       - task: "utils:checksum:compute"
         vars:
