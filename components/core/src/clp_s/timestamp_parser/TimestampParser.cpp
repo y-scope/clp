@@ -244,20 +244,6 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 [[nodiscard]] auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t;
 
 /**
- * Estimates the precision of an epoch timestamp based on its proximity to 1971 in different
- * precisions.
- *
- * This heuristic works because one year in epoch nanoseconds is approximately 1000 years in epoch
- * microseconds, and so on. Note that this heuristic can not distinguish the precision of timestamps
- * with absolute value sufficiently close to zero.
- *
- * @param timestamp
- * @return A pair containing the scaling factor needed to convert the timestamp into nanosecond
- * precision, and a format specifier indicating the precision of the timestamp.
- */
-[[nodiscard]] auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>;
-
-/**
  * Marshals a date-time timestamp according to a timestamp pattern.
  * @param timestamp
  * @param pattern
@@ -539,30 +525,6 @@ auto extract_bracket_pattern_list(std::string_view str)
     }
     entry_offsets_and_sizes.emplace_back(last_offset, str.size() - last_offset);
     return entry_offsets_and_sizes;
-}
-
-auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char> {
-    auto const abs_timestamp = timestamp < 0 ? -timestamp : timestamp;
-    if (abs_timestamp > cEpochNanoseconds1971) {
-        return std::make_pair(1LL, 'N');
-    }
-    if (abs_timestamp > cEpochMicroseconds1971) {
-        constexpr auto cFactor{cPowersOfTen
-                                       [cNumNanosecondPrecisionSubsecondDigits
-                                        - cNumMicrosecondPrecisionSubsecondDigits]};
-        return std::make_pair(cFactor, 'C');
-    }
-    if (abs_timestamp > cEpochMilliseconds1971) {
-        constexpr auto cFactor{cPowersOfTen
-                                       [cNumNanosecondPrecisionSubsecondDigits
-                                        - cNumMillisecondPrecisionSubsecondDigits]};
-        return std::make_pair(cFactor, 'L');
-    }
-    constexpr auto cFactor{
-            cPowersOfTen
-                    [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
-    };
-    return std::make_pair(cFactor, 'E');
 }
 
 auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t {
@@ -1854,6 +1816,30 @@ auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, s
         }
     }
     return std::nullopt;
+}
+
+auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char> {
+    auto const abs_timestamp = timestamp < 0 ? -timestamp : timestamp;
+    if (abs_timestamp > cEpochNanoseconds1971) {
+        return std::make_pair(1LL, 'N');
+    }
+    if (abs_timestamp > cEpochMicroseconds1971) {
+        constexpr auto cFactor{cPowersOfTen
+                                       [cNumNanosecondPrecisionSubsecondDigits
+                                        - cNumMicrosecondPrecisionSubsecondDigits]};
+        return std::make_pair(cFactor, 'C');
+    }
+    if (abs_timestamp > cEpochMilliseconds1971) {
+        constexpr auto cFactor{cPowersOfTen
+                                       [cNumNanosecondPrecisionSubsecondDigits
+                                        - cNumMillisecondPrecisionSubsecondDigits]};
+        return std::make_pair(cFactor, 'L');
+    }
+    constexpr auto cFactor{
+            cPowersOfTen
+                    [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
+    };
+    return std::make_pair(cFactor, 'E');
 }
 
 auto get_default_date_time_timestamp_patterns()

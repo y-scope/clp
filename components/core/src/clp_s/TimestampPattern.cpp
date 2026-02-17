@@ -6,7 +6,6 @@
 #include <cstring>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include <date/date.h>
 #include <spdlog/spdlog.h>
@@ -16,13 +15,8 @@ using clp::string_utils::convert_string_to_int;
 using std::string;
 using std::string_view;
 using std::to_string;
-using std::vector;
 
 namespace clp_s {
-// Static member default initialization
-std::unique_ptr<TimestampPattern[]> TimestampPattern::m_known_ts_patterns = nullptr;
-size_t TimestampPattern::m_known_ts_patterns_len = 0;
-
 // File-scope constants
 static constexpr int cNumDaysInWeek = 7;
 static char const* cAbbrevDaysOfWeek[cNumDaysInWeek]
@@ -200,135 +194,6 @@ static bool convert_string_to_number_notz(
     }
 
     return true;
-}
-
-/*
- * To initialize m_known_ts_patterns, we first create a vector of patterns then copy it to a
- * dynamic array. This eases maintenance of the list and the cost doesn't matter since it is
- * only done once when the program starts.
- */
-void TimestampPattern::init() {
-    // Terminate if already initialized.
-    if (nullptr != m_known_ts_patterns) {
-        return;
-    }
-    // First create vector of observed patterns so that it's easy to maintain
-    vector<TimestampPattern> patterns;
-    // E.g. 1706980946603
-    patterns.emplace_back(0, "%E");
-    // E.g. 1679711330.789032462
-    patterns.emplace_back(0, "%F");
-
-    // E.g. 2022-04-06T03:33:23.476Z ...47, ...4 ...()
-    patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%TZ");
-    // E.g. 2022-04-06T03:33:23Z
-    patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%SZ");
-    // E.g. 2022-04-06 03:33:23.476Z ...47, ...4 ...()
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S.%TZ");
-    // E.g. 2022-04-06 03:33:23Z
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%SZ");
-    // E.g. 2022/04/06T03:33:23.476Z ...47, ...4 ...()
-    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S.%TZ");
-    // E.g. 2022/04/06T03:33:23Z
-    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%SZ");
-    // E.g. 2022/04/06 03:33:23.476Z ...47, ...4 ...()
-    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%TZ");
-    // E.g. 2022/04/06 03:33:23Z
-    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%SZ");
-
-    // E.g. 2015-01-31T15:50:45.392
-    patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S.%3");
-    // E.g. 2015-01-31T15:50:45,392
-    patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S,%3");
-    // E.g. 2015-01-31 15:50:45.392
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S.%3");
-    // E.g. 2015-01-31 15:50:45,392
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S,%3");
-    // E.g. 2015/01/31T15:50:45.123
-    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S.%3");
-    // E.g. 2015/01/31T15:50:45,123
-    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S,%3");
-    // E.g. 2015/01/31 15:50:45.123
-    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S.%3");
-    // E.g. 2015/01/31 15:50:45,123
-    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S,%3");
-    // E.g. [2015-01-31 15:50:45,085]
-    patterns.emplace_back(0, "[%Y-%m-%d %H:%M:%S,%3]");
-    // E.g. INFO [main] 2015-01-31 15:50:45,085
-    patterns.emplace_back(2, "%Y-%m-%d %H:%M:%S,%3");
-    // E.g. <<<2016-11-10 03:02:29:936
-    patterns.emplace_back(0, "<<<%Y-%m-%d %H:%M:%S:%3");
-    // E.g. 01 Jan 2016 15:50:17,085
-    patterns.emplace_back(0, "%d %b %Y %H:%M:%S,%3");
-    // E.g. 2015-01-31T15:50:45
-    patterns.emplace_back(0, "%Y-%m-%dT%H:%M:%S");
-    // E.g. 2015-01-31 15:50:45
-    patterns.emplace_back(0, "%Y-%m-%d %H:%M:%S");
-    // E.g. 2015/01/31T15:50:45
-    patterns.emplace_back(0, "%Y/%m/%dT%H:%M:%S");
-    // E.g. 2015/01/31 15:50:45
-    patterns.emplace_back(0, "%Y/%m/%d %H:%M:%S");
-    // E.g. [2015-01-31T15:50:45
-    patterns.emplace_back(0, "[%Y-%m-%dT%H:%M:%S");
-    // E.g. [20170106-16:56:41]
-    patterns.emplace_back(0, "[%Y%m%d-%H:%M:%S]");
-    // E.g. Start-Date: 2015-01-31  15:50:45
-    patterns.emplace_back(1, "%Y-%m-%d  %H:%M:%S");
-    // E.g. 15/01/31 15:50:45
-    patterns.emplace_back(0, "%y/%m/%d %H:%M:%S");
-    // E.g. 150131  9:50:45
-    patterns.emplace_back(0, "%y%m%d %k:%M:%S");
-    // E.g. Jan 01, 2016 3:50:17 PM
-    patterns.emplace_back(0, "%b %d, %Y %l:%M:%S %p");
-    // E.g. January 31, 2015 15:50
-    patterns.emplace_back(0, "%B %d, %Y %H:%M");
-    // E.g. E [31/Jan/2015:15:50:45
-    patterns.emplace_back(1, "[%d/%b/%Y:%H:%M:%S");
-    // E.g. localhost - - [01/Jan/2016:15:50:17
-    // E.g. 192.168.4.5 - - [01/Jan/2016:15:50:17
-    patterns.emplace_back(3, "[%d/%b/%Y:%H:%M:%S");
-    // E.g. 192.168.4.5 - - [01/01/2016:15:50:17
-    patterns.emplace_back(3, "[%d/%m/%Y:%H:%M:%S");
-    // E.g. Started POST "/api/v3/internal/allowed" for 127.0.0.1 at 2017-06-18 00:20:44
-    patterns.emplace_back(6, "%Y-%m-%d %H:%M:%S");
-    // E.g. update-alternatives 2015-01-31 15:50:45
-    patterns.emplace_back(1, "%Y-%m-%d %H:%M:%S");
-    // E.g. ERROR: apport (pid 4557) Sun Jan  1 15:50:45 2015
-    patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");
-    // E.g. Sun Jan  1 15:50:45 2015
-    patterns.emplace_back(0, "%a %b %e %H:%M:%S %Y");
-
-    // TODO These patterns are imprecise and will prevent searching by timestamp; but for now,
-    // it's no worse than not parsing a timestamp E.g. Jan 21 11:56:42
-    patterns.emplace_back(0, "%b %d %H:%M:%S");
-    // E.g. 01-21 11:56:42.392
-    patterns.emplace_back(0, "%m-%d %H:%M:%S.%3");
-
-    // Initialize m_known_ts_patterns with vector's contents
-    m_known_ts_patterns_len = patterns.size();
-    m_known_ts_patterns = std::make_unique<TimestampPattern[]>(m_known_ts_patterns_len);
-    for (size_t i = 0; i < patterns.size(); ++i) {
-        m_known_ts_patterns[i] = patterns[i];
-    }
-}
-
-TimestampPattern const* TimestampPattern::search_known_ts_patterns(
-        string_view line,
-        epochtime_t& timestamp,
-        size_t& timestamp_begin_pos,
-        size_t& timestamp_end_pos
-) {
-    for (size_t i = 0; i < m_known_ts_patterns_len; ++i) {
-        if (m_known_ts_patterns[i]
-                    .parse_timestamp(line, timestamp, timestamp_begin_pos, timestamp_end_pos))
-        {
-            return &m_known_ts_patterns[i];
-        }
-    }
-
-    timestamp_begin_pos = string::npos;
-    timestamp_end_pos = string::npos;
-    return nullptr;
 }
 
 string const& TimestampPattern::get_format() const {
