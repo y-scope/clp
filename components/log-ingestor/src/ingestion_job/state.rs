@@ -3,7 +3,8 @@ use clp_rust_utils::s3::ObjectMetadata;
 
 /// TODO
 #[async_trait]
-pub trait IngestionJobState: Send + Sync + Clone + 'static {
+pub trait IngestionJobState:
+    SqsListenerState + S3ScannerState + Send + Sync + Clone + 'static {
     async fn start(&self) -> anyhow::Result<()>;
 
     async fn end(&self) -> anyhow::Result<()>;

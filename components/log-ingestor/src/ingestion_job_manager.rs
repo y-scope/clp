@@ -136,8 +136,8 @@ impl IngestionJobManagerState {
             config.base.endpoint_url.as_ref(),
         )
         .await;
-        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender, _state| {
-            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
+        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender, state| {
+            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender, state);
             IngestionJob::S3Scanner(scanner)
         })
         .await
@@ -253,8 +253,11 @@ impl IngestionJobManagerState {
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
-        JobCreationCallback:
-            FnOnce(Uuid, mpsc::Sender<ObjectMetadata>, NoopIngestionJobState) -> IngestionJob, {
+        JobCreationCallback: FnOnce(
+            Uuid,
+            mpsc::Sender<Vec<ObjectMetadata>>,
+            NoopIngestionJobState,
+        ) -> IngestionJob<NoopIngestionJobState>, {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
             // TODO: We should avoid being verbose for checking each field one by one (tracked by
@@ -342,7 +345,7 @@ struct IngestionJobManager {
 
 /// Represents an entry in the ingestion job table.
 struct IngestionJobTableEntry {
-    ingestion_job: IngestionJob,
+    ingestion_job: IngestionJob<NoopIngestionJobState>,
     listener: Listener,
     region: Option<NonEmptyString>,
     bucket_name: NonEmptyString,

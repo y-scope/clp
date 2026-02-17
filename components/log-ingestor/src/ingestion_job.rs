@@ -8,12 +8,14 @@ pub use sqs_listener::*;
 pub use state::*;
 
 /// Enum for different types of ingestion jobs.
-pub enum IngestionJob {
-    S3Scanner(S3Scanner),
-    SqsListener(SqsListener),
+///
+/// TODO
+pub enum IngestionJob<State: IngestionJobState> {
+    S3Scanner(S3Scanner<State>),
+    SqsListener(SqsListener<State>),
 }
 
-impl IngestionJob {
+impl<State: IngestionJobState> IngestionJob<State> {
     /// Shuts down and waits for the job to complete.
     ///
     /// # Returns
@@ -47,14 +49,14 @@ impl IngestionJob {
     }
 }
 
-impl From<S3Scanner> for IngestionJob {
-    fn from(scanner: S3Scanner) -> Self {
+impl<State: IngestionJobState> From<S3Scanner<State>> for IngestionJob<State> {
+    fn from(scanner: S3Scanner<State>) -> Self {
         Self::S3Scanner(scanner)
     }
 }
 
-impl From<SqsListener> for IngestionJob {
-    fn from(listener: SqsListener) -> Self {
+impl<State: IngestionJobState> From<SqsListener<State>> for IngestionJob<State> {
+    fn from(listener: SqsListener<State>) -> Self {
         Self::SqsListener(listener)
     }
 }

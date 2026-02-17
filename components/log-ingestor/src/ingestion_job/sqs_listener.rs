@@ -15,10 +15,7 @@ use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::{
-    aws_client_manager::AwsClientManagerType,
-    ingestion_job::{NoopIngestionJobState, SqsListenerState},
-};
+use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::SqsListenerState};
 
 type TaskId = usize;
 
@@ -31,7 +28,8 @@ type TaskId = usize;
 struct Task<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState> {
     sqs_client_manager: SqsClientManager,
     config: ValidatedSqsListenerConfig,
-    sender: mpsc::Sender<ObjectMetadata>,
+    sender: mpsc::Sender<Vec<ObjectMetadata>>,
+    job_id: Uuid,
     id: TaskId,
     state: State,
 }
@@ -137,18 +135,26 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
 
         let ingested = !object_metadata_to_ingest.is_empty();
         self.state.ingest(&object_metadata_to_ingest).await?;
-        for object_metadata in object_metadata_to_ingest {
-            self.sender.send(object_metadata).await?;
-        }
+        self.sender.send(object_metadata_to_ingest).await?;
 
-        self.sqs_client_manager
+        for failure in self
+            .sqs_client_manager
             .get()
             .await?
             .delete_message_batch()
             .queue_url(self.config.get().queue_url.as_str())
             .set_entries(Some(delete_message_batch_request_entries))
             .send()
-            .await?;
+            .await?
+            .failed
+        {
+            tracing::warn!(
+                job_id = ? self.job_id,
+                task_id = ? self.id,
+                error = ? failure,
+                "Failed to delete SQS message."
+            );
+        }
 
         Ok(ingested)
     }
@@ -227,7 +233,7 @@ impl TaskHandle {
 /// Represents a SQS listener job that manages the lifecycle of a SQS listener task.
 ///
 /// TODO
-pub struct SqsListener<State: SqsListenerState = NoopIngestionJobState> {
+pub struct SqsListener<State: SqsListenerState> {
     id: Uuid,
     task_handles: Vec<TaskHandle>,
     _state: State,
@@ -263,7 +269,7 @@ impl<State: SqsListenerState> SqsListener<State> {
         id: Uuid,
         sqs_client_manager: &SqsClientManager,
         config: &ValidatedSqsListenerConfig,
-        sender: &mpsc::Sender<ObjectMetadata>,
+        sender: &mpsc::Sender<Vec<ObjectMetadata>>,
         state: State,
     ) -> Self {
         let num_tasks = usize::from(config.get().num_concurrent_listener_tasks);
@@ -273,6 +279,7 @@ impl<State: SqsListenerState> SqsListener<State> {
                 sqs_client_manager: sqs_client_manager.clone(),
                 config: config.clone(),
                 sender: sender.clone(),
+                job_id: id,
                 id: TaskId::from(task_id),
                 state: state.clone(),
             };
