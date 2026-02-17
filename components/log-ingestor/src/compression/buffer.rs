@@ -26,8 +26,8 @@ pub trait BufferSubmitter {
 pub struct Buffer<Submitter: BufferSubmitter> {
     submitter: Submitter,
     buf: Vec<ObjectMetadata>,
-    total_size: usize,
-    size_threshold: usize,
+    total_size: u64,
+    size_threshold: u64,
 }
 
 impl<Submitter: BufferSubmitter> Buffer<Submitter> {
@@ -36,7 +36,7 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     /// # Returns
     ///
     /// A newly created [`Buffer`] with the given submitter of type `T` and size threshold.
-    pub const fn new(submitter: Submitter, size_threshold: usize) -> Self {
+    pub const fn new(submitter: Submitter, size_threshold: u64) -> Self {
         Self {
             submitter,
             buf: Vec::new(),

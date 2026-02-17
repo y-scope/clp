@@ -14,13 +14,13 @@ pub struct SearchJobConfig {
     pub dataset: Option<String>,
     pub query_string: String,
     pub max_num_results: u32,
-    pub tags: Option<Vec<String>>,
     pub begin_timestamp: Option<i64>,
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,
     pub path_filter: Option<String>,
     pub network_address: Option<(String, u16)>,
     pub aggregation_config: Option<()>,
+    pub write_to_file: bool,
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.

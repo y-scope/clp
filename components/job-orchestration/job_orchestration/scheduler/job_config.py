@@ -45,7 +45,6 @@ class S3InputConfig(S3Config):
 
 
 class OutputConfig(BaseModel):
-    tags: list[str] | None = None
     target_archive_size: int
     target_dictionaries_size: int
     target_segment_size: int
@@ -85,7 +84,6 @@ class ExtractJsonJobConfig(QueryJobConfig):
 class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int
-    tags: list[str] | None = None
     begin_timestamp: int | None = None
     end_timestamp: int | None = None
     ignore_case: bool = False
@@ -93,6 +91,7 @@ class SearchJobConfig(QueryJobConfig):
     # Tuple of (host, port)
     network_address: tuple[str, int] | None = None
     aggregation_config: AggregationConfig | None = None
+    write_to_file: bool = False
 
     @field_validator("network_address")
     @classmethod

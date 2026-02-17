@@ -1,3 +1,4 @@
+use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 
 /// Represents an Amazon S3 event notification message.
@@ -28,11 +29,11 @@ pub struct Entity {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Bucket {
-    pub name: String,
+    pub name: NonEmptyString,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Object {
-    pub key: String,
-    pub size: usize,
+    pub key: NonEmptyString,
+    pub size: u64,
 }

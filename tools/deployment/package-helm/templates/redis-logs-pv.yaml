@@ -1,0 +1,8 @@
+{{- include "clp.createStaticPv" (dict
+  "root" .
+  "component_category" "redis"
+  "name" "logs"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/redis" .Values.clpConfig.logs_directory)
+) }}

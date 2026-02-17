@@ -39,10 +39,8 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
-    get_archive_tags_table_name,
     get_archives_table_name,
     get_files_table_name,
-    get_tags_table_name,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
@@ -323,9 +321,9 @@ def set_job_or_task_status(
 
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
+        row_changed = cursor.rowcount != 0
         db_conn.commit()
-        rval = cursor.rowcount != 0
-    return rval
+    return row_changed
 
 
 async def handle_cancelling_search_jobs(db_conn_pool) -> None:
@@ -363,13 +361,19 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000000.0",
             )
 
+            set_job_or_task_status_kwargs = {}
+            if job.start_time is not None:
+                set_job_or_task_status_kwargs["duration"] = (
+                    datetime.datetime.now() - job.start_time
+                ).total_seconds()
+
             if set_job_or_task_status(
                 db_conn,
                 QUERY_JOBS_TABLE_NAME,
                 job_id,
                 QueryJobStatus.CANCELLED,
                 QueryJobStatus.CANCELLING,
-                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+                **set_job_or_task_status_kwargs,
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:
@@ -412,23 +416,12 @@ def get_archives_for_search(
         filter_clauses.append(
             f"(end_timestamp >= {archive_end_ts_lower_bound} OR end_timestamp = 0)"
         )
-    if search_config.tags is not None:
-        archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
-        tags_table_name = get_tags_table_name(table_prefix, dataset)
-        filter_clauses.append(
-            f"id IN (SELECT archive_id FROM {archive_tags_table_name} WHERE "
-            f"tag_id IN (SELECT tag_id FROM {tags_table_name} WHERE tag_name IN "
-            f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
-        )
     if len(filter_clauses) > 0:
         query += " WHERE " + " AND ".join(filter_clauses)
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        if search_config.tags is not None:
-            cursor.execute(query, tuple(search_config.tags))
-        else:
-            cursor.execute(query)
+        cursor.execute(query)
         archives_for_search = list(cursor.fetchall())
     return archives_for_search
 
@@ -621,7 +614,8 @@ def dispatch_job_and_update_db(
         db_conn, new_job, target_archives, clp_metadata_db_conn_params, results_cache_uri
     )
     start_time = datetime.datetime.now()
-    new_job.start_time = start_time
+    if new_job.start_time is None:
+        new_job.start_time = start_time
     set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
@@ -865,7 +859,7 @@ def handle_pending_query_jobs(
 def try_getting_task_result(async_task_result):
     if not async_task_result.ready():
         return None
-    return async_task_result.get()
+    return async_task_result.get(interval=0.005)
 
 
 def found_max_num_latest_results(
@@ -998,7 +992,7 @@ async def handle_finished_stream_extraction_job(
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
-        if not QueryJobStatus.SUCCEEDED == task_result.status:
+        if not QueryTaskStatus.SUCCEEDED == task_result.status:
             logger.error(
                 f"Extraction task job-{job_id}-task-{task_id} failed. "
                 f"Check {task_result.error_log_path} for details."
@@ -1093,9 +1087,13 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
     while True:
+        interval_start_time = datetime.datetime.now()
         await handle_cancelling_search_jobs(db_conn_pool)
         await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
-        await asyncio.sleep(jobs_poll_delay)
+        interval_end_time = datetime.datetime.now()
+        await asyncio.sleep(
+            jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
+        )
 
 
 async def handle_jobs(

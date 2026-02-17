@@ -22,6 +22,7 @@ vars:
   G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
+  G_YSTDLIB_LIB_NAME: "ystdlib"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
@@ -100,8 +101,8 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
           CMAKE_PACKAGE_NAME: "spider"
-          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
-          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          TAR_SHA256: "ef24c3271565864e630ac2c650fc46c62f0dd74d1a4c896fbdc67e5f37d9177e"
+          TAR_URL: "https://github.com/y-scope/spider/archive/32711f9.tar.gz"
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
@@ -357,18 +358,21 @@ tasks:
     deps:
       - "fmt"
       - "microsoft.gsl"
+      - "ystdlib"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
             - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
             - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "4551ea50cd22e8423770fd66a167e1c86053b1f4957f72c582a2da93e7820210"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/840f262.tar.gz"
+          TARBALL_SHA256: "eebf857962f8fc022bfa5de8d00e10ee4ac36bb8f126a556935a93dde1435aa2"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/193e1f9.tar.gz"
 
   lz4:
     internal: true
@@ -595,7 +599,7 @@ tasks:
             - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-Dystdlib_BUILD_TESTING=OFF"
-          LIB_NAME: "ystdlib"
+          LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
           TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
           TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
 

@@ -10,6 +10,8 @@ from typing import Any
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    ClpDbNameType,
+    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -20,12 +22,11 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
-    get_archive_tags_table_name,
     get_archives_table_name,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import (
-    generate_s3_virtual_hosted_style_url,
+    generate_s3_url,
     get_credential_env_vars,
     s3_put,
 )
@@ -67,32 +68,11 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
     db_cursor.execute(query)
 
 
-def update_tags(
-    db_cursor,
-    table_prefix: str,
-    dataset: str | None,
-    archive_id: str,
-    tag_ids: list[int],
-) -> None:
-    db_cursor.executemany(
-        f"""
-        INSERT INTO {get_archive_tags_table_name(table_prefix, dataset)} (archive_id, tag_id)
-        VALUES (%s, %s)
-        """,
-        [(archive_id, tag_id) for tag_id in tag_ids],
-    )
-
-
-def update_job_metadata_and_tags(
+def update_job_metadata(
     db_cursor,
     job_id: int,
-    table_prefix: str,
-    dataset: str | None,
-    tag_ids: list[int],
     archive_stats: dict[str, Any],
 ) -> None:
-    if len(tag_ids) > 0:
-        update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
     increment_compression_job_metadata(
         db_cursor,
         job_id,
@@ -163,10 +143,13 @@ def _generate_s3_logs_list(
     object_keys = paths_to_compress.file_paths
     with open(output_file_path, "w") as file:
         for object_key in object_keys:
-            s3_virtual_hosted_style_url = generate_s3_virtual_hosted_style_url(
-                s3_input_config.region_code, s3_input_config.bucket, object_key
+            s3_url = generate_s3_url(
+                s3_input_config.endpoint_url,
+                s3_input_config.region_code,
+                s3_input_config.bucket,
+                object_key,
             )
-            file.write(s3_virtual_hosted_style_url)
+            file.write(s3_url)
             file.write("\n")
 
 
@@ -195,7 +178,7 @@ def _get_db_connection_args_for_clp_cmd(
         "--db-port",
         str(clp_metadata_db_connection_config["port"]),
         "--db-name",
-        clp_metadata_db_connection_config["name"],
+        clp_metadata_db_connection_config["names"][ClpDbNameType.CLP],
         "--db-table-prefix",
         clp_metadata_db_connection_config["table_prefix"],
     ]
@@ -208,9 +191,10 @@ def _get_db_connection_env_vars_for_clp_cmd(
     :param clp_metadata_db_connection_config:
     :return: Dictionary of database connection environment variables for the clp command.
     """
+    credentials = Database.model_validate(clp_metadata_db_connection_config).credentials
     return {
-        CLP_DB_USER_ENV_VAR_NAME: clp_metadata_db_connection_config["username"],
-        CLP_DB_PASS_ENV_VAR_NAME: clp_metadata_db_connection_config["password"],
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
     }
 
 
@@ -344,7 +328,6 @@ def run_clp(
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
-    tag_ids: list[int],
     paths_to_compress: PathsToCompress,
     sql_adapter: SqlAdapter,
     clp_metadata_db_connection_config,
@@ -359,7 +342,6 @@ def run_clp(
     :param logs_dir:
     :param job_id:
     :param task_id:
-    :param tag_ids:
     :param paths_to_compress: PathToCompress
     :param sql_adapter: SqlAdapter
     :param clp_metadata_db_connection_config
@@ -519,12 +501,9 @@ def run_clp(
                         update_archive_metadata(
                             db_cursor, table_prefix, dataset, last_archive_stats
                         )
-                    update_job_metadata_and_tags(
+                    update_job_metadata(
                         db_cursor,
                         job_id,
-                        table_prefix,
-                        dataset,
-                        tag_ids,
                         last_archive_stats,
                     )
                     db_conn.commit()
@@ -592,7 +571,6 @@ def run_clp(
 def compression_entry_point(
     job_id: int,
     task_id: int,
-    tag_ids: list[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config: dict[str, Any],
@@ -618,7 +596,7 @@ def compression_entry_point(
             status=CompressionTaskStatus.FAILED,
             duration=0,
             error_message=error_msg,
-        )
+        ).model_dump()
 
     clp_io_config = ClpIoConfig.model_validate_json(clp_io_config_json)
     paths_to_compress = PathsToCompress.model_validate_json(paths_to_compress_json)
@@ -634,7 +612,6 @@ def compression_entry_point(
         logs_dir,
         job_id,
         task_id,
-        tag_ids,
         paths_to_compress,
         sql_adapter,
         clp_metadata_db_connection_config,
