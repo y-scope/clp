@@ -16,30 +16,30 @@ namespace clp::string_utils {
  * @param c
  * @return true if c is an alphabet, false otherwise
  */
-inline auto is_alphabet(char c) -> bool {
+[[nodiscard]] inline auto is_alphabet(char c) -> bool {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
 }
 
 /**
  * Checks if character is a decimal (base-10) digit
- * 
+ *
  * @param c
  * @return true if c is a decimal digit, false otherwise
  */
-inline auto is_decimal_digit(char c) -> bool {
+[[nodiscard]] inline auto is_decimal_digit(char c) -> bool {
     return '0' <= c && c <= '9';
 }
 
 /**
  * Searches haystack starting at the given position for one of the given needles
- * 
+ *
  * @param haystack
  * @param needles
  * @param search_start_pos
  * @param needle_ix The index of the needle found
  * @return The position of the match or string::npos if none
  */
-auto find_first_of(
+[[nodiscard]] auto find_first_of(
         std::string const& haystack,
         char const* needles,
         size_t search_start_pos,
@@ -56,7 +56,7 @@ auto find_first_of(
  * line-feed character is output as "\n")
  * @return The string with replacements
  */
-auto replace_characters(
+[[nodiscard]] auto replace_characters(
         char const* characters_to_escape,
         char const* replacement_characters,
         std::string const& value,
@@ -94,7 +94,7 @@ auto to_lower(std::string& str) -> void;
  * @param str Wildcard search string to clean
  * @return Cleaned wildcard search string
  */
-auto clean_up_wildcard_search_string(std::string_view str) -> std::string;
+[[nodiscard]] auto clean_up_wildcard_search_string(std::string_view str) -> std::string;
 
 /**
  * Unescapes a string according to the following rules:
@@ -113,7 +113,7 @@ auto clean_up_wildcard_search_string(std::string_view str) -> std::string;
  * @param c
  * @return true if c is a wildcard, false otherwise
  */
-auto is_wildcard(char c) -> bool;
+[[nodiscard]] auto is_wildcard(char c) -> bool;
 
 /**
  * Same as ``wildcard_match_unsafe_case_sensitive`` except this method allows
@@ -124,7 +124,7 @@ auto is_wildcard(char c) -> bool;
  * @param case_sensitive_match Whether to consider case when matching
  * @return Whether the two strings match
  */
-auto wildcard_match_unsafe(
+[[nodiscard]] auto wildcard_match_unsafe(
         std::string_view tame,
         std::string_view wild,
         bool case_sensitive_match = true
@@ -149,7 +149,7 @@ auto wildcard_match_unsafe(
  * @param wild The wildcard string
  * @return Whether the two strings match
  */
-auto wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_view wild) -> bool;
+[[nodiscard]] auto wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_view wild) -> bool;
 
 /**
  * Converts the given string to a 64-bit integer if possible
@@ -160,10 +160,10 @@ auto wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
  * @return true if the conversion was successful, false otherwise
  */
 template <std::integral integer_t>
-auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool;
+[[nodiscard]] auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool;
 
 template <std::integral integer_t>
-auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
+[[nodiscard]] auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
     auto const* raw_begin{raw.data()};
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     auto const* raw_end{raw_begin + raw.size()};
