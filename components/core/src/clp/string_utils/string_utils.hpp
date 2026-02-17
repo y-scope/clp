@@ -1,5 +1,5 @@
-#ifndef CLP_STRING_UTILS_STRINGUTILS_HPP
-#define CLP_STRING_UTILS_STRINGUTILS_HPP
+#ifndef CLP_STRING_UTILS_STRING_UTILS_HPP
+#define CLP_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
 #include <concepts>
@@ -173,4 +173,4 @@ template <std::integral integer_t>
 }
 }  // namespace clp::string_utils
 
-#endif  // CLP_STRING_UTILS_STRINGUTILS_HPP
+#endif  // CLP_STRING_UTILS_STRING_UTILS_HPP
