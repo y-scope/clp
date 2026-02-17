@@ -22,12 +22,17 @@ auto IrErrorCategory::message(IrErrorCodeEnum error_enum) const -> std::string {
         case IrErrorCodeEnum::IncompleteStream:
             return "The IR stream ended with a truncated IR unit or did not terminate with an "
                    "end-of-stream IR unit.";
+        case IrErrorCodeEnum::KeyValuePairSerializationFailure:
+            return "Failed to serialize a key-value pair log event.";
         case IrErrorCodeEnum::MetadataSerializationFailure:
             return "Failed to serialize the stream's metadata.";
         case IrErrorCodeEnum::SchemaTreeNodeSerializationFailure:
             return "Failed to serialize a schema tree node.";
-        case IrErrorCodeEnum::KeyValuePairSerializationFailure:
-            return "Failed to serialize a key-value pair log event.";
+        case IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure:
+            return "Failed to serialize a schema tree node ID. The ID exceeds the representable "
+                   "range.";
+        case IrErrorCodeEnum::UnsupportedSchemaTreeNodeType:
+            return "The schema tree node type is not supported.";
         case IrErrorCodeEnum::UnsupportedUserDefinedMetadata:
             return "The user-defined metadata is not a valid JSON object.";
         default:

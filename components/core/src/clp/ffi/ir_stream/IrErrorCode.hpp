@@ -18,6 +18,8 @@ enum class IrErrorCodeEnum : uint8_t {
     SchemaTreeNodeSerializationFailure,
     KeyValuePairSerializationFailure,
     UnsupportedUserDefinedMetadata,
+    UnsupportedSchemaTreeNodeType,
+    SchemaTreeNodeIdSerializationFailure,
 };
 
 using IrErrorCode = ystdlib::error_handling::ErrorCode<IrErrorCodeEnum>;

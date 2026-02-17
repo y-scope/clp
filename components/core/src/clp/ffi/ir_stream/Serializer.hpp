@@ -95,7 +95,10 @@ public:
      * @param auto_gen_kv_pairs_map
      * @param user_gen_kv_pairs_map
      * @return A void result on success, or an error code indicating the failure:
-     * - IrErrorCodeEnum::KeyValuePairSerializationFailure if the map serialization fails.
+     * - Forwards `serialize_schema_tree_node`'s return values.
+     * - IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure if a node ID couldn't be serialized.
+     * - IrErrorCodeEnum::KeyValuePairSerializationFailure if a value, non-string map key, or
+     *   unsupported msgpack type couldn't be serialized.
      */
     [[nodiscard]] auto serialize_msgpack_map(
             msgpack::object_map const& auto_gen_kv_pairs_map,
@@ -112,8 +115,10 @@ private:
      * @tparam is_auto_generated_node
      * @param locator
      * @return A void result on success, or an error code indicating the failure:
-     * - IrErrorCodeEnum::SchemaTreeNodeSerializationFailure if the node type is unsupported or if
-     *   the node ID or key name couldn't be serialized.
+     * - IrErrorCodeEnum::UnsupportedSchemaTreeNodeType if the node type is unsupported.
+     * - IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure if the parent node ID couldn't be
+     *   serialized.
+     * - IrErrorCodeEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be serialized.
      */
     template <bool is_auto_generated_node>
     [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator)

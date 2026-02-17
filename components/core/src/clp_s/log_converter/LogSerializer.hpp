@@ -55,8 +55,7 @@ public:
      * @param timestamp
      * @param message
      * @return A void result on success, or an error code indicating the failure:
-     * - IrErrorCodeEnum::KeyValuePairSerializationFailure if the key-value pair serialization
-     * fails.
+     * - Forwards `clp::ffi::ir_stream::Serializer<>::serialize_msgpack_map`'s return values.
      */
     [[nodiscard]] auto add_message(std::string_view timestamp, std::string_view message)
             -> ystdlib::error_handling::Result<void>;
@@ -65,8 +64,7 @@ public:
      * Adds a message without a timestamp to the serialized output.
      * @param message
      * @return A void result on success, or an error code indicating the failure:
-     * - std::errc::invalid_argument if `clp::ffi::ir_stream::Serializer<>::serialize_msgpack_map`
-     *   returns on failure.
+     * - Forwards `clp::ffi::ir_stream::Serializer<>::serialize_msgpack_map`'s return values.
      */
     [[nodiscard]] auto add_message(std::string_view message)
             -> ystdlib::error_handling::Result<void>;
