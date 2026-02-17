@@ -14,7 +14,80 @@ maintained in a [fork][yscope-presto] of the Presto project. At some point, thes
 been merged into the main Presto repository so that you can use official Presto releases with CLP.
 :::
 
-## Requirements
+## Deployment options
+
+CLP supports Presto through two deployment methods:
+
+* **[Kubernetes (Helm)](#kubernetes-helm)**: Presto is deployed as part of the CLP Helm chart. This
+  is the simplest option if you are already using the [Kubernetes deployment][k8s-deployment].
+* **[Docker Compose](#docker-compose)**: Presto is deployed separately using Docker Compose alongside
+  a CLP package installation.
+
+## Kubernetes (Helm)
+
+When deploying CLP on Kubernetes using Helm, Presto can be enabled by setting the `query_engine` to
+`"presto"` in your Helm values.
+
+### Requirements
+
+* A running CLP Kubernetes deployment (see the [Kubernetes deployment guide][k8s-deployment])
+
+### Set up
+
+1. Create a values file to enable Presto:
+
+   ```{code-block} yaml
+   :caption: presto-values.yaml
+
+   clpConfig:
+     package:
+       query_engine: "presto"
+
+     # Disable results cache retention since the Presto integration doesn't yet support
+     # garbage collection of search results.
+     results_cache:
+       retention_period: null
+
+     presto:
+       worker:
+       # Split filter config for the Presto CLP connector. For each dataset, add a filter entry.
+       # Replace <dataset> with the dataset name (use "default" if you didn't specify one when
+       # compressing) and <timestamp-key> with the timestamp key used during compression.
+       # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+       split_filter:
+         clp.default.<dataset>:
+           - columnName: "<timestamp-key>"
+             customOptions:
+               rangeMapping:
+                 lowerBound: "begin_timestamp"
+                 upperBound: "end_timestamp"
+             required: false
+   ```
+
+2. Install (or upgrade) the Helm chart with the Presto values:
+
+   ```bash
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f presto-values.yaml
+   ```
+
+3. Verify that the Presto coordinator and worker pods are running:
+
+   ```bash
+   kubectl get pods -l "app.kubernetes.io/component in (presto-coordinator, presto-worker)"
+   ```
+
+Once the pods are ready, you can [query your logs through Presto](#querying-your-logs-through-presto)
+using CLP's Web UI.
+
+:::{note}
+When using Kubernetes, Presto worker scheduling can be configured using the `prestoWorker.scheduling`
+key in Helm values. See the [worker scheduling][k8s-scheduling] section of the Kubernetes deployment
+guide for details.
+:::
+
+## Docker Compose
+
+### Requirements
 
 * [CLP][clp-releases] (clp-json) v0.5.0 or higher
 * [Docker] v28 or higher
@@ -22,9 +95,9 @@ been merged into the main Presto repository so that you can use official Presto 
 * Python
 * python3-venv (for the version of Python installed)
 
-## Set up
+### Set up
 
-Using Presto with CLP requires:
+Using Presto with CLP via Docker Compose requires:
 
 * [Setting up CLP](#setting-up-clp) and compressing some logs.
 * [Setting up Presto](#setting-up-presto) to query CLP's metadata database and archives.
@@ -227,6 +300,8 @@ These limitations will be addressed in a future release of the Presto integratio
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
+[k8s-deployment]: guides-k8s-deployment.md
+[k8s-scheduling]: guides-k8s-deployment.md#worker-scheduling
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8

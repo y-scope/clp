@@ -1,0 +1,82 @@
+{{- if eq .Values.clpConfig.package.query_engine "presto" }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-presto-coordinator
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "presto-coordinator"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "presto-coordinator"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "presto-coordinator"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      terminationGracePeriodSeconds: 30
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "prestoCoordinator"
+        ) | nindent 6 }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+      containers:
+        - name: "presto-coordinator"
+          image: "{{ .Values.image.prestoCoordinator.repository }}:{{ .Values.image.prestoCoordinator.tag }}"
+          imagePullPolicy: "{{ .Values.image.prestoCoordinator.pullPolicy }}"
+          ports:
+            - name: "presto-coord"
+              containerPort: 8080
+          volumeMounts:
+            - name: "presto-catalog"
+              mountPath: "/opt/presto-server/etc/catalog"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/config.properties"
+              subPath: "presto-coordinator-config-config.properties"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/jvm.config"
+              subPath: "presto-coordinator-config-jvm.config"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/log.properties"
+              subPath: "presto-coordinator-config-log.properties"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/node.properties"
+              subPath: "presto-coordinator-config-node.properties"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/split-filter.json"
+              subPath: "presto-coordinator-config-split-filter.json"
+              readOnly: true
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: &presto-coordinator-health-check
+              path: "/v1/info"
+              port: "presto-coord"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *presto-coordinator-health-check
+      volumes:
+        - name: "presto-catalog"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: "presto-coordinator-catalog-clp.properties"
+                path: "clp.properties"
+        - name: "presto-config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+{{- end }}

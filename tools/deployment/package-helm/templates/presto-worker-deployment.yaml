@@ -1,0 +1,113 @@
+{{- if eq .Values.clpConfig.package.query_engine "presto" }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-presto-worker
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "presto-worker"
+spec:
+  replicas: {{ .Values.prestoWorker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "presto-worker"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "presto-worker"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      terminationGracePeriodSeconds: 30
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "prestoWorker"
+        ) | nindent 6 }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "presto-coordinator"
+          ) | nindent 10 }}
+        - name: "setup-configs"
+          image: "busybox:latest"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -e
+              cp /etc/presto-config/presto-worker-config-config.properties /opt/presto-server/etc/config.properties
+              cp /etc/presto-config/presto-worker-config-node.properties /opt/presto-server/etc/node.properties
+
+              # Query coordinator for version and add it to config
+              DISCOVERY_URI="http://{{ include "clp.fullname" . }}-presto-coordinator:8080"
+              VERSION=$(wget -q -O - "${DISCOVERY_URI}/v1/info")
+              PRESTO_VERSION=$(echo "$VERSION" \
+                | sed 's/.*"version":"//' \
+                | sed 's/".*//')
+              echo "presto.version=${PRESTO_VERSION}" >> /opt/presto-server/etc/config.properties
+
+              # Set node identity from hostname
+              HOSTNAME=$(hostname)
+              HOST_IP=$(hostname -i)
+              echo "node.internal-address=${HOST_IP}" >> /opt/presto-server/etc/node.properties
+              echo "node.id=${HOSTNAME}" >> /opt/presto-server/etc/node.properties
+          volumeMounts:
+            - name: "presto-config"
+              mountPath: "/etc/presto-config"
+              readOnly: true
+            - name: "presto-etc"
+              mountPath: "/opt/presto-server/etc"
+      containers:
+        - name: "presto-worker"
+          image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
+          imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
+          ports:
+            - name: "presto-worker"
+              containerPort: 8080
+          volumeMounts:
+            - name: "presto-catalog"
+              mountPath: "/opt/presto-server/etc/catalog"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/velox.properties"
+              subPath: "presto-worker-config-velox.properties"
+              readOnly: true
+            - name: "presto-etc"
+              mountPath: "/opt/presto-server/etc"
+            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
+              mountPath: "/var/data/archives"
+              readOnly: true
+            {{- end }}
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            tcpSocket: &presto-worker-health-check
+              port: "presto-worker"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            tcpSocket: *presto-worker-health-check
+      volumes:
+        - name: "presto-catalog"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: "presto-worker-catalog-clp.properties"
+                path: "clp.properties"
+        - name: "presto-config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "presto-etc"
+          emptyDir: {}
+        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "archives"
+          ) | nindent 10 }}
+        {{- end }}
+{{- end }}

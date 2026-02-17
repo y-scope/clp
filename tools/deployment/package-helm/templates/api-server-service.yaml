@@ -1,4 +1,4 @@
-{{- if .Values.clpConfig.api_server }}
+{{- if and .Values.clpConfig.api_server (ne .Values.clpConfig.package.query_engine "presto") }}
 apiVersion: "v1"
 kind: "Service"
 metadata:

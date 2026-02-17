@@ -219,6 +219,13 @@ data:
     {{- else }}
     mcp_server: null
     {{- end }}
+    {{- if eq .Values.clpConfig.package.query_engine "presto" }}
+    presto:
+      host: "{{ include "clp.fullname" . }}-presto-coordinator"
+      port: 8080
+    {{- else }}
+    presto: null
+    {{- end }}
 
   mysql-logging.cnf: |
     [mysqld]
@@ -321,6 +328,91 @@ data:
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      {{- if eq .Values.clpConfig.package.query_engine "presto" }}
+      "PrestoHost": "{{ include "clp.fullname" . }}-presto-coordinator",
+      "PrestoPort": 8080
+      {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
+      {{- end }}
     }
+
+{{- if eq .Values.clpConfig.package.query_engine "presto" }}
+{{- with .Values.clpConfig.presto }}
+  presto-coordinator-catalog-clp.properties: |
+    connector.name=clp
+    clp.metadata-provider-type=mysql
+    clp.metadata-db-url=jdbc:mysql://{{ include "clp.fullname" $ }}-database:3306
+    clp.metadata-db-name={{ $.Values.clpConfig.database.names.clp }}
+    clp.metadata-db-user={{ $.Values.credentials.database.username }}
+    clp.metadata-db-password={{ $.Values.credentials.database.password }}
+    clp.metadata-table-prefix=clp_
+    clp.split-provider-type=mysql
+    clp.split-filter-provider-type=mysql
+    clp.split-filter-config=/opt/presto-server/etc/split-filter.json
+
+  presto-coordinator-config-config.properties: |
+    coordinator=true
+    node-scheduler.include-coordinator=false
+    http-server.http.port=8080
+    query.max-memory={{ .coordinator.query_max_memory_gb }}GB
+    query.max-memory-per-node={{ .coordinator.query_max_memory_per_node_gb }}GB
+    discovery-server.enabled=true
+    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8080
+    optimizer.optimize-hash-generation=false
+    regex-library=RE2J
+    use-alternative-function-signatures=true
+    inline-sql-functions=false
+    nested-data-serialization-enabled=false
+    native-execution-enabled=true
+
+  presto-coordinator-config-jvm.config: |
+    -server
+    -Xmx4G
+    -XX:+UseG1GC
+    -XX:G1HeapRegionSize=32M
+    -XX:+UseGCOverheadLimit
+    -XX:+ExplicitGCInvokesConcurrent
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+ExitOnOutOfMemoryError
+    -Djdk.attach.allowAttachSelf=true
+
+  presto-coordinator-config-log.properties: |
+    com.facebook.presto={{ .coordinator.logging_level }}
+
+  presto-coordinator-config-node.properties: |
+    node.environment=production
+    node.id=presto-coordinator
+
+  presto-coordinator-config-split-filter.json: |
+    {{ .split_filter | toJson }}
+
+  presto-worker-catalog-clp.properties: |
+    connector.name=clp
+    {{- with $.Values.clpConfig.archive_output.storage }}
+    {{- if eq .type "s3" }}
+    clp.storage-type=s3
+    clp.s3-auth-provider=clp_package
+    clp.s3-access-key-id={{ .s3_config.aws_authentication.credentials.access_key_id }}
+    clp.s3-end-point=https://{{ .s3_config.bucket }}.s3.{{ .s3_config.region_code }}.amazonaws.com/
+    clp.s3-secret-access-key={{ .s3_config.aws_authentication.credentials.secret_access_key }}
+    {{- end }}{{/* if eq .type "s3" */}}
+    {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
+
+  presto-worker-config-config.properties: |
+    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8080
+    http-server.http.port=8080
+    query-memory-gb={{ .worker.query_memory_gb }}
+    shutdown-onset-sec=1
+    system-memory-gb={{ .worker.system_memory_gb }}
+    register-test-functions=false
+    runtime-metrics-collection-enabled=false
+
+  presto-worker-config-node.properties: |
+    node.environment=production
+    node.location=worker-location
+
+  presto-worker-config-velox.properties: |
+    mutable-config=true
+{{- end }}{{/* with .Values.clpConfig.presto */}}
+{{- end }}{{/* if eq .Values.clpConfig.package.query_engine "presto" */}}

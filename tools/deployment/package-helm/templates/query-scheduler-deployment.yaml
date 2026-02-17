@@ -1,3 +1,4 @@
+{{- if ne .Values.clpConfig.package.query_engine "presto" }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -101,3 +102,4 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+{{- end }}

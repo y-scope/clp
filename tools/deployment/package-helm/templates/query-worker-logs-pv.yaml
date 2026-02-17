@@ -1,3 +1,4 @@
+{{- if ne .Values.clpConfig.package.query_engine "presto" }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "query-worker"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/query_worker" .Values.clpConfig.logs_directory)
 ) }}
+{{- end }}
