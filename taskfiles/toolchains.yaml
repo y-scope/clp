@@ -73,7 +73,7 @@ tasks:
         - "{{.G_RUSTUP_HOME}}/settings.toml"
         - "{{.G_RUSTUP_HOME}}/toolchains"
     sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
