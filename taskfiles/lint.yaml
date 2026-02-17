@@ -382,7 +382,6 @@ tasks:
             - "clp/streaming_compression/zstd/Decompressor.cpp"
             - "clp/streaming_compression/zstd/Decompressor.hpp"
             - "clp/string_utils/string_utils.cpp"
-            - "clp/string_utils/string_utils.hpp"
             - "clp/StringReader.cpp"
             - "clp/StringReader.hpp"
             - "clp/Thread.cpp"
