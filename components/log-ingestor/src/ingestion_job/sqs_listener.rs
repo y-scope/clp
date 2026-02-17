@@ -103,9 +103,29 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
             return Ok(false);
         };
 
+        if messages.is_empty() {
+            return Ok(false);
+        }
+
         let mut object_metadata_to_ingest = Vec::with_capacity(messages.len());
         let mut delete_message_batch_request_entries = Vec::with_capacity(messages.len());
         for (idx, msg) in messages.into_iter().enumerate() {
+            if let Some(receipt_handle) = msg.receipt_handle() {
+                delete_message_batch_request_entries.push(
+                    DeleteMessageBatchRequestEntry::builder()
+                        .id(idx.to_string())
+                        .receipt_handle(receipt_handle)
+                        .build()?,
+                );
+            } else {
+                tracing::warn!(
+                    job_id = ? self.job_id,
+                    task_id = ? self.id,
+                    msg = ? msg,
+                    "Received SQS message without receipt handle."
+                );
+            }
+
             let Some(body) = msg.body.as_ref() else {
                 continue;
             };
@@ -126,37 +146,35 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
                     object_metadata_to_ingest.push(object_metadata);
                 }
             }
-            if let Some(receipt_handle) = msg.receipt_handle() {
-                delete_message_batch_request_entries.push(
-                    DeleteMessageBatchRequestEntry::builder()
-                        .id(idx.to_string())
-                        .receipt_handle(receipt_handle)
-                        .build()?,
-                );
-            }
         }
 
         let ingested = !object_metadata_to_ingest.is_empty();
-        self.state.ingest(&object_metadata_to_ingest).await?;
-        self.sender.send(object_metadata_to_ingest).await?;
+        if ingested {
+            self.state.ingest(&object_metadata_to_ingest).await?;
+            self.sender.send(object_metadata_to_ingest).await?;
+        }
 
-        for failure in self
-            .sqs_client_manager
-            .get()
-            .await?
-            .delete_message_batch()
-            .queue_url(self.config.get().queue_url.as_str())
-            .set_entries(Some(delete_message_batch_request_entries))
-            .send()
-            .await?
-            .failed
-        {
-            tracing::warn!(
-                job_id = ? self.job_id,
-                task_id = ? self.id,
-                error = ? failure,
-                "Failed to delete SQS message."
-            );
+        if !delete_message_batch_request_entries.is_empty() {
+            // This check is necessary since SQS service requires at least one
+            // `DeleteMessageBatchRequestEntry` in the request.
+            for failure in self
+                .sqs_client_manager
+                .get()
+                .await?
+                .delete_message_batch()
+                .queue_url(self.config.get().queue_url.as_str())
+                .set_entries(Some(delete_message_batch_request_entries))
+                .send()
+                .await?
+                .failed
+            {
+                tracing::warn!(
+                    job_id = ? self.job_id,
+                    task_id = ? self.id,
+                    error = ? failure,
+                    "Failed to delete SQS message."
+                );
+            }
         }
 
         Ok(ingested)

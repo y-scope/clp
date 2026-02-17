@@ -34,4 +34,4 @@ tasks:
         AWS_ENDPOINT_URL="http://localhost:{{.LOCALSTACK_PORT}}" \
         CLP_LOG_INGESTOR_S3_BUCKET="{{.LOG_INGESTOR_BUCKET}}" \
         CLP_LOG_INGESTOR_SQS_QUEUE="{{.LOG_INGESTOR_QUEUE}}" \
-        cargo nextest run --nocapture --all --all-features --run-ignored all --release
+        cargo nextest run --all --all-features --run-ignored all --release
