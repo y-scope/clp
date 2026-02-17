@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cstdint>
 #include <cstring>
+#include <map>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -63,6 +64,18 @@ public:
     static bool get_last_uri_component(std::string_view const uri, std::string& name);
 };
 
+/**
+ * Result of sanitizing a buffer, including statistics about what was sanitized.
+ */
+struct BufferSanitizeResult {
+    /// New number of bytes occupied in the buffer after sanitization.
+    size_t new_buf_occupied;
+    /// Map of sanitized characters to their occurrence counts.
+    /// For JSON control char sanitization: key is the actual control character (0x00-0x1F).
+    /// For UTF-8 sanitization: key is 0xFF (sentinel value for all invalid sequences).
+    std::map<char, size_t> sanitized_char_counts;
+};
+
 class StringUtils {
 public:
     /**
@@ -81,6 +94,57 @@ public:
      */
     static void escape_json_string(std::string& destination, std::string_view const source);
 
+    /**
+     * Sanitizes a JSON buffer by escaping unescaped control characters (0x00-0x1F) inside JSON
+     * strings. This is used to fix malformed JSON that contains raw control characters which
+     * would cause parsing errors.
+     *
+     * Only control characters inside JSON string values (between unescaped double quotes) are
+     * escaped. Control characters outside strings are left unchanged as they would cause
+     * structural JSON errors anyway.
+     *
+     * Characters are escaped using unicode escape sequences (e.g., \x00 becomes \u0000).
+     *
+     * @param buf Reference to pointer to the buffer. May be reallocated if expansion is needed.
+     *             The caller's pointer will be updated to point to the new buffer if reallocation
+     *             occurs. The caller is responsible for deleting the buffer.
+     * @param buf_size Current allocated size of the buffer (excluding simdjson padding).
+     *                 This parameter is modified by reference and will be updated if the buffer
+     *                 is reallocated to reflect the new buffer size.
+     * @param buf_occupied Number of bytes currently used in the buffer.
+     * @param simdjson_padding Amount of padding required after buffer content.
+     * @return Result containing new buf_occupied and counts of each sanitized character.
+     */
+    static BufferSanitizeResult sanitize_json_buffer(
+            char*& buf,
+            size_t& buf_size,
+            size_t buf_occupied,
+            size_t simdjson_padding
+    );
+
+    /**
+     * Sanitizes a buffer by replacing invalid UTF-8 sequences with the Unicode replacement
+     * character (U+FFFD). This is used to fix malformed data that contains invalid UTF-8
+     * which would cause JSON parsing errors.
+     *
+     * @param buf Reference to pointer to the buffer. May be reallocated if expansion is needed.
+     *            The caller's pointer will be updated to point to the new buffer if reallocation
+     *            occurs. The caller is responsible for deleting the buffer.
+     * @param buf_size Current allocated size of the buffer (excluding simdjson padding).
+     *                 This parameter is modified by reference and will be updated if the buffer
+     *                 is reallocated to reflect the new buffer size.
+     * @param buf_occupied Number of bytes currently used in the buffer.
+     * @param simdjson_padding Amount of padding required after buffer content.
+     * @return Result containing new buf_occupied and counts of each type of invalid sequence
+     *         replaced.
+     */
+    static BufferSanitizeResult sanitize_utf8_buffer(
+            char*& buf,
+            size_t& buf_size,
+            size_t buf_occupied,
+            size_t simdjson_padding
+    );
+
 private:
     /**
      * Converts a character into its two byte hexadecimal representation.
@@ -88,7 +152,6 @@ private:
      * @return the two byte hexadecimal representation of c as an array of two characters.
      */
     static std::array<char, 2> char_to_hex(char c) {
-        std::array<char, 2> ret;
         auto nibble_to_hex = [](char nibble) -> char {
             if ('\x00' <= nibble && nibble <= '\x09') {
                 return '0' + (nibble - '\x00');
@@ -97,7 +160,7 @@ private:
             }
         };
 
-        return std::array<char, 2>{nibble_to_hex(0x0F & (c >> 4)), nibble_to_hex(0x0f & c)};
+        return {nibble_to_hex(0x0F & (c >> 4)), nibble_to_hex(0x0f & c)};
     }
 
     /**
