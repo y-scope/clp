@@ -158,7 +158,8 @@ auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool;
 template <std::integral integer_t>
 auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
     auto const* raw_begin{raw.data()};
-    auto const* raw_end{std::next(raw_begin, static_cast<std::ptrdiff_t>(raw.size()))};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    auto const* raw_end{raw_begin + raw.size()};
     auto const result{std::from_chars(raw_begin, raw_end, converted)};
 
     return result.ptr == raw_end && std::errc{} == result.ec;
