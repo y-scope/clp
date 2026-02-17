@@ -1,5 +1,5 @@
-#ifndef CLP_STRING_UTILS_STRING_UTILS_HPP
-#define CLP_STRING_UTILS_STRING_UTILS_HPP
+#ifndef CLP_STRING_UTILS_STRINGUTILS_HPP
+#define CLP_STRING_UTILS_STRINGUTILS_HPP
 
 #include <charconv>
 #include <concepts>
@@ -10,8 +10,10 @@
 #include <system_error>
 
 namespace clp::string_utils {
+
 /**
  * Checks if the given character is an alphabet
+ * 
  * @param c
  * @return true if c is an alphabet, false otherwise
  */
@@ -21,6 +23,7 @@ inline auto is_alphabet(char c) -> bool {
 
 /**
  * Checks if character is a decimal (base-10) digit
+ * 
  * @param c
  * @return true if c is a decimal digit, false otherwise
  */
@@ -30,6 +33,7 @@ inline auto is_decimal_digit(char c) -> bool {
 
 /**
  * Searches haystack starting at the given position for one of the given needles
+ * 
  * @param haystack
  * @param needles
  * @param search_start_pos
@@ -45,6 +49,7 @@ auto find_first_of(
 
 /**
  * Replaces the given characters in the given value with the given replacements
+ * 
  * @param characters_to_escape
  * @param replacement_characters
  * @param value
@@ -60,7 +65,7 @@ auto replace_characters(
 ) -> std::string;
 
 /**
- * Replace unescaped instances of `from_char` with `to_char` in `str`.
+ * Replaces unescaped instances of `from_char` with `to_char` in `str`.
  *
  * NOTE: `from_char` and `escape_char` must not be the same character. If they are, the function's
  * behaviour is undefined.
@@ -75,6 +80,7 @@ auto replace_unescaped_char(char escape_char, char from_char, char to_char, std:
 
 /**
  * Converts a string to lowercase
+ * 
  * @param str
  */
 auto to_lower(std::string& str) -> void;
@@ -104,6 +110,7 @@ auto clean_up_wildcard_search_string(std::string_view str) -> std::string;
 
 /**
  * Checks if character is a wildcard
+ * 
  * @param c
  * @return true if c is a wildcard, false otherwise
  */
@@ -147,6 +154,7 @@ auto wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
 
 /**
  * Converts the given string to a 64-bit integer if possible
+ * 
  * @tparam integer_t
  * @param raw
  * @param converted
@@ -166,4 +174,4 @@ auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
 }
 }  // namespace clp::string_utils
 
-#endif  // CLP_STRING_UTILS_STRING_UTILS_HPP
+#endif  // CLP_STRING_UTILS_STRINGUTILS_HPP
