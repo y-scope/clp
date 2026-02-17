@@ -49,7 +49,6 @@ When deploying CLP on Kubernetes using Helm, Presto can be enabled by setting th
        retention_period: null
 
      presto:
-       worker:
        # Split filter config for the Presto CLP connector. For each dataset, add a filter entry.
        # Replace <dataset> with the dataset name (use "default" if you didn't specify one when
        # compressing) and <timestamp-key> with the timestamp key used during compression.
