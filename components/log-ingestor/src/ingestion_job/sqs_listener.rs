@@ -24,7 +24,7 @@ type TaskId = usize;
 /// # Type Parameters
 ///
 /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
-/// * TODO
+/// * [`State`]: The type that implements [`SqsListenerState`] for managing SQS listener states.
 struct Task<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState> {
     sqs_client_manager: SqsClientManager,
     config: ValidatedSqsListenerConfig,
@@ -92,9 +92,12 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
     /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
-    /// * Forwards [`aws_sdk_sqs::operation::delete_message::TODO`]'s return values on failure.
-    /// * TODO
+    /// * Forwards the following `aws_sdk_sqs` methods' return values on failure:
+    ///   * [`DeleteMessageBatchFluentBuilder::send`]
+    ///   * [`DeleteMessageBatchRequestEntryBuilder::build`]
+    /// * Forwards [`SqsListenerState::ingest`]'s return values on failure.
     async fn process_sqs_response(&self, response: ReceiveMessageOutput) -> Result<bool> {
         let Some(messages) = response.messages else {
             return Ok(false);
@@ -232,7 +235,9 @@ impl TaskHandle {
 
 /// Represents a SQS listener job that manages the lifecycle of a SQS listener task.
 ///
-/// TODO
+/// # Type Parameters
+///
+/// * [`State`]: The type that implements [`SqsListenerState`] for managing SQS listener states.
 pub struct SqsListener<State: SqsListenerState> {
     id: Uuid,
     task_handles: Vec<TaskHandle>,
@@ -252,10 +257,6 @@ impl<State: SqsListenerState> SqsListener<State> {
     /// # Returns
     ///
     /// A newly created instance of [`SqsListener`].
-    ///
-    /// # Errors
-    ///
-    /// TODO
     ///
     /// # Panics
     ///

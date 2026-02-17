@@ -16,7 +16,7 @@ use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::S3ScannerSt
 /// # Type Parameters
 ///
 /// * [`S3ClientManager`]: The type of the AWS S3 client manager.
-/// * TODO
+/// * [`State`]: The type that implements [`S3ScannerState`] for managing S3 scanner states.
 struct Task<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState> {
     s3_client_manager: S3ClientManager,
     scanning_interval: Duration,
@@ -96,7 +96,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
     ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
     ///   return values on failure.
     /// * Forwards [`NonEmptyString::new`]'s return values on failure.
-    /// * TODO
+    /// * Forwards [`S3ScannerState::ingest`]'s return values on failure.
+    /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
     pub async fn scan_once(&mut self) -> Result<bool> {
         let client = self.s3_client_manager.get().await?;
         let response = client
@@ -155,7 +156,9 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
 
 /// Represents a S3 scanner job that manages the lifecycle of a S3 scanner task.
 ///
-/// TODO
+/// # Type Parameters
+///
+/// * [`State`]: The type that implements [`S3ScannerState`] for managing S3 scanner states.
 pub struct S3Scanner<State: S3ScannerState> {
     id: Uuid,
     cancel_token: CancellationToken,

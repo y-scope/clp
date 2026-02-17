@@ -198,10 +198,10 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
-    /// * TODO
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
     /// * Forwards [`IngestionJob::shutdown_and_join`]'s return value on failure.
     /// * Forwards [`Listener::shutdown_and_join`]'s return value on failure.
+    /// * Forwards [`IngestionJobState::end`]'s return values on failure.
     pub async fn shutdown_and_remove_job(&self, job_id: Uuid) -> Result<(), Error> {
         let mut job_table = self.inner.job_table.lock().await;
         let job_to_remove = job_table.remove(&job_id);
@@ -246,7 +246,7 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
-    /// * TODO
+    /// * Forwards [`IngestionJobState::start`]'s return values on failure.
     async fn create_s3_ingestion_job<JobCreationCallback>(
         &self,
         ingestion_job_config: BaseConfig,

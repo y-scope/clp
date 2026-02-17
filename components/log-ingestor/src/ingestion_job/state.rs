@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use clp_rust_utils::s3::ObjectMetadata;
 
-/// TODO
+/// An abstract layer for managing ingestion job states.
 #[async_trait]
 pub trait IngestionJobState:
     SqsListenerState + S3ScannerState + Send + Sync + Clone + 'static {
@@ -10,13 +10,13 @@ pub trait IngestionJobState:
     async fn end(&self) -> anyhow::Result<()>;
 }
 
-/// TODO
+/// An abstract layer for managing [`crate::ingestion_job::SqsListener`] states.
 #[async_trait]
 pub trait SqsListenerState: Send + Sync + Clone + 'static {
     async fn ingest(&self, objects: &[ObjectMetadata]) -> anyhow::Result<()>;
 }
 
-/// TODO
+/// An abstract layer for managing [`crate::ingestion_job::S3Scanner`] states.
 #[async_trait]
 pub trait S3ScannerState: Send + Sync + Clone + 'static {
     async fn ingest(
@@ -26,6 +26,7 @@ pub trait S3ScannerState: Send + Sync + Clone + 'static {
     ) -> anyhow::Result<()>;
 }
 
+/// An ingestion job state implementation that does nothing.
 #[derive(Clone, Default)]
 pub struct NoopIngestionJobState {}
 
