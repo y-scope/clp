@@ -91,6 +91,7 @@ auto to_lower(std::string& str) -> void;
  *   <li>Removes escaping from non-wildcard characters</li>
  *   <li>Removes dangling escape character from the end of the string</li>
  * </ul>
+ * 
  * @param str Wildcard search string to clean
  * @return Cleaned wildcard search string
  */
@@ -102,6 +103,7 @@ auto to_lower(std::string& str) -> void;
  *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
  *   <li>Lone dangling `\` is removed from the end of the string</li>
  * </ul>
+ * 
  * @param str
  * @return An unescaped version of `str`.
  */

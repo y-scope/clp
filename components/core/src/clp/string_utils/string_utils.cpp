@@ -14,6 +14,7 @@ namespace {
  * Helper for ``wildcard_match_unsafe_case_sensitive`` to advance the pointer in
  * tame to the next character which matches wild. This method should be inlined
  * for performance.
+ * 
  * @param tame_current
  * @param tame_bookmark
  * @param tame_end
@@ -75,8 +76,8 @@ size_t find_first_of(
         size_t search_start_pos,
         size_t& needle_ix
 ) {
-    size_t haystack_length = haystack.length();
-    size_t needles_length = strlen(needles);
+    size_t haystack_length{haystack.length()};
+    size_t needles_length{strlen(needles)};
     for (size_t i = search_start_pos; i < haystack_length; ++i) {
         for (needle_ix = 0; needle_ix < needles_length; ++needle_ix) {
             if (haystack[i] == needles[needle_ix]) {
@@ -95,9 +96,9 @@ string replace_characters(
         bool escape
 ) {
     string new_value;
-    size_t search_start_pos = 0;
+    size_t search_start_pos{0};
     while (true) {
-        size_t replace_char_ix;
+        size_t replace_char_ix{0};
         size_t char_to_replace_pos
                 = find_first_of(value, characters_to_replace, search_start_pos, replace_char_ix);
         if (string::npos == char_to_replace_pos) {
@@ -156,7 +157,7 @@ bool is_wildcard(char c) {
 string clean_up_wildcard_search_string(string_view str) {
     string cleaned_str;
 
-    bool is_escaped = false;
+    bool is_escaped{false};
     auto str_end = str.cend();
     for (auto current = str.cbegin(); current != str_end;) {
         auto c = *current;
@@ -212,9 +213,9 @@ bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
     } else {
         // We convert to lowercase (rather than uppercase) anticipating that
         // callers use lowercase more frequently, so little will need to change.
-        string lowercase_tame(tame);
+        string lowercase_tame{tame};
         to_lower(lowercase_tame);
-        string lowercase_wild(wild);
+        string lowercase_wild{wild};
         to_lower(lowercase_wild);
         return wildcard_match_unsafe_case_sensitive(lowercase_tame, lowercase_wild);
     }
@@ -236,10 +237,10 @@ bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
 bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
     auto const tame_length = tame.length();
     auto const wild_length = wild.length();
-    char const* tame_current = tame.data();
-    char const* wild_current = wild.data();
-    char const* tame_bookmark = nullptr;
-    char const* wild_bookmark = nullptr;
+    char const* tame_current{tame.data()};
+    char const* wild_current{wild.data()};
+    char const* tame_bookmark{nullptr};
+    char const* wild_bookmark{nullptr};
     char const* tame_end = tame_current + tame_length;
     char const* wild_end = wild_current + wild_length;
 
@@ -252,9 +253,9 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
         }
     }
 
-    char w;
-    char t;
-    bool is_escaped = false;
+    char w{'\0'};
+    char t{'\0'};
+    bool is_escaped{false};
     while (true) {
         w = *wild_current;
         if ('*' == w) {
@@ -283,7 +284,7 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
 
             // Handle a mismatch
             t = *tame_current;
-            if (!((false == is_escaped && '?' == w) || t == w)) {
+            if (false == ((false == is_escaped && '?' == w) || t == w)) {
                 if (nullptr == wild_bookmark) {
                     // No bookmark to return to
                     return false;
