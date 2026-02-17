@@ -83,11 +83,11 @@ data:
     database:
       auto_commit: false
       compress: true
-      host: "{{ include "clp.fullname" . }}-database"
+      host: "{{ include "clp.databaseHost" . }}"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
         spider: {{ .Values.clpConfig.database.names.spider | quote }}
-      port: 3306
+      port: {{ include "clp.databasePort" . | int }}
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
     logs_directory: "/var/log"
@@ -139,12 +139,12 @@ data:
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
-      host: "{{ include "clp.fullname" . }}-queue"
-      port: 5672
+      host: "{{ include "clp.queueHost" . }}"
+      port: {{ include "clp.queuePort" . | int }}
     redis:
       compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database | int }}
-      host: "{{ include "clp.fullname" . }}-redis"
-      port: 6379
+      host: "{{ include "clp.redisHost" . }}"
+      port: {{ include "clp.redisPort" . | int }}
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
     reducer:
       base_port: 14009
@@ -153,8 +153,8 @@ data:
       upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval | int }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
-      host: "{{ include "clp.fullname" . }}-results-cache"
-      port: 27017
+      host: "{{ include "clp.resultsCacheHost" . }}"
+      port: {{ include "clp.resultsCachePort" . | int }}
       {{- if .Values.clpConfig.results_cache.retention_period }}
       retention_period: {{ .Values.clpConfig.results_cache.retention_period | int }}
       {{- else }}
@@ -269,13 +269,13 @@ data:
 
   webui-server-settings.json: |
     {
-      "SqlDbHost": "{{ include "clp.fullname" . }}-database",
-      "SqlDbPort": 3306,
+      "SqlDbHost": "{{ include "clp.databaseHost" . }}",
+      "SqlDbPort": {{ include "clp.databasePort" . | int }},
       "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
       "SqlDbQueryJobsTableName": "query_jobs",
       "SqlDbCompressionJobsTableName": "compression_jobs",
-      "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
-      "MongoDbPort": 27017,
+      "MongoDbHost": "{{ include "clp.resultsCacheHost" . }}",
+      "MongoDbPort": {{ include "clp.resultsCachePort" . | int }},
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
