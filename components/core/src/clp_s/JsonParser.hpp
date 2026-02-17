@@ -256,7 +256,7 @@ private:
      */
     auto store_capture_groups(
             log_surgeon::LogEvent const& event,
-            log_surgeon::Token root_var,
+            log_surgeon::Token& root_var,
             int32_t root_var_node_id,
             ParsedMessage::ClpString& clp_str
     ) -> ystdlib::error_handling::Result<void>;
