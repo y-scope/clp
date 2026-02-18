@@ -1594,9 +1594,79 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                         NodeType::CompositeVar,
                         token_name
                 )};
-                YSTDLIB_ERROR_HANDLING_TRYV(
-                        store_capture_groups(event, token, var_node_id, clp_str)
-                );
+                // YSTDLIB_ERROR_HANDLING_TRYV(
+                //         store_capture_groups(event, token, var_node_id, clp_str)
+                // );
+                {
+                    auto const token_type{token.get_type_ids()->at(0)};
+                    auto const token_name{log_parser.get_id_symbol(token_type)};
+
+                    auto capture_start{
+                            m_current_schema.start_unordered_object(NodeType::CompositeVar)
+                    };
+
+                    m_current_schema.insert_unordered(m_archive_writer->add_node(
+                            var_node_id,
+                            NodeType::VarString,
+                            constants::cFullMatchNodeName
+                    ));
+                    m_current_parsed_message.add_unordered_value(token.to_string_view());
+                    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                            token.to_string_view(),
+                            fmt::format("{}.{}", token_name, constants::cFullMatchNodeName)
+                    ));
+
+                    auto prev_leaf_end_pos{token.get_start_pos()};
+                    for (auto const capture_match :
+                         YSTDLIB_ERROR_HANDLING_TRYX(event.get_capture_matches(token)))
+                    {
+                        auto capture{token.get_sub_token(
+                                capture_match.m_pos.m_start,
+                                capture_match.m_pos.m_end
+                        )};
+                        m_current_schema.insert_unordered(m_archive_writer->add_node(
+                                var_node_id,
+                                NodeType::VarString,
+                                capture_match.m_capture->get_name()
+                        ));
+                        auto capture_full_name{fmt::format(
+                                "{}.{}",
+                                token_name,
+                                capture_match.m_capture->get_name()
+                        )};
+                        m_current_parsed_message.add_unordered_value(capture.to_string_view());
+                        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                                capture.to_string_view(),
+                                capture_full_name
+                        ));
+                        SPDLOG_DEBUG(
+                                "[clpsls]\tcapture name: {} value: {}",
+                                capture_full_name,
+                                capture.to_string_view()
+                        );
+
+                        if (capture_match.m_leaf) {
+                            auto static_text{
+                                    token.get_sub_token(prev_leaf_end_pos, capture.get_start_pos())
+                            };
+                            clp_str.m_logtype.add_static_text(static_text.to_string_view());
+                            clp_str.m_encoded_vars.push_back(
+                                    m_archive_writer->add_dict_var_to_logtype(
+                                            capture.to_string_view(),
+                                            clp_str.m_logtype
+                                    )
+                            );
+                            clp_str.m_var_type_names.emplace_back(capture_full_name);
+                            prev_leaf_end_pos = capture.get_end_pos();
+                        }
+                    }
+                    clp_str.m_logtype.add_static_text(
+                            token.get_sub_token(prev_leaf_end_pos, token.get_end_pos())
+                                    .to_string_view()
+                    );
+
+                    m_current_schema.end_unordered_object(capture_start);
+                }
                 m_current_schema.insert_unordered(var_node_id);
                 break;
             }
