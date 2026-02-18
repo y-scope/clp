@@ -73,8 +73,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
         }
     }
 
-    /// Scans the configured S3 bucket and prefix for new objects and sends their metadata to the
-    /// underlying channel sender.
+    /// Scans the configured S3 bucket and prefix for new objects and ingests their metadata into
+    /// the provided state.
     ///
     /// # Note
     ///
@@ -168,7 +168,7 @@ impl<State: S3ScannerState> S3Scanner<State> {
     /// Creates and spawns a new [`S3Scanner`] backed by a [`Task`].
     ///
     /// This function spawns a [`Task`]. The spawned task will periodically scan the configured S3
-    /// bucket and prefix for new objects and send their metadata to the provided channel sender.
+    /// bucket and prefix for new objects and ingest their metadata into the provided state.
     ///
     /// # Type parameters
     ///

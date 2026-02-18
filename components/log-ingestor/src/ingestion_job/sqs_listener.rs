@@ -37,7 +37,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
     Task<SqsClientManager, State>
 {
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
-    /// extracted metadata is sent to the provided channel sender.
+    /// extracted metadata is ingested into the provided state.
     ///
     /// # Returns
     ///
@@ -77,7 +77,8 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
         }
     }
 
-    /// Processes the SQS response to extract S3 object metadata and send it to the channel sender.
+    /// Processes the SQS response to extract S3 object metadata and ingests it into the provided
+    /// state.
     ///
     /// # NOTE
     ///
@@ -263,7 +264,7 @@ impl<State: SqsListenerState> SqsListener<State> {
     /// Creates and spawns a new [`SqsListener`] backed by a [`Task`].
     ///
     /// This function spawns a series of [`Task`]. Each spawned task will listen to SQS messages,
-    /// extract relevant S3 object metadata, and send the metadata to the provided channel sender.
+    /// extract relevant S3 object metadata, and ingest the metadata into the provided state.
     ///
     /// # Type parameters
     ///

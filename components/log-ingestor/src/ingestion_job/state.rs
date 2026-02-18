@@ -68,7 +68,7 @@ pub trait S3ScannerState: Send + Sync + Clone + 'static {
     ///
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
-    async fn ingest<'object_metadata_lifetime>(
+    async fn ingest(
         &self,
         objects: Vec<ObjectMetadata>,
         last_ingested_key: &str,
@@ -119,7 +119,7 @@ impl S3ScannerState for ZeroFaultToleranceIngestionJobState {
     /// Returns an error if:
     ///
     /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
-    async fn ingest<'object_metadata_lifetime>(
+    async fn ingest(
         &self,
         objects: Vec<ObjectMetadata>,
         _last_ingested_key: &str,
