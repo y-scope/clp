@@ -323,12 +323,21 @@ clpConfig:
     storage_engine: "clp-s"
     query_engine: "presto"
 
+  # Disable the clp-s query pipeline since Presto replaces it.
+  # NOTE: The API server currently depends on the clp-s query pipeline and does not work with
+  # Presto. Keep it enabled if you need the API server; disable it if not.
+  api_server: null
+  query_scheduler: null
+  query_worker: null
+  reducer: null
+
   # Disable results cache retention since the Presto integration doesn't yet support garbage
   # collection of search results.
   results_cache:
     retention_period: null
 
   presto:
+    port: 30889
     coordinator:
       logging_level: "INFO"
       query_max_memory_gb: 1
@@ -386,6 +395,9 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    # Label query nodes
    kubectl label nodes node3 node4 yscope.io/nodeType=query
+
+   # Label Presto nodes (if using Presto as the query engine)
+   kubectl label nodes node5 node6 yscope.io/nodeType=presto
    ```
 
 2. Configure scheduling:
@@ -399,19 +411,27 @@ To run compression workers, query workers, and reducers in separate node pools:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compression
+         yscope.io/nodeType: "compression"
 
    queryWorker:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
 
    reducer:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
+
+   # If using Presto as the query engine, configure prestoWorker instead of
+   # queryWorker and reducer.
+   prestoWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: "presto"
    ```
 
 3. Install:
@@ -441,7 +461,7 @@ To run all worker types in the same node pool:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
        topologySpreadConstraints:
          - maxSkew: 1
            topologyKey: "kubernetes.io/hostname"
@@ -454,13 +474,21 @@ To run all worker types in the same node pool:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
 
    reducer:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
+
+   # If using Presto as the query engine, configure prestoWorker instead of
+   # queryWorker and reducer.
+   prestoWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: "compute"
    ```
 
 3. Install:

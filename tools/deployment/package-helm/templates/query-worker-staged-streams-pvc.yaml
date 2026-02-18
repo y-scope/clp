@@ -1,4 +1,4 @@
-{{- if ne .Values.clpConfig.package.query_engine "presto" }}
+{{- if .Values.clpConfig.query_worker }}
 {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
 {{- include "clp.createPvc" (dict
   "root" .

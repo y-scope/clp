@@ -1,4 +1,4 @@
-{{- if eq .Values.clpConfig.package.query_engine "presto" }}
+{{- if .Values.clpConfig.presto }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -36,7 +36,7 @@ spec:
           imagePullPolicy: "{{ .Values.image.prestoCoordinator.pullPolicy }}"
           ports:
             - name: "presto-coord"
-              containerPort: 8080
+              containerPort: 8889
           volumeMounts:
             - name: "presto-catalog"
               mountPath: "/opt/presto-server/etc/catalog"

@@ -1,4 +1,4 @@
-{{- if eq .Values.clpConfig.package.query_engine "presto" }}
+{{- if .Values.clpConfig.presto }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -31,41 +31,24 @@ spec:
             "name" "presto-coordinator"
           ) | nindent 10 }}
         - name: "setup-configs"
-          image: "busybox:latest"
-          command:
-            - "/bin/sh"
-            - "-c"
-            - |
-              set -e
-              cp /etc/presto-config/presto-worker-config-config.properties /opt/presto-server/etc/config.properties
-              cp /etc/presto-config/presto-worker-config-node.properties /opt/presto-server/etc/node.properties
-
-              # Query coordinator for version and add it to config
-              DISCOVERY_URI="http://{{ include "clp.fullname" . }}-presto-coordinator:8080"
-              VERSION=$(wget -q -O - "${DISCOVERY_URI}/v1/info")
-              PRESTO_VERSION=$(echo "$VERSION" \
-                | sed 's/.*"version":"//' \
-                | sed 's/".*//')
-              echo "presto.version=${PRESTO_VERSION}" >> /opt/presto-server/etc/config.properties
-
-              # Set node identity from hostname
-              HOSTNAME=$(hostname)
-              HOST_IP=$(hostname -i)
-              echo "node.internal-address=${HOST_IP}" >> /opt/presto-server/etc/node.properties
-              echo "node.id=${HOSTNAME}" >> /opt/presto-server/etc/node.properties
+          image: "bitnami/kubectl:latest"
+          command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
           volumeMounts:
             - name: "presto-config"
               mountPath: "/etc/presto-config"
               readOnly: true
             - name: "presto-etc"
               mountPath: "/opt/presto-server/etc"
+            - name: "presto-scripts"
+              mountPath: "/scripts"
+              readOnly: true
       containers:
         - name: "presto-worker"
           image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
           imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
           ports:
             - name: "presto-worker"
-              containerPort: 8080
+              containerPort: 8889
           volumeMounts:
             - name: "presto-catalog"
               mountPath: "/opt/presto-server/etc/catalog"
@@ -103,6 +86,13 @@ spec:
             name: {{ include "clp.fullname" . }}-config
         - name: "presto-etc"
           emptyDir: {}
+        - name: "presto-scripts"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: "presto-worker-setup-configs.sh"
+                path: "presto-worker-setup-configs.sh"
+            defaultMode: 0755
         {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .

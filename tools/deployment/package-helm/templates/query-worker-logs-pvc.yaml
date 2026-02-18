@@ -1,4 +1,4 @@
-{{- if ne .Values.clpConfig.package.query_engine "presto" }}
+{{- if .Values.clpConfig.query_worker }}
 {{- include "clp.createPvc" (dict
   "root" .
   "component_category" "query-worker"

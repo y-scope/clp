@@ -43,12 +43,28 @@ When deploying CLP on Kubernetes using Helm, Presto can be enabled by setting th
      package:
        query_engine: "presto"
 
+     # Disable the clp-s query pipeline since Presto replaces it.
+     # NOTE: The API server currently depends on the clp-s query pipeline and does not work
+     # with Presto. Keep it enabled if you need the API server; disable it if not.
+     api_server: null
+     query_scheduler: null
+     query_worker: null
+     reducer: null
+
      # Disable results cache retention since the Presto integration doesn't yet support
      # garbage collection of search results.
      results_cache:
        retention_period: null
 
      presto:
+       port: 30889
+       coordinator:
+         logging_level: "INFO"
+         query_max_memory_gb: 1
+         query_max_memory_per_node_gb: 1
+       worker:
+         query_memory_gb: 4
+         system_memory_gb: 8
        # Split filter config for the Presto CLP connector. For each dataset, add a filter entry.
        # Replace <dataset> with the dataset name (use "default" if you didn't specify one when
        # compressing) and <timestamp-key> with the timestamp key used during compression.

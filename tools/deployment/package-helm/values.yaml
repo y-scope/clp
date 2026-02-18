@@ -44,7 +44,7 @@ compressionWorker:
   # Controls which nodes run compression workers
   # scheduling:
   #   nodeSelector:
-  #     yscope.io/nodeType: compute
+  #     yscope.io/nodeType: "compression"
   #   tolerations:
   #     - key: "yscope.io/dedicated"
   #       operator: "Equal"
@@ -60,23 +60,7 @@ queryWorker:
   # Controls which nodes run query workers
   # scheduling:
   #   nodeSelector:
-  #     yscope.io/nodeType: compute
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "query"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
-
-prestoWorker:
-  replicas: 1
-  # Controls which nodes run Presto workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: compute
+  #     yscope.io/nodeType: "query"
   #   tolerations:
   #     - key: "yscope.io/dedicated"
   #       operator: "Equal"
@@ -92,11 +76,27 @@ reducer:
   # Controls which nodes run reducers
   # scheduling:
   #   nodeSelector:
-  #     yscope.io/nodeType: compute
+  #     yscope.io/nodeType: "query"
   #   tolerations:
   #     - key: "yscope.io/dedicated"
   #       operator: "Equal"
   #       value: "reducer"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+prestoWorker:
+  replicas: 1
+  # Controls which nodes run Presto workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: "presto"
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "presto"
   #       effect: "NoSchedule"
   #   topologySpreadConstraints:
   #     - maxSkew: 1
@@ -153,10 +153,6 @@ clpConfig:
     query_backend_database: 0
     compression_backend_database: 1
 
-  reducer:
-    logging_level: "INFO"
-    upsert_interval: 100  # milliseconds
-
   results_cache:
     port: 30017
     db_name: "clp-query-results"
@@ -171,6 +167,10 @@ clpConfig:
   query_worker:
     logging_level: "INFO"
 
+  reducer:
+    logging_level: "INFO"
+    upsert_interval: 100  # milliseconds
+
   webui:
     port: 30000
     results_metadata_collection_name: "results-metadata"
@@ -180,18 +180,19 @@ clpConfig:
   #   port: 30800
   #   logging_level: "INFO"
 
-  # Presto query engine config. Only used when package.query_engine is "presto".
-  presto:
-    coordinator:
-      logging_level: "INFO"
-      query_max_memory_gb: 1
-      query_max_memory_per_node_gb: 1
-    worker:
-      query_memory_gb: 4
-      system_memory_gb: 8
-    # Split filter config for Presto CLP connector.
-    # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
-    split_filter: {}
+  # Presto query engine config. Uncomment to enable Presto deployments.
+  presto: null
+  #   port: 30889
+  #   coordinator:
+  #     logging_level: "INFO"
+  #     query_max_memory_gb: 1
+  #     query_max_memory_per_node_gb: 1
+  #   worker:
+  #     query_memory_gb: 4
+  #     system_memory_gb: 8
+  #   # Split filter config for Presto CLP connector.
+  #   # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+  #   split_filter: {}
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:

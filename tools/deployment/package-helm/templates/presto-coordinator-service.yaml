@@ -1,4 +1,4 @@
-{{- if eq .Values.clpConfig.package.query_engine "presto" }}
+{{- if .Values.clpConfig.presto }}
 apiVersion: "v1"
 kind: "Service"
 metadata:
@@ -7,11 +7,12 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "presto-coordinator"
 spec:
-  clusterIP: "None"
+  type: "NodePort"
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "presto-coordinator"
   ports:
-    - port: 8080
+    - port: 8889
       targetPort: "presto-coord"
+      nodePort: {{ .Values.clpConfig.presto.port }}
 {{- end }}

@@ -129,15 +129,18 @@ data:
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
-      host: "{{ include "clp.fullname" . }}-query-scheduler"
-      jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
-      logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
-      num_archives_to_search_per_sub_job: {{
-        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job | int }}
+      host: "{{ include "clp.fullname" $ }}-query-scheduler"
+      jobs_poll_delay: {{ .jobs_poll_delay }}
+      logging_level: {{ .logging_level | quote }}
+      num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
       port: 7000
+    {{- end }}
+    {{- with .Values.clpConfig.query_worker }}
     query_worker:
-      logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
+      logging_level: {{ .logging_level | quote }}
+    {{- end }}
     queue:
       host: "{{ include "clp.fullname" . }}-queue"
       port: 5672
@@ -146,11 +149,13 @@ data:
       host: "{{ include "clp.fullname" . }}-redis"
       port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
+    {{- with .Values.clpConfig.reducer }}
     reducer:
       base_port: 14009
-      host: "{{ include "clp.fullname" . }}-reducer"
-      logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
-      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval | int }}
+      host: "{{ include "clp.fullname" $ }}-reducer"
+      logging_level: {{ .logging_level | quote }}
+      upsert_interval: {{ .upsert_interval | int }}
+    {{- end }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: "{{ include "clp.fullname" . }}-results-cache"
@@ -219,10 +224,10 @@ data:
     {{- else }}
     mcp_server: null
     {{- end }}
-    {{- if eq .Values.clpConfig.package.query_engine "presto" }}
+    {{- if .Values.clpConfig.presto }}
     presto:
       host: "{{ include "clp.fullname" . }}-presto-coordinator"
-      port: 8080
+      port: 8889
     {{- else }}
     presto: null
     {{- end }}
@@ -328,16 +333,15 @@ data:
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
-      {{- if eq .Values.clpConfig.package.query_engine "presto" }}
+      {{- if .Values.clpConfig.presto }}
       "PrestoHost": "{{ include "clp.fullname" . }}-presto-coordinator",
-      "PrestoPort": 8080
+      "PrestoPort": 8889
       {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
       {{- end }}
     }
 
-{{- if eq .Values.clpConfig.package.query_engine "presto" }}
 {{- with .Values.clpConfig.presto }}
   presto-coordinator-catalog-clp.properties: |
     connector.name=clp
@@ -354,11 +358,11 @@ data:
   presto-coordinator-config-config.properties: |
     coordinator=true
     node-scheduler.include-coordinator=false
-    http-server.http.port=8080
+    http-server.http.port=8889
     query.max-memory={{ .coordinator.query_max_memory_gb }}GB
     query.max-memory-per-node={{ .coordinator.query_max_memory_per_node_gb }}GB
     discovery-server.enabled=true
-    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8080
+    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8889
     optimizer.optimize-hash-generation=false
     regex-library=RE2J
     use-alternative-function-signatures=true
@@ -400,8 +404,8 @@ data:
     {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
 
   presto-worker-config-config.properties: |
-    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8080
-    http-server.http.port=8080
+    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8889
+    http-server.http.port=8889
     query-memory-gb={{ .worker.query_memory_gb }}
     shutdown-onset-sec=1
     system-memory-gb={{ .worker.system_memory_gb }}
@@ -414,5 +418,23 @@ data:
 
   presto-worker-config-velox.properties: |
     mutable-config=true
+
+  presto-worker-setup-configs.sh: |
+    #!/bin/sh
+    set -e
+
+    CONFIG_TEMPLATE_DIR="/etc/presto-config"
+    PRESTO_CONFIG_DIR="/opt/presto-server/etc"
+
+    cp "${CONFIG_TEMPLATE_DIR}/presto-worker-config-config.properties" "${PRESTO_CONFIG_DIR}/config.properties"
+    cp "${CONFIG_TEMPLATE_DIR}/presto-worker-config-node.properties" "${PRESTO_CONFIG_DIR}/node.properties"
+
+    # Query coordinator for version and append to config
+    DISCOVERY_URI="http://{{ include "clp.fullname" $ }}-presto-coordinator:8889"
+    PRESTO_VERSION=$(wget -q -O - "${DISCOVERY_URI}/v1/info" | jq -r '.version')
+    echo "presto.version=${PRESTO_VERSION}" >> "${PRESTO_CONFIG_DIR}/config.properties"
+
+    # Set node identity from hostname
+    echo "node.internal-address=$(hostname -i)" >> "${PRESTO_CONFIG_DIR}/node.properties"
+    echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
 {{- end }}{{/* with .Values.clpConfig.presto */}}
-{{- end }}{{/* if eq .Values.clpConfig.package.query_engine "presto" */}}
