@@ -294,7 +294,10 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         return std::errc::operation_not_permitted;
     }
 
-    auto tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
+    encoded_tag_t tag{};
+    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
+        return ir_error_code_to_errc(err);
+    }
 
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
     if (false == optional_ir_unit_type.has_value()) {

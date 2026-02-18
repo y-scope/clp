@@ -12,7 +12,6 @@
 #include "../EncodedTextAst.hpp"
 #include "../StringBlob.hpp"
 #include "byteswap.hpp"
-#include "IrErrorCode.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
 
@@ -590,13 +589,11 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     return IRErrorCode_Success;
 }
 
-auto deserialize_tag(ReaderInterface& reader)
-        -> ystdlib::error_handling::Result<encoded_tag_t, IrErrorCode> {
-    encoded_tag_t tag{};
+IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag) {
     if (ErrorCode_Success != reader.try_read_numeric_value(tag)) {
-        return IrErrorCode{IrErrorCodeEnum::DecodingMethodFailure};
+        return IRErrorCode_Incomplete_IR;
     }
-    return tag;
+    return IRErrorCode_Success;
 }
 
 IRErrorCode deserialize_preamble(
@@ -676,13 +673,13 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
     return IRProtocolErrorCode::Unsupported;
 }
 
-auto deserialize_utc_offset_change(ReaderInterface& reader)
-        -> ystdlib::error_handling::Result<UtcOffset, IrErrorCode> {
+IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset) {
     int64_t serialized_utc_offset{};
     if (false == deserialize_int(reader, serialized_utc_offset)) {
-        return IrErrorCode{IrErrorCodeEnum::DecodingMethodFailure};
+        return IRErrorCode_Incomplete_IR;
     }
-    return UtcOffset{serialized_utc_offset};
+    utc_offset = UtcOffset{serialized_utc_offset};
+    return IRErrorCode_Success;
 }
 
 namespace four_byte_encoding {

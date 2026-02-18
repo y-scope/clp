@@ -14,7 +14,6 @@
 
 #include "../BufferedReader.hpp"
 #include "../ffi/ir_stream/decoding_methods.hpp"
-#include "../ffi/ir_stream/IrErrorCode.hpp"
 #include "../ir/types.hpp"
 #include "../ir/utils.hpp"
 #include "../LogSurgeonReader.hpp"
@@ -547,8 +546,8 @@ std::error_code FileCompressor::compress_ir_stream_by_encoding(
     while (true) {
         auto result = log_event_deserializer.deserialize_log_event();
         if (result.has_error()) {
-            auto const error = result.error();
-            if (ffi::ir_stream::IrErrorCodeEnum::EndOfStream != error.get_error()) {
+            auto error = result.error();
+            if (std::errc::no_message != error) {
                 error_code = error;
             }
             break;
