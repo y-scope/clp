@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -599,10 +598,12 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     REQUIRE(all_passed_current_implementation == true);
 
     if (all_passed_current_implementation) {
-        cout << "Passed performance test in " << (duration_cast<std::chrono::milliseconds>(time_span_current_implementation).count())
+        cout << "Passed performance test in "
+             << (duration_cast<std::chrono::milliseconds>(time_span_current_implementation).count())
              << " milliseconds." << '\n';
     } else {
-        cout << "Failed performance test in " << (duration_cast<std::chrono::milliseconds>(time_span_current_implementation).count())
+        cout << "Failed performance test in "
+             << (duration_cast<std::chrono::milliseconds>(time_span_current_implementation).count())
              << " milliseconds." << '\n';
     }
 }

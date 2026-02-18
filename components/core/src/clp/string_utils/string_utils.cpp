@@ -14,7 +14,7 @@ namespace {
  * Helper for ``wildcard_match_unsafe_case_sensitive`` to advance the pointer in
  * tame to the next character which matches wild. This method should be inlined
  * for performance.
- * 
+ *
  * @param tame_current
  * @param tame_bookmark
  * @param tame_end
@@ -34,7 +34,7 @@ namespace {
         char const*& tame_bookmark,
         char const* tame_end,
         char const*& wild_current
-) -> bool{
+) -> bool {
     auto w = *wild_current;
     if ('?' != w) {
         // No need to check for '*' since the caller ensures wild doesn't
@@ -107,7 +107,7 @@ namespace clp::string_utils {
         if (string::npos == char_to_replace_pos) {
             new_value.append(value, search_start_pos);
             break;
-        } 
+        }
         new_value.append(value, search_start_pos, char_to_replace_pos - search_start_pos);
         if (escape) {
             new_value += "\\";
@@ -149,7 +149,7 @@ void to_lower(string& str) {
 
 /**
  * Checks if the character is a wildcard.
- * 
+ *
  * @param c
  * @return true if '?' or '*', false otherwise.
  */
@@ -157,12 +157,12 @@ void to_lower(string& str) {
     return '?' == c || '*' == c;
 }
 
-[[nodiscard]] auto clean_up_wildcard_search_string(string_view str) -> string{
+[[nodiscard]] auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
     bool is_escaped{false};
-    const auto *const str_end = str.cend();
-    for (const auto *current = str.cbegin(); current != str_end;) {
+    auto const* const str_end = str.cend();
+    for (auto const* current = str.cbegin(); current != str_end;) {
         auto c = *current;
         if (is_escaped) {
             is_escaped = false;
@@ -181,7 +181,7 @@ void to_lower(string& str) {
             // Skip over all '*' to find the next non-'*'
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-            while (current != str_end && '*' == *current){
+            while (current != str_end && '*' == *current) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++current;
             }
@@ -215,7 +215,8 @@ void to_lower(string& str) {
     return unescaped_str;
 }
 
-[[nodiscard]] auto wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) -> bool {
+[[nodiscard]] auto
+wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) -> bool {
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
     }
@@ -241,7 +242,8 @@ void to_lower(string& str) {
  * 3. checks if the two match. If not, the search repeats with the next group in
  *    tame.
  */
-[[nodiscard]] auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) -> bool {
+[[nodiscard]] auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild)
+        -> bool {
     auto const tame_length = tame.length();
     auto const wild_length = wild.length();
     char const* tame_current{tame.data()};
@@ -256,7 +258,7 @@ void to_lower(string& str) {
     // Handle wild or tame being empty
     if (0 == wild_length) {
         return 0 == tame_length;
-    } 
+    }
     if (0 == tame_length) {
         return "*" == wild;
     }
@@ -326,22 +328,17 @@ void to_lower(string& str) {
             return (wild_end == wild_current
                     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     || ('*' == *wild_current && (wild_current + 1) == wild_end));
-        } 
+        }
         if (wild_end == wild_current) {
             if (nullptr == wild_bookmark) {
                 // No bookmark to return to
                 return false;
-            } 
+            }
             wild_current = wild_bookmark;
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             tame_current = tame_bookmark + 1;
             if (false
-                == advance_tame_to_next_match(
-                        tame_current,
-                        tame_bookmark,
-                        tame_end,
-                        wild_current
-                ))
+                == advance_tame_to_next_match(tame_current, tame_bookmark, tame_end, wild_current))
             {
                 return false;
             }

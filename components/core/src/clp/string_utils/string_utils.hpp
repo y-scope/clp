@@ -9,10 +9,9 @@
 #include <system_error>
 
 namespace clp::string_utils {
-
 /**
  * Checks if the given character is an alphabet
- * 
+ *
  * @param c
  * @return true if c is an alphabet, false otherwise
  */
@@ -48,7 +47,7 @@ namespace clp::string_utils {
 
 /**
  * Replaces the given characters in the given value with the given replacements
- * 
+ *
  * @param characters_to_replace The characters to replace
  * @param replacement_characters
  * @param value
@@ -79,7 +78,7 @@ auto replace_unescaped_char(char escape_char, char from_char, char to_char, std:
 
 /**
  * Converts a string to lowercase
- * 
+ *
  * @param str
  */
 auto to_lower(std::string& str) -> void;
@@ -91,7 +90,7 @@ auto to_lower(std::string& str) -> void;
  *   <li>Removes escaping from non-wildcard characters</li>
  *   <li>Removes dangling escape character from the end of the string</li>
  * </ul>
- * 
+ *
  * @param str Wildcard search string to clean
  * @return Cleaned wildcard search string
  */
@@ -103,7 +102,7 @@ auto to_lower(std::string& str) -> void;
  *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
  *   <li>Lone dangling `\` is removed from the end of the string</li>
  * </ul>
- * 
+ *
  * @param str
  * @return An unescaped version of `str`.
  */
@@ -111,7 +110,7 @@ auto to_lower(std::string& str) -> void;
 
 /**
  * Checks if character is a wildcard
- * 
+ *
  * @param c
  * @return true if c is a wildcard, false otherwise
  */
@@ -151,11 +150,12 @@ auto to_lower(std::string& str) -> void;
  * @param wild The wildcard string
  * @return Whether the two strings match
  */
-[[nodiscard]] auto wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_view wild) -> bool;
+[[nodiscard]] auto
+wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_view wild) -> bool;
 
 /**
  * Converts the given string to a 64-bit integer if possible
- * 
+ *
  * @tparam integer_t
  * @param raw
  * @param converted
