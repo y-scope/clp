@@ -386,8 +386,9 @@ To narrow your search to a specific time range:
   * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
 * Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
 
-To search within specific datasets, add `--datasets <dataset1> [<dataset2> ...]`. If not specified,
-the `default` dataset will be searched.
+To search within specific datasets, add `--dataset <name>` for each dataset. This flag can be
+specified multiple times, e.g. `--dataset ds1 --dataset ds2`. If not specified, the `default` dataset
+will be searched.
 
 To perform case-insensitive searches, add the `--ignore-case` flag.
 

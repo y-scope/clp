@@ -51,11 +51,10 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
-        "--datasets",
-        type=str,
-        nargs="+",
+        "--dataset",
+        action="append",
         default=None,
-        help="The datasets that the archives belong to.",
+        help="A dataset to search. Can be specified multiple times.",
     )
     args_parser.add_argument(
         "--begin-time",
@@ -114,7 +113,7 @@ def main(argv):
         )
         return -1
 
-    datasets = parsed_args.datasets
+    datasets = parsed_args.dataset
     if StorageEngine.CLP_S == storage_engine:
         datasets = [CLP_DEFAULT_DATASET_NAME] if datasets is None else datasets
         try:
@@ -155,8 +154,9 @@ def main(argv):
     if parsed_args.verbose:
         search_cmd.append("--verbose")
     if datasets is not None:
-        search_cmd.append("--datasets")
-        search_cmd.extend(datasets)
+        for ds in datasets:
+            search_cmd.append("--dataset")
+            search_cmd.append(ds)
     if parsed_args.begin_time is not None:
         search_cmd.append("--begin-time")
         search_cmd.append(str(parsed_args.begin_time))

@@ -234,11 +234,10 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
-        "--datasets",
-        type=str,
-        nargs="+",
+        "--dataset",
+        action="append",
         default=None,
-        help="The datasets that the archives belong to.",
+        help="A dataset to search. Can be specified multiple times.",
     )
     args_parser.add_argument(
         "--begin-time",
@@ -298,7 +297,7 @@ def main(argv):
         return -1
 
     database_config: Database = clp_config.database
-    datasets = parsed_args.datasets
+    datasets = parsed_args.dataset
     if datasets is not None:
         max_datasets_per_query = clp_config.query_scheduler.max_datasets_per_query
         if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
