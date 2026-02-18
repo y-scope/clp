@@ -164,7 +164,7 @@ impl IngestionJobManagerState {
             )));
         }
         let sqs_client_manager = SqsClientWrapper::create(
-            config.get().region.as_ref(),
+            config.get().base.region.as_ref(),
             &self.inner.aws_authentication
         )
         .await;
