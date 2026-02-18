@@ -168,7 +168,7 @@ async fn run_sqs_listener_test(
         &SqsClientWrapper::from(sqs_client),
         &ValidatedSqsListenerConfig::validate_and_create(sqs_listener_config)
             .expect("invalid SQS listener config"),
-        ZeroFaultToleranceIngestionJobState::new(sender.clone()),
+        ZeroFaultToleranceIngestionJobState::new(sender),
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
