@@ -24,7 +24,7 @@ using std::string;
 using std::vector;
 
 TEST_CASE("to_lower", "[to_lower]") {
-    string str = "test123TEST";
+    string str{"test123TEST"};
     clp::string_utils::to_lower(str);
     REQUIRE(str == "test123test");
 }
@@ -371,7 +371,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         // The case insensitive implementation is exactly the same as case sensitive except it
         // automatically adjust the inputs to lower case when needed before doing comparison. It is
         // rarely used due to lower performance
-        const bool is_case_sensitive = false;
+        bool const is_case_sensitive{false};
         GIVEN("All lower case tame and all upper case wild") {
             tame_string = "abcde", wild_string = "A?C*";
             REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive) == true);
@@ -527,7 +527,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         }
 
         GIVEN("A case-insensitive algorithm test") {
-            const bool is_case_sensitive = false;
+            bool const is_case_sensitive{false};
             all_passed &= wildcard_match_unsafe("mississippi", "*issip*PI", is_case_sensitive);
             REQUIRE(all_passed == true);
         }
@@ -544,10 +544,10 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     string tame_str;
     string wild_str;
 
-    int const n_reps = 1'000'000;
+    int const n_reps{1'000'000};
     int test_reps{0};
-    bool all_passed_current_implementation = true;
-    const bool all_passed_next_best_implementation = true;
+    bool all_passed_current_implementation{true};
+    bool const all_passed_next_best_implementation{true};
 
     /***********************************************************************************************
      * Inputs Begin
@@ -576,7 +576,7 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
         }
     }
     t2 = high_resolution_clock::now();
-    const duration<double> time_span_current_implementation = t2 - t1;
+    duration<double> const time_span_current_implementation = t2 - t1;
 
     // Profile next best implementation
     test_reps = n_reps;
@@ -589,7 +589,7 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
         }
     }
     t2 = high_resolution_clock::now();
-    const duration<double> time_span_next_best_implementation = t2 - t1;
+    duration<double> const time_span_next_best_implementation = t2 - t1;
     REQUIRE(all_passed_current_implementation == true);
 
     if (all_passed_current_implementation) {

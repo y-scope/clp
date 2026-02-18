@@ -78,8 +78,8 @@ namespace clp::string_utils {
         size_t search_start_pos,
         size_t& needle_ix
 ) -> size_t {
-    const size_t haystack_length{haystack.length()};
-    const size_t needles_length{strlen(needles)};
+    size_t const haystack_length{haystack.length()};
+    size_t const needles_length{strlen(needles)};
     for (size_t i = search_start_pos; i < haystack_length; ++i) {
         for (needle_ix = 0; needle_ix < needles_length; ++needle_ix) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -102,7 +102,7 @@ namespace clp::string_utils {
     size_t search_start_pos{0};
     while (true) {
         size_t replace_char_ix{0};
-        const size_t char_to_replace_pos
+        size_t const char_to_replace_pos
                 = find_first_of(value, characters_to_replace, search_start_pos, replace_char_ix);
         if (string::npos == char_to_replace_pos) {
             new_value.append(value, search_start_pos);
