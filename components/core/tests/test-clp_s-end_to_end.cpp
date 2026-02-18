@@ -37,6 +37,7 @@ constexpr std::string_view cTestEndToEndValidFormattedFloatInputFile{
 constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
         "test_invalid_formatted_float.jsonl"
 };
+constexpr std::string_view cTestEndToEndTimestampInputFile{"test_timestamp.jsonl"};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
@@ -326,6 +327,39 @@ TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end
     auto extracted_json_path = extract();
     literallyCompare(
             get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
+            extracted_json_path
+    );
+}
+
+TEST_CASE("clp-s-compress-extract-timestamps", "[clp-s][end-to-end]") {
+    constexpr std::string_view cTimestampColumn{"timestamp"};
+    auto single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestEndToEndArchiveDirectory},
+             std::string{cTestEndToEndOutputDirectory},
+             std::string{cTestEndToEndOutputSortedJson},
+             std::string{cTestEndToEndExpectedOutputSortedFile}}
+    };
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndTimestampInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    std::string{cTimestampColumn},
+                    true,
+                    single_file_archive,
+                    false
+            )
+    );
+    validate_archive_header();
+
+    std::set<clp_s::NodeType> const expected_matching_types{clp_s::NodeType::Timestamp};
+    check_all_leaf_nodes_match_types(expected_matching_types);
+
+    auto extracted_json_path = extract();
+    literallyCompare(
+            get_test_input_local_path(cTestEndToEndTimestampInputFile),
             extracted_json_path
     );
 }

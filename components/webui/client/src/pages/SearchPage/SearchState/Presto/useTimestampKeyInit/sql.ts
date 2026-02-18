@@ -13,10 +13,11 @@ enum CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES {
 }
 
 /**
- * Matching the `NodeType::DateString` value in
+ * Matching the `NodeType::DeprecatedDateString` and `NodeType::Timestamp` values in
  * `clp/components/core/src/clp_s/SchemaTree.hpp`.
  */
-const TIMESTAMP_TYPE = 8;
+const DEPRECATED_TIMESTAMP_TYPE = 8;
+const TIMESTAMP_TYPE = 14;
 
 interface TimestampColumnItem {
     [CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.NAME]: string;
@@ -32,7 +33,8 @@ const buildTimestampColumnsSql = (datasetName: string): string => `
     SELECT DISTINCT
         ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.NAME}
     FROM ${settings.SqlDbClpTablePrefix}${datasetName}_${SqlTableSuffix.COLUMN_METADATA}
-    WHERE ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.TYPE} = ${TIMESTAMP_TYPE}
+    WHERE ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.TYPE} IN
+    (${TIMESTAMP_TYPE}, ${DEPRECATED_TIMESTAMP_TYPE})
     ORDER BY ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.NAME};
 `;
 
