@@ -29,7 +29,7 @@ namespace {
         char const*& wild_current
 ) -> bool;
 
-[[nodiscard]] inline auto advance_tame_to_next_match(
+inline auto advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
@@ -72,7 +72,7 @@ namespace {
 }  // namespace
 
 namespace clp::string_utils {
-[[nodiscard]] auto find_first_of(
+auto find_first_of(
         string const& haystack,
         char const* needles,
         size_t search_start_pos,
@@ -92,7 +92,7 @@ namespace clp::string_utils {
     return string::npos;
 }
 
-[[nodiscard]] auto replace_characters(
+auto replace_characters(
         char const* characters_to_replace,
         char const* replacement_characters,
         string const& value,
@@ -119,7 +119,7 @@ namespace clp::string_utils {
     return new_value;
 }
 
-[[nodiscard]] auto replace_unescaped_char(
+auto replace_unescaped_char(
         char const escape_char,
         char const from_char,
         char const to_char,
@@ -153,11 +153,11 @@ void to_lower(string& str) {
  * @param c
  * @return true if '?' or '*', false otherwise.
  */
-[[nodiscard]] auto is_wildcard(char c) -> bool {
+auto is_wildcard(char c) -> bool {
     return '?' == c || '*' == c;
 }
 
-[[nodiscard]] auto clean_up_wildcard_search_string(string_view str) -> string {
+auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
     bool is_escaped{false};
@@ -199,7 +199,7 @@ void to_lower(string& str) {
     return cleaned_str;
 }
 
-[[nodiscard]] auto unescape_string(std::string_view str) -> std::string {
+auto unescape_string(std::string_view str) -> std::string {
     std::string unescaped_str;
     bool escaped{false};
     for (auto const c : str) {
@@ -215,8 +215,7 @@ void to_lower(string& str) {
     return unescaped_str;
 }
 
-[[nodiscard]] auto
-wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) -> bool {
+auto wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) -> bool {
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
     }
@@ -242,8 +241,7 @@ wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_ma
  * 3. checks if the two match. If not, the search repeats with the next group in
  *    tame.
  */
-[[nodiscard]] auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild)
-        -> bool {
+auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) -> bool {
     auto const tame_length = tame.length();
     auto const wild_length = wild.length();
     char const* tame_current{tame.data()};
