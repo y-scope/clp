@@ -1,10 +1,10 @@
 #include <chrono>
-#include <cstdint> 
+#include <cstdint>
 #include <iostream>
 #include <limits>
-#include <string>   
-#include <utility>  
-#include <vector>   
+#include <string>
+#include <utility>
+#include <vector>
 
 
 #include <boost/foreach.hpp>
