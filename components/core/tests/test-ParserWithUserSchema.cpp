@@ -83,6 +83,9 @@ auto run_clp_compress(
             input_path_str.data(),
             nullptr
     };
+    // `clp::clp::run` registers a logger for `spdlog` that persists across runs. `spdlog` will
+    // error if a logger with the same name already exists. `spdlog::drop_all` clears all loggers,
+    // ensuring `clp::clp::run` can safely create a fresh logger for each new call.
     spdlog::drop_all();
     return clp::clp::run(static_cast<int>(argv.size() - 1), argv.data());
 }
