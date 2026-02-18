@@ -1,5 +1,11 @@
+#include <chrono>
+#include <cstdint> 
 #include <iostream>
 #include <limits>
+#include <string>   
+#include <utility>  
+#include <vector>   
+
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
