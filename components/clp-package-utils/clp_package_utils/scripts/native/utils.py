@@ -88,9 +88,9 @@ def validate_datasets_exist(db_config: Database, datasets: list[str]) -> None:
         closing(db_conn.cursor(dictionary=True)) as db_cursor,
     ):
         existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
-        for dataset in datasets:
-            if dataset not in existing_datasets:
-                raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+        missing = [ds for ds in datasets if ds not in existing_datasets]
+        if missing:
+            raise ValueError(f"Dataset(s) {missing} don't exist.")
 
 
 def wait_for_query_job(sql_adapter: SqlAdapter, job_id: int) -> QueryJobStatus:
