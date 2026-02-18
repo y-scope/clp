@@ -175,7 +175,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.model_validate(job_config)
         self._archive_id = self.__job_config.archive_id
-        extraction_dataset = self.__job_config.datasets[0] if self.__job_config.datasets else None
+        extraction_dataset = self.__job_config.datasets[0] if self.__job_config.datasets is not None else None
         if not archive_exists(db_conn, table_prefix, extraction_dataset, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
