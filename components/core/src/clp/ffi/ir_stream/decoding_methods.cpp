@@ -590,12 +590,13 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     return IRErrorCode_Success;
 }
 
-auto deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag)
-        -> ystdlib::error_handling::Result<void, IrErrorCode> {
+auto deserialize_tag(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<encoded_tag_t, IrErrorCode> {
+    encoded_tag_t tag{};
     if (ErrorCode_Success != reader.try_read_numeric_value(tag)) {
-        return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+        return IrErrorCode{IrErrorCodeEnum::DecodingMethodFailure};
     }
-    return ystdlib::error_handling::success();
+    return tag;
 }
 
 IRErrorCode deserialize_preamble(
@@ -675,14 +676,13 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
     return IRProtocolErrorCode::Unsupported;
 }
 
-auto deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset)
-        -> ystdlib::error_handling::Result<void, IrErrorCode> {
+auto deserialize_utc_offset_change(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<UtcOffset, IrErrorCode> {
     int64_t serialized_utc_offset{};
     if (false == deserialize_int(reader, serialized_utc_offset)) {
-        return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+        return IrErrorCode{IrErrorCodeEnum::DecodingMethodFailure};
     }
-    utc_offset = UtcOffset{serialized_utc_offset};
-    return ystdlib::error_handling::success();
+    return UtcOffset{serialized_utc_offset};
 }
 
 namespace four_byte_encoding {

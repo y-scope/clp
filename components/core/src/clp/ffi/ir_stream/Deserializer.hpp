@@ -102,14 +102,13 @@ public:
      *
      * NOTE: If the deserialized IR unit is `IrUnitType::LogEvent` and the query handler is not
      * `search::EmptyQueryHandler`, `handle_log_event` will only be invoked if the query handler
-
      * returns `search::AstEvaluationResult::True`.
      *
      * @param reader
      * @return Forwards `deserialize_tag`s return values if no tag bytes can be read to determine
      * the next IR unit type.
-     * @return IrErrorCodeEnum::CorruptedIR if the IR unit type is not supported.
-     * @return IrErrorCodeEnum::EndOfStream if the deserializer already reached the end of
+     * @return std::errc::protocol_not_supported if the IR unit type is not supported.
+     * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in a previous call.
      * @return IrUnitType::LogEvent if a log event IR unit is deserialized, or an error code
      * indicating the failure:
@@ -127,7 +126,7 @@ public:
      *   handler on unit handling failure.
      * - Forwards `search::QueryHandler::update_partially_resolved_columns`'s return values on
      *   failure, if `QueryHandlerType` is not `search::EmptyQueryHandler`.
-     * - IrErrorCodeEnum::CorruptedIR if the deserialized schema tree node already exists in the
+     * - std::errc::protocol_error if the deserialized schema tree node already exists in the
      *   schema tree.
      * @return IrUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
      * error code indicating the failure:
@@ -139,6 +138,7 @@ public:
      * indicating the failure:
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
+     * @return std::errc::protocol_not_supported for an unhandled IR unit type (default case).
      */
     [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<IrUnitType>;
@@ -176,11 +176,11 @@ private:
      * @param ir_unit_handler
      * @param query_handler
      * @return A result containing the deserializer or an error code indicating the failure:
-     * - IrErrorCodeEnum::IncompleteStream if the IR stream is truncated
-     * - IrErrorCodeEnum::CorruptedIR if the IR stream is corrupted
-     * - IrErrorCodeEnum::UnsupportedFormat if the IR stream contains an unsupported metadata
-     *   format, the IR stream's version is unsupported, or the user-defined metadata is not a
-     *   JSON object.
+     * - std::errc::result_out_of_range if the IR stream is truncated
+     * - std::errc::protocol_error if the IR stream is corrupted
+     * - std::errc::protocol_not_supported if either:
+     *   - the IR stream contains an unsupported metadata format;
+     *   - the IR stream's version is unsupported;
      */
     [[nodiscard]] static auto create_generic(
             ReaderInterface& reader,
@@ -255,7 +255,7 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
     }
 
     if (cProtocol::Metadata::EncodingJson != metadata_type) {
-        return IrErrorCode{IrErrorCodeEnum::UnsupportedFormat};
+        return std::errc::protocol_not_supported;
     }
 
     auto metadata_json = nlohmann::json::parse(metadata, nullptr, false);
@@ -270,13 +270,13 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
     if (ffi::ir_stream::IRProtocolErrorCode::Supported
         != ffi::ir_stream::validate_protocol_version(version))
     {
-        return IrErrorCode{IrErrorCodeEnum::UnsupportedFormat};
+        return std::errc::protocol_not_supported;
     }
 
     if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
         && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
     {
-        return IrErrorCode{IrErrorCodeEnum::UnsupportedFormat};
+        return std::errc::protocol_not_supported;
     }
 
     return Deserializer{
@@ -294,8 +294,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         return std::errc::operation_not_permitted;
     }
 
-    encoded_tag_t tag{};
-    YSTDLIB_ERROR_HANDLING_TRYV(deserialize_tag(reader, tag));
+    auto tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
 
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
     if (false == optional_ir_unit_type.has_value()) {

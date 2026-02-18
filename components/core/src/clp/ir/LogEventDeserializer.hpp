@@ -5,6 +5,7 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "../ffi/ir_stream/IrErrorCode.hpp"
 #include "../ReaderInterface.hpp"
 #include "../time_types.hpp"
 #include "../TimestampPattern.hpp"
@@ -16,9 +17,6 @@
 namespace clp::ir {
 /**
  * Class for deserializing IR log events from an IR stream.
- *
- * TODO: We're currently returning std::errc error codes, but we should replace these with our own
- * custom error codes (derived from std::error_code), ideally replacing IRErrorCode.
  * @tparam encoded_variable_t Type of encoded variables in the stream
  */
 template <typename encoded_variable_t>
@@ -28,14 +26,14 @@ public:
     /**
      * Creates a log event deserializer for the given stream
      * @param reader A reader for the IR stream
-     * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
-     *   or uses an unsupported version
+     * @return A result containing the deserializer or an error code indicating the failure:
+     * - IrErrorCodeEnum::IncompleteStream if the IR stream is truncated
+     * - IrErrorCodeEnum::CorruptedIR if the IR stream is corrupted
+     * - IrErrorCodeEnum::UnsupportedFormat if the IR stream contains an unsupported metadata
+     *   format or uses an unsupported version
      */
-    static auto create(ReaderInterface& reader)
-            -> ystdlib::error_handling::Result<LogEventDeserializer<encoded_variable_t>>;
+    static auto create(ReaderInterface& reader) -> ystdlib::error_handling::
+            Result<LogEventDeserializer<encoded_variable_t>, ffi::ir_stream::IrErrorCode>;
 
     // Delete copy constructor and assignment
     LogEventDeserializer(LogEventDeserializer const&) = delete;
@@ -57,12 +55,12 @@ public:
     /**
      * Deserializes a log event from the stream
      * @return A result containing the log event or an error code indicating the failure:
-     * - std::errc::no_message on reaching the end of the IR stream
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
+     * - IrErrorCodeEnum::EndOfStream on reaching the end of the IR stream
+     * - IrErrorCodeEnum::IncompleteStream if the IR stream is truncated
+     * - IrErrorCodeEnum::CorruptedIR if the IR stream is corrupted
      */
-    [[nodiscard]] auto deserialize_log_event()
-            -> ystdlib::error_handling::Result<LogEvent<encoded_variable_t>>;
+    [[nodiscard]] auto deserialize_log_event() -> ystdlib::error_handling::
+            Result<LogEvent<encoded_variable_t>, ffi::ir_stream::IrErrorCode>;
 
 private:
     // Constructors
