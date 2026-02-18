@@ -147,12 +147,6 @@ void to_lower(string& str) {
     });
 }
 
-/**
- * Checks if the character is a wildcard.
- *
- * @param c
- * @return true if '?' or '*', false otherwise.
- */
 auto is_wildcard(char c) -> bool {
     return '?' == c || '*' == c;
 }
@@ -263,7 +257,6 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
 
     char w{'\0'};
     char t{'\0'};
-    bool is_escaped{false};
     while (true) {
         w = *wild_current;
         if ('*' == w) {
@@ -283,8 +276,8 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
             }
         } else {
             // Handle escaped characters
-            if ('\\' == w) {
-                is_escaped = true;
+            bool is_escaped = '\\' == w;
+            if (is_escaped) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++wild_current;
                 // This is safe without a bounds check since this the caller
