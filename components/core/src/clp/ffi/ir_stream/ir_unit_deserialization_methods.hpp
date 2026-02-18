@@ -65,10 +65,8 @@ namespace clp::ffi::ir_stream {
  * KV-pair log event.
  * @param utc_offset UTC offset used to construct the KV-pair log event.
  * @return A result containing the deserialized log event or an error code indicating the failure:
- * - IrErrorCodeEnum::IncompleteStream if the IR stream is truncated.
  * - IrErrorCodeEnum::CorruptedIR if the IR stream is corrupted.
- * - IrErrorCodeEnum::UnsupportedFormat if the IR stream uses an unsupported metadata format,
- *   version, or structure.
+ * - IrErrorCodeEnum::IncompleteStream if the IR stream is truncated.
  * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values.
  * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
  *   cannot construct a valid key-value pair log event.
