@@ -16,16 +16,20 @@ use clp_rust_utils::{
         SqsListenerConfig,
         ValidatedSqsListenerConfig,
     },
-    s3::ObjectMetadata,
 };
 use non_empty_string::NonEmptyString;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     compression::{Buffer, CompressionJobSubmitter, Listener},
-    ingestion_job::{IngestionJob, IngestionJobState, NoopIngestionJobState, S3Scanner},
+    ingestion_job::{
+        IngestionJob,
+        IngestionJobState,
+        S3Scanner,
+        ZeroFaultToleranceIngestionJobState,
+    },
 };
 
 /// Errors for ingestion job manager operations.
@@ -136,8 +140,8 @@ impl IngestionJobManagerState {
             config.base.endpoint_url.as_ref(),
         )
         .await;
-        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender, state| {
-            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender, state);
+        self.create_s3_ingestion_job(config.base.clone(), move |job_id, state| {
+            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, state);
             IngestionJob::S3Scanner(scanner)
         })
         .await
@@ -174,12 +178,11 @@ impl IngestionJobManagerState {
             self.inner.aws_credentials.secret_access_key.as_str(),
         )
         .await;
-        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender, state| {
+        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, state| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
                 &sqs_client_manager,
                 &config,
-                &sender,
                 state,
             );
             IngestionJob::SqsListener(listener)
@@ -254,9 +257,8 @@ impl IngestionJobManagerState {
     where
         JobCreationCallback: FnOnce(
             Uuid,
-            mpsc::Sender<Vec<ObjectMetadata>>,
-            NoopIngestionJobState,
-        ) -> IngestionJob<NoopIngestionJobState>, {
+            ZeroFaultToleranceIngestionJobState,
+        ) -> IngestionJob<ZeroFaultToleranceIngestionJobState>, {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
             // TODO: We should avoid being verbose for checking each field one by one (tracked by
@@ -295,12 +297,12 @@ impl IngestionJobManagerState {
         let sender = job_listener.get_new_sender();
 
         // TODO: Relocate `start` before the ingestion job spawning after fixing #1733
-        let state = NoopIngestionJobState::default();
+        let state = ZeroFaultToleranceIngestionJobState::new(sender);
         state.start().await?;
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
-                ingestion_job: create_ingestion_job(job_id, sender, state.clone()),
+                ingestion_job: create_ingestion_job(job_id, state.clone()),
                 listener: job_listener,
                 bucket_name: ingestion_job_config.bucket_name,
                 region: ingestion_job_config.region,
@@ -346,14 +348,14 @@ struct IngestionJobManager {
 
 /// Represents an entry in the ingestion job table.
 struct IngestionJobTableEntry {
-    ingestion_job: IngestionJob<NoopIngestionJobState>,
+    ingestion_job: IngestionJob<ZeroFaultToleranceIngestionJobState>,
     listener: Listener,
     region: Option<NonEmptyString>,
     bucket_name: NonEmptyString,
     key_prefix: NonEmptyString,
     endpoint_url: Option<NonEmptyString>,
     dataset: Option<NonEmptyString>,
-    state: NoopIngestionJobState,
+    state: ZeroFaultToleranceIngestionJobState,
 }
 
 /// # Returns:

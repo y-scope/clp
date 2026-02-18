@@ -4,7 +4,7 @@ use anyhow::Result;
 use aws_sdk_s3::Client;
 use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetadata};
 use non_empty_string::NonEmptyString;
-use tokio::{select, sync::mpsc};
+use tokio::select;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -21,7 +21,6 @@ struct Task<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState
     s3_client_manager: S3ClientManager,
     scanning_interval: Duration,
     config: S3ScannerConfig,
-    sender: mpsc::Sender<Vec<ObjectMetadata>>,
     start_after: Option<String>,
     state: State,
 }
@@ -133,16 +132,16 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
             return Ok(response.is_truncated.unwrap_or(false));
         }
 
-        let last_ingested_key: &str = object_metadata_to_ingest
+        let last_ingested_key: String = object_metadata_to_ingest
             .last()
             .expect("`object_metadata_to_ingest` should not be empty")
             .key
-            .as_str();
+            .clone()
+            .into();
         self.state
-            .ingest(&object_metadata_to_ingest, last_ingested_key)
+            .ingest(object_metadata_to_ingest, last_ingested_key.as_str())
             .await?;
-        self.start_after = Some(last_ingested_key.into());
-        self.sender.send(object_metadata_to_ingest).await?;
+        self.start_after = Some(last_ingested_key);
 
         Ok(response.is_truncated.unwrap_or(false))
     }
@@ -183,7 +182,6 @@ impl<State: S3ScannerState> S3Scanner<State> {
         id: Uuid,
         s3_client_manager: S3ClientManager,
         config: S3ScannerConfig,
-        sender: mpsc::Sender<Vec<ObjectMetadata>>,
         state: State,
     ) -> Self {
         let scanning_interval = Duration::from_secs(u64::from(config.scanning_interval_sec));
@@ -192,7 +190,6 @@ impl<State: S3ScannerState> S3Scanner<State> {
             s3_client_manager,
             scanning_interval,
             config,
-            sender,
             start_after,
             state: state.clone(),
         };

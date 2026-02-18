@@ -16,7 +16,7 @@ use clp_rust_utils::{
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{NoopIngestionJobState, SqsListener},
+    ingestion_job::{SqsListener, ZeroFaultToleranceIngestionJobState},
 };
 use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
@@ -168,8 +168,7 @@ async fn run_sqs_listener_test(
         &SqsClientWrapper::from(sqs_client),
         &ValidatedSqsListenerConfig::validate_and_create(sqs_listener_config)
             .expect("invalid SQS listener config"),
-        &sender,
-        NoopIngestionJobState::default(),
+        ZeroFaultToleranceIngestionJobState::new(sender.clone()),
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
@@ -297,8 +296,7 @@ async fn test_s3_scanner() -> Result<()> {
         job_id,
         S3ClientWrapper::from(s3_client.clone()),
         s3_scanner_config,
-        sender,
-        NoopIngestionJobState::default(),
+        ZeroFaultToleranceIngestionJobState::new(sender),
     );
 
     let upload_and_receive_handle = tokio::spawn(upload_and_receive(

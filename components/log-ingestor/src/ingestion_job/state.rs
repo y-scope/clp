@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use clp_rust_utils::s3::ObjectMetadata;
+use tokio::sync::mpsc;
 
-/// An abstract layer for managing ingestion job states.
+/// An abstract, job-type-agnostic layer for managing ingestion job states.
 #[async_trait]
-pub trait IngestionJobState:
-    SqsListenerState + S3ScannerState + Send + Sync + Clone + 'static {
+pub trait IngestionJobState: Send + Sync + Clone + 'static {
     /// Starts the ingestion job.
     ///
     /// # Returns
@@ -47,18 +47,13 @@ pub trait SqsListenerState: Send + Sync + Clone + 'static {
     ///
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
-    async fn ingest(&self, objects: &[ObjectMetadata]) -> anyhow::Result<()>;
+    async fn ingest(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<()>;
 }
 
 /// An abstract layer for managing [`crate::ingestion_job::S3Scanner`] states.
 #[async_trait]
 pub trait S3ScannerState: Send + Sync + Clone + 'static {
     /// Ingests the given object metadata into CLP and marks them as `Buffered`.
-    ///
-    /// # Lifetimes
-    ///
-    /// * `'object_metadata_lifetime`: Both `objects` and `last_ingested_key` must remain valid for
-    ///   the same lifetime.
     ///
     /// # Parameters
     ///
@@ -75,17 +70,26 @@ pub trait S3ScannerState: Send + Sync + Clone + 'static {
     /// conditions under which those errors occur.
     async fn ingest<'object_metadata_lifetime>(
         &self,
-        objects: &'object_metadata_lifetime [ObjectMetadata],
-        last_ingested_key: &'object_metadata_lifetime str,
+        objects: Vec<ObjectMetadata>,
+        last_ingested_key: &str,
     ) -> anyhow::Result<()>;
 }
 
-/// An ingestion job state implementation that does nothing.
-#[derive(Clone, Default)]
-pub struct NoopIngestionJobState {}
+/// An ingestion job state implementation that has no fault-tolerance.
+#[derive(Clone)]
+pub struct ZeroFaultToleranceIngestionJobState {
+    sender: mpsc::Sender<Vec<ObjectMetadata>>,
+}
+
+impl ZeroFaultToleranceIngestionJobState {
+    #[must_use]
+    pub const fn new(sender: mpsc::Sender<Vec<ObjectMetadata>>) -> Self {
+        Self { sender }
+    }
+}
 
 #[async_trait]
-impl IngestionJobState for NoopIngestionJobState {
+impl IngestionJobState for ZeroFaultToleranceIngestionJobState {
     async fn start(&self) -> anyhow::Result<()> {
         Ok(())
     }
@@ -96,19 +100,31 @@ impl IngestionJobState for NoopIngestionJobState {
 }
 
 #[async_trait]
-impl SqsListenerState for NoopIngestionJobState {
-    async fn ingest(&self, _objects: &[ObjectMetadata]) -> anyhow::Result<()> {
+impl SqsListenerState for ZeroFaultToleranceIngestionJobState {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
+    async fn ingest(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<()> {
+        self.sender.send(objects).await?;
         Ok(())
     }
 }
 
 #[async_trait]
-impl S3ScannerState for NoopIngestionJobState {
+impl S3ScannerState for ZeroFaultToleranceIngestionJobState {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
     async fn ingest<'object_metadata_lifetime>(
         &self,
-        _objects: &'object_metadata_lifetime [ObjectMetadata],
-        _last_ingested_key: &'object_metadata_lifetime str,
+        objects: Vec<ObjectMetadata>,
+        _last_ingested_key: &str,
     ) -> anyhow::Result<()> {
+        self.sender.send(objects).await?;
         Ok(())
     }
 }

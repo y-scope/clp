@@ -142,7 +142,8 @@ impl Listener {
     }
 
     /// # Returns
-    /// A new `mpsc::Sender<ObjectMetadata>` that can be used to send metadata to this listener.
+    /// A new `mpsc::Sender<Vec<ObjectMetadata>>` that can be used to send metadata to this
+    /// listener.
     ///
     /// The returned sender is a cheap clone of the listener's internal channel sender. It can be
     /// freely cloned and moved to other tasks; multiple senders may concurrently send to the same

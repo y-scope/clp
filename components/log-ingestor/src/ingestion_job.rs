@@ -11,13 +11,14 @@ pub use state::*;
 ///
 /// # Type Parameters:
 ///
-/// * [`State`]: A type that implements [`IngestionJobState`] for managing ingestion job states.
-pub enum IngestionJob<State: IngestionJobState> {
+/// * [`State`]: A type that implements all required ingestion job state traits for state
+///   management.
+pub enum IngestionJob<State: IngestionJobState + S3ScannerState + SqsListenerState> {
     S3Scanner(S3Scanner<State>),
     SqsListener(SqsListener<State>),
 }
 
-impl<State: IngestionJobState> IngestionJob<State> {
+impl<State: IngestionJobState + S3ScannerState + SqsListenerState> IngestionJob<State> {
     /// Shuts down and waits for the job to complete.
     ///
     /// # Returns
@@ -51,13 +52,17 @@ impl<State: IngestionJobState> IngestionJob<State> {
     }
 }
 
-impl<State: IngestionJobState> From<S3Scanner<State>> for IngestionJob<State> {
+impl<State: IngestionJobState + S3ScannerState + SqsListenerState> From<S3Scanner<State>>
+    for IngestionJob<State>
+{
     fn from(scanner: S3Scanner<State>) -> Self {
         Self::S3Scanner(scanner)
     }
 }
 
-impl<State: IngestionJobState> From<SqsListener<State>> for IngestionJob<State> {
+impl<State: IngestionJobState + S3ScannerState + SqsListenerState> From<SqsListener<State>>
+    for IngestionJob<State>
+{
     fn from(listener: SqsListener<State>) -> Self {
         Self::SqsListener(listener)
     }

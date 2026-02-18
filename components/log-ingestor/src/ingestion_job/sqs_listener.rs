@@ -11,7 +11,7 @@ use clp_rust_utils::{
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
-use tokio::{select, sync::mpsc};
+use tokio::select;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -28,7 +28,6 @@ type TaskId = usize;
 struct Task<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState> {
     sqs_client_manager: SqsClientManager,
     config: ValidatedSqsListenerConfig,
-    sender: mpsc::Sender<Vec<ObjectMetadata>>,
     job_id: Uuid,
     id: TaskId,
     state: State,
@@ -93,7 +92,6 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
     /// Returns an error if:
     ///
     /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
     /// * Forwards the following `aws_sdk_sqs` methods' return values on failure:
     ///   * [`DeleteMessageBatchFluentBuilder::send`]
     ///   * [`DeleteMessageBatchRequestEntryBuilder::build`]
@@ -150,8 +148,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
 
         let ingested = !object_metadata_to_ingest.is_empty();
         if ingested {
-            self.state.ingest(&object_metadata_to_ingest).await?;
-            self.sender.send(object_metadata_to_ingest).await?;
+            self.state.ingest(object_metadata_to_ingest).await?;
         }
 
         if !delete_message_batch_request_entries.is_empty() {
@@ -288,7 +285,6 @@ impl<State: SqsListenerState> SqsListener<State> {
         id: Uuid,
         sqs_client_manager: &SqsClientManager,
         config: &ValidatedSqsListenerConfig,
-        sender: &mpsc::Sender<Vec<ObjectMetadata>>,
         state: State,
     ) -> Self {
         let num_tasks = usize::from(config.get().num_concurrent_listener_tasks);
@@ -297,7 +293,6 @@ impl<State: SqsListenerState> SqsListener<State> {
             let task = Task {
                 sqs_client_manager: sqs_client_manager.clone(),
                 config: config.clone(),
-                sender: sender.clone(),
                 job_id: id,
                 id: TaskId::from(task_id),
                 state: state.clone(),
