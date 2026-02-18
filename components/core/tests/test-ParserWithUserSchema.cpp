@@ -249,7 +249,6 @@ TEST_CASE("Error on header rule with a single non-timestamp capture", "[load_lex
     );
 }
 
-
 TEST_CASE("Error on header rule with a timestamp and non-timestamp capture", "[load_lexer]") {
     auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp_and_int.txt"};
     ByteLexer lexer;

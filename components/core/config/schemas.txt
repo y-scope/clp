@@ -16,4 +16,4 @@ float:-?\d+\.\d+
 // Dictionary variables
 hex:[a-fA-F]+
 hasNumber:.*\d.*
-equals:[a-zA-Z0-9]+=(?<var>.*[a-zA-Z0-9].*)
+equals:.*=.*[a-zA-Z0-9].*
