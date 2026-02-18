@@ -11,6 +11,7 @@ import {
     SelectProps,
 } from "antd";
 
+import {SETTINGS_MAX_DATASETS_PER_QUERY} from "../../../../config";
 import useSearchStore from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {fetchDatasetNames} from "./sql";
@@ -86,6 +87,17 @@ const DatasetSelect = (selectProps: SelectProps) => {
         updateDatasets]);
 
     const handleDatasetChange = (value: string[]) => {
+        if (null !== SETTINGS_MAX_DATASETS_PER_QUERY &&
+            value.length > SETTINGS_MAX_DATASETS_PER_QUERY
+        ) {
+            messageApi.warning({
+                key: "maxDatasetsExceeded",
+                content: `Maximum of ${SETTINGS_MAX_DATASETS_PER_QUERY} datasets can be` +
+                    " selected per query.",
+            });
+
+            return;
+        }
         updateDatasets(0 === value.length ?
             getFallbackDatasets() :
             value);

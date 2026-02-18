@@ -683,6 +683,7 @@ class BaseController(ABC):
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
+            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
