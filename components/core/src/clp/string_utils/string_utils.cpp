@@ -318,8 +318,8 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         // Handle reaching the end of tame or wild
         if (tame_end == tame_current) {
             return (wild_end == wild_current
-                    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                     || (cZeroOrMoreCharsWildcard == *wild_current
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                         && (wild_current + 1) == wild_end));
         }
         if (wild_end == wild_current) {
