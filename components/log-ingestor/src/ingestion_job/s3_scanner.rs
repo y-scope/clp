@@ -4,11 +4,11 @@ use anyhow::Result;
 use aws_sdk_s3::Client;
 use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetadata};
 use non_empty_string::NonEmptyString;
-use tokio::{select, sync::mpsc};
+use tokio::select;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::aws_client_manager::AwsClientManagerType;
+use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::S3ScannerState};
 
 /// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
 /// object metadata for newly created objects.
@@ -16,15 +16,18 @@ use crate::aws_client_manager::AwsClientManagerType;
 /// # Type Parameters
 ///
 /// * [`S3ClientManager`]: The type of the AWS S3 client manager.
-struct Task<S3ClientManager: AwsClientManagerType<Client>> {
+/// * [`State`]: The type that implements [`S3ScannerState`] for managing S3 scanner states.
+struct Task<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState> {
     s3_client_manager: S3ClientManager,
     scanning_interval: Duration,
     config: S3ScannerConfig,
-    sender: mpsc::Sender<ObjectMetadata>,
     start_after: Option<String>,
+    state: State,
 }
 
-impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
+impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
+    Task<S3ClientManager, State>
+{
     /// Runs the S3 scanner task to scan the given bucket.
     ///
     /// This is a wrapper of [`Self::scan_once`] that supports cancellation via the provided
@@ -70,8 +73,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
         }
     }
 
-    /// Scans the configured S3 bucket and prefix for new objects and sends their metadata to the
-    /// underlying channel sender.
+    /// Scans the configured S3 bucket and prefix for new objects and ingests their metadata into
+    /// the provided state.
     ///
     /// # Note
     ///
@@ -92,6 +95,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
     ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
     ///   return values on failure.
     /// * Forwards [`NonEmptyString::new`]'s return values on failure.
+    /// * Forwards [`S3ScannerState::ingest`]'s return values on failure.
+    /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
     pub async fn scan_once(&mut self) -> Result<bool> {
         let client = self.s3_client_manager.get().await?;
         let response = client
@@ -105,6 +110,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
             return Ok(false);
         };
 
+        let mut object_metadata_to_ingest = Vec::with_capacity(contents.len());
         for content in contents {
             let (Some(key), Some(size)) = (content.key, content.size) else {
                 continue;
@@ -119,9 +125,23 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
                 size: size.try_into()?,
             };
             tracing::info!(object = ? object_metadata, "Scanned new object metadata on S3.");
-            self.sender.send(object_metadata).await?;
-            self.start_after = Some(key);
+            object_metadata_to_ingest.push(object_metadata);
         }
+
+        if object_metadata_to_ingest.is_empty() {
+            return Ok(response.is_truncated.unwrap_or(false));
+        }
+
+        let last_ingested_key: String = object_metadata_to_ingest
+            .last()
+            .expect("`object_metadata_to_ingest` should not be empty")
+            .key
+            .clone()
+            .into();
+        self.state
+            .ingest(object_metadata_to_ingest, last_ingested_key.as_str())
+            .await?;
+        self.start_after = Some(last_ingested_key);
 
         Ok(response.is_truncated.unwrap_or(false))
     }
@@ -133,17 +153,22 @@ impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
 }
 
 /// Represents a S3 scanner job that manages the lifecycle of a S3 scanner task.
-pub struct S3Scanner {
+///
+/// # Type Parameters
+///
+/// * [`State`]: The type that implements [`S3ScannerState`] for managing S3 scanner states.
+pub struct S3Scanner<State: S3ScannerState> {
     id: Uuid,
     cancel_token: CancellationToken,
     handle: tokio::task::JoinHandle<Result<()>>,
+    _state: State,
 }
 
-impl S3Scanner {
+impl<State: S3ScannerState> S3Scanner<State> {
     /// Creates and spawns a new [`S3Scanner`] backed by a [`Task`].
     ///
     /// This function spawns a [`Task`]. The spawned task will periodically scan the configured S3
-    /// bucket and prefix for new objects and send their metadata to the provided channel sender.
+    /// bucket and prefix for new objects and ingest their metadata into the provided state.
     ///
     /// # Type parameters
     ///
@@ -157,7 +182,7 @@ impl S3Scanner {
         id: Uuid,
         s3_client_manager: S3ClientManager,
         config: S3ScannerConfig,
-        sender: mpsc::Sender<ObjectMetadata>,
+        state: State,
     ) -> Self {
         let scanning_interval = Duration::from_secs(u64::from(config.scanning_interval_sec));
         let start_after = config.start_after.clone().map(Into::into);
@@ -165,8 +190,8 @@ impl S3Scanner {
             s3_client_manager,
             scanning_interval,
             config,
-            sender,
             start_after,
+            state: state.clone(),
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
@@ -179,6 +204,7 @@ impl S3Scanner {
             id,
             cancel_token,
             handle,
+            _state: state,
         }
     }
 
