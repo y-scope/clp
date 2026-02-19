@@ -275,39 +275,39 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
     WHEN("Match unexpected containing wild card character(s)") {
         GIVEN("Missing literal character w/ \"*\"") {
             tame_string = "abcd", wild_string = "ac*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("More literals in wild than tame w/ \"*\" in the middle") {
             tame_string = "abcd", wild_string = "abc*de";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("MISSING matching literals in the beginning with \"*\" in the middle") {
             tame_string = "abcd", wild_string = "b**d";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("MISSING matching literals in the end with \"*\" in the middle") {
             tame_string = "abcd", wild_string = "a**c";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN(
                 "MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle"
         ) {
             tame_string = "abcd", wild_string = "b*?d";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("MISSING matching literals in the beginning with \"?\" at the beginning") {
             tame_string = "abcd", wild_string = "?cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("MISSING matching literals in the end with both \"?\" at the end") {
             tame_string = "abcd", wild_string = "ab?";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == false);
+            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
     }
 
@@ -600,7 +600,7 @@ TEST_CASE("convert_string_to_int", "[convert_string_to_int]") {
     // Corner cases
     // Empty string
     raw = "";
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     // Edges of representable range
     raw_as_int = INT64_MAX;
@@ -614,24 +614,24 @@ TEST_CASE("convert_string_to_int", "[convert_string_to_int]") {
     REQUIRE(raw_as_int == converted);
 
     raw = "9223372036854775808";  // INT64_MAX + 1 == 2^63
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     raw = "-9223372036854775809";  // INT64_MIN - 1 == -2^63 - 1
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     // Non-integers
     raw = "abc";
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     raw = "90a";
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     raw = "0.5";
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     // Non-decimal integers
     raw = "0x5A";
-    REQUIRE(false == convert_string_to_int(raw, converted));
+    REQUIRE_FALSE(convert_string_to_int(raw, converted));
 
     // Integers
     raw = "98340";
