@@ -148,7 +148,8 @@ auto to_lower(string& str) -> void {
 }
 
 auto is_wildcard(char c) -> bool {
-    return clp::string_utils::cSingleCharWildcard == c || clp::string_utils::cZeroOrMoreCharsWildcard == c;
+    return clp::string_utils::cSingleCharWildcard == c
+           || clp::string_utils::cZeroOrMoreCharsWildcard == c;
 }
 
 auto clean_up_wildcard_search_string(string_view str) -> string {
@@ -288,7 +289,9 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
 
             // Handle a mismatch
             t = *tame_current;
-            if (false == ((false == is_escaped && clp::string_utils::cSingleCharWildcard == w) || t == w)) {
+            if (false
+                == ((false == is_escaped && clp::string_utils::cSingleCharWildcard == w) || t == w))
+            {
                 if (nullptr == wild_bookmark) {
                     // No bookmark to return to
                     return false;
@@ -338,5 +341,6 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         }
     }
 }
+
 // NOLINTEND(readability-function-cognitive-complexity)
 }  // namespace clp::string_utils
