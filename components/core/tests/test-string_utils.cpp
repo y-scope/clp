@@ -567,7 +567,7 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
         }
     }
     t2 = high_resolution_clock::now();
-    duration<double> const time_span_current_implementation = t2 - t1;
+    auto const time_span_current_implementation = t2 - t1;
 
     // Profile next best implementation
     test_reps = n_reps;
