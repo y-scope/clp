@@ -774,6 +774,7 @@ if(CLP_ENABLE_TESTS)
             )
     target_include_directories(unitTest
             PRIVATE
+            ${CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY}/runtime/src
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
             )
     target_link_libraries(unitTest
