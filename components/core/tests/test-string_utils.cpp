@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/foreach.hpp>
-#include <boost/range/combine.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <string_utils/constants.hpp>
