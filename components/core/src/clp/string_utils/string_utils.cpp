@@ -9,9 +9,6 @@
 
 #include "string_utils/constants.hpp"
 
-using clp::string_utils::cSingleCharWildcard;
-using clp::string_utils::cWildcardEscapeChar;
-using clp::string_utils::cZeroOrMoreCharsWildcard;
 using std::string;
 using std::string_view;
 
