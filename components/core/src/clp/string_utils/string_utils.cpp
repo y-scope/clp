@@ -256,7 +256,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         return 0 == tame_length;
     }
     if (0 == tame_length) {
-        return "*" == wild;
+        return 1 == wild_length && cZeroOrMoreCharsWildcard == wild.at(0);
     }
 
     char w{'\0'};
