@@ -561,9 +561,10 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     test_reps = n_reps;
     t1 = high_resolution_clock::now();
     while (test_reps-- != 0) {
-        BOOST_FOREACH (boost::tie(tame_str, wild_str), boost::combine(tame_vec, wild_vec)) {
+        auto idx = tame_vec.size();
+        while (idx-- != 0) {
             all_passed_current_implementation
-                    &= wildcard_match_unsafe_case_sensitive(tame_str, wild_str);
+                    &= wildcard_match_unsafe_case_sensitive(tame_vec[idx], wild_vec[idx]);
         }
     }
     t2 = high_resolution_clock::now();
