@@ -19,8 +19,8 @@ pub enum AwsAuthentication {
     Credentials { credentials: AwsCredentials },
 
     /// Uses the default AWS SDK credential provider chain.
-    #[serde(rename = "ec2")]
-    Ec2,
+    #[serde(rename = "default")]
+    Default,
 }
 
 impl AwsAuthentication {
@@ -34,7 +34,7 @@ impl AwsAuthentication {
                 credentials.access_key_id.as_str(),
                 credentials.secret_access_key.as_str(),
             )),
-            Self::Ec2 => None,
+            Self::Default => None,
         }
     }
 }

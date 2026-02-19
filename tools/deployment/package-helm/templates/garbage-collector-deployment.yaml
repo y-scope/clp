@@ -20,7 +20,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "garbage-collector"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 10
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}

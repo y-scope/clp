@@ -17,7 +17,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "reducer"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       hostname: {{ include "clp.fullname" . }}-reducer
       subdomain: {{ include "clp.fullname" . }}-reducer
       {{- include "clp.createSchedulingConfigs" (dict
