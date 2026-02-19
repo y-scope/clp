@@ -14,10 +14,8 @@ const From = () => {
         <div className={guidedGrid["gridItem"]}>
             <InputLabel width={LABEL_WIDTH}>FROM</InputLabel>
             <DatasetSelect
-                className={
-                    `${guidedGrid["noLeftBorderRadiusSelect"]} ${
-                        guidedGrid["widthSelect"]}`
-                }/>
+                className={`${guidedGrid["sqlInput"]} ${guidedGrid["noLeftBorderRadiusSelect"]} ${
+                    guidedGrid["widthSelect"]}`}/>
         </div>
     );
 };

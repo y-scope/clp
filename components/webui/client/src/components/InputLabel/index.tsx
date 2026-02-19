@@ -28,6 +28,7 @@ const InputLabel = ({children, width}: {children: React.ReactNode; width?: strin
                 borderTopLeftRadius: `${token.borderRadius}px`,
                 fontSize: token.fontSize,
                 minWidth: width,
+                width: width,
             }}
         >
             {children}

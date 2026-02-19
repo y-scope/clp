@@ -91,6 +91,7 @@ const GuidedRunButton = () => {
                 color={"green"}
                 htmlType={"submit"}
                 icon={<CaretRightOutlined/>}
+                aria-label={"Run query"}
                 size={"middle"}
                 variant={"solid"}
                 disabled={!isQueryReady ||
@@ -100,9 +101,7 @@ const GuidedRunButton = () => {
                         throw err;
                     });
                 }}
-            >
-                Run
-            </Button>
+            />
         </Tooltip>
     );
 };

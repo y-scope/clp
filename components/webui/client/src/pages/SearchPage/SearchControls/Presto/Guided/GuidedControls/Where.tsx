@@ -24,7 +24,7 @@ const Where = () => {
         <div className={guidedGrid["gridItem"]}>
             <InputLabel width={LABEL_WIDTH}>WHERE</InputLabel>
             <SqlInput
-                className={guidedGrid["noLeftBorderRadius"] || ""}
+                className={`${guidedGrid["sqlInput"]} ${guidedGrid["noLeftBorderRadius"]}`}
                 disabled={disabled}
                 validateFn={validateBooleanExpression}
                 value={where}
