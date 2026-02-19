@@ -102,7 +102,7 @@ auto replace_characters(
     size_t search_start_pos{0};
     while (true) {
         size_t replace_char_ix{0};
-        size_t const char_to_replace_pos
+        auto const char_to_replace_pos
                 = find_first_of(value, characters_to_replace, search_start_pos, replace_char_ix);
         if (string::npos == char_to_replace_pos) {
             new_value.append(value, search_start_pos);
