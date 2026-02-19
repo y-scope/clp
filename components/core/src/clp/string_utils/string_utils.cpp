@@ -341,6 +341,5 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         }
     }
 }
-
 // NOLINTEND(readability-function-cognitive-complexity)
 }  // namespace clp::string_utils
