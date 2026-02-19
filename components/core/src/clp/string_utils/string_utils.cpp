@@ -276,7 +276,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
             }
         } else {
             // Handle escaped characters
-            bool is_escaped = '\\' == w;
+            bool const is_escaped{'\\' == w};
             if (is_escaped) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++wild_current;
