@@ -243,9 +243,9 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
     char const* tame_bookmark{nullptr};
     char const* wild_bookmark{nullptr};
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    char const* tame_end = tame_current + tame_length;
+    char const* tame_end{tame_current + tame_length};
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    char const* wild_end = wild_current + wild_length;
+    char const* wild_end{wild_current + wild_length};
 
     // Handle wild or tame being empty
     if (0 == wild_length) {
