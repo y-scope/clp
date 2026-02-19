@@ -1,17 +1,21 @@
 use std::cmp::min;
 
 use anyhow::Result;
-use aws_sdk_sqs::{Client, operation::receive_message::ReceiveMessageOutput};
+use aws_sdk_sqs::{
+    Client,
+    operation::receive_message::ReceiveMessageOutput,
+    types::DeleteMessageBatchRequestEntry,
+};
 use clp_rust_utils::{
     job_config::ingestion::s3::ValidatedSqsListenerConfig,
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
-use tokio::{select, sync::mpsc};
+use tokio::select;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::aws_client_manager::AwsClientManagerType;
+use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::SqsListenerState};
 
 type TaskId = usize;
 
@@ -20,16 +24,20 @@ type TaskId = usize;
 /// # Type Parameters
 ///
 /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
-struct Task<SqsClientManager: AwsClientManagerType<Client>> {
+/// * [`State`]: The type that implements [`SqsListenerState`] for managing SQS listener states.
+struct Task<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState> {
     sqs_client_manager: SqsClientManager,
     config: ValidatedSqsListenerConfig,
-    sender: mpsc::Sender<ObjectMetadata>,
+    job_id: Uuid,
     id: TaskId,
+    state: State,
 }
 
-impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
+impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
+    Task<SqsClientManager, State>
+{
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
-    /// extracted metadata is sent to the provided channel sender.
+    /// extracted metadata is ingested into the provided state.
     ///
     /// # Returns
     ///
@@ -69,7 +77,8 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
         }
     }
 
-    /// Processes the SQS response to extract S3 object metadata and send it to the channel sender.
+    /// Processes the SQS response to extract S3 object metadata and ingests it into the provided
+    /// state.
     ///
     /// # NOTE
     ///
@@ -83,17 +92,39 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
-    /// * Forwards
-    ///   [`aws_sdk_sqs::operation::delete_message::builders::DeleteMessageFluentBuilder::send`]'s
-    ///   return values on failure.
+    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
+    /// * Forwards the following `aws_sdk_sqs` methods' return values on failure:
+    ///   * [`DeleteMessageBatchFluentBuilder::send`]
+    ///   * [`DeleteMessageBatchRequestEntryBuilder::build`]
+    /// * Forwards [`SqsListenerState::ingest`]'s return values on failure.
     async fn process_sqs_response(&self, response: ReceiveMessageOutput) -> Result<bool> {
         let Some(messages) = response.messages else {
             return Ok(false);
         };
 
-        let mut ingested = false;
-        for msg in messages {
+        if messages.is_empty() {
+            return Ok(false);
+        }
+
+        let mut object_metadata_to_ingest = Vec::with_capacity(messages.len());
+        let mut delete_message_batch_request_entries = Vec::with_capacity(messages.len());
+        for (idx, msg) in messages.into_iter().enumerate() {
+            if let Some(receipt_handle) = msg.receipt_handle() {
+                delete_message_batch_request_entries.push(
+                    DeleteMessageBatchRequestEntry::builder()
+                        .id(idx.to_string())
+                        .receipt_handle(receipt_handle)
+                        .build()?,
+                );
+            } else {
+                tracing::warn!(
+                    job_id = ? self.job_id,
+                    task_id = ? self.id,
+                    msg = ? msg,
+                    "Received SQS message without receipt handle."
+                );
+            }
+
             let Some(body) = msg.body.as_ref() else {
                 continue;
             };
@@ -111,21 +142,39 @@ impl<SqsClientManager: AwsClientManagerType<Client>> Task<SqsClientManager> {
                         object = ? object_metadata,
                         "Received new object metadata from SQS."
                     );
-                    self.sender.send(object_metadata).await?;
-                    ingested = true;
+                    object_metadata_to_ingest.push(object_metadata);
                 }
             }
-            if let Some(receipt_handle) = msg.receipt_handle() {
-                self.sqs_client_manager
-                    .get()
-                    .await?
-                    .delete_message()
-                    .queue_url(self.config.get().queue_url.as_str())
-                    .receipt_handle(receipt_handle)
-                    .send()
-                    .await?;
+        }
+
+        let ingested = !object_metadata_to_ingest.is_empty();
+        if ingested {
+            self.state.ingest(object_metadata_to_ingest).await?;
+        }
+
+        if !delete_message_batch_request_entries.is_empty() {
+            // This check is necessary since SQS service requires at least one
+            // `DeleteMessageBatchRequestEntry` in the request.
+            for failure in self
+                .sqs_client_manager
+                .get()
+                .await?
+                .delete_message_batch()
+                .queue_url(self.config.get().queue_url.as_str())
+                .set_entries(Some(delete_message_batch_request_entries))
+                .send()
+                .await?
+                .failed
+            {
+                tracing::warn!(
+                    job_id = ? self.job_id,
+                    task_id = ? self.id,
+                    error = ? failure,
+                    "Failed to delete SQS message."
+                );
             }
         }
+
         Ok(ingested)
     }
 
@@ -174,9 +223,10 @@ impl TaskHandle {
     /// # Returns
     ///
     /// A handle to the spawned task.
-    fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
-        task: Task<SqsClientManager>,
+    fn spawn<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>(
+        task: Task<SqsClientManager, State>,
         job_id: Uuid,
+        _state: State,
     ) -> Self {
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
@@ -200,16 +250,21 @@ impl TaskHandle {
 }
 
 /// Represents a SQS listener job that manages the lifecycle of a SQS listener task.
-pub struct SqsListener {
+///
+/// # Type Parameters
+///
+/// * [`State`]: The type that implements [`SqsListenerState`] for managing SQS listener states.
+pub struct SqsListener<State: SqsListenerState> {
     id: Uuid,
     task_handles: Vec<TaskHandle>,
+    _state: State,
 }
 
-impl SqsListener {
+impl<State: SqsListenerState> SqsListener<State> {
     /// Creates and spawns a new [`SqsListener`] backed by a [`Task`].
     ///
     /// This function spawns a series of [`Task`]. Each spawned task will listen to SQS messages,
-    /// extract relevant S3 object metadata, and send the metadata to the provided channel sender.
+    /// extract relevant S3 object metadata, and ingest the metadata into the provided state.
     ///
     /// # Type parameters
     ///
@@ -227,12 +282,11 @@ impl SqsListener {
     /// configuration has already been validated by an upper-layer caller. In particular, enforcing
     /// domain constraints—such as upper bounds on the number of concurrent listener tasks—is the
     /// responsibility of the caller.
-    #[must_use]
     pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
         id: Uuid,
         sqs_client_manager: &SqsClientManager,
         config: &ValidatedSqsListenerConfig,
-        sender: &mpsc::Sender<ObjectMetadata>,
+        state: State,
     ) -> Self {
         let num_tasks = usize::from(config.get().num_concurrent_listener_tasks);
         let mut task_handles = Vec::with_capacity(num_tasks);
@@ -240,15 +294,20 @@ impl SqsListener {
             let task = Task {
                 sqs_client_manager: sqs_client_manager.clone(),
                 config: config.clone(),
-                sender: sender.clone(),
+                job_id: id,
                 id: TaskId::from(task_id),
+                state: state.clone(),
             };
-            let task_handle = TaskHandle::spawn(task, id);
+            let task_handle = TaskHandle::spawn(task, id, state.clone());
             task_handles.push(task_handle);
             tracing::info!(job_id = ? id, task_id = ? task_id, "Spawned SQS listener task.");
         }
 
-        Self { id, task_handles }
+        Self {
+            id,
+            task_handles,
+            _state: state,
+        }
     }
 
     /// Shuts down and waits for the underlying tasks to complete.
