@@ -1,11 +1,11 @@
 #include "BloomFilter.hpp"
 
+#include <misc/MurmurHash.h>
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <utility>
-
-#include <misc/MurmurHash.h>
 
 #include "../clp/ErrorCode.hpp"
 #include "../clp/ReaderInterface.hpp"
@@ -16,13 +16,11 @@ constexpr uint32_t kMinNumHashFunctions{1};
 constexpr uint32_t kMaxNumHashFunctions{20};
 
 auto compute_murmur_hash(std::string_view value, uint64_t seed) -> uint64_t {
-    return static_cast<uint64_t>(
-            antlr4::misc::MurmurHash::hashCode(
-                    value.data(),
-                    value.size(),
-                    static_cast<size_t>(seed)
-            )
-    );
+    return static_cast<uint64_t>(antlr4::misc::MurmurHash::hashCode(
+            value.data(),
+            value.size(),
+            static_cast<size_t>(seed)
+    ));
 }
 }  // namespace
 
@@ -57,18 +55,15 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
             static_cast<double>(bit_array_size) / static_cast<double>(expected_num_elements) * ln2
     );
 
-    uint32_t const capped_num_hash_functions = std::clamp(
-            num_hash_functions,
-            kMinNumHashFunctions,
-            kMaxNumHashFunctions
-    );
+    uint32_t const capped_num_hash_functions
+            = std::clamp(num_hash_functions, kMinNumHashFunctions, kMaxNumHashFunctions);
 
     return {bit_array_size, capped_num_hash_functions};
 }
 
 void BloomFilter::add(std::string_view value) {
     uint64_t const h1 = compute_murmur_hash(value, 0);
-    uint64_t h2 = compute_murmur_hash(value, 0x9e3779b97f4a7c15ULL);
+    uint64_t h2 = compute_murmur_hash(value, 0x9e37'79b9'7f4a'7c15ULL);
     if (0 == h2) {
         h2 = 1;
     }
@@ -79,7 +74,7 @@ void BloomFilter::add(std::string_view value) {
 
 auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
     uint64_t const h1 = compute_murmur_hash(value, 0);
-    uint64_t h2 = compute_murmur_hash(value, 0x9e3779b97f4a7c15ULL);
+    uint64_t h2 = compute_murmur_hash(value, 0x9e37'79b9'7f4a'7c15ULL);
     if (0 == h2) {
         h2 = 1;
     }
