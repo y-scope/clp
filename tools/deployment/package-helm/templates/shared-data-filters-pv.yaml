@@ -1,0 +1,8 @@
+{{- include "clp.createStaticPv" (dict
+  "root" .
+  "component_category" "shared-data"
+  "name" "filters"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" (printf "%s/filters" .Values.clpConfig.data_directory)
+) }}

@@ -76,6 +76,11 @@ spec:
               ) | quote }}
               mountPath: "/var/data/staged-archives"
             {{- end }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "filters"
+              ) | quote }}
+              mountPath: "/var/data/filters"
             {{- if .Values.clpConfig.aws_config_directory }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
@@ -120,6 +125,11 @@ spec:
             "name" "staged-archives"
           ) | nindent 10 }}
         {{- end }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "filters"
+          ) | nindent 10 }}
         {{- if .Values.clpConfig.aws_config_directory }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}

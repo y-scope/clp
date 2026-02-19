@@ -78,6 +78,59 @@ void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth
 }
 
 /**
+ * Validates and populates variable-dictionary filter options.
+ * @param filter_type_raw
+ * @param filter_fpr
+ * @param filter_output_dir
+ * @param filter_type_provided
+ * @param filter_fpr_provided
+ * @param filter_config
+ * @param output_filter_dir
+ * @throws std::invalid_argument if the filter type is invalid
+ */
+void validate_filter_options(
+        std::string_view filter_type_raw,
+        double filter_fpr,
+        std::string const& filter_output_dir,
+        bool filter_type_provided,
+        bool filter_fpr_provided,
+        FilterConfig& filter_config,
+        std::string& output_filter_dir
+) {
+    auto parsed_type = parse_filter_type(filter_type_raw);
+    if (false == parsed_type.has_value()) {
+        throw std::invalid_argument(fmt::format("Unknown var-filter-type '{}'", filter_type_raw));
+    }
+
+    filter_config.type = parsed_type.value();
+    filter_config.false_positive_rate = filter_fpr;
+    output_filter_dir = filter_output_dir;
+
+    if (FilterType::Bloom == filter_config.type) {
+        constexpr double kMinVarFilterFpr = 1e-6;
+        if (false == filter_fpr_provided) {
+            SPDLOG_WARN("var-filter-fpr not set; disabling variable dictionary filters.");
+            filter_config.type = FilterType::None;
+        } else if (false == (filter_fpr >= kMinVarFilterFpr && filter_fpr < 1.0)) {
+            SPDLOG_WARN(
+                    "var-filter-fpr must be in the range [{}, 1); disabling filters.",
+                    kMinVarFilterFpr
+            );
+            filter_config.type = FilterType::None;
+        }
+    } else if (FilterType::None == filter_config.type) {
+        if (filter_fpr_provided && false == filter_type_provided) {
+            SPDLOG_WARN("var-filter-fpr set without var-filter-type; ignoring.");
+        }
+    }
+
+    if (FilterType::None != filter_config.type && output_filter_dir.empty()) {
+        SPDLOG_WARN("var-filter-output-dir not set; disabling variable dictionary filters.");
+        filter_config.type = FilterType::None;
+    }
+}
+
+/**
  * Validates and populates archive paths.
  * @param archive_path
  * @param archive_id
@@ -207,6 +260,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description compression_options("Compression options");
             std::string input_path_list_file_path;
             std::string auth{cNoAuth};
+            std::string var_filter_type{"none"};
+            double var_filter_fpr{0.01};
+            std::string var_filter_output_dir;
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -269,6 +325,24 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Type of authentication required for network requests (s3 | none). Authentication"
                     " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
                     " variables, and optionally the AWS_SESSION_TOKEN environment variable."
+            )(
+                    "var-filter-type",
+                    po::value<std::string>(&var_filter_type)
+                        ->value_name("TYPE")
+                        ->default_value(var_filter_type),
+                    "Variable dictionary filter type (none | bloom)."
+            )(
+                    "var-filter-fpr",
+                    po::value<double>(&var_filter_fpr)
+                        ->value_name("FPR")
+                        ->default_value(var_filter_fpr),
+                    "False positive rate for bloom (0 < FPR < 1)."
+            )(
+                    "var-filter-output-dir",
+                    po::value<std::string>(&var_filter_output_dir)
+                        ->value_name("DIR")
+                        ->default_value(var_filter_output_dir),
+                    "Directory to write variable dictionary filters to (required to enable filters)."
             );
             // clang-format on
 
@@ -329,6 +403,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            bool const filter_type_provided
+                    = false == parsed_command_line_options["var-filter-type"].defaulted();
+            bool const filter_fpr_provided
+                    = false == parsed_command_line_options["var-filter-fpr"].defaulted();
+            validate_filter_options(
+                    var_filter_type,
+                    var_filter_fpr,
+                    var_filter_output_dir,
+                    filter_type_provided,
+                    filter_fpr_provided,
+                    m_filter_config,
+                    m_var_filter_output_dir
+            );
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;

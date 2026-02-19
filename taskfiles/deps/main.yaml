@@ -231,6 +231,9 @@ tasks:
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+      - >-
+        echo "set(CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY \"{{.SOURCE_DIR}}\")"
+        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"

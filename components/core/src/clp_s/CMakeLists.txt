@@ -227,6 +227,19 @@ if(CLP_BUILD_CLP_S_IO)
 endif()
 
 set(
+        CLP_S_FILTER_SOURCES
+        ${CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY}/runtime/src/misc/MurmurHash.cpp
+        filter/BloomFilter.cpp
+        filter/BloomFilter.hpp
+        filter/FilterBuilder.cpp
+        filter/FilterBuilder.hpp
+        filter/FilterConfig.cpp
+        filter/FilterConfig.hpp
+        filter/FilterFile.cpp
+        filter/FilterFile.hpp
+)
+
+set(
         CLP_S_ARCHIVE_WRITER_SOURCES
         archive_constants.hpp
         ArchiveWriter.cpp
@@ -269,6 +282,26 @@ set(
 
 if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
         add_library(
+                clp_s_filter
+                ${CLP_S_FILTER_SOURCES}
+        )
+        add_library(clp_s::filter ALIAS clp_s_filter)
+        target_compile_features(clp_s_filter PRIVATE cxx_std_20)
+        target_include_directories(
+                clp_s_filter
+                PUBLIC
+                ../
+                PRIVATE
+                ${CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY}/runtime/src
+        )
+        target_link_libraries(
+                clp_s_filter
+                PUBLIC
+                clp_s::io
+                clp::string_utils
+        )
+
+        add_library(
                 clp_s_archive_writer
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
         )
@@ -279,6 +312,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 clp_s_archive_writer
                 PUBLIC
                 absl::flat_hash_map
+                clp_s::filter
                 clp_s::clp_dependencies
                 clp_s::io
                 msgpack-cxx
@@ -455,4 +489,5 @@ if(CLP_BUILD_EXECUTABLES)
                 PROPERTIES
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
         )
+
 endif()

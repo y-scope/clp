@@ -20,6 +20,7 @@
 #include <clp/ReaderInterface.hpp>
 #include <clp_s/ArchiveWriter.hpp>
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/filter/FilterConfig.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ParsedMessage.hpp>
 #include <clp_s/Schema.hpp>
@@ -41,6 +42,8 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
+    FilterConfig filter_config{};
+    std::string filter_output_dir{};
 };
 
 class JsonParser {

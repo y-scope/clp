@@ -250,6 +250,7 @@ def _make_clp_s_command_and_env(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     use_single_file_archive: bool,
+    filter_output_dir: pathlib.Path | None = None,
 ) -> tuple[list[str], dict[str, str]]:
     """
     Generates the command and environment variables for a clp_s compression job.
@@ -257,6 +258,7 @@ def _make_clp_s_command_and_env(
     :param archive_output_dir:
     :param clp_config:
     :param use_single_file_archive:
+    :param filter_output_dir:
     :return: Tuple of (compression_command, compression_env_vars)
     """
     # fmt: off
@@ -269,6 +271,15 @@ def _make_clp_s_command_and_env(
         "--compression-level", str(clp_config.output.compression_level),
     ]
     # fmt: on
+
+    if clp_config.output.filter_type != "none":
+        compression_cmd.append("--var-filter-type")
+        compression_cmd.append(clp_config.output.filter_type)
+        compression_cmd.append("--var-filter-fpr")
+        compression_cmd.append(str(clp_config.output.filter_fpr))
+        if filter_output_dir:
+            compression_cmd.append("--var-filter-output-dir")
+            compression_cmd.append(str(filter_output_dir))
 
     compression_env_vars = dict(os.environ)
     if InputType.S3 == clp_config.input.type and not clp_config.input.unstructured:
@@ -353,7 +364,6 @@ def run_clp(
     clp_storage_engine = worker_config.package.storage_engine
     tmp_dir = worker_config.tmp_directory
     archive_output_dir = worker_config.archive_output.get_directory()
-
     # Get S3 config
     s3_config: S3Config
     enable_s3_write = False
@@ -377,11 +387,20 @@ def run_clp(
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
         archive_output_dir = archive_output_dir / dataset
+        filter_output_dir: pathlib.Path | None = None
+        if clp_config.output.filter_type != "none":
+            filter_output_dir = (
+                worker_config.get_filters_directory()
+                / "staging"
+                / dataset
+                / f"job-{job_id}"
+            )
         compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             use_single_file_archive=enable_s3_write,
+            filter_output_dir=filter_output_dir,
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")

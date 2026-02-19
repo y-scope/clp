@@ -11,7 +11,8 @@ set -o pipefail
 create_clp_directories() {
     echo "Creating CLP directories at ${CLP_HOME}..."
     mkdir -p  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-              "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
+              "$CLP_HOME/var/data/"{archives,filters,streams,staged-archives,staged-streams} \
+              "$CLP_HOME/var/data/filters/"{staging,packs} \
               "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
               "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
               "$CLP_HOME/var/log/"{api_server,garbage_collector,log_ingestor,mcp_server} \

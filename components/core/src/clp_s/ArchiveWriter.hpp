@@ -14,6 +14,7 @@
 #include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
 #include "DictionaryWriter.hpp"
+#include "filter/FilterConfig.hpp"
 #include "RangeIndexWriter.hpp"
 #include "Schema.hpp"
 #include "SchemaMap.hpp"
@@ -32,6 +33,8 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+    FilterConfig filter_config;
+    std::string filter_output_dir;
 };
 
 class ArchiveStats {
@@ -339,6 +342,8 @@ private:
     bool m_print_archive_stats{};
     bool m_single_file_archive{};
     size_t m_min_table_size{};
+    FilterConfig m_filter_config{};
+    std::string m_filter_output_dir;
 
     std::vector<std::string> m_authoritative_timestamp;
     std::string m_authoritative_timestamp_namespace;

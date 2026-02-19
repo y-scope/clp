@@ -330,6 +330,7 @@ def generate_worker_config(clp_config: ClpConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
     worker_config.package = clp_config.package.model_copy(deep=True)
     worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
+    worker_config.data_directory = clp_config.data_directory
     worker_config.tmp_directory = clp_config.tmp_directory
 
     worker_config.stream_output = clp_config.stream_output

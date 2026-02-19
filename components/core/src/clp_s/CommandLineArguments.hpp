@@ -11,6 +11,7 @@
 
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
+#include "filter/FilterConfig.hpp"
 #include "InputConfig.hpp"
 
 namespace clp_s {
@@ -123,6 +124,10 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
+    FilterConfig const& get_filter_config() const { return m_filter_config; }
+
+    std::string const& get_var_filter_output_dir() const { return m_var_filter_output_dir; }
+
 private:
     // Methods
     /**
@@ -207,10 +212,14 @@ private:
     bool m_print_ordered_chunk_stats{false};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MiB
     bool m_disable_log_order{false};
+    FilterConfig m_filter_config{};
+    std::string m_var_filter_output_dir;
 
     // MongoDB configuration variables
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
+
+    // Search query execution variables
     uint64_t m_batch_size{1000};
     uint64_t m_max_num_results{1000};
 

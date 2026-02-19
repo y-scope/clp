@@ -81,6 +81,7 @@ def main(
         clp_config.validate_data_dir(True)
         clp_config.validate_logs_dir(True)
         clp_config.validate_tmp_dir(True)
+        clp_config.validate_filters_dir(True)
     except Exception:
         logger.exception("Failed to load config.")
         sys.exit(1)
@@ -90,6 +91,10 @@ def main(
         resolve_host_path_in_container(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
         resolve_host_path_in_container(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
         resolve_host_path_in_container(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
+        filters_dir = resolve_host_path_in_container(clp_config.get_filters_directory())
+        filters_dir.mkdir(parents=True, exist_ok=True)
+        (filters_dir / "staging").mkdir(parents=True, exist_ok=True)
+        (filters_dir / "packs").mkdir(parents=True, exist_ok=True)
         resolve_host_path_in_container(clp_config.archive_output.get_directory()).mkdir(
             parents=True, exist_ok=True
         )

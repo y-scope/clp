@@ -9,6 +9,7 @@
 
 #include "archive_constants.hpp"
 #include "Defs.hpp"
+#include "filter/FilterBuilder.hpp"
 #include "SchemaTree.hpp"
 #include "SingleFileArchiveDefs.hpp"
 
@@ -19,6 +20,8 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_print_archive_stats = option.print_archive_stats;
     m_single_file_archive = option.single_file_archive;
     m_min_table_size = option.min_table_size;
+    m_filter_config = option.filter_config;
+    m_filter_output_dir = option.filter_output_dir;
     m_archives_dir = option.archives_dir;
     m_authoritative_timestamp = option.authoritative_timestamp;
     m_authoritative_timestamp_namespace = option.authoritative_timestamp_namespace;
@@ -62,6 +65,37 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     if (m_range_open) {
         if (auto const rc = close_current_range(); ErrorCodeSuccess != rc) {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
+        }
+    }
+    if (FilterType::None != m_filter_config.type) {
+        auto resolve_filter_path = [this]() -> std::optional<std::filesystem::path> {
+            std::error_code ec;
+            std::filesystem::create_directories(m_filter_output_dir, ec);
+            if (ec) {
+                SPDLOG_WARN(
+                        "Failed to create filter output dir '{}': {}",
+                        m_filter_output_dir,
+                        ec.message()
+                );
+                return std::nullopt;
+            }
+
+            std::string filter_file_name = m_id;
+            filter_file_name.append(".");
+            filter_file_name.append(constants::cArchiveVarDictFilterFileName);
+            return std::filesystem::path(m_filter_output_dir) / filter_file_name;
+        };
+
+        if (auto const filter_path = resolve_filter_path(); filter_path.has_value()) {
+            try {
+                filter::FilterBuilder builder(m_filter_config, m_var_dict->get_num_entries());
+                m_var_dict->for_each_value([&builder](std::string_view value) {
+                    builder.add(value);
+                });
+                builder.write(filter_path->string());
+            } catch (std::exception const& e) {
+                SPDLOG_WARN("Failed to create variable dictionary filter - {}", e.what());
+            }
         }
     }
     auto var_dict_compressed_size = m_var_dict->close();

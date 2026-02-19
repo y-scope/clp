@@ -101,6 +101,12 @@ def _generate_compress_cmd(
         compress_cmd.append("--unstructured")
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
+    if parsed_args.filter_type is not None:
+        compress_cmd.append("--filter-type")
+        compress_cmd.append(parsed_args.filter_type)
+    if parsed_args.filter_fpr is not None:
+        compress_cmd.append("--filter-fpr")
+        compress_cmd.append(str(parsed_args.filter_fpr))
 
     compress_cmd.append("--logs-list")
     compress_cmd.append(str(logs_list_path))
@@ -157,6 +163,18 @@ def main(argv):
     )
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
+    )
+    args_parser.add_argument(
+        "--filter-type",
+        type=str,
+        default=None,
+        help="Filter type to build per-archive filters (e.g. bloom).",
+    )
+    args_parser.add_argument(
+        "--filter-fpr",
+        type=float,
+        default=None,
+        help="False positive rate for the filter (only used if filter-type is set).",
     )
     args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(

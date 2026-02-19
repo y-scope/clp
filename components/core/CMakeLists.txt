@@ -139,6 +139,21 @@ if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
 endif()
 
+if(NOT DEFINED CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY)
+    set(CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/../../build/deps/cpp/antlr4-runtime-src")
+endif()
+
+if(CLP_BUILD_CLP_S_ARCHIVEWRITER OR CLP_BUILD_TESTING)
+    if(NOT EXISTS "${CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY}/runtime/src/misc/MurmurHash.cpp")
+        message(
+            FATAL_ERROR
+            "Couldn't find ANTLR MurmurHash source at "
+            "${CLP_ANTLR4_RUNTIME_SOURCE_DIRECTORY}/runtime/src/misc/MurmurHash.cpp. "
+            "Run `task deps:core` to fetch dependencies."
+        )
+    endif()
+endif()
+
 if(BUILD_TESTING AND CLP_BUILD_TESTING)
     set(CLP_ENABLE_TESTS ON)
 endif()
@@ -366,6 +381,14 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileWriter.hpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
+    src/clp_s/filter/BloomFilter.cpp
+    src/clp_s/filter/BloomFilter.hpp
+    src/clp_s/filter/FilterBuilder.cpp
+    src/clp_s/filter/FilterBuilder.hpp
+    src/clp_s/filter/FilterConfig.cpp
+    src/clp_s/filter/FilterConfig.hpp
+    src/clp_s/filter/FilterFile.cpp
+    src/clp_s/filter/FilterFile.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -709,6 +732,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-bloom_filter.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp

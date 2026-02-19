@@ -7,9 +7,9 @@
 #include <string>
 #include <system_error>
 #include <utility>
+#include <vector>
 
 #include <mongocxx/instance.hpp>
-#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
@@ -29,7 +29,6 @@
 #include "search/ast/Expression.hpp"
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
-#include "search/ast/SearchUtils.hpp"
 #include "search/ast/SetTimestampLiteralPrecision.hpp"
 #include "search/ast/TimestampLiteral.hpp"
 #include "search/EvaluateRangeIndexFilters.hpp"
@@ -107,6 +106,8 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
+    option.filter_config = command_line_arguments.get_filter_config();
+    option.filter_output_dir = command_line_arguments.get_var_filter_output_dir();
 
     clp_s::JsonParser parser(option);
     if (false == parser.ingest()) {

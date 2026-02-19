@@ -50,6 +50,26 @@ class OutputConfig(BaseModel):
     target_segment_size: int
     target_encoded_file_size: int
     compression_level: int
+    filter_type: str = "none"
+    filter_fpr: float = 0.01
+
+    @field_validator("filter_type")
+    @classmethod
+    def validate_filter_type(cls, value: str) -> str:
+        if value not in {"none", "bloom"}:
+            raise ValueError("filter_type must be one of: none, bloom")
+        return value
+
+    @field_validator("filter_fpr")
+    @classmethod
+    def validate_filter_fpr(cls, value: float, info) -> float:
+        filter_type = info.data.get("filter_type")
+        if filter_type != "none":
+            if not (0.0 < value < 1.0):
+                raise ValueError("filter_fpr must be in the range (0, 1)")
+            if value < 1e-6:
+                raise ValueError("filter_fpr too small (min 1e-6)")
+        return value
 
 
 class ClpIoConfig(BaseModel):

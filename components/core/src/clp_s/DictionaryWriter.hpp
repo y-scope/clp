@@ -3,6 +3,8 @@
 #ifndef CLP_S_DICTIONARYWRITER_HPP
 #define CLP_S_DICTIONARYWRITER_HPP
 
+#include <string_view>
+
 #include <absl/container/flat_hash_map.h>
 
 #include "../clp/Defs.h"
@@ -53,6 +55,22 @@ public:
      * @return The size (in-memory) of the data contained in the dictionary
      */
     size_t get_data_size() const { return m_data_size; }
+
+    /**
+     * @return The number of entries in the dictionary
+     */
+    size_t get_num_entries() const { return m_value_to_id.size(); }
+
+    /**
+     * Calls the given function for each dictionary value.
+     * @param fn A callable that accepts std::string_view.
+     */
+    template <typename Fn>
+    void for_each_value(Fn&& fn) const {
+        for (auto const& it : m_value_to_id) {
+            fn(std::string_view{it.first});
+        }
+    }
 
 protected:
     // Types

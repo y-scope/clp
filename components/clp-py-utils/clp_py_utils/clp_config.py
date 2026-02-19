@@ -862,6 +862,12 @@ class ClpConfig(BaseModel):
         )
         self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
+    def get_filters_directory(self) -> pathlib.Path:
+        """
+        :return: The directory for filter data.
+        """
+        return self.data_directory / "filters"
+
     def validate_logs_input_config(self, use_host_mount: bool = False):
         logs_input_type = self.logs_input.type
         if StorageType.FS == logs_input_type:
@@ -944,6 +950,16 @@ class ClpConfig(BaseModel):
             validate_path_could_be_dir(resolved_tmp_dir)
         except ValueError as ex:
             raise ValueError(f"tmp_directory is invalid: {ex}")
+
+    def validate_filters_dir(self, use_host_mount: bool = False):
+        filter_dir = self.get_filters_directory()
+        resolved_filter_dir = (
+            resolve_host_path_in_container(filter_dir) if use_host_mount else filter_dir
+        )
+        try:
+            validate_path_could_be_dir(resolved_filter_dir)
+        except ValueError as ex:
+            raise ValueError(f"Derived filters directory is invalid: {ex}")
 
     def validate_aws_config_dir(self, use_host_mount: bool = False):
         profile_auth_used = False
@@ -1094,11 +1110,18 @@ class ClpConfig(BaseModel):
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
+    data_directory: SerializablePath = ClpConfig().data_directory
     tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
+
+    def get_filters_directory(self) -> pathlib.Path:
+        """
+        :return: The directory for filter data.
+        """
+        return self.data_directory / "filters"
 
 
 def _validate_directory(value: Any):
