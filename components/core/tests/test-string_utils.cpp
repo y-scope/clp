@@ -533,8 +533,6 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
 
     high_resolution_clock::time_point t1;
     high_resolution_clock::time_point t2;
-    string tame_str;
-    string wild_str;
 
     int const n_reps{1'000'000};
     int test_reps{0};
