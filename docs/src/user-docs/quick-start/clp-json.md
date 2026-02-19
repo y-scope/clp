@@ -395,6 +395,22 @@ searches are case-**sensitive** on the command line.
 
 ---
 
+## Decompressing JSON logs
+
+To decompress one of your compressed JSON datasets, run:
+
+```bash
+sbin/decompress.sh x [-d DIR] --dataset '<dataset-name>'
+```
+
+* `x` selects the “extract” action. This argument is mandatory.
+* `DIR` is the path to the directory where you'd like the decompressed files to be stored. This
+  argument is optional; the default path is `.`.
+* `'dataset-name'` is the name of the dataset you'd like to decompress. If you don't use this flag,
+  clp-json will decompress the `default` dataset.
+
+---
+
 ## Stopping CLP
 
 ::::{tab-set}
