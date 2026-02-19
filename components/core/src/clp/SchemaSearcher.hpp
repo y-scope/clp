@@ -318,6 +318,8 @@ auto SchemaSearcher::process_schema_var_token(
         bool const is_mask_encoded,
         SubQuery& sub_query
 ) -> bool {
+    sub_query.mark_wildcard_match_required();
+
     auto const& raw_string{variable_token.get_query_substring()};
     auto const var_has_wildcard{variable_token.get_contains_wildcard()};
     auto const var_type{static_cast<log_surgeon::SymbolId>(variable_token.get_variable_type())};
@@ -325,7 +327,6 @@ auto SchemaSearcher::process_schema_var_token(
     bool const is_float{log_surgeon::SymbolId::TokenFloat == var_type};
 
     if (is_mask_encoded) {
-        sub_query.mark_wildcard_match_required();
         return true;
     }
 
