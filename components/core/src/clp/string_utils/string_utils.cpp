@@ -113,7 +113,7 @@ auto replace_characters(
         }
         new_value.append(value, search_start_pos, char_to_replace_pos - search_start_pos);
         if (escape) {
-            new_value += "\\";
+            new_value += cWildcardEscapeChar;
         }
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         new_value += replacement_characters[replace_char_ix];
