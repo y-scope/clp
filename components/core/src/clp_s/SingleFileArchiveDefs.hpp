@@ -43,11 +43,14 @@ constexpr auto decompose_archive_version(uint32_t archive_version)
 
 // define the version
 constexpr uint8_t cArchiveMajorVersion = 0;
-constexpr uint8_t cArchiveMinorVersion = 4;
-constexpr uint16_t cArchivePatchVersion = 1;
+constexpr uint8_t cArchiveMinorVersion = 5;
+constexpr uint16_t cArchivePatchVersion = 0;
 constexpr uint32_t cArchiveVersion{
         make_archive_version(cArchiveMajorVersion, cArchiveMinorVersion, cArchivePatchVersion)
 };
+
+// Format version markers for backwards compatibility.
+constexpr uint32_t cDeprecatedDateStringFormatVersionMarker{make_archive_version(0, 5, 0)};
 
 // define the magic number
 constexpr std::array<uint8_t, 4> cStructuredSFAMagicNumber{0xFD, 0x2F, 0xC5, 0x30};
@@ -72,6 +75,14 @@ struct ArchiveHeader {
                 cStructuredSFAMagicNumber.data(),
                 cStructuredSFAMagicNumber.size()
         );
+    }
+
+    /**
+     * @return Whether this archive can contain columns with the deprecated DateString timestamp
+     * format.
+     */
+    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
+        return version < cDeprecatedDateStringFormatVersionMarker;
     }
 
     uint8_t magic_number[4]{};
