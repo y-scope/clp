@@ -143,7 +143,7 @@ auto replace_unescaped_char(
     std::replace_if(str.begin(), str.end(), should_replace_char, to_char);
 }
 
-void to_lower(string& str) {
+auto to_lower(string& str) -> void {
     std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) {
         return std::tolower(c);
     });
