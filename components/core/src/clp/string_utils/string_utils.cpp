@@ -36,12 +36,12 @@ inline auto advance_tame_to_next_match(
         char const*& wild_current
 ) -> bool {
     auto w = *wild_current;
-    if ('?' != w) {
+    if (cSingleCharWildcard != w) {
         // No need to check for '*' since the caller ensures wild doesn't
         // contain consecutive '*'
 
         // Handle escaped characters
-        if ('\\' == w) {
+        if (cWildcardEscapeChar == w) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++wild_current;
             // This is safe without a bounds check since this the caller ensures
@@ -148,7 +148,7 @@ void to_lower(string& str) {
 }
 
 auto is_wildcard(char c) -> bool {
-    return '?' == c || '*' == c;
+    return cSingleCharWildcard == c || cZeroOrMoreCharsWildcard == c;
 }
 
 auto clean_up_wildcard_search_string(string_view str) -> string {
@@ -161,26 +161,26 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
         if (is_escaped) {
             is_escaped = false;
 
-            if (is_wildcard(c) || '\\' == c) {
+            if (is_wildcard(c) || cWildcardEscapeChar == c) {
                 // Keep escaping if c is a wildcard character or an escape
                 // character
-                cleaned_str += '\\';
+                cleaned_str += cWildcardEscapeChar;
             }
             cleaned_str += c;
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-        } else if ('*' == c) {
+        } else if (cZeroOrMoreCharsWildcard == c) {
             cleaned_str += c;
 
             // Skip over all '*' to find the next non-'*'
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-            while (current != str_end && '*' == *current) {
+            while (current != str_end && cZeroOrMoreCharsWildcard == *current) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++current;
             }
         } else {
-            if ('\\' == c) {
+            if (cWildcardEscapeChar == c) {
                 is_escaped = true;
             } else {
                 cleaned_str += c;
@@ -200,7 +200,7 @@ auto unescape_string(std::string_view str) -> std::string {
         if (escaped) {
             unescaped_str.push_back(c);
             escaped = false;
-        } else if ('\\' == c) {
+        } else if (cWildcardEscapeChar == c) {
             escaped = true;
         } else {
             unescaped_str.push_back(c);
@@ -260,7 +260,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
     char t{'\0'};
     while (true) {
         w = *wild_current;
-        if ('*' == w) {
+        if (cZeroOrMoreCharsWildcard == w) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++wild_current;
             if (wild_end == wild_current) {
@@ -277,7 +277,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
             }
         } else {
             // Handle escaped characters
-            bool const is_escaped{'\\' == w};
+            bool const is_escaped{cWildcardEscapeChar == w};
             if (is_escaped) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++wild_current;
@@ -288,7 +288,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
 
             // Handle a mismatch
             t = *tame_current;
-            if (false == ((false == is_escaped && '?' == w) || t == w)) {
+            if (false == ((false == is_escaped && cSingleCharWildcard == w) || t == w)) {
                 if (nullptr == wild_bookmark) {
                     // No bookmark to return to
                     return false;
@@ -319,7 +319,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         if (tame_end == tame_current) {
             return (wild_end == wild_current
                     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                    || ('*' == *wild_current && (wild_current + 1) == wild_end));
+                    || (cZeroOrMoreCharsWildcard == *wild_current && (wild_current + 1) == wild_end));
         }
         if (wild_end == wild_current) {
             if (nullptr == wild_bookmark) {

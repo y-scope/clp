@@ -128,7 +128,7 @@ TEST_CASE("unescape_string", "[string_utils][unescape_string]") {
         std::string escaped_string;
         char c{std::numeric_limits<char>::min()};
         while (true) {
-            escaped_string.push_back('\\');
+            escaped_string.push_back(cWildcardEscapeChar);
             escaped_string.push_back(c);
             unescaped_string.push_back(c);
             if (c == std::numeric_limits<char>::max()) {
