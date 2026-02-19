@@ -213,8 +213,8 @@ auto wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
     }
-    // We convert to lowercase (rather than uppercase) anticipating that
-    // callers use lowercase more frequently, so little will need to change.
+    // We convert to lowercase (rather than uppercase) anticipating that callers
+    // use lowercase more frequently, so little will need to change.
     string lowercase_tame{tame};
     to_lower(lowercase_tame);
     string lowercase_wild{wild};
