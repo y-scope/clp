@@ -428,7 +428,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive("abAbac", "*Abac*"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("aAazz", "a*zz*"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("A12b12", "*12*23"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("a12B12", "*12*12*"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("a12B12", "*12*12*"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("oWn", "*oWn*"));
         }
 
@@ -481,7 +481,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
                     "aaaaaaaaaaffafagaagggagaaaaaaaab",
                     "*a*b*ba*ca*aaaa*fa*ga*gggg*b*"
             ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
+            REQUIRE(wildcard_match_unsafe_case_sensitive(
                     "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
                     "aaaaaaaaaaffafagaagggagaaaaaaaab",
                     "*a*b*ba*ca*aaaa*fa*ga*ggg*b*"
@@ -504,7 +504,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
                     "abcdefghijkl*abcdefghijklm*abcdefghijklmn",
                     "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"
             ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
+            REQUIRE(wildcard_match_unsafe_case_sensitive(
                     "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*"
                     "abcdefghijkl*abcdefghijklm*abcdefghijklmn",
                     "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"
@@ -513,7 +513,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
                     "abc*abcd*abcd*abc*abcd",
                     "abc*abc*abc*abc*abc"
             ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
+            REQUIRE(wildcard_match_unsafe_case_sensitive(
                     "abc*abcd*abcd*abc*abcd*abcd*abc*abcd*abc*abc*abcd",
                     "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abcd"
             ));
