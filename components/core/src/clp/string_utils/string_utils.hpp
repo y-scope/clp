@@ -39,7 +39,7 @@ namespace clp::string_utils {
  * @return The position of the match or string::npos if none
  */
 [[nodiscard]] auto find_first_of(
-        std::string const& haystack,
+        std::string_view haystack,
         char const* needles,
         size_t search_start_pos,
         size_t& needle_ix
@@ -58,7 +58,7 @@ namespace clp::string_utils {
 [[nodiscard]] auto replace_characters(
         char const* characters_to_replace,
         char const* replacement_characters,
-        std::string const& value,
+        std::string_view value,
         bool escape
 ) -> std::string;
 

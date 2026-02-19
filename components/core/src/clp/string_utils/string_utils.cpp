@@ -73,7 +73,7 @@ inline auto advance_tame_to_next_match(
 
 namespace clp::string_utils {
 auto find_first_of(
-        string const& haystack,
+        string_view haystack,
         char const* needles,
         size_t search_start_pos,
         size_t& needle_ix
@@ -95,7 +95,7 @@ auto find_first_of(
 auto replace_characters(
         char const* characters_to_replace,
         char const* replacement_characters,
-        string const& value,
+        string_view value,
         bool escape
 ) -> string {
     string new_value;
@@ -235,6 +235,7 @@ auto wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
  * 3. checks if the two match. If not, the search repeats with the next group in
  *    tame.
  */
+// NOLINTBEGIN(readability-function-cognitive-complexity)
 auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) -> bool {
     auto const tame_length = tame.length();
     auto const wild_length = wild.length();
@@ -336,4 +337,5 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         }
     }
 }
+// NOLINTEND(readability-function-cognitive-complexity)
 }  // namespace clp::string_utils

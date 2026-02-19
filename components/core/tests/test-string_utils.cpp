@@ -31,7 +31,7 @@ using std::vector;
 TEST_CASE("to_lower", "[to_lower]") {
     string str{"test123TEST"};
     clp::string_utils::to_lower(str);
-    REQUIRE(str == "test123test");
+    REQUIRE("test123test" == str);
 }
 
 TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
@@ -39,9 +39,9 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
                     char from_char,
                     char to_char,
                     std::string in,
-                    std::string const& expected) {
+                    std::string_view expected) {
         replace_unescaped_char(escape_char, from_char, to_char, in);
-        REQUIRE((in == expected));
+        REQUIRE(in == expected);
     };
 
     SECTION("Conventional escape and wildcard characters") {
@@ -136,7 +136,7 @@ TEST_CASE("unescape_string", "[string_utils][unescape_string]") {
             }
             ++c;
         }
-        REQUIRE(unescaped_string == unescape_string(escaped_string));
+        REQUIRE(unescape_string(escaped_string) == unescaped_string);
     }
 }
 
@@ -147,131 +147,131 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
     WHEN("Match is expected if wild card character is \"*\"") {
         GIVEN("Single wild with no suffix char") {
             tame_string = "abcd", wild_string = "a*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild with no prefix char") {
             tame_string = "abcd", wild_string = "*d";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild on both side & has 1st char as literal") {
             tame_string = "abcd", wild_string = "*a*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild on both side & has middle char as literal") {
             tame_string = "abcd", wild_string = "*b*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild on both side & has last char as literal") {
             tame_string = "abcd", wild_string = "*d*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild only") {
             tame_string = "abcd", wild_string = "*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
     }
 
     WHEN("Match is expected if Wild card character is \"?\"") {
         GIVEN("Single wild in the middle") {
             tame_string = "abcd", wild_string = "a?cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild in the beginning") {
             tame_string = "abcd", wild_string = "?bcd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild at the end") {
             tame_string = "abcd", wild_string = "abc?";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Multiple wild in the middle") {
             tame_string = "abcd", wild_string = "a??d";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Multiple wild in the beginning") {
             tame_string = "abcd", wild_string = "??cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Multiple wild in the end") {
             tame_string = "abcd", wild_string = "ab??";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Single wild in the beginning and end") {
             tame_string = "abcd", wild_string = "?bc?";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Multiple wild anywhere") {
             tame_string = "abcdef", wild_string = "a?c?ef";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("All wild") {
             tame_string = "abcd", wild_string = "????";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
     }
 
     WHEN("Match is expected if wild card character has both \"*\" and \"?\"") {
         GIVEN("Wild begins with \"*?\" pattern with 0 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "*?bcd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild begins with \"?*\" pattern with 0 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "?*bcd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild begins with \"*?\" pattern with 1 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "*?cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild begins with \"?*\" pattern with 1 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "?*cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild ends with \"*?\" pattern with 0 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "abc*?";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild ends with \"?*\" pattern with 0 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "abc?*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild ends with \"*?\" pattern with 1 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "ab*?";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild ends with \"?*\" pattern with 1 matched char for \"*\"") {
             tame_string = "abcd", wild_string = "ab?*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild begins with exactly \"*?\" pattern") {
             tame_string = "abcd", wild_string = "*?";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Wild begins with exactly \"?*\" pattern") {
             tame_string = "abcd", wild_string = "?*";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
     }
 
@@ -317,57 +317,57 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
     WHEN("Match is expected when escape character(s) are used") {
         GIVEN("Escaping \"*\"") {
             tame_string = "a*cd", wild_string = "a\\*cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"?\"") {
             tame_string = "a?cd", wild_string = "a\\?cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"*\" and \"?\"") {
             tame_string = "a?c*e", wild_string = "a\\?c\\*e";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"\\\"") {
             tame_string = "a\\cd", wild_string = "a\\\\cd";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"?\" when fast forwarding") {
             tame_string = "abc?e", wild_string = "a*\\?e";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"*\" when fast forwarding") {
             tame_string = "abc*e", wild_string = "a*\\*e";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"\\\" when fast forwarding") {
             tame_string = "abc\\e", wild_string = "a*\\\\e";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"?\" when rewinding") {
             tame_string = R"(\ab\ab\c?ef)", wild_string = R"(*ab\\c\?*)";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"*\" when rewinding") {
             tame_string = R"(\ab\ab\c*ef)", wild_string = R"(*ab\\c\**)";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Escaping \"\\\" when rewinding") {
             tame_string = R"(\ab\ab\c\ef)", wild_string = R"(*ab\\c\\*)";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
 
         GIVEN("Silently ignore unsupported escape sequence \\a") {
             tame_string = "ab?d", wild_string = "\\ab?d";
-            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string) == true);
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tame_string, wild_string));
         }
     }
 
@@ -379,15 +379,15 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         bool const is_case_sensitive{false};
         GIVEN("All lower case tame and all upper case wild") {
             tame_string = "abcde", wild_string = "A?C*";
-            REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive) == true);
+            REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive));
         }
 
         GIVEN("All lower case tame and mixed lower and upper case wild") {
             tame_string = "abcde", wild_string = "A?c*";
-            REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive) == true);
+            REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive));
 
             tame_string = "abcde", wild_string = "a?C*";
-            REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive) == true);
+            REQUIRE(wildcard_match_unsafe(tame_string, wild_string, is_case_sensitive));
         }
     }
 
