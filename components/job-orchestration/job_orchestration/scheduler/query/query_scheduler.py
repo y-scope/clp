@@ -59,7 +59,6 @@ from job_orchestration.scheduler.constants import (
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,
     ExtractJsonJobConfig,
-    QueryJobConfig,
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import (
@@ -100,6 +99,9 @@ class StreamExtractionHandle(ABC):
 
     def get_archive_id(self) -> str | None:
         return self._archive_id
+
+    def get_dataset(self) -> str | None:
+        return None
 
     @abstractmethod
     def get_stream_id(self) -> str: ...
@@ -175,9 +177,12 @@ class JsonExtractionHandle(StreamExtractionHandle):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.model_validate(job_config)
         self._archive_id = self.__job_config.archive_id
-        extraction_dataset = self.__job_config.datasets[0] if self.__job_config.datasets is not None else None
-        if not archive_exists(db_conn, table_prefix, extraction_dataset, self._archive_id):
+        self._dataset = self.__job_config.dataset
+        if not archive_exists(db_conn, table_prefix, self._dataset, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
+
+    def get_dataset(self) -> str | None:
+        return self._dataset
 
     def get_stream_id(self) -> str:
         return self._archive_id
@@ -666,49 +671,19 @@ def handle_pending_query_jobs(
             job_creation_time = job["creation_time"].timestamp()
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
-            datasets = QueryJobConfig.model_validate(job_config).datasets
-            if datasets is not None:
-                # Deduplicate
-                datasets = list(dict.fromkeys(datasets))
-                if len(datasets) == 0:
-                    logger.error(f"Job {job_id} has an empty datasets list.")
-                    if not set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.FAILED,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        duration=0,
-                    ):
-                        logger.error(f"Failed to set job {job_id} as failed.")
+
+            if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
+                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+                if job_id in active_jobs:
                     continue
 
-                # Enforce max_datasets_per_query limit
-                if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
-                    logger.error(
-                        f"Job {job_id} requests {len(datasets)} datasets,"
-                        f" exceeding max_datasets_per_query={max_datasets_per_query}."
-                    )
-                    if not set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.FAILED,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        duration=0,
-                    ):
-                        logger.error(f"Failed to set job {job_id} as failed.")
-                    continue
-
-                # NOTE: This assumes we never delete a dataset.
-                missing = set(datasets) - existing_datasets
-                if missing:
-                    existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
-                    missing = set(datasets) - existing_datasets
-                    if missing:
-                        logger.error(f"Datasets {missing} don't exist.")
+                search_config = SearchJobConfig.model_validate(job_config)
+                datasets = search_config.datasets
+                if datasets is not None:
+                    # Deduplicate
+                    datasets = list(dict.fromkeys(datasets))
+                    if len(datasets) == 0:
+                        logger.error(f"Job {job_id} has an empty datasets list.")
                         if not set_job_or_task_status(
                             db_conn,
                             QUERY_JOBS_TABLE_NAME,
@@ -721,12 +696,48 @@ def handle_pending_query_jobs(
                             logger.error(f"Failed to set job {job_id} as failed.")
                         continue
 
-            if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
-                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
-                if job_id in active_jobs:
-                    continue
+                    # Enforce max_datasets_per_query limit
+                    if (
+                        max_datasets_per_query is not None
+                        and len(datasets) > max_datasets_per_query
+                    ):
+                        logger.error(
+                            f"Job {job_id} requests {len(datasets)} datasets,"
+                            f" exceeding max_datasets_per_query={max_datasets_per_query}."
+                        )
+                        if not set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.FAILED,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            duration=0,
+                        ):
+                            logger.error(f"Failed to set job {job_id} as failed.")
+                        continue
 
-                search_config = SearchJobConfig.model_validate(job_config)
+                    # NOTE: This assumes we never delete a dataset.
+                    missing = set(datasets) - existing_datasets
+                    if missing:
+                        existing_datasets.update(
+                            fetch_existing_datasets(db_cursor, table_prefix)
+                        )
+                        missing = set(datasets) - existing_datasets
+                        if missing:
+                            logger.error(f"Datasets {missing} don't exist.")
+                            if not set_job_or_task_status(
+                                db_conn,
+                                QUERY_JOBS_TABLE_NAME,
+                                job_id,
+                                QueryJobStatus.FAILED,
+                                QueryJobStatus.PENDING,
+                                start_time=datetime.datetime.now(),
+                                duration=0,
+                            ):
+                                logger.error(f"Failed to set job {job_id} as failed.")
+                            continue
+
                 archive_end_ts_lower_bound: int | None = None
                 if archive_retention_period is not None:
                     archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
@@ -849,11 +860,10 @@ def handle_pending_query_jobs(
 
                 new_stream_extraction_job = job_handle.create_stream_extraction_job()
                 archive_id = job_handle.get_archive_id()
-                extraction_dataset = datasets[0] if datasets else None
                 dispatch_job_and_update_db(
                     db_conn,
                     new_stream_extraction_job,
-                    [{"archive_id": archive_id, "dataset": extraction_dataset}],
+                    [{"archive_id": archive_id, "dataset": job_handle.get_dataset()}],
                     clp_metadata_db_conn_params,
                     results_cache_uri,
                     1,
