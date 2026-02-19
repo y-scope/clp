@@ -21,7 +21,6 @@ using clp::string_utils::replace_unescaped_char;
 using clp::string_utils::unescape_string;
 using clp::string_utils::wildcard_match_unsafe;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
-using std::chrono::duration;
 using std::chrono::high_resolution_clock;
 using std::cout;
 using std::string;
