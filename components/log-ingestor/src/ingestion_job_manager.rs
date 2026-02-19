@@ -9,17 +9,27 @@ use clp_rust_utils::{
             credentials::Credentials as ClpCredentials,
         },
     },
-    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
-    s3::ObjectMetadata,
+    job_config::ingestion::s3::{
+        BaseConfig,
+        ConfigError,
+        S3ScannerConfig,
+        SqsListenerConfig,
+        ValidatedSqsListenerConfig,
+    },
 };
 use non_empty_string::NonEmptyString;
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     compression::{Buffer, CompressionJobSubmitter, Listener},
-    ingestion_job::{IngestionJob, S3Scanner},
+    ingestion_job::{
+        IngestionJob,
+        IngestionJobState,
+        S3Scanner,
+        ZeroFaultToleranceIngestionJobState,
+    },
 };
 
 /// Errors for ingestion job manager operations.
@@ -36,6 +46,9 @@ pub enum Error {
 
     #[error("Custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
+
+    #[error("Invalid job config: {0}")]
+    InvalidConfig(#[from] ConfigError),
 
     #[error("A region code must be specified when using the default AWS endpoint")]
     MissingRegionCode,
@@ -127,8 +140,8 @@ impl IngestionJobManagerState {
             config.base.endpoint_url.as_ref(),
         )
         .await;
-        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {
-            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
+        self.create_s3_ingestion_job(config.base.clone(), move |job_id, state| {
+            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, state);
             IngestionJob::S3Scanner(scanner)
         })
         .await
@@ -144,9 +157,15 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::CustomEndpointUrlNotSupported`] if a custom endpoint URL is given.
     /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
-    pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
-        let ingestion_job_config = config.base.clone();
+    /// * Forwards [`ValidatedSqsListenerConfig::validate_and_create`]'s return values on failure.
+    pub async fn create_sqs_listener_job(
+        &self,
+        raw_config: SqsListenerConfig,
+    ) -> Result<Uuid, Error> {
+        let config = ValidatedSqsListenerConfig::validate_and_create(raw_config)?;
+        let ingestion_job_config = config.get().base.clone();
         if let Some(endpoint_url) = &ingestion_job_config.endpoint_url {
             return Err(Error::CustomEndpointUrlNotSupported(format!(
                 "SQS listener ingestion jobs do not support custom endpoint URLs yet. Endpoint \
@@ -154,17 +173,17 @@ impl IngestionJobManagerState {
             )));
         }
         let sqs_client_manager = SqsClientWrapper::create(
-            config.base.region.as_ref(),
+            config.get().base.region.as_ref(),
             self.inner.aws_credentials.access_key_id.as_str(),
             self.inner.aws_credentials.secret_access_key.as_str(),
         )
         .await;
-        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
+        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, state| {
             let listener = crate::ingestion_job::SqsListener::spawn(
                 job_id,
-                sqs_client_manager,
-                config,
-                sender,
+                &sqs_client_manager,
+                &config,
+                state,
             );
             IngestionJob::SqsListener(listener)
         })
@@ -184,6 +203,7 @@ impl IngestionJobManagerState {
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
     /// * Forwards [`IngestionJob::shutdown_and_join`]'s return value on failure.
     /// * Forwards [`Listener::shutdown_and_join`]'s return value on failure.
+    /// * Forwards [`IngestionJobState::end`]'s return values on failure.
     pub async fn shutdown_and_remove_job(&self, job_id: Uuid) -> Result<(), Error> {
         let mut job_table = self.inner.job_table.lock().await;
         let job_to_remove = job_table.remove(&job_id);
@@ -191,6 +211,7 @@ impl IngestionJobManagerState {
 
         match job_to_remove {
             Some(entry) => {
+                entry.state.end().await?;
                 entry.ingestion_job.shutdown_and_join().await?;
                 tracing::debug!("Ingestion job {} shut down.", job_id);
                 entry.listener.shutdown_and_join().await?;
@@ -227,13 +248,17 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
+    /// * Forwards [`IngestionJobState::start`]'s return values on failure.
     async fn create_s3_ingestion_job<JobCreationCallback>(
         &self,
         ingestion_job_config: BaseConfig,
         create_ingestion_job: JobCreationCallback,
     ) -> Result<Uuid, Error>
     where
-        JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
+        JobCreationCallback: FnOnce(
+            Uuid,
+            ZeroFaultToleranceIngestionJobState,
+        ) -> IngestionJob<ZeroFaultToleranceIngestionJobState>, {
         let mut job_table = self.inner.job_table.lock().await;
         for table_entry in job_table.values() {
             // TODO: We should avoid being verbose for checking each field one by one (tracked by
@@ -270,16 +295,21 @@ impl IngestionJobManagerState {
         // designed to be shared among multiple ingestion jobs in the future.
         let job_listener = self.create_listener(&ingestion_job_config);
         let sender = job_listener.get_new_sender();
+
+        // TODO: Relocate `start` before the ingestion job spawning after fixing #1733
+        let state = ZeroFaultToleranceIngestionJobState::new(sender);
+        state.start().await?;
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
-                ingestion_job: create_ingestion_job(job_id, sender),
+                ingestion_job: create_ingestion_job(job_id, state.clone()),
                 listener: job_listener,
                 bucket_name: ingestion_job_config.bucket_name,
                 region: ingestion_job_config.region,
                 key_prefix: ingestion_job_config.key_prefix,
                 endpoint_url: ingestion_job_config.endpoint_url,
                 dataset: ingestion_job_config.dataset,
+                state,
             },
         );
         drop(job_table);
@@ -318,13 +348,14 @@ struct IngestionJobManager {
 
 /// Represents an entry in the ingestion job table.
 struct IngestionJobTableEntry {
-    ingestion_job: IngestionJob,
+    ingestion_job: IngestionJob<ZeroFaultToleranceIngestionJobState>,
     listener: Listener,
     region: Option<NonEmptyString>,
     bucket_name: NonEmptyString,
     key_prefix: NonEmptyString,
     endpoint_url: Option<NonEmptyString>,
     dataset: Option<NonEmptyString>,
+    state: ZeroFaultToleranceIngestionJobState,
 }
 
 /// # Returns:
