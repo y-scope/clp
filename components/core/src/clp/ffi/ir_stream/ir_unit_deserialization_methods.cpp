@@ -21,7 +21,7 @@
 #include "../SchemaTree.hpp"
 #include "../Value.hpp"
 #include "decoding_methods.hpp"
-#include "IrErrorCode.hpp"
+#include "IrDeserializationError.hpp"
 #include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
@@ -65,7 +65,7 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  */
 [[nodiscard]] auto
 deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
-        -> ystdlib::error_handling::Result<void, IrErrorCode>;
+        -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes an integer value packet.
@@ -73,11 +73,12 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param tag
  * @param val Returns the deserialized value.
  * @return A result with success on success.
- * @return IrErrorCodeEnum::IncompleteStream if the stream is truncated.
- * @return IrErrorCodeEnum::CorruptedIR if the given tag doesn't correspond to an integer packet.
+ * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * @return IrDeserializationErrorEnum::CorruptedIR if the given tag doesn't correspond to an integer
+ * packet.
  */
 [[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
-        -> ystdlib::error_handling::Result<void, IrErrorCode>;
+        -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes a string packet.
@@ -85,12 +86,13 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param tag
  * @param deserialized_str Returns the deserialized string.
  * @return A result with success on success.
- * @return IrErrorCodeEnum::IncompleteStream if the stream is truncated.
- * @return IrErrorCodeEnum::CorruptedIR if the given tag doesn't correspond to a string packet.
+ * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * @return IrDeserializationErrorEnum::CorruptedIR if the given tag doesn't correspond to a string
+ * packet.
  */
 [[nodiscard]] auto
 deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& deserialized_str)
-        -> ystdlib::error_handling::Result<void, IrErrorCode>;
+        -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes the auto-generated node-ID-value pairs and the IDs of all user-generated keys in a
@@ -104,8 +106,8 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * - The possible error codes:
  *   - Forwards `deserialize_tag`'s return values.
  *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
- *   - IrErrorCodeEnum::CorruptedIR if the IR stream contains auto-generated key IDs *after* a
- *     user-generated key ID has been deserialized.
+ *   - IrDeserializationErrorEnum::CorruptedIR if the IR stream contains auto-generated key IDs
+ * *after* a user-generated key ID has been deserialized.
  */
 [[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         ReaderInterface& reader,
@@ -119,8 +121,9 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param node_id The node ID that corresponds to the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
  * @return A result with success on success.
- * @return IrErrorCodeEnum::IncompleteStream if the stream is truncated.
- * @return IrErrorCodeEnum::CorruptedIR if the tag doesn't correspond to any known value type.
+ * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * @return IrDeserializationErrorEnum::CorruptedIR if the tag doesn't correspond to any known value
+ * type.
  * @return Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return
  * values on any other failure.
  */
@@ -129,7 +132,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
         encoded_tag_t tag,
         SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
-) -> ystdlib::error_handling::Result<void, IrErrorCode>;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes an encoded text AST and pushes the result into node_id_value_pairs.
@@ -147,7 +150,7 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
         ReaderInterface& reader,
         SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
-) -> ystdlib::error_handling::Result<void, IrErrorCode>;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes values and constructs ID-value pairs according to the given schema. The number of
@@ -157,7 +160,8 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
  * @param schema The log event's schema.
  * @param node_id_value_pairs Returns the constructed ID-value pairs.
  * @return A result with success on success.
- * @return IrErrorCodeEnum::CorruptedIR if a key is duplicated in the deserialized log event.
+ * @return IrDeserializationErrorEnum::CorruptedIR if a key is duplicated in the deserialized log
+ * event.
  * @return Forwards `deserialize_tag`'s return values on failure.
  * @return Forwards `deserialize_value_and_insert_to_node_id_value_pairs`'s return values on
  * failure.
@@ -167,7 +171,7 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
         encoded_tag_t tag,
         Schema const& schema,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
-) -> ystdlib::error_handling::Result<void, IrErrorCode>;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * @param tag
@@ -204,7 +208,7 @@ auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
     encoded_tag_t tag{};
     if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode_Success != err) {
-        return to_ir_error_code(err);
+        return to_ir_deserialization_error(err);
     }
     return deserialize_and_decode_schema_tree_node_id<
             cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
@@ -214,73 +218,73 @@ auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
 }
 
 auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
-        -> ystdlib::error_handling::Result<void, IrErrorCode> {
+        -> ystdlib::error_handling::Result<void> {
     encoded_tag_t str_packet_tag{};
     if (auto const err{deserialize_tag(reader, str_packet_tag)}; IRErrorCode_Success != err) {
-        return to_ir_error_code(err);
+        return to_ir_deserialization_error(err);
     }
     YSTDLIB_ERROR_HANDLING_TRYV(deserialize_string(reader, str_packet_tag, key_name));
     return ystdlib::error_handling::success();
 }
 
 auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
-        -> ystdlib::error_handling::Result<void, IrErrorCode> {
+        -> ystdlib::error_handling::Result<void> {
     if (cProtocol::Payload::ValueInt8 == tag) {
         int8_t deserialized_val{};
         if (false == deserialize_int(reader, deserialized_val)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         val = deserialized_val;
     } else if (cProtocol::Payload::ValueInt16 == tag) {
         int16_t deserialized_val{};
         if (false == deserialize_int(reader, deserialized_val)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         val = deserialized_val;
     } else if (cProtocol::Payload::ValueInt32 == tag) {
         int32_t deserialized_val{};
         if (false == deserialize_int(reader, deserialized_val)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         val = deserialized_val;
     } else if (cProtocol::Payload::ValueInt64 == tag) {
         int64_t deserialized_val{};
         if (false == deserialize_int(reader, deserialized_val)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         val = deserialized_val;
     } else {
-        return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+        return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
     }
     return ystdlib::error_handling::success();
 }
 
 auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& deserialized_str)
-        -> ystdlib::error_handling::Result<void, IrErrorCode> {
+        -> ystdlib::error_handling::Result<void> {
     size_t str_length{};
     if (cProtocol::Payload::StrLenUByte == tag) {
         uint8_t length{};
         if (false == deserialize_int(reader, length)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         str_length = static_cast<size_t>(length);
     } else if (cProtocol::Payload::StrLenUShort == tag) {
         uint16_t length{};
         if (false == deserialize_int(reader, length)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         str_length = static_cast<size_t>(length);
     } else if (cProtocol::Payload::StrLenUInt == tag) {
         uint32_t length{};
         if (false == deserialize_int(reader, length)) {
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
         str_length = static_cast<size_t>(length);
     } else {
-        return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+        return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
     }
     if (clp::ErrorCode_Success != reader.try_read_string(str_length, deserialized_str)) {
-        return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
     return ystdlib::error_handling::success();
 }
@@ -310,7 +314,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         // Advance to the next tag. This is needed no matter whether the deserialized node ID is
         // auto-generated.
         if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode_Success != err) {
-            return to_ir_error_code(err);
+            return to_ir_deserialization_error(err);
         }
 
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
@@ -328,7 +332,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
                 auto_gen_node_id_value_pairs
         ));
         if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode_Success != err) {
-            return to_ir_error_code(err);
+            return to_ir_deserialization_error(err);
         }
     }
 
@@ -344,12 +348,12 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         }
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (is_auto_generated) {
-            return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
         }
         user_gen_schema.push_back(node_id);
 
         if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode_Success != err) {
-            return to_ir_error_code(err);
+            return to_ir_deserialization_error(err);
         }
     }
 
@@ -361,7 +365,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
         encoded_tag_t tag,
         SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
-) -> ystdlib::error_handling::Result<void, IrErrorCode> {
+) -> ystdlib::error_handling::Result<void> {
     switch (tag) {
         case cProtocol::Payload::ValueInt8:
         case cProtocol::Payload::ValueInt16:
@@ -375,7 +379,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
         case cProtocol::Payload::ValueFloat: {
             uint64_t val{};
             if (false == deserialize_int(reader, val)) {
-                return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             node_id_value_pairs.emplace(node_id, Value{bit_cast<value_float_t>(val)});
             break;
@@ -417,7 +421,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
             node_id_value_pairs.emplace(node_id, std::nullopt);
             break;
         default:
-            return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
     }
     return ystdlib::error_handling::success();
 }
@@ -427,15 +431,15 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
         ReaderInterface& reader,
         SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
-) -> ystdlib::error_handling::Result<void, IrErrorCode> {
+) -> ystdlib::error_handling::Result<void> {
     encoded_tag_t tag{};
     if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode_Success != err) {
-        return to_ir_error_code(err);
+        return to_ir_deserialization_error(err);
     }
 
     auto encoded_text_ast_result{deserialize_encoded_text_ast<encoded_variable_t>(reader, tag)};
     if (encoded_text_ast_result.has_error()) {
-        return to_ir_error_code(encoded_text_ast_result.error());
+        return to_ir_deserialization_error(encoded_text_ast_result.error());
     }
 
     node_id_value_pairs.emplace(node_id, Value{std::move(encoded_text_ast_result.value())});
@@ -447,13 +451,13 @@ auto deserialize_value_and_construct_node_id_value_pairs(
         encoded_tag_t tag,
         Schema const& schema,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
-) -> ystdlib::error_handling::Result<void, IrErrorCode> {
+) -> ystdlib::error_handling::Result<void> {
     node_id_value_pairs.clear();
     node_id_value_pairs.reserve(schema.size());
     for (auto const node_id : schema) {
         if (node_id_value_pairs.contains(node_id)) {
             // The key should be unique in a schema
-            return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
         }
 
         YSTDLIB_ERROR_HANDLING_TRYV(deserialize_value_and_insert_to_node_id_value_pairs(
@@ -465,7 +469,7 @@ auto deserialize_value_and_construct_node_id_value_pairs(
 
         if (schema.size() != node_id_value_pairs.size()) {
             if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode_Success != err) {
-                return to_ir_error_code(err);
+                return to_ir_deserialization_error(err);
             }
         }
     }
@@ -525,7 +529,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
     auto const type{schema_tree_node_tag_to_type(tag)};
     if (false == type.has_value()) {
-        return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+        return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
     }
 
     auto const parent_node_id_result{deserialize_schema_tree_node_parent_id(reader)};
@@ -544,7 +548,7 @@ auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
     if (auto const err{deserialize_utc_offset_change(reader, utc_offset)};
         IRErrorCode_Success != err)
     {
-        return to_ir_error_code(err);
+        return to_ir_deserialization_error(err);
     }
     return utc_offset;
 }
@@ -575,7 +579,7 @@ auto deserialize_ir_unit_kv_pair_log_event(
         ));
     } else {
         if (cProtocol::Payload::ValueEmpty != tag) {
-            return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
         }
     }
 

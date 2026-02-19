@@ -10,7 +10,7 @@
 
 #include "../../type_utils.hpp"
 #include "decoding_methods.hpp"
-#include "IrErrorCode.hpp"
+#include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -70,18 +70,18 @@ auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
     }
 }
 
-auto to_ir_error_code(IRErrorCode ir_error_code) -> IrErrorCode {
+auto to_ir_deserialization_error(IRErrorCode ir_error_code) -> IrDeserializationError {
     switch (ir_error_code) {
         case IRErrorCode_Incomplete_IR:
-            return IrErrorCode{IrErrorCodeEnum::IncompleteStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         case IRErrorCode_Corrupted_IR:
-            return IrErrorCode{IrErrorCodeEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
         case IRErrorCode_Decode_Error:
-            return IrErrorCode{IrErrorCodeEnum::DecodingMethodFailure};
+            return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
         case IRErrorCode_Eof:
-            return IrErrorCode{IrErrorCodeEnum::EndOfStream};
+            return IrDeserializationError{IrDeserializationErrorEnum::EndOfStream};
         default:
-            return IrErrorCode{IrErrorCodeEnum::DecodingMethodFailure};
+            return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
     }
 }
 }  // namespace clp::ffi::ir_stream

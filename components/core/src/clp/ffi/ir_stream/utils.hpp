@@ -20,7 +20,7 @@
 #include "byteswap.hpp"
 #include "decoding_methods.hpp"
 #include "encoding_methods.hpp"
-#include "IrErrorCode.hpp"
+#include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -136,13 +136,13 @@ template <
 [[nodiscard]] auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc;
 
 /**
- * Temporary conversion function that maps the C-style `IRErrorCode` enum to the `IrErrorCode` type.
- * This function will be removed once the full migration from `IRErrorCode` to `IrErrorCode` is
- * complete.
+ * Temporary conversion function that maps the C-style `IRErrorCode` enum to the
+ * `IrDeserializationError` type. This function will be removed once the full migration from
+ * `IRErrorCode` to `IrDeserializationError` is complete.
  * @param ir_error_code Must not be `IRErrorCode_Success`.
- * @return Equivalent `IrErrorCode` indicating the same error type.
+ * @return Equivalent `IrDeserializationError` indicating the same error type.
  */
-[[nodiscard]] auto to_ir_error_code(IRErrorCode ir_error_code) -> IrErrorCode;
+[[nodiscard]] auto to_ir_deserialization_error(IRErrorCode ir_error_code) -> IrDeserializationError;
 
 template <IntegerType integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {

@@ -17,7 +17,6 @@
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
 #include "ir_unit_deserialization_methods.hpp"
-#include "IrErrorCode.hpp"
 #include "IrUnitHandlerReq.hpp"
 #include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
