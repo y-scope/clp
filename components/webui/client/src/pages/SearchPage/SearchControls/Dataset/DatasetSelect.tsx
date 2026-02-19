@@ -54,7 +54,7 @@ const DatasetSelect = (selectProps: SelectProps) => {
 
     // Set the initial selection when data first loads.
     useEffect(() => {
-        if (isSuccess && 0 === datasets.length) {
+        if (isSuccess && 0 < data.length && 0 === datasets.length) {
             updateDatasets(getFallbackDatasets());
         }
     }, [isSuccess,
