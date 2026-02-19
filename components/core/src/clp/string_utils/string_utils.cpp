@@ -110,7 +110,7 @@ auto replace_characters(
         }
         new_value.append(value, search_start_pos, char_to_replace_pos - search_start_pos);
         if (escape) {
-            new_value += cWildcardEscapeChar;
+            new_value += clp::string_utils::cWildcardEscapeChar;
         }
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         new_value += replacement_characters[replace_char_ix];
@@ -148,7 +148,7 @@ auto to_lower(string& str) -> void {
 }
 
 auto is_wildcard(char c) -> bool {
-    return cSingleCharWildcard == c || cZeroOrMoreCharsWildcard == c;
+    return clp::string_utils::cSingleCharWildcard == c || clp::string_utils::cZeroOrMoreCharsWildcard == c;
 }
 
 auto clean_up_wildcard_search_string(string_view str) -> string {
@@ -161,26 +161,26 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
         if (is_escaped) {
             is_escaped = false;
 
-            if (is_wildcard(c) || cWildcardEscapeChar == c) {
+            if (is_wildcard(c) || clp::string_utils::cWildcardEscapeChar == c) {
                 // Keep escaping if c is a wildcard character or an escape
                 // character
-                cleaned_str += cWildcardEscapeChar;
+                cleaned_str += clp::string_utils::cWildcardEscapeChar;
             }
             cleaned_str += c;
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-        } else if (cZeroOrMoreCharsWildcard == c) {
+        } else if (clp::string_utils::cZeroOrMoreCharsWildcard == c) {
             cleaned_str += c;
 
             // Skip over all '*' to find the next non-'*'
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-            while (current != str_end && cZeroOrMoreCharsWildcard == *current) {
+            while (current != str_end && clp::string_utils::cZeroOrMoreCharsWildcard == *current) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++current;
             }
         } else {
-            if (cWildcardEscapeChar == c) {
+            if (clp::string_utils::cWildcardEscapeChar == c) {
                 is_escaped = true;
             } else {
                 cleaned_str += c;
@@ -200,7 +200,7 @@ auto unescape_string(std::string_view str) -> std::string {
         if (escaped) {
             unescaped_str.push_back(c);
             escaped = false;
-        } else if (cWildcardEscapeChar == c) {
+        } else if (clp::string_utils::cWildcardEscapeChar == c) {
             escaped = true;
         } else {
             unescaped_str.push_back(c);
@@ -253,14 +253,14 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         return 0 == tame_length;
     }
     if (0 == tame_length) {
-        return 1 == wild_length && cZeroOrMoreCharsWildcard == wild.at(0);
+        return 1 == wild_length && clp::string_utils::cZeroOrMoreCharsWildcard == wild.at(0);
     }
 
     char w{'\0'};
     char t{'\0'};
     while (true) {
         w = *wild_current;
-        if (cZeroOrMoreCharsWildcard == w) {
+        if (clp::string_utils::cZeroOrMoreCharsWildcard == w) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++wild_current;
             if (wild_end == wild_current) {
@@ -277,7 +277,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
             }
         } else {
             // Handle escaped characters
-            bool const is_escaped{cWildcardEscapeChar == w};
+            bool const is_escaped{clp::string_utils::cWildcardEscapeChar == w};
             if (is_escaped) {
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++wild_current;
@@ -288,7 +288,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
 
             // Handle a mismatch
             t = *tame_current;
-            if (false == ((false == is_escaped && cSingleCharWildcard == w) || t == w)) {
+            if (false == ((false == is_escaped && clp::string_utils::cSingleCharWildcard == w) || t == w)) {
                 if (nullptr == wild_bookmark) {
                     // No bookmark to return to
                     return false;
@@ -318,7 +318,7 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         // Handle reaching the end of tame or wild
         if (tame_end == tame_current) {
             return (wild_end == wild_current
-                    || (cZeroOrMoreCharsWildcard == *wild_current
+                    || (clp::string_utils::cZeroOrMoreCharsWildcard == *wild_current
                         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                         && (wild_current + 1) == wild_end));
         }
