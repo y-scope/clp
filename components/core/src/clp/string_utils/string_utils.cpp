@@ -1,5 +1,4 @@
 #include "string_utils/string_utils.hpp"
-#include "string_utils/constants.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -7,11 +6,13 @@
 #include <string>
 #include <string_view>
 
-using std::string;
-using std::string_view;
+#include "string_utils/constants.hpp"
+
 using clp::string_utils::cSingleCharWildcard;
 using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::cZeroOrMoreCharsWildcard;
+using std::string;
+using std::string_view;
 
 namespace {
 /**
@@ -76,12 +77,9 @@ inline auto advance_tame_to_next_match(
 }  // namespace
 
 namespace clp::string_utils {
-auto find_first_of(
-        string_view haystack,
-        char const* needles,
-        size_t search_start_pos,
-        size_t& needle_ix
-) -> size_t {
+auto
+find_first_of(string_view haystack, char const* needles, size_t search_start_pos, size_t& needle_ix)
+        -> size_t {
     size_t const haystack_length{haystack.length()};
     size_t const needles_length{strlen(needles)};
     for (size_t i = search_start_pos; i < haystack_length; ++i) {
@@ -323,7 +321,8 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         if (tame_end == tame_current) {
             return (wild_end == wild_current
                     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                    || (cZeroOrMoreCharsWildcard == *wild_current && (wild_current + 1) == wild_end));
+                    || (cZeroOrMoreCharsWildcard == *wild_current
+                        && (wild_current + 1) == wild_end));
         }
         if (wild_end == wild_current) {
             if (nullptr == wild_bookmark) {
@@ -341,5 +340,6 @@ auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) ->
         }
     }
 }
+
 // NOLINTEND(readability-function-cognitive-complexity)
 }  // namespace clp::string_utils

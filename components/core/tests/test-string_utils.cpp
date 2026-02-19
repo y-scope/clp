@@ -395,7 +395,9 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         GIVEN("Case with repeating character sequences") {
             REQUIRE(wildcard_match_unsafe_case_sensitive("abcccd", "*ccd"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("mississipissippi", "*issip*ss*"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxxx*zzy*fffff"));
+            REQUIRE_FALSE(
+                    wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxxx*zzy*fffff")
+            );
             REQUIRE(wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxx*zzy*f"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("xxxxzzzzzzzzyf", "xxxx*zzy*fffff"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("xxxxzzzzzzzzyf", "xxxx*zzy*f"));
@@ -410,7 +412,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("a12b12", "a12b"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("a12b12", "*12*12*"));
         }
-        
+
         GIVEN("Additional cases where the '*' char appears in the tame string") {
             REQUIRE(wildcard_match_unsafe_case_sensitive("*", "*"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("a*abab", "a*b"));
