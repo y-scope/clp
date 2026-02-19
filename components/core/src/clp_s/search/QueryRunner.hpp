@@ -133,7 +133,8 @@ private:
     std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
     std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>> m_clp_string_readers;
     std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>> m_var_string_readers;
-    std::unordered_map<int32_t, DateStringColumnReader*> m_datestring_readers;
+    std::unordered_map<int32_t, TimestampColumnReader*> m_timestamp_readers;
+    DeprecatedDateStringColumnReader* m_deprecated_datestring_reader{nullptr};
     std::unordered_map<int32_t, std::vector<BaseColumnReader*>> m_basic_readers;
     std::unordered_map<int32_t, std::string> m_extracted_unstructured_arrays;
     uint64_t m_cur_message{0};
@@ -267,7 +268,20 @@ private:
      */
     auto evaluate_epoch_date_filter(
             ast::FilterOperation op,
-            DateStringColumnReader* reader,
+            DeprecatedDateStringColumnReader* reader,
+            std::shared_ptr<ast::Literal>& operand
+    ) -> bool;
+
+    /**
+     * Evaluates a timestamp filter.
+     * @param op
+     * @param reader
+     * @param operand
+     * @return Whether the filter evaluates to true.
+     */
+    auto evaluate_timestamp_filter(
+            ast::FilterOperation op,
+            TimestampColumnReader* reader,
             std::shared_ptr<ast::Literal>& operand
     ) -> bool;
 

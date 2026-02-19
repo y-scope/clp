@@ -18,7 +18,7 @@ use crate::compression::{Buffer, BufferSubmitter};
 struct ListenerTask<Submitter: BufferSubmitter> {
     buffer: Buffer<Submitter>,
     timeout: Duration,
-    receiver: mpsc::Receiver<ObjectMetadata>,
+    receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
 }
 
 impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
@@ -59,12 +59,8 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                                 anyhow::anyhow!("Listener channel has been closed unexpectedly")
                             );
                         }
-                        Some(object_metadata) => {
-                            tracing::debug!(
-                                object = ? object_metadata,
-                                "Received new object metadata."
-                            );
-                            self.buffer.add(object_metadata).await?;
+                        Some(object_metadata_to_ingest) => {
+                            self.buffer.add(object_metadata_to_ingest).await?;
                         }
                     }
                 }
@@ -83,7 +79,7 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
 /// Represents a listener that accepts S3 object metadata from multiple senders and buffers them
 /// for submission.
 pub struct Listener {
-    sender: mpsc::Sender<ObjectMetadata>,
+    sender: mpsc::Sender<Vec<ObjectMetadata>>,
     cancel_token: CancellationToken,
     handle: tokio::task::JoinHandle<Result<()>>,
 }
@@ -146,14 +142,15 @@ impl Listener {
     }
 
     /// # Returns
-    /// A new `mpsc::Sender<ObjectMetadata>` that can be used to send metadata to this listener.
+    /// A new `mpsc::Sender<Vec<ObjectMetadata>>` that can be used to send metadata to this
+    /// listener.
     ///
     /// The returned sender is a cheap clone of the listener's internal channel sender. It can be
     /// freely cloned and moved to other tasks; multiple senders may concurrently send to the same
     /// listener. Messages sent by a single sender preserve order; messages from different senders
     /// are interleaved in the order they are received by the runtime.
     #[must_use]
-    pub fn get_new_sender(&self) -> mpsc::Sender<ObjectMetadata> {
+    pub fn get_new_sender(&self) -> mpsc::Sender<Vec<ObjectMetadata>> {
         self.sender.clone()
     }
 }
