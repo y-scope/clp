@@ -13,7 +13,7 @@
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
-#include "IrErrorCode.hpp"
+#include "IrSerializationError.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -45,14 +45,14 @@ public:
      * @param optional_user_defined_metadata Stream-level user-defined metadata, given as a JSON
      * object.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - IrErrorCodeEnum::MetadataSerializationFailure if the stream's metadata couldn't be
-     *   serialized.
-     * - IrErrorCodeEnum::UnsupportedUserDefinedMetadata if the given user-defined metadata is not
-     *   a JSON object.
+     * - IrSerializationErrorEnum::MetadataSerializationFailure if the stream's metadata couldn't
+     *   be serialized.
+     * - IrSerializationErrorEnum::UnsupportedUserDefinedMetadata if the given user-defined
+     *   metadata is not a JSON object.
      */
     [[nodiscard]] static auto create(
             std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
-    ) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrErrorCode>;
+    ) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrSerializationError>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;
@@ -96,14 +96,15 @@ public:
      * @param user_gen_kv_pairs_map
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `serialize_schema_tree_node`'s return values.
-     * - IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure if a node ID couldn't be serialized.
-     * - IrErrorCodeEnum::KeyValuePairSerializationFailure if a value, non-string map key, or
-     *   unsupported msgpack type couldn't be serialized.
+     * - IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure if a node ID couldn't be
+     *   serialized.
+     * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if a value, non-string map key,
+     *   or unsupported msgpack type couldn't be serialized.
      */
     [[nodiscard]] auto serialize_msgpack_map(
             msgpack::object_map const& auto_gen_kv_pairs_map,
             msgpack::object_map const& user_gen_kv_pairs_map
-    ) -> ystdlib::error_handling::Result<void, IrErrorCode>;
+    ) -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constructors
@@ -115,14 +116,15 @@ private:
      * @tparam is_auto_generated_node
      * @param locator
      * @return A void result on success, or an error code indicating the failure:
-     * - IrErrorCodeEnum::UnsupportedSchemaTreeNodeType if the node type is unsupported.
-     * - IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure if the parent node ID couldn't be
+     * - IrSerializationErrorEnum::UnsupportedSchemaTreeNodeType if the node type is unsupported.
+     * - IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure if the parent node ID
+     *   couldn't be serialized.
+     * - IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be
      *   serialized.
-     * - IrErrorCodeEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be serialized.
      */
     template <bool is_auto_generated_node>
     [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator)
-            -> ystdlib::error_handling::Result<void, IrErrorCode>;
+            -> ystdlib::error_handling::Result<void>;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;

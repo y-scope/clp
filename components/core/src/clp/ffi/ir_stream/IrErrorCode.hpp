@@ -7,19 +7,12 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * This enum class represents all possible error codes related to serializing or deserializing CLP
- * IR streams.
+ * This enum class represents error codes for IR stream deserialization
  */
 enum class IrErrorCodeEnum : uint8_t {
     DecodingMethodFailure,
     EndOfStream,
     IncompleteStream,
-    MetadataSerializationFailure,
-    SchemaTreeNodeSerializationFailure,
-    KeyValuePairSerializationFailure,
-    UnsupportedUserDefinedMetadata,
-    UnsupportedSchemaTreeNodeType,
-    SchemaTreeNodeIdSerializationFailure,
 };
 
 using IrErrorCode = ystdlib::error_handling::ErrorCode<IrErrorCodeEnum>;

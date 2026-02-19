@@ -1515,7 +1515,7 @@ TEMPLATE_TEST_CASE(
     auto const serializer_result{Serializer<TestType>::create(invalid_user_defined_metadata)};
     REQUIRE(serializer_result.has_error());
     REQUIRE(
-            (clp::ffi::ir_stream::IrErrorCodeEnum::UnsupportedUserDefinedMetadata
+            (clp::ffi::ir_stream::IrSerializationErrorEnum::UnsupportedUserDefinedMetadata
              == serializer_result.error().get_error())
     );
 }

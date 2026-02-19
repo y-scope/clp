@@ -20,7 +20,7 @@
 #include "byteswap.hpp"
 #include "decoding_methods.hpp"
 #include "encoding_methods.hpp"
-#include "IrErrorCode.hpp"
+#include "IrSerializationError.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -91,8 +91,8 @@ template <IntegerType T>
  * @param node_id
  * @param output_buf
  * @return A void result on success, or an error code indicating the failure:
- * - IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure if the ID exceeds the representable
- *   range.
+ * - IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure if the ID exceeds the
+ *   representable range.
  */
 template <
         bool is_auto_generated_node,
@@ -103,7 +103,7 @@ template <
 [[nodiscard]] auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
-) -> ystdlib::error_handling::Result<void, IrErrorCode>;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes and decodes a schema tree node ID.
@@ -208,7 +208,7 @@ template <
 auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
-) -> ystdlib::error_handling::Result<void, IrErrorCode> {
+) -> ystdlib::error_handling::Result<void> {
     auto size_dependent_encode_and_serialize_schema_tree_node_id
             = [&output_buf,
                &node_id]<SignedIntegerType encoded_node_id_t>(int8_t length_indicator_tag) -> void {
@@ -233,7 +233,7 @@ auto encode_and_serialize_schema_tree_node_id(
                 four_byte_length_indicator_tag
         );
     } else {
-        return IrErrorCode{IrErrorCodeEnum::SchemaTreeNodeIdSerializationFailure};
+        return IrSerializationError{IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure};
     }
     return ystdlib::error_handling::success();
 }

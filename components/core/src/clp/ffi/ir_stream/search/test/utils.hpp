@@ -18,7 +18,7 @@
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../type_utils.hpp"
 #include "../../../SchemaTree.hpp"
-#include "../../IrErrorCode.hpp"
+#include "../../IrSerializationError.hpp"
 #include "../../Serializer.hpp"
 #include "../utils.hpp"
 
@@ -103,21 +103,22 @@ private:
  * @param serializer
  * @return A void result on success, or an error code indicating the failure:
  * - Forwards `Serializer::serialize_msgpack_map`'s return values.
- * - IrErrorCodeEnum::KeyValuePairSerializationFailure if the msgpack bytes don't represent maps.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the msgpack bytes don't
+ *   represent maps.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
         std::vector<uint8_t> const& auto_gen_msgpack_bytes,
         std::vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
-) -> ystdlib::error_handling::Result<void, IrErrorCode>;
+) -> ystdlib::error_handling::Result<void>;
 
 template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
         std::vector<uint8_t> const& auto_gen_msgpack_bytes,
         std::vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
-) -> ystdlib::error_handling::Result<void, IrErrorCode> {
+) -> ystdlib::error_handling::Result<void> {
     // NOLINTNEXTLINE(misc-include-cleaner)
     auto const auto_gen_msgpack_byte_handle{msgpack::unpack(
             clp::size_checked_pointer_cast<char const>(auto_gen_msgpack_bytes.data()),
@@ -127,7 +128,7 @@ auto unpack_and_serialize_msgpack_bytes(
 
     // NOLINTNEXTLINE(misc-include-cleaner)
     if (msgpack::type::MAP != auto_gen_msgpack_obj.type) {
-        return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+        return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
     }
 
     // NOLINTNEXTLINE(misc-include-cleaner)
@@ -139,7 +140,7 @@ auto unpack_and_serialize_msgpack_bytes(
 
     // NOLINTNEXTLINE(misc-include-cleaner)
     if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
-        return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+        return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
     }
 
     // The following clang-tidy suppression is needed because it's the only way to access the

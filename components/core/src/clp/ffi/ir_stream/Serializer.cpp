@@ -35,21 +35,20 @@ using clp::ir::four_byte_encoded_variable_t;
 
 namespace clp::ffi::ir_stream {
 namespace {
-using SerializationResult = ystdlib::error_handling::Result<void, IrErrorCode>;
 using ystdlib::error_handling::success;
 
 /**
  * Concept that defines the method to serialize a schema tree node identified by the given locator.
  * @param serialization_method
  * @param locator
- * @return A void result on success, or an IrErrorCode on failure.
+ * @return A void result on success, or an IrSerializationError on failure.
  */
 template <typename SerializationMethod>
 concept SchemaTreeNodeSerializationMethodReq = requires(
         SerializationMethod serialization_method,
         SchemaTree::NodeLocator const& locator
 ) {
-    { serialization_method(locator) } -> std::same_as<SerializationResult>;
+    { serialization_method(locator) } -> std::same_as<ystdlib::error_handling::Result<void>>;
 };
 
 /**
@@ -58,7 +57,7 @@ concept SchemaTreeNodeSerializationMethodReq = requires(
  * @param node_id
  * @param val
  * @param schema_tree_node_type The type of the schema tree node that corresponds to `val`.
- * @return A void result on success, or an IrErrorCode on failure.
+ * @return A void result on success, or an IrSerializationError on failure.
  */
 template <typename SerializationMethod>
 concept NodeIdValuePairSerializationMethodReq = requires(
@@ -67,19 +66,23 @@ concept NodeIdValuePairSerializationMethodReq = requires(
         msgpack::object const& val,
         SchemaTree::Node::Type schema_tree_node_type
 ) {
-    { serialization_method(id, val, schema_tree_node_type) } -> std::same_as<SerializationResult>;
+    {
+        serialization_method(id, val, schema_tree_node_type)
+    } -> std::same_as<ystdlib::error_handling::Result<void>>;
 };
 
 /**
  * Concept that defines the method to serialize a node-ID-value pair whose value is an empty map.
  * @param serialization_method
  * @param node_id
- * @return A void result on success, or an IrErrorCode on failure.
+ * @return A void result on success, or an IrSerializationError on failure.
  */
 template <typename SerializationMethod>
 concept EmptyMapSerializationMethodReq
         = requires(SerializationMethod serialization_method, SchemaTree::Node::id_t node_id) {
-              { serialization_method(node_id) } -> std::same_as<SerializationResult>;
+              {
+                  serialization_method(node_id)
+              } -> std::same_as<ystdlib::error_handling::Result<void>>;
           };
 
 /**
@@ -198,7 +201,8 @@ serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<in
  * @param logtype_buf
  * @param output_buf
  * @return A void result on success, or an error code indicating the failure:
- * - IrErrorCodeEnum::KeyValuePairSerializationFailure if the value couldn't be serialized.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the value couldn't be
+ *   serialized.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_value(
@@ -206,7 +210,7 @@ template <typename encoded_variable_t>
         SchemaTree::Node::Type schema_tree_node_type,
         string& logtype_buf,
         vector<int8_t>& output_buf
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Checks whether the given msgpack array can be serialized into the key-value pair IR format.
@@ -229,8 +233,8 @@ template <typename encoded_variable_t>
  * @param node_id_value_pair_serialization_method
  * @param empty_map_serialization_method
  * @return A void result on success, or an error code indicating the failure:
- * - IrErrorCodeEnum::KeyValuePairSerializationFailure if the map contains non-string keys or a
- *   value with an unsupported msgpack type.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains non-string keys
+ *   or a value with an unsupported msgpack type.
  * - Forwards the serialization callbacks' return values on failure.
  */
 template <
@@ -244,7 +248,7 @@ template <
         SchemaTreeNodeSerializationMethod schema_tree_node_serialization_method,
         NodeIdValuePairSerializationMethod node_id_value_pair_serialization_method,
         EmptyMapSerializationMethod empty_map_serialization_method
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
         -> optional<SchemaTree::Node::Type> {
@@ -339,13 +343,15 @@ auto serialize_value(
         SchemaTree::Node::Type schema_tree_node_type,
         string& logtype_buf,
         vector<int8_t>& output_buf
-) -> SerializationResult {
+) -> ystdlib::error_handling::Result<void> {
     switch (schema_tree_node_type) {
         case SchemaTree::Node::Type::Int:
             if (msgpack::type::POSITIVE_INTEGER == val.type
                 && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
             {
-                return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+                return IrSerializationError{
+                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
+                };
             }
             serialize_value_int(val.as<int64_t>(), output_buf);
             break;
@@ -366,25 +372,31 @@ auto serialize_value(
                         output_buf
                 ))
             {
-                return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+                return IrSerializationError{
+                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
+                };
             }
             break;
 
         case SchemaTree::Node::Type::Obj:
             if (msgpack::type::NIL != val.type) {
-                return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+                return IrSerializationError{
+                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
+                };
             }
             serialize_value_null(output_buf);
             break;
 
         case SchemaTree::Node::Type::UnstructuredArray:
             if (false == serialize_value_array<encoded_variable_t>(val, logtype_buf, output_buf)) {
-                return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+                return IrSerializationError{
+                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
+                };
             }
             break;
 
         default:
-            return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+            return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
     }
     return success();
 }
@@ -442,7 +454,7 @@ template <
         SchemaTreeNodeSerializationMethod schema_tree_node_serialization_method,
         NodeIdValuePairSerializationMethod node_id_value_pair_serialization_method,
         EmptyMapSerializationMethod empty_map_serialization_method
-) -> SerializationResult {
+) -> ystdlib::error_handling::Result<void> {
     vector<MsgpackMapIterator> dfs_stack;
     dfs_stack.emplace_back(
             SchemaTree::cRootId,
@@ -460,12 +472,12 @@ template <
         auto const& [key, val]{curr.get_next_child()};
         if (msgpack::type::STR != key.type) {
             // A map containing non-string keys is not serializable
-            return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+            return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
         }
 
         auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
         if (false == opt_schema_tree_node_type.has_value()) {
-            return IrErrorCode{IrErrorCodeEnum::KeyValuePairSerializationFailure};
+            return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
         }
         auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
 
@@ -516,7 +528,7 @@ template <
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrErrorCode> {
+) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrSerializationError> {
     static_assert(
             std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
@@ -543,7 +555,7 @@ auto Serializer<encoded_variable_t>::create(
     );
     if (optional_user_defined_metadata.has_value()) {
         if (false == optional_user_defined_metadata.value().is_object()) {
-            return IrErrorCode{IrErrorCodeEnum::UnsupportedUserDefinedMetadata};
+            return IrSerializationError{IrSerializationErrorEnum::UnsupportedUserDefinedMetadata};
         }
         metadata.emplace(
                 string{cProtocol::Metadata::UserDefinedMetadataKey},
@@ -552,7 +564,7 @@ auto Serializer<encoded_variable_t>::create(
     }
 
     if (false == serialize_metadata(metadata, ir_buf)) {
-        return IrErrorCode{IrErrorCodeEnum::MetadataSerializationFailure};
+        return IrSerializationError{IrSerializationErrorEnum::MetadataSerializationFailure};
     }
 
     return serializer;
@@ -570,7 +582,7 @@ template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,
         msgpack::object_map const& user_gen_kv_pairs_map
-) -> SerializationResult {
+) -> ystdlib::error_handling::Result<void> {
     m_auto_gen_keys_schema_tree.take_snapshot();
     m_user_gen_keys_schema_tree.take_snapshot();
     TransactionManager revert_manager{
@@ -587,14 +599,18 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
 
     // Serialize auto-generated kv pairs
     auto auto_gen_schema_tree_node_serialization_method
-            = [this](SchemaTree::NodeLocator const& locator) -> SerializationResult {
+            = [this](
+                      SchemaTree::NodeLocator const& locator
+              ) -> ystdlib::error_handling::Result<void> {
         return this->serialize_schema_tree_node<true>(locator);
     };
 
     auto auto_gen_node_id_value_pairs_serialization_method
-            = [&](SchemaTree::Node::id_t node_id,
-                  msgpack::object const& val,
-                  SchemaTree::Node::Type schema_tree_node_type) -> SerializationResult {
+            = [&](
+                      SchemaTree::Node::id_t node_id,
+                      msgpack::object const& val,
+                      SchemaTree::Node::Type schema_tree_node_type
+              ) -> ystdlib::error_handling::Result<void> {
         auto encode_result = encode_and_serialize_schema_tree_node_id<
                 true,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
@@ -614,7 +630,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
     };
 
     auto auto_gen_empty_map_serialization_method
-            = [&](SchemaTree::Node::id_t node_id) -> SerializationResult {
+            = [&](SchemaTree::Node::id_t node_id) -> ystdlib::error_handling::Result<void> {
         auto encode_result = encode_and_serialize_schema_tree_node_id<
                 true,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
@@ -638,14 +654,18 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
 
     // Serialize user-generated kv pairs
     auto user_gen_schema_tree_node_serialization_method
-            = [this](SchemaTree::NodeLocator const& locator) -> SerializationResult {
+            = [this](
+                      SchemaTree::NodeLocator const& locator
+              ) -> ystdlib::error_handling::Result<void> {
         return this->serialize_schema_tree_node<false>(locator);
     };
 
     auto user_gen_node_id_value_pairs_serialization_method
-            = [&](SchemaTree::Node::id_t node_id,
-                  msgpack::object const& val,
-                  SchemaTree::Node::Type schema_tree_node_type) -> SerializationResult {
+            = [&](
+                      SchemaTree::Node::id_t node_id,
+                      msgpack::object const& val,
+                      SchemaTree::Node::Type schema_tree_node_type
+              ) -> ystdlib::error_handling::Result<void> {
         auto encode_result = encode_and_serialize_schema_tree_node_id<
                 false,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
@@ -665,7 +685,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
     };
 
     auto user_gen_empty_map_serialization_method
-            = [&](SchemaTree::Node::id_t node_id) -> SerializationResult {
+            = [&](SchemaTree::Node::id_t node_id) -> ystdlib::error_handling::Result<void> {
         auto encode_result = encode_and_serialize_schema_tree_node_id<
                 false,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
@@ -714,7 +734,7 @@ template <typename encoded_variable_t>
 template <bool is_auto_generated_node>
 auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
-) -> SerializationResult {
+) -> ystdlib::error_handling::Result<void> {
     switch (locator.get_type()) {
         case SchemaTree::Node::Type::Int:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeInt);
@@ -735,7 +755,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeObj);
             break;
         default:
-            return IrErrorCode{IrErrorCodeEnum::UnsupportedSchemaTreeNodeType};
+            return IrSerializationError{IrSerializationErrorEnum::UnsupportedSchemaTreeNodeType};
     }
 
     auto encode_result = encode_and_serialize_schema_tree_node_id<
@@ -747,7 +767,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
     YSTDLIB_ERROR_HANDLING_TRYV(encode_result);
 
     if (false == serialize_string(locator.get_key_name(), m_schema_tree_node_buf)) {
-        return IrErrorCode{IrErrorCodeEnum::SchemaTreeNodeSerializationFailure};
+        return IrSerializationError{IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure};
     }
     return success();
 }
@@ -756,10 +776,12 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<eight_byte_encoded_variable_t>, IrErrorCode>;
+) -> ystdlib::error_handling::
+        Result<Serializer<eight_byte_encoded_variable_t>, IrSerializationError>;
 template auto Serializer<four_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<four_byte_encoded_variable_t>, IrErrorCode>;
+) -> ystdlib::error_handling::
+        Result<Serializer<four_byte_encoded_variable_t>, IrSerializationError>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
         -> void;
@@ -769,22 +791,22 @@ template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOff
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,
         msgpack::object_map const& user_gen_kv_pairs_map
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,
         msgpack::object_map const& user_gen_kv_pairs_map
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node<true>(
         SchemaTree::NodeLocator const& locator
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node<false>(
         SchemaTree::NodeLocator const& locator
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node<true>(
         SchemaTree::NodeLocator const& locator
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node<false>(
         SchemaTree::NodeLocator const& locator
-) -> SerializationResult;
+) -> ystdlib::error_handling::Result<void>;
 }  // namespace clp::ffi::ir_stream

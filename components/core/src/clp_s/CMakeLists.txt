@@ -41,6 +41,8 @@ set(
         ../clp/ffi/ir_stream/encoding_methods.hpp
         ../clp/ffi/ir_stream/IrErrorCode.cpp
         ../clp/ffi/ir_stream/IrErrorCode.hpp
+        ../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../clp/ffi/ir_stream/IrSerializationError.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp
