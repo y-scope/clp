@@ -1159,10 +1159,7 @@ def _handle_new_search_job(
             return
 
         # Enforce max_datasets_per_query limit
-        if (
-            max_datasets_per_query is not None
-            and len(datasets) > max_datasets_per_query
-        ):
+        if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
             logger.error(
                 f"Job {job_id} requests {len(datasets)} datasets,"
                 f" exceeding max_datasets_per_query={max_datasets_per_query}."
@@ -1182,9 +1179,7 @@ def _handle_new_search_job(
         # NOTE: This assumes we never delete a dataset.
         missing = set(datasets) - existing_datasets
         if missing:
-            existing_datasets.update(
-                fetch_existing_datasets(db_cursor, table_prefix)
-            )
+            existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
             missing = set(datasets) - existing_datasets
             if missing:
                 logger.error(f"Datasets {missing} don't exist.")
