@@ -165,7 +165,7 @@ template <std::integral integer_t>
 [[nodiscard]] auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool;
 
 template <std::integral integer_t>
-[[nodiscard]] auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
+auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
     auto const* raw_begin{raw.data()};
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     auto const* raw_end{raw_begin + raw.size()};
