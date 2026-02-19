@@ -253,4 +253,4 @@ credentials:
 serviceAccount:
   annotations:
   # For IRSA on EKS, set:
-     eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
+  #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
