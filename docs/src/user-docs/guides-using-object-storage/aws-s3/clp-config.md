@@ -194,7 +194,7 @@ Credentials are resolved in priority order. Common sources include:
 * AWS config files (`~/.aws/credentials`, `~/.aws/config`)
 * [IRSA](eks-irsa-setup.md) web identity tokens (on Amazon EKS)
 * Container credentials (on Amazon ECS)
-* EC2 instance metadata / [IAM roles attached](index.md#ec2-instance-iam-roles) to an instance
+* EC2 instance metadata / [IAM roles attached](index.md#default-credential-provider-chain) to an instance
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [boto3-credentials]: https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentials
