@@ -22,7 +22,6 @@ namespace {
  * @param tame_bookmark
  * @param tame_end
  * @param wild_current
- * @param wild_bookmark
  * @return true on success, false if wild cannot match tame
  */
 [[nodiscard]] inline auto advance_tame_to_next_match(
