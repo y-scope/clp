@@ -283,13 +283,14 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 absl::flat_hash_map
                 clp_s::clp_dependencies
                 clp_s::io
+                clp_s::timestamp_parser
+                clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
@@ -347,13 +348,14 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 absl::flat_hash_map
                 clp::string_utils
                 clp_s::io
+                clp_s::timestamp_parser
+                clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
-                clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
