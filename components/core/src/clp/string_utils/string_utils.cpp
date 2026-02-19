@@ -44,7 +44,7 @@ inline auto advance_tame_to_next_match(
         // contain consecutive '*'
 
         // Handle escaped characters
-        if (cWildcardEscapeChar == w) {
+        if (clp::string_utils::cWildcardEscapeChar == w) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++wild_current;
             // This is safe without a bounds check since this the caller ensures
