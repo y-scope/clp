@@ -39,7 +39,7 @@ inline auto advance_tame_to_next_match(
         char const*& wild_current
 ) -> bool {
     auto w = *wild_current;
-    if (cSingleCharWildcard != w) {
+    if (clp::string_utils::cSingleCharWildcard != w) {
         // No need to check for '*' since the caller ensures wild doesn't
         // contain consecutive '*'
 
