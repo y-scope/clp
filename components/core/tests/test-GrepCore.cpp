@@ -206,6 +206,6 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }

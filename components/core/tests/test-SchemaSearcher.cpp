@@ -168,7 +168,7 @@ TEST_CASE("process_schema_empty_token", "[dfa_search]") {
     SubQuery sub_query;
     VariableQueryToken const empty_int_token{cIntId, "", false};
     REQUIRE(false == clp::SchemaSearcherTest::process_token(empty_int_token, var_dict, sub_query));
-    REQUIRE(false == sub_query.wildcard_match_required());
+    REQUIRE(sub_query.wildcard_match_required());
     REQUIRE(0 == sub_query.get_num_possible_vars());
 }
 
@@ -178,7 +178,7 @@ TEST_CASE("process_schema_unmatched_token", "[dfa_search]") {
     SubQuery sub_query;
     VariableQueryToken const int_token{cIntId, "200", false};
     REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
-    REQUIRE(false == sub_query.wildcard_match_required());
+    REQUIRE(sub_query.wildcard_match_required());
     REQUIRE(1 == sub_query.get_num_possible_vars());
     auto const& var{sub_query.get_vars()[0]};
     REQUIRE(false == var.is_dict_var());
@@ -192,7 +192,7 @@ TEST_CASE("process_schema_int_token", "[dfa_search]") {
     SubQuery sub_query;
     VariableQueryToken const int_token{cIntId, "100", false};
     REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
-    REQUIRE(false == sub_query.wildcard_match_required());
+    REQUIRE(sub_query.wildcard_match_required());
     REQUIRE(1 == sub_query.get_num_possible_vars());
     auto const& var{sub_query.get_vars()[0]};
     REQUIRE(false == var.is_dict_var());
@@ -223,7 +223,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
         SubQuery sub_query;
         VariableQueryToken const has_number_token{cHasNumId, "10a?", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -236,7 +236,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
         SubQuery sub_query;
         VariableQueryToken const has_number_token{cHasNumId, "10?0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -264,7 +264,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
         SubQuery sub_query;
         VariableQueryToken const int_token{cIntId, "1000000000000000000000000?0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -279,7 +279,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
         SubQuery sub_query;
         VariableQueryToken const float_token{cFloatId, "1000000000000000000000000?0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(float_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -294,7 +294,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
         SubQuery sub_query;
         VariableQueryToken const has_number_token{cHasNumId, "1000000000000000000000000?0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -322,7 +322,7 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
         SubQuery sub_query;
         VariableQueryToken const int_token{cIntId, "10*0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -337,7 +337,7 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
         SubQuery sub_query;
         VariableQueryToken const float_token{cFloatId, "10*0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(float_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -352,7 +352,7 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
         SubQuery sub_query;
         VariableQueryToken const has_number_token{cHasNumId, "10*0", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -367,7 +367,7 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
         SubQuery sub_query;
         VariableQueryToken const has_number_token{cHasNumId, "10b*", true};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
-        REQUIRE(false == sub_query.wildcard_match_required());
+        REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
         REQUIRE(var.is_dict_var());
@@ -435,7 +435,7 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
 
@@ -482,6 +482,6 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
