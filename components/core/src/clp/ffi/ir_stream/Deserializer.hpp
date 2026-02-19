@@ -108,7 +108,7 @@ public:
      * the next IR unit type.
      * @return std::errc::protocol_not_supported if the IR unit type is not supported.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
-     * stream by deserializing an end-of-stream IR unit in a previous call.
+     * stream by deserializing an end-of-stream IR unit in the previous calls.
      * @return IrUnitType::LogEvent if a log event IR unit is deserialized, or an error code
      * indicating the failure:
      * - Forwards `deserialize_ir_unit_kv_pair_log_event`'s return values if it failed to
@@ -137,7 +137,6 @@ public:
      * indicating the failure:
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
-     * @return std::errc::protocol_not_supported for an unhandled IR unit type (default case).
      */
     [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<IrUnitType>;
@@ -180,6 +179,7 @@ private:
      * - std::errc::protocol_not_supported if either:
      *   - the IR stream contains an unsupported metadata format;
      *   - the IR stream's version is unsupported;
+     *   - or the IR stream's user-defined metadata is not a JSON object.
      */
     [[nodiscard]] static auto create_generic(
             ReaderInterface& reader,
