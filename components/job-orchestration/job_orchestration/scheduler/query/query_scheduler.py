@@ -673,206 +673,30 @@ def handle_pending_query_jobs(
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
-                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
-                if job_id in active_jobs:
-                    continue
-
-                search_config = SearchJobConfig.model_validate(job_config)
-                datasets = search_config.datasets
-                if datasets is not None:
-                    # Deduplicate
-                    datasets = list(dict.fromkeys(datasets))
-                    if len(datasets) == 0:
-                        logger.error(f"Job {job_id} has an empty datasets list.")
-                        if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.FAILED,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            duration=0,
-                        ):
-                            logger.error(f"Failed to set job {job_id} as failed.")
-                        continue
-
-                    # Enforce max_datasets_per_query limit
-                    if (
-                        max_datasets_per_query is not None
-                        and len(datasets) > max_datasets_per_query
-                    ):
-                        logger.error(
-                            f"Job {job_id} requests {len(datasets)} datasets,"
-                            f" exceeding max_datasets_per_query={max_datasets_per_query}."
-                        )
-                        if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.FAILED,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            duration=0,
-                        ):
-                            logger.error(f"Failed to set job {job_id} as failed.")
-                        continue
-
-                    # NOTE: This assumes we never delete a dataset.
-                    missing = set(datasets) - existing_datasets
-                    if missing:
-                        existing_datasets.update(
-                            fetch_existing_datasets(db_cursor, table_prefix)
-                        )
-                        missing = set(datasets) - existing_datasets
-                        if missing:
-                            logger.error(f"Datasets {missing} don't exist.")
-                            if not set_job_or_task_status(
-                                db_conn,
-                                QUERY_JOBS_TABLE_NAME,
-                                job_id,
-                                QueryJobStatus.FAILED,
-                                QueryJobStatus.PENDING,
-                                start_time=datetime.datetime.now(),
-                                duration=0,
-                            ):
-                                logger.error(f"Failed to set job {job_id} as failed.")
-                            continue
-
-                archive_end_ts_lower_bound: int | None = None
-                if archive_retention_period is not None:
-                    archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
-                        job_creation_time - archive_retention_period * MIN_TO_SECONDS
-                    )
-
-                archives_for_search = get_archives_for_search(
-                    db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
+                _handle_new_search_job(
+                    db_conn=db_conn,
+                    db_cursor=db_cursor,
+                    job_id=job_id,
+                    job_config=job_config,
+                    job_creation_time=job_creation_time,
+                    table_prefix=table_prefix,
+                    max_datasets_per_query=max_datasets_per_query,
+                    existing_datasets=existing_datasets,
+                    archive_retention_period=archive_retention_period,
+                    pending_search_jobs=pending_search_jobs,
+                    reducer_acquisition_tasks=reducer_acquisition_tasks,
                 )
-                if len(archives_for_search) == 0:
-                    if set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.SUCCEEDED,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        num_tasks=0,
-                        duration=0,
-                    ):
-                        logger.info(f"No matching archives, skipping job {job_id}.")
-                    continue
-
-                new_search_job = SearchJob(
-                    id=job_id,
-                    search_config=search_config,
-                    state=InternalJobState.WAITING_FOR_DISPATCH,
-                    num_archives_to_search=len(archives_for_search),
-                    num_archives_searched=0,
-                    remaining_archives_for_search=archives_for_search,
-                )
-
-                if search_config.aggregation_config is not None:
-                    new_search_job.search_config.aggregation_config.job_id = int(job_id)
-                    new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
-                    new_search_job.reducer_acquisition_task = asyncio.create_task(
-                        acquire_reducer_for_job(new_search_job)
-                    )
-                    reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
-                else:
-                    pending_search_jobs.append(new_search_job)
-                active_jobs[job_id] = new_search_job
-
             elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
-                job_handle: StreamExtractionHandle
-                try:
-                    if QueryJobType.EXTRACT_IR == job_type:
-                        job_handle = IrExtractionHandle(job_id, job_config, db_conn, table_prefix)
-                    else:
-                        job_handle = JsonExtractionHandle(job_id, job_config, db_conn, table_prefix)
-                except ValueError:
-                    logger.exception("Failed to initialize extraction job handle")
-                    if not set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.FAILED,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        num_tasks=0,
-                        duration=0,
-                    ):
-                        logger.error(f"Failed to set job {job_id} as failed")
-                    continue
-
-                # NOTE: The following two if blocks for `is_stream_extraction_active` and
-                # `is_stream_extracted` should not be reordered.
-                #
-                # The logic below works as follows:
-                # 1. It checks if a stream is already being extracted
-                #    (`is_stream_extraction_active`) and if so, it marks the new job as waiting for
-                #    the old job to finish.
-                # 2. Otherwise, it checks if a stream has already been extracted
-                #    (`is_stream_extracted`) and if so, it marks the new job as complete.
-                # 3. Otherwise, it creates a new stream extraction job.
-                #
-                # `is_stream_extracted` only checks if a single stream has been extracted rather
-                # than whether all required streams have been extracted. This means that we can't
-                # use it to check if the old job is complete; instead, we need to employ the
-                # aforementioned logic.
-
-                # Check if the required streams are currently being extracted; if so, add the job ID
-                # to the list of jobs waiting for it.
-                if job_handle.is_stream_extraction_active():
-                    job_handle.mark_job_as_waiting()
-                    logger.info(
-                        f"Stream {job_handle.get_stream_id()} is already being extracted,"
-                        f" so mark job {job_id} as running."
-                    )
-                    if not set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.RUNNING,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        num_tasks=0,
-                    ):
-                        logger.error(f"Failed to set job {job_id} as running")
-                    continue
-
-                # Check if a required stream file has already been extracted
-                if job_handle.is_stream_extracted(results_cache_uri, stream_collection_name):
-                    logger.info(
-                        f"Stream {job_handle.get_stream_id()} already extracted,"
-                        f" so mark job {job_id} as succeeded."
-                    )
-                    if not set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.SUCCEEDED,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        num_tasks=0,
-                        duration=0,
-                    ):
-                        logger.error(f"Failed to set job {job_id} as succeeded")
-                    continue
-
-                new_stream_extraction_job = job_handle.create_stream_extraction_job()
-                archive_id = job_handle.get_archive_id()
-                dispatch_job_and_update_db(
-                    db_conn,
-                    new_stream_extraction_job,
-                    [{"archive_id": archive_id, "dataset": job_handle.get_dataset()}],
-                    clp_metadata_db_conn_params,
-                    results_cache_uri,
-                    1,
+                _handle_new_extraction_job(
+                    db_conn=db_conn,
+                    job_id=job_id,
+                    job_type=job_type,
+                    job_config=job_config,
+                    table_prefix=table_prefix,
+                    results_cache_uri=results_cache_uri,
+                    stream_collection_name=stream_collection_name,
+                    clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 )
-
-                job_handle.mark_job_as_waiting()
-                active_jobs[job_id] = new_stream_extraction_job
-                logger.info(f"Dispatched stream extraction job {job_id} for archive: {archive_id}")
-
             else:
                 # NOTE: We're skipping the job for this iteration, but its status will remain
                 # unchanged. So this log will print again in the next iteration unless the user
@@ -1294,6 +1118,234 @@ async def main(argv: list[str]) -> int:
         logger.exception("Uncaught exception in job handling loop.")
 
     return 0
+
+
+def _handle_new_search_job(
+    db_conn,
+    db_cursor,
+    job_id: str,
+    job_config: dict,
+    job_creation_time: float,
+    table_prefix: str,
+    max_datasets_per_query: int | None,
+    existing_datasets: set[str],
+    archive_retention_period: int | None,
+    pending_search_jobs: list,
+    reducer_acquisition_tasks: list[asyncio.Task],
+) -> None:
+    global active_jobs
+
+    # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+    if job_id in active_jobs:
+        return
+
+    search_config = SearchJobConfig.model_validate(job_config)
+    datasets = search_config.datasets
+    if datasets is not None:
+        # Deduplicate
+        datasets = list(dict.fromkeys(datasets))
+        if len(datasets) == 0:
+            logger.error(f"Job {job_id} has an empty datasets list.")
+            if not set_job_or_task_status(
+                db_conn,
+                QUERY_JOBS_TABLE_NAME,
+                job_id,
+                QueryJobStatus.FAILED,
+                QueryJobStatus.PENDING,
+                start_time=datetime.datetime.now(),
+                duration=0,
+            ):
+                logger.error(f"Failed to set job {job_id} as failed.")
+            return
+
+        # Enforce max_datasets_per_query limit
+        if (
+            max_datasets_per_query is not None
+            and len(datasets) > max_datasets_per_query
+        ):
+            logger.error(
+                f"Job {job_id} requests {len(datasets)} datasets,"
+                f" exceeding max_datasets_per_query={max_datasets_per_query}."
+            )
+            if not set_job_or_task_status(
+                db_conn,
+                QUERY_JOBS_TABLE_NAME,
+                job_id,
+                QueryJobStatus.FAILED,
+                QueryJobStatus.PENDING,
+                start_time=datetime.datetime.now(),
+                duration=0,
+            ):
+                logger.error(f"Failed to set job {job_id} as failed.")
+            return
+
+        # NOTE: This assumes we never delete a dataset.
+        missing = set(datasets) - existing_datasets
+        if missing:
+            existing_datasets.update(
+                fetch_existing_datasets(db_cursor, table_prefix)
+            )
+            missing = set(datasets) - existing_datasets
+            if missing:
+                logger.error(f"Datasets {missing} don't exist.")
+                if not set_job_or_task_status(
+                    db_conn,
+                    QUERY_JOBS_TABLE_NAME,
+                    job_id,
+                    QueryJobStatus.FAILED,
+                    QueryJobStatus.PENDING,
+                    start_time=datetime.datetime.now(),
+                    duration=0,
+                ):
+                    logger.error(f"Failed to set job {job_id} as failed.")
+                return
+
+    archive_end_ts_lower_bound: int | None = None
+    if archive_retention_period is not None:
+        archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
+            job_creation_time - archive_retention_period * MIN_TO_SECONDS
+        )
+
+    archives_for_search = get_archives_for_search(
+        db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
+    )
+    if len(archives_for_search) == 0:
+        if set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            job_id,
+            QueryJobStatus.SUCCEEDED,
+            QueryJobStatus.PENDING,
+            start_time=datetime.datetime.now(),
+            num_tasks=0,
+            duration=0,
+        ):
+            logger.info(f"No matching archives, skipping job {job_id}.")
+        return
+
+    new_search_job = SearchJob(
+        id=job_id,
+        search_config=search_config,
+        state=InternalJobState.WAITING_FOR_DISPATCH,
+        num_archives_to_search=len(archives_for_search),
+        num_archives_searched=0,
+        remaining_archives_for_search=archives_for_search,
+    )
+
+    if search_config.aggregation_config is not None:
+        new_search_job.search_config.aggregation_config.job_id = int(job_id)
+        new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
+        new_search_job.reducer_acquisition_task = asyncio.create_task(
+            acquire_reducer_for_job(new_search_job)
+        )
+        reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+    else:
+        pending_search_jobs.append(new_search_job)
+    active_jobs[job_id] = new_search_job
+
+
+def _handle_new_extraction_job(
+    db_conn,
+    job_id: str,
+    job_type: int,
+    job_config: dict,
+    table_prefix: str,
+    results_cache_uri: str,
+    stream_collection_name: str,
+    clp_metadata_db_conn_params: dict[str, any],
+) -> None:
+    global active_jobs
+
+    job_handle: StreamExtractionHandle
+    try:
+        if QueryJobType.EXTRACT_IR == job_type:
+            job_handle = IrExtractionHandle(job_id, job_config, db_conn, table_prefix)
+        else:
+            job_handle = JsonExtractionHandle(job_id, job_config, db_conn, table_prefix)
+    except ValueError:
+        logger.exception("Failed to initialize extraction job handle")
+        if not set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            job_id,
+            QueryJobStatus.FAILED,
+            QueryJobStatus.PENDING,
+            start_time=datetime.datetime.now(),
+            num_tasks=0,
+            duration=0,
+        ):
+            logger.error(f"Failed to set job {job_id} as failed")
+        return
+
+    # NOTE: The following two if blocks for `is_stream_extraction_active` and
+    # `is_stream_extracted` should not be reordered.
+    #
+    # The logic below works as follows:
+    # 1. It checks if a stream is already being extracted
+    #    (`is_stream_extraction_active`) and if so, it marks the new job as waiting for
+    #    the old job to finish.
+    # 2. Otherwise, it checks if a stream has already been extracted
+    #    (`is_stream_extracted`) and if so, it marks the new job as complete.
+    # 3. Otherwise, it creates a new stream extraction job.
+    #
+    # `is_stream_extracted` only checks if a single stream has been extracted rather
+    # than whether all required streams have been extracted. This means that we can't
+    # use it to check if the old job is complete; instead, we need to employ the
+    # aforementioned logic.
+
+    # Check if the required streams are currently being extracted; if so, add the job ID
+    # to the list of jobs waiting for it.
+    if job_handle.is_stream_extraction_active():
+        job_handle.mark_job_as_waiting()
+        logger.info(
+            f"Stream {job_handle.get_stream_id()} is already being extracted,"
+            f" so mark job {job_id} as running."
+        )
+        if not set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            job_id,
+            QueryJobStatus.RUNNING,
+            QueryJobStatus.PENDING,
+            start_time=datetime.datetime.now(),
+            num_tasks=0,
+        ):
+            logger.error(f"Failed to set job {job_id} as running")
+        return
+
+    # Check if a required stream file has already been extracted
+    if job_handle.is_stream_extracted(results_cache_uri, stream_collection_name):
+        logger.info(
+            f"Stream {job_handle.get_stream_id()} already extracted,"
+            f" so mark job {job_id} as succeeded."
+        )
+        if not set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            job_id,
+            QueryJobStatus.SUCCEEDED,
+            QueryJobStatus.PENDING,
+            start_time=datetime.datetime.now(),
+            num_tasks=0,
+            duration=0,
+        ):
+            logger.error(f"Failed to set job {job_id} as succeeded")
+        return
+
+    new_stream_extraction_job = job_handle.create_stream_extraction_job()
+    archive_id = job_handle.get_archive_id()
+    dispatch_job_and_update_db(
+        db_conn,
+        new_stream_extraction_job,
+        [{"archive_id": archive_id, "dataset": job_handle.get_dataset()}],
+        clp_metadata_db_conn_params,
+        results_cache_uri,
+        1,
+    )
+
+    job_handle.mark_job_as_waiting()
+    active_jobs[job_id] = new_stream_extraction_job
+    logger.info(f"Dispatched stream extraction job {job_id} for archive: {archive_id}")
 
 
 if "__main__" == __name__:
