@@ -170,7 +170,7 @@ impl IngestionJobManagerState {
         }
         let sqs_client_manager = SqsClientWrapper::create(
             config.get().base.region.as_ref(),
-            &self.inner.aws_authentication
+            &self.inner.aws_authentication,
         )
         .await;
         self.create_s3_ingestion_job(ingestion_job_config, move |job_id, state| {
