@@ -114,7 +114,7 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
 
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
-                for (int32_t node_id : m_unresolved_descriptor_to_descriptor.at(column.get())) {
+                for (auto const node_id : m_unresolved_descriptor_to_descriptor.at(column.get())) {
                     auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
@@ -347,7 +347,7 @@ void SchemaMatch::populate_schema_mapping() {
             if (false == m_column_to_descriptor.count(column_id)) {
                 continue;
             }
-            for (auto const& descriptor : m_column_to_descriptor[column_id]) {
+            for (auto const& descriptor : m_column_to_descriptor.at(column_id)) {
                 if (false == descriptor->is_pure_wildcard()) {
                     auto [schema_to_column_id_it, _]
                             = m_descriptor_to_schema.try_emplace(descriptor.get());
