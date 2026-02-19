@@ -799,6 +799,6 @@ if(CLP_ENABLE_TESTS)
             PRIVATE cxx_std_20
             )
     target_compile_definitions(unitTest
-            PRIVATE CLP_ENABLE_TESTS_IN_CPP
+            PRIVATE CLP_ENABLE_TESTS
             )
 endif()
