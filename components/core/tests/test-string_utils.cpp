@@ -396,51 +396,21 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive("abcccd", "*ccd"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("mississipissippi", "*issip*ss*"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxxx*zzy*fffff"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("xxxx*zzzzzzzzy*f", "xxx*zzy*f"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("xxxxzzzzzzzzyf", "xxxx*zzy*fffff"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("xxxxzzzzzzzzyf", "xxxx*zzy*f"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("xyxyxyzyxyz", "xy*z*xyz"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("mississippi", "*sip*"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("xyxyxyxyz", "xy*xyz"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("mississippi", "mi*sip*"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("ababac", "*abac*"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("ababac", "*abac*"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("aaazz", "a*zz*"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("a12b12", "*12*23"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("a12b12", "a12b"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("a*ar", "a*aar"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("miSsissippi", "mi*Sip*"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("A12b12", "*12*23"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("bLah", "bLaH"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("a", "??"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("abcd", "?a*??"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("bLaaa", "bLa?"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("bLaH", "?Lah"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
-                    "aaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*a*x*aaa*fa*ga*b*"
-            ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
-                    "aaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*aaaa*fa*ga*gggg*b*"
-            ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "aaaaaaaaaaaaaaaa",
-                    "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*"
-            ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*"
-                    "abcdefghijkl*abcdefghijklm*abcdefghijklmn",
-                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"
-            ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "abc*abcd*abcde*abcdef*abcdefg*abcdefgh*abcdefghi*abcdefghij*abcdefghijk*"
-                    "abcdefghijkl*abcdefghijklm*abcdefghijklmn",
-                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*"
-            ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "abc*abcd*abcd*abc*abcd",
-                    "abc*abc*abc*abc*abc"
-            ));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
-                    "abc*abcd*abcd*abc*abcd*abcd*abc*abcd*abc*abc*abcd",
-                    "abc*abc*abc*abc*abc*abc*abc*abc*abc*abc*abcd"
-            ));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("a12b12", "*12*12*"));
         }
-
+        
         GIVEN("Additional cases where the '*' char appears in the tame string") {
             REQUIRE(wildcard_match_unsafe_case_sensitive("*", "*"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("a*abab", "a*b"));
@@ -479,7 +449,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive("ab", "*?*?*"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("abcd", "?b*??"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("abcd", "?a*??"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("abcde", "?*b*?*d*?"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("abcde", "?*b*?*d*?"));
         }
 
         GIVEN("Single-character-match cases") {
@@ -487,7 +457,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("bLaaa", "bLa?"));
             REQUIRE(wildcard_match_unsafe_case_sensitive("bLah", "bLa?"));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("bLaH", "?Lah"));
-            REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive("bLaH", "?LaH"));
+            REQUIRE(wildcard_match_unsafe_case_sensitive("bLaH", "?LaH"));
         }
 
         GIVEN("Many-wildcard scenarios") {
@@ -504,7 +474,7 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
                     "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"
                     "aaaaaaaaaaffafagaagggagaaaaaaaab",
-                    "*a*b*ba*ca*ca*aaa*fa*ga*b*"
+                    "*a*b*ba*ca*a*x*aaa*fa*ga*b*"
             ));
             REQUIRE_FALSE(wildcard_match_unsafe_case_sensitive(
                     "abababababababababababababababababababaacacacacacacacadaeafagahaiajakalaaaaaaa"

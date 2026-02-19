@@ -1,4 +1,5 @@
 #include "string_utils/string_utils.hpp"
+#include "string_utils/constants.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -8,6 +9,9 @@
 
 using std::string;
 using std::string_view;
+using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cWildcardEscapeChar;
+using clp::string_utils::cZeroOrMoreCharsWildcard;
 
 namespace {
 /**
