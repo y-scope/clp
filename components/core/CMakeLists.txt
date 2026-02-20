@@ -366,6 +366,18 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileWriter.hpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
+    src/clp_s/filter/BloomFilter.cpp
+    src/clp_s/filter/BloomFilter.hpp
+    src/clp_s/filter/FilterBuilder.cpp
+    src/clp_s/filter/FilterBuilder.hpp
+    src/clp_s/filter/FilterConfig.cpp
+    src/clp_s/filter/FilterConfig.hpp
+    src/clp_s/filter/FilterFile.cpp
+    src/clp_s/filter/FilterFile.hpp
+    src/clp_s/filter/FilterReader.cpp
+    src/clp_s/filter/FilterReader.hpp
+    src/clp_s/filter/XxHash.cpp
+    src/clp_s/filter/XxHash.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -709,6 +721,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-bloom_filter.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
@@ -751,6 +764,7 @@ if(CLP_ENABLE_TESTS)
     target_include_directories(unitTest
             PRIVATE
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
+            ${CLP_XXHASH_INCLUDE_DIRECTORY}
             )
     target_link_libraries(unitTest
             PRIVATE

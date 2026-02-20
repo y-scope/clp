@@ -227,6 +227,44 @@ if(CLP_BUILD_CLP_S_IO)
 endif()
 
 set(
+        CLP_S_FILTER_SOURCES
+        filter/BloomFilter.cpp
+        filter/BloomFilter.hpp
+        filter/FilterBuilder.cpp
+        filter/FilterBuilder.hpp
+        filter/FilterConfig.cpp
+        filter/FilterConfig.hpp
+        filter/FilterFile.cpp
+        filter/FilterFile.hpp
+        filter/FilterReader.cpp
+        filter/FilterReader.hpp
+        filter/XxHash.cpp
+        filter/XxHash.hpp
+)
+
+if(CLP_BUILD_CLP_S_IO)
+        add_library(
+                clp_s_filter
+                ${CLP_S_FILTER_SOURCES}
+        )
+        add_library(clp_s::filter ALIAS clp_s_filter)
+        target_compile_features(clp_s_filter PRIVATE cxx_std_20)
+        target_include_directories(
+                clp_s_filter
+                PUBLIC
+                ../
+                PRIVATE
+                ${CLP_XXHASH_INCLUDE_DIRECTORY}
+        )
+        target_link_libraries(
+                clp_s_filter
+                PUBLIC
+                clp_s::io
+                clp::string_utils
+        )
+endif()
+
+set(
         CLP_S_ARCHIVE_WRITER_SOURCES
         archive_constants.hpp
         ArchiveWriter.cpp
