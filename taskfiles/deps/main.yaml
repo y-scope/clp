@@ -28,10 +28,6 @@ vars:
   G_ANTLR_VERSION: "4.13.2"
   G_ANTLR_JAR_FILE: "{{.G_DEPS_CPP_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
-# NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
-# - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
-#   and
-# - the component depends on another via `<lib_name>_ROOT`.
 tasks:
   default:
     deps:
@@ -96,7 +92,7 @@ tasks:
     preconditions:
       # NOTE: Spider is only supported on Ubuntu at present.
       - >-
-        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+        . /etc/os-release && [ "$ID" == "ubuntu" ]
     cmds:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
@@ -168,66 +164,30 @@ tasks:
   antlr-runtime:
     internal: true
     run: "once"
-    vars:
-      LIB_NAME: "antlr4-runtime"
-
-      # Paths
-      BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-build"
-      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
-      SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
-    deps:
-      - task: "utils:init"
-      - task: "yscope-dev-utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
-
-    # NOTE: We can't use `yscope-dev-utils:cmake:install-remote-tar` (and by extension
-    # `utils:install-remote-cmake-lib`) since it doesn't yet support the `INCLUDE_PATTERNS` and
-    # `NUM_COMPONENTS_TO_STRIP` parameters.
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          FILE_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
-          INCLUDE_PATTERNS: ["*/runtime/Cpp"]
-          NUM_COMPONENTS_TO_STRIP: 3
-          OUTPUT_DIR: "{{.SOURCE_DIR}}"
-          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
-      - task: "yscope-dev-utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.BUILD_DIR}}"
-          EXTRA_ARGS:
+          CMAKE_GEN_ARGS:
             - "-DANTLR4_INSTALL=ON"
+            - "-DANTLR_BUILD_CPP_TESTS=OFF"
+            - "-DANTLR_BUILD_SHARED=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
 
             # Set CMP0135 so that extracted files use the current timestamp as their modification
             # timestamp, which ensures the library gets rebuilt if the extracted files change.
             - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
-          SOURCE_DIR: "{{.SOURCE_DIR}}"
-      - task: "yscope-dev-utils:cmake:build"
-        vars:
-          BUILD_DIR: "{{.BUILD_DIR}}"
-          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
-      - task: "yscope-dev-utils:cmake:install"
-        vars:
-          BUILD_DIR: "{{.BUILD_DIR}}"
-          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-
-      # This command must be last
-      - task: "yscope-dev-utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+          CMAKE_SOURCE_DIR: "runtime/Cpp"
+          LIB_NAME: "antlr4-runtime"
+          TARBALL_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
+          TARBALL_URL: "https://github.com/antlr/antlr4/archive/refs/tags/\
+                        {{.G_ANTLR_VERSION}}.tar.gz"
 
   boost:
     internal: true
-    vars:
-      VERSION: "1.87.0"
     run: "once"
+    deps:
+      - task: "utils:init"
     cmds:
       - task: "yscope-dev-utils:boost:download-and-install"
         vars:
@@ -241,8 +201,8 @@ tasks:
             - "regex"
             - "system"
             - "url"
-          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
-          boost-{{.VERSION}}-b2-nodocs.tar.gz"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-1.87.0/\
+          boost-1.87.0-b2-nodocs.tar.gz"
           WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
 
   catch2:
@@ -252,7 +212,9 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DBUILD_TESTING=OFF"
+            - "-DCATCH_BUILD_TESTING=OFF"
+            - "-DCATCH_INSTALL_DOCS=OFF"
+            - "-DCATCH_INSTALL_EXTRAS=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
@@ -291,51 +253,25 @@ tasks:
 
   liblzma:
     internal: true
-    vars:
-      COMMON_CMAKE_GEN_ARGS:
-        - "-DBUILD_TESTING=OFF"
-        - "-DCMAKE_BUILD_TYPE=Release"
-        - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-        - "-DXZ_DOC=OFF"
-        - "-DXZ_TOOL_LZMADEC=OFF"
-        - "-DXZ_TOOL_LZMAINFO=OFF"
-        - "-DXZ_TOOL_SCRIPTS=OFF"
-        - "-DXZ_TOOL_SYMLINKS_LZMA=OFF"
-        - "-DXZ_TOOL_XZ=OFF"
-        - "-DXZ_TOOL_XZDEC=OFF"
-      TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
-      TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz"
     run: "once"
-    deps:
-      - task: "liblzma-install"
-        vars:
-          BUILD_SHARED_LIBS: true
-          COMMON_CMAKE_GEN_ARGS:
-            ref: ".COMMON_CMAKE_GEN_ARGS"
-          TARBALL_SHA256: "{{.TARBALL_SHA256}}"
-          TARBALL_URL: "{{.TARBALL_URL}}"
-      - task: "liblzma-install"
-        vars:
-          BUILD_SHARED_LIBS: false
-          COMMON_CMAKE_GEN_ARGS:
-            ref: ".COMMON_CMAKE_GEN_ARGS"
-          TARBALL_SHA256: "{{.TARBALL_SHA256}}"
-          TARBALL_URL: "{{.TARBALL_URL}}"
-
-  liblzma-install:
-    internal: true
-    requires:
-      vars: ["BUILD_SHARED_LIBS", "COMMON_CMAKE_GEN_ARGS", "TARBALL_SHA256", "TARBALL_URL"]
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DBUILD_SHARED_LIBS={{ if .BUILD_SHARED_LIBS }}ON{{ else }}OFF{{ end }}"
-            - >-
-              {{ join " " .COMMON_CMAKE_GEN_ARGS }}
-          LIB_NAME: "LibLZMA-{{ if .BUILD_SHARED_LIBS }}shared{{ else }}static{{ end }}"
-          TARBALL_SHA256: "{{.TARBALL_SHA256}}"
-          TARBALL_URL: "{{.TARBALL_URL}}"
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DXZ_DOC=OFF"
+            - "-DXZ_TOOL_LZMADEC=OFF"
+            - "-DXZ_TOOL_LZMAINFO=OFF"
+            - "-DXZ_TOOL_SCRIPTS=OFF"
+            - "-DXZ_TOOL_SYMLINKS_LZMA=OFF"
+            - "-DXZ_TOOL_XZ=OFF"
+            - "-DXZ_TOOL_XZDEC=OFF"
+          LIB_NAME: "LibLZMA"
+          TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
+          TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1/\
+            xz-5.8.1.tar.gz"
 
   log-surgeon:
     internal: true
@@ -366,8 +302,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DBUILD_SHARED_LIBS=ON"
-            - "-DBUILD_STATIC_LIBS=ON"
+            - "-DBUILD_SHARED_LIBS=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DLZ4_BUILD_CLI=OFF"
@@ -377,6 +312,7 @@ tasks:
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
   mariadb-connector-cpp:
+    internal: true
     platforms: ["linux"]
     preconditions:
       # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
@@ -384,20 +320,21 @@ tasks:
       # - Update the precondition accordingly.
       # - Make `INSTALL_LAYOUT` configurable.
       - >-
-        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
-    internal: true
+        . /etc/os-release && [ "$ID" = "ubuntu" ]
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DINSTALL_LAYOUT=DEB"
+            - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
+            - "-DWITH_UNIT_TESTS=OFF"
           LIB_NAME: "mariadb-connector-cpp"
+          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
           TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
             tags/1.1.5.tar.gz"
-          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
 
   microsoft.gsl:
     internal: true
@@ -415,27 +352,23 @@ tasks:
 
   mongocxx:
     internal: true
-    vars:
-      VERSION: "r4.1.1"
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
             - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
-            - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DENABLE_EXAMPLES=OFF"
             - "-DENABLE_UNINSTALL=OFF"
           LIB_NAME: "mongocxx"
           TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
-          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
-          /mongo-cxx-driver-{{.VERSION}}.tar.gz"
+          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/r4.1.1\
+          /mongo-cxx-driver-r4.1.1.tar.gz"
 
   msgpack-cxx:
     internal: true
-    vars:
-      VERSION: "7.0.0"
     run: "once"
     deps:
       - task: "boost"
@@ -451,8 +384,8 @@ tasks:
             - "-DMSGPACK_CXX20=ON"
           LIB_NAME: "msgpack-cxx"
           TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
-          TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
-          /msgpack-cxx-{{.VERSION}}.tar.gz"
+          TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-7.0.0\
+          /msgpack-cxx-7.0.0.tar.gz"
 
   nlohmann_json:
     internal: true
@@ -499,7 +432,6 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
-            - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
           LIB_NAME: "spdlog"
           TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
@@ -514,7 +446,7 @@ tasks:
       LIB_NAME: "sqlite3"
 
       # Paths
-      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-extracted"
       INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
       INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
@@ -529,34 +461,35 @@ tasks:
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
-      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
-      - "rm -f '{{.INSTALL_SYMLINK}}'"
-      - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
       - |-
-        echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
-        > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
-        echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
-        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        mkdir -p "{{.INSTALL_INCLUDE_DIR}}"
+        ln -sfn "{{.SRC_DIR}}" "{{.INSTALL_SYMLINK}}"
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" <<EOF
+        set(CLP_SQLITE3_SOURCE_DIRECTORY "{{.SRC_DIR}}")
+        set(CLP_SQLITE3_INCLUDE_DIRECTORY "{{.INSTALL_INCLUDE_DIR}}")
+        EOF
 
   utfcpp:
     internal: true
     vars:
       LIB_NAME: "utfcpp"
-      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-extracted"
     run: "once"
     deps:
       - task: "utils:init"
     cmds:
+      # Directly use the source project instead of installing it.
+      # See also: https://github.com/nemtrif/utfcpp/tree/v4.0.6?tab=readme-ov-file#installation
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
           FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
           OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
           URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
-      - >-
-        echo "set(
-        CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+      - |-
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" <<EOF
+        set(CLP_UTFCPP_INCLUDE_DIRECTORY "{{.UTFCPP_OUTPUT_DIR}}")
+        EOF
 
   yaml-cpp:
     internal: true
@@ -565,9 +498,9 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DBUILD_TESTING=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DYAML_CPP_BUILD_TESTS=OFF"
           LIB_NAME: "yaml-cpp"
           TARBALL_SHA256: "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3"
           TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
@@ -582,6 +515,8 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-Dystdlib_BUILD_TESTING=OFF"
           LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
@@ -597,7 +532,6 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DBUILD_SHARED_LIBS=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
@@ -615,10 +549,8 @@ tasks:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DZSTD_BUILD_CONTRIB=OFF"
             - "-DZSTD_BUILD_PROGRAMS=OFF"
-            - "-DZSTD_BUILD_SHARED=ON"
-            - "-DZSTD_BUILD_STATIC=ON"
+            - "-DZSTD_BUILD_SHARED=OFF"
             - "-DZSTD_BUILD_TESTS=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
           LIB_NAME: "zstd"
