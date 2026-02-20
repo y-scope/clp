@@ -119,6 +119,21 @@ When using AWS RDS:
 CLP is compatible with any MongoDB database. For installation instructions, see the [MongoDB
 installation documentation][mongodb-install].
 
+:::{warning}
+Running an external MongoDB on the **same host** as CLP (i.e., using `localhost` or `127.0.0.1` as
+the `results_cache` host) is not supported. CLP's `results-cache-indices-creator` initializes a
+MongoDB replica set using the configured hostname, which MongoDB must be able to resolve to itself;
+`localhost` from inside a Docker container does not resolve to the host machine.
+
+Instead, either:
+
+* Keep `results_cache` in the `bundled` list (recommended for single-host deployments).
+* Use a truly remote MongoDB instance and specify its hostname or IP.
+* If you must use a same-host MongoDB, configure `results_cache.host` in `clp-config.yaml` to the
+  host's non-loopback IP address (e.g., `192.168.1.10`) and ensure MongoDB is bound to that
+  address.
+:::
+
 ### Creating the CLP database in MongoDB
 
 MongoDB automatically creates databases and collections when first accessed, so no manual database

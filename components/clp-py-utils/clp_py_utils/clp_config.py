@@ -402,8 +402,8 @@ class Database(BaseModel):
         )
 
     def transform_for_container(self, is_bundled: bool):
+        self.host = DB_COMPONENT_NAME
         if is_bundled:
-            self.host = DB_COMPONENT_NAME
             self.port = self.DEFAULT_PORT
 
 
@@ -480,8 +480,8 @@ class Redis(BaseModel):
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
     def transform_for_container(self, is_bundled: bool):
+        self.host = REDIS_COMPONENT_NAME
         if is_bundled:
-            self.host = REDIS_COMPONENT_NAME
             self.port = self.DEFAULT_PORT
 
 
@@ -511,8 +511,8 @@ class ResultsCache(BaseModel):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
     def transform_for_container(self, is_bundled: bool):
+        self.host = RESULTS_CACHE_COMPONENT_NAME
         if is_bundled:
-            self.host = RESULTS_CACHE_COMPONENT_NAME
             self.port = self.DEFAULT_PORT
 
 
@@ -548,8 +548,8 @@ class Queue(BaseModel):
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
     def transform_for_container(self, is_bundled: bool):
+        self.host = QUEUE_COMPONENT_NAME
         if is_bundled:
-            self.host = QUEUE_COMPONENT_NAME
             self.port = self.DEFAULT_PORT
 
 
