@@ -253,6 +253,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  *   specifiers, or format specifiers that aren't supported in date-time timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
  * - ErrorCodeEnum::InvalidEscapeSequence `pattern` contains an unsupported escape sequence.
+ * - Forwards `append_positive_left_padded_integer`'s return values.
  */
 [[nodiscard]] auto marshal_date_time_timestamp(
         epochtime_t timestamp,
@@ -268,6 +269,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @return A void result on success, or an error code indicating the failure:
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
  * - ErrorCodeEnum::InvalidEscapeSequence `pattern` contains an unsupported escape sequence.
+ * - Forwards `append_positive_left_padded_integer`'s return values.
  */
 [[nodiscard]] auto marshal_numeric_timestamp(
         epochtime_t timestamp,
@@ -293,6 +295,23 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @return Whether `c` is a repeatable escape sequence.
  */
 [[nodiscard]] auto is_repeatable_escape_sequence(char c) -> bool;
+
+/**
+ * Appends a positive integer to a buffer, left-padding it to a minimum length with a padding
+ * character.
+ * @param buffer
+ * @param length The minimum length that the integer will be padded to.
+ * @param value
+ * @param padding_character
+ * @return A void result on success, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidDate if `value` is negative.
+ */
+auto append_positive_left_padded_integer(
+        std::string& buffer,
+        size_t length,
+        int value,
+        char padding_character
+) -> ystdlib::error_handling::Result<void>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
@@ -574,15 +593,27 @@ auto marshal_date_time_timestamp(
             case 'y': {  // Zero-padded 2-digit year in century.
                 auto const year{year_month_day.year().operator int()};
                 if (year >= cTwoDigitYearHighOffset) {
-                    buffer.append(fmt::format("{:0>2d}", year - cTwoDigitYearHighOffset));
+                    YSTDLIB_ERROR_HANDLING_TRYV(append_positive_left_padded_integer(
+                            buffer,
+                            2,
+                            year - cTwoDigitYearHighOffset,
+                            '0'
+                    ));
                 } else {
-                    buffer.append(fmt::format("{:0>2d}", year - cTwoDigitYearLowOffset));
+                    YSTDLIB_ERROR_HANDLING_TRYV(append_positive_left_padded_integer(
+                            buffer,
+                            2,
+                            year - cTwoDigitYearLowOffset,
+                            '0'
+                    ));
                 }
                 break;
             }
             case 'Y': {  // Zero-padded 4-digit year.
                 auto const year{year_month_day.year().operator int()};
-                buffer.append(fmt::format("{:0>4d}", year));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 4, year, '0')
+                );
                 break;
             }
             case 'B': {  // Month name.
@@ -594,17 +625,23 @@ auto marshal_date_time_timestamp(
             }
             case 'm': {  // Zero-padded month.
                 auto const month{year_month_day.month().operator unsigned int()};
-                buffer.append(fmt::format("{:0>2d}", month));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, month, '0')
+                );
                 break;
             }
             case 'd': {  // Zero-padded day in month.
                 auto const day{year_month_day.day().operator unsigned int()};
-                buffer.append(fmt::format("{:0>2d}", day));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, day, '0')
+                );
                 break;
             }
             case 'e': {  // Space-padded day in month.
                 auto const day{year_month_day.day().operator unsigned int()};
-                buffer.append(fmt::format("{: >2d}", day));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, day, ' ')
+                );
                 break;
             }
             case 'A': {  // Day in week.
@@ -628,12 +665,16 @@ auto marshal_date_time_timestamp(
             }
             case 'H': {  // 24-hour clock, zero-padded hour.
                 auto const hours{time_of_day.hours().count()};
-                buffer.append(fmt::format("{:0>2d}", hours));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, hours, '0')
+                );
                 break;
             }
             case 'k': {  // 24-hour clock, space-padded hour.
                 auto const hours{time_of_day.hours().count()};
-                buffer.append(fmt::format("{: >2d}", hours));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, hours, ' ')
+                );
                 break;
             }
             case 'I': {  // 12-hour clock, zero-padded hour.
@@ -642,7 +683,9 @@ auto marshal_date_time_timestamp(
                 auto const twelve_hour_clock_hours{
                         0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
                 };
-                buffer.append(fmt::format("{:0>2d}", twelve_hour_clock_hours));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, twelve_hour_clock_hours, '0')
+                );
                 break;
             }
             case 'l': {  // 12-hour clock, space-padded hour.
@@ -651,21 +694,29 @@ auto marshal_date_time_timestamp(
                 auto const twelve_hour_clock_hours{
                         0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
                 };
-                buffer.append(fmt::format("{: >2d}", twelve_hour_clock_hours));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, twelve_hour_clock_hours, ' ')
+                );
                 break;
             }
             case 'M': {  // Zero-padded minute.
                 auto const minutes{time_of_day.minutes().count()};
-                buffer.append(fmt::format("{:0>2d}", minutes));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, minutes, '0')
+                );
                 break;
             }
             case 'S': {  // Zero-padded non-leap second.
                 auto const seconds{time_of_day.seconds().count()};
-                buffer.append(fmt::format("{:0>2d}", seconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, seconds, '0')
+                );
                 break;
             }
             case 'J': {  // Leap second.
-                buffer.append(fmt::format("{:0>2d}", cLeapSecond));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 2, cLeapSecond, '0')
+                );
                 break;
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
@@ -674,7 +725,9 @@ auto marshal_date_time_timestamp(
                                                 - cNumMillisecondPrecisionSubsecondDigits]};
                 auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
                 auto const subsecond_milliseconds{subsecond_nanoseconds / cFactor};
-                buffer.append(fmt::format("{:0>3d}", subsecond_milliseconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 3, subsecond_milliseconds, '0')
+                );
                 break;
             }
             case '6': {  // Zero-padded 6-digit microseconds.
@@ -683,17 +736,27 @@ auto marshal_date_time_timestamp(
                                                 - cNumMicrosecondPrecisionSubsecondDigits]};
                 auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
                 auto const subsecond_microseconds{subsecond_nanoseconds / cFactor};
-                buffer.append(fmt::format("{:0>6d}", subsecond_microseconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 6, subsecond_microseconds, '0')
+                );
                 break;
             }
             case '9': {  // Zero-padded 9-digit nanoseconds.
                 auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
-                buffer.append(fmt::format("{:0>9d}", subsecond_nanoseconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 9, subsecond_nanoseconds, '0')
+                );
                 break;
             }
             case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
                 auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
-                auto const subsecond_nanoseconds_str{fmt::format("{:0>9d}", subsecond_nanoseconds)};
+                std::string subsecond_nanoseconds_str;
+                YSTDLIB_ERROR_HANDLING_TRYV(append_positive_left_padded_integer(
+                        subsecond_nanoseconds_str,
+                        9,
+                        subsecond_nanoseconds,
+                        '0'
+                ));
                 size_t num_digits_before_zero{subsecond_nanoseconds_str.size()};
                 while (num_digits_before_zero > 0
                        && '0' == subsecond_nanoseconds_str.at(num_digits_before_zero - 1))
@@ -783,7 +846,9 @@ auto marshal_numeric_timestamp(
                                                 - cNumMillisecondPrecisionSubsecondDigits]};
                 auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
                 auto const subsecond_milliseconds{subsecond_nanoseconds / cFactor};
-                buffer.append(fmt::format("{:0>3d}", subsecond_milliseconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 3, subsecond_milliseconds, '0')
+                );
                 break;
             }
             case '6': {  // Zero-padded 6-digit microseconds.
@@ -792,17 +857,27 @@ auto marshal_numeric_timestamp(
                                                 - cNumMicrosecondPrecisionSubsecondDigits]};
                 auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
                 auto const subsecond_microseconds{subsecond_nanoseconds / cFactor};
-                buffer.append(fmt::format("{:0>6d}", subsecond_microseconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 6, subsecond_microseconds, '0')
+                );
                 break;
             }
             case '9': {  // Zero-padded 9-digit nanoseconds.
                 auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
-                buffer.append(fmt::format("{:0>9d}", subsecond_nanoseconds));
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        append_positive_left_padded_integer(buffer, 9, subsecond_nanoseconds, '0')
+                );
                 break;
             }
             case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
                 auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
-                auto const subsecond_nanoseconds_str{fmt::format("{:0>9d}", subsecond_nanoseconds)};
+                std::string subsecond_nanoseconds_str;
+                YSTDLIB_ERROR_HANDLING_TRYV(append_positive_left_padded_integer(
+                        subsecond_nanoseconds_str,
+                        9,
+                        subsecond_nanoseconds,
+                        '0'
+                ));
                 size_t num_digits_before_zero{subsecond_nanoseconds_str.size()};
                 while (num_digits_before_zero > 0
                        && '0' == subsecond_nanoseconds_str.at(num_digits_before_zero - 1))
@@ -856,6 +931,25 @@ auto is_repeatable_escape_sequence(char c) -> bool {
         default:
             return false;
     }
+}
+
+auto append_positive_left_padded_integer(
+        std::string& buffer,
+        size_t length,
+        int value,
+        char padding_character
+) -> ystdlib::error_handling::Result<void> {
+    if (value < 0) {
+        return ErrorCode{ErrorCodeEnum::InvalidDate};
+    }
+
+    auto value_str{std::to_string(value)};
+    size_t const num_padding_characters{
+            value_str.length() >= length ? size_t{0} : length - value_str.length()
+    };
+    buffer.append(num_padding_characters, padding_character);
+    buffer.append(value_str);
+    return ystdlib::error_handling::success();
 }
 }  // namespace
 
