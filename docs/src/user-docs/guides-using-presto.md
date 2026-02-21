@@ -57,14 +57,13 @@ Using Presto with CLP requires:
         retention_period: null
       ```
 
-    * Update the `presto` key with the host and port of the Presto cluster. If you follow the
-      [Setting up Presto](#setting-up-presto) section, the host is `localhost` and the port is
-      `8889`.
+    * Update the `presto` key with the `host` and `port` of the Presto cluster. Replace the default
+      values if necessary.
 
       ```yaml
       presto:
-        host: "<ip-address>"
-        port: <port>
+        host: "localhost"
+        port: 8889
       ```
 
       :::{note}

@@ -87,6 +87,8 @@ log_ingestor: null
 #  rate_limit: 1000
 #
 #mcp_server: null
+##  host: "localhost"
+##  port: 8000
 #
 ## Where archives should be output to
 #archive_output:
@@ -139,6 +141,8 @@ log_ingestor: null
 #
 ## Presto client config
 #presto: null
+##  host: <presto-coordinator-ip>  # default: "localhost"
+##  port: <presto-coordinator-port>  # default: 8889
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
