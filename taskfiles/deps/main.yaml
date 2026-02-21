@@ -84,6 +84,7 @@ tasks:
       - task: "spdlog"
       - task: "sqlite3"
       - task: "utfcpp"
+      - task: "xxhash"
       - task: "yaml-cpp"
       - task: "ystdlib"
       - task: "zlib"
@@ -556,6 +557,26 @@ tasks:
       - >-
         echo "set(
         CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
+        )" > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+
+  xxhash:
+    internal: true
+    vars:
+      LIB_NAME: "xxhash"
+      XXHASH_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+    run: "once"
+    deps:
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "baee0c6afd4f03165de7a4e67988d16f0f2b257b51d0e3cb91909302a26a79c4"
+          OUTPUT_DIR: "{{.XXHASH_OUTPUT_DIR}}"
+          URL: "https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.2.tar.gz"
+      - >-
+        echo "set(
+        CLP_XXHASH_INCLUDE_DIRECTORY \"{{.XXHASH_OUTPUT_DIR}}\"
         )" > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   yaml-cpp:
