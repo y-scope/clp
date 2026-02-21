@@ -14,7 +14,7 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.utils import (
-    unlink,
+    remove_path,
     validate_dir_exists,
     validate_file_exists,
 )
@@ -306,5 +306,5 @@ class CompressionTestPathConfig:
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
-        unlink(self.compression_dir)
-        unlink(self.decompression_dir)
+        remove_path(self.compression_dir)
+        remove_path(self.decompression_dir)
