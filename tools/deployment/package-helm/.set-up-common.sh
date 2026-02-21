@@ -82,6 +82,9 @@ nodes:
   - containerPort: 30800
     hostPort: 30800
     protocol: TCP
+  - containerPort: 30889
+    hostPort: 30889
+    protocol: TCP
 EOF
 
     for ((i = 0; i < num_workers; i++)); do

@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.query_scheduler }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "query-scheduler"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/query_scheduler" .Values.clpConfig.logs_directory)
 ) }}
+{{- end }}

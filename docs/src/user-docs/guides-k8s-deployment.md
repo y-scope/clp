@@ -298,10 +298,90 @@ helm template clp . -f custom-values.yaml
 
 ::::
 
+### Using Presto as the query engine
+
+To use [Presto][presto-guide] as the query engine instead of the default clp-s query pipeline, set
+`query_engine` to `"presto"` and configure the Presto-specific settings:
+
+```{code-block} yaml
+:caption: presto-values.yaml
+
+image:
+  prestoCoordinator:
+    repository: "ghcr.io/y-scope/presto/coordinator"
+    tag: "dev"
+  prestoWorker:
+    repository: "ghcr.io/y-scope/presto/prestissimo-worker"
+    tag: "dev"
+
+prestoWorker:
+  # See below "Worker scheduling" for more details on configuring Presto scheduling
+  replicas: 2
+
+clpConfig:
+  package:
+    storage_engine: "clp-s"
+    query_engine: "presto"
+
+  # Disable the clp-s query pipeline since Presto replaces it.
+  # NOTE: The API server currently depends on the clp-s query pipeline and does not work with
+  # Presto. Keep it enabled if you need the API server; disable it if not.
+  api_server: null
+  query_scheduler: null
+  query_worker: null
+  reducer: null
+
+  # Disable results cache retention since the Presto integration doesn't yet support garbage
+  # collection of search results.
+  results_cache:
+    retention_period: null
+
+  presto:
+    port: 30889
+    coordinator:
+      logging_level: "INFO"
+      query_max_memory_gb: 1
+      query_max_memory_per_node_gb: 1
+    worker:
+      query_memory_gb: 4
+      system_memory_gb: 8
+    # Split filter config for the Presto CLP connector. For each dataset you want to query, add a
+    # filter entry. Replace <dataset> with the dataset name (use "default" if you didn't specify one
+    # when compressing) and <timestamp-key> with the timestamp key used during compression.
+    # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+    split_filter:
+      clp.default.<dataset>:
+        - columnName: "<timestamp-key>"
+          customOptions:
+            rangeMapping:
+              lowerBound: "begin_timestamp"
+              upperBound: "end_timestamp"
+          required: false
+```
+
+Install with the Presto values:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f presto-values.yaml
+```
+
+:::{note}
+When `query_engine` is set to `"presto"`, the chart deploys a Presto coordinator and Presto
+worker(s) instead of the query scheduler, query workers, reducers, and results cache.
+:::
+
+For more details on querying logs through Presto, see the [Using Presto][presto-guide] guide.
+
 ### Worker scheduling
 
 You can control where workers are scheduled using standard Kubernetes scheduling primitives
 (`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+
+:::{note}
+When using Presto as the query engine, use `prestoWorker:` instead of `queryWorker:` and `reducer:`
+to configure Presto worker scheduling. The `prestoWorker:` key supports the same `scheduling:`
+options.
+:::
 
 #### Dedicated node pools
 
@@ -315,6 +395,9 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    # Label query nodes
    kubectl label nodes node3 node4 yscope.io/nodeType=query
+
+   # Label Presto nodes (if using Presto as the query engine)
+   kubectl label nodes node5 node6 yscope.io/nodeType=presto
    ```
 
 2. Configure scheduling:
@@ -328,19 +411,27 @@ To run compression workers, query workers, and reducers in separate node pools:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compression
+         yscope.io/nodeType: "compression"
 
    queryWorker:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
 
    reducer:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
+
+   # If using Presto as the query engine, configure prestoWorker instead of
+   # queryWorker and reducer.
+   prestoWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: "presto"
    ```
 
 3. Install:
@@ -370,7 +461,7 @@ To run all worker types in the same node pool:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
        topologySpreadConstraints:
          - maxSkew: 1
            topologyKey: "kubernetes.io/hostname"
@@ -383,13 +474,21 @@ To run all worker types in the same node pool:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
 
    reducer:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
+
+   # If using Presto as the query engine, configure prestoWorker instead of
+   # queryWorker and reducer.
+   prestoWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: "compute"
    ```
 
 3. Install:
@@ -588,6 +687,7 @@ To tear down a `kubeadm` cluster:
 * [External database setup][external-db-guide]: Using external MariaDB and MongoDB
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
+* [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
 
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
@@ -605,6 +705,7 @@ To tear down a `kubeadm` cluster:
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
 [logging-infra-issue]: https://github.com/y-scope/clp/issues/1760
+[presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3

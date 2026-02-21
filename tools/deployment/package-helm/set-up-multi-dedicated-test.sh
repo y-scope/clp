@@ -10,9 +10,11 @@ CLP_HOME="${CLP_HOME:-/tmp/clp}"
 CLUSTER_NAME="${CLUSTER_NAME:-clp-test}"
 NUM_COMPRESSION_NODES="${NUM_COMPRESSION_NODES:-2}"
 NUM_QUERY_NODES="${NUM_QUERY_NODES:-2}"
+NUM_PRESTO_NODES="${NUM_PRESTO_NODES:-2}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
 REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
+PRESTO_WORKER_REPLICAS="${PRESTO_WORKER_REPLICAS:-2}"
 
 # shellcheck source=.set-up-common.sh
 source "${script_dir}/.set-up-common.sh"
@@ -21,14 +23,16 @@ echo "=== Multi-node setup with dedicated worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Compression nodes: ${NUM_COMPRESSION_NODES}"
 echo "Query nodes: ${NUM_QUERY_NODES}"
+echo "Presto nodes: ${NUM_PRESTO_NODES}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
 echo "Reducers: ${REDUCER_REPLICAS}"
+echo "Presto workers: ${PRESTO_WORKER_REPLICAS}"
 echo ""
 
 prepare_environment "${CLUSTER_NAME}"
 
-total_workers=$((NUM_COMPRESSION_NODES + NUM_QUERY_NODES))
+total_workers=$((NUM_COMPRESSION_NODES + NUM_QUERY_NODES + NUM_PRESTO_NODES))
 
 echo "Creating kind cluster..."
 generate_kind_config "${total_workers}" | kind create cluster --name "${CLUSTER_NAME}" --config=-
@@ -43,9 +47,16 @@ for ((i = 0; i < NUM_COMPRESSION_NODES; i++)); do
 done
 
 # Label query nodes
-for ((i = NUM_COMPRESSION_NODES; i < total_workers; i++)); do
+query_end=$((NUM_COMPRESSION_NODES + NUM_QUERY_NODES))
+for ((i = NUM_COMPRESSION_NODES; i < query_end; i++)); do
     echo "Labeling ${worker_nodes[$i]} as query node"
     kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=query --overwrite
+done
+
+# Label Presto nodes
+for ((i = query_end; i < total_workers; i++)); do
+    echo "Labeling ${worker_nodes[$i]} as presto node"
+    kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=presto --overwrite
 done
 
 echo "Installing Helm chart..."
@@ -57,6 +68,9 @@ helm install test "${script_dir}" \
     --set "compressionWorker.scheduling.nodeSelector.yscope\.io/nodeType=compression" \
     --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
     --set "queryWorker.scheduling.nodeSelector.yscope\.io/nodeType=query" \
-    --set "reducer.replicas=${REDUCER_REPLICAS}"
+    --set "reducer.replicas=${REDUCER_REPLICAS}" \
+    --set "reducer.scheduling.nodeSelector.yscope\.io/nodeType=query" \
+    --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    --set "prestoWorker.scheduling.nodeSelector.yscope\.io/nodeType=presto"
 
 wait_for_cluster_ready

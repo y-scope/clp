@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.reducer }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "reducer"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/reducer" .Values.clpConfig.logs_directory)
 ) }}
+{{- end }}
