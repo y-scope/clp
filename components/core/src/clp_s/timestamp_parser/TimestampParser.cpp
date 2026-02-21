@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +11,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -751,6 +753,7 @@ auto marshal_date_time_timestamp(
             case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
                 auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
                 std::string subsecond_nanoseconds_str;
+                subsecond_nanoseconds_str.reserve(cNumNanosecondPrecisionSubsecondDigits);
                 YSTDLIB_ERROR_HANDLING_TRYV(append_positive_left_padded_integer(
                         subsecond_nanoseconds,
                         9,
@@ -872,6 +875,7 @@ auto marshal_numeric_timestamp(
             case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
                 auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
                 std::string subsecond_nanoseconds_str;
+                subsecond_nanoseconds_str.reserve(cNumNanosecondPrecisionSubsecondDigits);
                 YSTDLIB_ERROR_HANDLING_TRYV(append_positive_left_padded_integer(
                         subsecond_nanoseconds,
 
@@ -944,7 +948,17 @@ auto append_positive_left_padded_integer(
         return ErrorCode{ErrorCodeEnum::InvalidDate};
     }
 
-    auto const value_str{std::to_string(value)};
+    std::array<char, std::numeric_limits<typeof(value)>::digits10 + 1> value_str_buffer{};
+    auto const [end_ptr, ec] = std::to_chars(
+            value_str_buffer.data(),
+            value_str_buffer.data() + value_str_buffer.size(),
+            value
+    );
+    if (auto err{std::make_error_code(ec)}; err) {
+        return err;
+    }
+
+    std::string_view const value_str{value_str_buffer.data(), end_ptr};
     size_t const num_padding_characters{
             value_str.length() >= min_padded_length ? size_t{0}
                                                     : min_padded_length - value_str.length()
