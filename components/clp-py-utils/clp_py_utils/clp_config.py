@@ -168,7 +168,7 @@ class AwsAuthType(LowercaseStrEnum):
     credentials = auto()
     profile = auto()
     env_vars = auto()
-    ec2 = auto()
+    default = auto()
 
 
 AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
@@ -583,7 +583,7 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"profile must be set when type is '{auth_enum}.'")
         if AwsAuthType.credentials == auth_enum and not credentials:
             raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
-        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
+        if auth_enum in [AwsAuthType.default, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return data
 

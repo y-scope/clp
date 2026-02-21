@@ -2,8 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::{
     clp_config::{
-        AwsAuthentication::Credentials,
-        AwsCredentials,
+        AwsAuthentication,
         S3Config,
         package::{DEFAULT_DATASET_NAME, config::ArchiveOutput},
     },
@@ -57,7 +56,7 @@ impl CompressionJobSubmitter {
     #[must_use]
     pub fn new(
         db_pool: MySqlPool,
-        aws_credentials: AwsCredentials,
+        aws_authentication: AwsAuthentication,
         archive_output_config: &ArchiveOutput,
         ingestion_job_config: &BaseConfig,
     ) -> Self {
@@ -67,9 +66,7 @@ impl CompressionJobSubmitter {
                 region_code: ingestion_job_config.region.clone(),
                 key_prefix: ingestion_job_config.key_prefix.clone(),
                 endpoint_url: ingestion_job_config.endpoint_url.clone(),
-                aws_authentication: Credentials {
-                    credentials: aws_credentials,
-                },
+                aws_authentication,
             },
             keys: None,
             // NOTE: Workaround for #1735
