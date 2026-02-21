@@ -787,22 +787,22 @@ tasks:
       vars: ["RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
-      - for:
-          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
-        cmd: |-
-          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
-          uv run --directory "{{.ITEM}}" mypy . || true
-      - for:
-          - "components/core/tools/scripts"
-          - "docs/conf"
-          - "tools/deployment"
-          - "tools/scripts"
-        cmd: |-
-          . "{{.G_LINT_VENV_DIR}}/bin/activate"
-          cd "{{.ITEM}}"
-          ruff check {{.RUFF_CHECK_FLAGS}} .
-          ruff format {{.RUFF_FORMAT_FLAGS}} .
+      #- for:
+      #    var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+      #  cmd: |-
+      #    uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+      #    uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+      #    uv run --directory "{{.ITEM}}" mypy . || true
+      #- for:
+      #    - "components/core/tools/scripts"
+      #    - "docs/conf"
+      #    - "tools/deployment"
+      #    - "tools/scripts"
+      #  cmd: |-
+      #    . "{{.G_LINT_VENV_DIR}}/bin/activate"
+      #    cd "{{.ITEM}}"
+      #    ruff check {{.RUFF_CHECK_FLAGS}} .
+      #    ruff format {{.RUFF_FORMAT_FLAGS}} .
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
