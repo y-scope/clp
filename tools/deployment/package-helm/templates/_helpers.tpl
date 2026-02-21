@@ -337,7 +337,7 @@ Gets the BROKER_URL env var for Celery workers.
 {{- $host := include "clp.queueHost" . -}}
 {{- $port := include "clp.queuePort" . | int -}}
 name: "BROKER_URL"
-value: {{ printf "amqp://%s:%s@%s:%s" $user $pass $host $port | quote }}
+value: {{ printf "amqp://%s:%s@%s:%d" $user $pass $host $port | quote }}
 {{- end }}
 
 {{/*
@@ -352,7 +352,7 @@ Gets the RESULT_BACKEND env var for Celery workers.
 {{- $host := include "clp.redisHost" .root -}}
 {{- $port := include "clp.redisPort" .root | int -}}
 name: "RESULT_BACKEND"
-value: {{ printf "redis://default:%s@%s:%s/%d" $pass $host $port (int .database) | quote }}
+value: {{ printf "redis://default:%s@%s:%d/%d" $pass $host $port (int .database) | quote }}
 {{- end }}
 
 {{/*
