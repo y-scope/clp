@@ -28,6 +28,8 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/IrDeserializationError.cpp
+        ../ffi/ir_stream/IrDeserializationError.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
         ../ffi/StringBlob.hpp

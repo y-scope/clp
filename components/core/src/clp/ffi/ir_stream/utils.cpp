@@ -10,6 +10,7 @@
 
 #include "../../type_utils.hpp"
 #include "decoding_methods.hpp"
+#include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -66,6 +67,21 @@ auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
             return std::errc::no_message;
         default:
             return std::errc::not_supported;
+    }
+}
+
+auto to_ir_deserialization_error(IRErrorCode ir_error_code) -> IrDeserializationError {
+    switch (ir_error_code) {
+        case IRErrorCode_Incomplete_IR:
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+        case IRErrorCode_Corrupted_IR:
+            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+        case IRErrorCode_Decode_Error:
+            return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
+        case IRErrorCode_Eof:
+            return IrDeserializationError{IrDeserializationErrorEnum::EndOfStream};
+        default:
+            return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
     }
 }
 }  // namespace clp::ffi::ir_stream

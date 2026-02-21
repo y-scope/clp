@@ -101,7 +101,6 @@ public:
      *
      * NOTE: If the deserialized IR unit is `IrUnitType::LogEvent` and the query handler is not
      * `search::EmptyQueryHandler`, `handle_log_event` will only be invoked if the query handler
-
      * returns `search::AstEvaluationResult::True`.
      *
      * @param reader
@@ -126,8 +125,8 @@ public:
      *   handler on unit handling failure.
      * - Forwards `search::QueryHandler::update_partially_resolved_columns`'s return values on
      *   failure, if `QueryHandlerType` is not `search::EmptyQueryHandler`.
-     * - std::errc::protocol_error if the deserialized schema tree node already exists in the schema
-     *   tree.
+     * - std::errc::protocol_error if the deserialized schema tree node already exists in the
+     *   schema tree.
      * @return IrUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
      * error code indicating the failure:
      * - Forwards `deserialize_ir_unit_utc_offset_change`'s return values if it failed to
