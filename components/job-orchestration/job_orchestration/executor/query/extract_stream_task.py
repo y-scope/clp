@@ -83,6 +83,7 @@ def _make_clp_s_command_and_env_vars(
     job_config: dict,
     results_cache_uri: str,
     print_stream_stats: bool,
+    dataset: str | None = None,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     stream_output_dir = worker_config.stream_output.get_directory()
@@ -95,7 +96,8 @@ def _make_clp_s_command_and_env_vars(
         "x",
     ]
 
-    dataset = extract_json_config.dataset
+    if dataset is None:
+        dataset = extract_json_config.dataset
     if StorageType.S3 == storage_type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
@@ -153,6 +155,7 @@ def _make_command_and_env_vars(
     job_config: dict,
     results_cache_uri: str,
     print_stream_stats: bool,
+    dataset: str | None = None,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
     if StorageEngine.CLP == storage_engine:
@@ -172,6 +175,7 @@ def _make_command_and_env_vars(
             job_config,
             results_cache_uri,
             print_stream_stats,
+            dataset,
         )
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
@@ -188,6 +192,7 @@ def extract_stream(
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
     task_name = "Stream Extraction"
 
@@ -230,6 +235,7 @@ def extract_stream(
         job_config=job_config,
         results_cache_uri=results_cache_uri,
         print_stream_stats=enable_s3_upload,
+        dataset=dataset,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")

@@ -432,6 +432,7 @@ class QueryScheduler(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    max_datasets_per_query: PositiveInt | None = 10
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
 
