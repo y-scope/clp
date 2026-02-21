@@ -307,6 +307,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @param buffer
  * @return A void result on success, or an error code indicating the failure:
  * - ErrorCodeEnum::InvalidDate if `value` is negative.
+ * - Forwards `std::to_chars`' return values on failure.
  */
 [[nodiscard]] auto append_positive_left_padded_integer(
         int value,
