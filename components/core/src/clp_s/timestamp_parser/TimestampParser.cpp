@@ -955,7 +955,7 @@ auto append_positive_left_padded_integer(
             value_str_buffer.data() + value_str_buffer.size(),
             value
     );
-    if (auto err{std::make_error_code(ec)}; err) {
+    if (auto const err{std::make_error_code(ec)}; err) {
         return err;
     }
 
