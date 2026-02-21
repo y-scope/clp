@@ -24,8 +24,10 @@ sbin/start-clp.sh
 ```
 
 ```{tip}
-To validate configuration and prepare directories without launching services, add the
-`--setup-only` flag (e.g., `sbin/start-clp.sh --setup-only`).
+To validate configuration and prepare directories without launching services, add the `--setup-only`
+flag (e.g., `sbin/start-clp.sh --setup-only`). To use external databases or other third-party
+services instead of bundled services, see the
+[external database guide](../guides-external-database.md).
 ```
 
 ```{note}

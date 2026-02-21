@@ -19,12 +19,14 @@ spec:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
         runAsGroup: {{ .Values.securityContext.firstParty.gid }}
         fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      {{- if has "database" .Values.clpConfig.bundled }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "database"
           ) | nindent 10 }}
+      {{- end }}
       containers:
         - name: "db-table-creator"
           image: "{{ include "clp.image.ref" . }}"
