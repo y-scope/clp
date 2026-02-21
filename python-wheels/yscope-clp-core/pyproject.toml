@@ -8,6 +8,10 @@ authors = [
 ]
 license = "Apache-2.0"
 requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.12.5",
+    "typing-extensions>=4.15.0",
+]
 
 [project.scripts]
 "clp-s" = "yscope_clp_core:clp_s"
