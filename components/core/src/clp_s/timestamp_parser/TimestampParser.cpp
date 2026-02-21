@@ -306,7 +306,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @return A void result on success, or an error code indicating the failure:
  * - ErrorCodeEnum::InvalidDate if `value` is negative.
  */
-auto append_positive_left_padded_integer(
+[[nodiscard]] auto append_positive_left_padded_integer(
         std::string& buffer,
         size_t length,
         int value,
@@ -943,7 +943,7 @@ auto append_positive_left_padded_integer(
         return ErrorCode{ErrorCodeEnum::InvalidDate};
     }
 
-    auto value_str{std::to_string(value)};
+    auto const value_str{std::to_string(value)};
     size_t const num_padding_characters{
             value_str.length() >= length ? size_t{0} : length - value_str.length()
     };
