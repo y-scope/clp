@@ -47,10 +47,7 @@ const CancelButton = () => {
             icon={<CloseOutlined/>}
             size={"middle"}
             type={"primary"}
-            onClick={handleCancelButtonClick}
-        >
-            Cancel
-        </Button>
+            onClick={handleCancelButtonClick}/>
     );
 };
 
