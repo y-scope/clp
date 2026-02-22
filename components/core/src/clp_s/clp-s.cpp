@@ -312,21 +312,21 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
                 output_handler.value()->write(message);
             }
         } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery == query) {
-            auto var_dict{archive_reader->get_variable_dictionary()};
-            for (clp::variable_dictionary_id_t i{0}; i < stats->m_var_stats.size(); ++i) {
-                auto var_stat{stats->m_var_stats.at(i)};
-                if (0 == var_stat.get_count()) {
-                    continue;
-                }
-                auto message{fmt::format(
-                        "{{\"id\":{},\"count\":{},\"type\":\"{}\",\"variable\":\"{}\"}}\n",
-                        i,
-                        var_stat.get_count(),
-                        var_stat.get_type(),
-                        var_dict->get_value(i)
-                )};
-                output_handler.value()->write(message);
-            }
+            // auto var_dict{archive_reader->get_variable_dictionary()};
+            // for (clp::variable_dictionary_id_t i{0}; i < stats->m_var_stats.size(); ++i) {
+            //     auto var_stat{stats->m_var_stats.at(i)};
+            //     if (0 == var_stat.get_count()) {
+            //         continue;
+            //     }
+            //     auto message{fmt::format(
+            //             "{{\"id\":{},\"count\":{},\"type\":\"{}\",\"variable\":\"{}\"}}\n",
+            //             i,
+            //             var_stat.get_count(),
+            //             var_stat.get_type(),
+            //             var_dict->get_value(i)
+            //     )};
+            //     output_handler.value()->write(message);
+            // }
         }
         if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
             SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));

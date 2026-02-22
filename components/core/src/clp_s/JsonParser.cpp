@@ -1583,9 +1583,9 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                             clp_str.m_logtype
                     ));
                     clp_str.m_var_type_names.emplace_back(token_name);
-                    YSTDLIB_ERROR_HANDLING_TRYV(
-                            m_archive_writer->update_var_stats(token.to_string_view(), token_name)
-                    );
+                    // YSTDLIB_ERROR_HANDLING_TRYV(
+                    //         m_archive_writer->update_var_stats(token.to_string_view(), token_name)
+                    // );
                     break;
                 }
 
@@ -1605,16 +1605,16 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                             m_current_schema.start_unordered_object(NodeType::CompositeVar)
                     };
 
-                    m_current_schema.insert_unordered(m_archive_writer->add_node(
-                            var_node_id,
-                            NodeType::VarString,
-                            constants::cFullMatchNodeName
-                    ));
-                    m_current_parsed_message.add_unordered_value(token.to_string_view());
-                    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                            token.to_string_view(),
-                            fmt::format("{}.{}", token_name, constants::cFullMatchNodeName)
-                    ));
+                    // m_current_schema.insert_unordered(m_archive_writer->add_node(
+                    //         var_node_id,
+                    //         NodeType::VarString,
+                    //         constants::cFullMatchNodeName
+                    // ));
+                    // m_current_parsed_message.add_unordered_value(token.to_string_view());
+                    // YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                    //         token.to_string_view(),
+                    //         fmt::format("{}.{}", token_name, constants::cFullMatchNodeName)
+                    // ));
 
                     auto prev_leaf_end_pos{token.get_start_pos()};
                     for (auto const capture_match :
@@ -1635,10 +1635,10 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                                 capture_match.m_capture->get_name()
                         )};
                         m_current_parsed_message.add_unordered_value(capture.to_string_view());
-                        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                                capture.to_string_view(),
-                                capture_full_name
-                        ));
+                        // YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
+                        //         capture.to_string_view(),
+                        //         capture_full_name
+                        // ));
                         SPDLOG_DEBUG(
                                 "[clpsls]\tcapture name: {} value: {}",
                                 capture_full_name,

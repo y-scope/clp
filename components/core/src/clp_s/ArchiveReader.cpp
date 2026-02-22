@@ -471,7 +471,7 @@ auto ArchiveReader::read_experimental_stats() -> ystdlib::error_handling::Result
     decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
 
     YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.decompress(decompressor));
-    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.decompress(decompressor));
+    // YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.decompress(decompressor));
 
     decompressor.close();
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveStatsFile);

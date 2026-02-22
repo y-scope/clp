@@ -543,7 +543,7 @@ auto ArchiveWriter::close_experimenal_stats() -> ystdlib::error_handling::Result
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
     YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.compress(compressor));
-    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.compress(compressor));
+    // YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.compress(compressor));
 
     compressor.close();
     auto compressed_size{writer.get_pos()};
