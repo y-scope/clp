@@ -1,5 +1,10 @@
+mod clp_ingestion;
+
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
+pub type IngestionJobId = u64;
+
+pub use clp_ingestion::*;
 use clp_rust_utils::{
     clp_config::{
         AwsAuthentication,

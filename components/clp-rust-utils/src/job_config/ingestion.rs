@@ -13,6 +13,13 @@ pub mod s3 {
         InvalidSqsWaitTime(u16),
     }
 
+    /// Enum for all supported types of S3 ingestion job configs.
+    #[derive(Clone, Debug, Serialize, Deserialize)]
+    pub enum S3IngestionJobConfig {
+        SqsListener(SqsListenerConfig),
+        S3Scanner(S3ScannerConfig),
+    }
+
     /// Base configuration for ingesting logs from S3.
     #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
     pub struct BaseConfig {
