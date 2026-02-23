@@ -71,6 +71,7 @@ auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
 }
 
 auto to_ir_deserialization_error(IRErrorCode ir_error_code) -> IrDeserializationError {
+    assert(IRErrorCode_Success != ir_error_code);
     switch (ir_error_code) {
         case IRErrorCode_Incomplete_IR:
             return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};

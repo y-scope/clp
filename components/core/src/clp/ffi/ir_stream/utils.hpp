@@ -136,9 +136,6 @@ template <
 [[nodiscard]] auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc;
 
 /**
- * Temporary conversion function that maps the C-style `IRErrorCode` enum to the
- * `IrDeserializationError` type. This function will be removed once the full migration from
- * `IRErrorCode` to `IrDeserializationError` is complete.
  * @param ir_error_code Must not be `IRErrorCode_Success`.
  * @return Equivalent `IrDeserializationError` indicating the same error type.
  */

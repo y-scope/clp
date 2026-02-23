@@ -72,7 +72,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param reader
  * @param tag
  * @param val Returns the deserialized value.
- * @return A result with success on success.
+ * @return A void result on success.
  * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * @return IrDeserializationErrorEnum::CorruptedIR if the given tag doesn't correspond to an integer
  * packet.
@@ -85,7 +85,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param reader
  * @param tag
  * @param deserialized_str Returns the deserialized string.
- * @return A result with success on success.
+ * @return A void result on success.
  * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * @return IrDeserializationErrorEnum::CorruptedIR if the given tag doesn't correspond to a string
  * packet.
@@ -120,7 +120,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param tag
  * @param node_id The node ID that corresponds to the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
- * @return A result with success on success.
+ * @return A void result on success.
  * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * @return IrDeserializationErrorEnum::CorruptedIR if the tag doesn't correspond to any known value
  * type.
@@ -141,7 +141,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param node_id The node ID that corresponds to the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized encoded text
  * AST.
- * @return A result with success on success.
+ * @return A void result on success.
  * @return Forwards `deserialize_tag`'s return values on failure.
  * @return Forwards `deserialize_encoded_text_ast`'s return values on failure.
  */
@@ -159,7 +159,7 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
  * @param tag
  * @param schema The log event's schema.
  * @param node_id_value_pairs Returns the constructed ID-value pairs.
- * @return A result with success on success.
+ * @return A void result on success.
  * @return IrDeserializationErrorEnum::CorruptedIR if a key is duplicated in the deserialized log
  * event.
  * @return Forwards `deserialize_tag`'s return values on failure.
