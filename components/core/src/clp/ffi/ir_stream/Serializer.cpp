@@ -130,10 +130,11 @@ private:
  * Gets the schema-tree node type that corresponds with a given MessagePack value.
  * @param val
  * @return The corresponding schema-tree node type.
- * @return std::nullopt if the value doesn't match any of the supported schema-tree node types.
+ * @return IrSerializationErrorEnum::UnknownSchemaTreeNodeType if the value doesn't match any of
+ * the supported schema-tree node types.
  */
 [[nodiscard]] auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
-        -> optional<SchemaTree::Node::Type>;
+        -> ystdlib::error_handling::Result<SchemaTree::Node::Type>;
 
 /**
  * Serializes an empty object.
@@ -201,8 +202,14 @@ serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<in
  * @param logtype_buf
  * @param output_buf
  * @return A void result on success, or an error code indicating the failure:
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the value couldn't be
- *   serialized.
+ * - IrSerializationErrorEnum::IntSerializationFailure if an integer overflows INT64 range.
+ * - IrSerializationErrorEnum::StringSerializationFailure if string serialization fails.
+ * - IrSerializationErrorEnum::ObjectSerializationFailure if the value is not an empty object when
+ *   the schema expects one.
+ * - IrSerializationErrorEnum::UnstructuredArraySerializationFailure if the array is not
+ *   serializable.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the schema tree node type is
+ *   unsupported for value serialization.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_value(
@@ -233,9 +240,16 @@ template <typename encoded_variable_t>
  * @param node_id_value_pair_serialization_method
  * @param empty_map_serialization_method
  * @return A void result on success, or an error code indicating the failure:
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains non-string keys.
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains a value with an
- *   unsupported type.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailureif the map contains non-string keys.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if a value's schema tree node
+ *   type is unsupported for serialization.
+ * - IrSerializationErrorEnum::IntSerializationFailure if an integer value could not be serialized.
+ * - IrSerializationErrorEnum::StringSerializationFailure if a string value could not be
+ *   serialized.
+ * - IrSerializationErrorEnum::ObjectSerializationFailure if an object value could not be
+ *   serialized.
+ * - IrSerializationErrorEnum::UnstructuredArraySerializationFailure if an array value could not
+ *   be serialized.
  * - Forwards `schema_tree_node_serialization_method`'s return value on failure.
  * - Forwards `node_id_value_pair_serialization_method`'s return value on failure.
  * - Forwards `empty_map_serialization_method`'s return value on failure.
@@ -254,34 +268,27 @@ template <
 ) -> ystdlib::error_handling::Result<void>;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
-        -> optional<SchemaTree::Node::Type> {
-    optional<SchemaTree::Node::Type> ret_val;
+        -> ystdlib::error_handling::Result<SchemaTree::Node::Type> {
     switch (val.type) {
         case msgpack::type::POSITIVE_INTEGER:
         case msgpack::type::NEGATIVE_INTEGER:
-            ret_val.emplace(SchemaTree::Node::Type::Int);
-            break;
+            return SchemaTree::Node::Type::Int;
         case msgpack::type::FLOAT32:
         case msgpack::type::FLOAT64:
-            ret_val.emplace(SchemaTree::Node::Type::Float);
-            break;
+            return SchemaTree::Node::Type::Float;
         case msgpack::type::STR:
-            ret_val.emplace(SchemaTree::Node::Type::Str);
-            break;
+            return SchemaTree::Node::Type::Str;
         case msgpack::type::BOOLEAN:
-            ret_val.emplace(SchemaTree::Node::Type::Bool);
-            break;
+            return SchemaTree::Node::Type::Bool;
         case msgpack::type::NIL:
         case msgpack::type::MAP:
-            ret_val.emplace(SchemaTree::Node::Type::Obj);
-            break;
+            return SchemaTree::Node::Type::Obj;
         case msgpack::type::ARRAY:
-            ret_val.emplace(SchemaTree::Node::Type::UnstructuredArray);
+            return SchemaTree::Node::Type::UnstructuredArray;
             break;
         default:
-            return std::nullopt;
+            return IrSerializationError{IrSerializationErrorEnum::UnknownSchemaTreeNodeType};
     }
-    return ret_val;
 }
 
 auto serialize_value_empty_object(vector<int8_t>& output_buf) -> void {
@@ -352,9 +359,7 @@ auto serialize_value(
             if (msgpack::type::POSITIVE_INTEGER == val.type
                 && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
             {
-                return IrSerializationError{
-                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
-                };
+                return IrSerializationError{IrSerializationErrorEnum::IntSerializationFailure};
             }
             serialize_value_int(val.as<int64_t>(), output_buf);
             break;
@@ -375,17 +380,13 @@ auto serialize_value(
                         output_buf
                 ))
             {
-                return IrSerializationError{
-                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
-                };
+                return IrSerializationError{IrSerializationErrorEnum::StringSerializationFailure};
             }
             break;
 
         case SchemaTree::Node::Type::Obj:
             if (msgpack::type::NIL != val.type) {
-                return IrSerializationError{
-                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
-                };
+                return IrSerializationError{IrSerializationErrorEnum::ObjectSerializationFailure};
             }
             serialize_value_null(output_buf);
             break;
@@ -393,7 +394,7 @@ auto serialize_value(
         case SchemaTree::Node::Type::UnstructuredArray:
             if (false == serialize_value_array<encoded_variable_t>(val, logtype_buf, output_buf)) {
                 return IrSerializationError{
-                        IrSerializationErrorEnum::KeyValuePairSerializationFailure
+                        IrSerializationErrorEnum::UnstructuredArraySerializationFailure
                 };
             }
             break;
@@ -478,11 +479,8 @@ template <
             return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
         }
 
-        auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
-        if (false == opt_schema_tree_node_type.has_value()) {
-            return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
-        }
-        auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
+        auto const schema_tree_node_type
+                = YSTDLIB_ERROR_HANDLING_TRYX(get_schema_tree_node_type_from_msgpack_val(val));
 
         SchemaTree::NodeLocator const locator{
                 curr.get_schema_tree_node_id(),
@@ -531,7 +529,7 @@ template <
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrSerializationError> {
+) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>> {
     static_assert(
             std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
@@ -758,7 +756,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeObj);
             break;
         default:
-            return IrSerializationError{IrSerializationErrorEnum::UnsupportedSchemaTreeNodeType};
+            return IrSerializationError{IrSerializationErrorEnum::UnknownSchemaTreeNodeType};
     }
 
     auto encode_result = encode_and_serialize_schema_tree_node_id<
@@ -779,12 +777,10 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::
-        Result<Serializer<eight_byte_encoded_variable_t>, IrSerializationError>;
+) -> ystdlib::error_handling::Result<Serializer<eight_byte_encoded_variable_t>>;
 template auto Serializer<four_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> ystdlib::error_handling::
-        Result<Serializer<four_byte_encoded_variable_t>, IrSerializationError>;
+) -> ystdlib::error_handling::Result<Serializer<four_byte_encoded_variable_t>>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
         -> void;

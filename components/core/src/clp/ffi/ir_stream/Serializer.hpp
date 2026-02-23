@@ -113,7 +113,7 @@ private:
      * @tparam is_auto_generated_node
      * @param locator
      * @return A void result on success, or an error code indicating the failure:
-     * - IrSerializationErrorEnum::UnsupportedSchemaTreeNodeType if the node type is unsupported.
+     * - IrSerializationErrorEnum::UnknownSchemaTreeNodeType if the node type is unsupported.
      * - IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be
      *   serialized.
      * - Forwards `encode_and_serialize_schema_tree_node_id`'s return value on failure.
