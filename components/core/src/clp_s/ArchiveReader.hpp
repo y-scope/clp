@@ -191,6 +191,14 @@ public:
             LogTypeStats const& logtype_stats
     ) -> ystdlib::error_handling::Result<std::string>;
 
+    /**
+     * @return Whether this archive can contain columns with the deprecated DateString timestamp
+     * format.
+     */
+    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
+        return get_header().has_deprecated_timestamp_format();
+    }
+
 private:
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.

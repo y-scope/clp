@@ -1,7 +1,17 @@
 pub mod s3 {
     use non_empty_string::NonEmptyString;
     use serde::{Deserialize, Serialize};
+    use thiserror::Error;
     use utoipa::ToSchema;
+
+    #[derive(Error, Debug)]
+    pub enum ConfigError {
+        #[error("Invalid `num_concurrent_listener_tasks`: {0}")]
+        InvalidNumConcurrentListenerTasks(u16),
+
+        #[error("Invalid `wait_time_sec`: {0}")]
+        InvalidSqsWaitTime(u16),
+    }
 
     /// Base configuration for ingesting logs from S3.
     #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -50,6 +60,70 @@ pub mod s3 {
         /// to this ingestion job.
         #[schema(value_type = String, min_length = 1)]
         pub queue_url: NonEmptyString,
+
+        /// The number of concurrent listener tasks to run.
+        ///
+        /// Each listener task is an asynchronous coroutine that continuously polls the configured
+        /// SQS queue and processes incoming S3 event notifications.
+        ///
+        /// Defaults to `1`.
+        #[serde(default = "default_num_concurrent_listener_tasks")]
+        #[schema(minimum = 1, maximum = 32)]
+        pub num_concurrent_listener_tasks: u16,
+
+        /// The long polling wait time, in seconds, for receiving messages from the SQS queue.
+        ///
+        /// This value controls how long an SQS `ReceiveMessage` call will wait for a message to
+        /// arrive before returning a response. Enabling long polling can reduce empty responses
+        /// and lower overall request costs.
+        ///
+        /// AWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than
+        /// 20 seconds will be considered invalid.
+        ///
+        /// Defaults to `20`.
+        #[serde(default = "default_sqs_wait_time_sec")]
+        #[schema(minimum = 0, maximum = 20)]
+        pub wait_time_sec: u16,
+    }
+
+    /// Wrapper around [`SqsListenerConfig`] that guarantees the configuration is valid.
+    #[derive(Debug, Clone)]
+    pub struct ValidatedSqsListenerConfig {
+        config: SqsListenerConfig,
+    }
+
+    impl ValidatedSqsListenerConfig {
+        /// Validates and creates a new instance of [`ValidatedSqsListenerConfig`] from the given
+        /// [`SqsListenerConfig`].
+        ///
+        /// # Returns
+        ///
+        /// The validated config wrapper on success.
+        ///
+        /// # Errors
+        ///
+        /// Returns an error if:
+        ///
+        /// * [`ConfigError::InvalidNumConcurrentListenerTasks`] if
+        ///   `config.num_concurrent_listener_tasks` is invalid.
+        /// * [`ConfigError::InvalidSqsWaitTime`] if `config.wait_time_sec` is invalid.
+        pub fn validate_and_create(config: SqsListenerConfig) -> Result<Self, ConfigError> {
+            if config.num_concurrent_listener_tasks < 1 || config.num_concurrent_listener_tasks > 32
+            {
+                return Err(ConfigError::InvalidNumConcurrentListenerTasks(
+                    config.num_concurrent_listener_tasks,
+                ));
+            }
+            if config.wait_time_sec > 20 {
+                return Err(ConfigError::InvalidSqsWaitTime(config.wait_time_sec));
+            }
+            Ok(Self { config })
+        }
+
+        #[must_use]
+        pub const fn get(&self) -> &SqsListenerConfig {
+            &self.config
+        }
     }
 
     /// Configuration for a S3 scanner job.
@@ -75,5 +149,13 @@ pub mod s3 {
 
     const fn default_scanning_interval_sec() -> u32 {
         30
+    }
+
+    const fn default_num_concurrent_listener_tasks() -> u16 {
+        1
+    }
+
+    const fn default_sqs_wait_time_sec() -> u16 {
+        20
     }
 }

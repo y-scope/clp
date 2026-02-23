@@ -142,12 +142,7 @@ void IndexManager::traverse_schema_tree_and_update_metadata(
         path_buffer += escape_key_name(node.get_key_name());
         if (children_ids.empty() && NodeType::Object != node_type && NodeType::Unknown != node_type)
         {
-            // Always index authoritative timestamp as `NodeType::DateString`
-            auto const indexed_node_type
-                    = timestamp_dict->get_authoritative_timestamp_column_ids().contains(node_id)
-                              ? NodeType::DateString
-                              : node_type;
-            m_field_update_callback(path_buffer, indexed_node_type);
+            m_field_update_callback(path_buffer, node_type);
         }
 
         for (auto child_id : children_ids) {
