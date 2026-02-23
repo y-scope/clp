@@ -1,5 +1,5 @@
-#ifndef CLP_S_BLOOM_FILTER_HPP
-#define CLP_S_BLOOM_FILTER_HPP
+#ifndef CLP_S_FILTER_BLOOM_FILTER_HPP
+#define CLP_S_FILTER_BLOOM_FILTER_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -39,4 +39,4 @@ private:
 };
 }  // namespace clp_s::filter
 
-#endif  // CLP_S_BLOOM_FILTER_HPP
+#endif  // CLP_S_FILTER_BLOOM_FILTER_HPP

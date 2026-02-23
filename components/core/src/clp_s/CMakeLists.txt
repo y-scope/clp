@@ -260,6 +260,7 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s_filter
                 PUBLIC
                 clp_s::io
+                PRIVATE
                 clp::string_utils
         )
 endif()

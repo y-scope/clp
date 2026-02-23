@@ -45,7 +45,7 @@ TEST_CASE("BloomFilter true positives and bounded false positives", "[clp_s][fil
 
     size_t false_negatives = 0;
     for (auto const& value : inserted) {
-        if (!filter.possibly_contains(value)) {
+        if (false == filter.possibly_contains(value)) {
             ++false_negatives;
         }
     }

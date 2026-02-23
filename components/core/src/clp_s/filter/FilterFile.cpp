@@ -37,7 +37,7 @@ std::optional<FilterType> read_filter_file(clp::ReaderInterface& reader, BloomFi
         return std::nullopt;
     }
 
-    out_filter = BloomFilter();
+    out_filter = BloomFilter{};
     if (false == out_filter.read_from_file(reader)) {
         return std::nullopt;
     }

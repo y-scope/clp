@@ -46,7 +46,7 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
     auto const ideal_bit_array_size
             = (-static_cast<double>(expected_num_elements) * std::log(false_positive_rate)
                / ln2_squared);
-    if (!std::isfinite(ideal_bit_array_size)
+    if (false == std::isfinite(ideal_bit_array_size)
         || ideal_bit_array_size > static_cast<double>(std::numeric_limits<size_t>::max()))
     {
         return {kDefaultBitArraySize, kDefaultNumHashFunctions};
@@ -106,7 +106,7 @@ void BloomFilter::write_to_file(FileWriter& writer) const {
     writer.write_numeric_value<uint32_t>(m_num_hash_functions);
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array.size()));
-    if (!m_bit_array.empty()) {
+    if (false == m_bit_array.empty()) {
         writer.write(reinterpret_cast<char const*>(m_bit_array.data()), m_bit_array.size());
     }
 }
@@ -142,7 +142,7 @@ bool BloomFilter::read_from_file(clp::ReaderInterface& reader) {
     }
 
     std::vector<uint8_t> bit_array(static_cast<size_t>(bit_array_bytes));
-    if (!bit_array.empty()) {
+    if (false == bit_array.empty()) {
         if (clp::ErrorCode_Success
             != reader.try_read_exact_length(
                     reinterpret_cast<char*>(bit_array.data()),
