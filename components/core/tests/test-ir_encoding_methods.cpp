@@ -416,9 +416,9 @@ auto unpack_and_assert_serialization_failure(
         // Serialization should fail
         return false;
     }
-    if (true
+    if (false
         == serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map)
-                   .has_value())
+                   .has_error())
     {
         // Serialization should fail
         return false;
