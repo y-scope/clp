@@ -9,15 +9,33 @@ vars:
 
   G_CLP_FFI_JS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/clp-ffi-js.md5"
 
+# NOTE: By default, clp-ffi-js builds its WASM binaries against the internally pinned CLP source.
+# For CLP development and integration testing, we override `CLP_FFI_JS_CLP_SOURCE_DIRECTORY` so the
+# build uses the CLP repository in the current workspace.
+# We achieve this by running an early, intentionally non-fatal CMake configure step to inject the
+# cache variable without triggering a full build. The normal clp-ffi-js test workflow is then
+# executed, which builds the package as part of the process.
 tasks:
   default:
-    deps: ["download"]
+    deps: ["download-src"]
     dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
     cmds:
       - task: "inject-clp-src-dir"
       - task: "symlink-yscope-dev-utils"
       - |-
         task test
+
+  download-src:
+    deps:
+      - "::init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_CLP_FFI_JS_CHECKSUM_FILE}}"
+          FILE_SHA256: "5ab1c27031caafb014198d4db711a71b3fbb1661b396bcd4e46764194e2b1f61"
+          OUTPUT_DIR: "{{.G_BUILD_DIR}}/clp-ffi-js"
+          TAR_FILE: "{{.G_BUILD_DIR}}/clp-ffi-js.tar.gz"
+          URL: "https://github.com/y-scope/clp-ffi-js/archive/4cc6a7c.tar.gz"
 
   inject-clp-src-dir:
     internal: true
@@ -32,16 +50,5 @@ tasks:
     cmds:
       - |-
         rm -rf "{{.G_CLP_FFI_JS_SRC_DIR}}/tools/yscope-dev-utils"
-        ln -s "{{.ROOT_DIR}}/tools/yscope-dev-utils" "{{.G_CLP_FFI_JS_SRC_DIR}}/tools/yscope-dev-utils"
-
-  download:
-    deps:
-      - "::init"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.G_CLP_FFI_JS_CHECKSUM_FILE}}"
-          FILE_SHA256: "5ab1c27031caafb014198d4db711a71b3fbb1661b396bcd4e46764194e2b1f61"
-          OUTPUT_DIR: "{{.G_BUILD_DIR}}/clp-ffi-js"
-          TAR_FILE: "{{.G_BUILD_DIR}}/clp-ffi-js.tar.gz"
-          URL: "https://github.com/y-scope/clp-ffi-js/archive/4cc6a7c.tar.gz"
+        ln -s "{{.ROOT_DIR}}/tools/yscope-dev-utils" \
+          "{{.G_CLP_FFI_JS_SRC_DIR}}/tools/yscope-dev-utils"
