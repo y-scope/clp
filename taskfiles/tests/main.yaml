@@ -1,6 +1,7 @@
 version: "3"
 
 includes:
+  clp-ffi-js: "clp-ffi-js.yaml"
   integration: "integration.yaml"
   toolchains: "../toolchains.yaml"
 
