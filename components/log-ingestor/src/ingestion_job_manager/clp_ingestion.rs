@@ -61,7 +61,9 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     /// * Forwards [`serde_json::to_string`]'s return values on failure.
     pub async fn create_ingestion_job(
         &self,
@@ -72,9 +74,10 @@ impl ClpDbIngestionConnector {
             table = INGESTION_JOB_TABLE_NAME,
         );
 
+        let mut tx = self.db_pool.begin().await?;
         let job_id = sqlx::query(QUERY)
             .bind(serde_json::to_string(&config)?)
-            .execute(&self.db_pool)
+            .execute(&mut *tx)
             .await?
             .last_insert_id();
 
@@ -85,9 +88,11 @@ impl ClpDbIngestionConnector {
             );
             sqlx::query(S3_SCANNER_STATE_INSERT_QUERY)
                 .bind(job_id)
-                .execute(&self.db_pool)
+                .execute(&mut *tx)
                 .await?;
         }
+
+        tx.commit().await?;
 
         Ok(ClpIngestionState {
             job_id,
@@ -115,6 +120,8 @@ impl ClpIngestionState {
     ///
     /// Returns an error if:
     ///
+    /// * [`anyhow::Error`] if no rows were affected by the job status update, which indicates the
+    ///   job may not exist.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_job_status(&self, status: ClpIngestionJobStatus) -> anyhow::Result<()> {
         const QUERY: &str = formatcp!(
@@ -122,11 +129,17 @@ impl ClpIngestionState {
             table = INGESTION_JOB_TABLE_NAME,
         );
 
-        sqlx::query(QUERY)
+        let result = sqlx::query(QUERY)
             .bind(status)
             .bind(self.job_id)
             .execute(&self.db_pool)
             .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!(
+                "Job status update failed. The job may not exist."
+            ));
+        }
 
         Ok(())
     }
@@ -163,23 +176,29 @@ impl ClpIngestionState {
         );
 
         // Ingest object metadata
-        let query_string = format!(
-            "{}{}",
-            BASE_INGESTION_QUERY,
-            std::iter::repeat_n("(?, ?, ?, ?)", objects.len())
-                .collect::<Vec<_>>()
-                .join(", ")
-                .as_str()
-        );
-        let mut query = sqlx::query(&query_string);
-        for object in objects {
-            query = query
-                .bind(object.bucket.as_str())
-                .bind(object.key.as_str())
-                .bind(object.size)
-                .bind(self.job_id);
+        // NOTE: MySQL has a maximum placeholder limit of 65535. We need to batch the ingestion to
+        // avoid hitting this limit. If the number of placeholders per insert changes, we may need
+        // to adjust the chunk size accordingly.
+        for chunk in objects.chunks(10000) {
+            let query_string = format!(
+                "{}{}",
+                BASE_INGESTION_QUERY,
+                std::iter::repeat_n("(?, ?, ?, ?)", chunk.len())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+
+            let mut query = sqlx::query(&query_string);
+            for object in chunk {
+                query = query
+                    .bind(object.bucket.as_str())
+                    .bind(object.key.as_str())
+                    .bind(object.size)
+                    .bind(self.job_id);
+            }
+
+            query.execute(&mut **tx).await?;
         }
-        query.execute(&mut **tx).await?;
 
         // Update ingestion job. This must be the last step in the transaction.
         Ok(())
@@ -459,7 +478,7 @@ CREATE TABLE IF NOT EXISTS `{INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME}` (
     `id` BIGINT unsigned NOT NULL,
     `last_ingested_key` VARCHAR(1024) NULL DEFAULT NULL,
     PRIMARY KEY (`id`),
-    CONSTRAINT `ingestion_job_id_ref`
+    CONSTRAINT `{INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME}_ingestion_job_id_ref`
         FOREIGN KEY (`id`) REFERENCES `{INGESTION_JOB_TABLE_NAME}` (`id`)
         ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ROW_FORMAT=DYNAMIC;",
@@ -481,10 +500,10 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     PRIMARY KEY (`id`),
     KEY `idx_ingestion_job_id` (`ingestion_job_id`),
     KEY `idx_compression_job_id` (`compression_job_id`),
-    CONSTRAINT `ingestion_job_id_ref`
+    CONSTRAINT `{table}_ingestion_job_id_ref`
         FOREIGN KEY (`ingestion_job_id`) REFERENCES `{job_table}` (`id`)
         ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT `compression_job_id_ref`
+    CONSTRAINT `{table}_compression_job_id_ref`
         FOREIGN KEY (`compression_job_id`) REFERENCES `{compression_job_table}` (`id`)
         ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ROW_FORMAT=DYNAMIC;",
