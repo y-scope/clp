@@ -1,8 +1,11 @@
 use async_trait::async_trait;
-use clp_rust_utils::{job_config::ingestion::s3::S3IngestionJobConfig, s3::ObjectMetadata};
+use clp_rust_utils::{
+    database::mysql::MySqlEnumFormat,
+    job_config::ingestion::s3::S3IngestionJobConfig,
+    s3::ObjectMetadata,
+};
 use const_format::formatcp;
 use sqlx::MySqlPool;
-use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 use crate::{
@@ -170,6 +173,7 @@ impl ClpIngestionState {
             r"INSERT INTO `{table}` (`bucket`, `key`, `size`, `ingestion_job_id`) VALUES ",
             table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
         );
+
         assert!(
             !objects.is_empty(),
             "Cannot build S3 object metadata ingestion query with empty objects"
@@ -303,11 +307,23 @@ impl S3ScannerState for ClpIngestionState {
         );
 
         let mut tx = self.db_pool.begin().await?;
-        sqlx::query(UPDATE_S3_SCANNER_STATE_QUERY)
+
+        if sqlx::query(UPDATE_S3_SCANNER_STATE_QUERY)
             .bind(last_ingested_key)
             .bind(self.job_id)
             .execute(&mut *tx)
-            .await?;
+            .await?
+            .rows_affected()
+            == 0
+        {
+            const ERROR_MSG: &str = "Failed to update last ingested key for S3 scanner state.";
+            tracing::error!(
+                job_id = ? self.job_id,
+                last_ingested_key = ? last_ingested_key,
+                ERROR_MSG
+            );
+            return Err(anyhow::anyhow!(ERROR_MSG));
+        }
 
         self.ingest_s3_object_metadata(&mut tx, &objects)
             .await
@@ -429,23 +445,6 @@ const INGESTION_JOB_TABLE_NAME: &str = "ingestion_job";
 const INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME: &str = "ingestion_job_s3_scanner_state";
 const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
 
-/// A trait for formatting Rust enums as SQL `ENUM(...)` declarations.
-trait MySqlEnumFormat: IntoEnumIterator + Sized + ToString
-where
-    Self::Iterator: Iterator<Item = Self>, {
-    /// # Returns
-    ///
-    /// A string representing the SQL enum definition for this enum.
-    #[must_use]
-    fn format_as_sql_enum() -> String {
-        let inner = Self::iter()
-            .map(|v| format!("'{}'", v.to_string()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("ENUM({inner})")
-    }
-}
-
 /// The query to create the table for CLP ingestion jobs.
 #[must_use]
 fn ingestion_job_table_creation_query() -> String {
@@ -453,7 +452,7 @@ fn ingestion_job_table_creation_query() -> String {
         r"
 CREATE TABLE IF NOT EXISTS `{table}` (
     `id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
-    `config` VARCHAR(1024) NOT NULL,
+    `config` TEXT NOT NULL,
     `status` {status_enum} NOT NULL DEFAULT '{default_status}',
     `num_files_ingested` BIGINT unsigned NOT NULL DEFAULT '0',
     `num_files_compressed` BIGINT unsigned NOT NULL DEFAULT '0',
@@ -462,7 +461,7 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     `last_update_ts` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
         ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (`id`)
-) ROW_FORMAT=DYNAMIC;",
+);",
         table = INGESTION_JOB_TABLE_NAME,
         status_enum = ClpIngestionJobStatus::format_as_sql_enum(),
         default_status = ClpIngestionJobStatus::Requested,
@@ -481,11 +480,12 @@ CREATE TABLE IF NOT EXISTS `{INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME}` (
     CONSTRAINT `{INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME}_ingestion_job_id_ref`
         FOREIGN KEY (`id`) REFERENCES `{INGESTION_JOB_TABLE_NAME}` (`id`)
         ON DELETE RESTRICT ON UPDATE RESTRICT
-) ROW_FORMAT=DYNAMIC;",
+);",
     )
 }
 
 /// The query to create the table for ingested S3 object metadata.
+#[must_use]
 fn ingested_s3_object_metadata_table_creation_query() -> String {
     format!(
         r"
@@ -506,7 +506,7 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     CONSTRAINT `{table}_compression_job_id_ref`
         FOREIGN KEY (`compression_job_id`) REFERENCES `{compression_job_table}` (`id`)
         ON DELETE RESTRICT ON UPDATE RESTRICT
-) ROW_FORMAT=DYNAMIC;",
+);",
         table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
         job_table = INGESTION_JOB_TABLE_NAME,
         status_enum = IngestedS3ObjectMetadataStatus::format_as_sql_enum(),
