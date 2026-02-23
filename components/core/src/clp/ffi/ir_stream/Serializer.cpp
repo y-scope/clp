@@ -240,7 +240,7 @@ template <typename encoded_variable_t>
  * @param node_id_value_pair_serialization_method
  * @param empty_map_serialization_method
  * @return A void result on success, or an error code indicating the failure:
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailureif the map contains non-string keys.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains non-string keys.
  * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if a value's schema tree node
  *   type is unsupported for serialization.
  * - IrSerializationErrorEnum::IntSerializationFailure if an integer value could not be serialized.
@@ -285,7 +285,6 @@ auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
             return SchemaTree::Node::Type::Obj;
         case msgpack::type::ARRAY:
             return SchemaTree::Node::Type::UnstructuredArray;
-            break;
         default:
             return IrSerializationError{IrSerializationErrorEnum::UnknownSchemaTreeNodeType};
     }
