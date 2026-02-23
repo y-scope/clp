@@ -52,7 +52,7 @@ public:
      */
     [[nodiscard]] static auto create(
             std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
-    ) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>, IrSerializationError>;
+    ) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;
@@ -95,11 +95,8 @@ public:
      * @param auto_gen_kv_pairs_map
      * @param user_gen_kv_pairs_map
      * @return A void result on success, or an error code indicating the failure:
-     * - Forwards `serialize_schema_tree_node`'s return values.
-     * - IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure if a node ID couldn't be
-     *   serialized.
-     * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if a value, non-string map key,
-     *   or unsupported msgpack type couldn't be serialized.
+     * - Forwards `serialize_schema_tree_node`'s return values on failure.
+     * - Forwards `serialize_msgpack_map_using_dfs`'s return values on failure.
      */
     [[nodiscard]] auto serialize_msgpack_map(
             msgpack::object_map const& auto_gen_kv_pairs_map,
@@ -117,10 +114,9 @@ private:
      * @param locator
      * @return A void result on success, or an error code indicating the failure:
      * - IrSerializationErrorEnum::UnsupportedSchemaTreeNodeType if the node type is unsupported.
-     * - IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure if the parent node ID
-     *   couldn't be serialized.
      * - IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be
      *   serialized.
+     * - Forwards `encode_and_serialize_schema_tree_node_id`'s return value on failure.
      */
     template <bool is_auto_generated_node>
     [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator)

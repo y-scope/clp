@@ -409,9 +409,9 @@ auto unpack_and_assert_serialization_failure(
     auto const msgpack_empty_map_obj_handle{create_msgpack_empty_map_obj_handle()};
     auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
 
-    if (true
+    if (false
         == serializer.serialize_msgpack_map(msgpack_obj.via.map, msgpack_empty_map_obj.via.map)
-                   .has_value())
+                   .has_error())
     {
         // Serialization should fail
         return false;
@@ -1514,8 +1514,9 @@ TEMPLATE_TEST_CASE(
     );
     auto const serializer_result{Serializer<TestType>::create(invalid_user_defined_metadata)};
     REQUIRE(serializer_result.has_error());
-    REQUIRE(
-            (clp::ffi::ir_stream::IrSerializationErrorEnum::UnsupportedUserDefinedMetadata
-             == serializer_result.error().get_error())
-    );
+
+    using clp::ffi::ir_stream::IrSerializationError;
+    using clp::ffi::ir_stream::IrSerializationErrorEnum;
+    REQUIRE(IrSerializationError{IrSerializationErrorEnum::UnsupportedUserDefinedMetadata}
+            == serializer_result.error());
 }

@@ -41,7 +41,7 @@ using ystdlib::error_handling::success;
  * Concept that defines the method to serialize a schema tree node identified by the given locator.
  * @param serialization_method
  * @param locator
- * @return A void result on success, or an IrSerializationError on failure.
+ * @return A void result on success, or an error code indicating the failure.
  */
 template <typename SerializationMethod>
 concept SchemaTreeNodeSerializationMethodReq = requires(
@@ -57,7 +57,7 @@ concept SchemaTreeNodeSerializationMethodReq = requires(
  * @param node_id
  * @param val
  * @param schema_tree_node_type The type of the schema tree node that corresponds to `val`.
- * @return A void result on success, or an IrSerializationError on failure.
+ * @return A void result on success, or an error code indicating the failure.
  */
 template <typename SerializationMethod>
 concept NodeIdValuePairSerializationMethodReq = requires(
@@ -75,7 +75,7 @@ concept NodeIdValuePairSerializationMethodReq = requires(
  * Concept that defines the method to serialize a node-ID-value pair whose value is an empty map.
  * @param serialization_method
  * @param node_id
- * @return A void result on success, or an IrSerializationError on failure.
+ * @return A void result on success, or an error code indicating the failure.
  */
 template <typename SerializationMethod>
 concept EmptyMapSerializationMethodReq
@@ -233,9 +233,12 @@ template <typename encoded_variable_t>
  * @param node_id_value_pair_serialization_method
  * @param empty_map_serialization_method
  * @return A void result on success, or an error code indicating the failure:
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains non-string keys
- *   or a value with an unsupported msgpack type.
- * - Forwards the serialization callbacks' return values on failure.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains non-string keys.
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains a value with an
+ *   unsupported type.
+ * - Forwards `schema_tree_node_serialization_method`'s return value on failure.
+ * - Forwards `node_id_value_pair_serialization_method`'s return value on failure.
+ * - Forwards `empty_map_serialization_method`'s return value on failure.
  */
 template <
         SchemaTreeNodeSerializationMethodReq SchemaTreeNodeSerializationMethod,
@@ -611,7 +614,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                       msgpack::object const& val,
                       SchemaTree::Node::Type schema_tree_node_type
               ) -> ystdlib::error_handling::Result<void> {
-        auto encode_result = encode_and_serialize_schema_tree_node_id<
+        auto const encode_result = encode_and_serialize_schema_tree_node_id<
                 true,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdShort,

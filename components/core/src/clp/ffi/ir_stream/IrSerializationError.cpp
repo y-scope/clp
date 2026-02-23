@@ -24,8 +24,7 @@ auto IrSerializationErrorCategory::message(IrSerializationErrorEnum error_enum) 
         case IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure:
             return "failed to serialize a schema tree node";
         case IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure:
-            return "failed to serialize a schema tree node ID (the ID exceeds the representable "
-                   "range)";
+            return "failed to serialize a schema tree node ID";
         case IrSerializationErrorEnum::UnsupportedSchemaTreeNodeType:
             return "the schema tree node type is not supported";
         case IrSerializationErrorEnum::UnsupportedUserDefinedMetadata:

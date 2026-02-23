@@ -7,7 +7,7 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * This enum class represents error codes for IR stream serialization
+ * Error code enum for IR stream serialization.
  */
 enum class IrSerializationErrorEnum : uint8_t {
     KeyValuePairSerializationFailure,

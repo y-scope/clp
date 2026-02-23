@@ -102,9 +102,9 @@ private:
  * @param user_gen_msgpack_bytes
  * @param serializer
  * @return A void result on success, or an error code indicating the failure:
+ * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the msgpack bytes cannot be
+ *   deserialized into a map.
  * - Forwards `Serializer::serialize_msgpack_map`'s return values.
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the msgpack bytes don't
- *   represent maps.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
