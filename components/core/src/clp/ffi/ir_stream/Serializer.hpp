@@ -45,10 +45,10 @@ public:
      * @param optional_user_defined_metadata Stream-level user-defined metadata, given as a JSON
      * object.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - IrSerializationErrorEnum::MetadataSerializationFailure if the stream's metadata couldn't
-     *   be serialized.
-     * - IrSerializationErrorEnum::UnsupportedUserDefinedMetadata if the given user-defined
-     *   metadata is not a JSON object.
+     * - IrSerializationErrorEnum::MetadataSerializationFailure if the stream's metadata couldn't be
+     *   serialized.
+     * - IrSerializationErrorEnum::UnsupportedUserDefinedMetadata if the given user-defined metadata
+     *   is not a JSON object.
      */
     [[nodiscard]] static auto create(
             std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
