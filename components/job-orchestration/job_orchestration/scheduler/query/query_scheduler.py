@@ -729,7 +729,9 @@ def handle_pending_query_jobs(
                 job.num_archives_to_search,
             )
             logger.info(
-                f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
+                "Dispatched job %s with %d archives to search.",
+                job_id,
+                len(archives_for_search),
             )
 
     return reducer_acquisition_tasks
@@ -1145,7 +1147,7 @@ def _handle_new_search_job(
         # Deduplicate
         datasets = list(dict.fromkeys(datasets))
         if len(datasets) == 0:
-            logger.error(f"Job {job_id} has an empty datasets list.")
+            logger.error("Job %s has an empty datasets list.", job_id)
             if not set_job_or_task_status(
                 db_conn,
                 QUERY_JOBS_TABLE_NAME,
@@ -1155,14 +1157,16 @@ def _handle_new_search_job(
                 start_time=datetime.datetime.now(),
                 duration=0,
             ):
-                logger.error(f"Failed to set job {job_id} as failed.")
+                logger.error("Failed to set job %s as failed.", job_id)
             return
 
         # Enforce max_datasets_per_query limit
         if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
             logger.error(
-                f"Job {job_id} requests {len(datasets)} datasets,"
-                f" exceeding max_datasets_per_query={max_datasets_per_query}."
+                "Job %s requests %d datasets, exceeding max_datasets_per_query=%s.",
+                job_id,
+                len(datasets),
+                max_datasets_per_query,
             )
             if not set_job_or_task_status(
                 db_conn,
@@ -1173,7 +1177,7 @@ def _handle_new_search_job(
                 start_time=datetime.datetime.now(),
                 duration=0,
             ):
-                logger.error(f"Failed to set job {job_id} as failed.")
+                logger.error("Failed to set job %s as failed.", job_id)
             return
 
         # NOTE: This assumes we never delete a dataset.
@@ -1182,7 +1186,7 @@ def _handle_new_search_job(
             existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
             missing = set(datasets) - existing_datasets
             if missing:
-                logger.error(f"Datasets {missing} don't exist.")
+                logger.error("Datasets %s don't exist.", missing)
                 if not set_job_or_task_status(
                     db_conn,
                     QUERY_JOBS_TABLE_NAME,
@@ -1192,7 +1196,7 @@ def _handle_new_search_job(
                     start_time=datetime.datetime.now(),
                     duration=0,
                 ):
-                    logger.error(f"Failed to set job {job_id} as failed.")
+                    logger.error("Failed to set job %s as failed.", job_id)
                 return
 
     archive_end_ts_lower_bound: int | None = None
@@ -1215,7 +1219,7 @@ def _handle_new_search_job(
             num_tasks=0,
             duration=0,
         ):
-            logger.info(f"No matching archives, skipping job {job_id}.")
+            logger.info("No matching archives, skipping job %s.", job_id)
         return
 
     new_search_job = SearchJob(
@@ -1269,7 +1273,7 @@ def _handle_new_extraction_job(
             num_tasks=0,
             duration=0,
         ):
-            logger.error(f"Failed to set job {job_id} as failed")
+            logger.error("Failed to set job %s as failed.", job_id)
         return
 
     # NOTE: The following two if blocks for `is_stream_extraction_active` and
@@ -1293,8 +1297,9 @@ def _handle_new_extraction_job(
     if job_handle.is_stream_extraction_active():
         job_handle.mark_job_as_waiting()
         logger.info(
-            f"Stream {job_handle.get_stream_id()} is already being extracted,"
-            f" so mark job {job_id} as running."
+            "Stream %s is already being extracted, so mark job %s as running.",
+            job_handle.get_stream_id(),
+            job_id,
         )
         if not set_job_or_task_status(
             db_conn,
@@ -1305,14 +1310,15 @@ def _handle_new_extraction_job(
             start_time=datetime.datetime.now(),
             num_tasks=0,
         ):
-            logger.error(f"Failed to set job {job_id} as running")
+            logger.error("Failed to set job %s as running.", job_id)
         return
 
     # Check if a required stream file has already been extracted
     if job_handle.is_stream_extracted(results_cache_uri, stream_collection_name):
         logger.info(
-            f"Stream {job_handle.get_stream_id()} already extracted,"
-            f" so mark job {job_id} as succeeded."
+            "Stream %s already extracted, so mark job %s as succeeded.",
+            job_handle.get_stream_id(),
+            job_id,
         )
         if not set_job_or_task_status(
             db_conn,
@@ -1324,7 +1330,7 @@ def _handle_new_extraction_job(
             num_tasks=0,
             duration=0,
         ):
-            logger.error(f"Failed to set job {job_id} as succeeded")
+            logger.error("Failed to set job %s as succeeded.", job_id)
         return
 
     new_stream_extraction_job = job_handle.create_stream_extraction_job()
@@ -1340,7 +1346,7 @@ def _handle_new_extraction_job(
 
     job_handle.mark_job_as_waiting()
     active_jobs[job_id] = new_stream_extraction_job
-    logger.info(f"Dispatched stream extraction job {job_id} for archive: {archive_id}")
+    logger.info("Dispatched stream extraction job %s for archive: %s", job_id, archive_id)
 
 
 if "__main__" == __name__:

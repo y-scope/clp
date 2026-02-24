@@ -302,8 +302,9 @@ def main(argv):
         max_datasets_per_query = clp_config.query_scheduler.max_datasets_per_query
         if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
             logger.error(
-                f"Number of datasets ({len(datasets)}) exceeds"
-                f" max_datasets_per_query={max_datasets_per_query}."
+                "Number of datasets (%d) exceeds max_datasets_per_query=%s.",
+                len(datasets),
+                max_datasets_per_query,
             )
             return -1
         try:
