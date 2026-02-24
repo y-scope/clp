@@ -1,9 +1,27 @@
 use secrecy::ExposeSecret;
+use strum::IntoEnumIterator;
 
 use crate::clp_config::package::{
     config::Database as DatabaseConfig,
     credentials::Database as DatabaseCredentials,
 };
+
+/// Trait for formatting Rust enums as SQL `ENUM(...)` declarations.
+pub trait MySqlEnumFormat: IntoEnumIterator + Sized + ToString
+where
+    Self::Iterator: Iterator<Item = Self>, {
+    /// # Returns
+    ///
+    /// A string representing the SQL enum definition for this enum.
+    #[must_use]
+    fn format_as_sql_enum() -> String {
+        let inner = Self::iter()
+            .map(|v| format!("'{}'", v.to_string()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("ENUM({inner})")
+    }
+}
 
 /// Creates a new `MySQL` connection pool to the CLP DB using the provided configuration and
 /// credentials.
