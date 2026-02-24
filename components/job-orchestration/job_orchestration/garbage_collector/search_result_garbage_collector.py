@@ -1,21 +1,17 @@
 import asyncio
-import pathlib
 from typing import Final
 
 import pymongo
 import pymongo.database
 from bson import ObjectId
 from clp_py_utils.clp_config import ClpConfig, ResultsCache
-from clp_py_utils.clp_logging import get_logger
+from clp_py_utils.clp_logging import configure_logging, get_logger
 
 from job_orchestration.garbage_collector.constants import (
     MIN_TO_SECONDS,
     SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
 )
-from job_orchestration.garbage_collector.utils import (
-    configure_logger,
-    get_expiry_epoch_secs,
-)
+from job_orchestration.garbage_collector.utils import get_expiry_epoch_secs
 
 # Constants
 MONGODB_ID_KEY: Final[str] = "_id"
@@ -70,10 +66,8 @@ def _collect_and_sweep_expired_search_results(
         logger.debug("No search results matched the expiry criteria.")
 
 
-async def search_result_garbage_collector(
-    clp_config: ClpConfig, log_directory: pathlib.Path | None, logging_level: str
-) -> None:
-    configure_logger(logger, logging_level, log_directory, SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
+async def search_result_garbage_collector(clp_config: ClpConfig) -> None:
+    configure_logging(logger, SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.search_result * MIN_TO_SECONDS
 

@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import shutil
@@ -12,24 +11,9 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
 from clp_py_utils.s3_utils import s3_delete_objects
 
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS
-
-
-def configure_logger(
-    logger: logging.Logger,
-    logging_level: str,
-    log_directory: pathlib.Path | None,
-    handler_name: str,
-):
-    if log_directory is not None:
-        log_file = log_directory / f"{handler_name}.log"
-        logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-        logging_file_handler.setFormatter(get_logging_formatter())
-        logger.addHandler(logging_file_handler)
-    set_logging_level(logger, logging_level)
 
 
 def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> None:

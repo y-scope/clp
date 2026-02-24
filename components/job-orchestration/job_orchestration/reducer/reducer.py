@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
 import os
 import subprocess
 import sys
@@ -9,7 +8,7 @@ from pathlib import Path
 from typing import TextIO
 
 from clp_py_utils.clp_config import ClpConfig
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
@@ -30,18 +29,8 @@ def main(argv: list[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup optional file logging (console logging is configured in get_logger()).
-    logs_dir_env = os.getenv("CLP_LOGS_DIR")
-    logs_dir = Path(logs_dir_env) if logs_dir_env else None
-    logging_file_handler = None
-    if logs_dir is not None:
-        log_file = logs_dir / "reducer.log"
-        logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-        logging_file_handler.setFormatter(get_logging_formatter())
-        logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
-    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+    # Setup optional file logging and logging level.
+    configure_logging(logger, "reducer")
 
     # Load configuration
     config_path = Path(parsed_args.config)

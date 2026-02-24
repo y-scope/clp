@@ -10,7 +10,7 @@ from clp_py_utils.clp_config import (
     QUERY_JOBS_TABLE_NAME,
     StorageEngine,
 )
-from clp_py_utils.clp_logging import get_logger
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     delete_archives_from_metadata_db,
     fetch_existing_datasets,
@@ -24,7 +24,6 @@ from job_orchestration.garbage_collector.constants import (
     SECOND_TO_MILLISECOND,
 )
 from job_orchestration.garbage_collector.utils import (
-    configure_logger,
     DeletionCandidatesBuffer,
     execute_deletion,
     validate_storage_type,
@@ -192,10 +191,8 @@ def _collect_and_sweep_expired_archives(
             raise ValueError(f"Unsupported Storage engine: {storage_engine}.")
 
 
-async def archive_garbage_collector(
-    clp_config: ClpConfig, log_directory: pathlib.Path | None, logging_level: str
-) -> None:
-    configure_logger(logger, logging_level, log_directory, ARCHIVE_GARBAGE_COLLECTOR_NAME)
+async def archive_garbage_collector(clp_config: ClpConfig) -> None:
+    configure_logging(logger, ARCHIVE_GARBAGE_COLLECTOR_NAME)
 
     archive_output_config = clp_config.archive_output
     storage_engine = clp_config.package.storage_engine

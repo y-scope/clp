@@ -1,7 +1,6 @@
 """CLP MCP Server entry point."""
 
 import ipaddress
-import logging
 import os
 import socket
 import sys
@@ -9,7 +8,7 @@ from pathlib import Path
 
 import click
 from clp_py_utils.clp_config import ClpConfig, MCP_SERVER_COMPONENT_NAME
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
@@ -38,14 +37,8 @@ def main(host: str, port: int, config_path: Path) -> int:
     :param config_path: The path to server's configuration file.
     :return: Exit code (0 for success, non-zero for failure).
     """
-    # Setup optional file logging (console logging is configured in get_logger()).
-    logs_dir = os.getenv("CLP_LOGS_DIR")
-    if logs_dir:
-        log_file_path = Path(logs_dir) / "mcp_server.log"
-        logging_file_handler = logging.FileHandler(filename=log_file_path, encoding="utf-8")
-        logging_file_handler.setFormatter(get_logging_formatter())
-        logger.addHandler(logging_file_handler)
-    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+    # Setup optional file logging and logging level.
+    configure_logging(logger, "mcp_server")
 
     exit_code = 0
 

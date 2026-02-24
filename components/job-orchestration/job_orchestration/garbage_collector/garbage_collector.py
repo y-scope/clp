@@ -2,7 +2,6 @@
 
 import argparse
 import asyncio
-import os
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -11,7 +10,7 @@ from clp_py_utils.clp_config import (
     ClpConfig,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
 )
-from clp_py_utils.clp_logging import get_logger
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
@@ -23,7 +22,6 @@ from job_orchestration.garbage_collector.constants import (
 from job_orchestration.garbage_collector.search_result_garbage_collector import (
     search_result_garbage_collector,
 )
-from job_orchestration.garbage_collector.utils import configure_logger
 
 logger = get_logger(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
@@ -35,11 +33,8 @@ async def main(argv: list[str]) -> int:
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup optional file logging (console logging is configured in get_logger()).
-    logs_directory_env = os.getenv("CLP_LOGS_DIR")
-    logs_directory = Path(logs_directory_env) if logs_directory_env else None
-    logging_level = os.getenv("CLP_LOGGING_LEVEL")
-    configure_logger(logger, logging_level, logs_directory, GARBAGE_COLLECTOR_COMPONENT_NAME)
+    # Setup optional file logging and logging level.
+    configure_logging(logger, GARBAGE_COLLECTOR_COMPONENT_NAME)
 
     # Load configuration
     config_path = Path(parsed_args.config)
@@ -72,9 +67,7 @@ async def main(argv: list[str]) -> int:
             continue
         logger.info(f"Creating {gc_name} with retention period = {retention_period} minutes")
         gc_tasks.append(
-            asyncio.create_task(
-                task_method(clp_config, logs_directory, logging_level), name=gc_name
-            )
+            asyncio.create_task(task_method(clp_config), name=gc_name)
         )
 
     # Poll and report any task that finished unexpectedly
