@@ -56,6 +56,9 @@ def main(argv: list[str]) -> int:
     ]
     # fmt: on
 
+    logs_dir_str = os.getenv("CLP_LOGS_DIR")
+    logs_dir = Path(logs_dir_str) if logs_dir_str else None
+
     reducers = []
     reducer_log_files: list[TextIO] = []
     concurrency = max(int(parsed_args.concurrency), 1)
@@ -94,10 +97,6 @@ def main(argv: list[str]) -> int:
         reducer_log_file.close()
 
     logger.error("All reducers terminated")
-
-    if logging_file_handler is not None:
-        logger.removeHandler(logging_file_handler)
-        logging_file_handler.close()
 
     return 0
 
