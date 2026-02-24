@@ -36,10 +36,11 @@ impl BufferSubmitter for TestBufferSubmitter {
 }
 
 /// Sends a list of objects to the listener via the provided sender.
-async fn send_to_listener(objects: Vec<ObjectMetadata>, sender: mpsc::Sender<ObjectMetadata>) {
-    for obj in objects {
-        sender.send(obj).await.unwrap();
-    }
+async fn send_to_listener(objects: Vec<ObjectMetadata>, sender: mpsc::Sender<Vec<ObjectMetadata>>) {
+    sender
+        .send(objects)
+        .await
+        .expect("Failed to send objects to listener");
 }
 
 /// Creates a vector of [`ObjectMetadata`] objects for a given bucket. Each object will have a
