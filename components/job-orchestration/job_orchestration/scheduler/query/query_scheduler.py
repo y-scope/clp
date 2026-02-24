@@ -1182,10 +1182,10 @@ def _handle_new_search_job(
 
         # NOTE: This assumes we never delete a dataset.
         missing = set(datasets) - existing_datasets
-        if missing:
+        if len(missing) > 0:
             existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
             missing = set(datasets) - existing_datasets
-            if missing:
+            if len(missing) > 0:
                 logger.error("Datasets %s don't exist.", missing)
                 if not set_job_or_task_status(
                     db_conn,
