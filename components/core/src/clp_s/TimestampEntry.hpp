@@ -42,13 +42,14 @@ public:
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin) {}
 
-    TimestampEntry(std::string_view key_name)
+    TimestampEntry(std::string_view key_name, int32_t node_id)
             : m_encoding(UnkownTimestampEncoding),
               m_epoch_start_double(cDoubleEpochTimeMax),
               m_epoch_end_double(cDoubleEpochTimeMin),
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin),
-              m_key_name(key_name) {}
+              m_key_name(key_name),
+              m_column_ids{node_id} {}
 
     /**
      * Ingest a timestamp potentially adjusting the start and end bounds for this
@@ -56,13 +57,6 @@ public:
      * @param timestamp the timestamp to be ingested
      */
     void ingest_timestamp(epochtime_t timestamp);
-    void ingest_timestamp(double timestamp);
-
-    /**
-     * Merge a timestamp range potentially adjusting the start and end bounds for this
-     * @param timestamp the timestamp to be ingested
-     */
-    void merge_range(TimestampEntry const& entry);
 
     /**
      * Write the timestamp entry to a buffered stream.
@@ -96,25 +90,17 @@ public:
 
     std::unordered_set<int32_t> const& get_column_ids() const { return m_column_ids; }
 
-    void insert_column_id(int32_t column_id) { m_column_ids.insert(column_id); }
-
-    void insert_column_ids(std::unordered_set<int32_t> const& column_ids) {
-        m_column_ids.insert(column_ids.begin(), column_ids.end());
-    }
-
     /**
-     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
-     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
-     * millisecond encoded timestamps.
-     * @return the beginning of the time range as milliseconds since the UNIX epoch
+     * NOTE: The returned timestamp is not guaranteed to be millisecond precision for archives
+     * older than 0.5.0.
+     * @return The beginning of the time range as milliseconds since the UNIX epoch.
      */
     epochtime_t get_begin_timestamp() const;
 
     /**
-     * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and
-     * timestamp ranges makes no effort to convert second and nanosecond encoded timestamps into
-     * millisecond encoded timestamps.
-     * @return the end of the time range as milliseconds since the UNIX epoch
+     * NOTE: The returned timestamp is not guaranteed to be millisecond precision for archives
+     * older than 0.5.0.
+     * @return The end of the time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_end_timestamp() const;
 

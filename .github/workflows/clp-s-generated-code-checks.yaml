@@ -32,7 +32,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli@3.44.0"
+        run: "npm install -g @go-task/cli@3.48.0"
 
       - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
