@@ -38,11 +38,13 @@ def main(host: str, port: int, config_path: Path) -> int:
     :param config_path: The path to server's configuration file.
     :return: Exit code (0 for success, non-zero for failure).
     """
-    # Setup logging to file
-    log_file_path = Path(os.getenv("CLP_LOGS_DIR")) / "mcp_server.log"
-    logging_file_handler = logging.FileHandler(filename=log_file_path, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
+    # Setup optional file logging (console logging is configured in get_logger()).
+    logs_dir = os.getenv("CLP_LOGS_DIR")
+    if logs_dir:
+        log_file_path = Path(logs_dir) / "mcp_server.log"
+        logging_file_handler = logging.FileHandler(filename=log_file_path, encoding="utf-8")
+        logging_file_handler.setFormatter(get_logging_formatter())
+        logger.addHandler(logging_file_handler)
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     exit_code = 0

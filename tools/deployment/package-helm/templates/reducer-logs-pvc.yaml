@@ -1,7 +1,0 @@
-{{- include "clp.createPvc" (dict
-  "root" .
-  "component_category" "reducer"
-  "name" "logs"
-  "capacity" "5Gi"
-  "accessModes" (list "ReadWriteOnce")
-) }}

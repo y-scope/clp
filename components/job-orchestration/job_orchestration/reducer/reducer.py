@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import TextIO
 
 from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -29,12 +30,15 @@ def main(argv: list[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup logging to file
-    logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "reducer.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
+    # Setup optional file logging (console logging is configured in get_logger()).
+    logs_dir_env = os.getenv("CLP_LOGS_DIR")
+    logs_dir = Path(logs_dir_env) if logs_dir_env else None
+    logging_file_handler = None
+    if logs_dir is not None:
+        log_file = logs_dir / "reducer.log"
+        logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
+        logging_file_handler.setFormatter(get_logging_formatter())
+        logger.addHandler(logging_file_handler)
 
     # Update logging level based on config
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
@@ -64,19 +68,26 @@ def main(argv: list[str]) -> int:
     # fmt: on
 
     reducers = []
+    reducer_log_files: list[TextIO] = []
     concurrency = max(int(parsed_args.concurrency), 1)
     for i in range(concurrency):
         reducer_instance_cmd = reducer_cmd + [str(clp_config.reducer.base_port + i)]
 
-        log_file_path = logs_dir / ("reducer-" + str(i) + ".log")
-        log_file = open(log_file_path, "a")
+        reducer_stdout = sys.stdout
+        reducer_stderr = sys.stderr
+        if logs_dir is not None:
+            log_file_path = logs_dir / f"reducer-{i}.log"
+            log_file = open(log_file_path, "a")
+            reducer_log_files.append(log_file)
+            reducer_stdout = log_file
+            reducer_stderr = log_file
 
         reducers.append(
             subprocess.Popen(
                 reducer_instance_cmd,
                 close_fds=True,
-                stdout=log_file,
-                stderr=log_file,
+                stdout=reducer_stdout,
+                stderr=reducer_stderr,
             )
         )
 
@@ -90,11 +101,14 @@ def main(argv: list[str]) -> int:
     for i, reducer in enumerate(reducers):
         reducer.communicate()
         logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
+    for reducer_log_file in reducer_log_files:
+        reducer_log_file.close()
 
     logger.error("All reducers terminated")
 
-    logger.removeHandler(logging_file_handler)
-    logging_file_handler.close()
+    if logging_file_handler is not None:
+        logger.removeHandler(logging_file_handler)
+        logging_file_handler.close()
 
     return 0
 

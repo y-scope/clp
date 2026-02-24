@@ -22,10 +22,6 @@ spec:
         "component" "compressionWorker"
       ) | nindent 6 }}
       terminationGracePeriodSeconds: 60
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       containers:
         - name: "compression-worker"
           image: "{{ include "clp.image.ref" . }}"
@@ -43,17 +39,12 @@ spec:
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
-              value: "/var/log/compression_worker"
+              value: "/tmp"
             - name: "CLP_WORKER_LOG_PATH"
-              value: "/var/log/compression_worker/worker.log"
+              value: "/dev/stdout"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "compression-worker"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/compression_worker"
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
                 "name" "tmp"
@@ -89,21 +80,15 @@ spec:
             "worker",
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--loglevel", "WARNING",
-            "-f", "/var/log/compression_worker/worker.log",
             "-Q", "compression",
             "-n", "compression-worker"
           ]
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "compression-worker"
-            "name" "logs"
-          ) | nindent 10 }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
+        - name: {{ include "clp.volumeName" (dict
             "component_category" "compression-worker"
             "name" "tmp"
-          ) | nindent 10 }}
+          ) | quote }}
+          emptyDir: {}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
@@ -114,11 +99,11 @@ spec:
             "name" "archives"
           ) | nindent 10 }}
         {{- else if eq .Values.clpConfig.archive_output.storage.type "s3" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
+        - name: {{ include "clp.volumeName" (dict
             "component_category" "compression-worker"
             "name" "staged-archives"
-          ) | nindent 10 }}
+          ) | quote }}
+          emptyDir: {}
         {{- end }}
         {{- if .Values.clpConfig.aws_config_directory }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}

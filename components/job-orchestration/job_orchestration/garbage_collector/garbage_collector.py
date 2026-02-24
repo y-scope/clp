@@ -35,8 +35,9 @@ async def main(argv: list[str]) -> int:
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup logging to file
-    logs_directory = Path(os.getenv("CLP_LOGS_DIR"))
+    # Setup optional file logging (console logging is configured in get_logger()).
+    logs_directory_env = os.getenv("CLP_LOGS_DIR")
+    logs_directory = Path(logs_directory_env) if logs_directory_env else None
     logging_level = os.getenv("CLP_LOGGING_LEVEL")
     configure_logger(logger, logging_level, logs_directory, GARBAGE_COLLECTOR_COMPONENT_NAME)
 

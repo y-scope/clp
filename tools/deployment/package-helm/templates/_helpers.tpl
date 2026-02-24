@@ -111,53 +111,9 @@ Used for:
 {{- end }}
 
 {{/*
-Creates a PersistentVolume that does not use dynamic provisioning.
-
-Behavior depends on the `distributedDeployment` value:
-- distributedDeployment=false: Uses local volume type with node affinity targeting control-plane
-  nodes
-- distributedDeployment=true: Uses hostPath without node affinity (assumes shared storage like NFS)
-
-@param {object} root Root template context
-@param {string} component_category (e.g., "database", "shared-data")
-@param {string} name (e.g., "archives", "data", "logs")
-@param {string} capacity Storage capacity
-@param {string[]} accessModes Access modes
-@param {string} hostPath Absolute path on host
-@return {string} YAML-formatted PersistentVolume resource
-*/}}
-{{- define "clp.createStaticPv" -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
-  labels:
-    {{- include "clp.labels" .root | nindent 4 }}
-    app.kubernetes.io/component: {{ .component_category | quote }}
-spec:
-  capacity:
-    storage: {{ .capacity }}
-  accessModes: {{ .accessModes }}
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: {{ .root.Values.storage.storageClassName | quote }}
-  {{- if .root.Values.distributedDeployment }}
-  hostPath:
-    path: {{ .hostPath | quote }}
-    type: "DirectoryOrCreate"
-  {{- else }}
-  local:
-    path: {{ .hostPath | quote }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "node-role.kubernetes.io/control-plane"
-              operator: "Exists"
-  {{- end }}{{/* if .root.Values.distributedDeployment */}}
-{{- end }}{{/* define "clp.createStaticPv" */}}
-
-{{/*
 Creates a PersistentVolumeClaim for the given component.
+
+Uses the cluster's default StorageClass for dynamic provisioning.
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
@@ -176,11 +132,6 @@ metadata:
     app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
   accessModes: {{ .accessModes }}
-  storageClassName: {{ .root.Values.storage.storageClassName | quote }}
-  selector:
-    matchLabels:
-      {{- include "clp.selectorLabels" .root | nindent 6 }}
-      app.kubernetes.io/component: {{ .component_category | quote }}
   resources:
     requests:
       storage: {{ .capacity }}

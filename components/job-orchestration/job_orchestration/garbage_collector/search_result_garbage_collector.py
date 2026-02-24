@@ -71,7 +71,7 @@ def _collect_and_sweep_expired_search_results(
 
 
 async def search_result_garbage_collector(
-    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
+    clp_config: ClpConfig, log_directory: pathlib.Path | None, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
 

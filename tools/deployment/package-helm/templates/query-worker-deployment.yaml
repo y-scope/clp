@@ -22,10 +22,6 @@ spec:
         "component" "queryWorker"
       ) | nindent 6 }}
       terminationGracePeriodSeconds: 60
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       containers:
         - name: "query-worker"
           image: "{{ include "clp.image.ref" . }}"
@@ -43,17 +39,12 @@ spec:
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.query_worker.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
-              value: "/var/log/query_worker"
+              value: "/tmp"
             - name: "CLP_WORKER_LOG_PATH"
-              value: "/var/log/query_worker/worker.log"
+              value: "/dev/stdout"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "query-worker"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/query_worker"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
@@ -88,16 +79,10 @@ spec:
             "worker",
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--loglevel", "WARNING",
-            "-f", "/var/log/query_worker/worker.log",
             "-Q", "query",
             "-n", "query-worker"
           ]
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "query-worker"
-            "name" "logs"
-          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
@@ -118,9 +103,9 @@ spec:
             "name" "streams"
           ) | nindent 10 }}
         {{- else if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
+        - name: {{ include "clp.volumeName" (dict
             "component_category" "query-worker"
             "name" "staged-streams"
-          ) | nindent 10 }}
+          ) | quote }}
+          emptyDir: {}
         {{- end }}

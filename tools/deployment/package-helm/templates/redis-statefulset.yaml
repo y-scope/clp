@@ -18,10 +18,6 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "redis"
     spec:
-      securityContext:
-        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
-        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
-        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
       containers:
         - name: "redis"
           image: "redis:7.2.4"
@@ -41,11 +37,6 @@ spec:
                 "name" "data"
               ) | quote }}
               mountPath: "/data"
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "redis"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/redis"
             - name: "config"
               mountPath: "/etc/redis/redis.conf"
               subPath: "redis.conf"
@@ -69,39 +60,11 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *redis-health-check
       volumes:
-        - name: "config"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: "Delete"
-  volumeClaimTemplates:
-    - metadata:
-        name: {{ include "clp.volumeName" (dict
+        - name: {{ include "clp.volumeName" (dict
             "component_category" "redis"
             "name" "data"
           ) | quote }}
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "redis"
-        resources:
-          requests:
-            storage: "10Gi"
-    - metadata:
-        name: {{ include "clp.volumeName" (dict
-            "component_category" "redis"
-            "name" "logs"
-          ) | quote }}
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "redis"
-        resources:
-          requests:
-            storage: "5Gi"
+          emptyDir: {}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config

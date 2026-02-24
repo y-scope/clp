@@ -21,10 +21,6 @@ spec:
       hostname: {{ include "clp.fullname" . }}-query-scheduler
       subdomain: {{ include "clp.fullname" . }}-query-scheduler
       terminationGracePeriodSeconds: 10
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
@@ -63,19 +59,12 @@ spec:
                   key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
-            - name: "CLP_LOGS_DIR"
-              value: "/var/log/query_scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
             - name: "query-scheduler"
               containerPort: 7000
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "query-scheduler"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/query_scheduler"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
@@ -93,11 +82,6 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             tcpSocket: *query-scheduler-health-check
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "query-scheduler"
-            "name" "logs"
-          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

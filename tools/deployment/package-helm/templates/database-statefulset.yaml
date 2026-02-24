@@ -18,10 +18,6 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "database"
     spec:
-      securityContext:
-        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
-        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
-        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
       containers:
         - name: "database"
           image: >-
@@ -58,11 +54,6 @@ spec:
                 "name" "data"
               ) | quote }}
               mountPath: "/var/lib/mysql"
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "database"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/mysql"
             - name: "config"
               mountPath: "/etc/mysql/conf.d/logging.cnf"
               subPath: "mysql-logging.cnf"
@@ -84,8 +75,6 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
         name: {{ include "clp.volumeName" (dict
@@ -94,26 +83,6 @@ spec:
           ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "database"
         resources:
           requests:
             storage: "20Gi"
-    - metadata:
-        name: {{ include "clp.volumeName" (dict
-            "component_category" "database"
-            "name" "logs"
-          ) | quote }}
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "database"
-        resources:
-          requests:
-            storage: "5Gi"

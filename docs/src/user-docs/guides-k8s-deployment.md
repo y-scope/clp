@@ -125,22 +125,7 @@ helm repo update clp
 The following configurations are optional but recommended for production deployments. You can skip
 this section for testing or development.
 
-1. **Storage for CLP package services' data and logs** (optional, for centralized debugging):
-
-   The Helm chart creates static PersistentVolumes using local host paths by default, so no
-   StorageClass configuration is required for basic deployments. For easier debugging, you can
-   configure a centralized storage backend for the following directories:
-
-   * `data_directory` - where CLP stores runtime data
-   * `logs_directory` - where CLP services write logs
-   * `tmp_directory` - where temporary files are stored
-
-   :::{note}
-   We aim to improve the logging infrastructure so mapping log volumes will not be required in the
-   future. See [y-scope/clp#1760][logging-infra-issue] for details.
-   :::
-
-2. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
+1. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
 
    :::{tip}
    [S3 storage][s3-storage] is **strongly recommended** for multi-node clusters as it does not
@@ -159,38 +144,15 @@ this section for testing or development.
    [SeaweedFS section][seaweedfs-setup] in the Docker Compose deployment guide for setup
    instructions.
 
-3. **External databases** (recommended for production):
+2. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
      MariaDB/MySQL and MongoDB databases
 
 ### Basic installation
 
-Create the required directories on all worker nodes:
+Generate credentials and install CLP:
 
 ```bash
-export CLP_HOME="/tmp/clp"
-
-mkdir -p \
-  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-  "$CLP_HOME/var/tmp"
-```
-
-Then on the **control-plane node**, create the required directories, generate credentials, and
-install CLP:
-
-```bash
-export CLP_HOME="/tmp/clp"
-
-mkdir -p \
-  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-  "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-  "$CLP_HOME/var/tmp"
-
 # Credentials (change these for production)
 export CLP_DB_PASS="pass"
 export CLP_DB_ROOT_PASS="root-pass"
@@ -203,11 +165,6 @@ export CLP_QUERY_WORKER_REPLICAS=1
 export CLP_REDUCER_REPLICAS=1
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
-  --set clpConfig.data_directory="$CLP_HOME/var/data" \
-  --set clpConfig.logs_directory="$CLP_HOME/var/log" \
-  --set clpConfig.tmp_directory="$CLP_HOME/var/tmp" \
-  --set clpConfig.archive_output.storage.directory="$CLP_HOME/var/data/archives" \
-  --set clpConfig.stream_output.storage.directory="$CLP_HOME/var/data/streams" \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
@@ -547,9 +504,9 @@ helm uninstall clp
 ```
 
 :::{warning}
-Uninstalling the Helm release will delete all CLP pods and services. However, PersistentVolumes
-with the `Retain` policy will preserve your data. To completely remove all data, delete the PVs and
-the data directories manually.
+Uninstalling the Helm release will delete all CLP pods and services. However, dynamically
+provisioned PersistentVolumeClaims (database, results cache, archives, streams) may be retained
+depending on the cluster's `reclaimPolicy`. To completely remove all data, delete the PVCs manually.
 :::
 
 ---
@@ -604,7 +561,6 @@ To tear down a `kubeadm` cluster:
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
-[logging-infra-issue]: https://github.com/y-scope/clp/issues/1760
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3
