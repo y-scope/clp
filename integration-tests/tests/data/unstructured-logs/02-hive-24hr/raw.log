@@ -1,0 +1,18 @@
+2015-03-23 05:38:01,440 INFO [main] org.apache.hadoop.metrics2.impl.MetricsConfig: loaded properties from hadoop-metrics2.properties
+2015-03-23 05:38:02,096 INFO [main] org.apache.hadoop.metrics2.impl.MetricsSystemImpl: Scheduled snapshot period at 10 second(s).
+2015-03-23 05:38:02,096 INFO [main] org.apache.hadoop.metrics2.impl.MetricsSystemImpl: MapTask metrics system started
+2015-03-23 05:38:02,164 INFO [main] org.apache.hadoop.mapred.YarnChild: Executing with tokens:
+2015-03-23 05:38:02,164 INFO [main] org.apache.hadoop.mapred.YarnChild: Kind: mapreduce.job, Service: job_1427088391284_0001, Ident: (org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier@482dbdc2)
+2015-03-23 05:38:02,703 INFO [main] org.apache.hadoop.mapred.YarnChild: Sleeping for 0ms before retrying again. Got null now.
+2015-03-23 05:38:04,418 INFO [main] org.apache.hadoop.mapred.YarnChild: mapreduce.cluster.local.dir for child: /tmp/hadoop-ubuntu/nm-local-dir/usercache/ubuntu/appcache/application_1427088391284_0001
+2015-03-23 05:38:09,630 INFO [main] org.apache.hadoop.conf.Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+2015-03-23 05:38:11,829 INFO [main] org.apache.hadoop.mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+2015-03-23 05:38:12,508 INFO [main] org.apache.hadoop.mapred.MapTask: Processing split: hdfs://172.31.17.135:8120/HiBench/Hive/temp/dummy:113+3
+2015-03-23 05:38:12,620 INFO [main] org.apache.hadoop.mapred.MapTask: numReduceTasks: 96
+2015-03-23 05:38:13,101 INFO [main] org.apache.hadoop.mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+2015-03-23 05:38:13,101 INFO [main] org.apache.hadoop.mapred.MapTask: mapreduce.task.io.sort.mb: 100
+2015-03-23 05:38:13,101 INFO [main] org.apache.hadoop.mapred.MapTask: soft limit at 83886080
+2015-03-23 05:38:13,101 INFO [main] org.apache.hadoop.mapred.MapTask: bufstart = 0; bufvoid = 104857600
+2015-03-23 05:38:13,101 INFO [main] org.apache.hadoop.mapred.MapTask: kvstart = 26214396; length = 6553600
+2015-03-23 05:38:13,112 INFO [main] org.apache.hadoop.mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+2015-03-23 05:38:13,120 INFO [main] HiBench.HtmlCore: WARNING: dict empty!!!
