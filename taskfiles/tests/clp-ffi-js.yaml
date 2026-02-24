@@ -6,26 +6,69 @@ includes:
 vars:
   G_CLP_FFI_JS_SRC_DIR: "{{.G_BUILD_DIR}}/clp-ffi-js"
   G_CLP_FFI_JS_BUILD_DIR: "{{.G_CLP_FFI_JS_SRC_DIR}}/build/clp-ffi-js"
+  G_CLP_FFI_JS_NODE_MODULE_PATH: "{{.G_CLP_FFI_JS_BUILD_DIR}}/ClpFfiJs-node.js"
+  G_CLP_FFI_JS_WORKER_MODULE_PATH: "{{.G_CLP_FFI_JS_BUILD_DIR}}/ClpFfiJs-worker.js"
 
   G_CLP_FFI_JS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/clp-ffi-js.md5"
 
-# NOTE: By default, clp-ffi-js builds its WASM binaries against the internally pinned CLP source.
-# For CLP development and integration testing, we override `CLP_FFI_JS_CLP_SOURCE_DIRECTORY` so the
-# build uses the CLP repository in the current workspace.
-# We achieve this by running an early, intentionally non-fatal CMake configure step to inject the
-# cache variable without triggering a full build. The normal clp-ffi-js test workflow is then
-# executed, which builds the package as part of the process.
+# NOTE: clp-ffi-js normally builds its WASM artifacts against a pinned CLP source revision. For
+# local CLP development and integration testing, we replace that dependency with the current
+# workspace CLP checkout via a symlink.
+#
+# This allows us to quickly verify whether in-flight CLP changes remain compatible with downstream
+# clp-ffi-js while reusing the existing clp-ffi-js build and test workflow through a small set of
+# hacks/overrides.
+#
+# Run `task:clp-ffi-js` once to perform the initial setup. After that, selectively run
+# - `task:clp-ffi-js:build-and-test-node`
+# - `task:clp-ffi-js:build-and-test-browser`
+# as needed. Note that `sudo` access is required for the latter.
 tasks:
   default:
     deps: ["download-src"]
     dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
     cmds:
-      - task: "inject-clp-src-dir"
       - task: "symlink-yscope-dev-utils"
       - |-
-        task test
+        sed -i 's/^\(\s*internal:\s*\)true\b/\1false/' taskfile.yaml
+        task node-modules
+        task config-cmake-project
+        rm -rf build/deps/clp
+        ln -s {{.ROOT_DIR}} build/deps/clp
+      - task: "build-and-test-node"
+      - task: "build-and-test-browser"
+
+  build-and-test-node:
+    dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
+    cmds:
+      - |-
+        cmake \
+          --build "{{.G_CLP_FFI_JS_BUILD_DIR}}" \
+          --parallel \
+          --target "ClpFfiJs-node"
+      - |-
+        VITE_NODE_MODULE_ABS_PATH={{.G_CLP_FFI_JS_NODE_MODULE_PATH}} \
+          npm run test -- --project node
+
+  # NOTE: Browser tests require installing browsers and system dependencies. The task is skipped if
+  # sudo is unavailable.
+  build-and-test-browser:
+    dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
+    status:
+      - '! (command -v sudo >/dev/null && sudo -n true)'
+    cmds:
+      - |-
+        cmake \
+          --build "{{.G_CLP_FFI_JS_BUILD_DIR}}" \
+          --parallel \
+          --target "ClpFfiJs-worker"
+      - |-
+        npm run test:init
+        VITE_WORKER_MODULE_ABS_PATH={{.G_CLP_FFI_JS_WORKER_MODULE_PATH}} \
+          npm run test -- --project browser
 
   download-src:
+    internal: true
     deps:
       - "::init"
     cmds:
@@ -36,14 +79,6 @@ tasks:
           OUTPUT_DIR: "{{.G_BUILD_DIR}}/clp-ffi-js"
           TAR_FILE: "{{.G_BUILD_DIR}}/clp-ffi-js.tar.gz"
           URL: "https://github.com/y-scope/clp-ffi-js/archive/4cc6a7c.tar.gz"
-
-  inject-clp-src-dir:
-    internal: true
-    silent: true
-    cmds:
-      - |-
-        cmake -S "{{.G_CLP_FFI_JS_SRC_DIR}}" -B "{{.G_CLP_FFI_JS_BUILD_DIR}}" \
-          -DCLP_FFI_JS_CLP_SOURCE_DIRECTORY="{{.ROOT_DIR}}" >/dev/null 2>&1 || true
 
   symlink-yscope-dev-utils:
     internal: true
