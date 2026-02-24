@@ -275,6 +275,20 @@ marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::s
 ) -> std::optional<std::pair<epochtime_t, std::string_view>>;
 
 /**
+ * Estimates the precision of an epoch timestamp based on its proximity to 1971 in different
+ * precisions.
+ *
+ * This heuristic works because one year in epoch nanoseconds is approximately 1000 years in epoch
+ * microseconds, and so on. Note that this heuristic can not distinguish the precision of timestamps
+ * with absolute value sufficiently close to zero.
+ *
+ * @param timestamp
+ * @return A pair containing the scaling factor needed to convert the timestamp into nanosecond
+ * precision, and a format specifier indicating the precision of the timestamp.
+ */
+[[nodiscard]] auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>;
+
+/**
  * @return A result containing a vector of date-time timestamp patterns, or an error code indicating
  * the failure:
  * - Forwards `TimestampPattern::create`'s return values on failure.
