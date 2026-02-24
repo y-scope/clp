@@ -129,9 +129,10 @@ private:
 /**
  * Gets the schema-tree node type that corresponds with a given MessagePack value.
  * @param val
- * @return The corresponding schema-tree node type.
- * @return IrSerializationErrorEnum::UnknownSchemaTreeNodeType if the value doesn't match any of
- * the supported schema-tree node types.
+ * @return The corresponding schema-tree node type on success, or an error code indicating the
+ * failure:
+ * - IrSerializationErrorEnum::UnknownSchemaTreeNodeType if the value doesn't match any of the
+ *   supported schema-tree node types.
  */
 [[nodiscard]] auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
         -> ystdlib::error_handling::Result<SchemaTree::Node::Type>;
@@ -202,7 +203,7 @@ serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<in
  * @param logtype_buf
  * @param output_buf
  * @return A void result on success, or an error code indicating the failure:
- * - IrSerializationErrorEnum::IntSerializationFailure if an integer overflows INT64 range.
+ * - IrSerializationErrorEnum::Int64Overflow if an integer overflows INT64 range.
  * - IrSerializationErrorEnum::StringSerializationFailure if string serialization fails.
  * - IrSerializationErrorEnum::ObjectSerializationFailure if the value is not an empty object when
  *   the schema expects one.
@@ -240,16 +241,7 @@ template <typename encoded_variable_t>
  * @param node_id_value_pair_serialization_method
  * @param empty_map_serialization_method
  * @return A void result on success, or an error code indicating the failure:
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if the map contains non-string keys.
- * - IrSerializationErrorEnum::KeyValuePairSerializationFailure if a value's schema tree node
- *   type is unsupported for serialization.
- * - IrSerializationErrorEnum::IntSerializationFailure if an integer value could not be serialized.
- * - IrSerializationErrorEnum::StringSerializationFailure if a string value could not be
- *   serialized.
- * - IrSerializationErrorEnum::ObjectSerializationFailure if an object value could not be
- *   serialized.
- * - IrSerializationErrorEnum::UnstructuredArraySerializationFailure if an array value could not
- *   be serialized.
+ * - IrSerializationErrorEnum::InvalidKeyType if the map contains keys of invalid type.
  * - Forwards `schema_tree_node_serialization_method`'s return value on failure.
  * - Forwards `node_id_value_pair_serialization_method`'s return value on failure.
  * - Forwards `empty_map_serialization_method`'s return value on failure.
@@ -359,7 +351,7 @@ auto serialize_value(
             if (msgpack::type::POSITIVE_INTEGER == val.type
                 && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
             {
-                return IrSerializationError{IrSerializationErrorEnum::IntSerializationFailure};
+                return IrSerializationError{IrSerializationErrorEnum::Int64Overflow};
             }
             serialize_value_int(val.as<int64_t>(), output_buf);
             break;
@@ -476,7 +468,7 @@ template <
         auto const& [key, val]{curr.get_next_child()};
         if (msgpack::type::STR != key.type) {
             // A map containing non-string keys is not serializable
-            return IrSerializationError{IrSerializationErrorEnum::KeyValuePairSerializationFailure};
+            return IrSerializationError{IrSerializationErrorEnum::InvalidKeyType};
         }
 
         auto const schema_tree_node_type

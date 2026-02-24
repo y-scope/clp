@@ -11,11 +11,11 @@ namespace clp::ffi::ir_stream {
  */
 enum class IrSerializationErrorEnum : uint8_t {
     KeyValuePairSerializationFailure,
-    IntSerializationFailure,
+    Int64Overflow,
     StringSerializationFailure,
     ObjectSerializationFailure,
     UnstructuredArraySerializationFailure,
-    NonStringMapKey,
+    InvalidKeyType,
     MetadataSerializationFailure,
     SchemaTreeNodeSerializationFailure,
     SchemaTreeNodeIdSerializationFailure,

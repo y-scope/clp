@@ -19,16 +19,16 @@ auto IrSerializationErrorCategory::message(IrSerializationErrorEnum error_enum) 
     switch (error_enum) {
         case IrSerializationErrorEnum::KeyValuePairSerializationFailure:
             return "failed to serialize a key-value pair log event";
-        case IrSerializationErrorEnum::IntSerializationFailure:
-            return "integer value exceeds INT64 range";
+        case IrSerializationErrorEnum::Int64Overflow:
+            return "integer value exceeds the 64-bit signed integer range";
         case IrSerializationErrorEnum::StringSerializationFailure:
             return "failed to serialize string value";
         case IrSerializationErrorEnum::ObjectSerializationFailure:
             return "expected empty object but value has different type";
         case IrSerializationErrorEnum::UnstructuredArraySerializationFailure:
             return "failed to serialize unstructured array";
-        case IrSerializationErrorEnum::NonStringMapKey:
-            return "map contains non-string keys";
+        case IrSerializationErrorEnum::InvalidKeyType:
+            return "map contains keys of invalid type";
         case IrSerializationErrorEnum::MetadataSerializationFailure:
             return "failed to serialize the stream's metadata";
         case IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure:
