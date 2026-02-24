@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use clp_rust_utils::{
     database::mysql::MySqlEnumFormat,
+    impl_sqlx_type,
     job_config::{
         ClpIoConfig,
         CompressionJobId,
@@ -200,8 +201,12 @@ impl ClpIngestionState {
                 anyhow::anyhow!("The retrieved ID overflows: {}", result.last_insert_id())
             })?;
 
-        // Update compression job ID for ingested objects
-        for chunk in objects.chunks(1000) {
+        // Update compression job ID for ingested objects.
+        // NOTE: We batch the update to avoid hitting the maximum placeholder limit of MySQL. The
+        // batch size is chosen to be 10000, which is conservative enough to avoid hitting the limit
+        // while also minimizing the number of batches for typical use cases. If the number of
+        // placeholders per update changes, we may need to adjust the batch size accordingly.
+        for chunk in objects.chunks(10000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 r"UPDATE `{table}` ",
                 table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
@@ -699,15 +704,7 @@ pub enum ClpIngestionJobStatus {
 
 impl MySqlEnumFormat for ClpIngestionJobStatus {}
 
-impl sqlx::Type<sqlx::MySql> for ClpIngestionJobStatus {
-    fn type_info() -> <sqlx::MySql as sqlx::Database>::TypeInfo {
-        <str as sqlx::Type<sqlx::MySql>>::type_info()
-    }
-
-    fn compatible(ty: &<sqlx::MySql as sqlx::Database>::TypeInfo) -> bool {
-        <str as sqlx::Type<sqlx::MySql>>::compatible(ty)
-    }
-}
+impl_sqlx_type!(ClpIngestionJobStatus => str);
 
 /// Enum for CLP ingestion S3 object metadata status.
 #[derive(
@@ -734,15 +731,7 @@ pub enum IngestedS3ObjectMetadataStatus {
 
 impl MySqlEnumFormat for IngestedS3ObjectMetadataStatus {}
 
-impl sqlx::Type<sqlx::MySql> for IngestedS3ObjectMetadataStatus {
-    fn type_info() -> <sqlx::MySql as sqlx::Database>::TypeInfo {
-        <str as sqlx::Type<sqlx::MySql>>::type_info()
-    }
-
-    fn compatible(ty: &<sqlx::MySql as sqlx::Database>::TypeInfo) -> bool {
-        <str as sqlx::Type<sqlx::MySql>>::compatible(ty)
-    }
-}
+impl_sqlx_type!(IngestedS3ObjectMetadataStatus => str);
 
 const INGESTION_JOB_TABLE_NAME: &str = "ingestion_job";
 const INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME: &str = "ingestion_job_s3_scanner_state";
