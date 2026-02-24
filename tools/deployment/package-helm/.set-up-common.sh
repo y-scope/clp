@@ -64,9 +64,15 @@ get_image_helm_args() {
     echo "Loading local image '${image}' into kind cluster..." >&2
     kind load docker-image "${image}" --name "${cluster_name}" >&2
 
-    # Split "repo:tag" into separate parts
-    local repo="${image%%:*}"
-    local tag="${image#*:}"
+    # Split "repo:tag" on the last colon whose right-hand side contains no '/'
+    # (so registry ports like localhost:5000/repo are not mistaken for tags).
+    if [[ "${image}" =~ ^(.+):([^:/]+)$ ]]; then
+        local repo="${BASH_REMATCH[1]}"
+        local tag="${BASH_REMATCH[2]}"
+    else
+        echo "Error: '${image}' is not a valid image reference (expected repo:tag)." >&2
+        return 1
+    fi
     echo "--set" "image.clpPackage.repository=${repo}" \
          "--set" "image.clpPackage.tag=${tag}" \
          "--set" "image.clpPackage.pullPolicy=Never"
