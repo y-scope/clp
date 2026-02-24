@@ -1,3 +1,7 @@
 .runButtonContainer {
-    width: 100px;
+    width: auto;
+    min-width: 0;
+    display: flex;
+    justify-content: flex-end;
+    height: 100%;
 }

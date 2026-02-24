@@ -1,3 +1,5 @@
 .runButton {
-    width: 100%;
+    min-width: 36px;
+    padding-inline: 8px;
+    height: 100%;
 }

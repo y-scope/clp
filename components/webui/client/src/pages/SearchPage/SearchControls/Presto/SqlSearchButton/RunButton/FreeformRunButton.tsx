@@ -36,14 +36,13 @@ const FreeformRunButton = () => {
                 className={styles["runButton"] || ""}
                 color={"green"}
                 icon={<CaretRightOutlined/>}
+                aria-label={"Run query"}
                 size={"middle"}
                 variant={"solid"}
                 disabled={isQueryStringEmpty ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 onClick={handleClick}
-            >
-                Run
-            </Button>
+            />
         </Tooltip>
     );
 };
