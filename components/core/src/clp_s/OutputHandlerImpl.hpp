@@ -131,12 +131,12 @@ public:
                 int64_t log_event_idx,
                 std::string_view dataset
         )
-                : original_path(original_path),
-                  message(message),
-                  timestamp(timestamp),
-                  archive_id(archive_id),
-                  log_event_idx(log_event_idx),
-                  dataset(dataset) {}
+                : original_path{original_path},
+                  message{message},
+                  timestamp{timestamp},
+                  archive_id{archive_id},
+                  log_event_idx{log_event_idx},
+                  dataset{dataset} {}
 
         std::string original_path;
         std::string message;
