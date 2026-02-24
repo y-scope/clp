@@ -31,6 +31,7 @@ import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
     ClpConfig,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -1220,6 +1221,9 @@ def _handle_new_search_job(
                 ):
                     logger.error("Failed to set job %s as failed.", job_id)
                 return
+
+    if datasets is None:
+        datasets = [CLP_DEFAULT_DATASET_NAME]
 
     archive_end_ts_lower_bound: int | None = None
     if archive_retention_period is not None:
