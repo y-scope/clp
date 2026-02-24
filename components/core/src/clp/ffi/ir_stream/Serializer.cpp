@@ -253,6 +253,7 @@ template <typename encoded_variable_t>
  * - Forwards `schema_tree_node_serialization_method`'s return value on failure.
  * - Forwards `node_id_value_pair_serialization_method`'s return value on failure.
  * - Forwards `empty_map_serialization_method`'s return value on failure.
+ * - Forwards `get_schema_tree_node_type_from_msgpack_val`'s return value on failure.
  */
 template <
         SchemaTreeNodeSerializationMethodReq SchemaTreeNodeSerializationMethod,
