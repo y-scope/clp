@@ -1,7 +1,6 @@
 """CLP MCP Server entry point."""
 
 import ipaddress
-import os
 import socket
 import sys
 from pathlib import Path

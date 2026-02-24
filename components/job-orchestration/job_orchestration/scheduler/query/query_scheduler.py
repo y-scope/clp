@@ -19,11 +19,9 @@ import argparse
 import asyncio
 import contextlib
 import datetime
-import os
 import pathlib
 import sys
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any
 
 import celery

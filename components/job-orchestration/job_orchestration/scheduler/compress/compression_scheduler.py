@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import os
 import signal
 import sys
 import time

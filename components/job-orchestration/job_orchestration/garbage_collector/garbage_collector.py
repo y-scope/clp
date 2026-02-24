@@ -66,9 +66,7 @@ async def main(argv: list[str]) -> int:
             logger.info(f"Retention period is not configured, skip creating {gc_name}.")
             continue
         logger.info(f"Creating {gc_name} with retention period = {retention_period} minutes")
-        gc_tasks.append(
-            asyncio.create_task(task_method(clp_config), name=gc_name)
-        )
+        gc_tasks.append(asyncio.create_task(task_method(clp_config), name=gc_name))
 
     # Poll and report any task that finished unexpectedly
     while len(gc_tasks) != 0:
