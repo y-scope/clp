@@ -28,7 +28,10 @@ def get_logger(name: str):
     return logger
 
 
-def set_logging_level(logger: logging.Logger, level: str):
+def set_logging_level(logger: logging.Logger, level: str | None):
+    if level is None:
+        logger.setLevel(logging.INFO)
+        return
     if level not in get_args(LoggingLevel):
         logger.warning(f"Invalid logging level: {level}, using INFO as default")
         logger.setLevel(logging.INFO)
