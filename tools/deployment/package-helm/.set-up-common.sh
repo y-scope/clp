@@ -81,6 +81,10 @@ parse_common_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --clp-package-image)
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    echo "Error: '--clp-package-image' requires a value." >&2
+                    exit 1
+                fi
                 CLP_PACKAGE_IMAGE="$2"
                 shift 2
                 ;;
