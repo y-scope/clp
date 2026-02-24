@@ -55,7 +55,7 @@ tasks:
   build-and-test-browser:
     dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
     status:
-      - '! (command -v sudo >/dev/null && sudo -n true)'
+      - "! (command -v sudo >/dev/null && sudo -n true)"
     cmds:
       - |-
         cmake \
