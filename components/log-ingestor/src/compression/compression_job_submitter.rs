@@ -23,7 +23,7 @@ use sqlx::MySqlPool;
 use crate::compression::BufferSubmitter;
 
 /// The CLP compression job table name.
-const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
+pub const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 
 /// A compression submitter that implements [`BufferSubmitter`] to submit compression jobs to CLP.
 pub struct CompressionJobSubmitter {
