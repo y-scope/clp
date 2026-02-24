@@ -150,7 +150,10 @@ impl ClpIngestionState {
     ///
     /// # Panics
     ///
-    /// Panics if any provided object metadata entry does not have its `id` field set.
+    /// Panics if:
+    ///
+    /// * No object metadata is provided for compression.
+    /// * Any provided object metadata entry does not have its `id` field set.
     pub async fn submit_for_compression(
         &self,
         io_config_template: ClpIoConfig,
@@ -160,6 +163,12 @@ impl ClpIngestionState {
             r"INSERT INTO {table} (`clp_config`) VALUES (?)",
             table = CLP_COMPRESSION_JOB_TABLE_NAME
         );
+
+        if objects.is_empty() {
+            const ERROR_MSG: &str = "No objects to compress.";
+            tracing::error!(job_id = ? self.job_id, ERROR_MSG);
+            panic!("{}", ERROR_MSG);
+        }
 
         let mut io_config = io_config_template;
         let s3_input_config = match &mut io_config.input {
@@ -827,5 +836,187 @@ mod tests {
             IngestedS3ObjectMetadataStatus::format_as_sql_enum(),
             "ENUM('buffered', 'submitted', 'compressed', 'failed')"
         );
+    }
+    #[tokio::test]
+    async fn test_table_creation() {
+        use clp_rust_utils::{
+            clp_config::{AwsAuthentication::Credentials, AwsCredentials, S3Config},
+            job_config::{OutputConfig, S3InputConfig, ingestion::s3::S3ScannerConfig},
+            types::non_empty_string::ExpectedNonEmpty,
+        };
+        use non_empty_string::NonEmptyString;
+        use serde_json::json;
+
+        let mysql_options = sqlx::mysql::MySqlConnectOptions::new()
+            .host("localhost")
+            .port(3306)
+            .database("clp-db")
+            .username("ROOT")
+            .password("ROOT");
+
+        let db_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .max_connections(100)
+            .connect_with(mysql_options)
+            .await
+            .expect("Failed to connect to mysql");
+
+        sqlx::query(
+            r"
+                CREATE TABLE IF NOT EXISTS `compression_jobs` (
+                    `id` INT NOT NULL AUTO_INCREMENT,
+                    `status` INT NOT NULL DEFAULT '0',
+                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
+                    `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `start_time` DATETIME(3) NULL DEFAULT NULL,
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+                    `duration` FLOAT NULL DEFAULT NULL,
+                    `original_size` BIGINT NOT NULL DEFAULT '0',
+                    `uncompressed_size` BIGINT NOT NULL DEFAULT '0',
+                    `compressed_size` BIGINT NOT NULL DEFAULT '0',
+                    `num_tasks` INT NOT NULL DEFAULT '0',
+                    `num_tasks_completed` INT NOT NULL DEFAULT '0',
+                    `clp_binary_version` INT NULL DEFAULT NULL,
+                    `clp_config` VARBINARY(60000) NOT NULL,
+                    PRIMARY KEY (`id`) USING BTREE,
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
+                ) ROW_FORMAT=DYNAMIC
+        ",
+        )
+        .execute(&db_pool)
+        .await
+        .expect("Failed to create compression jobs table");
+
+        let connector = match ClpDbIngestionConnector::new(db_pool.clone()).await {
+            Ok(c) => c,
+            Err(e) => {
+                panic!("Failed to create CLP DB connector: {e}");
+            }
+        };
+
+        let json_config = json!(
+            {
+                "bucket_name": "test",
+                "key_prefix": "test-",
+                "region": "us-east-2",
+            }
+        );
+
+        let config: S3ScannerConfig = serde_json::from_str(json_config.to_string().as_str())
+            .expect("Failed to deserialize S3 ingestion job config");
+
+        let (sender, mut receiver) = mpsc::channel::<Vec<ObjectMetadata>>(100);
+
+        let state = match connector
+            .create_ingestion_job(S3IngestionJobConfig::S3Scanner(config), sender.clone())
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                panic!("Failed to create ingestion job: {e}");
+            }
+        };
+
+        state.start().await.expect("Failed to start ingestion job");
+
+        let mut objects = Vec::new();
+        for i in 0..12345 {
+            objects.push(ObjectMetadata {
+                bucket: NonEmptyString::from_static_str("test"),
+                key: NonEmptyString::from_string(format!("test-{i}")),
+                size: 100 + i,
+                id: None,
+            });
+        }
+
+        let last_ingested_key = objects.last().unwrap().key.clone();
+        S3ScannerState::ingest(&state, objects, last_ingested_key.as_str())
+            .await
+            .expect("Failed to ingest");
+
+        state.end().await.expect("Failed to end ingestion job");
+
+        let objects = vec![ObjectMetadata {
+            bucket: NonEmptyString::from_static_str("test"),
+            key: NonEmptyString::from_static_str("test-10000"),
+            size: 8,
+            id: None,
+        }];
+        let last_ingested_key = objects.last().unwrap().key.clone();
+        assert!(
+            S3ScannerState::ingest(&state, objects, last_ingested_key.as_str())
+                .await
+                .is_err()
+        );
+
+        // Compression
+        let objects_to_submit = receiver.recv().await.expect("sth");
+        assert_eq!(objects_to_submit.len(), 12345);
+
+        for chunk in objects_to_submit.chunks(3000) {
+            let s3_input_config = S3InputConfig {
+                s3_config: S3Config {
+                    bucket: NonEmptyString::from_static_str("test"),
+                    region_code: Some(NonEmptyString::from_static_str("us-east-2")),
+                    key_prefix: NonEmptyString::from_static_str("test-"),
+                    endpoint_url: None,
+                    aws_authentication: Credentials {
+                        credentials: AwsCredentials {
+                            access_key_id: "ROOT".to_owned(),
+                            secret_access_key: "ROOT".to_owned(),
+                        },
+                    },
+                },
+                keys: None,
+                dataset: Some(NonEmptyString::from_static_str("default")),
+                timestamp_key: None,
+                unstructured: false,
+            };
+            let output_config = OutputConfig {
+                target_archive_size: 1000,
+                target_dictionaries_size: 1000,
+                target_encoded_file_size: 1000,
+                target_segment_size: 1000,
+                compression_level: 3,
+            };
+            let io_config_template = ClpIoConfig {
+                input: InputConfig::S3InputConfig {
+                    config: s3_input_config,
+                },
+                output: output_config,
+            };
+
+            let compression_job_id = state
+                .submit_for_compression(io_config_template, chunk)
+                .await
+                .expect("Failed to submit for compression");
+            let state_copy = state.clone();
+            let num_objects_submitted = chunk.len();
+            let handle = tokio::spawn(async move {
+                state_copy
+                    .wait_for_compression_and_update_submitted_metadata(
+                        compression_job_id,
+                        num_objects_submitted,
+                    )
+                    .await
+                    .expect("Failed to wait for compression result")
+            });
+
+            // Manually mark the compression as successful
+            sqlx::query(
+                format!(
+                    r"UPDATE `{CLP_COMPRESSION_JOB_TABLE_NAME}` SET `status` = ? WHERE `id` = ?"
+                )
+                .as_str(),
+            )
+            .bind(2)
+            .bind(compression_job_id)
+            .execute(&db_pool)
+            .await
+            .expect("Failed to mark compression job as successful");
+
+            let (status, _status_msg) = handle.await.expect("Failed to join handle");
+            assert_eq!(status, CompressionJobStatus::Succeeded);
+        }
     }
 }
