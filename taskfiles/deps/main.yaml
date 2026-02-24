@@ -73,6 +73,7 @@ tasks:
       - task: "catch2"
       - task: "date"
       - task: "fmt"
+      - task: "libarchive"
       - task: "liblzma"
       - task: "log-surgeon"
       - task: "lz4"
@@ -288,6 +289,24 @@ tasks:
           LIB_NAME: "{{.G_FMT_LIB_NAME}}"
           TARBALL_SHA256: "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"
           TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz"
+
+  libarchive:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_LIBDIR=lib"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/LibArchive-install"
+            - "-DENABLE_EXPAT=OFF"
+            - "-DENABLE_OPENSSL=OFF"
+          LIB_NAME: "LibArchive"
+          TARBALL_SHA256: "bde832a5e3344dc723cfe9cc37f8e54bde04565bfe6f136bc1bd31ab352e9fab"
+          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/v3.8.1\
+          /libarchive-3.8.1.tar.gz"
 
   liblzma:
     internal: true

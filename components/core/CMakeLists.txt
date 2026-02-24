@@ -79,16 +79,6 @@ set(CLP_USE_STATIC_LIBS ON CACHE BOOL "Whether to link against static libraries"
 if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
-    elseif (EXISTS "/etc/centos-release")
-        # NOTE:
-        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
-        #    shows up as "AlmaLinux").
-        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
-        #    we can improve this check when someone reports an issue.
-        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
-        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
-            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
-        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -229,12 +219,9 @@ if(CLP_NEED_LIBARCHIVE)
     if(CLP_USE_STATIC_LIBS)
         set(LibArchive_USE_STATIC_LIBS ON)
     endif()
-    find_package(LibArchive REQUIRED)
-    if(LibArchive_FOUND)
-        message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
-    endif()
+    # TODO: Add why we need 3.8.1
+    find_package(LibArchive 3.8.1 REQUIRED)
+    message(STATUS "Found LibArchive ${LibArchive_VERSION}")
 endif()
 
 # Find and setup libcurl
