@@ -25,9 +25,10 @@ vars:
 # as needed. Note that `sudo` access is required for the latter.
 tasks:
   default:
-    deps: ["download-src"]
     dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
+    deps: ["download-src"]
     cmds:
+      # Expose `clp-ffi-js` tasks for test setup
       - task: "symlink-yscope-dev-utils"
       - |-
         sed -i 's/^\(\s*internal:\s*\)true\b/\1false/' taskfile.yaml
@@ -35,37 +36,42 @@ tasks:
         task config-cmake-project
         rm -rf build/deps/clp
         ln -s {{.ROOT_DIR}} build/deps/clp
+
+      # Repeatable test workflow
       - task: "build-and-test-node"
       - task: "build-and-test-browser"
 
   build-and-test-node:
     dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
+    deps: ["build-targets"]
     cmds:
       - |-
-        cmake \
-          --build "{{.G_CLP_FFI_JS_BUILD_DIR}}" \
-          --parallel \
-          --target "ClpFfiJs-node"
-      - |-
-        VITE_NODE_MODULE_ABS_PATH={{.G_CLP_FFI_JS_NODE_MODULE_PATH}} \
+        VITE_NODE_MODULE_ABS_PATH="{{.G_CLP_FFI_JS_NODE_MODULE_PATH}}" \
           npm run test -- --project node
 
   # NOTE: Browser tests require installing browsers and system dependencies. The task is skipped if
   # sudo is unavailable.
   build-and-test-browser:
     dir: "{{.G_CLP_FFI_JS_SRC_DIR}}"
+    deps: ["build-targets"]
     status:
       - "! (command -v sudo >/dev/null && sudo -n true)"
+    cmds:
+      - |-
+        npm run test:init
+        VITE_WORKER_MODULE_ABS_PATH="{{.G_CLP_FFI_JS_WORKER_MODULE_PATH}}" \
+          npm run test -- --project browser
+
+  # Builds clp-ffi-js + CLP with Emscripten + Clang
+  build-targets:
+    internal: true
+    run: "once"
     cmds:
       - |-
         cmake \
           --build "{{.G_CLP_FFI_JS_BUILD_DIR}}" \
           --parallel \
-          --target "ClpFfiJs-worker"
-      - |-
-        npm run test:init
-        VITE_WORKER_MODULE_ABS_PATH={{.G_CLP_FFI_JS_WORKER_MODULE_PATH}} \
-          npm run test -- --project browser
+          --target "ClpFfiJs-node" "ClpFfiJs-worker"
 
   download-src:
     internal: true
