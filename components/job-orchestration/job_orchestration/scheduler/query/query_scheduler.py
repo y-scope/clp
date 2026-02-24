@@ -1130,11 +1130,33 @@ def _handle_new_search_job(
     job_creation_time: float,
     table_prefix: str,
     max_datasets_per_query: int | None,
-    existing_datasets: set[str],
     archive_retention_period: int | None,
+    existing_datasets: set[str],
     pending_search_jobs: list,
     reducer_acquisition_tasks: list[asyncio.Task],
 ) -> None:
+    """
+    Validates and creates a new search job from a pending DB row.
+
+    On success, appends the new SearchJob to `pending_search_jobs` (for non-aggregation jobs) or
+    creates a reducer-acquisition task and appends it to `reducer_acquisition_tasks` (for
+    aggregation jobs). Also registers the job in the global `active_jobs` dict.
+
+    On validation failure (empty/invalid datasets, no matching archives, etc.), marks the job as
+    failed in the DB and returns without side effects.
+
+    :param db_conn:
+    :param db_cursor:
+    :param job_id:
+    :param job_config:
+    :param job_creation_time:
+    :param table_prefix:
+    :param max_datasets_per_query:
+    :param archive_retention_period:
+    :param existing_datasets: [out] May be updated with newly fetched datasets.
+    :param pending_search_jobs: [out] Appended with the new SearchJob on success.
+    :param reducer_acquisition_tasks: [out] Appended with the reducer task for aggregation jobs.
+    """
     global active_jobs
 
     # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
@@ -1253,6 +1275,23 @@ def _handle_new_extraction_job(
     stream_collection_name: str,
     clp_metadata_db_conn_params: dict[str, any],
 ) -> None:
+    """
+    Validates and dispatches an IR or JSON stream extraction job.
+
+    Resolves the archive to extract, checks whether the stream is already being extracted or has
+    been extracted, and either reuses the existing result, waits for the in-progress extraction,
+    or dispatches a new extraction task. Registers the job in the global `active_jobs` dict on
+    success, or marks it as failed in the DB on error.
+
+    :param db_conn:
+    :param job_id:
+    :param job_type:
+    :param job_config:
+    :param table_prefix:
+    :param results_cache_uri:
+    :param stream_collection_name:
+    :param clp_metadata_db_conn_params:
+    """
     global active_jobs
 
     job_handle: StreamExtractionHandle
