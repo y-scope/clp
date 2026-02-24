@@ -58,7 +58,7 @@ constexpr char cLogEventIx[]{"log_event_ix"};
 constexpr char cTimestamp[]{"timestamp"};
 constexpr char cMessage[]{"message"};
 constexpr char cArchiveId[]{"archive_id"};
-constexpr char cDataset[]{"dataset"};
+constexpr std::string_view cDataset{"dataset"};
 }  // namespace results_cache::search
 }  // namespace clp_s::constants
 #endif  // CLP_S_ARCHIVE_CONSTANTS_HPP
