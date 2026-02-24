@@ -6,15 +6,10 @@ import {
 } from "react";
 
 import {FileEntry} from "@webui/common/schemas/os";
-import {
-    Form,
-    message,
-    TreeSelect,
-    TreeSelectProps,
-} from "antd";
+import {Form} from "antd";
 
 import {listFiles} from "../../../../api/os";
-import SwitcherIcon from "./SwitcherIcon";
+import DirectoryTreeSelect from "./DirectoryTreeSelect";
 import {
     ROOT_NODE,
     ROOT_PATH,
@@ -22,37 +17,23 @@ import {
 } from "./typings";
 import {
     addServerPrefix,
-    getListHeight,
+    handleLoadError,
     toTreeNode,
 } from "./utils";
 
 
-type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
-
-type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0];
-
 /**
  * Form item with TreeSelect for selecting file paths for compression.
- * Supports lazy loading and search with auto-expand.
+ * Uses DirectoryTree for intuitive folder/file navigation.
  *
  * @return
+ * @see https://ant.design/components/tree#tree-demo-directory
  */
 const PathsSelectFormItem = () => {
+    const form = Form.useFormInstance();
     const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-    const [listHeight, setListHeight] = useState<number>(getListHeight);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setListHeight(getListHeight());
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
+    const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
 
     // Use a ref, instead of a state passed to AntD's `treeLoadedKeys`, to dedupe load requests.
     const loadedPathsRef = useRef(new Set<string>());
@@ -85,37 +66,27 @@ const PathsSelectFormItem = () => {
         }
     }, [addNodes]);
 
+    const handleCheck = useCallback((keys: string[]) => {
+        setCheckedKeys(keys);
+        form.setFieldValue("paths", keys);
+    }, [form]);
+
+    const handleExpand = useCallback((keys: string[]) => {
+        setExpandedKeys(keys);
+    }, []);
+
+    const handleLoadData = useCallback(async (path: string) => {
+        await loadPath(path).catch(handleLoadError);
+    }, [loadPath]);
+
     // On initialization, load root directory contents.
     useEffect(() => {
         loadPath(ROOT_PATH)
             .then(() => {
                 setExpandedKeys([ROOT_PATH]);
             })
-            .catch((e: unknown) => {
-                console.error("Failed to load root directory:", e);
-                message.error(e instanceof Error ?
-                    e.message :
-                    "Failed to load root directory");
-            });
+            .catch(handleLoadError);
     }, [loadPath]);
-
-    const handleLoadData = useCallback(async ({value}: LoadDataNode) => {
-        if ("string" !== typeof value) {
-            return;
-        }
-        try {
-            await loadPath(value);
-        } catch (e) {
-            console.error("Failed to load directory:", e);
-            message.error(e instanceof Error ?
-                e.message :
-                "Unknown error while loading paths");
-        }
-    }, [loadPath]);
-
-    const handleTreeExpand = useCallback((keys: TreeExpandKeys) => {
-        setExpandedKeys(keys as string[]);
-    }, []);
 
     return (
         <Form.Item
@@ -123,23 +94,13 @@ const PathsSelectFormItem = () => {
             name={"paths"}
             rules={[{required: true, message: "Please select at least one path"}]}
         >
-            <TreeSelect
-                allowClear={true}
-                listHeight={listHeight}
-                loadData={handleLoadData}
-                multiple={true}
-                placeholder={"Select paths to compress"}
-                showCheckedStrategy={TreeSelect.SHOW_PARENT}
-                showSearch={false}
-                switcherIcon={SwitcherIcon}
-
-                treeCheckable={true}
+            <DirectoryTreeSelect
+                checkedKeys={checkedKeys}
+                expandedKeys={expandedKeys}
                 treeData={treeData}
-                treeDataSimpleMode={true}
-                treeExpandedKeys={expandedKeys}
-                treeLine={true}
-                treeNodeLabelProp={"value"}
-                onTreeExpand={handleTreeExpand}/>
+                onCheck={handleCheck}
+                onExpand={handleExpand}
+                onLoadData={handleLoadData}/>
         </Form.Item>
     );
 };
