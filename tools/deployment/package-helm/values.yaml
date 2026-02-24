@@ -14,8 +14,9 @@ image:
 #   - Pods automatically tolerate control-plane taints.
 #   - Each worker deployment supports only 1 replica.
 # - If true: Multi-node deployment.
-#   - When using filesystem storage (`archive_output.storage.type: "fs"`), the PVC-backed directories
-#     must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at the same path).
+#   - When using filesystem storage (`archive_output.storage.type: "fs"`), the PVC-backed
+#     directories must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+#     the same path).
 distributedDeployment: false
 
 # Number of concurrent processes per worker pod.
