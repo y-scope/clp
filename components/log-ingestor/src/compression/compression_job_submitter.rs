@@ -23,7 +23,7 @@ use sqlx::MySqlPool;
 use crate::compression::BufferSubmitter;
 
 /// The CLP compression job table name.
-const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
+pub const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 
 /// A compression submitter that implements [`BufferSubmitter`] to submit compression jobs to CLP.
 pub struct CompressionJobSubmitter {
@@ -83,7 +83,6 @@ impl CompressionJobSubmitter {
             unstructured: ingestion_job_config.unstructured,
         };
         let output_config = OutputConfig {
-            tags: ingestion_job_config.tags.clone(),
             target_archive_size: archive_output_config.target_archive_size,
             target_dictionaries_size: archive_output_config.target_dictionaries_size,
             target_encoded_file_size: archive_output_config.target_encoded_file_size,
@@ -166,9 +165,17 @@ async fn submit_clp_compression_job_and_wait_for_completion(
                 match status {
                     CompressionJobStatus::Failed => {
                         tracing::error!(
-                            "Compression job {} failed. Status message: {:?}",
+                            "Compression job {} failed. Status message: {}",
                             job_id,
-                            status_message
+                            status_message.as_deref().unwrap_or("None")
+                        );
+                        return;
+                    }
+                    CompressionJobStatus::Killed => {
+                        tracing::error!(
+                            "Compression job {} was killed. Status message: {}",
+                            job_id,
+                            status_message.as_deref().unwrap_or("None")
                         );
                         return;
                     }

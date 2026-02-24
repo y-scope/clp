@@ -206,8 +206,11 @@ services:
     healthcheck:
       <<: *healthcheck_defaults
       test: [
-        "CMD-SHELL",
-        "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:27017/test --quiet"
+        "CMD",
+        "mongosh",
+        "127.0.0.1:27017/test",
+        "--quiet",
+        "--eval", "db.runCommand('ping').ok"
       ]
 
   results-cache-indices-creator:
@@ -585,7 +588,6 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
       db-table-creator:

@@ -40,6 +40,8 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
+        ../SchemaSearcher.cpp
+        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -169,6 +171,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(clo PRIVATE cxx_std_20)
         target_include_directories(clo
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(clo

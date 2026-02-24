@@ -21,6 +21,12 @@ pub enum ClientError {
 
     #[error("`AwsError`: {description}")]
     Aws { description: String },
+
+    #[error("api_server configuration is missing")]
+    ConfigIsNone,
+
+    #[error("Search job not found: {0}")]
+    SearchJobNotFound(u64),
 }
 
 /// Empty trait to mark errors that indicate malformed data.

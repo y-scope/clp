@@ -73,7 +73,7 @@ tasks:
         - "{{.G_RUSTUP_HOME}}/settings.toml"
         - "{{.G_RUSTUP_HOME}}/toolchains"
     sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -108,7 +108,7 @@ tasks:
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
-        cargo install cargo-nextest
+        cargo install --locked cargo-nextest
         rustup set auto-self-update disable
 
       # This command must be last

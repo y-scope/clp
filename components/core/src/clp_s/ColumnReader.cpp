@@ -30,7 +30,7 @@ void DeltaEncodedInt64ColumnReader::load(BufferViewReader& reader, uint64_t num_
     }
 }
 
-int64_t DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) {
+auto DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) -> int64_t {
     if (m_cur_idx == idx) {
         return m_cur_value;
     }
@@ -226,31 +226,60 @@ int64_t VariableStringColumnReader::get_variable_id(uint64_t cur_message) {
     return m_variables[cur_message];
 }
 
-void DateStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+void DeprecatedDateStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_timestamps = reader.read_unaligned_span<int64_t>(num_messages);
     m_timestamp_encodings = reader.read_unaligned_span<int64_t>(num_messages);
 }
 
-std::variant<int64_t, double, std::string, uint8_t> DateStringColumnReader::extract_value(
+std::variant<int64_t, double, std::string, uint8_t> DeprecatedDateStringColumnReader::extract_value(
         uint64_t cur_message
 ) {
-    return m_timestamp_dict->get_string_encoding(
+    return m_timestamp_dict->get_deprecated_timestamp_string_encoding(
             m_timestamps[cur_message],
             m_timestamp_encodings[cur_message]
     );
 }
 
-void DateStringColumnReader::extract_string_value_into_buffer(
+void DeprecatedDateStringColumnReader::extract_string_value_into_buffer(
         uint64_t cur_message,
         std::string& buffer
 ) {
-    buffer.append(m_timestamp_dict->get_string_encoding(
+    buffer.append(m_timestamp_dict->get_deprecated_timestamp_string_encoding(
             m_timestamps[cur_message],
             m_timestamp_encodings[cur_message]
     ));
 }
 
-epochtime_t DateStringColumnReader::get_encoded_time(uint64_t cur_message) {
+epochtime_t DeprecatedDateStringColumnReader::get_encoded_time(uint64_t cur_message) {
     return m_timestamps[cur_message];
+}
+
+void TimestampColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_timestamps.load(reader, num_messages);
+    m_timestamp_encodings = reader.read_unaligned_span<uint64_t>(num_messages);
+}
+
+auto TimestampColumnReader::extract_value(uint64_t cur_message)
+        -> std::variant<int64_t, double, std::string, uint8_t> {
+    std::string ret;
+    m_timestamp_dict->append_timestamp_to_buffer(
+            m_timestamps.get_value_at_idx(cur_message),
+            m_timestamp_encodings[cur_message],
+            ret
+    );
+    return ret;
+}
+
+void
+TimestampColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
+    m_timestamp_dict->append_timestamp_to_buffer(
+            m_timestamps.get_value_at_idx(cur_message),
+            m_timestamp_encodings[cur_message],
+            buffer
+    );
+}
+
+auto TimestampColumnReader::get_encoded_time(uint64_t cur_message) -> epochtime_t {
+    return m_timestamps.get_value_at_idx(cur_message);
 }
 }  // namespace clp_s
