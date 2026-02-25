@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.utils import (
+    clear_directory,
     unlink,
     validate_dir_exists,
     validate_file_exists,
@@ -70,11 +71,17 @@ class PackagePathConfig:
     #: Root directory containing all CLP package contents.
     clp_package_dir: Path
 
+    #: Root directory where all package test scripts and data are stored.
+    package_test_scripts_dir: Path
+
     #: Root directory for package tests output.
     test_root_dir: InitVar[Path]
 
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
+
+    #: Directory where decompressed logs will be stored.
+    package_decompression_dir: Path = field(init=False, repr=True)
 
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
@@ -94,9 +101,15 @@ class PackagePathConfig:
             )
             raise RuntimeError(err_msg)
 
-        # Initialize directory for package tests.
+        # Validate directory for package test scripts.
+        validate_dir_exists(self.package_test_scripts_dir)
+
+        # Initialize directory for package test output.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        object.__setattr__(
+            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -118,6 +131,45 @@ class PackagePathConfig:
     def stop_script_path(self) -> Path:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
+
+    @property
+    def compress_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "compress.sh"
+
+    @property
+    def decompress_script_path(self) -> Path:
+        """:return: The absolute path to the package decompress script."""
+        return self.clp_package_dir / "sbin" / "decompress.sh"
+
+    @property
+    def clp_json_test_data_path(self) -> Path:
+        """:return: The absolute path to the data for clp-json tests."""
+        return self.package_test_scripts_dir / "clp_json" / "data"
+
+    @property
+    def clp_text_test_data_path(self) -> Path:
+        """:return: The absolute path to the data for clp-text tests."""
+        return self.package_test_scripts_dir / "clp_text" / "data"
+
+    def clear_package_archives(self) -> None:
+        """Removes the contents of `clp-package/var/data/archives`."""
+        archives_dir = self.clp_package_dir / "var" / "data" / "archives"
+        clear_directory(archives_dir)
+
+
+@dataclass(frozen=True)
+class PackageCompressionJob:
+    """A compression job for a package test."""
+
+    #: The absolute path to the dataset (either a file or directory).
+    path_to_original_dataset: Path
+
+    #: Options to specify in the compression command.
+    options: list[str] | None
+
+    #: Positional arguments to specify in the compression command (do not put paths to compress)
+    positional_args: list[str] | None
 
 
 @dataclass(frozen=True)

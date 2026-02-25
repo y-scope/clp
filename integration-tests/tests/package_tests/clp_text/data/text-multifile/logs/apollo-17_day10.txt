@@ -1,0 +1,10 @@
+1972-12-16T05:33:00.000 apollo-17 d10 e000 service propulsion system ignition performs trans Earth injection burn; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T05:42:35.999 apollo-17 d10 e001 trajectory after burn shows proper corridor for atmospheric reentry; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T05:52:11.998 apollo-17 d10 e002 spacecraft exits lunar orbit and begins long coast back to Earth; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:01:47.997 apollo-17 d10 e003 navigation sightings compare well with ground based tracking solutions; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:11:23.996 apollo-17 d10 e004 crew conducts deep space science experiments during return flight; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:20:59.995 apollo-17 d10 e005 thermal control roll re-established for uniform heating on spacecraft; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:30:35.994 apollo-17 d10 e006 communications schedule alternates between worldwide tracking stations; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:40:11.993 apollo-17 d10 e007 crew performs housekeeping and stowage reconfiguration for entry phase; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:49:47.992 apollo-17 d10 e008 biomedical data indicates crew adapting well after lunar surface stay; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-16T06:59:23.991 apollo-17 d10 e009 fuel cell reactant status supports remaining mission with margin; all primary systems nominal; communications lock; navigation solution within expected error
