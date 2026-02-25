@@ -21,7 +21,7 @@
 #  # arrives.
 #  buffer_flush_timeout: 300
 #  # The log buffer size (in bytes) that triggers a flush for compression.
-#  buffer_flush_threshold: 268435456 # 256 MiB
+#  buffer_flush_threshold: 4294967296  # 4 GiB
 #  # The capacity of the internal channel used for communication between an ingestion job and the
 #  # log buffer.
 #  channel_capacity: 10
@@ -118,18 +118,18 @@
 #  retention_period: null
 #
 #  # How much data CLP should try to compress into each archive
-#  target_archive_size: 268435456  # 256 MB
+#  target_archive_size: 268435456  # 256 MiB
 #
 #  # How large the dictionaries should be allowed to get before the archive is
 #  # closed and a new one is created
-#  target_dictionaries_size: 33554432  # 32 MB
+#  target_dictionaries_size: 33554432  # 32 MiB
 #
 #  # How large each encoded file should be before being split into a new encoded
 #  # file
-#  target_encoded_file_size: 268435456  # 256 MB
+#  target_encoded_file_size: 268435456  # 256 MiB
 #
 #  # How much data CLP should try to fit into each segment within an archive
-#  target_segment_size: 268435456  # 256 MB
+#  target_segment_size: 268435456  # 256 MiB
 #
 #  # How much archives should be compressed: 1 (fast/low compression) to 19 (slow/high compression)
 #  compression_level: 3
@@ -143,7 +143,7 @@
 #    directory: "var/data/streams"
 #
 #  # How large each stream file should be before being split into a new stream file
-#  target_uncompressed_size: 134217728  # 128 MB
+#  target_uncompressed_size: 134217728  # 128 MiB
 #
 ## Garbage collector config
 #garbage_collector:

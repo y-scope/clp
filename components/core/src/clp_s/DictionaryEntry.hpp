@@ -7,9 +7,11 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "../clp/Defs.h"
 #include "../clp/ir/types.hpp"
+#include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 #include "ZstdCompressor.hpp"
 #include "ZstdDecompressor.hpp"
@@ -108,6 +110,11 @@ public:
     void add_escape();
 
     /**
+     * Adds static text to the logtype, escaping any placeholder characters.
+     */
+    auto add_static_text(std::string_view static_text) -> void;
+
+    /**
      * Gets the size (in-memory) of the data contained in this entry
      * @return Size of the data contained in this entry
      */
@@ -124,12 +131,12 @@ public:
      * @param var
      * @return true if another variable was found, false otherwise
      */
-    bool parse_next_var(
+    auto parse_next_var(
             std::string_view msg,
             size_t& var_begin_pos,
             size_t& var_end_pos,
             std::string_view& var
-    );
+    ) -> bool;
 
     /**
      * Reserves space for a constant of the given length

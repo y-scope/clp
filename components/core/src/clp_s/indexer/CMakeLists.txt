@@ -31,12 +31,16 @@ set(
         ../../clp/ffi/ir_stream/decoding_methods.cpp
         ../../clp/ffi/ir_stream/decoding_methods.hpp
         ../../clp/ffi/ir_stream/decoding_methods.inc
+        ../../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../../clp/ffi/ir_stream/IrSerializationError.hpp
         ../../clp/ffi/ir_stream/protocol_constants.hpp
         ../../clp/ffi/ir_stream/utils.cpp
         ../../clp/ffi/ir_stream/utils.hpp
         ../../clp/ffi/SchemaTree.cpp
         ../../clp/ffi/SchemaTree.hpp
         ../../clp/ffi/StringBlob.hpp
+        ../../clp/FileDescriptor.cpp
+        ../../clp/FileDescriptor.hpp
         ../../clp/FileReader.cpp
         ../../clp/FileReader.hpp
         ../../clp/GlobalMetadataDBConfig.cpp
@@ -64,6 +68,8 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/ReadOnlyMemoryMappedFile.cpp
+        ../../clp/ReadOnlyMemoryMappedFile.hpp
         ../../clp/streaming_compression/Constants.hpp
         ../../clp/streaming_compression/Decompressor.hpp
         ../../clp/streaming_compression/zstd/Decompressor.cpp
@@ -73,6 +79,8 @@ set(
         ../../clp/time_types.hpp
         ../../clp/TraceableException.hpp
         ../../clp/type_utils.hpp
+        ../../clp/utf8_utils.cpp
+        ../../clp/utf8_utils.hpp
         ../../clp/VariableDictionaryEntryReq.hpp
         ../../clp/VariableDictionaryReaderReq.hpp
         ../../clp/VariableDictionaryWriterReq.hpp
@@ -90,6 +98,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../FloatFormatEncoding.cpp
+        ../FloatFormatEncoding.hpp
         ../InputConfig.cpp
         ../InputConfig.hpp
         ../PackedStreamReader.cpp
@@ -126,12 +136,14 @@ set(
 if(CLP_BUILD_EXECUTABLES)
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
+        target_include_directories(indexer PRIVATE ../../)
         target_link_libraries(indexer
                 PRIVATE
                 absl::flat_hash_map
-                Boost::iostreams Boost::program_options Boost::url
+                Boost::program_options Boost::url
                 ${CURL_LIBRARIES}
                 clp::string_utils
+                clp_s::timestamp_parser
                 date::date
                 MariaDBClient::MariaDBClient
                 msgpack-cxx

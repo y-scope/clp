@@ -171,7 +171,7 @@ def generate_container_name(job_type: str) -> str:
     :param job_type:
     :return: A unique container name for the given job type.
     """
-    return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
+    return f"clp-{job_type}-{uuid.uuid4()}"
 
 
 def check_docker_dependencies(should_compose_project_be_running: bool, project_name: str):

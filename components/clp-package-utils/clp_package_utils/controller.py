@@ -699,6 +699,7 @@ class BaseController(ABC):
             "SqlDbPort": container_clp_config.database.port,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
@@ -711,7 +712,17 @@ class BaseController(ABC):
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
+            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
+            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
+            "ArchiveOutputTargetDictionariesSize": (
+                self._clp_config.archive_output.target_dictionaries_size
+            ),
+            "ArchiveOutputTargetEncodedFileSize": (
+                self._clp_config.archive_output.target_encoded_file_size
+            ),
+            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
         }
 
         stream_storage = self._clp_config.stream_output.storage
@@ -909,17 +920,30 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: ClpConfig, instance_id: str) -> None:
+    def __init__(
+        self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
+    ) -> None:
+        """Initializes the DockerComposeController."""
         self._project_name = f"clp-package-{instance_id}"
+        self._restart_policy = restart_policy
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
+        """
+        Sets up environment variables and directories for all components and writes them to the
+        `.env` file.
+        """
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         env_vars = EnvVarsDict()
+
+        # Restart Policy
+        env_vars |= {
+            "CLP_RESTART_POLICY": self._restart_policy,
+        }
 
         # Credentials
         if self._clp_config.stream_output.storage.type == StorageType.S3:

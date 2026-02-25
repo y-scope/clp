@@ -1,19 +1,19 @@
 [project]
 name = "clp-py-utils"
-version = "0.7.1-dev"
+version = "0.9.1-dev"
 description = "Utilities for other Python packages in CLP."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "boto3>=1.40.55",
+    "boto3>=1.42.36",
     "mariadb>=1.1.14",
-    "mysql-connector-python>=9.4.0",
-    "pydantic>=2.12.3",
-    "python-Levenshtein>=0.27.1",
+    "mysql-connector-python>=9.5.0",
+    "pydantic>=2.12.5",
+    "python-Levenshtein>=0.27.3",
     "PyYAML>=6.0.3",
     "result>=0.17.0",
-    "sqlalchemy>=2.0.44",
+    "sqlalchemy>=2.0.46",
     "StrEnum>=0.4.15",
 ]
 

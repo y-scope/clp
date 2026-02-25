@@ -7,6 +7,7 @@ x-service-defaults: &service_defaults
     driver: "local"
   stop_grace_period: "60s"
   user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
+  restart: "${CLP_RESTART_POLICY:-on-failure:3}"
 
 # Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
@@ -86,6 +87,7 @@ services:
 
   db-table-creator:
     <<: *service_defaults
+    restart: "on-failure:3"
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -204,12 +206,16 @@ services:
     healthcheck:
       <<: *healthcheck_defaults
       test: [
-        "CMD-SHELL",
-        "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:27017/test --quiet"
+        "CMD",
+        "mongosh",
+        "127.0.0.1:27017/test",
+        "--quiet",
+        "--eval", "db.runCommand('ping').ok"
       ]
 
   results-cache-indices-creator:
     <<: *service_defaults
+    restart: "on-failure:3"
     hostname: "results_cache_indices_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -581,7 +587,6 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
       db-table-creator:

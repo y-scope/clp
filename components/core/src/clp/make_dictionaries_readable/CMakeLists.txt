@@ -18,6 +18,8 @@ set(
         ../ffi/ir_stream/decoding_methods.cpp
         ../ffi/ir_stream/decoding_methods.hpp
         ../ffi/ir_stream/decoding_methods.inc
+        ../ffi/ir_stream/IrSerializationError.cpp
+        ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/protocol_constants.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
@@ -74,6 +76,7 @@ set(
 if(CLP_BUILD_EXECUTABLES)
         add_executable(make-dictionaries-readable ${MAKE_DICTIONARIES_READABLE_SOURCES})
         target_compile_features(make-dictionaries-readable PRIVATE cxx_std_20)
+        target_include_directories(make-dictionaries-readable PRIVATE ../../)
         target_link_libraries(make-dictionaries-readable
                 PRIVATE
                 clp::string_utils

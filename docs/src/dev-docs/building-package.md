@@ -15,11 +15,10 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
   * `docker-buildx-plugin` >= 0.15.1
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
-* Python 3.10 or newer
+* Python >= 3.10
 * python3-dev
 * python3-venv (for the version of Python installed)
-* [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
+* [Task] >= 3.48.0
 * [uv] >= 0.8
 
 ## Setup
@@ -38,13 +37,13 @@ components/core/tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 
 ## Build
 
-There are two flavours of the CLP package:
+There are two flavors of the CLP package:
 
 1. `clp-json` for managing JSON logs
 2. `clp-text` for managing text logs
 
 :::{note}
-Both flavours contain the same binaries but are configured with different values for the
+Both flavors contain the same binaries but are configured with different values for the
 `package.storage_engine` and `package.query_engine` key.
 :::
 
@@ -69,15 +68,15 @@ package scripts, see the [Deployment orchestration][design-deployment-orchestrat
 more information.
 :::
 
-To build a releasable tar of either flavour, run:
+To build a releasable tar of either flavor, run:
 
 ```shell
-task clp-<flavour>-pkg-tar
+task clp-<flavor>-pkg-tar
 ```
 
-where `<flavour>` is `json` or `text`.
+where `<flavor>` is `json` or `text`.
 
-The tar will be written to `build/clp-<flavour>-<os>-<arch>-v<version>.tar.gz`, with appropriate
+The tar will be written to `build/clp-<flavor>-<os>-<arch>-v<version>.tar.gz`, with appropriate
 values for the fields in angle brackets.
 
 ## Cleanup
@@ -93,4 +92,3 @@ task clean
 [design-deployment-orchestration]: design-deployment-orchestration.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
