@@ -1,3 +1,4 @@
+{{- if has "queue" .Values.clpConfig.bundled }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "queue"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/queue" .Values.clpConfig.logs_directory)
 ) }}
+{{- end }}
