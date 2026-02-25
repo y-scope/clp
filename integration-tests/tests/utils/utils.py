@@ -93,6 +93,24 @@ def load_yaml_to_dict(path: Path) -> dict[str, Any]:
     return target_dict
 
 
+def remove_path(path_to_remove: Path) -> None:
+    """
+    Remove a file, directory, or symlink at `path_to_remove` if it exists.
+
+    :param path_to_remove:
+    :raise: Propagates `pathlib.Path.unlink`'s exceptions.
+    :raise: Propagates `shutil.rmtree`'s exceptions.
+    """
+    if path_to_remove.is_symlink():
+        path_to_remove.unlink()
+    elif not path_to_remove.exists():
+        return
+    elif path_to_remove.is_dir():
+        shutil.rmtree(path_to_remove)
+    else:
+        path_to_remove.unlink()
+
+
 def resolve_path_env_var(var_name: str) -> Path:
     """
     :param var_name: Name of the environment variable holding a path.
@@ -102,30 +120,6 @@ def resolve_path_env_var(var_name: str) -> Path:
     :raise: Propagates `Path.resolve`'s exceptions.
     """
     return Path(get_env_var(var_name)).expanduser().resolve()
-
-
-def unlink(rm_path: Path, force: bool = True) -> None:
-    """
-    Remove a file or directory at `path`.
-
-    :param rm_path:
-    :param force: Whether to force remove with sudo priviledges in case the normal operation fails.
-                  Defaults to True.
-    """
-    try:
-        shutil.rmtree(rm_path)
-    except FileNotFoundError:
-        pass
-    except PermissionError:
-        if not force:
-            raise
-
-        sudo_rm_cmds = ["sudo", "rm", "-rf", str(rm_path)]
-        try:
-            subprocess.run(sudo_rm_cmds, check=True)
-        except subprocess.CalledProcessError as e:
-            err_msg = f"Failed to remove {rm_path} due to lack of superuser privileges (sudo)."
-            raise OSError(err_msg) from e
 
 
 def validate_dir_exists(dir_path: Path) -> None:
