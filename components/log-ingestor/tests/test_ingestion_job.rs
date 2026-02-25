@@ -103,6 +103,7 @@ async fn upload_and_receive(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
+            id: None,
         })
         .collect();
 
@@ -138,6 +139,7 @@ async fn upload_noise_objects(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
+            id: None,
         })
         .collect();
 
