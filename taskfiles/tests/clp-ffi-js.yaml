@@ -19,9 +19,9 @@ vars:
 # clp-ffi-js while reusing the existing clp-ffi-js build and test workflow through a small set of
 # hacks/overrides.
 #
-# Run `task:clp-ffi-js` once to perform the initial setup. After that, selectively run
-# - `task:clp-ffi-js:build-and-test-node`
-# - `task:clp-ffi-js:build-and-test-browser`
+# Run `task tests:clp-ffi-js` once to perform the initial setup. After that, selectively run
+# - `task tests:clp-ffi-js:build-and-test-node`
+# - `task tests:clp-ffi-js:build-and-test-browser`
 # as needed. Note that `sudo` access is required for the latter.
 tasks:
   default:
@@ -35,7 +35,7 @@ tasks:
         task node-modules
         task config-cmake-project
         rm -rf build/deps/clp
-        ln -s {{.ROOT_DIR}} build/deps/clp
+        ln -s "{{.ROOT_DIR}}" build/deps/clp
 
       # Repeatable test workflow
       - task: "build-and-test-node"
@@ -82,7 +82,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_CLP_FFI_JS_CHECKSUM_FILE}}"
           FILE_SHA256: "5ab1c27031caafb014198d4db711a71b3fbb1661b396bcd4e46764194e2b1f61"
-          OUTPUT_DIR: "{{.G_BUILD_DIR}}/clp-ffi-js"
+          OUTPUT_DIR: "{{.G_CLP_FFI_JS_SRC_DIR}}"
           TAR_FILE: "{{.G_BUILD_DIR}}/clp-ffi-js.tar.gz"
           URL: "https://github.com/y-scope/clp-ffi-js/archive/4cc6a7c.tar.gz"
 
