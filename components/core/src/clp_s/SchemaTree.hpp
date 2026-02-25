@@ -50,7 +50,7 @@ enum class NodeType : uint8_t {
     Object,
     UnstructuredArray,
     NullValue,
-    DateString,
+    DeprecatedDateString,
     StructuredArray,
     Metadata,
     DeltaInteger,

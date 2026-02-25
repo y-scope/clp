@@ -171,7 +171,15 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+    [[nodiscard]] auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+
+    /**
+     * @return Whether this archive can contain columns with the deprecated DateString timestamp
+     * format.
+     */
+    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
+        return get_header().has_deprecated_timestamp_format();
+    }
 
     auto get_experimental_stats() const -> std::optional<ExperimentalStats> const& {
         return m_experimental_stats;

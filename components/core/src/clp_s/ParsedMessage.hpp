@@ -18,6 +18,7 @@
 namespace clp_s {
 class ParsedMessage {
 public:
+    // Types
     /**
      * Tracks building up a ClpString node during parsing a log event.
      */
@@ -34,11 +35,11 @@ public:
                     clp::ffi::EightByteEncodedTextAst,
                     clp::ffi::FourByteEncodedTextAst,
                     bool,
-                    std::pair<uint64_t, epochtime_t>,
                     std::pair<epochtime_t, uint64_t>,
                     std::pair<double, float_format_t>,
                     ClpString>;
 
+    // Methods
     auto set_id(int32_t schema_id) -> void { m_schema_id = schema_id; }
 
     /**
@@ -54,16 +55,6 @@ public:
 
     auto add_value(int32_t node_id, std::string_view value) -> void {
         m_message.emplace(node_id, std::string{value});
-    }
-
-    /**
-     * Adds a timestamp value and its encoding to the message for a given MST node ID.
-     * @param node_id
-     * @param encoding_id
-     * @param value
-     */
-    auto add_value(int32_t node_id, uint64_t encoding_id, epochtime_t value) -> void {
-        m_message.emplace(node_id, std::make_pair(encoding_id, value));
     }
 
     /**
@@ -121,6 +112,7 @@ public:
     auto get_unordered_content() -> std::vector<variable_t>& { return m_unordered_message; }
 
 private:
+    // Variables
     int32_t m_schema_id{-1};
     std::map<int32_t, variable_t> m_message;
     std::vector<variable_t> m_unordered_message;

@@ -24,15 +24,18 @@ namespace clp_s {
 template <typename DictionaryIdType>
 class DictionaryEntry {
 public:
+    // Constructors
     DictionaryEntry() = default;
 
     DictionaryEntry(std::string value, DictionaryIdType id) : m_value(std::move(value)), m_id(id) {}
 
+    // Methods
     [[nodiscard]] auto get_id() const -> DictionaryIdType { return m_id; }
 
     [[nodiscard]] auto get_value() const -> std::string const& { return m_value; }
 
 protected:
+    // Variables
     std::string m_value;
     DictionaryIdType m_id;
 };
@@ -42,12 +45,15 @@ protected:
  */
 class LogTypeDictionaryEntry : public DictionaryEntry<clp::logtype_dictionary_id_t> {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
+        // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    // Methods
     /**
      * @return The number of variables placeholders (including escaped ones) in the logtype.
      */
@@ -179,12 +185,14 @@ public:
     [[nodiscard]] auto initialized() const -> bool { return m_init; }
 
 private:
+    // Methods
     /**
      * Decodes the log type
      * @param escaped_value
      */
     auto decode_log_type(std::string& escaped_value) -> void;
 
+    // Variables
     std::vector<size_t> m_placeholder_positions;
     size_t m_num_escaped_placeholders{};
     bool m_init{false};
@@ -192,17 +200,21 @@ private:
 
 class VariableDictionaryEntry : public DictionaryEntry<clp::variable_dictionary_id_t> {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
+        // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    // Constructors
     VariableDictionaryEntry() = default;
 
     VariableDictionaryEntry(std::string value, clp::variable_dictionary_id_t id)
             : DictionaryEntry<clp::variable_dictionary_id_t>(std::move(value), id) {}
 
+    // Methods
     /**
      * Gets the size (in-memory) of the data contained in this entry
      * @return Size of the data contained in this entry

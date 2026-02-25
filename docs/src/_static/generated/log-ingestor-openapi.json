@@ -184,7 +184,7 @@
             }
           },
           "400": {
-            "description": "Custom endpoint URLs are not supported for SQS listener jobs.",
+            "description": "Custom endpoint URLs are not supported for SQS listener jobs, or the specified number of concurrent listener tasks is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -322,10 +322,24 @@
               "queue_url"
             ],
             "properties": {
+              "num_concurrent_listener_tasks": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The number of concurrent listener tasks to run.\n\nEach listener task is an asynchronous coroutine that continuously polls the configured\nSQS queue and processes incoming S3 event notifications.\n\nDefaults to `1`.",
+                "maximum": 32,
+                "minimum": 1
+              },
               "queue_url": {
                 "type": "string",
                 "description": "The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated\nto this ingestion job.",
                 "minLength": 1
+              },
+              "wait_time_sec": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The long polling wait time, in seconds, for receiving messages from the SQS queue.\n\nThis value controls how long an SQS `ReceiveMessage` call will wait for a message to\narrive before returning a response. Enabling long polling can reduce empty responses\nand lower overall request costs.\n\nAWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than\n20 seconds will be considered invalid.\n\nDefaults to `20`.",
+                "maximum": 20,
+                "minimum": 0
               }
             }
           }

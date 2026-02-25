@@ -35,7 +35,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli@3.44.0"
+        run: "npm install -g @go-task/cli@3.48.0"
 
       - name: "Lint Helm charts"
         shell: "bash"
@@ -58,7 +58,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli@3.44.0"
+        run: "npm install -g @go-task/cli@3.48.0"
 
       - name: "Package Helm chart"
         shell: "bash"

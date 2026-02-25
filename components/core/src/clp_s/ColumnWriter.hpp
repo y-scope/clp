@@ -161,8 +161,10 @@ private:
 
 class ClpStringColumnWriter : public BaseColumnWriter {
 public:
+    // Types
     using encoded_log_dict_id_t = uint64_t;
 
+    // Constructor
     ClpStringColumnWriter(
             int32_t id,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
@@ -172,6 +174,7 @@ public:
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)) {}
 
+    // Methods inherited from BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
@@ -237,24 +240,6 @@ public:
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
-};
-
-class DateStringColumnWriter : public BaseColumnWriter {
-public:
-    // Constructor
-    explicit DateStringColumnWriter(int32_t id) : BaseColumnWriter(id) {}
-
-    // Destructor
-    ~DateStringColumnWriter() override = default;
-
-    // Methods inherited from BaseColumnWriter
-    size_t add_value(ParsedMessage::variable_t& value) override;
-
-    void store(ZstdCompressor& compressor) override;
-
-private:
-    std::vector<int64_t> m_timestamps;
-    std::vector<int64_t> m_timestamp_encodings;
 };
 
 class TimestampColumnWriter : public BaseColumnWriter {
