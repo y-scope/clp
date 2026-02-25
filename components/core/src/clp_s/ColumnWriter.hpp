@@ -161,8 +161,10 @@ private:
 
 class ClpStringColumnWriter : public BaseColumnWriter {
 public:
+    // Types
     using encoded_log_dict_id_t = uint64_t;
 
+    // Constructor
     ClpStringColumnWriter(
             int32_t id,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
@@ -172,6 +174,7 @@ public:
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)) {}
 
+    // Methods inherited from BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;

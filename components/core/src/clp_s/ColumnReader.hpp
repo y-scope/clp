@@ -23,12 +23,15 @@ class BaseColumnReader {
 public:
     class OperationFailed : public TraceableException {
     public:
+        // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    // Constructor
     BaseColumnReader(int32_t id) : m_id(id) {}
 
+    // Destructor
     virtual ~BaseColumnReader() = default;
     BaseColumnReader(BaseColumnReader const&) = default;
     auto operator=(BaseColumnReader const&) -> BaseColumnReader& = default;
@@ -80,6 +83,7 @@ private:
 
 class Int64ColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     explicit Int64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Methods inherited from BaseColumnReader
@@ -99,6 +103,7 @@ private:
 
 class DeltaEncodedInt64ColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     explicit DeltaEncodedInt64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Methods inherited from BaseColumnReader
@@ -128,6 +133,7 @@ private:
 
 class FloatColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     explicit FloatColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Methods inherited from BaseColumnReader
@@ -147,6 +153,7 @@ private:
 
 class FormattedFloatColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     explicit FormattedFloatColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Methods inherited from BaseColumnReader
@@ -174,6 +181,7 @@ private:
 
 class DictionaryFloatColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     explicit DictionaryFloatColumnReader(
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict
@@ -199,6 +207,7 @@ private:
 
 class BooleanColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     explicit BooleanColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Methods inherited from BaseColumnReader
@@ -218,6 +227,7 @@ private:
 
 class ClpStringColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     ClpStringColumnReader(
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
@@ -271,6 +281,7 @@ private:
 
 class VariableStringColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     VariableStringColumnReader(int32_t id, std::shared_ptr<VariableDictionaryReader> var_dict)
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)) {}
@@ -338,6 +349,7 @@ private:
 
 class TimestampColumnReader : public BaseColumnReader {
 public:
+    // Constructor
     TimestampColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
             : BaseColumnReader{id},
               m_timestamp_dict{std::move(timestamp_dict)},

@@ -16,6 +16,7 @@
 namespace clp_s {
 class ParsedMessage {
 public:
+    // Types
     using variable_t = std::
             variant<int64_t,
                     double,
@@ -26,6 +27,7 @@ public:
                     std::pair<epochtime_t, uint64_t>,
                     std::pair<double, float_format_t>>;
 
+    // Methods
     auto set_id(int32_t schema_id) -> void { m_schema_id = schema_id; }
 
     /**
@@ -98,6 +100,7 @@ public:
     auto get_unordered_content() -> std::vector<variable_t>& { return m_unordered_message; }
 
 private:
+    // Variables
     int32_t m_schema_id{-1};
     std::map<int32_t, variable_t> m_message;
     std::vector<variable_t> m_unordered_message;

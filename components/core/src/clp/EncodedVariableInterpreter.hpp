@@ -45,16 +45,20 @@ namespace clp {
  */
 class EncodedVariableInterpreter {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
+        // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
 
+        // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
             return "EncodedVariableInterpreter operation failed";
         }
     };
 
+    // Methods
     [[nodiscard]] static auto encode_var_dict_id(variable_dictionary_id_t id) -> encoded_variable_t;
     [[nodiscard]] static auto decode_var_dict_id(encoded_variable_t encoded_var)
             -> variable_dictionary_id_t;
