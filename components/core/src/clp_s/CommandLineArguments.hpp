@@ -123,6 +123,10 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
+    auto get_path_prefix_to_remove() const -> std::optional<std::string> const& {
+        return m_path_prefix_to_remove;
+    }
+
 private:
     // Methods
     /**
@@ -207,6 +211,7 @@ private:
     bool m_print_ordered_chunk_stats{false};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MiB
     bool m_disable_log_order{false};
+    std::optional<std::string> m_path_prefix_to_remove{};
 
     // MongoDB configuration variables
     std::string m_mongodb_uri;

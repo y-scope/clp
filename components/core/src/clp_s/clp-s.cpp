@@ -107,6 +107,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
+    option.path_prefix_to_remove = command_line_arguments.get_path_prefix_to_remove();
 
     clp_s::JsonParser parser(option);
     if (false == parser.ingest()) {

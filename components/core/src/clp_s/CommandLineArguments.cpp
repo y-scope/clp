@@ -206,6 +206,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description compression_options("Compression options");
             std::string input_path_list_file_path;
+            bool normalize_file_paths{false};
+            std::string path_prefix_to_remove;
             std::string auth{cNoAuth};
             // clang-format off
             compression_options.add_options()(
@@ -248,6 +250,16 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "no-retain-float-format",
                     po::bool_switch(&m_no_retain_float_format),
                     "Do not store extra information to losslessly decompress floats."
+            )(
+                    "normalize-paths",
+                    po::bool_switch(&normalize_file_paths),
+                    "Make all paths for ingested files absolute relative to the root directory."
+            )(
+                    "remove-path-prefix",
+                    po::value<std::string>(&path_prefix_to_remove)
+                            ->value_name("DIR")
+                            ->default_value(path_prefix_to_remove),
+                    "Remove the given path prefix from each compressed file."
             )(
                     "single-file-archive",
                     po::bool_switch(&m_single_file_archive),
@@ -318,8 +330,49 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
             }
 
+            if (false == path_prefix_to_remove.empty()) {
+                if (false == std::filesystem::exists(path_prefix_to_remove)) {
+                    throw std::invalid_argument("Specified prefix to remove does not exist.");
+                }
+                if (false == std::filesystem::is_directory(path_prefix_to_remove)) {
+                    throw std::invalid_argument("Specified prefix to remove is not a directory.");
+                }
+                if (normalize_file_paths) {
+                    std::error_code ec;
+                    auto const normalized_path{
+                            std::filesystem::canonical(path_prefix_to_remove, ec)
+                    };
+                    if (ec) {
+                        throw std::invalid_argument(
+                                fmt::format(
+                                        "Failed to normalize prefix {} - {}",
+                                        path_prefix_to_remove,
+                                        ec.message()
+                                )
+                        );
+                    }
+                    path_prefix_to_remove = normalized_path.string();
+                }
+                m_path_prefix_to_remove.emplace(path_prefix_to_remove);
+            }
+
             for (auto const& path : input_paths) {
-                if (false == get_input_files_for_raw_path(path, m_input_paths)) {
+                auto path_object{get_path_object_for_raw_path(path)};
+                if (normalize_file_paths && InputSource::Filesystem == path_object.source) {
+                    std::error_code ec;
+                    auto const normalized_path{std::filesystem::canonical(path_object.path, ec)};
+                    if (ec) {
+                        throw std::invalid_argument(
+                                fmt::format(
+                                        "Failed to normalize path {} - {}",
+                                        path_object.path,
+                                        ec.message()
+                                )
+                        );
+                    }
+                    path_object.path = normalized_path.string();
+                }
+                if (false == get_input_files_for_path(path_object, m_input_paths)) {
                     throw std::invalid_argument(fmt::format("Invalid input path \"{}\".", path));
                 }
             }

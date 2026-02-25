@@ -41,6 +41,7 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
+    std::optional<std::string> path_prefix_to_remove{};
 };
 
 class JsonParser {
@@ -76,12 +77,14 @@ private:
      * beyond the target encoded size.
      * @param reader
      * @param path
+     * @param file_name_in_metadata
      * @param archive_creator_id
      * @return Whether ingestion was successful or not.
      */
     [[nodiscard]] auto ingest_json(
             std::shared_ptr<clp::ReaderInterface> reader,
             Path const& path,
+            std::string const& file_name_in_metadata,
             std::string const& archive_creator_id
     ) -> bool;
 
@@ -90,12 +93,14 @@ private:
      * beyond the target encoded size.
      * @param reader
      * @param path
+     * @param file_name_in_metadata
      * @param archive_creator_id
      * @return Whether ingestion was successful or not.
      */
     [[nodiscard]] auto ingest_kvir(
             std::shared_ptr<clp::ReaderInterface> reader,
             Path const& path,
+            std::string const& file_name_in_metadata,
             std::string const& archive_creator_id
     ) -> bool;
 
@@ -239,6 +244,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
     bool m_retain_float_format{false};
+    std::optional<std::string> m_path_prefix_to_remove{};
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
