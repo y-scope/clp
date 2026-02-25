@@ -35,4 +35,17 @@ auto ClpArchiveReader::get_archive_id() const -> std::string {
 
     return std::string{m_archive_reader->get_archive_id()};
 }
+
+auto ClpArchiveReader::get_event_count() const -> uint64_t {
+    if (nullptr == m_archive_reader) {
+        throw std::logic_error("ClpArchiveReader is closed.");
+    }
+
+    uint64_t event_count{0};
+    for (auto const& range : m_archive_reader->get_range_index()) {
+        event_count += static_cast<uint64_t>(range.end_index - range.start_index);
+    }
+
+    return event_count;
+}
 }  // namespace clp_s::ffi::sfa

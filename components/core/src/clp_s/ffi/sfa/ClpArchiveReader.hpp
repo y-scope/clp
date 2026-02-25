@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <cstdint>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -40,6 +41,11 @@ public:
      * @return The archive ID.
      */
     [[nodiscard]] auto get_archive_id() const -> std::string;
+
+    /**
+     * @return The total number of events in the archive.
+     */
+    [[nodiscard]] auto get_event_count() const -> uint64_t;
 
 private:
     // Constructors
