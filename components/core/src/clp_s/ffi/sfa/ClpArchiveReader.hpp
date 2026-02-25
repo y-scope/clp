@@ -5,6 +5,8 @@
 #include <string>
 #include <string_view>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "../../ArchiveReader.hpp"
 
 namespace clp_s::ffi::sfa {
@@ -16,10 +18,12 @@ public:
     // Factory functions
     /**
      * @param archive_path Path to the single-file archive.
-     * @return A newly constructed `ClpArchiveReader`.
+     * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
+     * error code indicating the failure:
+     * - `std::errc::io_error` if archive open/initialization fails.
      */
     [[nodiscard]] static auto create(std::string_view archive_path)
-            -> std::unique_ptr<ClpArchiveReader>;
+            -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor
     ~ClpArchiveReader() noexcept;
@@ -30,17 +34,12 @@ public:
 
     // Default move constructor and assignment operator
     ClpArchiveReader(ClpArchiveReader&&) = default;
-    auto operator=(ClpArchiveReader&&) -> ClpArchiveReader& = default;
+    [[nodiscard]] auto operator=(ClpArchiveReader&&) -> ClpArchiveReader& = default;
 
     /**
-     * @return The archive ID parsed from the archive path.
+     * @return The archive ID.
      */
     [[nodiscard]] auto get_archive_id() const -> std::string;
-
-    /**
-     * Closes the underlying archive reader. This operation is idempotent.
-     */
-    void close();
 
 private:
     // Constructors

@@ -32,6 +32,8 @@ TEST_CASE("clp_s_ffi_sfa_reader_get_archive_id", "[clp-s][ffi][sfa]") {
             std::filesystem::path{cTestArchiveDirectory}
     }->path();
 
-    auto reader = clp_s::ffi::sfa::ClpArchiveReader::create(archive_path.string());
-    REQUIRE(archive_path.filename().string() == reader->get_archive_id());
+    auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(archive_path.string());
+    REQUIRE_FALSE(reader_result.has_error());
+    auto& reader = reader_result.value();
+    REQUIRE(archive_path.filename().string() == reader.get_archive_id());
 }

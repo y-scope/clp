@@ -1,23 +1,30 @@
 #include "ClpArchiveReader.hpp"
 
 #include <stdexcept>
+#include <system_error>
 
 namespace clp_s::ffi::sfa {
-auto ClpArchiveReader::create(std::string_view archive_path) -> std::unique_ptr<ClpArchiveReader> {
-    auto path = get_path_object_for_raw_path(archive_path);
-    auto reader = std::make_unique<clp_s::ArchiveReader>();
-    reader->open(path, NetworkAuthOption{});
+auto ClpArchiveReader::create(std::string_view archive_path)
+        -> ystdlib::error_handling::Result<ClpArchiveReader> {
+    try {
+        auto path = get_path_object_for_raw_path(archive_path);
+        auto reader = std::make_unique<clp_s::ArchiveReader>();
+        reader->open(path, NetworkAuthOption{});
 
-    return std::unique_ptr<ClpArchiveReader>(new ClpArchiveReader(std::move(reader)));
+        return ClpArchiveReader{std::move(reader)};
+    } catch (...) {
+        return std::errc::io_error;
+    }
 }
 
 ClpArchiveReader::~ClpArchiveReader() noexcept {
     if (nullptr != m_archive_reader) {
         try {
-            close();
+            m_archive_reader->close();
         } catch (...) {
             // Suppress exceptions in destructor.
         }
+        m_archive_reader.reset();
     }
 }
 
@@ -27,20 +34,5 @@ auto ClpArchiveReader::get_archive_id() const -> std::string {
     }
 
     return std::string{m_archive_reader->get_archive_id()};
-}
-
-void ClpArchiveReader::close() {
-    if (nullptr == m_archive_reader) {
-        return;
-    }
-
-    try {
-        m_archive_reader->close();
-    } catch (...) {
-        m_archive_reader.reset();
-        throw;
-    }
-
-    m_archive_reader.reset();
 }
 }  // namespace clp_s::ffi::sfa
