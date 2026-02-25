@@ -15,6 +15,7 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
+strum = "0.28.0"
 thiserror = "2.0.18"
 utoipa = { version = "5.4.0" }
 

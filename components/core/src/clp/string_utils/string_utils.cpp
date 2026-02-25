@@ -1,10 +1,13 @@
 #include "string_utils/string_utils.hpp"
 
 #include <algorithm>
-#include <charconv>
+#include <cctype>
+#include <cstddef>
 #include <cstring>
 #include <string>
 #include <string_view>
+
+#include "string_utils/constants.hpp"
 
 using std::string;
 using std::string_view;
@@ -14,33 +17,34 @@ namespace {
  * Helper for ``wildcard_match_unsafe_case_sensitive`` to advance the pointer in
  * tame to the next character which matches wild. This method should be inlined
  * for performance.
+ *
  * @param tame_current
  * @param tame_bookmark
  * @param tame_end
  * @param wild_current
- * @param wild_bookmark
  * @return true on success, false if wild cannot match tame
  */
-inline bool advance_tame_to_next_match(
+[[nodiscard]] inline auto advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
         char const*& wild_current
-);
+) -> bool;
 
-inline bool advance_tame_to_next_match(
+inline auto advance_tame_to_next_match(
         char const*& tame_current,
         char const*& tame_bookmark,
         char const* tame_end,
         char const*& wild_current
-) {
+) -> bool {
     auto w = *wild_current;
-    if ('?' != w) {
+    if (clp::string_utils::cSingleCharWildcard != w) {
         // No need to check for '*' since the caller ensures wild doesn't
         // contain consecutive '*'
 
         // Handle escaped characters
-        if ('\\' == w) {
+        if (clp::string_utils::cWildcardEscapeChar == w) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++wild_current;
             // This is safe without a bounds check since this the caller ensures
             // there are no dangling escape characters
@@ -58,6 +62,7 @@ inline bool advance_tame_to_next_match(
             if (t == w) {
                 break;
             }
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++tame_current;
         }
     }
@@ -69,16 +74,14 @@ inline bool advance_tame_to_next_match(
 }  // namespace
 
 namespace clp::string_utils {
-size_t find_first_of(
-        string const& haystack,
-        char const* needles,
-        size_t search_start_pos,
-        size_t& needle_ix
-) {
-    size_t haystack_length = haystack.length();
-    size_t needles_length = strlen(needles);
-    for (size_t i = search_start_pos; i < haystack_length; ++i) {
+auto
+find_first_of(string_view haystack, char const* needles, size_t search_start_pos, size_t& needle_ix)
+        -> size_t {
+    auto const haystack_length = haystack.length();
+    auto const needles_length = strlen(needles);
+    for (size_t i{search_start_pos}; i < haystack_length; ++i) {
         for (needle_ix = 0; needle_ix < needles_length; ++needle_ix) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             if (haystack[i] == needles[needle_ix]) {
                 return i;
             }
@@ -88,29 +91,29 @@ size_t find_first_of(
     return string::npos;
 }
 
-string replace_characters(
+auto replace_characters(
         char const* characters_to_replace,
         char const* replacement_characters,
-        string const& value,
+        string_view value,
         bool escape
-) {
+) -> string {
     string new_value;
-    size_t search_start_pos = 0;
+    size_t search_start_pos{0};
     while (true) {
-        size_t replace_char_ix;
-        size_t char_to_replace_pos
+        size_t replace_char_ix{0};
+        auto const char_to_replace_pos
                 = find_first_of(value, characters_to_replace, search_start_pos, replace_char_ix);
         if (string::npos == char_to_replace_pos) {
-            new_value.append(value, search_start_pos, string::npos);
+            new_value.append(value, search_start_pos);
             break;
-        } else {
-            new_value.append(value, search_start_pos, char_to_replace_pos - search_start_pos);
-            if (escape) {
-                new_value += "\\";
-            }
-            new_value += replacement_characters[replace_char_ix];
-            search_start_pos = char_to_replace_pos + 1;
         }
+        new_value.append(value, search_start_pos, char_to_replace_pos - search_start_pos);
+        if (escape) {
+            new_value += cWildcardEscapeChar;
+        }
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        new_value += replacement_characters[replace_char_ix];
+        search_start_pos = char_to_replace_pos + 1;
     }
     return new_value;
 }
@@ -137,52 +140,51 @@ auto replace_unescaped_char(
     std::replace_if(str.begin(), str.end(), should_replace_char, to_char);
 }
 
-void to_lower(string& str) {
+auto to_lower(string& str) -> void {
     std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) {
         return std::tolower(c);
     });
 }
 
-bool is_wildcard(char c) {
-    static constexpr char cWildcards[] = "?*";
-    for (size_t i = 0; i < strlen(cWildcards); ++i) {
-        if (cWildcards[i] == c) {
-            return true;
-        }
-    }
-    return false;
+auto is_wildcard(char c) -> bool {
+    return cSingleCharWildcard == c || cZeroOrMoreCharsWildcard == c;
 }
 
-string clean_up_wildcard_search_string(string_view str) {
+auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
-    bool is_escaped = false;
-    auto str_end = str.cend();
-    for (auto current = str.cbegin(); current != str_end;) {
+    bool is_escaped{false};
+    auto const* const str_end = str.cend();
+    for (auto const* current = str.cbegin(); current != str_end;) {
         auto c = *current;
         if (is_escaped) {
             is_escaped = false;
 
-            if (is_wildcard(c) || '\\' == c) {
+            if (is_wildcard(c) || cWildcardEscapeChar == c) {
                 // Keep escaping if c is a wildcard character or an escape
                 // character
-                cleaned_str += '\\';
+                cleaned_str += cWildcardEscapeChar;
             }
             cleaned_str += c;
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-        } else if ('*' == c) {
+        } else if (cZeroOrMoreCharsWildcard == c) {
             cleaned_str += c;
 
             // Skip over all '*' to find the next non-'*'
-            do {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            ++current;
+            while (current != str_end && cZeroOrMoreCharsWildcard == *current) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++current;
-            } while (current != str_end && '*' == *current);
+            }
         } else {
-            if ('\\' == c) {
+            if (cWildcardEscapeChar == c) {
                 is_escaped = true;
             } else {
                 cleaned_str += c;
             }
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
         }
     }
@@ -197,7 +199,7 @@ auto unescape_string(std::string_view str) -> std::string {
         if (escaped) {
             unescaped_str.push_back(c);
             escaped = false;
-        } else if ('\\' == c) {
+        } else if (cWildcardEscapeChar == c) {
             escaped = true;
         } else {
             unescaped_str.push_back(c);
@@ -206,18 +208,17 @@ auto unescape_string(std::string_view str) -> std::string {
     return unescaped_str;
 }
 
-bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {
+auto wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) -> bool {
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
-    } else {
-        // We convert to lowercase (rather than uppercase) anticipating that
-        // callers use lowercase more frequently, so little will need to change.
-        string lowercase_tame(tame);
-        to_lower(lowercase_tame);
-        string lowercase_wild(wild);
-        to_lower(lowercase_wild);
-        return wildcard_match_unsafe_case_sensitive(lowercase_tame, lowercase_wild);
     }
+    // We convert to lowercase (rather than uppercase) anticipating that callers
+    // use lowercase more frequently, so little will need to change.
+    string lowercase_tame{tame};
+    to_lower(lowercase_tame);
+    string lowercase_wild{wild};
+    to_lower(lowercase_wild);
+    return wildcard_match_unsafe_case_sensitive(lowercase_tame, lowercase_wild);
 }
 
 /**
@@ -233,31 +234,33 @@ bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
  * 3. checks if the two match. If not, the search repeats with the next group in
  *    tame.
  */
-bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
+// NOLINTBEGIN(readability-function-cognitive-complexity)
+auto wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) -> bool {
     auto const tame_length = tame.length();
     auto const wild_length = wild.length();
-    char const* tame_current = tame.data();
-    char const* wild_current = wild.data();
-    char const* tame_bookmark = nullptr;
-    char const* wild_bookmark = nullptr;
-    char const* tame_end = tame_current + tame_length;
-    char const* wild_end = wild_current + wild_length;
+    char const* tame_current{tame.data()};
+    char const* wild_current{wild.data()};
+    char const* tame_bookmark{nullptr};
+    char const* wild_bookmark{nullptr};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    char const* tame_end{tame_current + tame_length};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    char const* wild_end{wild_current + wild_length};
 
     // Handle wild or tame being empty
     if (0 == wild_length) {
         return 0 == tame_length;
-    } else {
-        if (0 == tame_length) {
-            return "*" == wild;
-        }
+    }
+    if (0 == tame_length) {
+        return 1 == wild_length && cZeroOrMoreCharsWildcard == wild.at(0);
     }
 
-    char w;
-    char t;
-    bool is_escaped = false;
+    char w{'\0'};
+    char t{'\0'};
     while (true) {
         w = *wild_current;
-        if ('*' == w) {
+        if (cZeroOrMoreCharsWildcard == w) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++wild_current;
             if (wild_end == wild_current) {
                 // Trailing '*' means everything remaining in tame will match
@@ -273,8 +276,9 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
             }
         } else {
             // Handle escaped characters
-            if ('\\' == w) {
-                is_escaped = true;
+            bool const is_escaped{cWildcardEscapeChar == w};
+            if (is_escaped) {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 ++wild_current;
                 // This is safe without a bounds check since this the caller
                 // ensures there are no dangling escape characters
@@ -283,13 +287,14 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
 
             // Handle a mismatch
             t = *tame_current;
-            if (!((false == is_escaped && '?' == w) || t == w)) {
+            if (false == ((false == is_escaped && cSingleCharWildcard == w) || t == w)) {
                 if (nullptr == wild_bookmark) {
                     // No bookmark to return to
                     return false;
                 }
 
                 wild_current = wild_bookmark;
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
                 tame_current = tame_bookmark + 1;
                 if (false
                     == advance_tame_to_next_match(
@@ -304,34 +309,34 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
             }
         }
 
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         ++tame_current;
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         ++wild_current;
 
         // Handle reaching the end of tame or wild
         if (tame_end == tame_current) {
             return (wild_end == wild_current
-                    || ('*' == *wild_current && (wild_current + 1) == wild_end));
-        } else {
-            if (wild_end == wild_current) {
-                if (nullptr == wild_bookmark) {
-                    // No bookmark to return to
-                    return false;
-                } else {
-                    wild_current = wild_bookmark;
-                    tame_current = tame_bookmark + 1;
-                    if (false
-                        == advance_tame_to_next_match(
-                                tame_current,
-                                tame_bookmark,
-                                tame_end,
-                                wild_current
-                        ))
-                    {
-                        return false;
-                    }
-                }
+                    || (cZeroOrMoreCharsWildcard == *wild_current
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+                        && (wild_current + 1) == wild_end));
+        }
+        if (wild_end == wild_current) {
+            if (nullptr == wild_bookmark) {
+                // No bookmark to return to
+                return false;
+            }
+            wild_current = wild_bookmark;
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            tame_current = tame_bookmark + 1;
+            if (false
+                == advance_tame_to_next_match(tame_current, tame_bookmark, tame_end, wild_current))
+            {
+                return false;
             }
         }
     }
 }
+
+// NOLINTEND(readability-function-cognitive-complexity)
 }  // namespace clp::string_utils

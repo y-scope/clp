@@ -16,7 +16,7 @@ use clp_rust_utils::{
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::SqsListener,
+    ingestion_job::{SqsListener, ZeroFaultToleranceIngestionJobState},
 };
 use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
@@ -64,18 +64,16 @@ async fn create_s3_objects(
 ///
 /// A vector of received S3 object metadata on success.
 async fn receive_object_metadata(
-    mut receiver: mpsc::Receiver<ObjectMetadata>,
+    mut receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
     max_num_objects: usize,
 ) -> Vec<ObjectMetadata> {
     let mut received_objects = Vec::new();
 
-    while received_objects.len() < max_num_objects {
-        match receiver.recv().await {
-            Some(object_metadata) => {
-                received_objects.push(object_metadata);
-            }
-            None => {
-                break;
+    while let Some(object_metadata_received) = receiver.recv().await {
+        for object_metadata in object_metadata_received {
+            received_objects.push(object_metadata);
+            if received_objects.len() >= max_num_objects {
+                return received_objects;
             }
         }
     }
@@ -98,13 +96,14 @@ async fn upload_and_receive(
     bucket: NonEmptyString,
     prefix: NonEmptyString,
     num_objects_to_create: usize,
-    receiver: mpsc::Receiver<ObjectMetadata>,
+    receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
 ) -> (Vec<ObjectMetadata>, Vec<ObjectMetadata>) {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|idx| ObjectMetadata {
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
+            id: None,
         })
         .collect();
 
@@ -140,6 +139,7 @@ async fn upload_noise_objects(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
+            id: None,
         })
         .collect();
 
@@ -163,14 +163,14 @@ async fn run_sqs_listener_test(
     )
     .await;
 
-    let (sender, receiver) = mpsc::channel::<ObjectMetadata>(TEST_CHANNEL_CAPACITY);
+    let (sender, receiver) = mpsc::channel::<Vec<ObjectMetadata>>(TEST_CHANNEL_CAPACITY);
 
     let sqs_listener = SqsListener::spawn(
         job_id,
         &SqsClientWrapper::from(sqs_client),
         &ValidatedSqsListenerConfig::validate_and_create(sqs_listener_config)
             .expect("invalid SQS listener config"),
-        &sender,
+        ZeroFaultToleranceIngestionJobState::new(sender),
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
@@ -292,13 +292,13 @@ async fn test_s3_scanner() -> Result<()> {
         start_after: None,
     };
 
-    let (sender, receiver) = mpsc::channel::<ObjectMetadata>(TEST_CHANNEL_CAPACITY);
+    let (sender, receiver) = mpsc::channel::<Vec<ObjectMetadata>>(TEST_CHANNEL_CAPACITY);
 
     let s3_scanner = log_ingestor::ingestion_job::S3Scanner::spawn(
         job_id,
         S3ClientWrapper::from(s3_client.clone()),
         s3_scanner_config,
-        sender,
+        ZeroFaultToleranceIngestionJobState::new(sender),
     );
 
     let upload_and_receive_handle = tokio::spawn(upload_and_receive(
