@@ -1,5 +1,4 @@
 #![allow(clippy::needless_for_each)]
-use std::str::FromStr;
 
 use axum::{
     Json,
@@ -8,13 +7,24 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use clp_rust_utils::job_config::ingestion::s3::{S3ScannerConfig, SqsListenerConfig};
+use clp_rust_utils::job_config::ingestion::s3::{
+    S3IngestionJobConfig,
+    S3ScannerConfig,
+    SqsListenerConfig,
+};
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState};
+use crate::{
+    ingestion_job::IngestionJobId,
+    ingestion_job_manager::{
+        ClpIngestionJobStatus,
+        Error as IngestionJobManagerError,
+        IngestionJobManagerState,
+    },
+};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
@@ -70,9 +80,6 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
 enum Error {
     #[error("{0}")]
     IngestionJobManagerError(#[from] IngestionJobManagerError),
-
-    #[error("Invalid job ID: {0}")]
-    InvalidJobId(String),
 }
 
 impl IntoResponse for Error {
@@ -95,7 +102,6 @@ impl IntoResponse for Error {
                     (axum::http::StatusCode::BAD_REQUEST, self.to_string())
                 }
             },
-            Self::InvalidJobId(_) => (axum::http::StatusCode::BAD_REQUEST, self.to_string()),
         };
         let body = ErrorResponse {
             error: error_message,
@@ -107,7 +113,16 @@ impl IntoResponse for Error {
 #[derive(Clone, Serialize, ToSchema)]
 struct CreationResponse {
     /// The unique ID of the created ingestion job.
-    id: String,
+    id: IngestionJobId,
+}
+
+#[derive(Clone, Serialize, ToSchema)]
+struct DeleteResponse {
+    /// The unique ID of the deleted ingestion job.
+    id: IngestionJobId,
+
+    /// Terminal status of the job.
+    terminal_status: String,
 }
 
 #[derive(Clone, Serialize, ToSchema)]
@@ -130,8 +145,8 @@ async fn health() -> &'static str {
     post,
     path = "/s3_scanner",
     tags = ["IngestionJob"],
-    description = "Creates an ingestion job that periodically scans the specified S3 bucket and \
-        key prefix for new objects to ingest.\n\n\
+    description = "Creates an ingestion job instance that periodically scans the specified S3 \
+        bucket and key prefix for new objects to ingest.\n\n\
         To ensure correct and efficient ingestion, the scanner relies on the following \
         assumptions:\n\n\
         1. Lexicographical Order: New objects are added in lexicographical order to the bucket \
@@ -146,8 +161,8 @@ async fn health() -> &'static str {
             status = CONFLICT,
             body = ErrorResponse,
             description = "A prefix conflict was detected. For the same bucket and dataset, only \
-                one ingestion job may monitor a given S3 prefix or any of its ancestor or \
-                descendant prefixes."
+                one running ingestion job instance may monitor a given S3 prefix or any of its \
+                ancestor or descendant prefixes."
         ),
         (
             status = INTERNAL_SERVER_ERROR,
@@ -167,24 +182,23 @@ async fn create_s3_scanner_job(
 ) -> Result<Json<CreationResponse>, Error> {
     tracing::info!(config = ? config, "Create S3 scanner ingestion job.");
     let job_id = ingestion_job_manager_state
-        .create_s3_scanner_job(config)
+        .create_new_s3_ingestion_job(S3IngestionJobConfig::S3Scanner(config))
         .await
         .map_err(|err| {
             tracing::error!(err = ? err, "Failed to create S3 scanner ingestion job.");
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "Created S3 scanner ingestion job.");
-    Ok(Json(CreationResponse {
-        id: job_id.to_string(),
-    }))
+    Ok(Json(CreationResponse { id: job_id }))
 }
 
 #[utoipa::path(
     post,
     path = "/sqs_listener",
     tags = ["IngestionJob"],
-    description = "Creates an ingestion job that monitors an SQS queue. The queue receives \
-        notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\n\
+    description = "Creates an ingestion job instance that monitors an SQS queue. The queue \
+        receives notifications whenever new objects are added to the specified S3 bucket and key \
+        prefix.\n\n\
         The specified SQS queue must be dedicated to this ingestion job. Upon successful \
         ingestion, the job deletes the corresponding message from the queue to ensure objects are \
         not ingested multiple times.\n\n\
@@ -197,8 +211,8 @@ async fn create_s3_scanner_job(
             status = CONFLICT,
             body = ErrorResponse,
             description = "A prefix conflict was detected. For the same bucket and dataset, only \
-                one ingestion job may monitor a given S3 prefix or any of its ancestor or \
-                descendant prefixes."
+                one running ingestion job instance may monitor a given S3 prefix or any of its \
+                ancestor or descendant prefixes."
         ),
         (
             status = INTERNAL_SERVER_ERROR,
@@ -219,42 +233,36 @@ async fn create_sqs_listener_job(
 ) -> Result<Json<CreationResponse>, Error> {
     tracing::info!(config = ? config, "Create SQS listener ingestion job.");
     let job_id = ingestion_job_manager_state
-        .create_sqs_listener_job(config)
+        .create_new_s3_ingestion_job(S3IngestionJobConfig::SqsListener(config))
         .await
         .map_err(|err| {
             tracing::error!(err = ? err, "Failed to create SQS listener ingestion job.");
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "Created SQS listener ingestion job.");
-    Ok(Json(CreationResponse {
-        id: job_id.to_string(),
-    }))
+    Ok(Json(CreationResponse { id: job_id }))
 }
 
 #[utoipa::path(
     delete,
     path = "/job/{job_id}",
     tags = ["IngestionJob"],
-    description = "Deletes an existing ingestion job by its ID. This operation stops the job if it \
-        is currently running and removes all associated resources.",
+    description = "Deletes the running instance of the specified ingestion job by its job ID. This \
+        operation only terminates the job instance; the job record, including its status and \
+        statistics, is preserved and can still be queried using the same job ID.",
     params(
         (
-            "job_id" = String,
+            "job_id" = IngestionJobId,
             Path,
             description = "The unique identifier of the ingestion job to delete."
         )
     ),
     responses(
-        (status = OK, body = ()),
+        (status = OK, body = DeleteResponse),
         (
             status = NOT_FOUND,
             body = ErrorResponse,
-            description = "The specified job ID does not correspond to any existing ingestion job."
-        ),
-        (
-            status = BAD_REQUEST,
-            body = ErrorResponse,
-            description = "The provided job ID is not in a valid format."
+            description = "The specified job ID does not correspond to a running job instance."
         ),
         (
             status = INTERNAL_SERVER_ERROR,
@@ -265,20 +273,23 @@ async fn create_sqs_listener_job(
 )]
 async fn stop_and_delete_job(
     State(ingestion_job_manager_state): State<IngestionJobManagerState>,
-    Path(job_id): Path<String>,
-) -> Result<(), Error> {
+    Path(job_id): Path<IngestionJobId>,
+) -> Result<Json<DeleteResponse>, Error> {
     tracing::info!(job_id = ? job_id, "Stop and delete ingestion job.");
-    let job_id = uuid::Uuid::from_str(&job_id).map_err(|err| {
-        tracing::error!(err = ? err, "Invalid job ID format.");
-        Error::InvalidJobId(err.to_string())
-    })?;
-    ingestion_job_manager_state
-        .shutdown_and_remove_job(job_id)
+    let end_with_error = ingestion_job_manager_state
+        .shutdown_and_remove_job_instance(job_id)
         .await
         .map_err(|err| {
             tracing::error!(err = ? err, "Failed to stop and delete ingestion job.");
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "The ingestion job has been deleted.");
-    Ok(())
+    Ok(Json(DeleteResponse {
+        id: job_id,
+        terminal_status: if end_with_error {
+            ClpIngestionJobStatus::Failed.to_string()
+        } else {
+            ClpIngestionJobStatus::Finished.to_string()
+        },
+    }))
 }

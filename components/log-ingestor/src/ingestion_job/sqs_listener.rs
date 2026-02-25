@@ -13,9 +13,11 @@ use clp_rust_utils::{
 };
 use tokio::select;
 use tokio_util::sync::CancellationToken;
-use uuid::Uuid;
 
-use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::SqsListenerState};
+use crate::{
+    aws_client_manager::AwsClientManagerType,
+    ingestion_job::{IngestionJobId, IngestionJobState, SqsListenerState},
+};
 
 type TaskId = usize;
 
@@ -24,16 +26,20 @@ type TaskId = usize;
 /// # Type Parameters
 ///
 /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
-/// * [`State`]: The type that implements [`SqsListenerState`] for managing SQS listener states.
-struct Task<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState> {
+/// * [`State`]: The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
+///   managing SQS listener states.
+struct Task<
+    SqsClientManager: AwsClientManagerType<Client>,
+    State: IngestionJobState + SqsListenerState,
+> {
     sqs_client_manager: SqsClientManager,
     config: ValidatedSqsListenerConfig,
-    job_id: Uuid,
+    job_id: IngestionJobId,
     id: TaskId,
     state: State,
 }
 
-impl<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>
+impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + SqsListenerState>
     Task<SqsClientManager, State>
 {
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
@@ -224,23 +230,36 @@ impl TaskHandle {
     /// # Returns
     ///
     /// A handle to the spawned task.
-    fn spawn<SqsClientManager: AwsClientManagerType<Client>, State: SqsListenerState>(
+    fn spawn<
+        SqsClientManager: AwsClientManagerType<Client>,
+        State: IngestionJobState + SqsListenerState,
+    >(
         task: Task<SqsClientManager, State>,
-        job_id: Uuid,
-        _state: State,
+        job_id: IngestionJobId,
+        state: State,
     ) -> Self {
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
         let task_id = task.id;
         let join_handle = tokio::spawn(async move {
-            task.run(child_cancel_token).await.inspect_err(|err| {
-                tracing::error!(
-                    error = ? err,
-                    job_id = ? job_id,
-                    task_id = ? task_id,
-                    "SQS listener task execution failed."
-                );
-            })
+            let result = task.run(child_cancel_token).await;
+            match &result {
+                Ok(()) => {}
+                Err(err) => {
+                    tracing::error!(
+                        error = ? err,
+                        job_id = ? job_id,
+                        task_id = ? task_id,
+                        "SQS listener task execution failed."
+                    );
+                    state
+                        .fail(format!(
+                            "SQS listener task (ID={task_id}) execution failed: {err}"
+                        ))
+                        .await;
+                }
+            }
+            result
         });
         Self {
             task_id,
@@ -254,14 +273,15 @@ impl TaskHandle {
 ///
 /// # Type Parameters
 ///
-/// * [`State`]: The type that implements [`SqsListenerState`] for managing SQS listener states.
-pub struct SqsListener<State: SqsListenerState> {
-    id: Uuid,
+/// * [`State`]: The type that implements [`IngestionJobState`] and [`SqsListenerState`] for
+///   managing SQS listener states.
+pub struct SqsListener<State: IngestionJobState + SqsListenerState> {
+    id: IngestionJobId,
     task_handles: Vec<TaskHandle>,
-    _state: State,
+    state: State,
 }
 
-impl<State: SqsListenerState> SqsListener<State> {
+impl<State: IngestionJobState + SqsListenerState> SqsListener<State> {
     /// Creates and spawns a new [`SqsListener`] backed by a [`Task`].
     ///
     /// This function spawns a series of [`Task`]. Each spawned task will listen to SQS messages,
@@ -284,7 +304,7 @@ impl<State: SqsListenerState> SqsListener<State> {
     /// domain constraints—such as upper bounds on the number of concurrent listener tasks—is the
     /// responsibility of the caller.
     pub fn spawn<SqsClientManager: AwsClientManagerType<Client>>(
-        id: Uuid,
+        id: IngestionJobId,
         sqs_client_manager: &SqsClientManager,
         config: &ValidatedSqsListenerConfig,
         state: State,
@@ -307,7 +327,7 @@ impl<State: SqsListenerState> SqsListener<State> {
         Self {
             id,
             task_handles,
-            _state: state,
+            state,
         }
     }
 
@@ -342,6 +362,9 @@ impl<State: SqsListenerState> SqsListener<State> {
                         task_id = ? task_id,
                         "SQS listener task panicked."
                     );
+                    self.state
+                        .fail(format!("SQS listener task (ID={task_id}) panicked: {err}"))
+                        .await;
                 }
             }
         }
@@ -350,9 +373,9 @@ impl<State: SqsListenerState> SqsListener<State> {
 
     /// # Returns
     ///
-    /// The UUID of this listener.
+    /// The ID of this listener.
     #[must_use]
-    pub fn get_id(&self) -> String {
-        self.id.to_string()
+    pub const fn get_id(&self) -> IngestionJobId {
+        self.id
     }
 }
