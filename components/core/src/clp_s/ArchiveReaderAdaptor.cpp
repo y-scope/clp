@@ -150,6 +150,9 @@ auto ArchiveReaderAdaptor::try_read_range_index(ZstdDecompressor& decompressor, 
                 end_index,
                 std::move(range_index_entry.at(RangeIndexWriter::cMetadataFieldsName))
         );
+        if (start_index != end_index) {
+            m_non_empty_range_metadata_map.emplace(end_index, m_range_index.back().fields);
+        }
     }
     return ErrorCodeSuccess;
 }
@@ -331,5 +334,14 @@ void ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
     }
 
     m_current_reader_holder.reset();
+}
+
+auto ArchiveReaderAdaptor::get_metadata_for_log_event(int64_t log_event_idx)
+        -> nlohmann::json const& {
+    auto const it{m_non_empty_range_metadata_map.upper_bound(log_event_idx)};
+    if (m_non_empty_range_metadata_map.end() == it || log_event_idx < 0) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    return it->second;
 }
 }  // namespace clp_s

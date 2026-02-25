@@ -7,6 +7,8 @@
 #include <string_view>
 #include <utility>
 
+#include <nlohmann/json_fwd.hpp>
+
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
 #include "InputConfig.hpp"
@@ -157,6 +159,16 @@ public:
      */
     [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
         return get_header().has_deprecated_timestamp_format();
+    }
+
+    /**
+     * @param log_event_idx
+     * @return The file-level metadata associated with the record at `log_event_idx`.
+     * @throws ArchiveReaderAdaptor::OperationFailed when `log_event_idx` cannot be mapped to any
+     * metadata.
+     */
+    [[nodiscard]] auto get_metadata_for_log_event(int64_t log_event_idx) -> nlohmann::json const& {
+        return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
     }
 
 private:

@@ -2,6 +2,7 @@
 #define CLP_S_ARCHIVEREADERADAPTOR_HPP
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -88,6 +89,13 @@ public:
     ArchiveHeader const& get_header() const { return m_archive_header; }
 
     std::vector<RangeIndexEntry> const& get_range_index() const { return m_range_index; }
+
+    /**
+     * @param log_event_idx
+     * @return The file-level metadata associated with the record at `log_event_idx`.
+     * @throws OperationFailed when `log_event_idx` cannot be mapped to any metadata.
+     */
+    [[nodiscard]] auto get_metadata_for_log_event(int64_t log_event_idx) -> nlohmann::json const&;
 
 private:
     /**
@@ -176,6 +184,7 @@ private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;
     std::vector<RangeIndexEntry> m_range_index;
+    std::map<int64_t, nlohmann::json> m_non_empty_range_metadata_map;
 };
 }  // namespace clp_s
 #endif  // CLP_S_ARCHIVEREADERADAPTOR_HPP
