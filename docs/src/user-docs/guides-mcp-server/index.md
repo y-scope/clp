@@ -21,14 +21,9 @@ This guide assumes:
 
 ## Starting the MCP Server
 
-1. Configure `clp-json` to run the MCP server by locating the `mcp_server` section in
-   `etc/clp-config.yaml`
-
-    ```yaml
-    #mcp_server: null
-    ```
-
-   then uncommenting it and specifying a `host` and `port`:
+1. Configure `clp-json` to run the MCP server by uncommenting the `mcp_server` section in
+   `etc/clp-config.yaml` and specifying a `host` and `port`. Replace the default values if
+   necessary.
 
     ```yaml
     mcp_server:
@@ -37,11 +32,9 @@ This guide assumes:
        # other settings
     ```
 
-    Replace the default `host` and `port` shown above if necessary.
-
     :::{note}
-    If you set `mcp_server: null` or leave the `mcp_server` section commented, the MCP server won't
-    be started with the rest of `clp-json`.
+    Setting `mcp_server: null` or leaving the section commented will prevent the MCP server from
+    starting with `clp-json`.
     :::
 
 2. Start `clp-json` and compress the logs you want to query by following the [clp-json
