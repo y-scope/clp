@@ -71,7 +71,7 @@ spec:
               subPath: "clp-config.yaml"
               readOnly: true
             - name: "tmp"
-              mountPath: "/var/log"
+              mountPath: "/var/tmp"
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
