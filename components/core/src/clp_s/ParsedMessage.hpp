@@ -23,7 +23,6 @@ public:
                     clp::ffi::EightByteEncodedTextAst,
                     clp::ffi::FourByteEncodedTextAst,
                     bool,
-                    std::pair<uint64_t, epochtime_t>,
                     std::pair<epochtime_t, uint64_t>,
                     std::pair<double, float_format_t>>;
 
@@ -42,16 +41,6 @@ public:
 
     auto add_value(int32_t node_id, std::string_view value) -> void {
         m_message.emplace(node_id, std::string{value});
-    }
-
-    /**
-     * Adds a timestamp value and its encoding to the message for a given MST node ID.
-     * @param node_id
-     * @param encoding_id
-     * @param value
-     */
-    auto add_value(int32_t node_id, uint64_t encoding_id, epochtime_t value) -> void {
-        m_message.emplace(node_id, std::make_pair(encoding_id, value));
     }
 
     /**

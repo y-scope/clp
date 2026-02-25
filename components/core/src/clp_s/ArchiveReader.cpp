@@ -220,8 +220,12 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::UnstructuredArray:
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
             break;
-        case NodeType::DateString:
-            column_reader = new DateStringColumnReader(column_id, get_timestamp_dictionary());
+        case NodeType::DeprecatedDateString:
+            column_reader
+                    = new DeprecatedDateStringColumnReader(column_id, get_timestamp_dictionary());
+            break;
+        case NodeType::Timestamp:
+            column_reader = new TimestampColumnReader(column_id, get_timestamp_dictionary());
             break;
         // No need to push columns without associated object readers into the SchemaReader.
         case NodeType::Metadata:
@@ -276,10 +280,11 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(column_id);
                 break;
-            // UnstructuredArray and DateString currently aren't supported as part of any unordered
-            // object, so we disregard them here
+            // UnstructuredArray, DeprecatedDateString, and Timestamp currently aren't supported as
+            // part of any unordered object, so we disregard them here
             case NodeType::UnstructuredArray:
-            case NodeType::DateString:
+            case NodeType::DeprecatedDateString:
+            case NodeType::Timestamp:
             // No need to push columns without associated object readers into the SchemaReader.
             case NodeType::StructuredArray:
             case NodeType::Object:

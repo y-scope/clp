@@ -302,16 +302,20 @@ private:
     UnalignedMemSpan<uint64_t> m_variables;
 };
 
-class DateStringColumnReader : public BaseColumnReader {
+class DeprecatedDateStringColumnReader : public BaseColumnReader {
 public:
-    DateStringColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
+    // Constructor
+    DeprecatedDateStringColumnReader(
+            int32_t id,
+            std::shared_ptr<TimestampDictionaryReader> timestamp_dict
+    )
             : BaseColumnReader(id),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
     // Methods inherited from BaseColumnReader
     auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    auto get_type() -> NodeType override { return NodeType::DateString; }
+    auto get_type() -> NodeType override { return NodeType::DeprecatedDateString; }
 
     auto extract_value(uint64_t cur_message)
             -> std::variant<int64_t, double, std::string, uint8_t> override;

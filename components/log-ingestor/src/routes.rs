@@ -90,6 +90,7 @@ impl IntoResponse for Error {
                     (axum::http::StatusCode::CONFLICT, self.to_string())
                 }
                 IngestionJobManagerError::CustomEndpointUrlNotSupported(_)
+                | IngestionJobManagerError::InvalidConfig(_)
                 | IngestionJobManagerError::MissingRegionCode => {
                     (axum::http::StatusCode::BAD_REQUEST, self.to_string())
                 }
@@ -207,7 +208,8 @@ async fn create_s3_scanner_job(
         (
             status = BAD_REQUEST,
             body = ErrorResponse,
-            description = "Custom endpoint URLs are not supported for SQS listener jobs."
+            description = "Custom endpoint URLs are not supported for SQS listener jobs, or the \
+                specified number of concurrent listener tasks is invalid."
         )
     )
 )]

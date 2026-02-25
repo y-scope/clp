@@ -196,34 +196,49 @@ public:
     int32_t add_schema(Schema const& schema) { return m_schema_map.add_schema(schema); }
 
     /**
-     * Ingests a timestamp entry from a string
+     * Ingests a timestamp entry from a string.
      * @param key
      * @param node_id
      * @param timestamp
-     * @param pattern_id
-     * @return the epoch time corresponding to the string timestamp
+     * @param is_json_literal
+     * @return Forwards `TimestampDictionaryWriter::ingest_string_timestamp`'s return values.
      */
-    epochtime_t ingest_timestamp_entry(
+    [[nodiscard]] auto ingest_string_timestamp(
             std::string_view key,
             int32_t node_id,
             std::string_view timestamp,
-            uint64_t& pattern_id
-    ) {
-        return m_timestamp_dict.ingest_entry(key, node_id, timestamp, pattern_id);
+            bool is_json_literal
+    ) -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_string_timestamp(key, node_id, timestamp, is_json_literal);
     }
 
     /**
-     * Ingests a timestamp entry from a number
-     * @param column_key
+     * Ingests a numeric JSON entry.
+     * @param key
      * @param node_id
      * @param timestamp
+     * @return Forwards `TimestampDictionaryWriter::ingest_numeric_json_timestamp`'s return values.
      */
-    void ingest_timestamp_entry(std::string_view key, int32_t node_id, double timestamp) {
-        m_timestamp_dict.ingest_entry(key, node_id, timestamp);
+    [[nodiscard]] auto
+    ingest_numeric_json_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
+            -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_numeric_json_timestamp(key, node_id, timestamp);
     }
 
-    void ingest_timestamp_entry(std::string_view key, int32_t node_id, int64_t timestamp) {
-        m_timestamp_dict.ingest_entry(key, node_id, timestamp);
+    /**
+     * Ingests an unknown precision epoch timestamp.
+     * @param key
+     * @param node_id
+     * @param timestamp
+     * @return Forwards `TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp`'s
+     * return values.
+     */
+    [[nodiscard]] auto ingest_unknown_precision_epoch_timestamp(
+            std::string_view key,
+            int32_t node_id,
+            int64_t timestamp
+    ) -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_unknown_precision_epoch_timestamp(key, node_id, timestamp);
     }
 
     /**
