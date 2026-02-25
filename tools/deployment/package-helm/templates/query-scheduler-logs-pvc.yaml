@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.query_scheduler }}
 {{- include "clp.createPvc" (dict
   "root" .
   "component_category" "query-scheduler"
@@ -5,3 +6,4 @@
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}
+{{- end }}

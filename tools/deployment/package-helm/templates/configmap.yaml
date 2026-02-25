@@ -129,15 +129,18 @@ data:
     package:
       query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
-      host: "{{ include "clp.fullname" . }}-query-scheduler"
-      jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
-      logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
-      num_archives_to_search_per_sub_job: {{
-        .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job | int }}
+      host: "{{ include "clp.fullname" $ }}-query-scheduler"
+      jobs_poll_delay: {{ .jobs_poll_delay }}
+      logging_level: {{ .logging_level | quote }}
+      num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
       port: 7000
+    {{- end }}
+    {{- with .Values.clpConfig.query_worker }}
     query_worker:
-      logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
+      logging_level: {{ .logging_level | quote }}
+    {{- end }}
     queue:
       host: "{{ include "clp.fullname" . }}-queue"
       port: 5672
@@ -146,11 +149,13 @@ data:
       host: "{{ include "clp.fullname" . }}-redis"
       port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
+    {{- with .Values.clpConfig.reducer }}
     reducer:
       base_port: 14009
-      host: "{{ include "clp.fullname" . }}-reducer"
-      logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
-      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval | int }}
+      host: "{{ include "clp.fullname" $ }}-reducer"
+      logging_level: {{ .logging_level | quote }}
+      upsert_interval: {{ .upsert_interval | int }}
+    {{- end }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: "{{ include "clp.fullname" . }}-results-cache"
@@ -218,6 +223,13 @@ data:
       logging_level: {{ .logging_level | quote }}
     {{- else }}
     mcp_server: null
+    {{- end }}
+    {{- if .Values.clpConfig.presto }}
+    presto:
+      host: "{{ include "clp.fullname" . }}-presto-coordinator"
+      port: 8889
+    {{- else }}
+    presto: null
     {{- end }}
 
   mysql-logging.cnf: |
@@ -321,6 +333,108 @@ data:
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      {{- if .Values.clpConfig.presto }}
+      "PrestoHost": "{{ include "clp.fullname" . }}-presto-coordinator",
+      "PrestoPort": 8889
+      {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
+      {{- end }}
     }
+
+{{- with .Values.clpConfig.presto }}
+  presto-coordinator-catalog-clp.properties: |
+    connector.name=clp
+    clp.metadata-provider-type=mysql
+    clp.metadata-db-url=jdbc:mysql://{{ include "clp.fullname" $ }}-database:3306
+    clp.metadata-db-name={{ $.Values.clpConfig.database.names.clp }}
+    clp.metadata-db-user={{ $.Values.credentials.database.username }}
+    clp.metadata-db-password={{ $.Values.credentials.database.password }}
+    clp.metadata-table-prefix=clp_
+    clp.split-provider-type=mysql
+    clp.split-filter-provider-type=mysql
+    clp.split-filter-config=/opt/presto-server/etc/split-filter.json
+
+  presto-coordinator-config-config.properties: |
+    coordinator=true
+    node-scheduler.include-coordinator=false
+    http-server.http.port=8889
+    query.max-memory={{ .coordinator.query_max_memory_gb }}GB
+    query.max-memory-per-node={{ .coordinator.query_max_memory_per_node_gb }}GB
+    discovery-server.enabled=true
+    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8889
+    optimizer.optimize-hash-generation=false
+    regex-library=RE2J
+    use-alternative-function-signatures=true
+    inline-sql-functions=false
+    nested-data-serialization-enabled=false
+    native-execution-enabled=true
+
+  presto-coordinator-config-jvm.config: |
+    -server
+    -Xmx4G
+    -XX:+UseG1GC
+    -XX:G1HeapRegionSize=32M
+    -XX:+UseGCOverheadLimit
+    -XX:+ExplicitGCInvokesConcurrent
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+ExitOnOutOfMemoryError
+    -Djdk.attach.allowAttachSelf=true
+
+  presto-coordinator-config-log.properties: |
+    com.facebook.presto={{ .coordinator.logging_level }}
+
+  presto-coordinator-config-node.properties: |
+    node.environment=production
+    node.id=presto-coordinator
+
+  presto-coordinator-config-split-filter.json: |
+    {{ .split_filter | toJson }}
+
+  presto-worker-catalog-clp.properties: |
+    connector.name=clp
+    {{- with $.Values.clpConfig.archive_output.storage }}
+    {{- if eq .type "s3" }}
+    clp.storage-type=s3
+    clp.s3-auth-provider=clp_package
+    clp.s3-access-key-id={{ .s3_config.aws_authentication.credentials.access_key_id }}
+    clp.s3-end-point=https://{{ .s3_config.bucket }}.s3.{{ .s3_config.region_code }}.amazonaws.com/
+    clp.s3-secret-access-key={{ .s3_config.aws_authentication.credentials.secret_access_key }}
+    {{- end }}{{/* if eq .type "s3" */}}
+    {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
+
+  presto-worker-config-config.properties: |
+    discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8889
+    http-server.http.port=8889
+    query-memory-gb={{ .worker.query_memory_gb }}
+    shutdown-onset-sec=1
+    system-memory-gb={{ .worker.system_memory_gb }}
+    register-test-functions=false
+    runtime-metrics-collection-enabled=false
+
+  presto-worker-config-node.properties: |
+    node.environment=production
+    node.location=worker-location
+
+  presto-worker-config-velox.properties: |
+    mutable-config=true
+
+  presto-worker-setup-configs.sh: |
+    #!/bin/sh
+    set -e
+
+    CONFIG_TEMPLATE_DIR="/etc/presto-config"
+    PRESTO_CONFIG_DIR="/opt/presto-server/etc"
+
+    cp "${CONFIG_TEMPLATE_DIR}/presto-worker-config-config.properties" "${PRESTO_CONFIG_DIR}/config.properties"
+    cp "${CONFIG_TEMPLATE_DIR}/presto-worker-config-node.properties" "${PRESTO_CONFIG_DIR}/node.properties"
+
+    # Query coordinator for version and append to config
+    DISCOVERY_URI="http://{{ include "clp.fullname" $ }}-presto-coordinator:8889"
+    PRESTO_VERSION=$(wget -q -O - "${DISCOVERY_URI}/v1/info" | jq -r '.version')
+    echo "presto.version=${PRESTO_VERSION}" >> "${PRESTO_CONFIG_DIR}/config.properties"
+
+    # Set node identity from hostname
+    echo "node.internal-address=$(hostname -i)" >> "${PRESTO_CONFIG_DIR}/node.properties"
+    echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
+{{- end }}{{/* with .Values.clpConfig.presto */}}

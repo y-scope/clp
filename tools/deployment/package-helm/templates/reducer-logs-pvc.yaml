@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.reducer }}
 {{- include "clp.createPvc" (dict
   "root" .
   "component_category" "reducer"
@@ -5,3 +6,4 @@
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
 ) }}
+{{- end }}

@@ -1,0 +1,103 @@
+{{- if .Values.clpConfig.presto }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-presto-worker
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "presto-worker"
+spec:
+  replicas: {{ .Values.prestoWorker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "presto-worker"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "presto-worker"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      terminationGracePeriodSeconds: 30
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "prestoWorker"
+        ) | nindent 6 }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "presto-coordinator"
+          ) | nindent 10 }}
+        - name: "setup-configs"
+          image: "bitnami/kubectl:latest"
+          command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
+          volumeMounts:
+            - name: "presto-config"
+              mountPath: "/etc/presto-config"
+              readOnly: true
+            - name: "presto-etc"
+              mountPath: "/opt/presto-server/etc"
+            - name: "presto-scripts"
+              mountPath: "/scripts"
+              readOnly: true
+      containers:
+        - name: "presto-worker"
+          image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
+          imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
+          ports:
+            - name: "presto-worker"
+              containerPort: 8889
+          volumeMounts:
+            - name: "presto-catalog"
+              mountPath: "/opt/presto-server/etc/catalog"
+              readOnly: true
+            - name: "presto-config"
+              mountPath: "/opt/presto-server/etc/velox.properties"
+              subPath: "presto-worker-config-velox.properties"
+              readOnly: true
+            - name: "presto-etc"
+              mountPath: "/opt/presto-server/etc"
+            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "archives"
+              ) | quote }}
+              mountPath: "/var/data/archives"
+              readOnly: true
+            {{- end }}
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            tcpSocket: &presto-worker-health-check
+              port: "presto-worker"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            tcpSocket: *presto-worker-health-check
+      volumes:
+        - name: "presto-catalog"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: "presto-worker-catalog-clp.properties"
+                path: "clp.properties"
+        - name: "presto-config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+        - name: "presto-etc"
+          emptyDir: {}
+        - name: "presto-scripts"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: "presto-worker-setup-configs.sh"
+                path: "presto-worker-setup-configs.sh"
+            defaultMode: 0755
+        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "archives"
+          ) | nindent 10 }}
+        {{- end }}
+{{- end }}
