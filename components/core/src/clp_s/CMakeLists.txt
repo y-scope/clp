@@ -137,7 +137,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp::string_utils
                 log_surgeon::log_surgeon
                 ystdlib::containers
-                ${zstd_TARGET}
+                zstd::libzstd_static
                 PRIVATE
                 Boost::regex
                 ${CURL_LIBRARIES}
@@ -228,7 +228,7 @@ if(CLP_BUILD_CLP_S_IO)
                 fmt::fmt
                 simdjson::simdjson
                 spdlog::spdlog
-                ${zstd_TARGET}
+                zstd::libzstd_static
         )
 endif()
 
@@ -386,7 +386,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
-                ${zstd_TARGET}
+                zstd::libzstd_static
                 PRIVATE
                 fmt::fmt
                 ${MONGOCXX_TARGET}
