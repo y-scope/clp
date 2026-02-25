@@ -71,6 +71,15 @@ reducer:
   #       whenUnsatisfiable: "DoNotSchedule"
 
 clpConfig:
+  # List of third-party services bundled (deployed) as part of the chart.
+  # Remove a service from this list to use an external instance instead, and configure its host/port
+  # accordingly in the service-specific sections below.
+  bundled:
+    - "database"
+    - "queue"
+    - "redis"
+    - "results_cache"
+
   package:
     storage_engine: "clp-s"
     query_engine: "clp-s"
@@ -94,6 +103,10 @@ clpConfig:
 
   database:
     type: "mariadb"  # "mariadb" or "mysql"
+    # Host and port for the database service. When "database" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
     port: 30306
     names:
       clp: "clp-db"
@@ -109,7 +122,19 @@ clpConfig:
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
 
+  queue:
+    # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 5672
+
   redis:
+    # Host and port for the Redis service. When "redis" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 6379
     query_backend_database: 0
     compression_backend_database: 1
 
@@ -118,6 +143,10 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   results_cache:
+    # Host and port for the results cache service. When "results_cache" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
     port: 30017
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"

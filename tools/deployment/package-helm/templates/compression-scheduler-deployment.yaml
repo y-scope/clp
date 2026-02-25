@@ -25,16 +25,20 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
+        {{- if has "queue" .Values.clpConfig.bundled }}
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "queue"
           ) | nindent 10 }}
+        {{- end }}
+        {{- if has "redis" .Values.clpConfig.bundled }}
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "redis"
           ) | nindent 10 }}
+        {{- end }}
       containers:
         - name: "compression-scheduler"
           image: "{{ include "clp.image.ref" . }}"

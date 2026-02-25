@@ -6,6 +6,28 @@ use crate::clp_config::package::{
     credentials::Database as DatabaseCredentials,
 };
 
+/// Implements [`sqlx::Type<sqlx::MySql>`] for `$ty` by delegating to `$delegate`.
+///
+/// # Examples
+///
+/// ```rust
+/// impl_sqlx_type!(IngestedS3ObjectMetadataStatus => str);
+/// ```
+#[macro_export]
+macro_rules! impl_sqlx_type {
+    ($ty:ty => $delegate:ty $(,)?) => {
+        impl ::sqlx::Type<::sqlx::MySql> for $ty {
+            fn type_info() -> <::sqlx::MySql as ::sqlx::Database>::TypeInfo {
+                <$delegate as ::sqlx::Type<::sqlx::MySql>>::type_info()
+            }
+
+            fn compatible(ty: &<::sqlx::MySql as ::sqlx::Database>::TypeInfo) -> bool {
+                <$delegate as ::sqlx::Type<::sqlx::MySql>>::compatible(ty)
+            }
+        }
+    };
+}
+
 /// Trait for formatting Rust enums as SQL `ENUM(...)` declarations.
 pub trait MySqlEnumFormat: IntoEnumIterator + Sized + ToString
 where
