@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import logging
 import multiprocessing
@@ -1181,13 +1182,14 @@ def _resolve_external_host(hostname: str) -> str:
     """
     Resolves a hostname to an address suitable for Docker's ``extra_hosts``.
 
-    When the hostname is ``localhost`` or ``127.0.0.1``, returns Docker's ``host-gateway`` token so
+    When the hostname resolves to a loopback address, returns Docker's ``host-gateway`` token so
     that containers can reach services running on the Docker host. For any other hostname, falls
     back to standard DNS resolution.
 
     :param hostname:
     :return: The resolved address.
     """
-    if hostname in ("localhost", "127.0.0.1"):
+    resolved_ip = _get_ip_from_hostname(hostname)
+    if ipaddress.ip_address(resolved_ip).is_loopback:
         return "host-gateway"
-    return _get_ip_from_hostname(hostname)
+    return resolved_ip
