@@ -128,12 +128,13 @@ tasks:
 
   check-cpp-format:
     sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.TASKFILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/tests/**/*"
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
+      - "{{.TASKFILE}}"
     deps: ["cpp-lint-configs", "venv"]
     cmds:
       - task: ":utils:cpp-lint:clang-format"
@@ -886,9 +887,9 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
       - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
-      - "lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
     deps:
