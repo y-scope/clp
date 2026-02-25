@@ -2,6 +2,7 @@
 #define CLP_S_SCHEMATREE_HPP
 
 #include <functional>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -80,7 +81,7 @@ public:
               m_type(type),
               m_count(0),
               m_depth(depth) {
-        memcpy(m_key_name_buf.get(), key_name.begin(), key_name.size());
+        memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
     }
 
     /**

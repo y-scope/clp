@@ -154,8 +154,8 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
     bool is_escaped{false};
-    auto const* const str_end = str.cend();
-    for (auto const* current = str.cbegin(); current != str_end;) {
+    std::string_view::const_iterator const str_end = str.cend();
+    for (std::string_view::const_iterator current = str.cbegin(); current != str_end;) {
         auto c = *current;
         if (is_escaped) {
             is_escaped = false;
