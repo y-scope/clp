@@ -28,14 +28,17 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
+    // Constructors
     BaseColumnReader(int32_t id) : m_id(id) {}
 
-    // Destructor
-    virtual ~BaseColumnReader() = default;
     BaseColumnReader(BaseColumnReader const&) = default;
-    auto operator=(BaseColumnReader const&) -> BaseColumnReader& = default;
     BaseColumnReader(BaseColumnReader&&) noexcept = default;
+
+    // Destructors
+    virtual ~BaseColumnReader() = default;
+
+    // Operators
+    auto operator=(BaseColumnReader const&) -> BaseColumnReader& = default;
     auto operator=(BaseColumnReader&&) noexcept -> BaseColumnReader& = default;
 
     /**
