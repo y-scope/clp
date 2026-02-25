@@ -205,7 +205,7 @@ void tokenize_query(
                 composite_wildcard_token_indexes.push_back(tokens.size() - 1);
             }
         } else {
-            string_view variable(wildcard_query.cbegin() + begin_pos, end_pos - begin_pos);
+            string_view variable(wildcard_query.data() + begin_pos, end_pos - begin_pos);
             // Treat token as variable if:
             // - it contains a decimal digit, or
             // - it's directly preceded by an equals sign and contains an alphabet, or
