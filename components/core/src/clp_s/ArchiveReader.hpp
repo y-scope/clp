@@ -153,7 +153,7 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+    [[nodiscard]] auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
 
     /**
      * @return Whether this archive can contain columns with the deprecated DateString timestamp

@@ -305,7 +305,7 @@ private:
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
             VariableDictionaryWriterReq VariableDictionaryWriterType
     >
-    static auto encode_var(
+    [[nodiscard]] static auto encode_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
             VariableDictionaryWriterType& var_dict,
@@ -327,7 +327,7 @@ private:
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
             VariableDictionaryWriterReq VariableDictionaryWriterType
     >
-    static auto add_dict_var(
+    [[nodiscard]] static auto add_dict_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
             VariableDictionaryWriterType& var_dict,
