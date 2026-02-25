@@ -27,6 +27,8 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/IrSerializationError.cpp
+        ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
         ../ffi/StringBlob.hpp
@@ -40,6 +42,8 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
+        ../SchemaSearcher.cpp
+        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp

@@ -24,7 +24,7 @@ tasks:
       OUTPUT_DIR: "{{.G_DOCS_BUILD_DIR}}"
     sources:
       - "{{.G_BUILD_DIR}}/docs-venv.md5"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
       - "conf/**/*"
       - "src/**/*"
@@ -67,7 +67,7 @@ tasks:
       REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
     sources:
       - "{{.REQUIREMENTS_FILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -94,7 +94,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
     sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
