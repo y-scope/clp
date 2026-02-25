@@ -12,6 +12,10 @@
 #include "../src/clp_s/JsonParser.hpp"
 #include "../src/clp_s/TimestampPattern.hpp"
 
+namespace {
+constexpr std::string_view cTestEndToEndInputFileDirectory{"test_log_files"};
+}  // namespace
+
 auto compress_archive(
         std::string const& file_path,
         std::string const& archive_directory,
@@ -53,4 +57,11 @@ auto compress_archive(
 
     REQUIRE((false == std::filesystem::is_empty(archive_directory)));
     return archive_stats;
+}
+
+auto get_test_input_local_path(std::string_view test_input_path) -> std::string {
+    std::filesystem::path const current_file_path{__FILE__};
+    auto const tests_dir{current_file_path.parent_path()};
+    return (tests_dir / std::filesystem::path{cTestEndToEndInputFileDirectory} / test_input_path)
+            .string();
 }

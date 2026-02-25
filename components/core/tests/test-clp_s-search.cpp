@@ -39,7 +39,6 @@
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archive"};
-constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
 constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
 constexpr std::string_view cTestSearchFloatTimestampFile{"test_search_float_timestamp.jsonl"};
@@ -48,9 +47,6 @@ constexpr std::string_view cTestIdxKey{"idx"};
 constexpr std::string_view cTestTimestampKey{"timestamp"};
 
 namespace {
-auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
-        -> std::filesystem::path;
-auto get_test_input_local_path(std::string_view test_input_path) -> std::string;
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
 void
 search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
@@ -63,17 +59,6 @@ void validate_results(
         std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 );
-
-auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
-        -> std::filesystem::path {
-    return std::filesystem::path{cTestInputFileDirectory} / test_input_path;
-}
-
-auto get_test_input_local_path(std::string_view test_input_path) -> std::string {
-    std::filesystem::path const current_file_path{__FILE__};
-    auto const tests_dir{current_file_path.parent_path()};
-    return (tests_dir / get_test_input_path_relative_to_tests_dir(test_input_path)).string();
-}
 
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression> {
     auto zero_literal = clp_s::search::ast::Integral::create_from_int(0);
