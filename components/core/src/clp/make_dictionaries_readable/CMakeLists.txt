@@ -18,6 +18,8 @@ set(
         ../ffi/ir_stream/decoding_methods.cpp
         ../ffi/ir_stream/decoding_methods.hpp
         ../ffi/ir_stream/decoding_methods.inc
+        ../ffi/ir_stream/IrSerializationError.cpp
+        ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/protocol_constants.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
