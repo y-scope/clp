@@ -133,7 +133,7 @@ void read_and_check_archive_metadata(bool from_ir) {
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
         };
-        REQUIRE_NOTHROW(archive_reader.open(archive_path, clp_s::NetworkAuthOption{}));
+        REQUIRE_NOTHROW(archive_reader.open(archive_path, clp_s::ArchiveReader::Options{}));
         auto const& range_index = archive_reader.get_range_index();
         check_archive_range_index(range_index, from_ir);
         REQUIRE_NOTHROW(archive_reader.close());

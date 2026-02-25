@@ -1,11 +1,15 @@
 #include "SchemaReader.hpp"
 
 #include <stack>
+#include <stdexcept>
 #include <string>
 
-#include "archive_constants.hpp"
-#include "BufferViewReader.hpp"
-#include "Schema.hpp"
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/BufferViewReader.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/Schema.hpp>
 
 namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
@@ -482,6 +486,7 @@ size_t SchemaReader::generate_structured_array_template(
                     break;
                 }
                 case NodeType::ClpString:
+                case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -574,6 +579,7 @@ size_t SchemaReader::generate_structured_object_template(
                     break;
                 }
                 case NodeType::ClpString:
+                case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -667,6 +673,16 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
+            case NodeType::LogMessage: {
+                if (auto const result{generate_log_message_template(child_global_id)};
+                    result.has_error())
+                {
+                    throw(std::runtime_error(
+                            "generate_log_message_template failed with: " + result.error().message()
+                    ));
+                }
+                break;
+            }
             case NodeType::DeltaInteger:
             case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
@@ -690,6 +706,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 break;
             }
             case NodeType::ClpString:
+            case NodeType::LogType:
             case NodeType::VarString:
             case NodeType::DeprecatedDateString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
@@ -706,10 +723,174 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_special_key(key);
                 break;
             }
+            case NodeType::CompositeVar: {
+                throw(std::runtime_error(
+                        "generate_json_template found CompositeVar outside of LogMessage."
+                ));
+            }
             case NodeType::Metadata:
-            case NodeType::Unknown:
+            case NodeType::Unknown: {
                 break;
+            }
         }
     }
+}
+
+auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
+        -> ystdlib::error_handling::Result<size_t> {
+    auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_id)};
+    if (m_global_id_to_unordered_object.end() == log_msg_it) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+
+    m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
+    m_json_serializer.add_special_key(m_global_schema_tree->get_node(log_msg_id).get_key_name());
+
+    auto column_idx{log_msg_it->second.first};
+    auto const schema{log_msg_it->second.second};
+    for (size_t schema_idx{0}; schema_idx < schema.size(); schema_idx++) {
+        auto const global_column_id{schema[schema_idx]};
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
+            if (Schema::get_unordered_object_type(global_column_id) != NodeType::CompositeVar) {
+                return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+            }
+
+            auto length{Schema::get_unordered_object_length(global_column_id)};
+            auto const sub_object_schema{schema.subspan(schema_idx + 1, length)};
+            auto const capture_id{m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                    log_msg_id,
+                    get_first_column_in_span(sub_object_schema),
+                    NodeType::CompositeVar
+            )};
+            column_idx = YSTDLIB_ERROR_HANDLING_TRYX(generate_composite_var_template(capture_id));
+            schema_idx += length;
+        } else {
+            auto const& node{m_global_schema_tree->get_node(global_column_id)};
+            switch (node.get_type()) {
+                case NodeType::DeltaInteger:
+                case NodeType::Integer: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
+                    m_reordered_columns.push_back(m_columns[column_idx]);
+                    column_idx++;
+                    break;
+                }
+                case NodeType::Float: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                    m_reordered_columns.push_back(m_columns[column_idx]);
+                    column_idx++;
+                    break;
+                }
+                case NodeType::FormattedFloat:
+                case NodeType::DictionaryFloat: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
+                    m_reordered_columns.push_back(m_columns[column_idx]);
+                    column_idx++;
+                    break;
+                }
+                case NodeType::Boolean: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
+                    m_reordered_columns.push_back(m_columns[column_idx]);
+                    column_idx++;
+                    break;
+                }
+                case NodeType::ClpString:
+                case NodeType::LogType:
+                case NodeType::VarString: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
+                    m_reordered_columns.push_back(m_columns[column_idx]);
+                    column_idx++;
+                    break;
+                }
+                case NodeType::CompositeVar:
+                case NodeType::LogMessage:
+                case NodeType::Object:
+                case NodeType::StructuredArray:
+                case NodeType::NullValue:
+                case NodeType::UnstructuredArray:
+                case NodeType::Metadata:
+                case NodeType::DeprecatedDateString:
+                case NodeType::Unknown: {
+                    break;
+                }
+            }
+        }
+    }
+    m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+    return column_idx;
+}
+
+/**
+ * Nested capture groups are currently flattened into the same unordered object. This makes finding
+ * a nested unordered object unsupported until the nested capture group implementation is revisited.
+ */
+auto SchemaReader::generate_composite_var_template(int32_t var_id)
+        -> ystdlib::error_handling::Result<size_t> {
+    auto var_it{m_global_id_to_unordered_object.find(var_id)};
+    if (m_global_id_to_unordered_object.end() == var_it) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+
+    m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
+    m_json_serializer.add_special_key(m_global_schema_tree->get_node(var_id).get_key_name());
+
+    auto column_idx{var_it->second.first};
+    auto const schema{var_it->second.second};
+    for (size_t schema_idx{0}; schema_idx < schema.size(); schema_idx++) {
+        auto const global_column_id{schema[schema_idx]};
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
+            return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+        }
+        auto const& node{m_global_schema_tree->get_node(global_column_id)};
+        switch (node.get_type()) {
+            case NodeType::DeltaInteger:
+            case NodeType::Integer: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                column_idx++;
+                break;
+            }
+            case NodeType::Float: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                column_idx++;
+                break;
+            }
+            case NodeType::FormattedFloat:
+            case NodeType::DictionaryFloat: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                column_idx++;
+                break;
+            }
+            case NodeType::Boolean: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                column_idx++;
+                break;
+            }
+            case NodeType::VarString: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                column_idx++;
+                break;
+            }
+            case NodeType::CompositeVar:
+            case NodeType::LogMessage:
+            case NodeType::Object:
+            case NodeType::StructuredArray:
+            case NodeType::ClpString:
+            case NodeType::LogType:
+            case NodeType::NullValue:
+            case NodeType::UnstructuredArray:
+            case NodeType::Metadata:
+            case NodeType::DeprecatedDateString:
+            case NodeType::Unknown: {
+                return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+                break;
+            }
+        }
+    }
+    m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+    return column_idx;
 }
 }  // namespace clp_s

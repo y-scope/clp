@@ -2,15 +2,27 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <memory>
 #include <sstream>
+#include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
-#include "archive_constants.hpp"
-#include "Defs.hpp"
-#include "SchemaTree.hpp"
-#include "SingleFileArchiveDefs.hpp"
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/FileWriter.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -56,6 +68,10 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     std::string array_dict_path = m_archive_path + constants::cArchiveArrayDictFile;
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
+
+    if (option.experimental) {
+        m_experimental_stats = ExperimentalStats();
+    }
 }
 
 auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
@@ -80,6 +96,18 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveArrayDictFile, array_dict_compressed_size},
             {constants::cArchiveTablesFile, table_compressed_size}
     };
+
+    if (m_experimental_stats) {
+        auto stats_compressed_size{close_experimenal_stats()};
+        if (stats_compressed_size.has_error()) {
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        files.emplace_back(
+                std::string(constants::cArchiveStatsFile),
+                stats_compressed_size.value()
+        );
+    }
+
     uint64_t offset = 0;
     for (auto& file : files) {
         uint64_t original_size = file.o;
@@ -318,6 +346,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 );
                 break;
             case NodeType::ClpString:
+            case NodeType::LogType:
                 writer->append_column(
                         std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_log_dict)
                 );
@@ -344,6 +373,8 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::NullValue:
             case NodeType::Object:
             case NodeType::StructuredArray:
+            case NodeType::LogMessage:
+            case NodeType::CompositeVar:
             case NodeType::Unknown:
                 break;
         }
@@ -466,5 +497,61 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     m_tables_file_writer.close();
 
     return {table_metadata_compressed_size, table_compressed_size};
+}
+
+auto ArchiveWriter::add_dict_var_to_logtype(std::string_view var, LogTypeDictionaryEntry& logtype)
+        -> encoded_variable_t {
+    return clp::EncodedVariableInterpreter::encode_and_add_dict_var(var, logtype, *m_var_dict);
+}
+
+auto ArchiveWriter::update_logtype_stats(ParsedMessage::ClpString& clp_str)
+        -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+    }
+
+    clp::logtype_dictionary_id_t id{};
+    m_log_dict->add_entry(clp_str.m_logtype, id);
+    auto& logtype_stats{m_experimental_stats.value().m_logtype_stats};
+    logtype_stats.at_or_create(id, clp_str.m_var_type_names).increment_count();
+    return id;
+}
+
+auto ArchiveWriter::update_var_stats(std::string_view value, std::string_view type)
+        -> ystdlib::error_handling::Result<clp::variable_dictionary_id_t> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+    }
+
+    clp::variable_dictionary_id_t id{};
+    m_var_dict->add_entry(value, id);
+    auto& var_stats{m_experimental_stats.value().m_var_stats};
+    var_stats.at_or_create(id, {type}).increment_count();
+    return id;
+}
+
+auto ArchiveWriter::close_experimenal_stats() -> ystdlib::error_handling::Result<size_t> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+    }
+
+    FileWriter writer{};
+    writer.open(
+            m_archive_path + std::string{constants::cArchiveStatsFile},
+            FileWriter::OpenMode::CreateForWriting
+    );
+
+    ZstdCompressor compressor{};
+    compressor.open(writer, m_compression_level);
+    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.compress(compressor));
+    // YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.compress(compressor));
+
+    compressor.close();
+    auto compressed_size{writer.get_pos()};
+    writer.close();
+
+    m_experimental_stats->m_logtype_stats.clear();
+    m_experimental_stats->m_var_stats.clear();
+    return compressed_size;
 }
 }  // namespace clp_s

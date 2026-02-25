@@ -3,50 +3,57 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 
-#include "BufferViewReader.hpp"
-#include "DictionaryReader.hpp"
-#include "FloatFormatEncoding.hpp"
-#include "SchemaTree.hpp"
-#include "TimestampDictionaryReader.hpp"
-#include "Utils.hpp"
-#include "ZstdDecompressor.hpp"
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/BufferViewReader.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/FloatFormatEncoding.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
+#include <clp_s/TraceableException.hpp>
+#include <clp_s/Utils.hpp>
 
 namespace clp_s {
 class BaseColumnReader {
 public:
     class OperationFailed : public TraceableException {
     public:
-        // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
     BaseColumnReader(int32_t id) : m_id(id) {}
 
-    // Destructor
     virtual ~BaseColumnReader() = default;
+    BaseColumnReader(BaseColumnReader const&) = default;
+    auto operator=(BaseColumnReader const&) -> BaseColumnReader& = default;
+    BaseColumnReader(BaseColumnReader&&) noexcept = default;
+    auto operator=(BaseColumnReader&&) noexcept -> BaseColumnReader& = default;
 
     /**
      * Reads the column from a shared buffer.
      * @param buffer
      * @param num_messages
      */
-    virtual void load(BufferViewReader& reader, uint64_t num_messages) = 0;
+    virtual auto load(BufferViewReader& reader, uint64_t num_messages) -> void = 0;
 
-    int32_t get_id() const { return m_id; }
+    [[nodiscard]] auto get_id() const -> int32_t { return m_id; }
 
-    virtual NodeType get_type() { return NodeType::Unknown; }
+    virtual auto get_type() -> NodeType { return NodeType::Unknown; }
 
     /**
      * Extracts a value of the column
      * @param cur_message
      * @return Value
      */
-    virtual std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message)
+    virtual auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t>
             = 0;
 
     /**
@@ -54,7 +61,8 @@ public:
      * @param cur_message
      * @param buffer
      */
-    virtual void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) = 0;
+    virtual auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) -> void
+            = 0;
 
     /**
      * Extracts a value from the column, escapes it, and serializes it into a provided buffer as a
@@ -62,8 +70,8 @@ public:
      * @param cur_message
      * @param buffer
      */
-    virtual void
-    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
+    virtual auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void {
         extract_string_value_into_buffer(cur_message, buffer);
     }
 
@@ -73,22 +81,18 @@ private:
 
 class Int64ColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     explicit Int64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
-    // Destructor
-    ~Int64ColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::Integer; }
+    auto get_type() -> NodeType override { return NodeType::Integer; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
 private:
     UnalignedMemSpan<int64_t> m_values;
@@ -96,22 +100,18 @@ private:
 
 class DeltaEncodedInt64ColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     explicit DeltaEncodedInt64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
-    // Destructor
-    ~DeltaEncodedInt64ColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::DeltaInteger; }
+    auto get_type() -> NodeType override { return NodeType::DeltaInteger; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
     /**
      * Gets the value stored at a given index by summing up the stored deltas between the requested
@@ -129,22 +129,18 @@ private:
 
 class FloatColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     explicit FloatColumnReader(int32_t id) : BaseColumnReader(id) {}
 
-    // Destructor
-    ~FloatColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::Float; }
+    auto get_type() -> NodeType override { return NodeType::Float; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
 private:
     UnalignedMemSpan<double> m_values;
@@ -152,20 +148,15 @@ private:
 
 class FormattedFloatColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     explicit FormattedFloatColumnReader(int32_t id) : BaseColumnReader(id) {}
 
-    // Destructor
-    ~FormattedFloatColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::FormattedFloat; }
+    auto get_type() -> NodeType override { return NodeType::FormattedFloat; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
     /**
      * Appends the floating point value to the buffer in its original format by decoding the stored
@@ -174,7 +165,8 @@ public:
      * @param cur_message
      * @param buffer
      */
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
 private:
     UnalignedMemSpan<double> m_values;
@@ -183,7 +175,6 @@ private:
 
 class DictionaryFloatColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     explicit DictionaryFloatColumnReader(
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict
@@ -191,19 +182,16 @@ public:
             : BaseColumnReader(id),
               m_var_dict{std::move(var_dict)} {}
 
-    // Destructor
-    ~DictionaryFloatColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::DictionaryFloat; }
+    auto get_type() -> NodeType override { return NodeType::DictionaryFloat; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -212,22 +200,18 @@ private:
 
 class BooleanColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     explicit BooleanColumnReader(int32_t id) : BaseColumnReader(id) {}
 
-    // Destructor
-    ~BooleanColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::Boolean; }
+    auto get_type() -> NodeType override { return NodeType::Boolean; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
 private:
     UnalignedMemSpan<uint8_t> m_values;
@@ -235,50 +219,46 @@ private:
 
 class ClpStringColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     ClpStringColumnReader(
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
-            bool is_array = false
+            NodeType type,
+            LogTypeStats const* logtype_stats
     )
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
-              m_is_array(is_array) /*, encoded_vars_index_(0)*/ {}
-
-    // Destructor
-    ~ClpStringColumnReader() override = default;
+              m_type(type),
+              m_logtype_stats(logtype_stats) {}
 
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override {
-        return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
-    }
+    auto get_type() -> NodeType override { return m_type; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
-    void
-    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
     /**
      * Gets the encoded id of the variable
      * @param cur_message
      * @return The encoded logtype id
      */
-    int64_t get_encoded_id(uint64_t cur_message);
+    auto get_encoded_id(uint64_t cur_message) -> int64_t;
 
     /**
      * Gets the encoded variables
      * @param cur_message
      * @return Encoded variables in a span
      */
-    UnalignedMemSpan<int64_t> get_encoded_vars(uint64_t cur_message);
+    auto get_encoded_vars(uint64_t cur_message) -> UnalignedMemSpan<int64_t>;
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -287,39 +267,36 @@ private:
     UnalignedMemSpan<uint64_t> m_logtypes;
     UnalignedMemSpan<int64_t> m_encoded_vars;
 
-    bool m_is_array;
+    NodeType m_type;
+    LogTypeStats const* m_logtype_stats;
 };
 
 class VariableStringColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     VariableStringColumnReader(int32_t id, std::shared_ptr<VariableDictionaryReader> var_dict)
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)) {}
 
-    // Destructor
-    ~VariableStringColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::VarString; }
+    auto get_type() -> NodeType override { return NodeType::VarString; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
-    void
-    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
     /**
      * Gets the encoded id of the variable
      * @param cur_message
      * @return The encoded logtype id
      */
-    int64_t get_variable_id(uint64_t cur_message);
+    auto get_variable_id(uint64_t cur_message) -> uint64_t;
 
 private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -329,7 +306,6 @@ private:
 
 class DeprecatedDateStringColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     DeprecatedDateStringColumnReader(
             int32_t id,
             std::shared_ptr<TimestampDictionaryReader> timestamp_dict
@@ -337,25 +313,22 @@ public:
             : BaseColumnReader(id),
               m_timestamp_dict(std::move(timestamp_dict)) {}
 
-    // Destructor
-    ~DeprecatedDateStringColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    NodeType get_type() override { return NodeType::DeprecatedDateString; }
+    auto get_type() -> NodeType override { return NodeType::DeprecatedDateString; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(
-            uint64_t cur_message
-    ) override;
+    auto extract_value(uint64_t cur_message)
+            -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
     /**
      * @param cur_message
      * @return The encoded time in epoch time
      */
-    epochtime_t get_encoded_time(uint64_t cur_message);
+    auto get_encoded_time(uint64_t cur_message) -> epochtime_t;
 
 private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
@@ -366,24 +339,21 @@ private:
 
 class TimestampColumnReader : public BaseColumnReader {
 public:
-    // Constructor
     TimestampColumnReader(int32_t id, std::shared_ptr<TimestampDictionaryReader> timestamp_dict)
             : BaseColumnReader{id},
               m_timestamp_dict{std::move(timestamp_dict)},
               m_timestamps{id} {}
 
-    // Destructor
-    ~TimestampColumnReader() override = default;
-
     // Methods inherited from BaseColumnReader
-    void load(BufferViewReader& reader, uint64_t num_messages) override;
+    auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
     auto get_type() -> NodeType override { return NodeType::Timestamp; }
 
     auto extract_value(uint64_t cur_message)
             -> std::variant<int64_t, double, std::string, uint8_t> override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+    auto extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
+            -> void override;
 
     /**
      * @param cur_message

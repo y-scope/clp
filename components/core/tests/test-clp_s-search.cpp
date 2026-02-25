@@ -163,7 +163,7 @@ void search(
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
         };
-        archive_reader->open(archive_path, clp_s::NetworkAuthOption{});
+        archive_reader->open(archive_path, clp_s::ArchiveReader::Options{});
 
         auto archive_expr = expr->copy();
 

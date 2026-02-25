@@ -56,14 +56,12 @@ public:
     // Factory function
     /**
      * @param command_line_arguments
-     * @param reducer_socket_fd
      * @return A result containing the created IrUnitHandler on success, or an error code indicating
      * the failure:
      * - KvIrSearchErrorEnum::UnsupportedOutputHandlerType if the output handler type is not
      *   supported.
      */
-    [[nodiscard]] static auto
-    create(CommandLineArguments const& command_line_arguments, int reducer_socket_fd)
+    [[nodiscard]] static auto create(CommandLineArguments const& command_line_arguments)
             -> ystdlib::error_handling::Result<IrUnitHandler>;
 
     // Delete copy constructor and assignment operator
@@ -111,7 +109,6 @@ private:
  * @param stream_reader The stream reader to read the kv-pair IR stream from.
  * @param command_line_arguments
  * @param query
- * @param reducer_socket_fd
  * @return A void result on success, or an error code indicating the failure:
  * - KvIrSearchErrorEnum::DeserializerCreationFailure if `clp::ffi::ir_stream::Deserializer::create`
  *   failed. This specific error code is returned instead of propagating the return values of
@@ -124,14 +121,11 @@ private:
 [[nodiscard]] auto deserialize_and_search_kv_ir_stream(
         clp::ReaderInterface& stream_reader,
         CommandLineArguments const& command_line_arguments,
-        std::shared_ptr<search::ast::Expression> query,
-        int reducer_socket_fd
+        std::shared_ptr<search::ast::Expression> query
 ) -> ystdlib::error_handling::Result<void>;
 
-auto IrUnitHandler::create(
-        CommandLineArguments const& command_line_arguments,
-        [[maybe_unused]] int reducer_socket_fd
-) -> ystdlib::error_handling::Result<IrUnitHandler> {
+auto IrUnitHandler::create(CommandLineArguments const& command_line_arguments)
+        -> ystdlib::error_handling::Result<IrUnitHandler> {
     switch (command_line_arguments.get_output_handler_type()) {
         case CommandLineArguments::OutputHandlerType::Stdout:
             break;
@@ -198,8 +192,7 @@ auto IrUnitHandler::handle_log_event(
 auto deserialize_and_search_kv_ir_stream(
         clp::ReaderInterface& stream_reader,
         CommandLineArguments const& command_line_arguments,
-        std::shared_ptr<search::ast::Expression> query,
-        int reducer_socket_fd
+        std::shared_ptr<search::ast::Expression> query
 ) -> ystdlib::error_handling::Result<void> {
     auto trivial_new_projected_schema_tree_node_callback
             = []([[maybe_unused]] bool is_auto_generated,
@@ -209,9 +202,9 @@ auto deserialize_and_search_kv_ir_stream(
     using QueryHandlerType = clp::ffi::ir_stream::search::
             QueryHandler<decltype(trivial_new_projected_schema_tree_node_callback)>;
 
-    auto ir_unit_handler{YSTDLIB_ERROR_HANDLING_TRYX(
-            IrUnitHandler::create(command_line_arguments, reducer_socket_fd)
-    )};
+    auto ir_unit_handler{
+            YSTDLIB_ERROR_HANDLING_TRYX(IrUnitHandler::create(command_line_arguments))
+    };
     auto query_handler{YSTDLIB_ERROR_HANDLING_TRYX(
             QueryHandlerType::create(
                     trivial_new_projected_schema_tree_node_callback,
@@ -241,8 +234,7 @@ auto deserialize_and_search_kv_ir_stream(
 auto search_kv_ir_stream(
         Path const& stream_path,
         CommandLineArguments const& command_line_arguments,
-        std::shared_ptr<search::ast::Expression> query,
-        int reducer_socket_fd
+        std::shared_ptr<search::ast::Expression> query
 ) -> ystdlib::error_handling::Result<void> {
     if (false == command_line_arguments.get_projection_columns().empty()) {
         SPDLOG_ERROR("kv-ir search: Projection support is not implemented.");
@@ -282,8 +274,7 @@ auto search_kv_ir_stream(
         YSTDLIB_ERROR_HANDLING_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,
                 command_line_arguments,
-                std::move(query),
-                reducer_socket_fd
+                std::move(query)
         ));
         decompressor.close();
     } catch (clp::TraceableException const& ex) {

@@ -28,6 +28,18 @@ namespace clp_s {
  * demarcate data needed by the implementation that is not part of the log record. In particular,
  * the implementation may create a special subtree of the MPT which contains fields used to record
  * things like original log order.
+ *
+ * The following NodeTypes are only used in the experimental prototype:
+ *
+ * `LogMessage`: Stores a structured representation of an unstructured log message. It is made up of
+ * a single `LogType` node and all `CompositeVar`s and primitive type nodes that are in the message.
+ *
+ * `LogType`: Functionally similar to a `ClpString`, but has no variable dictionary component as the
+ * variables are stored in their own nodes unlike a `ClpsString`. The logtype dictionary component
+ * is identical.
+ *
+ * `CompositeVar`: Contains a `VarString` node representing the "full match" of the pattern and
+ * primitive type nodes for all capture groups in the variable.
  */
 enum class NodeType : uint8_t {
     Integer,
@@ -45,6 +57,9 @@ enum class NodeType : uint8_t {
     FormattedFloat,
     DictionaryFloat,
     Timestamp,
+    LogMessage = 100,
+    LogType,
+    CompositeVar,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 

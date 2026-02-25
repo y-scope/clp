@@ -87,11 +87,16 @@ set(
         ../ArchiveReader.hpp
         ../ArchiveReaderAdaptor.cpp
         ../ArchiveReaderAdaptor.hpp
+        ../ArchiveStats.cpp
+        ../ArchiveStats.hpp
+        ../Array.hpp
         ../ColumnReader.cpp
         ../ColumnReader.hpp
         ../DictionaryReader.hpp
         ../DictionaryEntry.cpp
         ../DictionaryEntry.hpp
+        ../ErrorCode.cpp
+        ../ErrorCode.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp

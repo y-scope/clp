@@ -1,17 +1,26 @@
 #include "ArchiveReader.hpp"
 
-#include <filesystem>
-#include <string_view>
+#include <memory>
+#include <system_error>
+#include <utility>
+#include <vector>
 
-#include "archive_constants.hpp"
-#include "ArchiveReaderAdaptor.hpp"
-#include "InputConfig.hpp"
-#include "ReaderUtils.hpp"
+#include <fmt/core.h>
+#include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
-using std::string_view;
+#include <clp/ir/types.hpp>
+#include <clp/type_utils.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/ReaderUtils.hpp>
 
 namespace clp_s {
-void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
+void ArchiveReader::open(Path const& archive_path, Options const& options) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
@@ -21,7 +30,8 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+    m_archive_reader_adaptor
+            = std::make_shared<ArchiveReaderAdaptor>(archive_path, options.m_network_auth);
 
     if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
@@ -35,6 +45,10 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
+
+    if (options.m_experimental) {
+        m_experimental_stats = ExperimentalStats();
+    }
 }
 
 void ArchiveReader::read_metadata() {
@@ -134,6 +148,7 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     m_var_dict->read_entries();
     m_log_dict->read_entries();
     m_array_dict->read_entries();
+    std::ignore = read_experimental_stats();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -201,7 +216,15 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
             break;
         case NodeType::ClpString:
-            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
+        case NodeType::LogType:
+            column_reader = new ClpStringColumnReader(
+                    column_id,
+                    m_var_dict,
+                    m_log_dict,
+                    node.get_type(),
+                    m_experimental_stats.has_value() ? &m_experimental_stats->m_logtype_stats
+                                                     : nullptr
+            );
             break;
         case NodeType::VarString:
             column_reader = new VariableStringColumnReader(column_id, m_var_dict);
@@ -210,7 +233,13 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new BooleanColumnReader(column_id);
             break;
         case NodeType::UnstructuredArray:
-            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
+            column_reader = new ClpStringColumnReader(
+                    column_id,
+                    m_var_dict,
+                    m_array_dict,
+                    node.get_type(),
+                    nullptr
+            );
             break;
         case NodeType::DeprecatedDateString:
             column_reader
@@ -224,6 +253,8 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::NullValue:
         case NodeType::Object:
         case NodeType::StructuredArray:
+        case NodeType::LogMessage:
+        case NodeType::CompositeVar:
         case NodeType::Unknown:
             break;
     }
@@ -241,8 +272,23 @@ void ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) {
     size_t object_begin_pos = reader.get_column_size();
-    for (int32_t column_id : schema_ids) {
+    for (size_t i = 0; i < schema_ids.size(); ++i) {
+        auto const column_id{schema_ids[i]};
         if (Schema::schema_entry_is_unordered_object(column_id)) {
+            auto length{Schema::get_unordered_object_length(column_id)};
+            auto sub_schema{schema_ids.subspan(i + 1, length)};
+            auto subtree_root_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+                    mst_subtree_root_node_id,
+                    SchemaReader::get_first_column_in_span(sub_schema),
+                    Schema::get_unordered_object_type(column_id)
+            )};
+            append_unordered_reader_columns(
+                    reader,
+                    subtree_root_node_id,
+                    sub_schema,
+                    should_marshal_records
+            );
+            i += length;
             continue;
         }
         BaseColumnReader* column_reader = nullptr;
@@ -264,7 +310,15 @@ void ArchiveReader::append_unordered_reader_columns(
                 column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
                 break;
             case NodeType::ClpString:
-                column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
+            case NodeType::LogType:
+                column_reader = new ClpStringColumnReader(
+                        column_id,
+                        m_var_dict,
+                        m_log_dict,
+                        node.get_type(),
+                        m_experimental_stats.has_value() ? &m_experimental_stats->m_logtype_stats
+                                                         : nullptr
+                );
                 break;
             case NodeType::VarString:
                 column_reader = new VariableStringColumnReader(column_id, m_var_dict);
@@ -282,6 +336,8 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Object:
             case NodeType::Metadata:
             case NodeType::NullValue:
+            case NodeType::LogMessage:
+            case NodeType::CompositeVar:
             case NodeType::Unknown:
                 break;
         }
@@ -377,6 +433,10 @@ void ArchiveReader::close() {
     m_var_dict->close();
     m_log_dict->close();
     m_array_dict->close();
+    if (m_experimental_stats) {
+        m_experimental_stats->m_logtype_stats.clear();
+        m_experimental_stats->m_var_stats.clear();
+    }
 
     m_stream_reader.close();
     m_archive_reader_adaptor.reset();
@@ -402,5 +462,87 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     m_stream_reader.read_stream(stream_id, m_stream_buffer, m_stream_buffer_size);
     m_cur_stream_id = stream_id;
     return m_stream_buffer;
+}
+
+auto ArchiveReader::read_experimental_stats() -> ystdlib::error_handling::Result<void> {
+    if (false == m_experimental_stats.has_value()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+    }
+    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
+    auto reader{
+            m_archive_reader_adaptor->checkout_reader_for_section(constants::cArchiveStatsFile)
+    };
+    ZstdDecompressor decompressor{};
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.decompress(decompressor));
+    // YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.decompress(decompressor));
+
+    decompressor.close();
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveStatsFile);
+    return ystdlib::error_handling::success();
+}
+
+auto ArchiveReader::decode_logtype_with_variable_types(
+        LogTypeDictionaryEntry const& logtype_dict_entry,
+        LogTypeStats const& logtype_stats
+) -> ystdlib::error_handling::Result<std::string> {
+    std::string logtype;
+    auto const& logtype_value{logtype_dict_entry.get_value()};
+    auto const& var_type_names{logtype_stats.at(logtype_dict_entry.get_id()).get_var_type_names()};
+    if (var_type_names.size() != logtype_dict_entry.get_num_variables()) {
+        SPDLOG_ERROR(
+                "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} type names "
+                "were given for decoding.",
+                logtype_value.c_str(),
+                logtype_dict_entry.get_num_variables(),
+                var_type_names.size()
+        );
+        return std::errc::bad_message;
+    }
+
+    size_t constant_begin_pos{0};
+    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
+    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
+         ++placeholder_ix)
+    {
+        clp::ir::VariablePlaceholder var_placeholder{};
+        auto const placeholder_position{
+                logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder)
+        };
+        logtype.append(
+                logtype_value,
+                constant_begin_pos,
+                placeholder_position - constant_begin_pos
+        );
+
+        switch (var_placeholder) {
+            case clp::ir::VariablePlaceholder::Integer:
+            case clp::ir::VariablePlaceholder::Float:
+            case clp::ir::VariablePlaceholder::Dictionary: {
+                logtype.append(fmt::format("<{}>", var_type_names.at(var_ix)));
+                ++var_ix;
+                break;
+            }
+            case clp::ir::VariablePlaceholder::Escape: {
+                break;
+            }
+            default: {
+                SPDLOG_ERROR(
+                        "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
+                        "placeholder 0x{:x}",
+                        logtype_value,
+                        clp::enum_to_underlying_type(var_placeholder)
+                );
+                return std::errc::bad_message;
+            }
+        }
+        constant_begin_pos = placeholder_position + 1;
+    }
+
+    if (constant_begin_pos < logtype_value.length()) {
+        logtype.append(logtype_value, constant_begin_pos, logtype_value.length());
+    }
+    return logtype;
 }
 }  // namespace clp_s

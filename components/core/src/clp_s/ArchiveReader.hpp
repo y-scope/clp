@@ -2,20 +2,26 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <map>
-#include <set>
+#include <memory>
+#include <optional>
 #include <span>
+#include <string>
 #include <string_view>
-#include <utility>
+#include <vector>
 
-#include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryReader.hpp"
-#include "InputConfig.hpp"
-#include "PackedStreamReader.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaReader.hpp"
-#include "search/Projection.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryReader.hpp"
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/PackedStreamReader.hpp>
+#include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaReader.hpp>
+#include <clp_s/search/Projection.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -27,15 +33,26 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    struct Options {
+        Options() = default;
+
+        Options(NetworkAuthOption network_auth, bool experimental)
+                : m_network_auth{network_auth},
+                  m_experimental{experimental} {}
+
+        NetworkAuthOption m_network_auth{};
+        bool m_experimental{false};
+    };
+
     // Constructor
     ArchiveReader() : m_is_open(false) {}
 
     /**
      * Opens an archive for reading.
      * @param archive_path
-     * @param network_auth
+     * @param options
      */
-    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+    void open(Path const& archive_path, Options const& options);
 
     /**
      * Reads the dictionaries and metadata.
@@ -76,6 +93,11 @@ public:
         m_array_dict->read_entries(lazy);
         return m_array_dict;
     }
+
+    /**
+     * Reads the experimental statistics from the archive.
+     */
+    auto read_experimental_stats() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Reads the metadata from the archive.
@@ -149,7 +171,25 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+
+    auto get_experimental_stats() const -> std::optional<ExperimentalStats> const& {
+        return m_experimental_stats;
+    }
+
+    /**
+     * Decodes variable placeholders from `logtype_dict_entry` replacing them with their type names.
+     * @param logtype_dict_entry Only supports clp-s entry due to the requirement of experimental
+     * features for the type names.
+     * @param logtype_stats Contains the type names for all logtypes.
+     * @return A result containing a logtype string with variable type names, or an error code
+     * indicating the failure:
+     * - `std::errc::bad_message` if the logtype information is malformed.
+     */
+    static auto decode_logtype_with_variable_types(
+            LogTypeDictionaryEntry const& logtype_dict_entry,
+            LogTypeStats const& logtype_stats
+    ) -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * @return Whether this archive can contain columns with the deprecated DateString timestamp
@@ -231,6 +271,8 @@ private:
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
+
+    std::optional<ExperimentalStats> m_experimental_stats;
 };
 }  // namespace clp_s
 

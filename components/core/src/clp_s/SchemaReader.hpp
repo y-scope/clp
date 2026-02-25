@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "ColumnReader.hpp"
 #include "FileReader.hpp"
 #include "JsonSerializer.hpp"
@@ -281,6 +283,27 @@ private:
      */
     size_t
     generate_structured_object_template(int32_t id, size_t column_start, std::span<int32_t> schema);
+
+    /**
+     * Generates a JSON template for a LogMessage.
+     * @param log_msg_id The LogMessage node ID.
+     * @return A result containing the index of the next reader in m_columns after those consumed by
+     * this object, or an error code indicating the failure:
+     * - ClpsErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
+     * - ClpsErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
+     */
+    auto generate_log_message_template(int32_t log_msg_id)
+            -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Generates a JSON template for a CompositeVar.
+     * @param var_id The CompositeVar node ID.
+     * @return A result containing the index of the next reader in m_columns after those consumed by
+     * this object, or an error code indicating the failure:
+     * - ClpsErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
+     * - ClpsErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
+     */
+    auto generate_composite_var_template(int32_t var_id) -> ystdlib::error_handling::Result<size_t>;
 
     /**
      * Finds the common root of the subtree containing cur_root and next_root, and adds brackets

@@ -75,7 +75,9 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
         if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
-            nullptr != clp_reader && NodeType::ClpString == clp_reader->get_type())
+            nullptr != clp_reader
+            && (NodeType::ClpString == clp_reader->get_type()
+                || NodeType::LogType == clp_reader->get_type()))
         {
             m_clp_string_readers[column_id].push_back(clp_reader);
         } else if (auto* const var_reader
@@ -972,7 +974,8 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             if (col->matches_type(node_to_literal_type(tree_node_type))) {
                 auto literal_type = node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
-                if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
+                if (NodeType::ClpString != tree_node_type && NodeType::LogType != tree_node_type
+                    && NodeType::VarString != tree_node_type
                     && NodeType::DeprecatedDateString != tree_node_type)
                 {
                     m_wildcard_to_searched_basic_columns[col].insert(node);
