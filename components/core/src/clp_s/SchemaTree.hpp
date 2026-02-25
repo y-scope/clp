@@ -1,8 +1,8 @@
 #ifndef CLP_S_SCHEMATREE_HPP
 #define CLP_S_SCHEMATREE_HPP
 
-#include <functional>
 #include <cstring>
+#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
