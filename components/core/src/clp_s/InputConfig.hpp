@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -72,6 +73,16 @@ struct Path {
  * @return a Path object representing the raw path or url
  */
 [[nodiscard]] auto get_path_object_for_raw_path(std::string_view const path) -> Path;
+
+/**
+ * Removes a prefix from a filesystem path.
+ * @param path
+ * @param prefix
+ * @return An option containing the path with the prefix removed on success, or an empty option on
+ * failure.
+ */
+[[nodiscard]] auto remove_path_prefix(std::string_view path, std::string_view prefix)
+        -> std::optional<std::string>;
 
 /**
  * Recursively collects all file paths from the given raw path, including the path itself.
