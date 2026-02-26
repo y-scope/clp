@@ -14,8 +14,9 @@
 # companion script (setup-corporate-proxy.sh) runs inside the container to
 # install the CA bundle into the system trust store.
 #
-# When no CA bundle is found on the host, everything is a no-op — builds work
-# identically to before.
+# When no CA bundle is found on the host, an empty file is staged so that the
+# Dockerfile's COPY succeeds; the in-container setup script detects the empty
+# file and skips trust-store installation.
 
 # Detects the host's CA certificate bundle.
 # Returns the path via stdout, or returns 1 if not found.
