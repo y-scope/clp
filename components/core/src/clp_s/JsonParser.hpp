@@ -28,7 +28,7 @@
 
 namespace clp_s {
 struct JsonParserOption {
-    std::vector<Path> input_paths;
+    std::vector<std::pair<Path, std::string>> input_paths_and_canonical_filenames;
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size{};
@@ -41,7 +41,6 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
-    std::optional<std::string> path_prefix_to_remove{};
 };
 
 class JsonParser {
@@ -226,7 +225,7 @@ private:
     static bool
     check_and_log_curl_error(Path const& path, std::shared_ptr<clp::ReaderInterface> reader);
 
-    std::vector<Path> m_input_paths;
+    std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
 
     Schema m_current_schema;

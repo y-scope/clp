@@ -144,9 +144,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
-          m_input_paths(option.input_paths),
-          m_network_auth(option.network_auth),
-          m_path_prefix_to_remove{option.path_prefix_to_remove} {
+          m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
+          m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -647,23 +646,7 @@ void JsonParser::parse_line(
 
 bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
-    for (auto const& path : m_input_paths) {
-        std::string file_name_in_metadata{path.path};
-        if (InputSource::Filesystem == path.source && m_path_prefix_to_remove.has_value()) {
-            auto const result_option{
-                    remove_path_prefix(path.path, m_path_prefix_to_remove.value())
-            };
-            if (false == result_option.has_value()) {
-                SPDLOG_ERROR(
-                        "Failed to remove prefix \"{}\" from path \"{}\".",
-                        m_path_prefix_to_remove.value(),
-                        path.path
-                );
-                return false;
-            }
-            file_name_in_metadata = result_option.value();
-        }
-
+    for (auto const& [path, file_name_in_metadata] : m_input_paths_and_canonical_filenames) {
         auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
             std::ignore = m_archive_writer->close();

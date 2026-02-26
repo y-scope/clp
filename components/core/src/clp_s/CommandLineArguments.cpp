@@ -330,6 +330,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
             }
 
+            std::optional<std::string> path_prefix_to_remove_option{};
             if (false == path_prefix_to_remove.empty()) {
                 if (false == std::filesystem::exists(path_prefix_to_remove)) {
                     throw std::invalid_argument("Specified prefix to remove does not exist.");
@@ -353,7 +354,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     }
                     path_prefix_to_remove = normalized_path.string();
                 }
-                m_path_prefix_to_remove.emplace(path_prefix_to_remove);
+                path_prefix_to_remove_option.emplace(path_prefix_to_remove);
             }
 
             for (auto const& path : input_paths) {
@@ -379,6 +380,32 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_input_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
+            }
+
+            for (auto const& input_path : m_input_paths) {
+                if (false == path_prefix_to_remove_option.has_value()
+                    || InputSource::Filesystem != input_path.source)
+                {
+                    m_input_paths_and_canonical_filenames.emplace_back(input_path, input_path.path);
+                    continue;
+                }
+
+                auto const result_option{
+                        remove_path_prefix(input_path.path, path_prefix_to_remove_option.value())
+                };
+                if (false == result_option.has_value()) {
+                    throw std::invalid_argument(
+                            fmt::format(
+                                    "Failed to remove prefix \"{}\" from path \"{}\".",
+                                    path_prefix_to_remove_option.value(),
+                                    input_path.path
+                            )
+                    );
+                }
+                m_input_paths_and_canonical_filenames.emplace_back(
+                        input_path,
+                        result_option.value()
+                );
             }
 
             validate_network_auth(auth, m_network_auth);
