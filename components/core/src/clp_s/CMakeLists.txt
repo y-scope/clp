@@ -71,6 +71,10 @@ set(
         ../clp/ffi/ir_stream/Deserializer.hpp
         ../clp/ffi/ir_stream/encoding_methods.cpp
         ../clp/ffi/ir_stream/encoding_methods.hpp
+        ../clp/ffi/ir_stream/IrErrorCode.cpp
+        ../clp/ffi/ir_stream/IrErrorCode.hpp
+        ../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../clp/ffi/ir_stream/IrSerializationError.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp
@@ -102,6 +106,8 @@ set(
         ../clp/GrepCore.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
+        ../clp/SchemaSearcher.cpp
+        ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
@@ -156,6 +162,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         )
         add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
         target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
+        target_include_directories(clp_s_clp_dependencies PUBLIC ../)
         target_link_libraries(
                 clp_s_clp_dependencies
                 PUBLIC
@@ -219,6 +226,7 @@ if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
         )
         add_library(clp_s::reducer_dependencies ALIAS clp_s_reducer_dependencies)
         target_compile_features(clp_s_reducer_dependencies PRIVATE cxx_std_20)
+        target_include_directories(clp_s_reducer_dependencies PUBLIC ../)
         target_link_libraries(
                 clp_s_reducer_dependencies
                 PUBLIC
@@ -264,7 +272,7 @@ if(CLP_BUILD_CLP_S_IO)
         target_link_libraries(
                 clp_s_io
                 PRIVATE
-                Boost::iostreams Boost::url
+                Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
                 simdjson::simdjson
@@ -333,13 +341,14 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 absl::flat_hash_map
                 clp_s::clp_dependencies
                 clp_s::io
+                clp_s::timestamp_parser
+                clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                clp_s::timestamp_pattern
                 fmt::fmt
                 spdlog::spdlog
         )
@@ -408,13 +417,14 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 absl::flat_hash_map
                 clp::string_utils
                 clp_s::io
+                clp_s::timestamp_parser
+                clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
-                clp_s::timestamp_pattern
                 fmt::fmt
                 spdlog::spdlog
         )
@@ -517,6 +527,7 @@ if(CLP_BUILD_EXECUTABLES)
                 CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
         )
         target_compile_features(clp-s PRIVATE cxx_std_20)
+        target_include_directories(clp-s PRIVATE ../)
         target_link_libraries(
                 clp-s
                 PRIVATE

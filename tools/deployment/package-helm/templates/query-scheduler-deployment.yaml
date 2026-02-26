@@ -31,16 +31,20 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
+        {{- if has "queue" .Values.clpConfig.bundled }}
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "queue"
           ) | nindent 10 }}
+        {{- end }}
+        {{- if has "redis" .Values.clpConfig.bundled }}
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "redis"
           ) | nindent 10 }}
+        {{- end }}
       containers:
         - name: "query-scheduler"
           image: "{{ include "clp.image.ref" . }}"
@@ -70,28 +74,28 @@ spec:
           ports:
             - name: "query-scheduler"
               containerPort: 7000
-          readinessProbe:
-            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            tcpSocket: &query-scheduler-health-check
-              port: 7000
-          livenessProbe:
-            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            tcpSocket: *query-scheduler-health-check
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/clp-config.yaml"
-              subPath: "clp-config.yaml"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "query-scheduler"
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/query_scheduler"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
           command: [
             "python3", "-u",
             "-m", "job_orchestration.scheduler.query.query_scheduler",
             "--config", "/etc/clp-config.yaml"
           ]
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            tcpSocket: &query-scheduler-health-check
+              port: "query-scheduler"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            tcpSocket: *query-scheduler-health-check
       volumes:
         - {{- include "clp.pvcVolume" (dict
             "root" .

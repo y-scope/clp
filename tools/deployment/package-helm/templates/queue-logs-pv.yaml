@@ -1,9 +1,10 @@
-{{- include "clp.createLocalPv" (dict
+{{- if has "queue" .Values.clpConfig.bundled }}
+{{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "queue"
   "name" "logs"
-  "nodeRole" "control-plane"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/queue" .Values.clpConfig.logs_directory)
 ) }}
+{{- end }}

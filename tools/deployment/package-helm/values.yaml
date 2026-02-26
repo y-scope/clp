@@ -18,12 +18,95 @@ image:
     pullPolicy: "Always"
     tag: "main"
 
+# - If false: Single-node deployment.
+#   - PVs use local storage bound to a single node.
+#   - Pods automatically tolerate control-plane taints.
+#   - Each worker deployment supports only 1 replica.
+# - If true: Multi-node deployment.
+#   - PVs use a path on the host (`hostPath`) without node affinity.
+#   - `hostPath` must point to externally managed shared storage (e.g., NFS/CephFS) mounted at the
+#      same path on all nodes.
+distributedDeployment: false
+
+# Number of concurrent processes per worker pod.
 workerConcurrency: 8
 
+compressionWorker:
+  replicas: 1
+  # Controls which nodes run compression workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "compression"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+queryWorker:
+  replicas: 1
+  # Controls which nodes run query workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "query"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+reducer:
+  replicas: 1
+  # Controls which nodes run reducers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: compute
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "reducer"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+storage:
+  # Name of the StorageClass for PVs and PVCs.
+  # - If set to "local-storage" (default), the chart will create a StorageClass
+  #   with volumeBindingMode=WaitForFirstConsumer.
+  # - If set to any other value, that StorageClass must already exist in the cluster.
+  storageClassName: "local-storage"
+
 clpConfig:
+  # List of third-party services bundled (deployed) as part of the chart.
+  # Remove a service from this list to use an external instance instead, and configure its host/port
+  # accordingly in the service-specific sections below.
+  bundled:
+    - "database"
+    - "queue"
+    - "redis"
+    - "results_cache"
+
   package:
     storage_engine: "clp-s"
     query_engine: "clp-s"
+
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
@@ -36,9 +119,14 @@ clpConfig:
 
   database:
     type: "mariadb"  # "mariadb" or "mysql"
+    # Host and port for the database service. When "database" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
     port: 30306
     names:
       clp: "clp-db"
+      spider: "spider-db"
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -50,7 +138,19 @@ clpConfig:
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
 
+  queue:
+    # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 5672
+
   redis:
+    # Host and port for the Redis service. When "redis" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 6379
     query_backend_database: 0
     compression_backend_database: 1
 
@@ -59,6 +159,10 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   results_cache:
+    # Host and port for the results cache service. When "results_cache" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
     port: 30017
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"
@@ -76,6 +180,23 @@ clpConfig:
     port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
+
+  mcp_server: null
+  #   port: 30800
+  #   logging_level: "INFO"
+
+  # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+  log_ingestor:
+    port: 30302
+    # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
+    # arrives.
+    buffer_flush_timeout: 300
+    # The log buffer size (in bytes) that triggers a flush for compression.
+    buffer_flush_threshold: 4294967296  # 4 GiB
+    # The capacity of the internal channel used for communication between an ingestion job and the
+    # log buffer.
+    channel_capacity: 10
+    logging_level: "INFO"
 
   # Where archives should be output to
   archive_output:
@@ -140,6 +261,9 @@ clpConfig:
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
   tmp_directory: "/tmp/clp/var/tmp"
+
+  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
+  aws_config_directory: null
 
 credentials:
   database:

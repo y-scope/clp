@@ -44,7 +44,7 @@
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
-#include "TimestampPattern.hpp"
+#include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
 using clp_s::cArchiveFormatDevelopmentVersionFlag;
@@ -188,10 +188,12 @@ bool search_archive(
         return true;
     }
 
-    ast::SetTimestampLiteralPrecision date_precision_pass{
-            ast::TimestampLiteral::Precision::Milliseconds
-    };
-    expr = date_precision_pass.run(expr);
+    if (archive_reader->has_deprecated_timestamp_format()) {
+        ast::SetTimestampLiteralPrecision date_precision_pass{
+                ast::TimestampLiteral::Precision::Milliseconds
+        };
+        expr = date_precision_pass.run(expr);
+    }
 
     // Narrow against schemas
     auto match_pass = std::make_shared<SchemaMatch>(
@@ -313,7 +315,6 @@ int main(int argc, char const* argv[]) {
         return 1;
     }
 
-    clp_s::TimestampPattern::init();
 #if !CLP_S_EXCLUDE_MONGOCXX
     mongocxx::instance const mongocxx_instance{};
 #endif

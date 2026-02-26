@@ -1,3 +1,4 @@
+{{- if has "redis" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -26,11 +27,6 @@ spec:
         - name: "redis"
           image: "redis:7.2.4"
           imagePullPolicy: "Always"
-          command: [
-            "redis-server",
-            "/etc/redis/redis.conf",
-            "--requirepass", "$(REDIS_PASSWORD)"
-          ]
           env:
             - name: "REDIS_PASSWORD"
               valueFrom:
@@ -41,10 +37,6 @@ spec:
             - name: "redis"
               containerPort: 6379
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/redis/redis.conf"
-              subPath: "redis.conf"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "redis"
                 "name" "data"
@@ -55,6 +47,15 @@ spec:
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/redis"
+            - name: "config"
+              mountPath: "/etc/redis/redis.conf"
+              subPath: "redis.conf"
+              readOnly: true
+          command: [
+            "redis-server",
+            "/etc/redis/redis.conf",
+            "--requirepass", "$(REDIS_PASSWORD)"
+          ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &redis-health-check
@@ -105,3 +106,4 @@ spec:
         resources:
           requests:
             storage: "5Gi"
+{{- end }}

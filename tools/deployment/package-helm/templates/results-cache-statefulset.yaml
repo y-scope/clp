@@ -1,3 +1,4 @@
+{{- if has "results_cache" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -26,18 +27,10 @@ spec:
         - name: "results-cache"
           image: "mongo:7.0.1"
           imagePullPolicy: "Always"
-          args: [
-            "--config", "/etc/mongo/mongod.conf",
-            "--bind_ip", "0.0.0.0"
-          ]
           ports:
             - name: "results-cache"
               containerPort: 27017
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/mongo/mongod.conf"
-              subPath: "mongod.conf"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "results-cache"
                 "name" "data"
@@ -48,6 +41,14 @@ spec:
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/mongodb"
+            - name: "config"
+              mountPath: "/etc/mongo/mongod.conf"
+              subPath: "mongod.conf"
+              readOnly: true
+          args: [
+            "--config", "/etc/mongo/mongod.conf",
+            "--bind_ip", "0.0.0.0"
+          ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &results-cache-health-check
@@ -97,3 +98,4 @@ spec:
         resources:
           requests:
             storage: "5Gi"
+{{- end }}

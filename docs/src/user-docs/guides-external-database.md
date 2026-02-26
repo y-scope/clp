@@ -119,6 +119,21 @@ When using AWS RDS:
 CLP is compatible with any MongoDB database. For installation instructions, see the [MongoDB
 installation documentation][mongodb-install].
 
+:::{warning}
+Running an external MongoDB on the **same host** as CLP (i.e., using `localhost` or `127.0.0.1` as
+the `results_cache` host) is not supported. CLP's `results-cache-indices-creator` initializes a
+MongoDB replica set using the configured hostname, which MongoDB must be able to resolve to itself;
+`localhost` from inside a Docker container does not resolve to the host machine.
+
+Instead, either:
+
+* Keep `results_cache` in the `bundled` list (recommended for single-host deployments).
+* Use a truly remote MongoDB instance and specify its hostname or IP.
+* If you must use a same-host MongoDB, configure `results_cache.host` in `clp-config.yaml` to the
+  host's non-loopback IP address (e.g., `192.168.1.10`) and ensure MongoDB is bound to that
+  address.
+:::
+
 ### Creating the CLP database in MongoDB
 
 MongoDB automatically creates databases and collections when first accessed, so no manual database
@@ -173,28 +188,39 @@ When using AWS DocumentDB or MongoDB Atlas:
 
 ## Configuring CLP to use external databases
 
-After setting up your external databases, configure CLP to use them by editing `etc/clp-config.yaml`:
+After setting up your external databases, configure CLP to use them:
 
-```yaml
-database:
-  host: "<mariadb-hostname-or-ip>"
-  port: 3306
-  name: "clp-db"
-  # Credentials will be set in etc/credentials.yaml
+1. Edit `etc/clp-config.yaml` to specify which services are bundled (managed by the `clp-package`
+   Docker Compose project):
 
-results_cache:
-  host: "<mongodb-hostname-or-ip>"
-  port: 27017
-  name: "clp-query-results"
-```
+   ```yaml
+   # Remove "database" and "results_cache" from this list to use external instances
+   bundled:
+     # - "database"
+     - "queue"
+     - "redis"
+     # - "results_cache"
+   ```
 
-Set the credentials in `etc/credentials.yaml`:
+2. Configure the connection details for your external databases in `etc/clp-config.yaml`:
 
-```yaml
-database:
-  username: "clp-user"
-  password: "<your-mariadb-password>"
-```
+   ```yaml
+   database:
+     host: "<mariadb-hostname-or-ip>"
+     port: <mariadb-port>
+
+   results_cache:
+     host: "<mongodb-hostname-or-ip>"
+     port: <mongodb-port>
+   ```
+
+3. Set the credentials in `etc/credentials.yaml`:
+
+   ```yaml
+   database:
+     username: "clp-user"
+     password: "<your-mariadb-password>"
+   ```
 
 :::{note}
 When using external databases in a multi-host deployment, you do **not** need to start the
@@ -205,7 +231,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 [aws-rds]: https://aws.amazon.com/rds/
 [azure-databases]: https://azure.microsoft.com/en-us/products/category/databases
-[docker-compose-orchestration]: ../dev-docs/design-deployment-orchestration.md#docker-compose-orchestration
+[docker-compose-orchestration]: guides-docker-compose-deployment.md
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
-[multi-host-guide]: guides-multi-host.md#starting-clp
+[multi-host-guide]: guides-docker-compose-deployment.md#starting-clp

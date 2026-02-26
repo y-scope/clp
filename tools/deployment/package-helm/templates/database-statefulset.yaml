@@ -1,3 +1,4 @@
+{{- if has "database" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -53,10 +54,6 @@ spec:
             - name: "database"
               containerPort: 3306
           volumeMounts:
-            - name: "config"
-              mountPath: "/etc/mysql/conf.d/logging.cnf"
-              subPath: "mysql-logging.cnf"
-              readOnly: true
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "database"
                 "name" "data"
@@ -67,6 +64,10 @@ spec:
                 "name" "logs"
               ) | quote }}
               mountPath: "/var/log/mysql"
+            - name: "config"
+              mountPath: "/etc/mysql/conf.d/logging.cnf"
+              subPath: "mysql-logging.cnf"
+              readOnly: true
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &database-health-check
@@ -117,3 +118,4 @@ spec:
         resources:
           requests:
             storage: "5Gi"
+{{- end }}

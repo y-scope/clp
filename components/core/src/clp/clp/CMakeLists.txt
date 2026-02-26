@@ -28,6 +28,10 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/IrErrorCode.cpp
+        ../ffi/ir_stream/IrErrorCode.hpp
+        ../ffi/ir_stream/IrSerializationError.cpp
+        ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
         ../ffi/StringBlob.hpp
@@ -180,6 +184,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(clp PRIVATE cxx_std_20)
         target_include_directories(clp
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(clp
