@@ -253,7 +253,7 @@ async fn create_sqs_listener_job(
     post,
     path = "/job/{job_id}/terminate",
     tags = ["IngestionJob"],
-    description = "Terminates the ingestion job instance identified by the given job ID.\n\n
+    description = "Terminates the ingestion job instance identified by the given job ID.\n\n\
         This operation only terminates the job instance; the job record, including its status and \
         statistics, is preserved and can still be accessible using the same job ID.\n\n\
         This operation is idempotent.",
