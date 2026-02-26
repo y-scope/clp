@@ -1,3 +1,4 @@
+{{- if has "database" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -86,3 +87,4 @@ spec:
         resources:
           requests:
             storage: "20Gi"
+{{- end }}

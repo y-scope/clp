@@ -15,12 +15,14 @@ spec:
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       restartPolicy: "OnFailure"
+      {{- if has "results_cache" .Values.clpConfig.bundled }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "results-cache"
           ) | nindent 10 }}
+      {{- end }}
       containers:
         - name: "results-cache-indices-creator"
           image: "{{ include "clp.image.ref" . }}"

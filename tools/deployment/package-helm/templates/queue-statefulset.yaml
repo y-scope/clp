@@ -1,3 +1,4 @@
+{{- if has "queue" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -47,3 +48,4 @@ spec:
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *queue-health-check
+{{- end }}
