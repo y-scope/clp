@@ -144,10 +144,6 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
 
             for record in event.records {
                 if let Some(object_metadata) = self.extract_object_metadata(record) {
-                    tracing::info!(
-                        object = ? object_metadata,
-                        "Received new object metadata from SQS."
-                    );
                     object_metadata_to_ingest.push(object_metadata);
                 }
             }

@@ -131,7 +131,6 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
                 size: size.try_into()?,
                 id: None,
             };
-            tracing::info!(object = ? object_metadata, "Scanned new object metadata on S3.");
             object_metadata_to_ingest.push(object_metadata);
         }
 

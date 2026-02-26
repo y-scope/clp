@@ -336,62 +336,38 @@ impl ClpIngestionState {
                     .bind(self.job_id);
             }
 
-            let result = query.execute(&mut **tx).await?;
-            last_inserted_ids.push(result.last_insert_id());
+            last_inserted_ids.push(query.execute(&mut **tx).await?.last_insert_id());
         }
 
         Ok((CHUNK_SIZE, last_inserted_ids))
     }
 
-    /// Updates the ingestion stats of the underling job, and commits the transaction.
-    ///
-    /// # NOTE
-    ///
-    /// This method returns success only if the underlying job is valid and in
-    /// [`ClpIngestionJobStatus::Running`] state. On failure, the transaction will be rolled back
-    /// and all previous operations in the transaction will be dropped.
+    /// Commits the transaction if the underlying job is valid and in
+    /// [`ClpIngestionJobStatus::Running`] state.
     ///
     /// # Returns
     ///
-    /// `Ok(())` on success, which indicates the ingestion stats have been updated and the
-    /// transaction has been committed.
+    /// `Ok(())` on success with the transaction committed.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if no rows were affected by the job status update, which may indicates
-    ///   the job doesn't exist, or it is not in the running state.
-    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * [`anyhow::Error`] if the job is not in the running state.
+    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// This method panics if:
-    ///
-    /// * The number of objects exceeds `u64::MAX`, which should be practically impossible.
-    async fn update_ingestion_stats_and_commit(
+    async fn check_job_status_and_commit(
         &self,
         mut tx: sqlx::Transaction<'_, sqlx::MySql>,
-        num_files_ingested: usize,
     ) -> anyhow::Result<()> {
-        const BASE_JOB_UPDATE_QUERY: &str = formatcp!(
-            r"UPDATE `{table}` SET `num_files_ingested` = `num_files_ingested` + ?
-                WHERE `id` = ? AND `status` = ?;",
+        let curr_status: ClpIngestionJobStatus = sqlx::query_scalar(formatcp!(
+            r"SELECT `status` FROM `{table}` WHERE `id` = ?",
             table = INGESTION_JOB_TABLE_NAME,
-        );
-
-        let result = sqlx::query(BASE_JOB_UPDATE_QUERY)
-            .bind(
-                u64::try_from(num_files_ingested)
-                    .expect("number of objects should not exceed u64::MAX"),
-            )
-            .bind(self.job_id)
-            .bind(ClpIngestionJobStatus::Running)
-            .execute(&mut *tx)
-            .await?;
-
-        if result.rows_affected() == 0 {
+        ))
+        .bind(self.job_id)
+        .fetch_one(&mut *tx)
+        .await?;
+        if curr_status != ClpIngestionJobStatus::Running {
             return Err(anyhow::anyhow!(
                 "Job status update failed. The job may not exist or is not in the running state."
             ));
@@ -418,7 +394,7 @@ impl ClpIngestionState {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::ingest_s3_object_metadata`]'s return values on failure.
-    /// * Forwards [`Self::update_ingestion_stats_and_commit`]'s return values on failure.
+    /// * Forwards [`Self::check_job_status_and_commit`]'s return values on failure.
     /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
     ///
     /// # Panics
@@ -444,7 +420,7 @@ impl ClpIngestionState {
                 );
             })?;
 
-        self.update_ingestion_stats_and_commit(tx, objects.len())
+        self.check_job_status_and_commit(tx)
             .await
             .inspect_err(|err| {
                 tracing::error!(
@@ -919,7 +895,7 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     `id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
     `config` TEXT NOT NULL,
     `status` {status_enum} NOT NULL DEFAULT '{default_status}',
-    `num_files_ingested` BIGINT unsigned NOT NULL DEFAULT '0',
+    `status_msg` TEXT NULL DEFAULT NULL,
     `num_files_compressed` BIGINT unsigned NOT NULL DEFAULT '0',
     `error_msg` TEXT NULL DEFAULT NULL,
     `creation_ts` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -960,9 +936,11 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     `key` VARCHAR(1024) NOT NULL,
     `size` BIGINT unsigned NOT NULL,
     `status` {status_enum} NOT NULL DEFAULT '{default_status}',
-    `status_msg` TEXT NULL DEFAULT NULL,
     `ingestion_job_id` BIGINT unsigned NOT NULL,
     `compression_job_id` INT NULL DEFAULT NULL,
+    `creation_ts` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `last_update_ts` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+        ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (`id`),
     INDEX `index_ingestion_job_id` (`ingestion_job_id`) USING BTREE,
     INDEX `index_compression_job_id` (`compression_job_id`) USING BTREE,
