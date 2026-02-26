@@ -208,7 +208,11 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
             match &result {
                 Ok(()) => {}
                 Err(err) => {
-                    tracing::error!(error = ? err, "S3 scanner task execution failed.");
+                    tracing::error!(
+                        error = ? err,
+                        job_id = ? id,
+                        "S3 scanner task execution failed."
+                    );
                     cloned_state
                         .fail(format!("S3 scanner task execution failed: {err}"))
                         .await;

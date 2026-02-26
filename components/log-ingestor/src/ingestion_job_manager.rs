@@ -170,7 +170,7 @@ impl IngestionJobManagerState {
     /// * Forwards [`ClpIngestionState::get_job_status`]' return values on failure.
     /// * Forwards [`IngestionJobState::end`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::get_job_status`]' return values on failure.
-    /// * Forwards [`ClpDbIngestionConnector::try_end`]'s return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::try_fail`]'s return values on failure.
     pub async fn shutdown_and_remove_job_instance(
         &self,
         job_id: IngestionJobId,
