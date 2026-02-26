@@ -172,36 +172,17 @@ impl ClpDbIngestionConnector {
             r"SELECT COUNT(*) FROM `{table}` WHERE `id` = ?;",
             table = INGESTION_JOB_TABLE_NAME,
         ))
-        .bind(job_id)
-        .fetch_one(&self.db_pool)
-        .await?;
+            .bind(job_id)
+            .fetch_one(&self.db_pool)
+            .await?;
         Ok(count > 0)
     }
 
-    /// Attempts to fail an ingestion job with the given ID.
-    ///
-    /// # NOTE
-    ///
-    /// This method doesn't perform any validation on the job ID before attempting to fail it, which
-    /// means the job ID may not exist in the CLP DB.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`update_job_status`]'s return values on failure.
-    pub async fn try_fail(&self, job_id: IngestionJobId, error_msg: String) -> anyhow::Result<()> {
-        update_job_status(
-            self.db_pool.clone(),
+    pub async fn try_end(&self, job_id: IngestionJobId) -> anyhow::Result<()> {
+        let state = ClpIngestionState {
             job_id,
-            ClpIngestionJobStatus::Failed,
-            Some(&error_msg),
-        )
-        .await
+            db_pool: self.db_pool,
+        };
     }
 }
 
@@ -423,15 +404,10 @@ impl IngestionJobState for ClpIngestionState {
     ///
     /// # Errors
     ///
-    /// * Forwards [`update_job_status`]'s return values on failure.
+    /// * Forwards [`Self::update_job_status`]'s return values on failure.
     async fn start(&self) -> anyhow::Result<()> {
-        update_job_status(
-            self.db_pool.clone(),
-            self.job_id,
-            ClpIngestionJobStatus::Running,
-            None,
-        )
-        .await
+        self.update_job_status(ClpIngestionJobStatus::Running, None)
+            .await
     }
 
     /// # NOTE
@@ -441,15 +417,10 @@ impl IngestionJobState for ClpIngestionState {
     ///
     /// # Errors
     ///
-    /// * Forwards [`update_job_status`]'s return values on failure.
+    /// * Forwards [`Self::update_job_status`]'s return values on failure.
     async fn end(&self) -> anyhow::Result<()> {
-        update_job_status(
-            self.db_pool.clone(),
-            self.job_id,
-            ClpIngestionJobStatus::Finished,
-            None,
-        )
-        .await
+        self.update_job_status(ClpIngestionJobStatus::Finished, None)
+            .await
     }
 
     /// # NOTE
@@ -459,15 +430,11 @@ impl IngestionJobState for ClpIngestionState {
     ///
     /// # Errors
     ///
-    /// * Forwards [`update_job_status`]'s return values on failure.
+    /// * Forwards [`Self::update_job_status`]'s return values on failure.
     async fn fail(&self, msg: String) {
-        match update_job_status(
-            self.db_pool.clone(),
-            self.job_id,
-            ClpIngestionJobStatus::Failed,
-            Some(&msg),
-        )
-        .await
+        match self
+            .update_job_status(ClpIngestionJobStatus::Failed, Some(&msg))
+            .await
         {
             Ok(()) => {}
             Err(err) => {
@@ -944,83 +911,6 @@ CREATE TABLE IF NOT EXISTS `{table}` (
         default_status = IngestedS3ObjectMetadataStatus::Buffered,
         compression_job_table = crate::compression::CLP_COMPRESSION_JOB_TABLE_NAME,
     )
-}
-
-/// Updates the status of the underlying ingestion job in the CLP database.
-///
-/// # NOTE
-///
-/// This method is idempotent. It returns success if the underlying job is already in the target
-/// status.
-///
-/// # Returns
-///
-/// `Ok(())` on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`anyhow::Error`] if the ingestion job is not found in the database.
-/// * [`anyhow::Error`] if the status transition is invalid (as indicated by
-///   [`ClpIngestionJobStatus::is_valid_transition`]).
-/// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
-/// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
-/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-/// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-async fn update_job_status(
-    db_pool: MySqlPool,
-    job_id: IngestionJobId,
-    status: ClpIngestionJobStatus,
-    status_msg: Option<&str>,
-) -> anyhow::Result<()> {
-    let mut tx = db_pool.begin().await?;
-
-    // Lock the row for update and fetch the current status
-    let curr_status: ClpIngestionJobStatus = sqlx::query_scalar(formatcp!(
-        r"SELECT `status` FROM `{table}` WHERE `id` = ? FOR UPDATE",
-        table = INGESTION_JOB_TABLE_NAME,
-    ))
-    .bind(job_id)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(|e| match e {
-        sqlx::Error::RowNotFound => {
-            anyhow::anyhow!("Ingestion job with ID {job_id} not found.")
-        }
-        other => other.into(),
-    })?;
-
-    if curr_status == status {
-        // For idempotency, we skip the update if the job is already in the target status.
-        tx.commit().await?;
-        return Ok(());
-    }
-
-    if !ClpIngestionJobStatus::is_valid_transition(curr_status, status) {
-        const ERROR_MSG: &str = "Invalid job status transition.";
-        tracing::error!(
-            job_id = ? job_id,
-            from_status = ? curr_status,
-            to_status = ? status,
-            ERROR_MSG
-        );
-        return Err(anyhow::anyhow!(ERROR_MSG));
-    }
-
-    sqlx::query(formatcp!(
-        r"UPDATE `{table}` SET `status` = ?, `status_msg` = ? WHERE `id` = ?;",
-        table = INGESTION_JOB_TABLE_NAME,
-    ))
-    .bind(status)
-    .bind(status_msg)
-    .bind(job_id)
-    .execute(&mut *tx)
-    .await?;
-
-    tx.commit().await?;
-    tracing::info!(job_id = ? job_id, status = ? status, "Ingestion job status updated.");
-    Ok(())
 }
 
 #[cfg(test)]

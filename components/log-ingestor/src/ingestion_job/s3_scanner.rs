@@ -202,14 +202,14 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let state_copy = state.clone();
+        let cloned_state = state.clone();
         let handle = tokio::spawn(async move {
             let result = task.run(child_cancel_token).await;
             match &result {
                 Ok(()) => {}
                 Err(err) => {
                     tracing::error!(error = ? err, "S3 scanner task execution failed.");
-                    state_copy
+                    cloned_state
                         .fail(format!("S3 scanner task execution failed: {err}"))
                         .await;
                 }
@@ -225,16 +225,6 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
     }
 
     /// Shuts down and waits for the underlying task to complete.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards the underlying task's return values on failure ([`Task::run`]).
     pub async fn shutdown_and_join(self) {
         self.cancel_token.cancel();
         match self.handle.await {
@@ -262,6 +252,7 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
                     .await;
             }
         }
+        tracing::info!(job_id = ? self.id, "S3 scanner job shutdown complete.");
     }
 
     /// # Returns

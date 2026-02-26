@@ -126,16 +126,6 @@ impl Listener {
     }
 
     /// Shuts down the listener and waits for the underlying task to complete.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards the underlying task's return values on failure ([`ListenerTask::run`]).
     pub async fn shutdown_and_join(self) {
         self.cancel_token.cancel();
         match self.handle.await {

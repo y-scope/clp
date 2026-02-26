@@ -59,7 +59,7 @@ impl CompressionJobSubmitter {
     /// # Returns
     ///
     /// A newly created instance with the given parameters, dedicated to submitting compression jobs
-    /// created by the given ingestion job specification.
+    /// using the given [`ClpCompressionState`] for its underlying ingestion job.
     #[must_use]
     pub fn new(
         clp_compression_state: ClpCompressionState,
@@ -108,7 +108,7 @@ impl CompressionJobSubmitter {
     }
 }
 
-/// Submits a CLP compression job with the given IO config and waits for its completion.
+/// Submits a CLP compression job with the given IO config template and waits for its completion.
 ///
 /// # NOTE
 ///
@@ -116,7 +116,7 @@ impl CompressionJobSubmitter {
 /// coroutine.
 async fn submit_clp_compression_job_and_wait_for_completion(
     state: ClpCompressionState,
-    io_config: ClpIoConfig,
+    io_config_template: ClpIoConfig,
     id_and_key_pairs: Vec<(S3ObjectMetadataId, NonEmptyString)>,
 ) {
     let ingestion_job_id = state.get_ingestion_job_id();
@@ -124,7 +124,7 @@ async fn submit_clp_compression_job_and_wait_for_completion(
     tracing::info!(ingestion_job_id = ? ingestion_job_id, "Submitting CLP compression job.");
 
     let compression_job_id = match state
-        .submit_for_compression(io_config, id_and_key_pairs)
+        .submit_for_compression(io_config_template, id_and_key_pairs)
         .await
     {
         Ok(id) => id,

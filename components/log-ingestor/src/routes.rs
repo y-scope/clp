@@ -182,7 +182,7 @@ async fn create_s3_scanner_job(
 ) -> Result<Json<CreationResponse>, Error> {
     tracing::info!(config = ? config, "Create S3 scanner ingestion job.");
     let job_id = ingestion_job_manager_state
-        .create_new_s3_ingestion_job(S3IngestionJobConfig::S3Scanner(config))
+        .register_and_create_s3_ingestion_job(S3IngestionJobConfig::S3Scanner(config))
         .await
         .map_err(|err| {
             tracing::error!(err = ? err, "Failed to create S3 scanner ingestion job.");
@@ -233,7 +233,7 @@ async fn create_sqs_listener_job(
 ) -> Result<Json<CreationResponse>, Error> {
     tracing::info!(config = ? config, "Create SQS listener ingestion job.");
     let job_id = ingestion_job_manager_state
-        .create_new_s3_ingestion_job(S3IngestionJobConfig::SqsListener(config))
+        .register_and_create_s3_ingestion_job(S3IngestionJobConfig::SqsListener(config))
         .await
         .map_err(|err| {
             tracing::error!(err = ? err, "Failed to create SQS listener ingestion job.");

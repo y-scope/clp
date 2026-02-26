@@ -112,8 +112,8 @@ impl IngestionJobManagerState {
         Ok(Self { inner })
     }
 
-    /// Creates a new S3 ingestion job based on the given config, and adds a running job instance to
-    /// the underlying job table.
+    /// Registers a new S3 ingestion job with the given config in CLP DB and creates a running job
+    /// instance in the underlying job table.
     ///
     /// # Returns
     ///
@@ -125,7 +125,7 @@ impl IngestionJobManagerState {
     ///
     /// * Forwards [`Self::add_s3_ingestion_job`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::create_ingestion_job`]'s return values on failure.
-    pub async fn create_new_s3_ingestion_job(
+    pub async fn register_and_create_s3_ingestion_job(
         &self,
         config: S3IngestionJobConfig,
     ) -> Result<IngestionJobId, Error> {
@@ -180,10 +180,21 @@ impl IngestionJobManagerState {
                     // The job has failed. We don't overwrite the failure status.
                     return Ok(true);
                 }
-                entry.state.end().await?;
+                entry.state.end().await.inspect_err(|e| {
+                    tracing::error!(
+                        job_id = ? job_id,
+                        error = ? e,
+                        "Failed to end ingestion job while the job instance has been removed."
+                    );
+                })?;
                 Ok(false)
             }
-            None => Err(Error::JobNotFound(job_id)),
+            None => {
+                if !self.inner.clp_db_ingestion_connector.contains(job_id).await? {
+                    return Err(Error::JobNotFound(job_id));
+                }
+
+            }
         }
     }
 
