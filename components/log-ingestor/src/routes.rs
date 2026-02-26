@@ -280,7 +280,7 @@ async fn terminate_ingestion_job(
     Path(job_id): Path<IngestionJobId>,
 ) -> Result<Json<TerminateResponse>, Error> {
     tracing::info!(job_id = ? job_id, "Stop and delete ingestion job.");
-    let end_with_error = ingestion_job_manager_state
+    let terminated_with_error = ingestion_job_manager_state
         .shutdown_and_remove_job_instance(job_id)
         .await
         .map_err(|err| {
@@ -290,7 +290,7 @@ async fn terminate_ingestion_job(
     tracing::info!(job_id = ? job_id, "The ingestion job has been deleted.");
     Ok(Json(TerminateResponse {
         id: job_id,
-        terminal_status: if end_with_error {
+        terminal_status: if terminated_with_error {
             TerminalStatus::Failed
         } else {
             TerminalStatus::Finished
