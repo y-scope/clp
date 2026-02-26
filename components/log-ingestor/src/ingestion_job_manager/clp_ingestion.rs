@@ -429,10 +429,11 @@ impl ClpIngestionState {
             })?;
 
         for (chunk_id, chunk) in objects.chunks_mut(chunk_size).enumerate() {
-            let mut next_metadata_id = *last_inserted_ids.get(chunk_id).expect("invalid chunk ID");
-            for object in chunk {
+            for (next_metadata_id, object) in
+                (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..)
+                    .zip(chunk.iter_mut())
+            {
                 object.id = Some(next_metadata_id);
-                next_metadata_id += 1;
             }
         }
         self.sender.send(objects).await?;
@@ -486,7 +487,7 @@ impl IngestionJobState for ClpIngestionState {
                     error = ? err,
                     status_msg = ? msg,
                     job_id = ? self.job_id,
-                    "Failed to update job status to failed."
+                    "Failed to update job status to `failed`."
                 );
             }
         }
