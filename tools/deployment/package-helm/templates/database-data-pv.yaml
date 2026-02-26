@@ -1,3 +1,4 @@
+{{- if has "database" .Values.clpConfig.bundled }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "database"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/database" .Values.clpConfig.data_directory)
 ) }}
+{{- end }}

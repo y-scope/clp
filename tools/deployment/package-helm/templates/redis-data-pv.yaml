@@ -1,3 +1,4 @@
+{{- if has "redis" .Values.clpConfig.bundled }}
 {{- include "clp.createStaticPv" (dict
   "root" .
   "component_category" "redis"
@@ -6,3 +7,4 @@
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/redis" .Values.clpConfig.data_directory)
 ) }}
+{{- end }}
