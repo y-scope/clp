@@ -9,12 +9,12 @@
 #include <utility>
 #include <vector>
 
-#include "../clp/Defs.h"
-#include "../clp/ir/types.hpp"
-#include "ErrorCode.hpp"
-#include "TraceableException.hpp"
-#include "ZstdCompressor.hpp"
-#include "ZstdDecompressor.hpp"
+#include <clp/Defs.h>
+#include <clp/ir/types.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
+#include <clp_s/ZstdCompressor.hpp>
+#include <clp_s/ZstdDecompressor.hpp>
 
 namespace clp_s {
 /**
@@ -30,9 +30,9 @@ public:
     DictionaryEntry(std::string value, DictionaryIdType id) : m_value(std::move(value)), m_id(id) {}
 
     // Methods
-    DictionaryIdType get_id() const { return m_id; }
+    [[nodiscard]] auto get_id() const -> DictionaryIdType { return m_id; }
 
-    std::string const& get_value() const { return m_value; }
+    [[nodiscard]] auto get_value() const -> std::string const& { return m_value; }
 
 protected:
     // Variables
@@ -53,25 +53,18 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructors
-    LogTypeDictionaryEntry() : m_init(false) {}
-
-    // Use default copy constructor
-    LogTypeDictionaryEntry(LogTypeDictionaryEntry const&) = default;
-
-    // Use default assignment operators
-    LogTypeDictionaryEntry& operator=(LogTypeDictionaryEntry const&) = default;
-
     // Methods
     /**
      * @return The number of variables placeholders (including escaped ones) in the logtype.
      */
-    size_t get_num_placeholders() const { return m_placeholder_positions.size(); }
+    [[nodiscard]] auto get_num_placeholders() const -> size_t {
+        return m_placeholder_positions.size();
+    }
 
     /**
      * @return The number of variable placeholders (excluding escaped ones) in the logtype.
      */
-    size_t get_num_variables() const {
+    [[nodiscard]] auto get_num_variables() const -> size_t {
         return m_placeholder_positions.size() - m_num_escaped_placeholders;
     }
 
@@ -81,8 +74,9 @@ public:
      * @param placeholder
      * @return The placeholder's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t
-    get_placeholder_info(size_t placeholder_ix, clp::ir::VariablePlaceholder& placeholder) const;
+    auto
+    get_placeholder_info(size_t placeholder_ix, clp::ir::VariablePlaceholder& placeholder) const
+            -> size_t;
 
     /**
      * Adds a constant to the logtype
@@ -90,24 +84,28 @@ public:
      * @param begin_pos Start of the constant in value_containing_constant
      * @param length
      */
-    void add_constant(std::string_view value_containing_constant, size_t begin_pos, size_t length);
+    auto add_constant(std::string_view value_containing_constant, size_t begin_pos, size_t length)
+            -> void;
 
     /**
      * Adds an int variable placeholder
      */
-    void add_int_var();
+    auto add_int_var() -> void;
+
     /**
      * Adds a float variable placeholder
      */
-    void add_float_var();
+    auto add_float_var() -> void;
+
     /**
      * Adds a dictionary variable placeholder
      */
-    void add_dictionary_var();
+    auto add_dictionary_var() -> void;
+
     /**
      * Adds an escape character
      */
-    void add_escape();
+    auto add_escape() -> void;
 
     /**
      * Adds static text to the logtype, escaping any placeholder characters.
@@ -118,7 +116,7 @@ public:
      * Gets the size (in-memory) of the data contained in this entry
      * @return Size of the data contained in this entry
      */
-    size_t get_data_size() const;
+    [[nodiscard]] auto get_data_size() const -> size_t;
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype
@@ -142,20 +140,20 @@ public:
      * Reserves space for a constant of the given length
      * @param length
      */
-    void reserve_constant_length(size_t length) { m_value.reserve(length); }
+    auto reserve_constant_length(size_t length) -> void { m_value.reserve(length); }
 
-    void set_id(clp::logtype_dictionary_id_t id) { m_id = id; }
+    auto set_id(clp::logtype_dictionary_id_t id) -> void { m_id = id; }
 
     /**
      * Clears the entry
      */
-    void clear();
+    auto clear() -> void;
 
     /**
      * Writes an entry to a compressed file
      * @param compressor
      */
-    void write_to_file(ZstdCompressor& compressor) const;
+    auto write_to_file(ZstdCompressor& compressor) const -> void;
 
     /**
      * Tries to read an entry from the given decompressor
@@ -163,26 +161,28 @@ public:
      * @return Same as streaming_compression::Decompressor::try_read_numeric_value
      * @return Same as streaming_compression::Decompressor::try_read_string
      */
-    ErrorCode
-    try_read_from_file(ZstdDecompressor& decompressor, clp::logtype_dictionary_id_t id, bool lazy);
+    auto
+    try_read_from_file(ZstdDecompressor& decompressor, clp::logtype_dictionary_id_t id, bool lazy)
+            -> ErrorCode;
 
     /**
      * Reads an entry from the given decompressor
      * @param decompressor
      * @param lazy apply lazy decoding
      */
-    void read_from_file(ZstdDecompressor& decompressor, clp::logtype_dictionary_id_t id, bool lazy);
+    auto read_from_file(ZstdDecompressor& decompressor, clp::logtype_dictionary_id_t id, bool lazy)
+            -> void;
 
     /**
      * Decodes the log type
      */
-    void decode_log_type();
+    auto decode_log_type() -> void;
 
     /**
      * Checks if the entry has been initialized
      * @return true if the entry has been initialized, false otherwise
      */
-    bool initialized() const { return m_init; }
+    [[nodiscard]] auto initialized() const -> bool { return m_init; }
 
 private:
     // Methods
@@ -190,7 +190,7 @@ private:
      * Decodes the log type
      * @param escaped_value
      */
-    void decode_log_type(std::string& escaped_value);
+    auto decode_log_type(std::string& escaped_value) -> void;
 
     // Variables
     std::vector<size_t> m_placeholder_positions;
@@ -214,30 +214,23 @@ public:
     VariableDictionaryEntry(std::string value, clp::variable_dictionary_id_t id)
             : DictionaryEntry<clp::variable_dictionary_id_t>(std::move(value), id) {}
 
-    // Use default copy constructor
-    VariableDictionaryEntry(VariableDictionaryEntry const&) = default;
-
-    // Assignment operators
-    // Use default
-    VariableDictionaryEntry& operator=(VariableDictionaryEntry const&) = default;
-
     // Methods
     /**
      * Gets the size (in-memory) of the data contained in this entry
      * @return Size of the data contained in this entry
      */
-    size_t get_data_size() const;
+    [[nodiscard]] auto get_data_size() const -> size_t;
 
     /**
      * Clears the entry
      */
-    void clear() { m_value.clear(); }
+    auto clear() -> void { m_value.clear(); }
 
     /**
      * Writes an entry to a compressed file
      * @param compressor
      */
-    void write_to_file(ZstdCompressor& compressor) const;
+    auto write_to_file(ZstdCompressor& compressor) const -> void;
 
     /**
      * Tries to read an entry from the given decompressor
@@ -246,7 +239,8 @@ public:
      * @return Same as streaming_compression::Decompressor::try_read_numeric_value
      * @return Same as streaming_compression::Decompressor::try_read_string
      */
-    ErrorCode try_read_from_file(ZstdDecompressor& decompressor, clp::variable_dictionary_id_t id);
+    auto try_read_from_file(ZstdDecompressor& decompressor, clp::variable_dictionary_id_t id)
+            -> ErrorCode;
 
     /**
      * Reads an entry from the given decompressor
@@ -254,8 +248,8 @@ public:
      * @param id
      * @param lazy
      */
-    void
-    read_from_file(ZstdDecompressor& decompressor, clp::variable_dictionary_id_t id, bool lazy);
+    auto read_from_file(ZstdDecompressor& decompressor, clp::variable_dictionary_id_t id, bool lazy)
+            -> void;
 };
 }  // namespace clp_s
 
