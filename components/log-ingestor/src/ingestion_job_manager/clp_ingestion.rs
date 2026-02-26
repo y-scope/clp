@@ -91,7 +91,7 @@ impl ClpDbIngestionConnector {
     /// A tuple on success, containing:
     ///
     /// * A [`ClpIngestionState`] instance representing the initial state of the newly created
-    ///   ingestion job on success.
+    ///   ingestion job.
     /// * A newly created listener for receiving ingested object metadata for compression job
     ///   submission.
     ///
