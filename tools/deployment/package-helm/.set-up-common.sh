@@ -41,6 +41,61 @@ prepare_environment() {
     download_samples
 }
 
+# Loads a local Docker image into the kind cluster and returns the helm --set
+# flags for using it. If image is not specified, returns empty string.
+#
+# @param {string} cluster_name Name of the kind cluster
+# @param {string} [image] Docker image (e.g., "clp-package:dev-junhao-a6bf")
+# @return Prints helm --set flags to stdout
+get_image_helm_args() {
+    local cluster_name=$1
+    local image="${2:-}"
+
+    if [[ -z "${image}" ]]; then
+        return
+    fi
+
+    echo "Loading local image '${image}' into kind cluster..." >&2
+    kind load docker-image "${image}" --name "${cluster_name}" >&2
+
+    # Split "repo:tag" on the last colon whose right-hand side contains no '/'
+    # (so registry ports like localhost:5000/repo are not mistaken for tags).
+    if [[ "${image}" =~ ^(.+):([^:/]+)$ ]]; then
+        local repo="${BASH_REMATCH[1]}"
+        local tag="${BASH_REMATCH[2]}"
+    else
+        echo "Error: '${image}' is not a valid image reference (expected repo:tag)." >&2
+        return 1
+    fi
+    echo "--set" "image.clpPackage.repository=${repo}" \
+         "--set" "image.clpPackage.tag=${tag}" \
+         "--set" "image.clpPackage.pullPolicy=Never"
+}
+
+# Parses common arguments shared across set-up scripts.
+# Sets CLP_PACKAGE_IMAGE global variable.
+#
+# @param {string[]} args Script arguments
+parse_common_args() {
+    CLP_PACKAGE_IMAGE=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --clp-package-image)
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    echo "Error: '--clp-package-image' requires a value." >&2
+                    exit 1
+                fi
+                CLP_PACKAGE_IMAGE="$2"
+                shift 2
+                ;;
+            *)
+                echo "Unknown argument: $1" >&2
+                exit 1
+                ;;
+        esac
+    done
+}
+
 # Generates kind cluster configuration YAML
 #
 # @param {int} num_workers Number of worker nodes (0 for single-node cluster)
