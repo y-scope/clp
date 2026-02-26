@@ -882,7 +882,6 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     `status` {status_enum} NOT NULL DEFAULT '{default_status}',
     `status_msg` TEXT NULL DEFAULT NULL,
     `num_files_compressed` BIGINT unsigned NOT NULL DEFAULT '0',
-    `error_msg` TEXT NULL DEFAULT NULL,
     `creation_ts` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `last_update_ts` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
         ON UPDATE CURRENT_TIMESTAMP(3),
