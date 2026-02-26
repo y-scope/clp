@@ -57,7 +57,7 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
-            - name: "mcp"
+            - name: "mcp-server"
               containerPort: 8000
           volumeMounts:
             - name: "config"
@@ -80,7 +80,7 @@ spec:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet: &mcp-server-health-check
               path: "/health"
-              port: "mcp"
+              port: "mcp-server"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *mcp-server-health-check
