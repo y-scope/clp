@@ -2,7 +2,6 @@
 #define CLP_S_ARCHIVEREADERADAPTOR_HPP
 
 #include <cstddef>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
