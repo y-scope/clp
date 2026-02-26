@@ -8,7 +8,6 @@ pub use clp_ingestion::*;
 use clp_rust_utils::{
     clp_config::{
         AwsAuthentication,
-        AwsCredentials,
         package::{
             config::{ArchiveOutput, Config as ClpConfig, LogsInput},
             credentials::Credentials as ClpCredentials,
@@ -89,10 +88,8 @@ impl IngestionJobManagerState {
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<Self> {
-        let aws_credentials = match clp_config.logs_input {
-            LogsInput::S3 { config } => match config.aws_authentication {
-                AwsAuthentication::Credentials { credentials } => credentials,
-            },
+        let aws_authentication = match clp_config.logs_input {
+            LogsInput::S3 { config } => config.aws_authentication,
             LogsInput::Fs { .. } => {
                 return Err(anyhow::anyhow!(
                     "Invalid CLP config: Unsupported logs input type. The current implementation \
@@ -115,7 +112,7 @@ impl IngestionJobManagerState {
             buffer_flush_timeout: Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
             buffer_flush_threshold: log_ingestor_config.buffer_flush_threshold,
             channel_capacity: log_ingestor_config.channel_capacity,
-            aws_credentials,
+            aws_authentication,
             archive_output_config: clp_config.archive_output,
             mysql_pool,
         });
@@ -140,9 +137,8 @@ impl IngestionJobManagerState {
         }
         let s3_client_manager = S3ClientWrapper::create(
             config.base.region.as_ref(),
-            self.inner.aws_credentials.access_key_id.as_str(),
-            self.inner.aws_credentials.secret_access_key.as_str(),
             config.base.endpoint_url.as_ref(),
+            &self.inner.aws_authentication,
         )
         .await;
         self.create_s3_ingestion_job(config.base.clone(), move |job_id, state| {
@@ -179,8 +175,7 @@ impl IngestionJobManagerState {
         }
         let sqs_client_manager = SqsClientWrapper::create(
             config.get().base.region.as_ref(),
-            self.inner.aws_credentials.access_key_id.as_str(),
-            self.inner.aws_credentials.secret_access_key.as_str(),
+            &self.inner.aws_authentication,
         )
         .await;
         self.create_s3_ingestion_job(ingestion_job_config, move |job_id, state| {
@@ -328,7 +323,7 @@ impl IngestionJobManagerState {
     fn create_listener(&self, ingestion_job_config: &BaseConfig) -> Listener {
         let submitter = CompressionJobSubmitter::new(
             self.inner.mysql_pool.clone(),
-            self.inner.aws_credentials.clone(),
+            self.inner.aws_authentication.clone(),
             &self.inner.archive_output_config,
             ingestion_job_config,
         );
@@ -346,7 +341,7 @@ struct IngestionJobManager {
     buffer_flush_timeout: Duration,
     buffer_flush_threshold: u64,
     channel_capacity: usize,
-    aws_credentials: AwsCredentials,
+    aws_authentication: AwsAuthentication,
     archive_output_config: ArchiveOutput,
     mysql_pool: sqlx::MySqlPool,
 }

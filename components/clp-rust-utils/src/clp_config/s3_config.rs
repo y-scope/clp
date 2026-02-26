@@ -17,6 +17,26 @@ pub struct S3Config {
 pub enum AwsAuthentication {
     #[serde(rename = "credentials")]
     Credentials { credentials: AwsCredentials },
+
+    /// Uses the default AWS SDK credential provider chain.
+    #[serde(rename = "default")]
+    Default,
+}
+
+impl AwsAuthentication {
+    /// Returns the access key pair as `Some((access_key_id, secret_access_key))` for explicit
+    /// credentials, or `None` for authentication methods that rely on the default credential
+    /// provider chain.
+    #[must_use]
+    pub const fn credentials_pair(&self) -> Option<(&str, &str)> {
+        match self {
+            Self::Credentials { credentials } => Some((
+                credentials.access_key_id.as_str(),
+                credentials.secret_access_key.as_str(),
+            )),
+            Self::Default => None,
+        }
+    }
 }
 
 /// Represents AWS credentials.

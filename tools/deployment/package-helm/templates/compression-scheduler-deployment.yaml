@@ -17,7 +17,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "compression-scheduler"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 300
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}

@@ -117,7 +117,7 @@ Settings for each type are described below:
 * [credentials](#credentials)
 * [profile](#profile)
 * [env_vars](#env_vars)
-* [ec2](#ec2)
+* [default](#default)
 
 ### credentials
 
@@ -172,16 +172,30 @@ aws_authentication:
 The environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` should be used to specify
 a set of [long-term IAM user credentials](index.md#long-term-iam-user-credentials).
 
-### ec2
+### default
 
 Settings for this type are shown below.
 
 ```yaml
 aws_authentication:
-  type: "ec2"
+  type: "default"
 ```
 
-This authentication method will only work on an EC2 instance with a
-[role attached](index.md#ec2-instance-iam-roles).
+This authentication method uses the AWS SDK's default credential provider chain, which automatically
+discovers credentials from multiple sources in priority order. See the official documentation for
+details:
+
+* [Boto3 (Python) credential provider chain][boto3-credentials]
+* [AWS SDK for Rust credential provider chain][rust-sdk-credentials]
+
+Credentials are resolved in priority order. Common sources include:
+
+* Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+* AWS config files (`~/.aws/credentials`, `~/.aws/config`)
+* [IRSA](eks-irsa-setup.md) web identity tokens (on Amazon EKS)
+* Container credentials (on Amazon ECS)
+* EC2 instance metadata / [IAM roles attached](index.md#default-credential-provider-chain) to an instance
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
+[boto3-credentials]: https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentials
+[rust-sdk-credentials]: https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html
