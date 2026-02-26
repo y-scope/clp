@@ -4,13 +4,11 @@
 #include <string>
 #include <string_view>
 
-#if !CLP_S_EXCLUDE_MONGOCXX
-    #include <mongocxx/client.hpp>
-    #include <mongocxx/collection.hpp>
-    #include <mongocxx/exception/exception.hpp>
-    #include <mongocxx/instance.hpp>
-    #include <mongocxx/uri.hpp>
-#endif
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/exception/exception.hpp>
+#include <mongocxx/instance.hpp>
+#include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
@@ -67,7 +65,6 @@ void NetworkOutputHandler::write(
     }
 }
 
-#if !CLP_S_EXCLUDE_MONGOCXX
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         string const& uri,
         string const& collection,
@@ -173,7 +170,6 @@ void ResultsCacheOutputHandler::write(
         );
     }
 }
-#endif
 
 CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
         : ::clp_s::search::OutputHandler(false, false),

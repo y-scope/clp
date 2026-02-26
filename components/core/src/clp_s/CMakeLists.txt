@@ -15,14 +15,6 @@ cmake_dependent_option(
 )
 
 cmake_dependent_option(
-        CLP_S_EXCLUDE_MONGOCXX
-        "Exclude mongocxx support from the simplified static clp-s executable."
-        ON
-        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
-        OFF
-)
-
-cmake_dependent_option(
         CLP_S_STATIC_GCC_RUNTIME
         "Link the simplified static clp-s executable against static libgcc and libstdc++."
         ON
@@ -185,13 +177,11 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                         ${CURL_LIBRARIES}
                 )
         endif()
-        if(NOT CLP_S_EXCLUDE_MONGOCXX)
-                target_link_libraries(
-                        clp_s_clp_dependencies
-                        PRIVATE
-                        OpenSSL::Crypto
-                )
-        endif()
+        target_link_libraries(
+                clp_s_clp_dependencies
+                PRIVATE
+                OpenSSL::Crypto
+        )
 endif()
 
 set(
@@ -451,11 +441,6 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
         )
         add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
-        target_compile_definitions(
-                clp_s_json_constructor
-                PRIVATE
-                CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
-        )
         target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
         target_include_directories(clp_s_json_constructor PUBLIC ../)
         target_link_libraries(
@@ -467,13 +452,11 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 fmt::fmt
                 spdlog::spdlog
         )
-        if(NOT CLP_S_EXCLUDE_MONGOCXX)
-                target_link_libraries(
-                        clp_s_json_constructor
-                        PRIVATE
-                        ${MONGOCXX_TARGET}
-                )
-        endif()
+        target_link_libraries(
+                clp_s_json_constructor
+                PRIVATE
+                ${MONGOCXX_TARGET}
+        )
 endif()
 
 set(
@@ -524,7 +507,6 @@ if(CLP_BUILD_EXECUTABLES)
                 clp-s
                 PRIVATE
                 CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
-                CLP_S_EXCLUDE_MONGOCXX=$<BOOL:${CLP_S_EXCLUDE_MONGOCXX}>
         )
         target_compile_features(clp-s PRIVATE cxx_std_20)
         target_include_directories(clp-s PRIVATE ../)
@@ -545,13 +527,11 @@ if(CLP_BUILD_EXECUTABLES)
                 spdlog::spdlog
                 ystdlib::error_handling
         )
-        if(NOT CLP_S_EXCLUDE_MONGOCXX)
-                target_link_libraries(
-                        clp-s
-                        PRIVATE
-                        ${MONGOCXX_TARGET}
-                )
-        endif()
+        target_link_libraries(
+                clp-s
+                PRIVATE
+                ${MONGOCXX_TARGET}
+        )
         set_target_properties(
                 clp-s
                 PROPERTIES

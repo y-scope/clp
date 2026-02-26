@@ -11,10 +11,8 @@
 #include <string_view>
 #include <vector>
 
-#if !CLP_S_EXCLUDE_MONGOCXX
-    #include <mongocxx/client.hpp>
-    #include <mongocxx/collection.hpp>
-#endif
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
 
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
@@ -117,7 +115,6 @@ private:
     int m_socket_fd;
 };
 
-#if !CLP_S_EXCLUDE_MONGOCXX
 /**
  * Output handler that writes to a MongoDB collection.
  */
@@ -201,7 +198,6 @@ private:
     >
             m_latest_results;
 };
-#endif
 
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.
