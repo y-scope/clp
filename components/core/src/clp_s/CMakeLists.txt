@@ -1,25 +1,7 @@
-include(CMakeDependentOption)
-
 option(
-        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
-        "Build clp-s as a simplified statically linked executable with reduced dependencies."
-        OFF
-)
-
-cmake_dependent_option(
         CLP_S_EXCLUDE_LIBCURL
-        "Exclude libcurl support from the simplified static clp-s executable."
+        "Exclude libcurl support from clp-s."
         ON
-        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
-        OFF
-)
-
-cmake_dependent_option(
-        CLP_S_STATIC_GCC_RUNTIME
-        "Link the simplified static clp-s executable against static libgcc and libstdc++."
-        ON
-        CLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE
-        OFF
 )
 
 add_subdirectory(indexer)
@@ -537,12 +519,4 @@ if(CLP_BUILD_EXECUTABLES)
                 PROPERTIES
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
         )
-        if(CLP_S_STATIC_GCC_RUNTIME)
-                target_link_options(
-                        clp-s
-                        PRIVATE
-                        -static-libgcc
-                        -static-libstdc++
-                )
-        endif()
 endif()
