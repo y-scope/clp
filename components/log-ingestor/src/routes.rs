@@ -19,10 +19,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     ingestion_job::IngestionJobId,
-    ingestion_job_manager::{
-        Error as IngestionJobManagerError,
-        IngestionJobManagerState,
-    },
+    ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState},
 };
 
 #[derive(utoipa::OpenApi)]
