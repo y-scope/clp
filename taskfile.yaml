@@ -26,7 +26,6 @@ vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
-  G_CORE_STATIC_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core-static"
   G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
   G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
@@ -206,37 +205,6 @@ tasks:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "log-converter", "reducer-server"]
-
-  core-static:
-    cmds:
-      - task: "core-static-generate"
-      - task: "core-static-build"
-
-  core-static-generate:
-    internal: true
-    sources: *core_source_files
-    deps:
-      - "deps:core"
-    cmds:
-      - task: "utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.G_CORE_STATIC_COMPONENT_BUILD_DIR}}"
-          EXTRA_ARGS:
-            - "-DCLP_S_BUILD_SIMPLIFIED_STATIC_EXECUTABLE=ON"
-            - "-DCLP_USE_STATIC_LIBS=ON"
-          SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
-
-  core-static-build:
-    internal: true
-    sources: *core_source_files
-    generates:
-      - "{{.G_CORE_STATIC_COMPONENT_BUILD_DIR}}/clp-s"
-    cmds:
-      - task: "utils:cmake:build"
-        vars:
-          BUILD_DIR: "{{.G_CORE_STATIC_COMPONENT_BUILD_DIR}}"
-          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
-          TARGETS: ["clp-s"]
 
   # NOTE: We rely on cargo for checksumming. It automatically rebuilds when source files change or
   # when a binary is missing.

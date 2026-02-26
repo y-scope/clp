@@ -22,10 +22,6 @@ vars:
   G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
-  G_ZSTD_LIB_NAME: "zstd"
-
-  # Installation directories
-  G_ZSTD_INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.G_ZSTD_LIB_NAME}}-install"
   G_YSTDLIB_LIB_NAME: "ystdlib"
 
   # Antlr
@@ -422,8 +418,6 @@ tasks:
     vars:
       VERSION: "r4.1.1"
     run: "once"
-    deps:
-      - task: "zstd"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
@@ -433,7 +427,6 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DENABLE_UNINSTALL=OFF"
-            - "-Dpkgcfg_lib_ZSTD_zstd={{.G_ZSTD_INSTALL_PREFIX}}/lib/libzstd.a"
           LIB_NAME: "mongocxx"
           TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
           TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
@@ -621,7 +614,6 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DCMAKE_INSTALL_LIBDIR=lib"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DZSTD_BUILD_CONTRIB=OFF"
             - "-DZSTD_BUILD_PROGRAMS=OFF"
@@ -629,7 +621,6 @@ tasks:
             - "-DZSTD_BUILD_STATIC=ON"
             - "-DZSTD_BUILD_TESTS=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
-          INSTALL_PREFIX: "{{.G_ZSTD_INSTALL_PREFIX}}"
-          LIB_NAME: "{{.G_ZSTD_LIB_NAME}}"
+          LIB_NAME: "zstd"
           TARBALL_SHA256: "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
           TARBALL_URL: "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"

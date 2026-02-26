@@ -48,7 +48,6 @@ tasks:
   # command.
   # @param {string} [CMAKE_SOURCE_DIR=.] The path, within the tarball extraction directory,
   # containing the project's top level CMakeLists.txt.
-  # @param {string} [INSTALL_PREFIX] Path to the installation directory.
   install-remote-cmake-lib:
     internal: true
     vars:
@@ -56,8 +55,7 @@ tasks:
         ref: "default (list) .CMAKE_GEN_ARGS"
       CMAKE_SOURCE_DIR: >-
         {{default "." .CMAKE_SOURCE_DIR}}
-      INSTALL_PREFIX: >-
-        {{default "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install" .INSTALL_PREFIX}}
+      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
       INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
     deps:
       - task: "init"
