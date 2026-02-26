@@ -132,17 +132,8 @@ this section for testing or development.
    require shared local storage between workers. If you use S3 storage, you can skip this section.
    :::
 
-   For multi-node clusters using filesystem storage, the following directories **must** be
-   accessible from all worker nodes at the same paths. Without shared storage, compressed logs
-   created by one worker cannot be searched by other workers.
-
-   * `archive_output.storage.directory` - where compressed archives are stored
-   * `stream_output.storage.directory` - where stream files are stored
-   * `logs_input.directory` - where input logs are read from
-
-   Set up NFS, SeaweedFS, or another shared filesystem to provide this access. See the
-   [SeaweedFS section][seaweedfs-setup] in the Docker Compose deployment guide for setup
-   instructions.
+   If storage type is set to `fs`, users must manually provision the persistent volumes and update
+   `accessModes` of PVCs.
 
 2. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
