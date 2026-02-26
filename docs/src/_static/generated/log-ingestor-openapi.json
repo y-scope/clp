@@ -336,6 +336,13 @@
         ],
         "description": "Configuration for a SQS listener job."
       },
+      "TerminalStatus": {
+        "type": "string",
+        "enum": [
+          "finished",
+          "failed"
+        ]
+      },
       "TerminateResponse": {
         "type": "object",
         "required": [
@@ -348,7 +355,7 @@
             "description": "The ID of the job whose instance is being deleted."
           },
           "terminal_status": {
-            "type": "string",
+            "$ref": "#/components/schemas/TerminalStatus",
             "description": "Terminal status of the job."
           }
         }
