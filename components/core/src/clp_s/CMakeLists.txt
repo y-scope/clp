@@ -251,13 +251,14 @@ if(CLP_BUILD_CLP_S_IO)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
                 clp_s_io
+                PUBLIC
+                zstd::libzstd_static
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
                 simdjson::simdjson
                 spdlog::spdlog
-                zstd::libzstd_static
         )
 endif()
 
