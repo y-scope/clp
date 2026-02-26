@@ -22,14 +22,11 @@ vars:
   G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
-<<<<<<< HEAD
   G_ZSTD_LIB_NAME: "zstd"
 
   # Installation directories
   G_ZSTD_INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.G_ZSTD_LIB_NAME}}-install"
-=======
   G_YSTDLIB_LIB_NAME: "ystdlib"
->>>>>>> main
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
