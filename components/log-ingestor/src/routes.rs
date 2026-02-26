@@ -121,7 +121,7 @@ enum TerminalStatus {
 
 #[derive(Clone, Serialize, ToSchema)]
 struct TerminateResponse {
-    /// The ID of the job whose instance is being deleted.
+    /// The ID of the job whose instance is terminated.
     id: IngestionJobId,
 
     /// Terminal status of the job.

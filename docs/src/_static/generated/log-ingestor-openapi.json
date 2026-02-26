@@ -352,7 +352,7 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/u64",
-            "description": "The ID of the job whose instance is being deleted."
+            "description": "The ID of the job whose instance is terminated."
           },
           "terminal_status": {
             "$ref": "#/components/schemas/TerminalStatus",
