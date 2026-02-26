@@ -91,7 +91,7 @@ impl ClpDbIngestionConnector {
     /// A tuple on success, containing:
     ///
     /// * A [`ClpIngestionState`] instance representing the initial state of the newly created
-    ///   ingestion job on success.
+    ///   ingestion job.
     /// * A newly created listener for receiving ingested object metadata for compression job
     ///   submission.
     ///
@@ -803,7 +803,7 @@ impl ClpCompressionState {
                 _ => {}
             }
 
-            tokio::time::sleep(tokio::time::Duration::from_secs(sleep_duration_sec.into())).await;
+            tokio::time::sleep(Duration::from_secs(sleep_duration_sec.into())).await;
             sleep_duration_sec =
                 std::cmp::min(sleep_duration_sec.saturating_mul(2), MAX_SLEEP_DURATION_SEC);
         }
