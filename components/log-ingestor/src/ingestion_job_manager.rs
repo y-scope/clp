@@ -150,6 +150,11 @@ impl IngestionJobManagerState {
 
     /// Shuts down and removes an ingestion job instance by its ID.
     ///
+    /// # NOTE
+    ///
+    /// This method only removes the running job instance. It does not remove the job from CLP DB.
+    /// The job status and stats will still be accessible after calling this method.
+    ///
     /// # Returns
     ///
     /// A boolean indicating whether the job has stopped with an error:
@@ -164,7 +169,7 @@ impl IngestionJobManagerState {
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
     /// * Forwards [`ClpIngestionState::get_job_status`]' return values on failure.
     /// * Forwards [`IngestionJobState::end`]'s return values on failure.
-    /// * Forwards [`ClpDbIngestionConnector::contains`]' return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::get_job_status`]' return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::try_end`]'s return values on failure.
     pub async fn shutdown_and_remove_job_instance(
         &self,
@@ -192,22 +197,29 @@ impl IngestionJobManagerState {
         }
 
         // The ID does not exist in the in-memory job table.
-        if !self
+        let Some(status) = self
             .inner
             .clp_db_ingestion_connector
-            .contains(job_id)
+            .get_job_status(job_id)
             .await?
-        {
+        else {
             return Err(Error::JobNotFound(job_id));
+        };
+
+        if ClpIngestionJobStatus::Finished == status {
+            // The job has already finished. Keep the operation idempotent by not overwriting the
+            // status.
+            Ok(false)
+        } else {
+            self.inner
+                .clp_db_ingestion_connector
+                .try_fail(
+                    job_id,
+                    "Ingestion job instance not found on shutdown.".to_string(),
+                )
+                .await?;
+            Ok(true)
         }
-        self.inner
-            .clp_db_ingestion_connector
-            .try_fail(
-                job_id,
-                "Ingestion job instance not found on shutdown.".to_string(),
-            )
-            .await?;
-        Ok(false)
     }
 
     /// Creates a new S3 ingestion job instance and adds it to the job table with key prefix

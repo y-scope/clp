@@ -41,7 +41,7 @@ use crate::{
         health,
         create_s3_scanner_job,
         create_sqs_listener_job,
-        stop_and_delete_job
+        terminate_ingestion_job,
     )
 )]
 pub struct ApiDoc;
@@ -63,7 +63,7 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
         .routes(routes!(health))
         .routes(routes!(create_s3_scanner_job))
         .routes(routes!(create_sqs_listener_job))
-        .routes(routes!(stop_and_delete_job))
+        .routes(routes!(terminate_ingestion_job))
         .split_for_parts();
 
     let api_json = api.to_json()?;
@@ -112,13 +112,13 @@ impl IntoResponse for Error {
 
 #[derive(Clone, Serialize, ToSchema)]
 struct CreationResponse {
-    /// The unique ID of the created ingestion job.
+    /// The ID of the created ingestion job.
     id: IngestionJobId,
 }
 
 #[derive(Clone, Serialize, ToSchema)]
-struct DeleteResponse {
-    /// The unique ID of the deleted ingestion job.
+struct TerminateResponse {
+    /// The ID of the job whose instance is being deleted.
     id: IngestionJobId,
 
     /// Terminal status of the job.
@@ -145,8 +145,8 @@ async fn health() -> &'static str {
     post,
     path = "/s3_scanner",
     tags = ["IngestionJob"],
-    description = "Creates an ingestion job instance that periodically scans the specified S3 \
-        bucket and key prefix for new objects to ingest.\n\n\
+    description = "Creates an ingestion job and starts a job instance that periodically scans the \
+        specified S3 bucket and key prefix for new objects to ingest.\n\n\
         To ensure correct and efficient ingestion, the scanner relies on the following \
         assumptions:\n\n\
         1. Lexicographical Order: New objects are added in lexicographical order to the bucket \
@@ -196,9 +196,9 @@ async fn create_s3_scanner_job(
     post,
     path = "/sqs_listener",
     tags = ["IngestionJob"],
-    description = "Creates an ingestion job instance that monitors an SQS queue. The queue \
-        receives notifications whenever new objects are added to the specified S3 bucket and key \
-        prefix.\n\n\
+    description = "Creates an ingestion job and starts a job instance that monitors an SQS queue. \
+        The queue receives notifications whenever new objects are added to the specified S3 bucket \
+        and key prefix.\n\n\
         The specified SQS queue must be dedicated to this ingestion job. Upon successful \
         ingestion, the job deletes the corresponding message from the queue to ensure objects are \
         not ingested multiple times.\n\n\
@@ -244,25 +244,26 @@ async fn create_sqs_listener_job(
 }
 
 #[utoipa::path(
-    delete,
-    path = "/job/{job_id}",
+    post,
+    path = "/job/{job_id}/terminate",
     tags = ["IngestionJob"],
-    description = "Deletes the running instance of the specified ingestion job by its job ID. This \
-        operation only terminates the job instance; the job record, including its status and \
-        statistics, is preserved and can still be queried using the same job ID.",
+    description = "Terminates the ingestion job instance identified by the given job ID.\n\n
+        This operation only terminates the job instance; the job record, including its status and \
+        statistics, is preserved and can still be accessible using the same job ID.\n\n\
+        This operation is idempotent.",
     params(
         (
             "job_id" = IngestionJobId,
             Path,
-            description = "The unique identifier of the ingestion job to delete."
+            description = "The ID of the job to terminate."
         )
     ),
     responses(
-        (status = OK, body = DeleteResponse),
+        (status = OK, body = TerminateResponse),
         (
             status = NOT_FOUND,
             body = ErrorResponse,
-            description = "The specified job ID does not correspond to a running job instance."
+            description = "The specified job ID does not correspond to an ingestion job."
         ),
         (
             status = INTERNAL_SERVER_ERROR,
@@ -271,10 +272,10 @@ async fn create_sqs_listener_job(
         )
     )
 )]
-async fn stop_and_delete_job(
+async fn terminate_ingestion_job(
     State(ingestion_job_manager_state): State<IngestionJobManagerState>,
     Path(job_id): Path<IngestionJobId>,
-) -> Result<Json<DeleteResponse>, Error> {
+) -> Result<Json<TerminateResponse>, Error> {
     tracing::info!(job_id = ? job_id, "Stop and delete ingestion job.");
     let end_with_error = ingestion_job_manager_state
         .shutdown_and_remove_job_instance(job_id)
@@ -284,7 +285,7 @@ async fn stop_and_delete_job(
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "The ingestion job has been deleted.");
-    Ok(Json(DeleteResponse {
+    Ok(Json(TerminateResponse {
         id: job_id,
         terminal_status: if end_with_error {
             ClpIngestionJobStatus::Failed.to_string()
