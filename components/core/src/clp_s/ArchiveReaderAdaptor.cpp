@@ -301,7 +301,7 @@ std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_
 
     size_t file_offset = m_files_section_offset + it->o;
     ++it;
-    size_t next_file_offset{m_archive_header.compressed_size};
+    size_t next_file_offset = static_cast<size_t>(m_archive_header.compressed_size);
     if (m_archive_file_info.files.end() != it) {
         next_file_offset = m_files_section_offset + it->o;
     }
