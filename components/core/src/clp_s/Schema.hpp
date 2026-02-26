@@ -130,6 +130,10 @@ public:
      */
     void resize(size_t size) { m_schema.resize(size); }
 
+    [[nodiscard]] auto data() -> int32_t* { return m_schema.data(); }
+
+    [[nodiscard]] auto data() const -> int32_t const* { return m_schema.data(); }
+
     /**
      * Less than comparison operator so that Schema can act as a key for SchemaMap
      * @return true if this schema is less than the schema on the right hand side
