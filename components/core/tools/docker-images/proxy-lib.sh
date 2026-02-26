@@ -1,22 +1,19 @@
 #!/usr/bin/env bash
 
-# Shared library for corporate proxy support in Docker image builds.
-# Source this file from build.sh scripts.
+# Shared library for corporate proxy support in Docker image builds. Source this file from build.sh
+# scripts.
 #
-# Problem: In corporate environments, TLS-intercepting proxies (e.g., Zscaler,
-# Fortinet, Palo Alto, Symantec/Blue Coat) replace upstream SSL certificates
-# with ones signed by the organization's own CA. Tools inside Docker containers
-# (curl, dnf, pip, etc.) reject these certificates because the corporate CA
-# isn't in the container's trust store.
+# Problem: In corporate environments, TLS-intercepting proxies (e.g., Zscaler, Fortinet, Palo Alto,
+# Symantec/Blue Coat) replace upstream SSL certificates with ones signed by the organization's own
+# CA. Tools inside Docker containers (curl, dnf, pip, etc.) reject these certificates because the
+# corporate CA isn't in the container's trust store.
 #
-# Solution: This library detects the host's CA bundle, copies it into the Docker
-# build context, and forwards proxy environment variables as build args. A
-# companion script (setup-corporate-proxy.sh) runs inside the container to
-# install the CA bundle into the system trust store.
+# Solution: This library detects the host's CA bundle, copies it into the Docker build context, and
+# forwards proxy environment variables as build args. A companion script (setup-corporate-proxy.sh)
+# runs inside the container to install the CA bundle into the system trust store.
 #
-# When no CA bundle is found on the host, an empty file is staged so that the
-# Dockerfile's COPY succeeds; the in-container setup script detects the empty
-# file and skips trust-store installation.
+# When no CA bundle is found on the host, an empty file is staged so that the Dockerfile's COPY
+# succeeds; the in-container setup script detects the empty file and skips trust-store installation.
 
 # Detects the host's CA certificate bundle.
 # Returns the path via stdout, or returns 1 if not found.
@@ -39,12 +36,11 @@ detect_ca_bundle() {
     return 1
 }
 
-# Copies the host's CA bundle into the build context so the Dockerfile can
-# install it into the container's trust store. On a normal workstation this
-# copies the standard public CA bundle (redundant but harmless). On a corporate
-# machine, the bundle includes the organization's CA — which the container needs.
-# Creates an empty file if no bundle is found (so COPY always succeeds and the
-# in-container setup script is a no-op).
+# Copies the host's CA bundle into the build context so the Dockerfile can install it into the
+# container's trust store. On a normal workstation this copies the standard public CA bundle
+# (redundant but harmless). On a corporate machine, the bundle includes the organization's CA —
+# which the container needs. Creates an empty file if no bundle is found (so COPY always succeeds
+# and the in-container setup script is a no-op).
 # Arguments:
 #   $1 - component_root (path to components/core/)
 prepare_ca_cert_for_build() {
@@ -73,9 +69,8 @@ cleanup_ca_cert() {
     fi
 }
 
-# Finalizes the build command array and executes the Docker build.
-# Adds proxy build args, an optional mirror override, DOCKER_PULL support,
-# git metadata labels, then runs the build.
+# Finalizes the build command array and executes the Docker build. Adds proxy build args, an
+# optional mirror override, DOCKER_PULL support, git metadata labels, then runs the build.
 # Arguments:
 #   $1 - name of the bash array variable holding the build command
 #   $2 - script_dir (used for git label metadata)
@@ -112,11 +107,11 @@ finalize_build() {
     "${_build_cmd[@]}"
 }
 
-# Appends --build-arg flags for proxy environment variables to the given
-# build command array. Also handles Docker network mode:
+# Appends --build-arg flags for proxy environment variables to the given build command array. Also
+# handles Docker network mode:
 #   - If DOCKER_NETWORK is set, uses that value (e.g., DOCKER_NETWORK=host)
-#   - Otherwise, if any proxy URL points to localhost/127.0.0.1, defaults to
-#     --network host so the build container can reach the host's proxy
+#   - Otherwise, if any proxy URL points to localhost/127.0.0.1, defaults to --network host so the
+#     build container can reach the host's proxy
 #   - Otherwise, uses Docker's default (bridge) network
 # Arguments:
 #   $1 - name of the bash array variable holding the build command

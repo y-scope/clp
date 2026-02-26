@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 
-# Installs a corporate CA certificate bundle into the container's system trust
-# store. This is needed when building behind a TLS-intercepting proxy — without
-# the corporate CA in the trust store, tools like curl, dnf, and pip will reject
-# the proxy's certificates with SSL verification errors.
+# Installs a corporate CA certificate bundle into the container's system trust store. This is needed
+# when building behind a TLS-intercepting proxy — without the corporate CA in the trust store, tools
+# like curl, dnf, and pip will reject the proxy's certificates with SSL verification errors.
 #
-# The CA bundle (ca-certificates.crt) is placed alongside this script by the
-# host-side build.sh (via proxy-lib.sh). If the file is empty, no corporate
-# proxy is in use and this script is a no-op.
+# The CA bundle (ca-certificates.crt) is placed alongside this script by the host-side build.sh (via
+# proxy-lib.sh). If the file is empty, no corporate proxy is in use and this script is a no-op.
 #
 # Supports:
 #   - DNF-based (manylinux_2_28, centos-stream-9): update-ca-trust
