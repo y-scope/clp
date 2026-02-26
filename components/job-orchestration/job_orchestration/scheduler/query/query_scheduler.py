@@ -31,7 +31,6 @@ import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     ClpConfig,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -401,6 +400,35 @@ def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[
             task_ids.append(cursor.lastrowid)
     db_conn.commit()
     return task_ids
+
+
+@exception_default_value(default=[])
+def _get_archives_for_search_without_datasets(
+    db_conn,
+    table_prefix: str,
+    search_config: SearchJobConfig,
+    archive_end_ts_lower_bound: int | None,
+):
+    filter_clauses = []
+    if search_config.end_timestamp is not None:
+        filter_clauses.append(f"begin_timestamp <= {search_config.end_timestamp}")
+    if search_config.begin_timestamp is not None:
+        filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
+    if archive_end_ts_lower_bound is not None:
+        filter_clauses.append(
+            f"(end_timestamp >= {archive_end_ts_lower_bound} OR end_timestamp = 0)"
+        )
+    where_clause = ""
+    if len(filter_clauses) > 0:
+        where_clause = " WHERE " + " AND ".join(filter_clauses)
+
+    table = get_archives_table_name(table_prefix, None)
+    query = f"SELECT id AS archive_id, end_timestamp FROM {table}{where_clause}"
+    query += " ORDER BY end_timestamp DESC"
+
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        cursor.execute(query)
+        return cursor.fetchall()
 
 
 @exception_default_value(default=[])
@@ -1222,18 +1250,21 @@ def _handle_new_search_job(
                     logger.error("Failed to set job %s as failed.", job_id)
                 return
 
-    if datasets is None:
-        datasets = [CLP_DEFAULT_DATASET_NAME]
-
     archive_end_ts_lower_bound: int | None = None
     if archive_retention_period is not None:
         archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
             job_creation_time - archive_retention_period * MIN_TO_SECONDS
         )
 
-    archives_for_search = get_archives_for_search(
-        db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
-    )
+    if datasets is None:
+        # CLP-Text does not support datasets.
+        archives_for_search = _get_archives_for_search_without_datasets(
+            db_conn, table_prefix, search_config, archive_end_ts_lower_bound
+        )
+    else:
+        archives_for_search = get_archives_for_search(
+            db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
+        )
     if len(archives_for_search) == 0:
         if set_job_or_task_status(
             db_conn,
