@@ -6,8 +6,9 @@
 #include <span>
 #include <vector>
 
-#include "SchemaTree.hpp"
-#include "TraceableException.hpp"
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 /**
@@ -22,6 +23,7 @@ namespace clp_s {
  */
 class Schema {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
         // Constructors
@@ -29,26 +31,29 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    using Id = int32_t;
+
+    // Methods
     /**
      * Inserts a node into the ordered region of the schema.
      */
-    void insert_ordered(int32_t mst_node_id);
+    auto insert_ordered(Id mst_node_id) -> void;
 
     /**
      * Inserts a node into the unordered region of the schema.
      */
-    void insert_unordered(int32_t mst_node_id);
+    auto insert_unordered(Id mst_node_id) -> void;
 
     /**
      * Inserts another schema into the unordered region of the schema, maintaining that Schema's
      * order.
      */
-    void insert_unordered(Schema const& schema);
+    auto insert_unordered(Schema const& schema) -> void;
 
     /**
      * Clear the Schema object so that it can be reused without reallocating the underlying vector.
      */
-    void clear() {
+    auto clear() -> void {
         m_schema.clear();
         m_num_ordered = 0;
     }
@@ -58,17 +63,17 @@ public:
      * decompression to help initialize this object.
      * @param num_ordered
      */
-    void set_num_ordered(size_t num_ordered) { m_num_ordered = num_ordered; }
+    auto set_num_ordered(size_t num_ordered) -> void { m_num_ordered = num_ordered; }
 
     /**
      * @return the number of ordered elements in the underlying schema
      */
-    [[nodiscard]] size_t get_num_ordered() const { return m_num_ordered; }
+    [[nodiscard]] auto get_num_ordered() const -> size_t { return m_num_ordered; }
 
     /**
      * @return the number of elements in the underlying schema
      */
-    [[nodiscard]] size_t size() const { return m_schema.size(); }
+    [[nodiscard]] auto size() const -> size_t { return m_schema.size(); }
 
     /**
      * @return iterator to the start of the underlying schema
@@ -103,13 +108,13 @@ public:
     /**
      * @return the nth value in the underlying schema
      */
-    int32_t operator[](size_t i) const { return m_schema[i]; }
+    auto operator[](size_t i) const -> Id { return m_schema[i]; }
 
     /**
      * @return a view into the ordered region of the underlying schema
      */
-    [[nodiscard]] std::span<int32_t> get_ordered_schema_view() {
-        return std::span<int32_t>{m_schema.data(), m_num_ordered};
+    [[nodiscard]] auto get_ordered_schema_view() -> std::span<Id> {
+        return std::span<Id>{m_schema.data(), m_num_ordered};
     }
 
     /**
@@ -117,32 +122,32 @@ public:
      * @param size
      * @return a view into the requested region of the schema
      */
-    [[nodiscard]] std::span<int32_t> get_view(size_t i, size_t size) {
+    [[nodiscard]] auto get_view(size_t i, size_t size) -> std::span<Id> {
         if (i + size > m_schema.size()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
-        return std::span<int32_t>{m_schema.data() + i, size};
+        return std::span{m_schema}.subspan(i, size);
     }
 
     /**
      * Resizes the internal schema vector to match the given length.
      * @param size
      */
-    void resize(size_t size) { m_schema.resize(size); }
+    auto resize(size_t size) -> void { m_schema.resize(size); }
 
     /**
      * Less than comparison operator so that Schema can act as a key for SchemaMap
      * @return true if this schema is less than the schema on the right hand side
      * @return false otherwise
      */
-    bool operator<(Schema const& rhs) const { return m_schema < rhs.m_schema; }
+    auto operator<(Schema const& rhs) const -> bool { return m_schema < rhs.m_schema; }
 
     /**
      * Equal to comparison operator so that Schema can act as a key for SchemaMap
      * @return true if this schema is equal to the schema on the right hand side
      * @return false otherwise
      */
-    bool operator==(Schema const& rhs) const { return m_schema == rhs.m_schema; }
+    auto operator==(Schema const& rhs) const -> bool { return m_schema == rhs.m_schema; }
 
     /**
      * Starts an unordered object of a given NodeType.
@@ -152,7 +157,7 @@ public:
      * @param object_type
      * @return the start position of the unordered object
      */
-    [[nodiscard]] size_t start_unordered_object(NodeType object_type) {
+    [[nodiscard]] auto start_unordered_object(NodeType object_type) -> size_t {
         insert_unordered(encode_node_type_as_schema_entry(object_type));
         return m_schema.size();
     }
@@ -161,8 +166,8 @@ public:
      * Ends an unordered object which was started by calling `start_unordered_object`.
      * @param start_position
      */
-    void end_unordered_object(size_t start_position) {
-        m_schema[start_position - 1] |= static_cast<int32_t>(m_schema.size() - start_position);
+    auto end_unordered_object(size_t start_position) -> void {
+        m_schema[start_position - 1] |= static_cast<Id>(m_schema.size() - start_position);
     }
 
     /**
@@ -170,8 +175,8 @@ public:
      * @param node_type
      * @return The NodeType encoded as a schema entry
      */
-    static int32_t encode_node_type_as_schema_entry(NodeType node_type) {
-        return static_cast<int32_t>(node_type) << cEncodedTypeOffset;
+    static auto encode_node_type_as_schema_entry(NodeType node_type) -> Id {
+        return static_cast<Id>(node_type) << cEncodedTypeOffset;
     }
 
     /**
@@ -179,7 +184,7 @@ public:
      * @param schema_entry
      * @return true if the schema_entry is the delimiter for an unordered object, false otherwise
      */
-    static bool schema_entry_is_unordered_object(int32_t schema_entry) {
+    static auto schema_entry_is_unordered_object(Id schema_entry) -> bool {
         return 0 != (schema_entry & cEncodedTypeBitmask);
     }
 
@@ -188,7 +193,7 @@ public:
      * @param schema_entry
      * @return The extracted NodeType
      */
-    static NodeType get_unordered_object_type(int32_t schema_entry) {
+    static auto get_unordered_object_type(Id schema_entry) -> NodeType {
         return static_cast<NodeType>(static_cast<uint32_t>(schema_entry) >> cEncodedTypeOffset);
     }
 
@@ -197,16 +202,16 @@ public:
      * @param schema_entry
      * @return The extracted object length
      */
-    static int32_t get_unordered_object_length(int32_t schema_entry) {
+    static auto get_unordered_object_length(Id schema_entry) -> Id {
         return schema_entry & cEncodedTypeLengthBitmask;
     }
 
 private:
-    static constexpr size_t cEncodedTypeOffset = (sizeof(int32_t) - 1) * 8;
-    static constexpr int32_t cEncodedTypeBitmask = 0xFF00'0000;
-    static constexpr int32_t cEncodedTypeLengthBitmask = ~cEncodedTypeBitmask;
+    static constexpr size_t cEncodedTypeOffset{(sizeof(Id) - 1) * 8};
+    static constexpr uint32_t cEncodedTypeBitmask{0xFF00'0000};
+    static constexpr int32_t cEncodedTypeLengthBitmask{~cEncodedTypeBitmask};
 
-    std::vector<int32_t> m_schema;
+    std::vector<Id> m_schema;
     size_t m_num_ordered{0};
 };
 }  // namespace clp_s
