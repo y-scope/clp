@@ -6,6 +6,9 @@
 #include <memory>
 #include <optional>
 #include <stack>
+#if CLP_S_EXCLUDE_LIBCURL
+    #include <stdexcept>
+#endif
 #include <string>
 #include <string_view>
 #include <utility>
@@ -13,7 +16,9 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <curl/curl.h>
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include <curl/curl.h>
+#endif
 #include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
@@ -1352,6 +1357,19 @@ void JsonParser::split_archive() {
     m_archive_writer->open(m_archive_options);
 }
 
+#if CLP_S_EXCLUDE_LIBCURL
+bool JsonParser::check_and_log_curl_error(
+        Path const& path,
+        std::shared_ptr<clp::ReaderInterface> reader
+) {
+    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
+        nullptr != network_reader)
+    {
+        throw std::runtime_error("Simplified static clp-s executable does not support libcurl.");
+    }
+    return false;
+}
+#else
 bool JsonParser::check_and_log_curl_error(
         Path const& path,
         std::shared_ptr<clp::ReaderInterface> reader
@@ -1374,4 +1392,5 @@ bool JsonParser::check_and_log_curl_error(
     }
     return false;
 }
+#endif
 }  // namespace clp_s

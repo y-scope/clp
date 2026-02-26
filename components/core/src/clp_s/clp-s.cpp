@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -13,7 +14,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/CurlGlobalInstance.hpp"
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include "../clp/CurlGlobalInstance.hpp"
+#endif
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
@@ -305,7 +308,9 @@ int main(int argc, char const* argv[]) {
     }
 
     mongocxx::instance const mongocxx_instance{};
+#if !CLP_S_EXCLUDE_LIBCURL
     clp::CurlGlobalInstance const curl_instance{};
+#endif
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
