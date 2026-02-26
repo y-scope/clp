@@ -6,12 +6,16 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
 #include <clp/ir/parsing.hpp>
 #include <clp/ir/types.hpp>
 #include <clp/type_utils.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/ZstdCompressor.hpp>
+#include <clp_s/ZstdDecompressor.hpp>
 
 namespace clp_s {
 using clp::EncodedVariableInterpreter;
@@ -22,17 +26,17 @@ using clp::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
 
-size_t LogTypeDictionaryEntry::get_data_size() const {
+auto LogTypeDictionaryEntry::get_data_size() const -> size_t {
     // NOTE: sizeof(vector[0]) is executed at compile time so there's no risk of an exception at
     // runtime
     return sizeof(m_id) + m_value.length()
-           + m_placeholder_positions.size() * sizeof(m_placeholder_positions[0]);
+           + (m_placeholder_positions.size() * sizeof(m_placeholder_positions[0]));
 }
 
-size_t LogTypeDictionaryEntry::get_placeholder_info(
+auto LogTypeDictionaryEntry::get_placeholder_info(
         size_t placeholder_ix,
         VariablePlaceholder& placeholder
-) const {
+) const -> size_t {
     if (placeholder_ix >= m_placeholder_positions.size()) {
         return SIZE_MAX;
     }
@@ -43,30 +47,30 @@ size_t LogTypeDictionaryEntry::get_placeholder_info(
     return m_placeholder_positions[placeholder_ix];
 }
 
-void LogTypeDictionaryEntry::add_constant(
+auto LogTypeDictionaryEntry::add_constant(
         string_view value_containing_constant,
         size_t begin_pos,
         size_t length
-) {
+) -> void {
     m_value.append(value_containing_constant, begin_pos, length);
 }
 
-void LogTypeDictionaryEntry::add_dictionary_var() {
+auto LogTypeDictionaryEntry::add_dictionary_var() -> void {
     m_placeholder_positions.push_back(m_value.length());
     EncodedVariableInterpreter::add_dict_var(m_value);
 }
 
-void LogTypeDictionaryEntry::add_int_var() {
+auto LogTypeDictionaryEntry::add_int_var() -> void {
     m_placeholder_positions.push_back(m_value.length());
     EncodedVariableInterpreter::add_int_var(m_value);
 }
 
-void LogTypeDictionaryEntry::add_float_var() {
+auto LogTypeDictionaryEntry::add_float_var() -> void {
     m_placeholder_positions.push_back(m_value.length());
     EncodedVariableInterpreter::add_float_var(m_value);
 }
 
-void LogTypeDictionaryEntry::add_escape() {
+auto LogTypeDictionaryEntry::add_escape() -> void {
     m_placeholder_positions.push_back(m_value.length());
     EncodedVariableInterpreter::add_escape(m_value);
     ++m_num_escaped_placeholders;
@@ -109,27 +113,27 @@ auto LogTypeDictionaryEntry::parse_next_var(
     return false;
 }
 
-void LogTypeDictionaryEntry::clear() {
+auto LogTypeDictionaryEntry::clear() -> void {
     m_value.clear();
     m_placeholder_positions.clear();
     m_num_escaped_placeholders = 0;
     m_init = false;
 }
 
-void LogTypeDictionaryEntry::write_to_file(ZstdCompressor& compressor) const {
+auto LogTypeDictionaryEntry::write_to_file(ZstdCompressor& compressor) const -> void {
     compressor.write_numeric_value<uint64_t>(m_value.length());
     compressor.write_string(m_value);
 }
 
-ErrorCode LogTypeDictionaryEntry::try_read_from_file(
+auto LogTypeDictionaryEntry::try_read_from_file(
         ZstdDecompressor& decompressor,
         clp::logtype_dictionary_id_t id,
         bool lazy
-) {
+) -> ErrorCode {
     clear();
 
     m_id = id;
-    ErrorCode error_code;
+    ErrorCode error_code{};
     uint64_t escaped_value_length{};
     error_code = decompressor.try_read_numeric_value(escaped_value_length);
     if (ErrorCodeSuccess != error_code) {
@@ -151,21 +155,21 @@ ErrorCode LogTypeDictionaryEntry::try_read_from_file(
     return error_code;
 }
 
-void LogTypeDictionaryEntry::read_from_file(
+auto LogTypeDictionaryEntry::read_from_file(
         ZstdDecompressor& decompressor,
         clp::logtype_dictionary_id_t id,
         bool lazy
-) {
+) -> void {
     auto error_code = try_read_from_file(decompressor, id, lazy);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
 
-void LogTypeDictionaryEntry::decode_log_type(string& escaped_value) {
+auto LogTypeDictionaryEntry::decode_log_type(string& escaped_value) -> void {
     bool is_escaped = false;
     string constant;
-    for (char c : escaped_value) {
+    for (auto const c : escaped_value) {
         if (is_escaped) {
             constant += c;
             is_escaped = false;
@@ -198,28 +202,28 @@ void LogTypeDictionaryEntry::decode_log_type(string& escaped_value) {
     m_init = true;
 }
 
-void LogTypeDictionaryEntry::decode_log_type() {
+auto LogTypeDictionaryEntry::decode_log_type() -> void {
     string escaped_value = std::move(m_value);
     m_value.clear();
     decode_log_type(escaped_value);
 }
 
-size_t VariableDictionaryEntry::get_data_size() const {
+auto VariableDictionaryEntry::get_data_size() const -> size_t {
     return sizeof(m_id) + m_value.length();
 }
 
-void VariableDictionaryEntry::write_to_file(ZstdCompressor& compressor) const {
+auto VariableDictionaryEntry::write_to_file(ZstdCompressor& compressor) const -> void {
     compressor.write_numeric_value<uint64_t>(m_value.length());
     compressor.write_string(m_value);
 }
 
-ErrorCode VariableDictionaryEntry::try_read_from_file(
+auto VariableDictionaryEntry::try_read_from_file(
         ZstdDecompressor& decompressor,
         clp::variable_dictionary_id_t id
-) {
+) -> ErrorCode {
     m_id = id;
 
-    ErrorCode error_code;
+    ErrorCode error_code{};
     uint64_t value_length{};
     error_code = decompressor.try_read_numeric_value(value_length);
     if (ErrorCodeSuccess != error_code) {
@@ -233,11 +237,11 @@ ErrorCode VariableDictionaryEntry::try_read_from_file(
     return error_code;
 }
 
-void VariableDictionaryEntry::read_from_file(
+auto VariableDictionaryEntry::read_from_file(
         ZstdDecompressor& decompressor,
         clp::variable_dictionary_id_t id,
-        bool lazy
-) {
+        [[maybe_unused]] bool lazy
+) -> void {
     auto error_code = try_read_from_file(decompressor, id);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
