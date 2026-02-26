@@ -2,22 +2,25 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <map>
-#include <set>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
-#include <utility>
+#include <vector>
 
 #include <nlohmann/json_fwd.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
-#include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryReader.hpp"
-#include "InputConfig.hpp"
-#include "PackedStreamReader.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaReader.hpp"
-#include "search/Projection.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryReader.hpp"
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/PackedStreamReader.hpp>
+#include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaReader.hpp>
+#include <clp_s/search/Projection.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -139,8 +142,8 @@ public:
     void close();
 
     /**
-     * @return The schema ids in the archive. It also defines the order that tables should be read
-     * in to avoid seeking backwards.
+     * @return The schema ids in the archive. It also defines the order that tables should be
+     * read in to avoid seeking backwards.
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
 
@@ -151,7 +154,7 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    [[nodiscard]] auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
 
     /**
      * @return Whether this archive can contain columns with the deprecated DateString timestamp
@@ -164,8 +167,8 @@ public:
     /**
      * @param log_event_idx
      * @return The file-level metadata associated with the record at `log_event_idx`.
-     * @throws ArchiveReaderAdaptor::OperationFailed when `log_event_idx` cannot be mapped to any
-     * metadata.
+     * @throws ArchiveReaderAdaptor::OperationFailed when `log_event_idx` cannot be mapped to
+     * any metadata.
      */
     [[nodiscard]] auto get_metadata_for_log_event(int64_t log_event_idx) -> nlohmann::json const& {
         return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
@@ -210,13 +213,14 @@ private:
     );
 
     /**
-     * Reads a table with given ID from the packed stream reader. If read_stream is called multiple
-     * times in a row for the same stream_id a cached buffer is returned. This function allows the
-     * caller to ask for the same buffer to be reused to read multiple different tables: this can
-     * save memory allocations, but can only be used when tables are read one at a time.
+     * Reads a table with given ID from the packed stream reader. If read_stream is called
+     * multiple times in a row for the same stream_id a cached buffer is returned. This function
+     * allows the caller to ask for the same buffer to be reused to read multiple different
+     * tables: this can save memory allocations, but can only be used when tables are read one
+     * at a time.
      * @param stream_id
-     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
-     * returned previous calls to read_stream
+     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting
+     * data returned previous calls to read_stream
      * @return a buffer containing the decompressed stream identified by stream_id
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
