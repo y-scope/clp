@@ -32,7 +32,9 @@
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
-#include <clp/NetworkReader.hpp>
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include <clp/NetworkReader.hpp>
+#endif
 #include <clp/ReaderInterface.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
@@ -1360,11 +1362,9 @@ void JsonParser::split_archive() {
 #if CLP_S_EXCLUDE_LIBCURL
 bool JsonParser::check_and_log_curl_error(
         Path const& path,
-        std::shared_ptr<clp::ReaderInterface> reader
+        [[maybe_unused]] std::shared_ptr<clp::ReaderInterface> reader
 ) {
-    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
-        nullptr != network_reader)
-    {
+    if (InputSource::Network == path.source) {
         throw std::runtime_error("Simplified static clp-s executable does not support libcurl.");
     }
     return false;

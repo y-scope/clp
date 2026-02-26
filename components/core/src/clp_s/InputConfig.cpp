@@ -21,7 +21,9 @@
 #include "../clp/BufferedReader.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
-#include "../clp/NetworkReader.hpp"
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include "../clp/NetworkReader.hpp"
+#endif
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
