@@ -48,7 +48,7 @@ async def main(argv: list[str]) -> int:
         logger.exception("Failed to parse CLP configuration file.")
         return 1
 
-    gc_task_configs: dict[str, tuple[int | None, Callable]] = {
+    gc_task_configs: dict[str, tuple[int | None, Callable[[ClpConfig], None]]] = {
         ARCHIVE_GARBAGE_COLLECTOR_NAME: (
             clp_config.archive_output.retention_period,
             archive_garbage_collector,
