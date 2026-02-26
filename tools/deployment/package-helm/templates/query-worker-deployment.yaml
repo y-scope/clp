@@ -45,6 +45,11 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "query-worker"
+                "name" "log"
+              ) | quote }}
+              mountPath: "/var/log/query_worker"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
@@ -83,6 +88,11 @@ spec:
             "-n", "query-worker"
           ]
       volumes:
+        - name: {{ include "clp.volumeName" (dict
+            "component_category" "query-worker"
+            "name" "log"
+          ) | quote }}
+          emptyDir: {}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

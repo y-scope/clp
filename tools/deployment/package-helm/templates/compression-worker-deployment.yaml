@@ -47,6 +47,11 @@ spec:
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
+                "name" "log"
+              ) | quote }}
+              mountPath: "/var/log/compression_worker"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-worker"
                 "name" "tmp"
               ) | quote }}
               mountPath: "/var/tmp"
@@ -84,6 +89,11 @@ spec:
             "-n", "compression-worker"
           ]
       volumes:
+        - name: {{ include "clp.volumeName" (dict
+            "component_category" "compression-worker"
+            "name" "log"
+          ) | quote }}
+          emptyDir: {}
         - name: {{ include "clp.volumeName" (dict
             "component_category" "compression-worker"
             "name" "tmp"
