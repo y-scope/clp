@@ -189,6 +189,49 @@ The container image sets the following environment variables and configurations,
   </tbody>
 </table>
 
+## Corporate proxy and mirror support
+
+All base image `build.sh` scripts source `proxy-lib.sh`, which provides transparent support for
+building behind corporate proxies and with custom package mirrors. When no proxy or mirror
+environment variables are set, builds work identically to before.
+
+### Corporate proxy (TLS-intercepting)
+
+In environments where a TLS-intercepting proxy (e.g., Zscaler, Fortinet, Palo Alto) replaces
+upstream SSL certificates, `build.sh` auto-detects the host's CA bundle and injects it into the
+container's trust store. This allows package managers (dnf, apk, apt, pip) to verify the proxy's
+certificates without disabling SSL.
+
+The following proxy environment variables are forwarded as Docker build args when set:
+
+| Variable | Description |
+|---|---|
+| `HTTP_PROXY` / `http_proxy` | HTTP proxy URL |
+| `HTTPS_PROXY` / `https_proxy` | HTTPS proxy URL |
+| `ALL_PROXY` / `all_proxy` | SOCKS/catch-all proxy URL |
+| `NO_PROXY` / `no_proxy` | Comma-separated list of hosts to bypass |
+
+When a proxy URL points to localhost (`127.0.0.1`, `localhost`, or `[::1]`), `--network host` is
+automatically added to the Docker build so the container can reach the host's proxy. This can be
+overridden with `DOCKER_NETWORK`.
+
+### Package mirror overrides
+
+Each distro supports an environment variable to override the default package mirror:
+
+| Variable | Distro | Example |
+|---|---|---|
+| `DNF_MIRROR_BASE_URL` | manylinux_2_28 (AlmaLinux), centos-stream-9 | `https://internal.example.com/almalinux` |
+| `APK_MIRROR_URL` | musllinux_1_2 (Alpine) | `https://internal.example.com/alpine` |
+| `APT_MIRROR_URL` | ubuntu-jammy | `https://internal.example.com/ubuntu` |
+
+### Other build flags
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCKER_PULL` | `true` | Pull the latest base image before building. Set to `false` for offline builds. |
+| `DOCKER_NETWORK` | (auto) | Override Docker's network mode (e.g., `host`, `bridge`). |
+
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
 [core-deps-musllinux_1_2-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-musllinux_1_2

@@ -81,34 +81,35 @@ cleanup_ca_cert() {
 #   $2 - script_dir (used for git label metadata)
 #   $3 - (optional) name of the mirror override env var (e.g., DNF_MIRROR_BASE_URL)
 finalize_build() {
-    local -n _build_cmd_ref=$1
+    local -n _build_cmd=$1
     local script_dir="$2"
     local mirror_var="${3:-}"
 
     add_proxy_build_args "$1"
 
     if [[ -n "$mirror_var" ]] && [[ -n "${!mirror_var:-}" ]]; then
-        _build_cmd_ref+=(--build-arg "${mirror_var}=${!mirror_var}")
+        _build_cmd+=(--build-arg "${mirror_var}=${!mirror_var}")
     fi
 
-    if [[ "${DOCKER_PULL:-false}" == "true" ]]; then
-        _build_cmd_ref+=(--pull)
+    if [[ "${DOCKER_PULL:-true}" != "false" ]]; then
+        _build_cmd+=(--pull)
     fi
 
     if command -v git >/dev/null \
         && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
     then
-        _build_cmd_ref+=(
-            --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD 2>/dev/null)"
-        )
+        local revision
+        revision="$(git -C "$script_dir" rev-parse HEAD 2>/dev/null)"
+        _build_cmd+=(--label "org.opencontainers.image.revision=${revision}")
+
         local remote_url
         if remote_url="$(git -C "$script_dir" remote get-url origin 2>/dev/null)"; then
-            _build_cmd_ref+=(--label "org.opencontainers.image.source=${remote_url}")
+            _build_cmd+=(--label "org.opencontainers.image.source=${remote_url}")
         fi
     fi
 
-    echo "Running: ${_build_cmd_ref[*]}"
-    "${_build_cmd_ref[@]}"
+    echo "Running: ${_build_cmd[*]}"
+    "${_build_cmd[@]}"
 }
 
 # Appends --build-arg flags for proxy environment variables to the given
