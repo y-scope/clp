@@ -123,7 +123,7 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::add_s3_ingestion_job`]'s return values on failure.
+    /// * Forwards [`Self::create_s3_ingestion_job_instance`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::create_ingestion_job`]'s return values on failure.
     pub async fn register_and_create_s3_ingestion_job(
         &self,
@@ -135,7 +135,7 @@ impl IngestionJobManagerState {
             .create_ingestion_job(&config)
             .await?;
         match self
-            .add_s3_ingestion_job(config, state.clone(), listener)
+            .create_s3_ingestion_job_instance(config, state.clone(), listener)
             .await
         {
             Ok(()) => Ok(state.get_job_id()),
@@ -162,8 +162,10 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
-    /// * Forwards [`ClpIngestionState::get_job_status`]'s return values on failure.
+    /// * Forwards [`ClpIngestionState::get_job_status`]' return values on failure.
     /// * Forwards [`IngestionJobState::end`]'s return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::contains`]' return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::try_end`]'s return values on failure.
     pub async fn shutdown_and_remove_job_instance(
         &self,
         job_id: IngestionJobId,
@@ -172,34 +174,44 @@ impl IngestionJobManagerState {
         let job_to_remove = job_table.remove(&job_id);
         drop(job_table);
 
-        match job_to_remove {
-            Some(entry) => {
-                entry.ingestion_job.shutdown_and_join().await;
-                entry.listener.shutdown_and_join().await;
-                if ClpIngestionJobStatus::Failed == entry.state.get_job_status().await? {
-                    // The job has failed. We don't overwrite the failure status.
-                    return Ok(true);
-                }
-                entry.state.end().await.inspect_err(|e| {
-                    tracing::error!(
-                        job_id = ? job_id,
-                        error = ? e,
-                        "Failed to end ingestion job while the job instance has been removed."
-                    );
-                })?;
-                Ok(false)
+        if let Some(entry) = job_to_remove {
+            entry.ingestion_job.shutdown_and_join().await;
+            entry.listener.shutdown_and_join().await;
+            if ClpIngestionJobStatus::Failed == entry.state.get_job_status().await? {
+                // The job has failed. We don't overwrite the failure status.
+                return Ok(true);
             }
-            None => {
-                if !self.inner.clp_db_ingestion_connector.contains(job_id).await? {
-                    return Err(Error::JobNotFound(job_id));
-                }
-
-            }
+            entry.state.end().await.inspect_err(|e| {
+                tracing::error!(
+                    job_id = ? job_id,
+                    error = ? e,
+                    "Failed to end ingestion job while the job instance has been removed."
+                );
+            })?;
+            return Ok(false);
         }
+
+        // The ID does not exist in the in-memory job table.
+        if !self
+            .inner
+            .clp_db_ingestion_connector
+            .contains(job_id)
+            .await?
+        {
+            return Err(Error::JobNotFound(job_id));
+        }
+        self.inner
+            .clp_db_ingestion_connector
+            .try_fail(
+                job_id,
+                "Ingestion job instance not found on shutdown.".to_string(),
+            )
+            .await?;
+        Ok(false)
     }
 
-    /// Adds a new S3 ingestion job to the job table with key prefix conflict detection. The added
-    /// ingestion job will start running immediately after being added to the job table.
+    /// Creates a new S3 ingestion job instance and adds it to the job table with key prefix
+    /// conflict detection.
     ///
     /// When multiple ingestion jobs run in parallel, this function ensures that key prefixes do not
     /// conflict with each other, preventing duplicate object ingestion.
@@ -222,8 +234,9 @@ impl IngestionJobManagerState {
     /// * [`Error::InternalError`] if a job ID collision is detected (which is unlikely in
     ///   practice).
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
-    /// * Forwards [`Self::start_s3_ingestion_job_instance`]'s return values on failure.
-    async fn add_s3_ingestion_job(
+    /// * Forwards [`ValidatedSqsListenerConfig::validate_and_create`]'s return values on failure.
+    /// * Forwards [`ClpIngestionState::start`]'s return values on failure.
+    async fn create_s3_ingestion_job_instance(
         &self,
         config: S3IngestionJobConfig,
         state: ClpIngestionState,
@@ -261,12 +274,46 @@ impl IngestionJobManagerState {
             )));
         }
 
+        let job_id = state.get_job_id();
+        let ingestion_job = match config {
+            S3IngestionJobConfig::SqsListener(config) => {
+                let sqs_client_manager = SqsClientWrapper::create(
+                    config.base.region.as_ref(),
+                    self.inner.aws_credentials.access_key_id.as_str(),
+                    self.inner.aws_credentials.secret_access_key.as_str(),
+                )
+                .await;
+                let validated_config = ValidatedSqsListenerConfig::validate_and_create(config)?;
+                state.start().await?;
+                IngestionJob::SqsListener(crate::ingestion_job::SqsListener::spawn(
+                    job_id,
+                    &sqs_client_manager,
+                    &validated_config,
+                    state.clone(),
+                ))
+            }
+            S3IngestionJobConfig::S3Scanner(config) => {
+                let s3_client_manager = S3ClientWrapper::create(
+                    config.base.region.as_ref(),
+                    self.inner.aws_credentials.access_key_id.as_str(),
+                    self.inner.aws_credentials.secret_access_key.as_str(),
+                    config.base.endpoint_url.as_ref(),
+                )
+                .await;
+                state.start().await?;
+                IngestionJob::S3Scanner(S3Scanner::spawn(
+                    job_id,
+                    s3_client_manager,
+                    config,
+                    state.clone(),
+                ))
+            }
+        };
+
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
-                ingestion_job: self
-                    .start_s3_ingestion_job_instance(config, state.clone())
-                    .await?,
+                ingestion_job,
                 listener,
                 bucket_name: base_config.bucket_name,
                 region: base_config.region,
@@ -280,62 +327,6 @@ impl IngestionJobManagerState {
         drop(job_table);
 
         Ok(())
-    }
-
-    /// Creates and starts a new S3 ingestion job instance based on the given config and state.
-    ///
-    /// # Returns
-    ///
-    /// The created ingestion job instance on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`ClpIngestionState::start`]'s return values on failure.
-    /// * Forwards [`ValidatedSqsListenerConfig::validate_and_create`]'s return values on failure.
-    async fn start_s3_ingestion_job_instance(
-        &self,
-        config: S3IngestionJobConfig,
-        state: ClpIngestionState,
-    ) -> Result<IngestionJob<ClpIngestionState>, Error> {
-        let job_id = state.get_job_id();
-        match config {
-            S3IngestionJobConfig::SqsListener(config) => {
-                let sqs_client_manager = SqsClientWrapper::create(
-                    config.base.region.as_ref(),
-                    self.inner.aws_credentials.access_key_id.as_str(),
-                    self.inner.aws_credentials.secret_access_key.as_str(),
-                )
-                .await;
-                let validated_config = ValidatedSqsListenerConfig::validate_and_create(config)?;
-                state.start().await?;
-                Ok(IngestionJob::SqsListener(
-                    crate::ingestion_job::SqsListener::spawn(
-                        job_id,
-                        &sqs_client_manager,
-                        &validated_config,
-                        state.clone(),
-                    ),
-                ))
-            }
-            S3IngestionJobConfig::S3Scanner(config) => {
-                let s3_client_manager = S3ClientWrapper::create(
-                    config.base.region.as_ref(),
-                    self.inner.aws_credentials.access_key_id.as_str(),
-                    self.inner.aws_credentials.secret_access_key.as_str(),
-                    config.base.endpoint_url.as_ref(),
-                )
-                .await;
-                state.start().await?;
-                Ok(IngestionJob::S3Scanner(S3Scanner::spawn(
-                    job_id,
-                    s3_client_manager,
-                    config,
-                    state.clone(),
-                )))
-            }
-        }
     }
 }
 

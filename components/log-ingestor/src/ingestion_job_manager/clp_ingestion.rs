@@ -172,9 +172,9 @@ impl ClpDbIngestionConnector {
             r"SELECT COUNT(*) FROM `{table}` WHERE `id` = ?;",
             table = INGESTION_JOB_TABLE_NAME,
         ))
-            .bind(job_id)
-            .fetch_one(&self.db_pool)
-            .await?;
+        .bind(job_id)
+        .fetch_one(&self.db_pool)
+        .await?;
         Ok(count > 0)
     }
 
@@ -201,7 +201,7 @@ impl ClpDbIngestionConnector {
             ClpIngestionJobStatus::Failed,
             Some(&error_msg),
         )
-            .await
+        .await
     }
 }
 
@@ -336,9 +336,9 @@ impl ClpIngestionState {
             r"SELECT `status` FROM `{table}` WHERE `id` = ?",
             table = INGESTION_JOB_TABLE_NAME,
         ))
-            .bind(self.job_id)
-            .fetch_one(&mut *tx)
-            .await?;
+        .bind(self.job_id)
+        .fetch_one(&mut *tx)
+        .await?;
         if curr_status != ClpIngestionJobStatus::Running {
             return Err(anyhow::anyhow!(
                 "Job status update failed. The job may not exist or is not in the running state."
@@ -431,7 +431,7 @@ impl IngestionJobState for ClpIngestionState {
             ClpIngestionJobStatus::Running,
             None,
         )
-            .await
+        .await
     }
 
     /// # NOTE
@@ -449,7 +449,7 @@ impl IngestionJobState for ClpIngestionState {
             ClpIngestionJobStatus::Finished,
             None,
         )
-            .await
+        .await
     }
 
     /// # NOTE
@@ -467,7 +467,7 @@ impl IngestionJobState for ClpIngestionState {
             ClpIngestionJobStatus::Failed,
             Some(&msg),
         )
-            .await
+        .await
         {
             Ok(()) => {}
             Err(err) => {
@@ -980,15 +980,15 @@ async fn update_job_status(
         r"SELECT `status` FROM `{table}` WHERE `id` = ? FOR UPDATE",
         table = INGESTION_JOB_TABLE_NAME,
     ))
-        .bind(job_id)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => {
-                anyhow::anyhow!("Ingestion job with ID {job_id} not found.")
-            }
-            other => other.into(),
-        })?;
+    .bind(job_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => {
+            anyhow::anyhow!("Ingestion job with ID {job_id} not found.")
+        }
+        other => other.into(),
+    })?;
 
     if curr_status == status {
         // For idempotency, we skip the update if the job is already in the target status.
@@ -1011,11 +1011,11 @@ async fn update_job_status(
         r"UPDATE `{table}` SET `status` = ?, `status_msg` = ? WHERE `id` = ?;",
         table = INGESTION_JOB_TABLE_NAME,
     ))
-        .bind(status)
-        .bind(status_msg)
-        .bind(job_id)
-        .execute(&mut *tx)
-        .await?;
+    .bind(status)
+    .bind(status_msg)
+    .bind(job_id)
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
     tracing::info!(job_id = ? job_id, status = ? status, "Ingestion job status updated.");
