@@ -1,3 +1,4 @@
+{{- if has "results_cache" .Values.clpConfig.bundled }}
 apiVersion: "v1"
 kind: "Service"
 metadata:
@@ -20,3 +21,4 @@ spec:
       {{- if .Values.allowHostAccessForSbinScripts }}
       nodePort: {{ .Values.clpConfig.results_cache.port }}
       {{- end }}
+{{- end }}
