@@ -18,6 +18,8 @@ enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
 
 type CompressionMetadataQueryRow = CompressionMetadata & RowDataPacket;
 
+const COMPRESSION_METADATA_QUERY_LIMIT = 1000;
+
 /**
  * Builds the SQL query to fetch recent compression metadata.
  *
@@ -36,7 +38,8 @@ const getCompressionMetadataQuery = () => `
         ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.CLP_CONFIG}
     FROM ${settings.SqlDbCompressionJobsTableName}
     WHERE ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME} >= NOW() - INTERVAL 30 DAY
-    ORDER BY ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.ID} DESC;
+    ORDER BY ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.ID} DESC
+    LIMIT ${COMPRESSION_METADATA_QUERY_LIMIT};
 `;
 
 export {
