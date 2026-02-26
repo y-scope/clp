@@ -154,26 +154,29 @@ impl ClpDbIngestionConnector {
         Ok((ingestion_state, listener))
     }
 
-    /// Checks if an ingestion job with the given ID exists in CLP DB.
+    /// Gets the status of an ingestion job with the given ID from CLP DB.
     ///
     /// # Returns
     ///
-    /// Whether the ingestion job with the given ID exists in CLP DB.
+    /// The status of the ingestion job with the given ID if it exists in CLP DB, `None` otherwise.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values.
-    pub async fn contains(&self, job_id: IngestionJobId) -> anyhow::Result<bool> {
-        let count: u64 = sqlx::query_scalar(formatcp!(
-            r"SELECT COUNT(*) FROM `{table}` WHERE `id` = ?;",
+    /// * Forwards [`sqlx::query::Query::fetch_optional`]'s return values on failure.
+    pub async fn get_job_status(
+        &self,
+        job_id: IngestionJobId,
+    ) -> anyhow::Result<Option<ClpIngestionJobStatus>> {
+        let status: Option<ClpIngestionJobStatus> = sqlx::query_scalar(formatcp!(
+            r"SELECT `status` FROM `{table}` WHERE `id` = ?;",
             table = INGESTION_JOB_TABLE_NAME,
         ))
         .bind(job_id)
-        .fetch_one(&self.db_pool)
+        .fetch_optional(&self.db_pool)
         .await?;
-        Ok(count > 0)
+        Ok(status)
     }
 
     /// Attempts to fail an ingestion job with the given ID.
