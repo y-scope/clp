@@ -125,8 +125,6 @@ dependencies = [
  "tokio",
  "tower-http",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
  "utoipa",
  "utoipa-axum",
 ]
@@ -901,6 +899,8 @@ dependencies = [
  "sqlx",
  "strum",
  "thiserror",
+ "tracing-appender",
+ "tracing-subscriber",
  "utoipa",
 ]
 
@@ -2176,8 +2176,6 @@ dependencies = [
  "tokio-util",
  "tower-http",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
  "utoipa",
  "utoipa-axum",
  "uuid",

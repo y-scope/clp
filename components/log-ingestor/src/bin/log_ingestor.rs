@@ -2,8 +2,6 @@ use anyhow::Context;
 use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
 use log_ingestor::{ingestion_job_manager::IngestionJobManagerState, routes::create_router};
-use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
 #[derive(Parser)]
 #[command(version, about = "log-ingestor for CLP.")]
@@ -43,29 +41,6 @@ fn read_config_and_credentials(
     Ok((config, credentials))
 }
 
-fn set_up_logging() -> anyhow::Result<tracing_appender::non_blocking::WorkerGuard> {
-    let logs_directory =
-        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
-    let logs_directory = std::path::Path::new(logs_directory.as_str());
-    let file_appender =
-        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "log_ingestor.log");
-    let (non_blocking_writer, guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt()
-        .event_format(
-            tracing_subscriber::fmt::format()
-                .with_level(true)
-                .with_target(false)
-                .with_file(true)
-                .with_line_number(true)
-                .json(),
-        )
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .with_ansi(false)
-        .with_writer(std::io::stdout.and(non_blocking_writer))
-        .init();
-    Ok(guard)
-}
-
 async fn shutdown_signal() {
     let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
         .expect("failed to listen for SIGTERM");
@@ -82,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let (config, credentials) = read_config_and_credentials(&args)?;
-    let _guard = set_up_logging()?;
+    let _guard = clp_rust_utils::logging::set_up_logging("log_ingestor.log");
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)

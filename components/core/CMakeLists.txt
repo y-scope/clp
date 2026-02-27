@@ -506,6 +506,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrDeserializationError.cpp
         src/clp/ffi/ir_stream/IrDeserializationError.hpp
+        src/clp/ffi/ir_stream/IrSerializationError.cpp
+        src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp

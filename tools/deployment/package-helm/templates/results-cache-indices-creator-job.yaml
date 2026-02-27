@@ -15,16 +15,14 @@ spec:
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       restartPolicy: "OnFailure"
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      {{- if has "results_cache" .Values.clpConfig.bundled }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "results-cache"
           ) | nindent 10 }}
+      {{- end }}
       containers:
         - name: "results-cache-indices-creator"
           image: "{{ include "clp.image.ref" . }}"
@@ -36,8 +34,9 @@ spec:
             "python3", "-u",
             "-m", "clp_py_utils.initialize-results-cache",
             "--uri",
-            "mongodb://{{ include "clp.fullname" . }}-results-cache:27017\
-            /{{ .Values.clpConfig.results_cache.db_name }}",
+            "mongodb://{{ include "clp.resultsCacheHost" . }}:{{
+              include "clp.resultsCachePort" . | int
+            }}/{{ .Values.clpConfig.results_cache.db_name }}",
             "--stream-collection",
             {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
           ]
