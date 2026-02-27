@@ -222,30 +222,21 @@ data:
 
   mysql-logging.cnf: |
     [mysqld]
-    # https://dev.mysql.com/doc/refman/8.0/en/log-destinations.html
-    # Enable the general log
-    general_log=1
-    # Set the destination file
-    general_log_file=/var/log/mysql/mysql.log
-
-    # https://dev.mysql.com/doc/refman/8.0/en/error-log-destination-configuration.html
-    # Send error logs to file
-    log_error=/var/log/mysql/mysql-error.log
+    # Both MySQL and MariaDB Docker images default error log to stderr, so no
+    # log_error override is needed. General log is not enabled because the
+    # database process runs as a non-root user that cannot write to /dev/stdout.
 
   redis.conf: |
     # For full reference of configuration options see
     # https://raw.githubusercontent.com/redis/redis/7.2/redis.conf
 
     databases 2
-    logfile "/var/log/redis/redis.log"
+    logfile ""
 
   mongod.conf: |
     replication:
       replSetName: "rs0"
     systemLog:
-      destination: file
-      path: /var/log/mongodb/mongod.log
-      logAppend: true
       timeStampFormat: iso8601-local
 
   webui-client-settings.json: |

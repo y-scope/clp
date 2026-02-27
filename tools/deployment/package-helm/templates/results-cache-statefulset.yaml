@@ -19,10 +19,6 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "results-cache"
     spec:
-      securityContext:
-        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
-        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
-        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
       containers:
         - name: "results-cache"
           image: "mongo:7.0.1"
@@ -36,11 +32,6 @@ spec:
                 "name" "data"
               ) | quote }}
               mountPath: "/data/db"
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "results-cache"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/mongodb"
             - name: "config"
               mountPath: "/etc/mongo/mongod.conf"
               subPath: "mongod.conf"
@@ -65,8 +56,6 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
         name: {{ include "clp.volumeName" (dict
@@ -75,27 +64,7 @@ spec:
           ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "results-cache"
         resources:
           requests:
-            storage: "20Gi"
-    - metadata:
-        name: {{ include "clp.volumeName" (dict
-            "component_category" "results-cache"
-            "name" "logs"
-          ) | quote }}
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "results-cache"
-        resources:
-          requests:
-            storage: "5Gi"
+            storage: "10Gi"
 {{- end }}
