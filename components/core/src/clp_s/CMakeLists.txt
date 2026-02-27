@@ -19,13 +19,6 @@ set(
         ../clp/BufferedReader.hpp
         ../clp/BufferReader.cpp
         ../clp/BufferReader.hpp
-        ../clp/CurlDownloadHandler.cpp
-        ../clp/CurlDownloadHandler.hpp
-        ../clp/CurlEasyHandle.hpp
-        ../clp/CurlGlobalInstance.cpp
-        ../clp/CurlGlobalInstance.hpp
-        ../clp/CurlOperationFailed.hpp
-        ../clp/CurlStringList.hpp
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/Defs.h
@@ -92,8 +85,6 @@ set(
         ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
-        ../clp/NetworkReader.cpp
-        ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
         ../clp/Query.cpp
@@ -128,6 +119,22 @@ set(
         ../clp/WriterInterface.hpp
 )
 
+set(
+        CLP_S_CLP_CURL_SOURCES
+        ../clp/CurlDownloadHandler.cpp
+        ../clp/CurlDownloadHandler.hpp
+        ../clp/CurlEasyHandle.hpp
+        ../clp/CurlGlobalInstance.cpp
+        ../clp/CurlGlobalInstance.hpp
+        ../clp/CurlOperationFailed.hpp
+        ../clp/CurlStringList.hpp
+        ../clp/NetworkReader.cpp
+        ../clp/NetworkReader.hpp
+)
+if(NOT CLP_S_EXCLUDE_LIBCURL)
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
+endif()
+
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
@@ -149,6 +156,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
         )
@@ -159,11 +167,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                         ${CURL_LIBRARIES}
                 )
         endif()
-        target_link_libraries(
-                clp_s_clp_dependencies
-                PRIVATE
-                OpenSSL::Crypto
-        )
 endif()
 
 set(
@@ -324,13 +327,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 fmt::fmt
                 spdlog::spdlog
         )
-        if(NOT CLP_S_EXCLUDE_LIBCURL)
-                target_link_libraries(
-                        clp_s_archive_writer
-                        PRIVATE
-                        ${CURL_LIBRARIES}
-                )
-        endif()
 endif()
 
 set(
@@ -400,13 +396,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 fmt::fmt
                 spdlog::spdlog
         )
-        if(NOT CLP_S_EXCLUDE_LIBCURL)
-                target_link_libraries(
-                        clp_s_archive_reader
-                        PRIVATE
-                        ${CURL_LIBRARIES}
-                )
-        endif()
 endif()
 
 set(
