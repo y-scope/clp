@@ -1,9 +1,0 @@
-{{- if .Values.clpConfig.api_server }}
-{{- include "clp.createPvc" (dict
-  "root" .
-  "component_category" "api-server"
-  "name" "logs"
-  "capacity" "5Gi"
-  "accessModes" (list "ReadWriteOnce")
-) }}
-{{- end }}

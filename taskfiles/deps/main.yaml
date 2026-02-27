@@ -617,7 +617,7 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DZSTD_BUILD_CONTRIB=OFF"
             - "-DZSTD_BUILD_PROGRAMS=OFF"
-            - "-DZSTD_BUILD_SHARED=ON"
+            - "-DZSTD_BUILD_SHARED=OFF"
             - "-DZSTD_BUILD_STATIC=ON"
             - "-DZSTD_BUILD_TESTS=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
