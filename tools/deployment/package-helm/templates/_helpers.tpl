@@ -367,7 +367,7 @@ should be the job name suffix.
 */}}
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
-image: "bitnami/kubectl:latest"
+image: "bitnami/kubectl:1.31"
 command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}
