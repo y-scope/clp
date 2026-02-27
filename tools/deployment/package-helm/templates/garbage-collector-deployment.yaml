@@ -22,10 +22,6 @@ spec:
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       terminationGracePeriodSeconds: 10
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
@@ -56,21 +52,17 @@ spec:
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
-            - name: "CLP_LOGS_DIR"
-              value: "/var/log/garbage_collector"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "garbage-collector"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/garbage_collector"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "tmp"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "garbage-collector"
+                "name" "tmp"
+              ) | quote }}
               mountPath: "/var/log"
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
@@ -95,15 +87,13 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "garbage-collector"
-            "name" "logs"
-          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "tmp"
+        - name: {{ include "clp.volumeName" (dict
+            "component_category" "garbage-collector"
+            "name" "tmp"
+          ) | quote }}
           emptyDir: {}
         {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict

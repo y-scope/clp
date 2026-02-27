@@ -25,10 +25,6 @@ spec:
         "component" "reducer"
       ) | nindent 6 }}
       terminationGracePeriodSeconds: 10
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
@@ -49,16 +45,9 @@ spec:
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.reducer.logging_level | quote }}
-            - name: "CLP_LOGS_DIR"
-              value: "/var/log/reducer"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "reducer"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/reducer"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
@@ -71,11 +60,6 @@ spec:
             "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
           ]
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "reducer"
-            "name" "logs"
-          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

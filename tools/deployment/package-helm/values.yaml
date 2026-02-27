@@ -4,14 +4,6 @@ fullnameOverride: ""
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
 
-securityContext:
-  firstParty:
-    uid: 1000
-    gid: 1000
-  thirdParty:
-    uid: 1000
-    gid: 1000
-
 image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
@@ -19,13 +11,12 @@ image:
     tag: "main"
 
 # - If false: Single-node deployment.
-#   - PVs use local storage bound to a single node.
 #   - Pods automatically tolerate control-plane taints.
 #   - Each worker deployment supports only 1 replica.
 # - If true: Multi-node deployment.
-#   - PVs use a path on the host (`hostPath`) without node affinity.
-#   - `hostPath` must point to externally managed shared storage (e.g., NFS/CephFS) mounted at the
-#      same path on all nodes.
+#   - When using filesystem storage (`archive_output.storage.type: "fs"`), the PVC-backed
+#     directories must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+#     the same path).
 distributedDeployment: false
 
 # Number of concurrent processes per worker pod.
@@ -78,13 +69,6 @@ reducer:
   #     - maxSkew: 1
   #       topologyKey: "kubernetes.io/hostname"
   #       whenUnsatisfiable: "DoNotSchedule"
-
-storage:
-  # Name of the StorageClass for PVs and PVCs.
-  # - If set to "local-storage" (default), the chart will create a StorageClass
-  #   with volumeBindingMode=WaitForFirstConsumer.
-  # - If set to any other value, that StorageClass must already exist in the cluster.
-  storageClassName: "local-storage"
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
@@ -244,23 +228,6 @@ clpConfig:
     sweep_interval:
       archive: 60
       search_result: 30
-
-  # Location where other data (besides archives) are stored. It will be created if
-  # it doesn't exist.
-  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
-  # will be raised if so.
-  data_directory: "/tmp/clp/var/data"
-
-  # Location where logs are stored. It will be created if it doesn't exist.
-  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
-  # will be raised if so.
-  logs_directory: "/tmp/clp/var/log"
-
-  # Location where temporary runtime data are stored. It will be created if
-  # it doesn't exist.
-  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
-  # will be raised if so.
-  tmp_directory: "/tmp/clp/var/tmp"
 
   # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
   aws_config_directory: null

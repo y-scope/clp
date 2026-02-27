@@ -20,10 +20,6 @@ spec:
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
       terminationGracePeriodSeconds: 60
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
@@ -50,19 +46,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
-            - name: "CLP_LOGS_DIR"
-              value: "/var/log/api_server"
             - name: "RUST_LOG"
               value: "INFO"
           ports:
             - name: "api-server"
               containerPort: 3001
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "api-server"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/api_server"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
@@ -89,11 +78,6 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *api-server-health-check
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "api-server"
-            "name" "logs"
-          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config

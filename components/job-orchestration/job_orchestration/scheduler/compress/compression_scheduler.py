@@ -1,7 +1,5 @@
 import argparse
 import datetime
-import logging
-import os
 import signal
 import sys
 import time
@@ -22,7 +20,7 @@ from clp_py_utils.clp_config import (
     OrchestrationType,
     StorageEngine,
 )
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
@@ -423,14 +421,8 @@ def main(argv) -> int | None:
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args = args_parser.parse_args(argv[1:])
 
-    # Setup logging
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_scheduler.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
-    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+    # Setup optional file logging and logging level.
+    configure_logging(logger, "compression_scheduler")
 
     # Register the SIGTERM handler
     signal.signal(signal.SIGTERM, sigterm_handler)
