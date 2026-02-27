@@ -438,7 +438,6 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
-                zstd::libzstd_static
                 PRIVATE
                 fmt::fmt
                 spdlog::spdlog
