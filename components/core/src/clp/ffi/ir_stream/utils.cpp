@@ -1,5 +1,6 @@
 #include "utils.hpp"
 
+#include <cassert>
 #include <cstdint>
 #include <string_view>
 #include <system_error>

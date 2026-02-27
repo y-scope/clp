@@ -59,7 +59,7 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * Deserializes the key name of a schema tree node.
  * @param reader
  * @param key_name Returns the deserialized key name.
- * @return A void result on success
+ * @return A void result on success.
  * @return Forwards `deserialize_tag`'s return values on failure.
  * @return Forwards `deserialize_string`'s return values on failure.
  */
