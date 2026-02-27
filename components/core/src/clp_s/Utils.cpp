@@ -153,19 +153,17 @@ bool FileUtils::get_last_non_empty_path_component(std::string_view const path, s
 }
 
 #if CLP_S_EXCLUDE_LIBCURL
-auto NetworkUtils::check_and_log_curl_error(
-        std::string_view path,
-        clp::ReaderInterface const* reader
-) -> bool {
+auto
+NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
+        -> bool {
     std::ignore = path;
     std::ignore = reader;
     return false;
 }
 #else
-auto NetworkUtils::check_and_log_curl_error(
-        std::string_view path,
-        clp::ReaderInterface const* reader
-) -> bool {
+auto
+NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
+        -> bool {
     auto const* network_reader = dynamic_cast<clp::NetworkReader const*>(reader);
     if (nullptr == network_reader) {
         return false;
