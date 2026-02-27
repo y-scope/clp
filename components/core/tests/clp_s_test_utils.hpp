@@ -3,7 +3,6 @@
 
 #include <optional>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "../src/clp_s/ArchiveWriter.hpp"
@@ -30,10 +29,4 @@
         bool single_file_archive,
         bool structurize_arrays
 ) -> std::vector<clp_s::ArchiveStats>;
-
-/**
- * @param test_input_path The name of the test input file.
- * @return The absolute path to the test input file within the test log directory.
- */
-[[nodiscard]] auto get_test_input_local_path(std::string_view test_input_path) -> std::string;
 #endif  // CLP_S_TEST_UTILS_HPP
