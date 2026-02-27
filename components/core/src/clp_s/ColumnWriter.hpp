@@ -23,12 +23,12 @@ public:
     BaseColumnWriter(BaseColumnWriter const&) = default;
     BaseColumnWriter(BaseColumnWriter&&) noexcept = default;
 
-    // Destructors
-    virtual ~BaseColumnWriter() = default;
-
     // Operators
     auto operator=(BaseColumnWriter const&) -> BaseColumnWriter& = default;
     auto operator=(BaseColumnWriter&&) noexcept -> BaseColumnWriter& = default;
+
+    // Destructor
+    virtual ~BaseColumnWriter() = default;
 
     // Methods
     /**
@@ -110,7 +110,7 @@ private:
 class DictionaryFloatColumnWriter : public BaseColumnWriter {
 public:
     // Constructors
-    DictionaryFloatColumnWriter(std::shared_ptr<VariableDictionaryWriter> var_dict)
+    explicit DictionaryFloatColumnWriter(std::shared_ptr<VariableDictionaryWriter> var_dict)
             : m_var_dict(std::move(var_dict)) {}
 
     // Methods implementing BaseColumnWriter
@@ -203,7 +203,7 @@ private:
 class VariableStringColumnWriter : public BaseColumnWriter {
 public:
     // Constructors
-    VariableStringColumnWriter(std::shared_ptr<VariableDictionaryWriter> var_dict)
+    explicit VariableStringColumnWriter(std::shared_ptr<VariableDictionaryWriter> var_dict)
             : m_var_dict(std::move(var_dict)) {}
 
     // Methods implementing BaseColumnWriter
