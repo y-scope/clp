@@ -1,19 +1,16 @@
+add_subdirectory(indexer)
+add_subdirectory(log_converter)
+add_subdirectory(search)
+add_subdirectory(timestamp_parser)
+
 option(
         CLP_S_EXCLUDE_LIBCURL
         "Exclude libcurl support from clp-s."
         ON
 )
 
-add_subdirectory(indexer)
-add_subdirectory(log_converter)
-add_subdirectory(search)
-add_subdirectory(timestamp_parser)
-add_subdirectory(ffi)
-
 set(
         CLP_S_CLP_SOURCES
-        ../clp/aws/AwsAuthenticationSigner.cpp
-        ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
         ../clp/BoundedReader.hpp
         ../clp/BufferedReader.cpp
@@ -72,8 +69,6 @@ set(
         ../clp/FileReader.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        ../clp/hash_utils.cpp
-        ../clp/hash_utils.hpp
         ../clp/SchemaSearcher.cpp
         ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
@@ -121,7 +116,11 @@ set(
 )
 
 set(
-        CLP_S_CURL_SOURCES
+        CLP_S_CLP_CURL_SOURCES
+        ../clp/aws/AwsAuthenticationSigner.cpp
+        ../clp/aws/AwsAuthenticationSigner.hpp
+        ../clp/hash_utils.cpp
+        ../clp/hash_utils.hpp
         ../clp/CurlDownloadHandler.cpp
         ../clp/CurlDownloadHandler.hpp
         ../clp/CurlEasyHandle.hpp
@@ -133,7 +132,7 @@ set(
         ../clp/NetworkReader.hpp
 )
 if(NOT CLP_S_EXCLUDE_LIBCURL)
-        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CURL_SOURCES})
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
 endif()
 
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
@@ -165,13 +164,9 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                         clp_s_clp_dependencies
                         PRIVATE
                         ${CURL_LIBRARIES}
+                        OpenSSL::Crypto
                 )
         endif()
-        target_link_libraries(
-                clp_s_clp_dependencies
-                PRIVATE
-                OpenSSL::Crypto
-        )
 endif()
 
 set(
@@ -333,13 +328,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 fmt::fmt
                 spdlog::spdlog
         )
-        if(NOT CLP_S_EXCLUDE_LIBCURL)
-                target_link_libraries(
-                        clp_s_archive_writer
-                        PRIVATE
-                        ${CURL_LIBRARIES}
-                )
-        endif()
 endif()
 
 set(
@@ -409,13 +397,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 fmt::fmt
                 spdlog::spdlog
         )
-        if(NOT CLP_S_EXCLUDE_LIBCURL)
-                target_link_libraries(
-                        clp_s_archive_reader
-                        PRIVATE
-                        ${CURL_LIBRARIES}
-                )
-        endif()
 endif()
 
 set(
@@ -440,12 +421,8 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s::archive_reader
                 PRIVATE
                 fmt::fmt
-                spdlog::spdlog
-        )
-        target_link_libraries(
-                clp_s_json_constructor
-                PRIVATE
                 ${MONGOCXX_TARGET}
+                spdlog::spdlog
         )
 endif()
 
@@ -513,14 +490,10 @@ if(CLP_BUILD_EXECUTABLES)
                 clp_s::search
                 clp_s::search::ast
                 clp_s::search::kql
+                ${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
-        )
-        target_link_libraries(
-                clp-s
-                PRIVATE
-                ${MONGOCXX_TARGET}
         )
         set_target_properties(
                 clp-s

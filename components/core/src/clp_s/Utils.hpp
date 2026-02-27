@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include "../clp/ReaderInterface.hpp"
+
 namespace clp_s {
 class FileUtils {
 public:
@@ -45,6 +47,19 @@ public:
      * @return true on success, false otherwise
      */
     static bool get_last_non_empty_path_component(std::string_view const path, std::string& name);
+};
+
+class NetworkUtils {
+public:
+    /**
+     * Checks if a reader is a clp::NetworkReader that has encountered a CURL error and logs
+     * relevant CURL error information if a CURL error has occurred.
+     * @param path The path that the reader has opened.
+     * @param reader The open reader which may have experienced a CURL error.
+     * @return true if a CURL error has occurred on the reader, false otherwise.
+     */
+    [[nodiscard]] static auto
+    check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader) -> bool;
 };
 
 class UriUtils {
