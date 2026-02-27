@@ -95,7 +95,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
 
     clp_s::JsonParserOption option{};
     option.input_paths_and_canonical_filenames
-            = command_line_arguments.input_paths_and_canonical_filenames();
+            = command_line_arguments.get_input_paths_and_canonical_filenames();
     option.network_auth = command_line_arguments.get_network_auth();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
