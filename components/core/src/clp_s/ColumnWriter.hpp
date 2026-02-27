@@ -68,13 +68,13 @@ private:
 
 class DeltaEncodedInt64ColumnWriter : public BaseColumnWriter {
 public:
-    // Methods
-    [[nodiscard]] auto add_value(int64_t value) -> size_t;
-
     // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
+
+    // Methods
+    [[nodiscard]] auto add_value(int64_t value) -> size_t;
 
 private:
     // Variables
@@ -154,9 +154,9 @@ public:
 
     auto store(ZstdCompressor& compressor) -> void override;
 
+    // Methods
     [[nodiscard]] auto get_total_header_size() const -> size_t override { return sizeof(size_t); }
 
-    // Methods
     /**
      * @param encoded_id
      * @return the encoded log dict id
@@ -212,6 +212,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
 };
@@ -224,6 +225,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     DeltaEncodedInt64ColumnWriter m_timestamps;
     std::vector<uint64_t> m_timestamp_encodings;
 };
