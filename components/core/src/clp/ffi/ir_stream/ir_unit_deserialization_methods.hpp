@@ -35,7 +35,8 @@ namespace clp::ffi::ir_stream {
  *   - The locator of the inserted schema tree node.
  * - The possible error codes:
  *   - IrDeserializationErrorEnum::IncompleteStream if the IR stream is truncated.
- *   - IrDeserializationErrorEnum::CorruptedIR if the deserialized node type isn't supported.
+ *   - IrDeserializationErrorEnum::UnsupportedNodeType if the deserialized node type isn't
+ *     supported.
  *   - Forwards `deserialize_schema_tree_node_key_name`'s return values.
  *   - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
@@ -65,11 +66,12 @@ namespace clp::ffi::ir_stream {
  * KV-pair log event.
  * @param utc_offset UTC offset used to construct the KV-pair log event.
  * @return A result containing the deserialized log event or an error code indicating the failure:
- * - IrDeserializationErrorEnum::CorruptedIR if the IR stream is corrupted.
- * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is truncated.
- * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values.
- * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
- *   cannot construct a valid key-value pair log event.
+ * - IrDeserializationErrorEnum::InvalidTag if the log event is empty but the tag is not
+ *   ValueEmpty.
+ * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values on
+ * failure.
+ * - Forwards `deserialize_value_and_construct_node_id_value_pairs`'s return values on failure.
+ * - Forwards `KeyValuePairLogEvent::create`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
         ReaderInterface& reader,

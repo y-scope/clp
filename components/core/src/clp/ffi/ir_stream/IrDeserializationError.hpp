@@ -10,11 +10,15 @@ namespace clp::ffi::ir_stream {
  * Error code enum for IR stream deserialization.
  */
 enum class IrDeserializationErrorEnum : uint8_t {
+    CorruptedIR,
     DecodingMethodFailure,
+    DuplicateKey,
     EndOfStream,
     IncompleteStream,
-    CorruptedIR,
+    InvalidKeyOrdering,
+    InvalidTag,
     UnsupportedFormat,
+    UnsupportedNodeType,
 };
 
 using IrDeserializationError = ystdlib::error_handling::ErrorCode<IrDeserializationErrorEnum>;

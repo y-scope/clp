@@ -74,7 +74,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param val Returns the deserialized value.
  * @return A void result on success.
  * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * @return IrDeserializationErrorEnum::CorruptedIR if the given tag doesn't correspond to an integer
+ * @return IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to an integer
  * packet.
  */
 [[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
@@ -87,7 +87,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param deserialized_str Returns the deserialized string.
  * @return A void result on success.
  * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * @return IrDeserializationErrorEnum::CorruptedIR if the given tag doesn't correspond to a string
+ * @return IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to a string
  * packet.
  */
 [[nodiscard]] auto
@@ -106,8 +106,8 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * - The possible error codes:
  *   - Forwards `deserialize_tag`'s return values.
  *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
- *   - IrDeserializationErrorEnum::CorruptedIR if the IR stream contains auto-generated key IDs
- * *after* a user-generated key ID has been deserialized.
+ *   - IrDeserializationErrorEnum::InvalidKeyOrdering if the IR stream contains auto-generated key
+ *     IDs *after* a user-generated key ID has been deserialized.
  */
 [[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         ReaderInterface& reader,
@@ -122,10 +122,12 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
  * @return A void result on success.
  * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * @return IrDeserializationErrorEnum::CorruptedIR if the tag doesn't correspond to any known value
- * type.
+ * @return IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't correspond to any
+ * known value type.
  * @return Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return
  * values on any other failure.
+ * @return Forwards `deserialize_int_val`'s return values on failure.
+ * @return Forwards `deserialize_string`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
@@ -160,7 +162,7 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
  * @param schema The log event's schema.
  * @param node_id_value_pairs Returns the constructed ID-value pairs.
  * @return A void result on success.
- * @return IrDeserializationErrorEnum::CorruptedIR if a key is duplicated in the deserialized log
+ * @return IrDeserializationErrorEnum::DuplicateKey if a key is duplicated in the deserialized log
  * event.
  * @return Forwards `deserialize_tag`'s return values on failure.
  * @return Forwards `deserialize_value_and_insert_to_node_id_value_pairs`'s return values on
@@ -254,7 +256,7 @@ auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t
         }
         val = deserialized_val;
     } else {
-        return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+        return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
     return ystdlib::error_handling::success();
 }
@@ -281,7 +283,7 @@ auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string&
         }
         str_length = static_cast<size_t>(length);
     } else {
-        return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+        return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
     if (clp::ErrorCode_Success != reader.try_read_string(str_length, deserialized_str)) {
         return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
@@ -348,7 +350,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         }
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (is_auto_generated) {
-            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidKeyOrdering};
         }
         user_gen_schema.push_back(node_id);
 
@@ -421,7 +423,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
             node_id_value_pairs.emplace(node_id, std::nullopt);
             break;
         default:
-            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedNodeType};
     }
     return ystdlib::error_handling::success();
 }
@@ -457,7 +459,7 @@ auto deserialize_value_and_construct_node_id_value_pairs(
     for (auto const node_id : schema) {
         if (node_id_value_pairs.contains(node_id)) {
             // The key should be unique in a schema
-            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::DuplicateKey};
         }
 
         YSTDLIB_ERROR_HANDLING_TRYV(deserialize_value_and_insert_to_node_id_value_pairs(
@@ -529,7 +531,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
     auto const type{schema_tree_node_tag_to_type(tag)};
     if (false == type.has_value()) {
-        return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedNodeType};
     }
 
     auto const parent_node_id_result{deserialize_schema_tree_node_parent_id(reader)};
@@ -579,7 +581,7 @@ auto deserialize_ir_unit_kv_pair_log_event(
         ));
     } else {
         if (cProtocol::Payload::ValueEmpty != tag) {
-            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
         }
     }
 
