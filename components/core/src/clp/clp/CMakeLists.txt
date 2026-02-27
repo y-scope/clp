@@ -204,7 +204,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 ystdlib::containers
                 ystdlib::error_handling
-                ${zstd_TARGET}
+                zstd::libzstd_static
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
