@@ -120,9 +120,9 @@ public:
     /**
      * Checks if a reader is a clp::NetworkReader that has encountered a CURL error and logs
      * relevant CURL error information if a CURL error has occurred.
-     * @param path
-     * @param reader
-     * @return true if a curl error has occurred on the reader, false otherwise.
+     * @param path The path that the reader has opened.
+     * @param reader The open reader which may have experienced a CURL error.
+     * @return true if a CURL error has occurred on the reader, false otherwise.
      */
     [[nodiscard]] static auto
     check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader) -> bool;

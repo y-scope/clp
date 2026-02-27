@@ -421,12 +421,8 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
-                spdlog::spdlog
-        )
-        target_link_libraries(
-                clp_s_json_constructor
-                PRIVATE
                 ${MONGOCXX_TARGET}
+                spdlog::spdlog
         )
 endif()
 
@@ -494,14 +490,10 @@ if(CLP_BUILD_EXECUTABLES)
                 clp_s::search
                 clp_s::search::ast
                 clp_s::search::kql
+                ${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
-        )
-        target_link_libraries(
-                clp-s
-                PRIVATE
-                ${MONGOCXX_TARGET}
         )
         set_target_properties(
                 clp-s

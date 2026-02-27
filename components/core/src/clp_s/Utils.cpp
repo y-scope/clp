@@ -236,7 +236,7 @@ NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterfa
         curl_error_info.has_value())
     {
         SPDLOG_ERROR(
-                "Encountered curl error while downloading {} - Code: {} - Message: {}",
+                "Encountered curl error while reading {} - Code: {} - Message: {}",
                 path,
                 curl_error_info->code,
                 curl_error_info->message
