@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 
+#include "../clp/type_utils.hpp"
 #include "archive_constants.hpp"
 
 namespace clp_s {
@@ -120,7 +121,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
         }
         schema.resize(schema_node_size);
         error_code = schema_id_decompressor.try_read_exact_length(
-                reinterpret_cast<char*>(schema.data()),
+                clp::size_checked_pointer_cast<char>(schema.data()),
                 sizeof(int32_t) * schema_node_size
         );
         if (ErrorCodeSuccess != error_code) {

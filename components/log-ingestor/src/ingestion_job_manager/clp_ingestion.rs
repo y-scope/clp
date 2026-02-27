@@ -334,7 +334,7 @@ impl ClpIngestionState {
         mut tx: sqlx::Transaction<'_, sqlx::MySql>,
     ) -> anyhow::Result<()> {
         let curr_status: ClpIngestionJobStatus = sqlx::query_scalar(formatcp!(
-            r"SELECT `status` FROM `{table}` WHERE `id` = ?",
+            r"SELECT `status` FROM `{table}` WHERE `id` = ? LOCK IN SHARE MODE;",
             table = INGESTION_JOB_TABLE_NAME,
         ))
         .bind(self.job_id)
