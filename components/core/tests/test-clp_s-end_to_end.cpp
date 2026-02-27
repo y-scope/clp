@@ -26,6 +26,7 @@
 constexpr std::string_view cTestEndToEndArchiveDirectory{"test-end-to-end-archive"};
 constexpr std::string_view cTestEndToEndOutputDirectory{"test-end-to-end-out"};
 constexpr std::string_view cTestEndToEndOutputSortedJson{"test-end-to-end_sorted.jsonl"};
+constexpr std::string_view cTestEndToEndInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestEndToEndInputFile{"test_no_floats_sorted.jsonl"};
 constexpr std::string_view cTestEndToEndExpectedOutputSortedFile{
         "test-end-to-end_expected_output_sorted.jsonl"
@@ -39,6 +40,9 @@ constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
 constexpr std::string_view cTestEndToEndTimestampInputFile{"test_timestamp.jsonl"};
 
 namespace {
+auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
+        -> std::filesystem::path;
+auto get_test_input_local_path(std::string_view const test_input_path) -> std::string;
 auto extract() -> std::filesystem::path;
 void compare(std::filesystem::path const& extracted_json_path);
 void literallyCompare(
@@ -47,6 +51,17 @@ void literallyCompare(
 );
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types);
 void validate_archive_header();
+
+auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
+        -> std::filesystem::path {
+    return std::filesystem::path{cTestEndToEndInputFileDirectory} / test_input_path;
+}
+
+auto get_test_input_local_path(std::string_view const test_input_path) -> std::string {
+    std::filesystem::path const current_file_path{__FILE__};
+    auto const tests_dir{current_file_path.parent_path()};
+    return (tests_dir / get_test_input_path_relative_to_tests_dir(test_input_path)).string();
+}
 
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
     clp_s::ArchiveReader archive_reader;
