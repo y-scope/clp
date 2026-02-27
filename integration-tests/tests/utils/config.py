@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
@@ -18,6 +19,8 @@ from tests.utils.utils import (
     validate_dir_exists,
     validate_file_exists,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -157,7 +160,8 @@ class PackageTestConfig:
         return self.path_config.temp_config_dir / f"clp-config-{self.mode_config.mode_name}.yaml"
 
     def _write_temp_config_file(self) -> None:
-        """Writes the temporary config file for this package test."""
+        """Writes the temporary config file for this package."""
+        logger.debug("Writing the config file for the '%s' package...", self.mode_config.mode_name)
         temp_config_file_path = self.temp_config_file_path
 
         payload = self.mode_config.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]

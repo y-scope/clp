@@ -1,8 +1,8 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-import shlex
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -12,29 +12,26 @@ from pydantic import ValidationError
 from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_services_in_compose_project
+from tests.utils.logging_utils import construct_log_err_msg
 from tests.utils.utils import load_yaml_to_dict
 
 logger = logging.getLogger(__name__)
 
 
-def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+def run_and_log_to_file(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> None:
     """
-    Runs a command with subprocess and asserts that it succeeds with pytest.
+    Runs a command with subprocess.
 
+    :param request: Pytest fixture request.
     :param cmd: Command and arguments to execute.
     :param kwargs: Additional keyword arguments passed through to the subprocess.
-    :return: The completed process object, for inspection or further handling.
-    :raise: pytest.fail if the command exits with a non-zero return code.
+    :raise: Propagates `subprocess.run`'s errors.
     """
-    logger.info("Running command: %s", shlex.join(cmd))
-
-    try:
-        proc = subprocess.run(cmd, check=True, **kwargs)
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
-    except subprocess.TimeoutExpired as e:
-        pytest.fail(f"Command timed out: {' '.join(cmd)}: {e}")
-    return proc
+    log_file_path = Path(request.config.getini("log_file_path"))
+    with log_file_path.open("ab") as log_file:
+        log_debug_msg = f"Now running command: {cmd}"
+        logger.debug(log_debug_msg)
+        subprocess.run(cmd, stdout=log_file, stderr=log_file, check=True, **kwargs)
 
 
 def validate_package_instance(package_instance: PackageInstance) -> None:
@@ -45,6 +42,9 @@ def validate_package_instance(package_instance: PackageInstance) -> None:
 
     :param package_instance:
     """
+    mode_name = package_instance.package_test_config.mode_config.mode_name
+    logger.info("Validating that the '%s' package is running correctly...", mode_name)
+
     # Ensure that all package components are running.
     _validate_package_running(package_instance)
 
@@ -60,6 +60,9 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
+    mode_name = package_instance.package_test_config.mode_config.mode_name
+    logger.debug("Validating that all components of the '%s' package are running...", mode_name)
+
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
     project_name = f"clp-package-{instance_id}"
@@ -70,17 +73,19 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     if required_components == running_services:
         return
 
-    fail_msg = "Component mismatch."
+    # Construct error message.
+    err_msg = f"Component validation failed for the {mode_name} package test."
 
     missing_components = required_components - running_services
     if missing_components:
-        fail_msg += f"\nMissing components: {missing_components}."
+        err_msg += f" Missing components: {missing_components}."
 
     unexpected_components = running_services - required_components
     if unexpected_components:
-        fail_msg += f"\nUnexpected services: {unexpected_components}."
+        err_msg += f" Unexpected services: {unexpected_components}."
 
-    pytest.fail(fail_msg)
+    logger.error(construct_log_err_msg(err_msg))
+    pytest.fail(err_msg)
 
 
 def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
@@ -94,13 +99,22 @@ def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the ClpConfig object cannot be validated.
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
+    mode_name = package_instance.package_test_config.mode_config.mode_name
+    logger.debug(
+        "Validating that the '%s' package is running in the correct configuration...", mode_name
+    )
+
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)
     except ValidationError as err:
-        pytest.fail(f"Shared config failed validation: {err}")
+        err_msg = f"The shared config file could not be validated: {err}"
+        logger.error(construct_log_err_msg(err_msg))
+        pytest.fail(err_msg)
 
     intended_config = package_instance.package_test_config.mode_config.clp_config
 
     if not compare_mode_signatures(intended_config, running_config):
-        pytest.fail("Mode mismatch: running configuration does not match intended configuration.")
+        err_msg = f"Mode validation failed for the {mode_name} package test."
+        logger.error(construct_log_err_msg(err_msg))
+        pytest.fail(err_msg)
