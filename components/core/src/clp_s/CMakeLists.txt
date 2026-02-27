@@ -11,8 +11,6 @@ add_subdirectory(timestamp_parser)
 
 set(
         CLP_S_CLP_SOURCES
-        ../clp/aws/AwsAuthenticationSigner.cpp
-        ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
         ../clp/BoundedReader.hpp
         ../clp/BufferedReader.cpp
@@ -71,8 +69,6 @@ set(
         ../clp/FileReader.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        ../clp/hash_utils.cpp
-        ../clp/hash_utils.hpp
         ../clp/SchemaSearcher.cpp
         ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
@@ -121,6 +117,10 @@ set(
 
 set(
         CLP_S_CLP_CURL_SOURCES
+        ../clp/aws/AwsAuthenticationSigner.cpp
+        ../clp/aws/AwsAuthenticationSigner.hpp
+        ../clp/hash_utils.cpp
+        ../clp/hash_utils.hpp
         ../clp/CurlDownloadHandler.cpp
         ../clp/CurlDownloadHandler.hpp
         ../clp/CurlEasyHandle.hpp
@@ -156,7 +156,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
-                OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
         )
@@ -165,6 +164,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                         clp_s_clp_dependencies
                         PRIVATE
                         ${CURL_LIBRARIES}
+                        OpenSSL::Crypto
                 )
         endif()
 endif()
