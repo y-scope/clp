@@ -238,7 +238,7 @@ NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterfa
         SPDLOG_ERROR(
                 "Encountered curl error while reading {} - Code: {} - Message: {}",
                 path,
-                curl_error_info->code,
+                static_cast<int64_t>(curl_error_info->code),
                 curl_error_info->message
         );
         return true;

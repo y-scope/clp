@@ -70,7 +70,7 @@ public:
      * CURL error details set by the underlying CURL handler.
      */
     struct CurlErrorInfo {
-        int64_t code;
+        CURLcode code;
         std::string_view message;
     };
 
@@ -241,7 +241,7 @@ public:
             return std::nullopt;
         }
         return CurlErrorInfo{
-                .code = static_cast<int64_t>(ret_code.value()),
+                .code = ret_code.value(),
                 .message = std::string_view{m_curl_error_msg_buf->data()}
         };
     }
