@@ -56,12 +56,13 @@ public:
 
 class Int64ColumnWriter : public BaseColumnWriter {
 public:
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::vector<int64_t> m_values;
 };
 
@@ -70,63 +71,68 @@ public:
     // Methods
     [[nodiscard]] auto add_value(int64_t value) -> size_t;
 
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::vector<int64_t> m_values;
     int64_t m_cur{};
 };
 
 class FloatColumnWriter : public BaseColumnWriter {
 public:
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::vector<double> m_values;
 };
 
 class FormattedFloatColumnWriter : public BaseColumnWriter {
 public:
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::vector<double> m_values;
     std::vector<float_format_t> m_formats;
 };
 
 class DictionaryFloatColumnWriter : public BaseColumnWriter {
 public:
-    // Constructor
+    // Constructors
     DictionaryFloatColumnWriter(std::shared_ptr<VariableDictionaryWriter> var_dict)
             : m_var_dict(std::move(var_dict)) {}
 
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
 };
 
 class BooleanColumnWriter : public BaseColumnWriter {
 public:
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
+    // Variables
     std::vector<uint8_t> m_values;
 };
 
@@ -135,7 +141,7 @@ public:
     // Types
     using encoded_log_dict_id_t = uint64_t;
 
-    // Constructor
+    // Constructors
     ClpStringColumnWriter(
             std::shared_ptr<VariableDictionaryWriter> var_dict,
             std::shared_ptr<LogTypeDictionaryWriter> log_dict
@@ -143,13 +149,14 @@ public:
             : m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)) {}
 
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
 
     [[nodiscard]] auto get_total_header_size() const -> size_t override { return sizeof(size_t); }
 
+    // Methods
     /**
      * @param encoded_id
      * @return the encoded log dict id
@@ -168,6 +175,7 @@ public:
     }
 
 private:
+    // Methods
     /**
      * Encodes a log dict id
      * @param id
@@ -179,6 +187,7 @@ private:
         return static_cast<encoded_log_dict_id_t>(id) | (offset << cOffsetBitPosition);
     }
 
+    // Variables
     static constexpr int cOffsetBitPosition = 24;
     static constexpr uint64_t cLogDictIdMask = (1ULL << cOffsetBitPosition) - 1;
     static constexpr uint64_t cOffsetMask = ~cLogDictIdMask;
@@ -197,7 +206,7 @@ public:
     VariableStringColumnWriter(std::shared_ptr<VariableDictionaryWriter> var_dict)
             : m_var_dict(std::move(var_dict)) {}
 
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;
@@ -209,7 +218,7 @@ private:
 
 class TimestampColumnWriter : public BaseColumnWriter {
 public:
-    // Methods inherited from BaseColumnWriter
+    // Methods implementing BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
     auto store(ZstdCompressor& compressor) -> void override;

@@ -207,6 +207,7 @@ public:
     }
 
 private:
+    // Variables
     static constexpr size_t cEncodedTypeOffset{(sizeof(Id) - 1) * 8};
     static constexpr uint32_t cEncodedTypeBitmask{0xFF00'0000};
     static constexpr int32_t cEncodedTypeLengthBitmask{~cEncodedTypeBitmask};
