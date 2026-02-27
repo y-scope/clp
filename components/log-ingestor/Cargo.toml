@@ -34,8 +34,6 @@ strum_macros = "0.28.0"
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tokio-util = "0.7.18"
 tracing = "0.1.44"
-tracing-appender = "0.2.4"
-tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter", "fmt", "std"] }
 tower-http = { version = "0.6.8", features = ["cors"] }
 uuid = { version = "1.20.0", features = ["v4"] }
 thiserror = "2.0.18"
