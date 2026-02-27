@@ -66,6 +66,14 @@ public:
         Finished
     };
 
+    /**
+     * CURL error details set by the underlying CURL handler.
+     */
+    struct CurlErrorInfo {
+        int64_t code;
+        std::string_view message;
+    };
+
     // Constants
     static constexpr size_t cDefaultBufferPoolSize{8};
     static constexpr size_t cDefaultBufferSize{4096};
@@ -224,16 +232,18 @@ public:
     }
 
     /**
-     * @return The error message set by the underlying CURL handler.
-     * @return std::nullopt if the download is still in-progress or no error has occured.
+     * @return CURL error info if the download has completed with a CURL error.
+     * @return std::nullopt if the download is still in-progress or no error has occurred.
      */
-    [[nodiscard]] auto get_curl_error_msg() const -> std::optional<std::string_view> {
-        if (auto const ret_code{get_curl_ret_code()};
-            false == ret_code.has_value() || CURLE_OK == ret_code.value())
-        {
+    [[nodiscard]] auto get_curl_error_info() const -> std::optional<CurlErrorInfo> {
+        auto const ret_code = get_curl_ret_code();
+        if (false == ret_code.has_value() || CURLcode::CURLE_OK == ret_code.value()) {
             return std::nullopt;
         }
-        return std::string_view{m_curl_error_msg_buf->data()};
+        return CurlErrorInfo{
+                .code = static_cast<int64_t>(ret_code.value()),
+                .message = std::string_view{m_curl_error_msg_buf->data()}
+        };
     }
 
 private:
