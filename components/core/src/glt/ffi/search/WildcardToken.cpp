@@ -152,7 +152,7 @@ WildcardToken<encoded_variable_t>::WildcardToken(
         : QueryToken(query, begin_pos, end_pos),
           m_has_prefix_star_wildcard('*' == query[begin_pos]),
           m_has_suffix_star_wildcard('*' == query[end_pos - 1]) {
-    auto token = string_view(query.data() + begin_pos, end_pos - begin_pos);
+    auto const token = query.substr(begin_pos, end_pos - begin_pos);
     if (could_be_int_var<encoded_variable_t>(token)) {
         m_possible_variable_types.push_back(TokenType::IntegerVariable);
     }
