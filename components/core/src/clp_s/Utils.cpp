@@ -152,6 +152,39 @@ bool FileUtils::get_last_non_empty_path_component(std::string_view const path, s
     return false;
 }
 
+#if CLP_S_EXCLUDE_LIBCURL
+auto NetworkUtils::check_and_log_curl_error(
+        std::string_view path,
+        clp::ReaderInterface const* reader
+) -> bool {
+    std::ignore = path;
+    std::ignore = reader;
+    return false;
+}
+#else
+auto NetworkUtils::check_and_log_curl_error(
+        std::string_view path,
+        clp::ReaderInterface const* reader
+) -> bool {
+    auto const* network_reader = dynamic_cast<clp::NetworkReader const*>(reader);
+    if (nullptr == network_reader) {
+        return false;
+    }
+    if (auto const curl_error_info = network_reader->get_curl_error_info();
+        curl_error_info.has_value())
+    {
+        SPDLOG_ERROR(
+                "Encountered curl error while reading {} - Code: {} - Message: {}",
+                path,
+                static_cast<int64_t>(curl_error_info->code),
+                curl_error_info->message
+        );
+        return true;
+    }
+    return false;
+}
+#endif
+
 bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& name) {
     auto parsed_result = boost::urls::parse_uri(uri);
     if (false == parsed_result.has_value()) {
@@ -218,32 +251,5 @@ void StringUtils::escape_json_string(std::string& destination, std::string_view 
         }
     }
     append_unescaped_slice(source.size());
-}
-
-auto
-NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
-        -> bool {
-#if CLP_S_EXCLUDE_LIBCURL
-    std::ignore = path;
-    std::ignore = reader;
-    return false;
-#else
-    auto const* network_reader = dynamic_cast<clp::NetworkReader const*>(reader);
-    if (nullptr == network_reader) {
-        return false;
-    }
-    if (auto const curl_error_info = network_reader->get_curl_error_info();
-        curl_error_info.has_value())
-    {
-        SPDLOG_ERROR(
-                "Encountered curl error while downloading {} - Code: {} - Message: {}",
-                path,
-                curl_error_info->code,
-                curl_error_info->message
-        );
-        return true;
-    }
-    return false;
-#endif
 }
 }  // namespace clp_s

@@ -8,16 +8,15 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
-#if CLP_S_EXCLUDE_LIBCURL
-    #include <stdexcept>
-#endif
 #include <string>
 #include <vector>
 
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/aws/AwsAuthenticationSigner.hpp"
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include "../clp/aws/AwsAuthenticationSigner.hpp"
+#endif
 #include "../clp/BufferedReader.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
@@ -160,6 +159,15 @@ auto try_create_file_reader(std::string_view const file_path)
     }
 }
 
+#if CLP_S_EXCLUDE_LIBCURL
+auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
+        -> std::shared_ptr<clp::ReaderInterface> {
+    std::ignore = url;
+    std::ignore = auth;
+    SPDLOG_ERROR("This build of clp-s does not support network reading (libcurl excluded).");
+    return nullptr;
+}
+#else
 auto try_sign_url(std::string& url) -> bool {
     auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
     auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
@@ -196,12 +204,6 @@ auto try_sign_url(std::string& url) -> bool {
     return true;
 }
 
-#if CLP_S_EXCLUDE_LIBCURL
-auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
-        -> std::shared_ptr<clp::ReaderInterface> {
-    throw std::runtime_error("Simplified static clp-s executable does not support libcurl.");
-}
-#else
 auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
         -> std::shared_ptr<clp::ReaderInterface> {
     std::string request_url{url};
