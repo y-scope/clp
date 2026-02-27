@@ -208,6 +208,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             std::string input_path_list_file_path;
             bool normalize_file_paths{false};
             std::string path_prefix_to_remove;
+            bool remove_leading_slash{false};
             std::string auth{cNoAuth};
             // clang-format off
             compression_options.add_options()(
@@ -259,7 +260,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&path_prefix_to_remove)
                             ->value_name("DIR")
                             ->default_value(path_prefix_to_remove),
-                    "Remove the given path prefix from each compressed file."
+                    "Remove the given path prefix from each compressed file path."
+            )(
+                    "remove-leading-slash",
+                    po::bool_switch(&remove_leading_slash),
+                    "Remove the leading `/` from each compressed file path."
             )(
                     "single-file-archive",
                     po::bool_switch(&m_single_file_archive),
@@ -406,6 +411,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         input_path,
                         result_option.value()
                 );
+            }
+
+            if (remove_leading_slash) {
+                for (auto& [input_path, canonical_file_name] :
+                     m_input_paths_and_canonical_filenames)
+                {
+                    if (InputSource::Filesystem == input_path.source
+                        && false == canonical_file_name.empty() && '/' == canonical_file_name.at(0))
+                    {
+                        canonical_file_name = canonical_file_name.substr(1);
+                    }
+                }
             }
 
             validate_network_auth(auth, m_network_auth);
