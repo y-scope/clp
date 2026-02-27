@@ -164,7 +164,7 @@ auto try_create_network_reader(std::string_view const url, NetworkAuthOption con
         -> std::shared_ptr<clp::ReaderInterface> {
     std::ignore = url;
     std::ignore = auth;
-    SPDLOG_ERROR("This build of clp-s does not support network inputs (libcurl excluded).");
+    SPDLOG_ERROR("This build of clp-s does not support network reading (libcurl excluded).");
     return nullptr;
 }
 #else
