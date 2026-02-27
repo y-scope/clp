@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include "../clp/ReaderInterface.hpp"
+
 namespace clp_s {
 class FileUtils {
 public:
@@ -111,6 +113,19 @@ private:
         auto hex = char_to_hex(c);
         destination.append(hex.data(), hex.size());
     }
+};
+
+class NetworkUtils {
+public:
+    /**
+     * Checks if a reader is a clp::NetworkReader that has encountered a CURL error and logs
+     * relevant CURL error information if a CURL error has occurred.
+     * @param path
+     * @param reader
+     * @return true if a curl error has occurred on the reader, false otherwise.
+     */
+    [[nodiscard]] static auto
+    check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader) -> bool;
 };
 
 enum EvaluatedValue {

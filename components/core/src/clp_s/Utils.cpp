@@ -11,6 +11,9 @@
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include "../clp/NetworkReader.hpp"
+#endif
 #include "archive_constants.hpp"
 
 using std::string;
@@ -215,5 +218,32 @@ void StringUtils::escape_json_string(std::string& destination, std::string_view 
         }
     }
     append_unescaped_slice(source.size());
+}
+
+auto
+NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
+        -> bool {
+#if CLP_S_EXCLUDE_LIBCURL
+    std::ignore = path;
+    std::ignore = reader;
+    return false;
+#else
+    auto const* network_reader = dynamic_cast<clp::NetworkReader const*>(reader);
+    if (nullptr == network_reader) {
+        return false;
+    }
+    if (auto const curl_error_info = network_reader->get_curl_error_info();
+        curl_error_info.has_value())
+    {
+        SPDLOG_ERROR(
+                "Encountered curl error while downloading {} - Code: {} - Message: {}",
+                path,
+                curl_error_info->code,
+                curl_error_info->message
+        );
+        return true;
+    }
+    return false;
+#endif
 }
 }  // namespace clp_s
