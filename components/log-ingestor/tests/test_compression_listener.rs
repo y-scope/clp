@@ -124,7 +124,7 @@ async fn test_compression_listener() -> Result<()> {
     drop(submitted_buffers);
 
     // Clean up
-    listener.shutdown_and_join().await.unwrap();
+    listener.shutdown_and_join().await;
     assert!(shared.lock().await.is_empty());
 
     Ok(())
