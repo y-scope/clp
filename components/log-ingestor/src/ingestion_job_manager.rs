@@ -1,6 +1,6 @@
 mod clp_ingestion;
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 
 pub use clp_ingestion::*;
 use clp_rust_utils::{
@@ -14,12 +14,10 @@ use clp_rust_utils::{
     },
     job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
 };
-use non_empty_string::NonEmptyString;
 use tokio::sync::Mutex;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    compression::Listener,
     ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
 };
 
@@ -76,8 +74,8 @@ impl IngestionJobManagerState {
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<Self> {
-        let aws_credentials = match clp_config.logs_input {
-            LogsInput::S3 { config } => match config.aws_authentication {
+        let aws_credentials = match &clp_config.logs_input {
+            LogsInput::S3 { config } => match config.aws_authentication.clone() {
                 AwsAuthentication::Credentials { credentials } => credentials,
             },
             LogsInput::Fs { .. } => {
@@ -87,27 +85,12 @@ impl IngestionJobManagerState {
                 ));
             }
         };
-        let mysql_pool = clp_rust_utils::database::mysql::create_clp_db_mysql_pool(
-            &clp_config.database,
-            &clp_credentials.database,
-            100,
-        )
-        .await?;
-        let log_ingestor_config = clp_config
-            .log_ingestor
-            .as_ref()
-            .expect("log_ingestor configuration is missing");
+
+        let (clp_db_ingestion_connector, _) =
+            ClpDbIngestionConnector::connect(clp_config, clp_credentials).await?;
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
-            clp_db_ingestion_connector: ClpDbIngestionConnector::new(
-                mysql_pool,
-                log_ingestor_config.channel_capacity,
-                aws_credentials.clone(),
-                clp_config.archive_output,
-                Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
-                log_ingestor_config.buffer_flush_threshold,
-            )
-            .await?,
+            clp_db_ingestion_connector,
             aws_credentials,
         });
         Ok(Self { inner })
@@ -130,18 +113,19 @@ impl IngestionJobManagerState {
         &self,
         config: S3IngestionJobConfig,
     ) -> Result<IngestionJobId, Error> {
-        let (state, listener) = self
+        let ingestion_job_context = self
             .inner
             .clp_db_ingestion_connector
-            .create_ingestion_job(&config)
+            .create_ingestion_job(config)
             .await?;
+        let ingestion_state = ingestion_job_context.get_ingestion_state();
         match self
-            .create_s3_ingestion_job_instance(config, state.clone(), listener)
+            .create_s3_ingestion_job_instance(ingestion_job_context)
             .await
         {
-            Ok(()) => Ok(state.get_job_id()),
+            Ok(()) => Ok(ingestion_state.get_job_id()),
             Err(e) => {
-                state
+                ingestion_state
                     .fail(format!("Failed to add S3 ingestion job instance: {e}"))
                     .await;
                 Err(e)
@@ -168,8 +152,7 @@ impl IngestionJobManagerState {
     /// Returns an error if:
     ///
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
-    /// * Forwards [`ClpIngestionState::get_job_status`]' return values on failure.
-    /// * Forwards [`IngestionJobState::end`]'s return values on failure.
+    /// * Forwards [`ClpIngestionJobContext::shutdown`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::get_job_status`]' return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::try_fail`]'s return values on failure.
     pub async fn shutdown_and_remove_job_instance(
@@ -181,20 +164,9 @@ impl IngestionJobManagerState {
         drop(job_table);
 
         if let Some(entry) = job_to_remove {
-            entry.ingestion_job.shutdown_and_join().await;
-            entry.listener.shutdown_and_join().await;
-            if ClpIngestionJobStatus::Failed == entry.state.get_job_status().await? {
-                // The job has failed. We don't overwrite the failure status.
-                return Ok(true);
-            }
-            entry.state.end().await.inspect_err(|e| {
-                tracing::error!(
-                    job_id = ? job_id,
-                    error = ? e,
-                    "Failed to end ingestion job while the job instance has been removed."
-                );
-            })?;
-            return Ok(false);
+            entry.ingestion_job_instance.shutdown_and_join().await;
+            let has_error = entry.ingestion_job_context.shutdown().await?;
+            return Ok(has_error);
         }
 
         // The ID does not exist in the in-memory job table.
@@ -251,12 +223,13 @@ impl IngestionJobManagerState {
     /// * Forwards [`ClpIngestionState::start`]'s return values on failure.
     async fn create_s3_ingestion_job_instance(
         &self,
-        config: S3IngestionJobConfig,
-        state: ClpIngestionState,
-        listener: Listener,
+        ingestion_job_context: ClpIngestionJobContext,
     ) -> Result<(), Error> {
-        let base_config = config.as_base_config().clone();
-        let job_id = state.get_job_id();
+        let base_config = ingestion_job_context
+            .get_ingestion_job_config()
+            .as_base_config()
+            .clone();
+        let job_id = ingestion_job_context.get_job_id();
         let mut job_table = self.inner.job_table.lock().await;
 
         if job_table.contains_key(&job_id) {
@@ -266,14 +239,18 @@ impl IngestionJobManagerState {
         }
 
         for table_entry in job_table.values() {
+            let existing_job_base_config = table_entry
+                .ingestion_job_context
+                .get_ingestion_job_config()
+                .as_base_config();
             // TODO: We should avoid being verbose for checking each field one by one (tracked by
             // #1805)
-            if table_entry.endpoint_url != base_config.endpoint_url
-                || table_entry.region != base_config.region
-                || table_entry.bucket_name != base_config.bucket_name
-                || table_entry.dataset != base_config.dataset
+            if existing_job_base_config.endpoint_url != base_config.endpoint_url
+                || existing_job_base_config.region != base_config.region
+                || existing_job_base_config.bucket_name != base_config.bucket_name
+                || existing_job_base_config.dataset != base_config.dataset
                 || is_mutually_prefix_free(
-                    table_entry.key_prefix.as_str(),
+                    existing_job_base_config.key_prefix.as_str(),
                     base_config.key_prefix.as_str(),
                 )
             {
@@ -283,12 +260,13 @@ impl IngestionJobManagerState {
                 "Cannot create ingestion job with prefix '{}' as it conflicts with existing job \
                  with prefix '{}', which ingests from the same region and bucket into the same \
                  dataset.",
-                base_config.key_prefix, table_entry.key_prefix
+                base_config.key_prefix, existing_job_base_config.key_prefix
             )));
         }
 
-        let job_id = state.get_job_id();
-        let ingestion_job = match config {
+        let ingestion_state = ingestion_job_context.get_ingestion_state();
+        let ingestion_job_instance = match ingestion_job_context.get_ingestion_job_config().clone()
+        {
             S3IngestionJobConfig::SqsListener(config) => {
                 let sqs_client_manager = SqsClientWrapper::create(
                     config.base.region.as_ref(),
@@ -297,12 +275,12 @@ impl IngestionJobManagerState {
                 )
                 .await;
                 let validated_config = ValidatedSqsListenerConfig::validate_and_create(config)?;
-                state.start().await?;
+                ingestion_state.start().await?;
                 IngestionJob::SqsListener(crate::ingestion_job::SqsListener::spawn(
                     job_id,
                     &sqs_client_manager,
                     &validated_config,
-                    state.clone(),
+                    ingestion_state.clone(),
                 ))
             }
             S3IngestionJobConfig::S3Scanner(config) => {
@@ -313,12 +291,12 @@ impl IngestionJobManagerState {
                     config.base.endpoint_url.as_ref(),
                 )
                 .await;
-                state.start().await?;
+                ingestion_state.start().await?;
                 IngestionJob::S3Scanner(S3Scanner::spawn(
                     job_id,
                     s3_client_manager,
                     config,
-                    state.clone(),
+                    ingestion_state.clone(),
                 ))
             }
         };
@@ -326,14 +304,8 @@ impl IngestionJobManagerState {
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
-                ingestion_job,
-                listener,
-                bucket_name: base_config.bucket_name,
-                region: base_config.region,
-                key_prefix: base_config.key_prefix,
-                endpoint_url: base_config.endpoint_url,
-                dataset: base_config.dataset,
-                state,
+                ingestion_job_instance,
+                ingestion_job_context,
             },
         );
 
@@ -352,14 +324,8 @@ struct IngestionJobManager {
 
 /// Represents an entry in the ingestion job table.
 struct IngestionJobTableEntry {
-    ingestion_job: IngestionJob<ClpIngestionState>,
-    listener: Listener,
-    region: Option<NonEmptyString>,
-    bucket_name: NonEmptyString,
-    key_prefix: NonEmptyString,
-    endpoint_url: Option<NonEmptyString>,
-    dataset: Option<NonEmptyString>,
-    state: ClpIngestionState,
+    ingestion_job_instance: IngestionJob<ClpIngestionState>,
+    ingestion_job_context: ClpIngestionJobContext,
 }
 
 /// # Returns:

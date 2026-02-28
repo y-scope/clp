@@ -34,14 +34,14 @@ use crate::{
 };
 
 /// A bundle of objects to manage CLP ingestion jobs.
-pub struct ClpIngestionContext {
+pub struct ClpIngestionJobContext {
     config: S3IngestionJobConfig,
     ingestion_state: ClpIngestionState,
     compression_state: ClpCompressionState,
     listener: Listener,
 }
 
-impl ClpIngestionContext {
+impl ClpIngestionJobContext {
     #[must_use]
     pub const fn get_job_id(&self) -> IngestionJobId {
         self.ingestion_state.get_job_id()
@@ -118,40 +118,6 @@ pub struct ClpDbIngestionConnector {
 }
 
 impl ClpDbIngestionConnector {
-    /// Factory function.
-    ///
-    /// This method creates a new CLP DB connector and creates all necessary tables if they do not
-    /// already exist.
-    ///
-    /// # Returns
-    ///
-    /// A newly created instance with the given database pool.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::create_tables`]'s return values on failure.
-    pub async fn new(
-        db_pool: MySqlPool,
-        channel_capacity: usize,
-        aws_credentials: AwsCredentials,
-        archive_output_config: ArchiveOutput,
-        buffer_flush_timeout: Duration,
-        buffer_flush_threshold: u64,
-    ) -> anyhow::Result<Self> {
-        Self::create_tables(&db_pool).await?;
-
-        Ok(Self {
-            db_pool,
-            channel_capacity,
-            aws_credentials,
-            archive_output_config,
-            buffer_flush_timeout,
-            buffer_flush_threshold,
-        })
-    }
-
     /// Creates a connection to CLP DB for ingestion.
     ///
     /// # Returns
@@ -160,7 +126,7 @@ impl ClpDbIngestionConnector {
     ///
     /// * A newly created instance of [`ClpDbIngestionConnector`] connected to CLP DB with the given
     ///   configuration and credentials.
-    /// * A vector of [`ClpIngestionContext`] for all recoverable ingestion jobs in CLP DB,
+    /// * A vector of [`ClpIngestionJobContext`] for all recoverable ingestion jobs in CLP DB,
     ///   forwarded from [`Self::load_recoverable_ingestion_jobs`].
     ///
     /// # Errors
@@ -178,7 +144,7 @@ impl ClpDbIngestionConnector {
     pub async fn connect(
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
-    ) -> anyhow::Result<(Self, Vec<ClpIngestionContext>)> {
+    ) -> anyhow::Result<(Self, Vec<ClpIngestionJobContext>)> {
         let log_ingestor_config = clp_config
             .log_ingestor
             .as_ref()
@@ -222,12 +188,8 @@ impl ClpDbIngestionConnector {
     ///
     /// # Returns
     ///
-    /// A tuple on success, containing:
-    ///
-    /// * A [`ClpIngestionState`] instance representing the initial state of the newly created
-    ///   ingestion job.
-    /// * A newly created listener for receiving ingested object metadata for compression job
-    ///   submission.
+    /// A [`ClpIngestionJobContext`] instance representing the newly created ingestion job on
+    /// success.
     ///
     /// # Errors
     ///
@@ -239,8 +201,8 @@ impl ClpDbIngestionConnector {
     /// * Forwards [`serde_json::to_string`]'s return values on failure.
     pub async fn create_ingestion_job(
         &self,
-        config: &S3IngestionJobConfig,
-    ) -> anyhow::Result<(ClpIngestionState, Listener)> {
+        config: S3IngestionJobConfig,
+    ) -> anyhow::Result<ClpIngestionJobContext> {
         const QUERY: &str = formatcp!(
             r"INSERT INTO `{table}` (`config`) VALUES (?);",
             table = INGESTION_JOB_TABLE_NAME,
@@ -248,12 +210,12 @@ impl ClpDbIngestionConnector {
 
         let mut tx = self.db_pool.begin().await?;
         let job_id = sqlx::query(QUERY)
-            .bind(serde_json::to_string(config)?)
+            .bind(serde_json::to_string(&config)?)
             .execute(&mut *tx)
             .await?
             .last_insert_id();
 
-        if let S3IngestionJobConfig::S3Scanner(_) = config {
+        if let S3IngestionJobConfig::S3Scanner(_) = &config {
             const S3_SCANNER_STATE_INSERT_QUERY: &str = formatcp!(
                 r"INSERT INTO `{table}` (`id`) VALUES (?);",
                 table = INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME,
@@ -266,28 +228,7 @@ impl ClpDbIngestionConnector {
 
         tx.commit().await?;
 
-        let submitter = CompressionJobSubmitter::new(
-            ClpCompressionState {
-                ingestion_job_id: job_id,
-                db_pool: self.db_pool.clone(),
-            },
-            self.aws_credentials.clone(),
-            &self.archive_output_config,
-            config.as_base_config(),
-        );
-
-        let listener = Listener::spawn(
-            Buffer::new(submitter, self.buffer_flush_threshold),
-            self.buffer_flush_timeout,
-            self.channel_capacity,
-        );
-        let ingestion_state = ClpIngestionState {
-            job_id,
-            db_pool: self.db_pool.clone(),
-            sender: listener.get_new_sender(),
-        };
-
-        Ok((ingestion_state, listener))
+        Ok(self.create_clp_ingestion_context(job_id, config))
     }
 
     /// Gets the status of an ingestion job with the given ID from CLP DB.
@@ -375,13 +316,13 @@ impl ClpDbIngestionConnector {
     ///
     /// # Returns
     ///
-    /// A [`ClpIngestionContext`] instance, with a newly created listener for receiving ingested
+    /// A [`ClpIngestionJobContext`] instance, with a newly created listener for receiving ingested
     /// object metadata for compression job submission.
     fn create_clp_ingestion_context(
         &self,
         job_id: IngestionJobId,
         config: S3IngestionJobConfig,
-    ) -> ClpIngestionContext {
+    ) -> ClpIngestionJobContext {
         let compression_state = ClpCompressionState {
             ingestion_job_id: job_id,
             db_pool: self.db_pool.clone(),
@@ -405,7 +346,7 @@ impl ClpDbIngestionConnector {
             sender: listener.get_new_sender(),
         };
 
-        ClpIngestionContext {
+        ClpIngestionJobContext {
             config,
             ingestion_state,
             compression_state,
@@ -421,7 +362,7 @@ impl ClpDbIngestionConnector {
     ///
     /// # Returns
     ///
-    /// A vector of [`ClpIngestionContext`] instances representing all recoverable ingestion jobs
+    /// A vector of [`ClpIngestionJobContext`] instances representing all recoverable ingestion jobs
     /// on success.
     ///
     /// # Errors
@@ -429,8 +370,8 @@ impl ClpDbIngestionConnector {
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when fetching jobs.
-    async fn load_recoverable_ingestion_jobs(&self) -> anyhow::Result<Vec<ClpIngestionContext>> {
-        let mut ingestion_contexts: Vec<ClpIngestionContext> = Vec::new();
+    async fn load_recoverable_ingestion_jobs(&self) -> anyhow::Result<Vec<ClpIngestionJobContext>> {
+        let mut ingestion_contexts: Vec<ClpIngestionJobContext> = Vec::new();
 
         let requested_jod_id_and_config: Vec<(IngestionJobId, String)> = sqlx::query_as(formatcp!(
             r"SELECT `id`, `config` FROM `{table}` WHERE `status` = ? FOR UPDATE;",
