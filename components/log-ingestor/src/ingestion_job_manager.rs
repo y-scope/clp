@@ -62,10 +62,8 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
-    /// * The logs input type in the CLP configuration is unsupported.
-    /// * Forwards [`clp_rust_utils::database::mysql::create_clp_db_mysql_pool`]'s return values on
-    ///   failure.
-    /// * Forwards [`ClpDbIngestionConnector::new`]'s return values on failure.
+    /// * [`anyhow::Error`] if the logs input type in the CLP configuration is unsupported.
+    /// * Forwards [`ClpDbIngestionConnector::connect`]'s return values on failure.
     ///
     /// # Panics
     ///
