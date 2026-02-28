@@ -29,8 +29,10 @@ services instead of bundled services, see the
 ```
 
 ```{note}
-If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
-`etc/clp-config.yaml` and then run the start command again.
+Keep in mind about `etc/clp-config.yaml`:
+- If CLP fails to start (e.g., due to a port conflict), try adjusting the settings and restarting.
+- Configuration changes are **not** hot-reloaded. You must run `sbin/stop-clp.sh` followed by
+  `sbin/start-clp.sh` for changes to take effect.
 ```
 
 :::
