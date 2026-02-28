@@ -16,7 +16,7 @@ use clp_rust_utils::{
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{SqsListener, ZeroFaultToleranceIngestionJobState},
+    ingestion_job::{IngestionJobId, SqsListener, ZeroFaultToleranceIngestionJobState},
 };
 use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
@@ -150,7 +150,7 @@ async fn upload_noise_objects(
 
 /// Runs SQS listener test with the given job config.
 async fn run_sqs_listener_test(
-    job_id: Uuid,
+    job_id: IngestionJobId,
     prefix: NonEmptyString,
     aws_config: AwsConfig,
     sqs_listener_config: SqsListenerConfig,
@@ -213,7 +213,7 @@ async fn run_sqs_listener_test(
 /// # Returns
 ///
 /// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}`.
-fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
+fn get_testing_prefix_as_non_empty_string(job_id: IngestionJobId) -> NonEmptyString {
     NonEmptyString::from_string(format!("test-{job_id}"))
 }
 
@@ -222,8 +222,8 @@ fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_sqs_listener() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
-    let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
 
     let num_tasks_to_test = vec![1, 4, 16, 32];
 
@@ -265,8 +265,8 @@ async fn test_sqs_listener() -> Result<()> {
 #[serial_test::serial]
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_s3_scanner() -> Result<()> {
-    let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
@@ -320,7 +320,7 @@ async fn test_s3_scanner() -> Result<()> {
     let (mut created_objects, mut received_objects) = upload_and_receive_handle
         .await
         .context("Error while awaiting upload and receive")?;
-    s3_scanner.shutdown_and_join().await?;
+    s3_scanner.shutdown_and_join().await;
 
     created_objects.sort();
     received_objects.sort();

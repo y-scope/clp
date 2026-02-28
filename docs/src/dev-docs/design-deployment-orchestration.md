@@ -243,8 +243,9 @@ Services require persistent storage for logs, data, archives, and streams.
 
 * **Docker Compose**: Uses bind mounts for host directories and named volumes for database data.
   Conditional mounts use variable interpolation to mount empty tmpfs when not needed.
-* **Kubernetes**: Uses PersistentVolumeClaims per component, with shared PVCs (`ReadWriteMany`) for
-  archives and streams. Uses `local-storage` StorageClass by default.
+* **Kubernetes**: Uses dynamically provisioned PersistentVolumeClaims for persistent data (database,
+  results cache, archives, streams) and `emptyDir` volumes for ephemeral state (Redis, staging
+  directories). Service logs are emitted to pod stdout/stderr.
 
 ### Deployment types
 

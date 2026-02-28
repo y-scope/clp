@@ -1,8 +1,0 @@
-{{- include "clp.createStaticPv" (dict
-  "root" .
-  "component_category" "compression-scheduler"
-  "name" "user-logs"
-  "capacity" "10Gi"
-  "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/user" .Values.clpConfig.logs_directory)
-) }}
