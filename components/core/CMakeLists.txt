@@ -499,8 +499,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
-        src/clp/ffi/ir_stream/IrErrorCode.cpp
-        src/clp/ffi/ir_stream/IrErrorCode.hpp
+        src/clp/ffi/ir_stream/IrDeserializationError.cpp
+        src/clp/ffi/ir_stream/IrDeserializationError.hpp
         src/clp/ffi/ir_stream/IrSerializationError.cpp
         src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp

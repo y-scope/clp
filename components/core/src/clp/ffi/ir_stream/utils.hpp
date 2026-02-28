@@ -20,6 +20,7 @@
 #include "byteswap.hpp"
 #include "decoding_methods.hpp"
 #include "encoding_methods.hpp"
+#include "IrDeserializationError.hpp"
 #include "IrSerializationError.hpp"
 #include "protocol_constants.hpp"
 
@@ -135,6 +136,12 @@ template <
  * @return Equivalent `std::errc` code indicating the same error type.
  */
 [[nodiscard]] auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc;
+
+/**
+ * @param ir_error_code Must not be `IRErrorCode_Success`.
+ * @return Equivalent `IrDeserializationError` indicating the same error type.
+ */
+[[nodiscard]] auto to_ir_deserialization_error(IRErrorCode ir_error_code) -> IrDeserializationError;
 
 template <IntegerType integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {

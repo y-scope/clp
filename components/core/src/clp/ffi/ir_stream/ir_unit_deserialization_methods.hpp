@@ -18,7 +18,7 @@
 namespace clp::ffi::ir_stream {
 /**
  * @param tag
- * @return The IR unit type of indicated by the given tag on success.
+ * @return The IR unit type as indicated by the given tag on success.
  * @return std::nullopt if the tag doesn't represent a valid IR unit.
  */
 [[nodiscard]] auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> std::optional<IrUnitType>;
@@ -34,8 +34,9 @@ namespace clp::ffi::ir_stream {
  *   - Whether the node is for auto-generated keys schema tree.
  *   - The locator of the inserted schema tree node.
  * - The possible error codes:
- *   - std::errc::result_out_of_range if the IR stream is truncated.
- *   - std::errc::protocol_error if the deserialized node type isn't supported.
+ *   - IrDeserializationErrorEnum::IncompleteStream if the IR stream is truncated.
+ *   - IrDeserializationErrorEnum::UnsupportedNodeType if the deserialized node type isn't
+ *     supported.
  *   - Forwards `deserialize_schema_tree_node_key_name`'s return values.
  *   - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
@@ -49,7 +50,7 @@ namespace clp::ffi::ir_stream {
  * Deserializes a UTC offset change IR unit.
  * @param reader
  * @return A result containing the new UTC offset or an error code indicating the failure:
- * - std::errc::result_out_of_range if the IR stream is truncated.
+ * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is truncated.
  * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
  */
 [[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
@@ -65,13 +66,12 @@ namespace clp::ffi::ir_stream {
  * KV-pair log event.
  * @param utc_offset UTC offset used to construct the KV-pair log event.
  * @return A result containing the deserialized log event or an error code indicating the failure:
- * - std::errc::result_out_of_range if the IR stream is truncated.
- * - std::errc::protocol_error if the IR stream is corrupted.
- * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
- *   or uses an unsupported version.
- * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values.
- * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
- *   cannot construct a valid key-value pair log event.
+ * - IrDeserializationErrorEnum::InvalidTag if the log event is empty but the tag is not
+ *   ValueEmpty.
+ * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values on
+ * failure.
+ * - Forwards `deserialize_value_and_construct_node_id_value_pairs`'s return values on failure.
+ * - Forwards `KeyValuePairLogEvent::create`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
         ReaderInterface& reader,
