@@ -2,7 +2,6 @@ import argparse
 import logging
 import pathlib
 import shlex
-import subprocess
 import sys
 import uuid
 
@@ -27,6 +26,7 @@ from clp_package_utils.general import (
     get_container_config_filename,
     JobType,
     load_config_file,
+    run_subprocess_with_signal_forward,
     validate_and_load_db_credentials_file,
     validate_dataset_name,
 )
@@ -257,7 +257,7 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd, check=False)
+    proc = run_subprocess_with_signal_forward(cmd)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")

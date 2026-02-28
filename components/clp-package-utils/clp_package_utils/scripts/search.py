@@ -2,7 +2,6 @@ import argparse
 import logging
 import pathlib
 import shlex
-import subprocess
 import sys
 
 from clp_py_utils.clp_config import (
@@ -25,6 +24,7 @@ from clp_package_utils.general import (
     get_container_config_filename,
     JobType,
     load_config_file,
+    run_subprocess_with_signal_forward,
     validate_and_load_db_credentials_file,
     validate_dataset_name,
 )
@@ -175,7 +175,7 @@ def main(argv):
         search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
 
-    proc = subprocess.run(cmd, check=False)
+    proc = run_subprocess_with_signal_forward(cmd)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Search failed.")
