@@ -23,9 +23,9 @@ spec:
         - name: "database"
           image: >-
             {{- if eq .Values.clpConfig.database.type "mysql" }}
-              mysql:8.0.23
+              mysql:8.0.45
             {{- else }}
-              mariadb:10-jammy
+              mariadb:10.11.16
             {{- end }}
           imagePullPolicy: "Always"
           env:
