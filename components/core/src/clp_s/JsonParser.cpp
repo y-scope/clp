@@ -13,7 +13,6 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <curl/curl.h>
 #include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
@@ -27,7 +26,6 @@
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
-#include <clp/NetworkReader.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
@@ -37,6 +35,7 @@
 #include <clp_s/JsonFileIterator.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
+#include <clp_s/Utils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -672,7 +671,7 @@ bool JsonParser::ingest() {
             case FileType::Zstd:
             case FileType::Unknown:
             default: {
-                std::ignore = check_and_log_curl_error(path, reader);
+                std::ignore = NetworkUtils::check_and_log_curl_error(path.path, reader.get());
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
                 std::ignore = m_archive_writer->close();
                 return false;
@@ -680,7 +679,9 @@ bool JsonParser::ingest() {
         }
 
         close_nested_readers(nested_readers);
-        if (false == ingestion_successful || check_and_log_curl_error(path, reader)) {
+        if (false == ingestion_successful
+            || NetworkUtils::check_and_log_curl_error(path.path, reader.get()))
+        {
             std::ignore = m_archive_writer->close();
             return false;
         }
@@ -1350,28 +1351,5 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
-}
-
-bool JsonParser::check_and_log_curl_error(
-        Path const& path,
-        std::shared_ptr<clp::ReaderInterface> reader
-) {
-    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
-        nullptr != network_reader)
-    {
-        if (auto const rc = network_reader->get_curl_ret_code();
-            rc.has_value() && CURLcode::CURLE_OK != rc.value())
-        {
-            auto const curl_error_message = network_reader->get_curl_error_msg();
-            SPDLOG_ERROR(
-                    "Encountered curl error while ingesting {} - Code: {} - Message: {}",
-                    path.path,
-                    static_cast<int64_t>(rc.value()),
-                    curl_error_message.value_or("Unknown error")
-            );
-            return true;
-        }
-    }
-    return false;
 }
 }  // namespace clp_s

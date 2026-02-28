@@ -14,11 +14,15 @@
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/aws/AwsAuthenticationSigner.hpp"
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include "../clp/aws/AwsAuthenticationSigner.hpp"
+#endif
 #include "../clp/BufferedReader.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
-#include "../clp/NetworkReader.hpp"
+#if !CLP_S_EXCLUDE_LIBCURL
+    #include "../clp/NetworkReader.hpp"
+#endif
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
@@ -155,6 +159,15 @@ auto try_create_file_reader(std::string_view const file_path)
     }
 }
 
+#if CLP_S_EXCLUDE_LIBCURL
+auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
+        -> std::shared_ptr<clp::ReaderInterface> {
+    std::ignore = url;
+    std::ignore = auth;
+    SPDLOG_ERROR("This build of clp-s does not support network reading (libcurl excluded).");
+    return nullptr;
+}
+#else
 auto try_sign_url(std::string& url) -> bool {
     auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
     auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
@@ -213,6 +226,7 @@ auto try_create_network_reader(std::string_view const url, NetworkAuthOption con
         return nullptr;
     }
 }
+#endif
 
 auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool {
     constexpr std::array<char, 4> cZstdMagicNumber = {'\x28', '\xB5', '\x2F', '\xFD'};

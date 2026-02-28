@@ -361,6 +361,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileWriter.hpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
+    src/clp_s/ffi/sfa/ClpArchiveReader.cpp
+    src/clp_s/ffi/sfa/ClpArchiveReader.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
