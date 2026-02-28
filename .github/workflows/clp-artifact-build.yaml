@@ -27,14 +27,16 @@ concurrency:
   cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
 
 jobs:
+  skip-duplicate-check:
+    uses: "./.github/workflows/skip-duplicate-check.yaml"
+
   filter-relevant-changes:
     name: "filter-relevant-changes"
-    runs-on: &runner >-
-      ${{
-        github.repository_owner == 'y-scope'
-        && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
-        || 'ubuntu-24.04'
-      }}
+    needs: "skip-duplicate-check"
+    if: "needs.skip-duplicate-check.outputs.should_skip != 'true'"
+    # This job only performs git operations to detect changed paths, so we use a GitHub-hosted
+    # runner to avoid consuming self-hosted runner resources needed for heavier build jobs.
+    runs-on: "ubuntu-24.04"
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       manylinux_2_28_x86_64_image_changed: "${{steps.filter.outputs.manylinux_2_28_x86_64_image}}"
@@ -111,7 +113,14 @@ jobs:
     name: "centos-stream-9-deps-image"
     if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: *runner
+    # Define a reusable runner configuration for jobs that require Docker and benefit from
+    # self-hosted runner resources. Falls back to GitHub-hosted runners for non-y-scope forks.
+    runs-on: &runner >-
+      ${{
+        github.repository_owner == 'y-scope'
+        && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
+        || 'ubuntu-24.04'
+      }}
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
