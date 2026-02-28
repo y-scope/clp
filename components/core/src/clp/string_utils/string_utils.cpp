@@ -154,9 +154,8 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
     bool is_escaped{false};
-    std::string_view::const_iterator const str_end{str.cend()};
-    for (std::string_view::const_iterator current = str.cbegin(); current != str_end;) {
-        auto c = *current;
+    for (size_t current{0}; current < str.size();) {
+        auto const c = str[current];
         if (is_escaped) {
             is_escaped = false;
 
@@ -166,16 +165,13 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
                 cleaned_str += cWildcardEscapeChar;
             }
             cleaned_str += c;
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
         } else if (cZeroOrMoreCharsWildcard == c) {
             cleaned_str += c;
 
             // Skip over all '*' to find the next non-'*'
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-            while (current != str_end && cZeroOrMoreCharsWildcard == *current) {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            while (current < str.size() && cZeroOrMoreCharsWildcard == str[current]) {
                 ++current;
             }
         } else {
@@ -184,7 +180,6 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
             } else {
                 cleaned_str += c;
             }
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
         }
     }
