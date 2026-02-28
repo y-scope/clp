@@ -123,7 +123,7 @@ public:
      * @return a view into the requested region of the schema
      */
     [[nodiscard]] auto get_view(size_t i, size_t size) -> std::span<Id> {
-        if (size > m_schema.size() || i <= m_schema.size() - size) {
+        if (i > m_schema.size() || size > m_schema.size() - i) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
         return std::span<Id>{m_schema}.subspan(i, size);
