@@ -206,6 +206,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description compression_options("Compression options");
             std::string input_path_list_file_path;
+            bool normalize_file_paths{false};
+            std::string path_prefix_to_remove;
+            bool remove_leading_slash{false};
             std::string auth{cNoAuth};
             // clang-format off
             compression_options.add_options()(
@@ -248,6 +251,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "no-retain-float-format",
                     po::bool_switch(&m_no_retain_float_format),
                     "Do not store extra information to losslessly decompress floats."
+            )(
+                    "normalize-paths",
+                    po::bool_switch(&normalize_file_paths),
+                    "Make all paths for ingested files absolute relative to the root directory."
+            )(
+                    "remove-path-prefix",
+                    po::value<std::string>(&path_prefix_to_remove)
+                            ->value_name("DIR")
+                            ->default_value(path_prefix_to_remove),
+                    "Remove the given path prefix from each compressed file path."
+            )(
+                    "remove-leading-slash",
+                    po::bool_switch(&remove_leading_slash),
+                    "Remove the leading `/` from each compressed file path."
             )(
                     "single-file-archive",
                     po::bool_switch(&m_single_file_archive),
@@ -318,14 +335,94 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
             }
 
+            std::optional<std::string> path_prefix_to_remove_option{};
+            if (false == path_prefix_to_remove.empty()) {
+                if (false == std::filesystem::exists(path_prefix_to_remove)) {
+                    throw std::invalid_argument("Specified prefix to remove does not exist.");
+                }
+                if (false == std::filesystem::is_directory(path_prefix_to_remove)) {
+                    throw std::invalid_argument("Specified prefix to remove is not a directory.");
+                }
+                if (normalize_file_paths) {
+                    std::error_code ec;
+                    auto const normalized_path{
+                            std::filesystem::canonical(path_prefix_to_remove, ec)
+                    };
+                    if (ec) {
+                        throw std::invalid_argument(
+                                fmt::format(
+                                        "Failed to normalize prefix {} - {}",
+                                        path_prefix_to_remove,
+                                        ec.message()
+                                )
+                        );
+                    }
+                    path_prefix_to_remove = normalized_path.string();
+                }
+                path_prefix_to_remove_option.emplace(path_prefix_to_remove);
+            }
+
             for (auto const& path : input_paths) {
-                if (false == get_input_files_for_raw_path(path, m_input_paths)) {
+                auto path_object{get_path_object_for_raw_path(path)};
+                if (normalize_file_paths && InputSource::Filesystem == path_object.source) {
+                    std::error_code ec;
+                    auto const normalized_path{std::filesystem::canonical(path_object.path, ec)};
+                    if (ec) {
+                        throw std::invalid_argument(
+                                fmt::format(
+                                        "Failed to normalize path {} - {}",
+                                        path_object.path,
+                                        ec.message()
+                                )
+                        );
+                    }
+                    path_object.path = normalized_path.string();
+                }
+                if (false == get_input_files_for_path(path_object, m_input_paths)) {
                     throw std::invalid_argument(fmt::format("Invalid input path \"{}\".", path));
                 }
             }
 
             if (m_input_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
+            }
+
+            for (auto const& input_path : m_input_paths) {
+                if (false == path_prefix_to_remove_option.has_value()
+                    || InputSource::Filesystem != input_path.source)
+                {
+                    m_input_paths_and_canonical_filenames.emplace_back(input_path, input_path.path);
+                    continue;
+                }
+
+                auto const result_option{
+                        remove_path_prefix(input_path.path, path_prefix_to_remove_option.value())
+                };
+                if (false == result_option.has_value()) {
+                    throw std::invalid_argument(
+                            fmt::format(
+                                    "Failed to remove prefix \"{}\" from path \"{}\".",
+                                    path_prefix_to_remove_option.value(),
+                                    input_path.path
+                            )
+                    );
+                }
+                m_input_paths_and_canonical_filenames.emplace_back(
+                        input_path,
+                        result_option.value()
+                );
+            }
+
+            if (remove_leading_slash) {
+                for (auto& [input_path, canonical_file_name] :
+                     m_input_paths_and_canonical_filenames)
+                {
+                    if (InputSource::Filesystem == input_path.source
+                        && false == canonical_file_name.empty() && '/' == canonical_file_name.at(0))
+                    {
+                        canonical_file_name = canonical_file_name.substr(1);
+                    }
+                }
             }
 
             validate_network_auth(auth, m_network_auth);

@@ -402,6 +402,7 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/QueryRunner.hpp
     src/clp_s/search/SchemaMatch.cpp
     src/clp_s/search/SchemaMatch.hpp
+    src/clp_s/test/test_InputConfig.cpp
     src/clp_s/TimestampDictionaryReader.cpp
     src/clp_s/TimestampDictionaryReader.hpp
     src/clp_s/TimestampDictionaryWriter.cpp

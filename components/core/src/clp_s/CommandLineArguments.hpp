@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/program_options/option.hpp>
@@ -48,6 +49,11 @@ public:
     Command get_command() const { return m_command; }
 
     std::vector<Path> const& get_input_paths() const { return m_input_paths; }
+
+    [[nodiscard]] auto get_input_paths_and_canonical_filenames() const
+            -> std::vector<std::pair<Path, std::string>> const& {
+        return m_input_paths_and_canonical_filenames;
+    }
 
     NetworkAuthOption const& get_network_auth() const { return m_network_auth; }
 
@@ -191,6 +197,7 @@ private:
 
     // Compression and decompression variables
     std::vector<Path> m_input_paths;
+    std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
     std::string m_archives_dir;
     std::string m_output_dir;
