@@ -8,6 +8,7 @@
 #include <string_view>
 #include <vector>
 
+#include <nlohmann/json_fwd.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReaderAdaptor.hpp>
@@ -141,8 +142,8 @@ public:
     void close();
 
     /**
-     * @return The schema ids in the archive. It also defines the order that tables should be read
-     * in to avoid seeking backwards.
+     * @return The schema ids in the archive. It also defines the order that tables should be
+     * read in to avoid seeking backwards.
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
 
@@ -161,6 +162,16 @@ public:
      */
     [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
         return get_header().has_deprecated_timestamp_format();
+    }
+
+    /**
+     * @param log_event_idx
+     * @return The file-level metadata associated with the record at `log_event_idx`.
+     * @throws ArchiveReaderAdaptor::OperationFailed when `log_event_idx` cannot be mapped to
+     * any metadata.
+     */
+    [[nodiscard]] auto get_metadata_for_log_event(int64_t log_event_idx) -> nlohmann::json const& {
+        return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
     }
 
 private:
@@ -202,13 +213,14 @@ private:
     );
 
     /**
-     * Reads a table with given ID from the packed stream reader. If read_stream is called multiple
-     * times in a row for the same stream_id a cached buffer is returned. This function allows the
-     * caller to ask for the same buffer to be reused to read multiple different tables: this can
-     * save memory allocations, but can only be used when tables are read one at a time.
+     * Reads a table with given ID from the packed stream reader. If read_stream is called
+     * multiple times in a row for the same stream_id a cached buffer is returned. This function
+     * allows the caller to ask for the same buffer to be reused to read multiple different
+     * tables: this can save memory allocations, but can only be used when tables are read one
+     * at a time.
      * @param stream_id
-     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
-     * returned previous calls to read_stream
+     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting
+     * data returned previous calls to read_stream
      * @return a buffer containing the decompressed stream identified by stream_id
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
