@@ -6,7 +6,6 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "db-table-creator"
 spec:
-  ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
