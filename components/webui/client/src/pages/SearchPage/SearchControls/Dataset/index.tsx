@@ -23,6 +23,7 @@ const Dataset = () => {
             >
                 <DatasetSelect
                     className={styles["select"] || ""}
+                    isMultiSelect={true}
                     {...(expanded ?
                         {maxTagCount: "responsive"} :
                         {})}/>

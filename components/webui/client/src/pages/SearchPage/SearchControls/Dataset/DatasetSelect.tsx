@@ -17,13 +17,22 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {fetchDatasetNames} from "./sql";
 
 
+interface DatasetSelectProps {
+    isMultiSelect: boolean;
+    className?: string;
+    maxTagCount?: SelectProps["maxTagCount"];
+}
+
 /**
  * Renders a dataset selector component that allows users to select from available datasets.
  *
- * @param selectProps
+ * @param props
+ * @param props.isMultiSelect
+ * @param props.maxTagCount
+ * @param props.selectProps
  * @return
  */
-const DatasetSelect = (selectProps: SelectProps) => {
+const DatasetSelect = ({isMultiSelect, maxTagCount, ...selectProps}: DatasetSelectProps) => {
     const datasets = useSearchStore((state) => state.selectedDatasets);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const updateDatasets = useSearchStore((state) => state.updateSelectedDatasets);
@@ -86,7 +95,7 @@ const DatasetSelect = (selectProps: SelectProps) => {
         messageApi,
         updateDatasets]);
 
-    const handleDatasetChange = (value: string[]) => {
+    const handleMultiDatasetChange = (value: string[]) => {
         if (null !== SETTINGS_MAX_DATASETS_PER_QUERY &&
             value.length > SETTINGS_MAX_DATASETS_PER_QUERY
         ) {
@@ -103,22 +112,39 @@ const DatasetSelect = (selectProps: SelectProps) => {
             value);
     };
 
+    const handleSingleDatasetChange = (value: string) => {
+        updateDatasets([value]);
+    };
+
+    const isDisabled = searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+        searchUiState === SEARCH_UI_STATE.QUERYING;
+
     return (
         <>
             {contextHolder}
-            <Select
-                loading={isPending}
-                mode={"multiple"}
-                options={(data || []).map((option) => ({label: option, value: option}))}
-                popupMatchSelectWidth={false}
-                size={"middle"}
-                value={datasets}
-                disabled={
-                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                    searchUiState === SEARCH_UI_STATE.QUERYING
-                }
-                onChange={handleDatasetChange}
-                {...selectProps}/>
+            {isMultiSelect ?
+                <Select
+                    disabled={isDisabled}
+                    loading={isPending}
+                    mode={"multiple"}
+                    options={(data || []).map((option) => ({label: option, value: option}))}
+                    popupMatchSelectWidth={false}
+                    size={"middle"}
+                    value={datasets}
+                    onChange={handleMultiDatasetChange}
+                    {...selectProps}
+                    {...("undefined" !== typeof maxTagCount ?
+                        {maxTagCount: maxTagCount} :
+                        {})}/> :
+                <Select
+                    disabled={isDisabled}
+                    loading={isPending}
+                    options={(data || []).map((option) => ({label: option, value: option}))}
+                    popupMatchSelectWidth={false}
+                    size={"middle"}
+                    value={datasets[0] ?? null}
+                    onChange={handleSingleDatasetChange}
+                    {...selectProps}/>}
         </>
     );
 };
