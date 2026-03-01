@@ -4,16 +4,26 @@ import {settings} from "../../../../../settings";
 
 /**
  * Builds a SQL query string to retrieve the total uncompressed bytes and duration
- * for a specific query job within a given dataset.
+ * for a specific query job across one or more datasets.
  *
- * @param datasetName
+ * @param datasetNames
  * @param jobId
  * @return
  */
-const buildQuerySpeedSql = (datasetName: string, jobId: string) => {
-    const tableName = "" === datasetName ?
-        settings.SqlDbClpArchivesTableName :
-        `${settings.SqlDbClpTablePrefix}${datasetName}_archives`;
+const buildQuerySpeedSql = (datasetNames: string[], jobId: string) => {
+    let archivesSubquery: string;
+    if (0 === datasetNames.length) {
+        archivesSubquery = "SELECT id, uncompressed_size" +
+            ` FROM ${settings.SqlDbClpArchivesTableName}`;
+    } else if (1 === datasetNames.length) {
+        archivesSubquery = "SELECT id, uncompressed_size" +
+            ` FROM ${settings.SqlDbClpTablePrefix}${datasetNames[0]}_archives`;
+    } else {
+        archivesSubquery = datasetNames
+            .map((name) => "SELECT id, uncompressed_size" +
+                ` FROM ${settings.SqlDbClpTablePrefix}${name}_archives`)
+            .join(" UNION ALL ");
+    }
 
     return `WITH qt AS (
     SELECT job_id, archive_id
@@ -27,7 +37,7 @@ totals AS (
         qt.job_id,
         SUM(ca.uncompressed_size) AS total_uncompressed_bytes
     FROM qt
-    JOIN ${tableName} ca
+    JOIN (${archivesSubquery}) ca
     ON qt.archive_id = ca.id
 )
 SELECT
@@ -45,14 +55,14 @@ interface QuerySpeedResp {
 
 /**
  * Fetches the query speed data (bytes and duration) for a specific job ID
- * within a given dataset by executing a SQL query.
+ * across the given datasets by executing a SQL query.
  *
- * @param datasetName
+ * @param datasetNames
  * @param jobId
  * @return
  */
-const fetchQuerySpeed = async (datasetName: string, jobId: string): Promise<QuerySpeedResp> => {
-    const resp = await querySql<QuerySpeedResp[]>(buildQuerySpeedSql(datasetName, jobId));
+const fetchQuerySpeed = async (datasetNames: string[], jobId: string): Promise<QuerySpeedResp> => {
+    const resp = await querySql<QuerySpeedResp[]>(buildQuerySpeedSql(datasetNames, jobId));
     const [data] = resp.data;
     if ("undefined" === typeof data) {
         throw new Error("Invalid query speed.");

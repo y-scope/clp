@@ -25,37 +25,42 @@ FROM ${settings.SqlDbClpArchivesTableName}
 `;
 
 /**
- * Builds a SQL query string to retrieve the minimum and maximum timestamps for a specific CLP-s
- * dataset's archives.
+ * Builds a SQL query string to retrieve the minimum and maximum timestamps across multiple CLP-s
+ * datasets' archives using UNION ALL.
  *
- * @param datasetName
+ * @param datasetNames
  * @return
  */
-const buildClpsTimeRangeSql = (datasetName: string): string => {
-    return `SELECT
+const buildClpsTimeRangeSql = (datasetNames: string[]): string => {
+    const unionParts = datasetNames.map((name) => `SELECT
   MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP}) AS begin_timestamp,
   MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP}) AS end_timestamp
-FROM ${settings.SqlDbClpTablePrefix}${datasetName}_${SqlTableSuffix.ARCHIVES}`;
+FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.ARCHIVES}`);
+
+    return `SELECT
+  MIN(begin_timestamp) AS begin_timestamp,
+  MAX(end_timestamp) AS end_timestamp
+FROM (${unionParts.join("\nUNION ALL\n")}) AS combined`;
 };
 
 /**
  * Fetches the earliest and latest log entry timestamps ("all time" range)
  * from the configured storage engine (CLP or CLPS).
  *
- * @param selectDataset
+ * @param selectedDatasets
  * @return
  */
-const fetchAllTimeRange = async (selectDataset: Nullable<string>): Promise<[Dayjs, Dayjs]> => {
+const fetchAllTimeRange = async (selectedDatasets: string[]): Promise<[Dayjs, Dayjs]> => {
     let sql: string;
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         sql = buildClpTimeRangeSql();
     } else {
-        if (null === selectDataset) {
-            console.error("Cannot fetch \"All Time\" time range. No selected dataset.");
+        if (0 === selectedDatasets.length) {
+            console.error("Cannot fetch \"All Time\" time range. No selected datasets.");
 
             return DEFAULT_TIME_RANGE;
         }
-        sql = buildClpsTimeRangeSql(selectDataset);
+        sql = buildClpsTimeRangeSql(selectedDatasets);
     }
     const resp = await querySql<
         {

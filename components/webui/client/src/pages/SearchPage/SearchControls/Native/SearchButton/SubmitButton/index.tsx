@@ -35,14 +35,12 @@ const SubmitButton = () => {
         (state) => state.queryIsCaseSensitive,
     );
     const queryString = useSearchStore((state) => state.queryString);
-    const selectDataset = useSearchStore((state) => state.selectDataset);
-    const updateCachedDataset = useSearchStore(
-        (state) => state.updateCachedDataset,
-    );
+    const selectedDatasets = useSearchStore((state) => state.selectedDatasets);
+    const updateQueriedDatasets = useSearchStore((state) => state.updateQueriedDatasets);
     const [messageApi, contextHolder] = message.useMessage();
 
     /**
-     * Submits search query.
+     * Submits the search query.
      */
     const handleSubmitButtonClick = useCallback(async () => {
         let newTimeRange: [Dayjs, Dayjs];
@@ -67,8 +65,8 @@ const SubmitButton = () => {
         updateTimelineConfig(newTimelineConfig);
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if (null !== selectDataset) {
-                updateCachedDataset(selectDataset);
+            if (0 < selectedDatasets.length) {
+                updateQueriedDatasets(selectedDatasets);
             } else {
                 console.error(
                     "Cannot submit a clp-s query without a dataset selection.",
@@ -79,7 +77,7 @@ const SubmitButton = () => {
         }
 
         handleQuerySubmit({
-            dataset: selectDataset,
+            datasets: selectedDatasets,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
@@ -102,15 +100,15 @@ const SubmitButton = () => {
         timeRangeOption,
         updateTimeRange,
         messageApi,
-        selectDataset,
-        updateCachedDataset,
+        selectedDatasets,
+        updateQueriedDatasets,
     ]);
 
     const isQueryStringEmpty = "" === queryString;
 
     // Submit button must be disabled if there are no datasets since clp-s requires dataset option
     // for queries.
-    const isNoDatasetsAndClpS = null === selectDataset &&
+    const isNoDatasetsAndClpS = 0 === selectedDatasets.length &&
         CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
 
     let tooltipTitle = "";

@@ -15,7 +15,10 @@ import {fetchTimestampColumns} from "./sql";
  * @return
  */
 const useTimestampKeyInit = () => {
-    const dataset = useSearchStore((state) => state.selectDataset);
+    const selectedDatasets = useSearchStore((state) => state.selectedDatasets);
+    const dataset = 0 < selectedDatasets.length ?
+        selectedDatasets[0] :
+        null;
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
     const updateTimestampKey = usePrestoSearchState((state) => state.updateTimestampKey);
 

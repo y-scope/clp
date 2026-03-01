@@ -85,7 +85,7 @@ async fn health() -> String {
         content= QueryConfig,
         example = json!({
             "query_string": "*",
-            "dataset": "default",
+            "datasets": ["default"],
             "time_range_begin_millisecs": 0,
             "time_range_end_millisecs": 17_356_896,
             "ignore_case": true,

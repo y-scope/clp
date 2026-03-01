@@ -3,6 +3,7 @@
     "ClpQueryEngine": "clp-s",
     "LogsInputType": "fs",
     "LogsInputRootDir": "/",
+    "MaxDatasetsPerQuery": 10,
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
     "SqlDbClpArchivesTableName": "clp_archives",
     "SqlDbClpDatasetsTableName": "clp_datasets",

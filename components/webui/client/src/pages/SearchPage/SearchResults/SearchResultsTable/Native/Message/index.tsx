@@ -12,6 +12,7 @@ import {highlighterCustomStyles} from "./utils";
 const {Text} = Typography;
 
 interface MessageProps {
+    dataset: string;
     fileText: string;
     message: string;
     logEventIdx: number;
@@ -22,6 +23,7 @@ interface MessageProps {
  * Renders a message with syntax highlighting and a link to original file.
  *
  * @param props
+ * @param props.dataset
  * @param props.fileText
  * @param props.logEventIdx
  * @param props.message
@@ -29,6 +31,7 @@ interface MessageProps {
  * @return
  */
 const Message = ({
+    dataset,
     message,
     fileText,
     streamId,
@@ -52,6 +55,7 @@ const Message = ({
                 </SyntaxHighlighter>
             </Text>
             <LogViewerLink
+                dataset={dataset}
                 fileText={fileText}
                 logEventIdx={logEventIdx}
                 streamId={streamId}/>
