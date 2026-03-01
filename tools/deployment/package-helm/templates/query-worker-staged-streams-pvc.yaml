@@ -1,9 +1,0 @@
-{{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-{{- include "clp.createPvc" (dict
-  "root" .
-  "component_category" "query-worker"
-  "name" "staged-streams"
-  "capacity" "20Gi"
-  "accessModes" (list "ReadWriteOnce")
-) }}
-{{- end }}
