@@ -62,7 +62,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     std::vector<int64_t> m_values;
 };
 
@@ -77,7 +77,7 @@ public:
     [[nodiscard]] auto add_value(int64_t value) -> size_t;
 
 private:
-    // Variables
+    // Data members
     std::vector<int64_t> m_values;
     int64_t m_cur{};
 };
@@ -90,7 +90,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     std::vector<double> m_values;
 };
 
@@ -102,7 +102,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     std::vector<double> m_values;
     std::vector<float_format_t> m_formats;
 };
@@ -119,7 +119,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
 };
@@ -132,7 +132,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     std::vector<uint8_t> m_values;
 };
 
@@ -187,7 +187,7 @@ private:
         return static_cast<encoded_log_dict_id_t>(id) | (offset << cOffsetBitPosition);
     }
 
-    // Variables
+    // Data members
     static constexpr int cOffsetBitPosition = 24;
     static constexpr uint64_t cLogDictIdMask = (1ULL << cOffsetBitPosition) - 1;
     static constexpr uint64_t cOffsetMask = ~cLogDictIdMask;
@@ -212,7 +212,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
 };
@@ -225,7 +225,7 @@ public:
     auto store(ZstdCompressor& compressor) -> void override;
 
 private:
-    // Variables
+    // Data members
     DeltaEncodedInt64ColumnWriter m_timestamps;
     std::vector<uint64_t> m_timestamp_encodings;
 };
