@@ -339,7 +339,7 @@ class Database(BaseModel):
             }
         )
         return (
-            f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
+            f"jdbc:{self.type.value}://{self.host}:{self.port}/"
             f"{self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
         )
 
@@ -401,9 +401,10 @@ class Database(BaseModel):
             password=_get_env_var(pass_env_var),
         )
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = DB_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class SpiderScheduler(BaseModel):
@@ -478,9 +479,10 @@ class Redis(BaseModel):
         """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = REDIS_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class Reducer(BaseModel):
@@ -508,9 +510,10 @@ class ResultsCache(BaseModel):
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = RESULTS_CACHE_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class Queue(BaseModel):
@@ -544,9 +547,10 @@ class Queue(BaseModel):
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = QUEUE_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class S3Credentials(BaseModel):
@@ -1077,14 +1081,14 @@ class ClpConfig(BaseModel):
         self.archive_output.storage.transform_for_container()
         self.stream_output.storage.transform_for_container()
 
-        self.database.transform_for_container()
+        self.database.transform_for_container(BundledService.DATABASE in self.bundled)
         if self.queue is not None:
-            self.queue.transform_for_container()
+            self.queue.transform_for_container(BundledService.QUEUE in self.bundled)
         if self.redis is not None:
-            self.redis.transform_for_container()
+            self.redis.transform_for_container(BundledService.REDIS in self.bundled)
         if self.spider_scheduler is not None:
             self.spider_scheduler.transform_for_container()
-        self.results_cache.transform_for_container()
+        self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
         if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:

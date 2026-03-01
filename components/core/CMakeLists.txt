@@ -308,11 +308,6 @@ if(CLP_NEED_ZSTD)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.
     find_package(zstd 1.4.8 REQUIRED)
     message(STATUS "Found zstd ${zstd_VERSION}")
-    if(CLP_USE_STATIC_LIBS)
-        set(zstd_TARGET zstd::libzstd_static)
-    else()
-        set(zstd_TARGET zstd::libzstd_shared)
-    endif()
 endif()
 
 if(CLP_NEED_LIBLZMA)
@@ -509,6 +504,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrErrorCode.cpp
         src/clp/ffi/ir_stream/IrErrorCode.hpp
+        src/clp/ffi/ir_stream/IrSerializationError.cpp
+        src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
@@ -796,7 +793,7 @@ if(CLP_ENABLE_TESTS)
             clp::string_utils
             ystdlib::containers
             ystdlib::error_handling
-            ${zstd_TARGET}
+            zstd::libzstd_static
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

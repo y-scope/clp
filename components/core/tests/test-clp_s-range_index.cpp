@@ -85,7 +85,9 @@ void serialize_record(
     auto const user_gen_obj{user_gen_handle.get()};
     REQUIRE(msgpack::type::MAP == auto_gen_obj.type);
     REQUIRE(msgpack::type::MAP == user_gen_obj.type);
-    REQUIRE(serializer.serialize_msgpack_map(auto_gen_obj.via.map, user_gen_obj.via.map));
+    REQUIRE_FALSE(
+            serializer.serialize_msgpack_map(auto_gen_obj.via.map, user_gen_obj.via.map).has_error()
+    );
 }
 
 void generate_ir() {

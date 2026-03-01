@@ -806,9 +806,10 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                 case NodeType::Object:
                 case NodeType::StructuredArray:
                 case NodeType::NullValue:
-                case NodeType::DateString:
+                case NodeType::DeprecatedDateString:
                 case NodeType::UnstructuredArray:
                 case NodeType::Metadata:
+                case NodeType::Timestamp:
                 case NodeType::Unknown: {
                     break;
                 }
@@ -881,9 +882,10 @@ auto SchemaReader::generate_composite_var_template(int32_t var_id)
             case NodeType::ClpString:
             case NodeType::LogType:
             case NodeType::NullValue:
-            case NodeType::DateString:
+            case NodeType::DeprecatedDateString:
             case NodeType::UnstructuredArray:
             case NodeType::Metadata:
+            case NodeType::Timestamp:
             case NodeType::Unknown: {
                 return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
                 break;

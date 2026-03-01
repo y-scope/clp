@@ -43,6 +43,70 @@ struct ArchiveWriterOption {
     bool experimental{false};
 };
 
+class ArchiveStats {
+public:
+    // Constructors
+    explicit ArchiveStats(
+            std::string id,
+            epochtime_t begin_timestamp,
+            epochtime_t end_timestamp,
+            size_t uncompressed_size,
+            size_t compressed_size,
+            nlohmann::json range_index,
+            bool is_split
+    )
+            : m_id{id},
+              m_begin_timestamp{begin_timestamp},
+              m_end_timestamp{end_timestamp},
+              m_uncompressed_size{uncompressed_size},
+              m_compressed_size{compressed_size},
+              m_range_index(std::move(range_index)),  // Avoid {} to prevent wrapping in JSON array.
+              m_is_split{is_split} {}
+
+    // Methods
+    /**
+     * @return The contents of `ArchiveStats` as a JSON object in a string.
+     */
+    [[nodiscard]] auto as_string() const -> std::string {
+        namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
+        namespace File = clp::streaming_archive::cMetadataDB::File;
+        constexpr std::string_view cRangeIndex{"range_index"};
+
+        nlohmann::json json_msg
+                = {{Archive::Id, m_id},
+                   {Archive::BeginTimestamp, m_begin_timestamp},
+                   {Archive::EndTimestamp, m_end_timestamp},
+                   {Archive::UncompressedSize, m_uncompressed_size},
+                   {Archive::Size, m_compressed_size},
+                   {File::IsSplit, m_is_split},
+                   {cRangeIndex, m_range_index}};
+        return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
+    }
+
+    [[nodiscard]] auto get_id() const -> std::string const& { return m_id; }
+
+    [[nodiscard]] auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
+
+    [[nodiscard]] auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
+
+    [[nodiscard]] auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
+
+    [[nodiscard]] auto get_compressed_size() const -> size_t { return m_compressed_size; }
+
+    [[nodiscard]] auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
+
+    [[nodiscard]] auto get_is_split() const -> bool { return m_is_split; }
+
+private:
+    std::string m_id;
+    epochtime_t m_begin_timestamp{};
+    epochtime_t m_end_timestamp{};
+    size_t m_uncompressed_size{};
+    size_t m_compressed_size{};
+    nlohmann::json m_range_index;
+    bool m_is_split{};
+};
+
 class ArchiveWriter {
 public:
     class OperationFailed : public TraceableException {

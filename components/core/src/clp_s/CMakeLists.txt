@@ -39,6 +39,10 @@ set(
         ../clp/ffi/ir_stream/Deserializer.hpp
         ../clp/ffi/ir_stream/encoding_methods.cpp
         ../clp/ffi/ir_stream/encoding_methods.hpp
+        ../clp/ffi/ir_stream/IrErrorCode.cpp
+        ../clp/ffi/ir_stream/IrErrorCode.hpp
+        ../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../clp/ffi/ir_stream/IrSerializationError.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp
@@ -134,7 +138,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 log_surgeon::log_surgeon
                 ystdlib::containers
                 ystdlib::error_handling
-                ${zstd_TARGET}
+                zstd::libzstd_static
                 PRIVATE
                 Boost::regex
                 ${CURL_LIBRARIES}
@@ -219,13 +223,14 @@ if(CLP_BUILD_CLP_S_IO)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
                 clp_s_io
+                PUBLIC
+                zstd::libzstd_static
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
                 simdjson::simdjson
                 spdlog::spdlog
-                ${zstd_TARGET}
         )
 endif()
 
@@ -390,7 +395,6 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 PUBLIC
                 clp_s::archive_reader
                 ystdlib::error_handling
-                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 ${MONGOCXX_TARGET}

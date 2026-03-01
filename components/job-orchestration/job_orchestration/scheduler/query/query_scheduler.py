@@ -19,12 +19,9 @@ import argparse
 import asyncio
 import contextlib
 import datetime
-import logging
-import os
 import pathlib
 import sys
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any
 
 import celery
@@ -36,7 +33,7 @@ from clp_py_utils.clp_config import (
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
     get_archives_table_name,
@@ -1145,14 +1142,8 @@ async def main(argv: list[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Setup logging to file
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "query_scheduler.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
-    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+    # Setup optional file logging and logging level.
+    configure_logging(logger, "query_scheduler")
 
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
