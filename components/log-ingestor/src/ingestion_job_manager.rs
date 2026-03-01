@@ -18,6 +18,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
+    compression::wait_for_compression_job_completion_and_update_metadata,
     ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
 };
 
@@ -84,14 +85,80 @@ impl IngestionJobManagerState {
             }
         };
 
-        let (clp_db_ingestion_connector, _) =
+        let (clp_db_ingestion_connector, recoverable_ingestion_jobs) =
             ClpDbIngestionConnector::connect(clp_config, clp_credentials).await?;
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
             clp_db_ingestion_connector,
             aws_credentials,
         });
-        Ok(Self { inner })
+        let ingestion_job_manager = Self { inner };
+
+        // Recover ingestion jobs
+        for ingestion_job_context in recoverable_ingestion_jobs {
+            let job_id = ingestion_job_context.get_job_id();
+            tracing::info!(
+                job_id = ? job_id,
+                "Recovering ingestion job."
+            );
+
+            let _unfinished_compression_jobs = match ingestion_job_context
+                .get_compression_state()
+                .get_all_unfinished_compression_jobs()
+                .await
+            {
+                Ok(unfinished_compression_jobs) => unfinished_compression_jobs,
+                Err(e) => {
+                    tracing::error!(
+                        job_id = ? job_id,
+                        error = ? e,
+                        "Failed to get unfinished compression job on ingestion job recovery. \
+                            Recovering skipped."
+                    );
+                    Vec::new()
+                }
+            };
+            for (compression_job_id, num_submitted) in ingestion_job_context
+                .get_compression_state()
+                .get_all_unfinished_compression_jobs()
+                .await?
+            {
+                tracing::info!(
+                    ingestion_job_id = ? job_id,
+                    compression_job_id = ? compression_job_id,
+                    num_submitted = ? num_submitted,
+                    "Recovering a coroutine to wait for unfinished compression job."
+                );
+                let compression_job_state = ingestion_job_context.get_compression_state();
+                tokio::spawn(async move {
+                    wait_for_compression_job_completion_and_update_metadata(
+                        compression_job_state,
+                        compression_job_id,
+                        usize::try_from(num_submitted)
+                            .expect("Number of submitted items exceeds usize::MAX"),
+                    )
+                    .await;
+                });
+            }
+
+            tracing::info!(
+                job_id = ? job_id,
+                "Creating ingestion job instance on recovery."
+            );
+            if let Err(e) = ingestion_job_manager
+                .create_s3_ingestion_job_instance(ingestion_job_context)
+                .await
+            {
+                tracing::error!(
+                    job_id = ? job_id,
+                    error = ? e,
+                    "Failed to create ingestion job instance on recovery. Recovery for this job \
+                        skipped."
+                );
+            }
+        }
+
+        Ok(ingestion_job_manager)
     }
 
     /// Registers a new S3 ingestion job with the given config in CLP DB and creates a running job

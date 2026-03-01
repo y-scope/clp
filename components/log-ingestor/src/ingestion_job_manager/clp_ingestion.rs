@@ -1057,6 +1057,38 @@ impl ClpCompressionState {
         Ok((status, status_msg))
     }
 
+    /// Retrieves all unfinished compression jobs submitted by the underlying ingestion job.
+    ///
+    /// # Returns
+    ///
+    /// A vector of tuples on success, where each tuple contains:
+    ///
+    /// * The ID of an unfinished compression job.
+    /// * The number of metadata submitted for the compression job.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    pub async fn get_all_unfinished_compression_jobs(
+        &self,
+    ) -> anyhow::Result<Vec<(CompressionJobId, u64)>> {
+        const QUERY: &str = formatcp!(
+            r"SELECT `compression_job_id`, COUNT(*) as `num_submitted` FROM `{table}` \
+                WHERE`ingestion_job_id` = ? AND `compression_job_id` IS NOT NULL AND `status` = ? \
+                GROUP BY `compression_job_id` \
+                ORDER BY `compression_job_id` ASC;",
+            table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
+        );
+        let all: Vec<(CompressionJobId, u64)> = sqlx::query_as(QUERY)
+            .bind(self.ingestion_job_id)
+            .bind(IngestedS3ObjectMetadataStatus::Submitted)
+            .fetch_all(&self.db_pool)
+            .await?;
+        Ok(all)
+    }
+
     /// Waits for the compression job to finish. A compression job is considered finished when it's
     /// in one of the following states:
     ///
