@@ -227,10 +227,10 @@ Each distro supports an environment variable to override the default package mir
 
 ### Other build flags
 
-| Variable | Default | Description |
-|---|---|---|
-| `DOCKER_PULL` | `true` | Pull the latest base image before building. Set to `false` for offline builds. |
-| `DOCKER_NETWORK` | (auto) | Override Docker's network mode (e.g., `host`, `bridge`). |
+| Variable         | Default | Description                                                                    |
+|------------------|---------|--------------------------------------------------------------------------------|
+| `DOCKER_PULL`    | `true`  | Pull the latest base image before building. Set to `false` for offline builds. |
+| `DOCKER_NETWORK` | (auto)  | Override Docker's network mode (e.g., `host`, `bridge`).                       |
 
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
