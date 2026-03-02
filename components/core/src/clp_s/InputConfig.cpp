@@ -39,6 +39,37 @@ auto get_path_object_for_raw_path(std::string_view const path) -> Path {
     return Path{.source = get_source_for_path(path), .path = std::string{path}};
 }
 
+auto remove_path_prefix(std::string_view path, std::string_view prefix)
+        -> std::optional<std::string> {
+    try {
+        std::filesystem::path input_path{path};
+        std::filesystem::path prefix_path{prefix};
+
+        auto path_it = input_path.begin();
+        auto prefix_end_idx = prefix_path.end();
+        if (false == prefix_path.empty() && (--prefix_path.end())->empty()) {
+            --prefix_end_idx;
+        }
+        for (auto prefix_it = prefix_path.begin(); prefix_end_idx != prefix_it; ++prefix_it) {
+            if (input_path.end() == path_it) {
+                return std::nullopt;
+            }
+            if (*prefix_it != *path_it) {
+                return std::nullopt;
+            }
+            ++path_it;
+        }
+
+        std::filesystem::path path_without_prefix{"/"};
+        for (; input_path.end() != path_it; ++path_it) {
+            path_without_prefix.append(path_it->string());
+        }
+        return path_without_prefix.string();
+    } catch (std::exception const&) {
+        return std::nullopt;
+    }
+}
+
 auto get_input_files_for_raw_path(std::string_view const path, std::vector<Path>& files) -> bool {
     return get_input_files_for_path(get_path_object_for_raw_path(path), files);
 }

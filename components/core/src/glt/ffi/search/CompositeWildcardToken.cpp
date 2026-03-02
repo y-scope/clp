@@ -252,7 +252,7 @@ void CompositeWildcardToken<encoded_variable_t>::try_add_wildcard_variable(
                 end_pos
         );
     } else {
-        string_view var(m_query.cbegin() + begin_pos, end_pos - begin_pos);
+        auto const var = m_query.substr(begin_pos, end_pos - begin_pos);
         if (ir::is_var(var)) {
             m_variables.emplace_back(
                     std::in_place_type<ExactVariableToken<encoded_variable_t>>,
