@@ -51,12 +51,34 @@ will be routed through CLP's [API server](./guides-using-the-api-server.md) in a
 
 ### Fault tolerance
 
-:::{warning}
-**The current version of `log-ingestor` does not provide fault tolerance.**
+`log-ingestor` is designed to tolerate unexpected crashes or restarts without losing ingestion
+progress.
 
-If `log-ingestor` crashes or is restarted, all in-progress ingestion jobs and their associated state
-will be lost, and must be restored manually. Robust fault tolerance for the ingestion pipeline is
-planned for a future release.
+At the **job level**, `log-ingestor` automatically restores all ingestion job instances that were
+previously running. After a restart, these jobs are resumed without requiring users to manually
+recreate or resubmit them.
+
+Within each ingestion job, `log-ingestor` maintains a **persistent ingestion state** that records
+the metadata of discovered log files and the progress of ingestion. Using this state, `log-ingestor`
+guarantees the following behavior after a restart:
+
+* **No data loss**: Log files that were successfully ingested before the crash will not be lost.
+* **Buffered data recovery**: Any log files buffered in memory before the crash will be recovered
+  and eventually submitted for compression.
+* **Isolation of completed work**:
+  * Files that have already been compressed will not be re-ingested or recompressed.
+  * Files that were previously submitted for compression will not be submitted again, and their
+    compression results will be correctly tracked when the compression job finishes.
+
+:::{note}
+`log-ingestor`'s fault tolerance model does not guarantee zero duplication for all ingestion job
+types. Some jobs interact with external systems whose state is not synchronized with CLP's
+persistent state.
+
+For example, [SQS listener](#sqs-listener) ingestion jobs delete messages from an SQS queue after
+processing them. If a crash occurs after a message has been processed but before the deletion
+request is sent, the message may be delivered again after restart. In this case, the corresponding
+log file may be ingested more than once.
 :::
 
 ---
