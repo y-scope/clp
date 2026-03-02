@@ -338,6 +338,7 @@
       },
       "TerminalStatus": {
         "type": "string",
+        "description": "Status of a terminated ingestion job.",
         "enum": [
           "finished",
           "failed"
