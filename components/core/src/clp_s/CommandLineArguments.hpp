@@ -123,6 +123,8 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
+    std::string const& get_dataset() const { return m_dataset; }
+
 private:
     // Methods
     /**
@@ -227,6 +229,7 @@ private:
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
     std::vector<std::string> m_projection_columns;
+    std::string m_dataset;
 
     // Search aggregation variables
     std::string m_reducer_host;
