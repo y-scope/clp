@@ -144,7 +144,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
-          m_input_paths(option.input_paths),
+          m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
@@ -646,7 +646,7 @@ void JsonParser::parse_line(
 
 bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
-    for (auto const& path : m_input_paths) {
+    for (auto const& [path, file_name_in_metadata] : m_input_paths_and_canonical_filenames) {
         auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
             std::ignore = m_archive_writer->close();
@@ -657,10 +657,20 @@ bool JsonParser::ingest() {
         bool ingestion_successful{};
         switch (file_type) {
             case FileType::Json:
-                ingestion_successful = ingest_json(nested_readers.back(), path, archive_creator_id);
+                ingestion_successful = ingest_json(
+                        nested_readers.back(),
+                        path,
+                        file_name_in_metadata,
+                        archive_creator_id
+                );
                 break;
             case FileType::KeyValueIr:
-                ingestion_successful = ingest_kvir(nested_readers.back(), path, archive_creator_id);
+                ingestion_successful = ingest_kvir(
+                        nested_readers.back(),
+                        path,
+                        file_name_in_metadata,
+                        archive_creator_id
+                );
                 break;
             case FileType::LogText:
                 SPDLOG_ERROR(
@@ -691,6 +701,7 @@ bool JsonParser::ingest() {
 auto JsonParser::ingest_json(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
+        std::string const& file_name_in_metadata,
         std::string const& archive_creator_id
 ) -> bool {
     JsonFileIterator json_file_iterator(*reader, m_max_document_size);
@@ -718,7 +729,7 @@ auto JsonParser::ingest_json(
                 = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
         if (auto const rc = m_archive_writer->add_field_to_current_range(
                     std::string{constants::range_index::cFilename},
-                    path.path
+                    file_name_in_metadata
             );
             ErrorCodeSuccess != rc)
         {
@@ -860,6 +871,7 @@ auto JsonParser::ingest_json(
 auto JsonParser::ingest_kvir(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
+        std::string const& file_name_in_metadata,
         std::string const& archive_creator_id
 ) -> bool {
     auto deserializer_result{Deserializer<IrUnitHandler>::create(*reader, IrUnitHandler{})};
@@ -885,7 +897,7 @@ auto JsonParser::ingest_kvir(
                 = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
         if (auto const rc = m_archive_writer->add_field_to_current_range(
                     std::string{constants::range_index::cFilename},
-                    path.path
+                    file_name_in_metadata
             );
             ErrorCodeSuccess != rc)
         {
