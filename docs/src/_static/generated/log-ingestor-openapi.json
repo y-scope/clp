@@ -32,21 +32,21 @@
         }
       }
     },
-    "/job/{job_id}": {
-      "delete": {
+    "/job/{job_id}/terminate": {
+      "post": {
         "tags": [
           "IngestionJob"
         ],
-        "description": "Deletes an existing ingestion job by its ID. This operation stops the job if it is currently running and removes all associated resources.",
-        "operationId": "stop_and_delete_job",
+        "description": "Terminates the ingestion job instance identified by the given job ID.\n\nThis operation only terminates the job instance; the job record, including its status and statistics, is preserved and can still be accessible using the same job ID.\n\nThis operation is idempotent.",
+        "operationId": "terminate_ingestion_job",
         "parameters": [
           {
             "name": "job_id",
             "in": "path",
-            "description": "The unique identifier of the ingestion job to delete.",
+            "description": "The ID of the job to terminate.",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/u64"
             }
           }
         ],
@@ -56,23 +56,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "default": null
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The provided job ID is not in a valid format.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/TerminateResponse"
                 }
               }
             }
           },
           "404": {
-            "description": "The specified job ID does not correspond to any existing ingestion job.",
+            "description": "The specified job ID does not correspond to an ingestion job.",
             "content": {
               "application/json": {
                 "schema": {
@@ -99,7 +89,7 @@
         "tags": [
           "IngestionJob"
         ],
-        "description": "Creates an ingestion job that periodically scans the specified S3 bucket and key prefix for new objects to ingest.\n\nTo ensure correct and efficient ingestion, the scanner relies on the following assumptions:\n\n1. Lexicographical Order: New objects are added in lexicographical order to the bucket based on their keys. For example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater than the last ingested key.\n\n2. Immutability: Objects under the specified prefix are immutable. Once an object is created, it is not modified or overwritten.",
+        "description": "Creates an ingestion job and starts a job instance that periodically scans the specified S3 bucket and key prefix for new objects to ingest.\n\nTo ensure correct and efficient ingestion, the scanner relies on the following assumptions:\n\n1. Lexicographical Order: New objects are added in lexicographical order to the bucket based on their keys. For example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater than the last ingested key.\n\n2. Immutability: Objects under the specified prefix are immutable. Once an object is created, it is not modified or overwritten.",
         "operationId": "create_s3_scanner_job",
         "requestBody": {
           "content": {
@@ -133,7 +123,7 @@
             }
           },
           "409": {
-            "description": "A prefix conflict was detected. For the same bucket and dataset, only one ingestion job may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -160,7 +150,7 @@
         "tags": [
           "IngestionJob"
         ],
-        "description": "Creates an ingestion job that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
+        "description": "Creates an ingestion job and starts a job instance that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
         "operationId": "create_sqs_listener_job",
         "requestBody": {
           "content": {
@@ -194,7 +184,7 @@
             }
           },
           "409": {
-            "description": "A prefix conflict was detected. For the same bucket and dataset, only one ingestion job may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -270,8 +260,8 @@
         ],
         "properties": {
           "id": {
-            "type": "string",
-            "description": "The unique ID of the created ingestion job."
+            "$ref": "#/components/schemas/u64",
+            "description": "The ID of the created ingestion job."
           }
         }
       },
@@ -345,6 +335,35 @@
           }
         ],
         "description": "Configuration for a SQS listener job."
+      },
+      "TerminalStatus": {
+        "type": "string",
+        "enum": [
+          "finished",
+          "failed"
+        ]
+      },
+      "TerminateResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "terminal_status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/u64",
+            "description": "The ID of the job whose instance is terminated."
+          },
+          "terminal_status": {
+            "$ref": "#/components/schemas/TerminalStatus",
+            "description": "Terminal status of the job."
+          }
+        }
+      },
+      "u64": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
       }
     }
   },
