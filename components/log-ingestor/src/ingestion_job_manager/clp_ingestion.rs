@@ -132,9 +132,11 @@ impl ClpDbIngestionConnector {
 
         tx.commit().await?;
 
-        // TODO: `db_pool` should be replaced with `ClpCompressionState` in #2035
         let submitter = CompressionJobSubmitter::new(
-            self.db_pool.clone(),
+            ClpCompressionState {
+                ingestion_job_id: job_id,
+                db_pool: self.db_pool.clone(),
+            },
             self.aws_credentials.clone(),
             &self.archive_output_config,
             config.as_base_config(),
@@ -334,7 +336,7 @@ impl ClpIngestionState {
         mut tx: sqlx::Transaction<'_, sqlx::MySql>,
     ) -> anyhow::Result<()> {
         let curr_status: ClpIngestionJobStatus = sqlx::query_scalar(formatcp!(
-            r"SELECT `status` FROM `{table}` WHERE `id` = ?",
+            r"SELECT `status` FROM `{table}` WHERE `id` = ? LOCK IN SHARE MODE;",
             table = INGESTION_JOB_TABLE_NAME,
         ))
         .bind(self.job_id)
