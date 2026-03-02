@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <istream>
 #include <memory>
 #include <optional>
 #include <stack>
@@ -21,6 +22,7 @@
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/log_mechanic.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/Token.hpp>
@@ -91,7 +93,7 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
  * @return A log surgeon parser created from the provided schema.
  */
 auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const& network_auth)
-        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::BufferParser>>;
+        -> ystdlib::error_handling::Result<std::unique_ptr<JsonParser::ParserHandle>>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -163,7 +165,7 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
  * create the parser from it.
  */
 auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const& network_auth)
-        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::BufferParser>> {
+        -> ystdlib::error_handling::Result<std::unique_ptr<JsonParser::ParserHandle>> {
     auto schema_reader{try_create_reader(schema_path, network_auth)};
     if (nullptr == schema_reader) {
         return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
@@ -182,9 +184,54 @@ auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const&
         }
         schema_contents.append(buf.data(), bytes_read);
     }
-    return std::make_unique<log_surgeon::BufferParser>(
-            log_surgeon::SchemaParser::try_schema_string(schema_contents)
-    );
+
+    auto* schema{log_mechanic::logmech_schema_new()};
+    std::istringstream stream(schema_contents);
+    std::string line;
+    while (std::getline(stream, line)) {
+        if (line.empty() || line.starts_with("//")) {
+            continue;
+        }
+
+        auto const colon_pos{line.find(':')};
+        if (colon_pos != std::string::npos) {
+            auto const name{line.substr(0, colon_pos)};
+            auto const escaped_pattern{line.substr(colon_pos + 1)};
+            std::string pattern{};
+            for (size_t i{0}; i < escaped_pattern.size(); ++i) {
+                auto const c{escaped_pattern[i]};
+                if ('\\' != c) {
+                    pattern += c;
+                    continue;
+                }
+                auto const escaped_c{escaped_pattern[i + 1]};
+                switch (escaped_c) {
+                    case 'n':
+                        pattern += '\n';
+                        break;
+                    case 'r':
+                        pattern += '\r';
+                        break;
+                    case 't':
+                        pattern += '\t';
+                        break;
+                    default:
+                        pattern += c;
+                        pattern += escaped_c;
+                        break;
+                }
+                ++i;
+            }
+            if ("delimiters" == name) {
+                log_mechanic::logmech_schema_set_delimiters(schema, {pattern});
+            } else {
+                if (nullptr != log_mechanic::logmech_schema_add_rule(schema, {name}, {pattern})) {
+                    throw(std::runtime_error(fmt::format("failed to add {}: '{}'", name, pattern)));
+                }
+            }
+        }
+    }
+    return std::make_unique<JsonParser::ParserHandle>(schema);
 }
 }  // namespace
 
@@ -775,15 +822,15 @@ bool JsonParser::ingest() {
         bool ingestion_successful{};
         switch (file_type) {
             case FileType::Json: {
-                auto const start{std::chrono::steady_clock::now()};
-                SPDLOG_INFO("Start ingesting: {}", path.path);
+                // auto const start{std::chrono::steady_clock::now()};
+                // SPDLOG_INFO("Start ingesting: {}", path.path);
                 ingestion_successful = ingest_json(nested_readers.back(), path, archive_creator_id);
                 auto const end{std::chrono::steady_clock::now()};
-                SPDLOG_INFO(
-                        "Finished ingesting in {} for: {}",
-                        std::chrono::duration_cast<std::chrono::microseconds>(end - start),
-                        path.path
-                );
+                // SPDLOG_INFO(
+                //         "Finished ingesting in {} for: {}",
+                //         std::chrono::duration_cast<std::chrono::microseconds>(end - start),
+                //         path.path
+                // );
                 break;
             }
             case FileType::KeyValueIr:
@@ -1502,386 +1549,81 @@ bool JsonParser::check_and_log_curl_error(
     return false;
 }
 
-auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
+auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_msg)
         -> ystdlib::error_handling::Result<void> {
-    (*m_log_surgeon_parser).reset();
-    size_t offset{};
-    std::string str{view};
-    if (log_surgeon::ErrorCode::Success
-        != m_log_surgeon_parser->parse_next_event(str.data(), str.size(), offset, true))
-    {
+    size_t parser_pos{0};
+    auto const event_opt{m_log_surgeon_parser->m_parser.next_event(log_msg, &parser_pos)};
+    if (false == event_opt.has_value()) {
         return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
     }
+    auto const event{event_opt.value()};
+
+    // SPDLOG_INFO("####");
+    // SPDLOG_INFO("[clpsls] log msg: {}", log_msg);
+    // SPDLOG_INFO("[clpsls] log type: {}", event.log_type());
 
     auto msg_start{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
-    auto const& log_parser{m_log_surgeon_parser->get_log_parser()};
-    auto const& event{log_parser.get_log_event_view()};
-    auto const& log_buf = event.get_log_output_buffer();
+    for (size_t var_idx{0}; event[var_idx].has_value(); ++var_idx) {
+        // auto const start{std::chrono::steady_clock::now()};
 
-    ParsedMessage::ClpString clp_str{};
-    clp_str.m_logtype.reserve_constant_length(view.size());
-    auto starting_token_idx{log_buf->has_header() ? 0 : 1};
-    for (auto token_idx{starting_token_idx}; token_idx < log_buf->pos(); token_idx++) {
-        auto token{log_buf->get_token(token_idx)};
-        auto const token_type{token.get_type_ids()->at(0)};
-        auto const token_name{log_parser.get_id_symbol(token_type)};
-        SPDLOG_DEBUG(
-                "[clpsls] token name: {} ({}) value: {}",
-                token_name,
-                token_type,
-                token.to_string_view()
-        );
-
-        if (log_buf->has_delimiters() && token_idx != starting_token_idx
-            && static_cast<int>(log_surgeon::SymbolId::TokenNewline) != token_type
-            && static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString) != token_type)
-        {
-            clp_str.m_logtype.add_static_text(token.get_delimiter());
-            token.increment_start_pos();
+        auto const var{event[var_idx].value()};
+        // SPDLOG_INFO("[clpsls]\tvar name: {} value: {}", var.name, var.lexeme);
+        if (var.begin() == var.end()) {
+            m_current_parsed_message.add_unordered_value(var.lexeme);
+            m_current_schema.insert_unordered(
+                    m_archive_writer->add_node(parent_node_id, NodeType::VarString, var.name)
+            );
+            continue;
         }
 
-        switch (token_type) {
-            case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
-            case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-                clp_str.m_logtype.add_static_text(token.to_string_view());
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
-                int32_t node_id{};
-                clp_s::encoded_variable_t encoded_var{};
-                if (clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                            token.to_string_view(),
-                            encoded_var
-                    ))
-                {
-                    node_id = m_archive_writer
-                                      ->add_node(parent_node_id, NodeType::Integer, token_name);
-                    m_current_parsed_message.add_unordered_value(encoded_var);
-                    clp_str.m_logtype.add_int_var();
-                    clp_str.m_encoded_vars.push_back(encoded_var);
-                } else {
-                    node_id = m_archive_writer
-                                      ->add_node(parent_node_id, NodeType::VarString, token_name);
-                    m_current_parsed_message.add_unordered_value(token.to_string_view());
-                    clp_str.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
-                            token.to_string_view(),
-                            clp_str.m_logtype
-                    ));
-                }
-                clp_str.m_var_type_names.emplace_back(token_name);
-                m_current_schema.insert_unordered(node_id);
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
-                int32_t node_id{};
-                encoded_variable_t encoded_var{};
-                if (auto const float_format{get_float_encoding(token.to_string_view())};
-                    float_format.has_value()
-                    && round_trip_is_identical(
-                            token.to_string_view(),
-                            std::stod(token.to_string()),
-                            float_format.value()
-                    )
-                    && clp::EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                            token.to_string_view(),
-                            encoded_var
-                    ))
+        auto var_node_id{
+                m_archive_writer->add_node(parent_node_id, NodeType::CompositeVar, var.name)
+        };
+        auto capture_start{m_current_schema.start_unordered_object(NodeType::CompositeVar)};
+        m_current_schema.insert_unordered(m_archive_writer->add_node(
+                var_node_id,
+                NodeType::VarString,
+                constants::cFullMatchNodeName
+        ));
+        m_current_parsed_message.add_unordered_value(var.lexeme);
 
-                {
-                    m_current_parsed_message.add_unordered_value(
-                            std::stod(token.to_string()),
-                            float_format.value()
-                    );
-                    node_id = m_archive_writer->add_node(
-                            parent_node_id,
-                            NodeType::FormattedFloat,
-                            token_name
-                    );
-                    clp_str.m_logtype.add_float_var();
-                    clp_str.m_encoded_vars.push_back(encoded_var);
-                } else {
-                    m_current_parsed_message.add_unordered_value(token.to_string_view());
-                    node_id = m_archive_writer->add_node(
-                            parent_node_id,
-                            NodeType::DictionaryFloat,
-                            token_name
-                    );
-                    clp_str.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
-                            token.to_string_view(),
-                            clp_str.m_logtype
-                    ));
-                }
-                clp_str.m_var_type_names.emplace_back(token_name);
-                m_current_schema.insert_unordered(node_id);
-                break;
-            }
-            default: {
-                auto const& lexer{event.get_log_parser().m_lexer};
-                if (false == lexer.get_captures_from_rule_id(token_type).has_value()) {
-                    m_current_parsed_message.add_unordered_value(token.to_string_view());
-                    m_current_schema.insert_unordered(m_archive_writer->add_node(
-                            parent_node_id,
-                            NodeType::VarString,
-                            token_name
-                    ));
-                    clp_str.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
-                            token.to_string_view(),
-                            clp_str.m_logtype
-                    ));
-                    clp_str.m_var_type_names.emplace_back(token_name);
-                    YSTDLIB_ERROR_HANDLING_TRYV(
-                            m_archive_writer->update_var_stats(token.to_string_view(), token_name)
-                    );
-                    break;
-                }
-
-                auto var_node_id{m_archive_writer->add_node(
-                        parent_node_id,
-                        NodeType::CompositeVar,
-                        token_name
-                )};
-                // auto const start{std::chrono::steady_clock::now()};
-                // YSTDLIB_ERROR_HANDLING_TRYV(
-                //         store_capture_groups(event, token, var_node_id, clp_str)
-                // );
-                {
-                    auto capture_start{
-                            m_current_schema.start_unordered_object(NodeType::CompositeVar)
-                    };
-
-                    m_current_schema.insert_unordered(m_archive_writer->add_node(
-                            var_node_id,
-                            NodeType::VarString,
-                            constants::cFullMatchNodeName
-                    ));
-                    m_current_parsed_message.add_unordered_value(token.to_string_view());
-                    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                            token.to_string_view(),
-                            fmt::format("{}.{}", token_name, constants::cFullMatchNodeName)
-                    ));
-
-                    auto prev_leaf_end_pos{token.get_start_pos()};
-                    for (auto const capture_match :
-                         YSTDLIB_ERROR_HANDLING_TRYX(event.get_capture_matches(token)))
-                    {
-                        auto capture{token.get_sub_token(
-                                capture_match.m_pos.m_start,
-                                capture_match.m_pos.m_end
-                        )};
-                        m_current_schema.insert_unordered(m_archive_writer->add_node(
-                                var_node_id,
-                                NodeType::VarString,
-                                capture_match.m_capture->get_name()
-                        ));
-                        auto capture_full_name{fmt::format(
-                                "{}.{}",
-                                token_name,
-                                capture_match.m_capture->get_name()
-                        )};
-                        m_current_parsed_message.add_unordered_value(capture.to_string_view());
-                        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                                capture.to_string_view(),
-                                capture_full_name
-                        ));
-                        SPDLOG_DEBUG(
-                                "[clpsls]\tcapture name: {} value: {}",
-                                capture_full_name,
-                                capture.to_string_view()
-                        );
-
-                        if (capture_match.m_leaf) {
-                            auto static_text{
-                                    token.get_sub_token(prev_leaf_end_pos, capture.get_start_pos())
-                            };
-                            clp_str.m_logtype.add_static_text(static_text.to_string_view());
-                            clp_str.m_encoded_vars.push_back(
-                                    m_archive_writer->add_dict_var_to_logtype(
-                                            capture.to_string_view(),
-                                            clp_str.m_logtype
-                                    )
-                            );
-                            clp_str.m_var_type_names.emplace_back(capture_full_name);
-                            prev_leaf_end_pos = capture.get_end_pos();
-                        }
-                    }
-                    clp_str.m_logtype.add_static_text(
-                            token.get_sub_token(prev_leaf_end_pos, token.get_end_pos())
-                                    .to_string_view()
-                    );
-                    // auto pre_end_pos{token.get_start_pos()};
-                    // auto const captures{event.get_log_parser().m_lexer.get_captures_from_rule_id(
-                    //         token.get_type_ids()->at(0)
-                    // )};
-                    // for (auto const* const capture_id : captures.value()) {
-                    //     auto position{event.get_capture_position(token, capture_id)};
-                    //     if (position.has_error()) {
-                    //         continue;
-                    //     }
-                    //     auto capture{token.get_sub_token(
-                    //             position.value().m_start,
-                    //             position.value().m_end
-                    //     )};
-                    //     m_current_schema.insert_unordered(m_archive_writer->add_node(
-                    //             var_node_id,
-                    //             NodeType::VarString,
-                    //             capture_id->get_name()
-                    //     ));
-                    //     auto capture_full_name{
-                    //             fmt::format("{}.{}", token_name, capture_id->get_name())
-                    //     };
-                    //     m_current_parsed_message.add_unordered_value(capture.to_string_view());
-                    //     YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-                    //             capture.to_string_view(),
-                    //             capture_full_name
-                    //     ));
-                    //     auto static_text{token.get_sub_token(pre_end_pos,
-                    //     capture.get_start_pos())};
-                    //     clp_str.m_logtype.add_static_text(static_text.to_string_view());
-                    //     clp_str.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
-                    //             capture.to_string_view(),
-                    //             clp_str.m_logtype
-                    //     ));
-                    //     clp_str.m_var_type_names.emplace_back(capture_full_name);
-                    //     pre_end_pos = capture.get_end_pos();
-                    // }
-                    // clp_str.m_logtype.add_static_text(
-                    //         token.get_sub_token(pre_end_pos,
-                    //         token.get_end_pos()).to_string_view()
-                    // );
-
-                    m_current_schema.end_unordered_object(capture_start);
-                }
-                // auto const end{std::chrono::steady_clock::now()};
+        for (auto cap_it{var.begin()}; var.end() != cap_it; ++cap_it) {
+            for (auto const cap : var[*cap_it]) {
+                m_current_schema.insert_unordered(m_archive_writer->add_node(
+                        var_node_id,
+                        NodeType::VarString,
+                        cap.name.as_cpp_view()
+                ));
+                m_current_parsed_message.add_unordered_value(cap.lexeme.as_cpp_view());
                 // SPDLOG_INFO(
-                //         "wtf... {}({}) took: {}",
-                //         token_name,
-                //         token_idx,
-                //         std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+                //         "[clpsls]\tcapture name: {} value: {}",
+                //         cap.name.as_cpp_view(),
+                //         cap.lexeme.as_cpp_view()
                 // );
-                m_current_schema.insert_unordered(var_node_id);
-                break;
             }
         }
+
+        m_current_schema.end_unordered_object(capture_start);
+
+        // auto const end{std::chrono::steady_clock::now()};
+        // SPDLOG_INFO(
+        //         "var... {}({}) took: {}",
+        //         var.name,
+        //         var_idx,
+        //         std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+        // );
     }
 
-    m_current_parsed_message.add_unordered_value(clp_str);
+    m_current_parsed_message.add_unordered_value(event.log_type());
     m_current_schema.insert_unordered(m_archive_writer->add_node(
             parent_node_id,
             NodeType::LogType,
             constants::cLogTypeNodeName
     ));
-    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(clp_str));
-    m_current_parsed_message.add_unordered_value(clp_str);
-    m_current_schema.insert_unordered(m_archive_writer->add_node(
-            parent_node_id,
-            NodeType::ClpString,
-            constants::cFullMatchNodeName
-    ));
+    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_logtype_stats(event.log_type()));
+
     m_current_schema.end_unordered_object(msg_start);
-    return ystdlib::error_handling::success();
-}
-
-auto JsonParser::store_capture_groups(
-        log_surgeon::LogEvent const& event,
-        log_surgeon::Token& root_var,
-        int32_t root_var_node_id,
-        ParsedMessage::ClpString& clp_str
-) -> ystdlib::error_handling::Result<void> {
-    auto const& log_parser{m_log_surgeon_parser->get_log_parser()};
-    auto const root_var_type{root_var.get_type_ids()->at(0)};
-    auto const root_var_name{log_parser.get_id_symbol(root_var_type)};
-
-    auto capture_start{m_current_schema.start_unordered_object(NodeType::CompositeVar)};
-
-    m_current_schema.insert_unordered(m_archive_writer->add_node(
-            root_var_node_id,
-            NodeType::VarString,
-            constants::cFullMatchNodeName
-    ));
-    m_current_parsed_message.add_unordered_value(root_var.to_string_view());
-    YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_var_stats(
-            root_var.to_string_view(),
-            fmt::format("{}.{}", root_var_name, constants::cFullMatchNodeName)
-    ));
-
-    auto prev_leaf_end_pos{root_var.get_start_pos()};
-    for (auto const capture_match :
-         YSTDLIB_ERROR_HANDLING_TRYX(event.get_capture_matches(root_var)))
-    {
-        auto capture{
-                root_var.get_sub_token(capture_match.m_pos.m_start, capture_match.m_pos.m_end)
-        };
-        m_current_schema.insert_unordered(m_archive_writer->add_node(
-                root_var_node_id,
-                NodeType::VarString,
-                capture_match.m_capture->get_name()
-        ));
-        auto capture_full_name{
-                fmt::format("{}.{}", root_var_name, capture_match.m_capture->get_name())
-        };
-        m_current_parsed_message.add_unordered_value(capture.to_string_view());
-        YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_var_stats(capture.to_string_view(), capture_full_name)
-        );
-        SPDLOG_DEBUG(
-                "[clpsls]\tcapture name: {} value: {}",
-                capture_full_name,
-                capture.to_string_view()
-        );
-
-        if (capture_match.m_leaf) {
-            auto static_text{root_var.get_sub_token(prev_leaf_end_pos, capture.get_start_pos())};
-            clp_str.m_logtype.add_static_text(static_text.to_string_view());
-            clp_str.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
-                    capture.to_string_view(),
-                    clp_str.m_logtype
-            ));
-            clp_str.m_var_type_names.emplace_back(capture_full_name);
-            prev_leaf_end_pos = capture.get_end_pos();
-        }
-    }
-    clp_str.m_logtype.add_static_text(
-            root_var.get_sub_token(prev_leaf_end_pos, root_var.get_end_pos()).to_string_view()
-    );
-
-    // // FIXME bad code to treat everything as a leaf
-    // auto pre_end_pos{root_var.get_start_pos()};
-    // auto const captures{
-    //         event.get_log_parser().m_lexer.get_captures_from_rule_id(root_var.get_type_ids()->at(0))
-    // };
-    // for (auto const* const capture_id : captures.value()) {
-    //     auto position{event.get_capture_position(root_var, capture_id)};
-    //     if (position.has_error()) {
-    //         continue;
-    //     }
-    //     auto capture{root_var.get_sub_token(position.value().m_start, position.value().m_end)};
-    //     m_current_schema.insert_unordered(m_archive_writer->add_node(
-    //             root_var_node_id,
-    //             NodeType::VarString,
-    //             capture_id->get_name()
-    //     ));
-    //     auto capture_full_name{
-    //             fmt::format("{}.{}", root_var_name, capture_match.m_capture->get_name())
-    //     };
-    //     m_current_parsed_message.add_unordered_value(capture.to_string_view());
-    //     YSTDLIB_ERROR_HANDLING_TRYV(
-    //             m_archive_writer->update_var_stats(capture.to_string_view(), capture_full_name)
-    //     );
-    //     auto static_text{root_var.get_sub_token(pre_end_pos, capture.get_start_pos())};
-    //     clp_str.m_logtype.add_static_text(static_text.to_string_view());
-    //     clp_str.m_encoded_vars.push_back(m_archive_writer->add_dict_var_to_logtype(
-    //             capture.to_string_view(),
-    //             clp_str.m_logtype
-    //     ));
-    //     clp_str.m_var_type_names.emplace_back(capture_full_name);
-    //     pre_end_pos = capture.get_end_pos();
-    // }
-    // clp_str.m_logtype.add_static_text(
-    //         root_var.get_sub_token(pre_end_pos, root_var.get_end_pos()).to_string_view()
-    // );
-
-    m_current_schema.end_unordered_object(capture_start);
     return ystdlib::error_handling::success();
 }
 }  // namespace clp_s

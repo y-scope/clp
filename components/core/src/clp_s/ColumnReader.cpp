@@ -164,14 +164,9 @@ ClpStringColumnReader::extract_string_value_into_buffer(uint64_t cur_message, st
     auto encoded_vars{m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables())};
 
     if (NodeType::LogType == m_type) {
-        if (auto logtype{
-                    ArchiveReader::decode_logtype_with_variable_types(entry, *m_logtype_stats)
-            };
-            logtype.has_value())
-        {
-            buffer.append(logtype.value());
-        }
+        buffer.append(entry.get_value());
     } else {
+        // TODO this doesn't work with new log surgeon
         clp::EncodedVariableInterpreter::decode_variables_into_message(
                 entry,
                 *m_var_dict,

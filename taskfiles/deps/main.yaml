@@ -2,6 +2,7 @@ version: "3"
 
 includes:
   lock: "./lock.yaml"
+  toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
@@ -73,6 +74,7 @@ tasks:
       - task: "catch2"
       - task: "date"
       - task: "fmt"
+      - task: "libarchive"
       - task: "liblzma"
       - task: "log-surgeon"
       - task: "lz4"
@@ -289,6 +291,22 @@ tasks:
           TARBALL_SHA256: "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"
           TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz"
 
+  libarchive:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DENABLE_EXPAT=OFF"
+            - "-DENABLE_OPENSSL=OFF"
+          LIB_NAME: "LibArchive"
+          TARBALL_SHA256: "191b5b24811499d5c2e5efa3248975fa6daa5e6a227700cc7b8e54d6d7c06eef"
+          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/\
+          v3.8.0/libarchive-3.8.0.tar.gz"
+
   liblzma:
     internal: true
     vars:
@@ -337,6 +355,38 @@ tasks:
           TARBALL_SHA256: "{{.TARBALL_SHA256}}"
           TARBALL_URL: "{{.TARBALL_URL}}"
 
+  log-mechanic:
+    internal: true
+    run: "once"
+    deps: ["toolchains:rust"]
+    vars:
+      LIB_NAME: "log_mechanic"
+      INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
+      INSTALL_HEADER_DIR: "{{.INSTALL_INCLUDE_DIR}}/log_surgeon"
+      OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      SRC_DIR: "{{.OUTPUT_DIR}}/rust"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "4a0f2ec45f39e5b55c1cedd375c8cc8f1c84f30c2c0cc99fc9b849ad2f1cde76"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          URL: "https://github.com/y-scope/log-surgeon/archive/db9e9af.tar.gz"
+      - |-
+        cd "{{.SRC_DIR}}"
+        cargo build --no-default-features --release
+        mkdir -p "{{.INSTALL_HEADER_DIR}}"
+        rsync -az "{{.SRC_DIR}}/target/release/liblog_mechanic.a" "{{.INSTALL_DIR}}"
+        rsync -az "{{.SRC_DIR}}/include/" "{{.INSTALL_HEADER_DIR}}"
+        cat << EOF > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        add_library({{.LIB_NAME}} STATIC IMPORTED)
+        set_target_properties({{.LIB_NAME}} PROPERTIES
+            IMPORTED_LOCATION "{{.INSTALL_DIR}}/liblog_mechanic.a"
+            INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
+        )
+        EOF
+
   log-surgeon:
     internal: true
     run: "once"
@@ -344,6 +394,7 @@ tasks:
       - "fmt"
       - "microsoft.gsl"
       - "ystdlib"
+      - "log-mechanic"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
@@ -569,8 +620,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "yaml-cpp"
-          TARBALL_SHA256: "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3"
-          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
+          TARBALL_SHA256: "3c8b5e3f5afc9f251c643d3d5642502934a85a0e76b041710cb229cb2b2106d6"
+          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/aa8d4e4.tar.gz"
 
   ystdlib:
     internal: true

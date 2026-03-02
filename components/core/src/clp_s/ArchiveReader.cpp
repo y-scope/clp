@@ -483,66 +483,67 @@ auto ArchiveReader::read_experimental_stats() -> ystdlib::error_handling::Result
     return ystdlib::error_handling::success();
 }
 
+// TODO change to decoding typed logtype with variable values
 auto ArchiveReader::decode_logtype_with_variable_types(
         LogTypeDictionaryEntry const& logtype_dict_entry,
         LogTypeStats const& logtype_stats
 ) -> ystdlib::error_handling::Result<std::string> {
     std::string logtype;
-    auto const& logtype_value{logtype_dict_entry.get_value()};
-    auto const& var_type_names{logtype_stats.at(logtype_dict_entry.get_id()).get_var_type_names()};
-    if (var_type_names.size() != logtype_dict_entry.get_num_variables()) {
-        SPDLOG_ERROR(
-                "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} type names "
-                "were given for decoding.",
-                logtype_value.c_str(),
-                logtype_dict_entry.get_num_variables(),
-                var_type_names.size()
-        );
-        return std::errc::bad_message;
-    }
+    // auto const& logtype_value{logtype_dict_entry.get_value()};
+    // auto const& var_type_names{logtype_stats.at(logtype_dict_entry.get_id()).get_var_type_names()};
+    // if (var_type_names.size() != logtype_dict_entry.get_num_variables()) {
+    //     SPDLOG_ERROR(
+    //             "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} type names "
+    //             "were given for decoding.",
+    //             logtype_value.c_str(),
+    //             logtype_dict_entry.get_num_variables(),
+    //             var_type_names.size()
+    //     );
+    //     return std::errc::bad_message;
+    // }
 
-    size_t constant_begin_pos{0};
-    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
-    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
-         ++placeholder_ix)
-    {
-        clp::ir::VariablePlaceholder var_placeholder{};
-        auto const placeholder_position{
-                logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder)
-        };
-        logtype.append(
-                logtype_value,
-                constant_begin_pos,
-                placeholder_position - constant_begin_pos
-        );
+    // size_t constant_begin_pos{0};
+    // size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
+    // for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
+    //      ++placeholder_ix)
+    // {
+    //     clp::ir::VariablePlaceholder var_placeholder{};
+    //     auto const placeholder_position{
+    //             logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder)
+    //     };
+    //     logtype.append(
+    //             logtype_value,
+    //             constant_begin_pos,
+    //             placeholder_position - constant_begin_pos
+    //     );
 
-        switch (var_placeholder) {
-            case clp::ir::VariablePlaceholder::Integer:
-            case clp::ir::VariablePlaceholder::Float:
-            case clp::ir::VariablePlaceholder::Dictionary: {
-                logtype.append(fmt::format("<{}>", var_type_names.at(var_ix)));
-                ++var_ix;
-                break;
-            }
-            case clp::ir::VariablePlaceholder::Escape: {
-                break;
-            }
-            default: {
-                SPDLOG_ERROR(
-                        "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
-                        "placeholder 0x{:x}",
-                        logtype_value,
-                        clp::enum_to_underlying_type(var_placeholder)
-                );
-                return std::errc::bad_message;
-            }
-        }
-        constant_begin_pos = placeholder_position + 1;
-    }
+    //     switch (var_placeholder) {
+    //         case clp::ir::VariablePlaceholder::Integer:
+    //         case clp::ir::VariablePlaceholder::Float:
+    //         case clp::ir::VariablePlaceholder::Dictionary: {
+    //             logtype.append(fmt::format("<{}>", var_type_names.at(var_ix)));
+    //             ++var_ix;
+    //             break;
+    //         }
+    //         case clp::ir::VariablePlaceholder::Escape: {
+    //             break;
+    //         }
+    //         default: {
+    //             SPDLOG_ERROR(
+    //                     "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
+    //                     "placeholder 0x{:x}",
+    //                     logtype_value,
+    //                     clp::enum_to_underlying_type(var_placeholder)
+    //             );
+    //             return std::errc::bad_message;
+    //         }
+    //     }
+    //     constant_begin_pos = placeholder_position + 1;
+    // }
 
-    if (constant_begin_pos < logtype_value.length()) {
-        logtype.append(logtype_value, constant_begin_pos, logtype_value.length());
-    }
+    // if (constant_begin_pos < logtype_value.length()) {
+    //     logtype.append(logtype_value, constant_begin_pos, logtype_value.length());
+    // }
     return logtype;
 }
 }  // namespace clp_s

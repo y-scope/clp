@@ -23,11 +23,7 @@ namespace clp_s {
  */
 class LogTypeStat {
 public:
-    LogTypeStat() = default;
-
-    LogTypeStat(std::vector<std::string> const& type_names)
-            : m_var_type_names(type_names.begin(), type_names.end()) {}
-
+    // Methods
     [[nodiscard]] auto compress(ZstdCompressor& compressor) const
             -> ystdlib::error_handling::Result<void>;
 
@@ -38,26 +34,24 @@ public:
 
     auto increment_count() -> void { ++m_count; }
 
-    [[nodiscard]] auto get_var_type_names() const -> std::vector<std::string> const& {
-        return m_var_type_names;
-    }
-
 private:
+    // Data members
     size_t m_count{};
-    std::vector<std::string> m_var_type_names;
 };
 
-using LogTypeStats = Array<LogTypeStat, clp::logtype_dictionary_id_t>;
+using LogTypeStats = Array<LogTypeStat, logtype_id_t>;
 
 /*
  * Tracks the stats for a dictionary variables in an archive.
  */
 class VariableStat {
 public:
+    // Constructors
     VariableStat() = default;
 
     VariableStat(std::string_view type) : m_type(type) {}
 
+    // Methods
     [[nodiscard]] auto compress(ZstdCompressor& compressor) const
             -> ystdlib::error_handling::Result<void>;
 
@@ -71,6 +65,7 @@ public:
     auto increment_count() -> void { ++m_count; }
 
 private:
+    // Data members
     std::string m_type;
     size_t m_count{};
 };

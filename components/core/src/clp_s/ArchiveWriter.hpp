@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -305,12 +306,12 @@ public:
 
     /**
      * Update the stats for the given log type, adding it to the log type dictionary if necessary.
-     * @param clp_str
+     * @param logtype
      * @return The log type ID on success.
      * @return ClpsErrorCodeEnum::Unsupported if experimental stats are not enabled.
      */
-    auto update_logtype_stats(ParsedMessage::ClpString& clp_str)
-            -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t>;
+    auto update_logtype_stats(std::string_view logtype)
+            -> ystdlib::error_handling::Result<logtype_id_t>;
 
     /**
      * Update the stats for the given variable, adding it to the variable dictionary if necessary.
@@ -418,6 +419,7 @@ private:
     bool m_range_open{false};
 
     std::optional<ExperimentalStats> m_experimental_stats;
+    std::shared_ptr<VariableDictionaryWriter> m_typed_log_type_dict;
 };
 }  // namespace clp_s
 

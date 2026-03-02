@@ -25,7 +25,6 @@ public:
     struct ClpString {
         clp_s::LogTypeDictionaryEntry m_logtype;
         std::vector<clp::encoded_variable_t> m_encoded_vars;
-        std::vector<std::string> m_var_type_names;
     };
 
     using variable_t = std::

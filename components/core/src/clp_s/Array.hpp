@@ -18,11 +18,14 @@ namespace clp_s {
 template <typename Element, typename Index = size_t>
 class Array {
 public:
+    // Methods
     [[nodiscard]] auto at(Index i) -> Element& { return m_array.at(i); }
 
     [[nodiscard]] auto at(Index i) const -> Element const& { return m_array.at(i); }
 
     auto at_or_create(Index id, Element e) -> Element&;
+
+    auto at_or_create(Index id) -> Element& { return at_or_create(id, {}); }
 
     auto clear() -> void { return m_array.clear(); }
 
@@ -38,6 +41,7 @@ public:
     [[nodiscard]] auto size() const -> size_t { return m_array.size(); }
 
 private:
+    // Data members
     std::vector<Element> m_array;
 };
 

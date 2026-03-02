@@ -24,6 +24,9 @@
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
 
+#include "clp_s/ColumnWriter.hpp"
+#include "clp_s/DictionaryWriter.hpp"
+
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_id = boost::uuids::to_string(option.id);
@@ -62,8 +65,13 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_var_dict->open(var_dict_path, m_compression_level, UINT64_MAX);
 
     std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
-    m_log_dict = std::make_shared<LogTypeDictionaryWriter>();
-    m_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
+    if (option.experimental) {
+        m_typed_log_type_dict = std::make_shared<VariableDictionaryWriter>();
+        m_typed_log_type_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
+    } else {
+        m_log_dict = std::make_shared<LogTypeDictionaryWriter>();
+        m_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
+    }
 
     std::string array_dict_path = m_archive_path + constants::cArchiveArrayDictFile;
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
@@ -81,7 +89,14 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         }
     }
     auto var_dict_compressed_size = m_var_dict->close();
-    auto log_dict_compressed_size = m_log_dict->close();
+    size_t log_dict_compressed_size{};
+    if (m_experimental_stats) {
+        log_dict_compressed_size = m_typed_log_type_dict->close();
+        SPDLOG_INFO("Log type next id: {}", m_typed_log_type_dict->get_next_id());
+    } else {
+        log_dict_compressed_size = m_log_dict->close();
+        SPDLOG_INFO("Log type next id: {}", m_log_dict->get_next_id());
+    }
     auto array_dict_compressed_size = m_array_dict->close();
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
     auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
@@ -320,7 +335,13 @@ bool ArchiveWriter::matches_timestamp(int parent_node_id, std::string_view key) 
 }
 
 size_t ArchiveWriter::get_data_size() {
-    return m_log_dict->get_data_size() + m_var_dict->get_data_size() + m_array_dict->get_data_size()
+    size_t log_dict_size{};
+    if (m_experimental_stats) {
+        log_dict_size = m_typed_log_type_dict->get_data_size();
+    } else {
+        log_dict_size = m_log_dict->get_data_size();
+    }
+    return log_dict_size + m_var_dict->get_data_size() + m_array_dict->get_data_size()
            + m_encoded_message_size;
 }
 
@@ -344,7 +365,6 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(std::make_unique<DictionaryFloatColumnWriter>(m_var_dict));
                 break;
             case NodeType::ClpString:
-            case NodeType::LogType:
                 writer->append_column(
                         std::make_unique<ClpStringColumnWriter>(m_var_dict, m_log_dict)
                 );
@@ -365,6 +385,11 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 break;
             case NodeType::Timestamp:
                 writer->append_column(std::make_unique<TimestampColumnWriter>());
+                break;
+            case NodeType::LogType:
+                writer->append_column(
+                        std::make_unique<VariableStringColumnWriter>(m_typed_log_type_dict)
+                );
                 break;
             case NodeType::DeprecatedDateString:
             case NodeType::Metadata:
@@ -502,16 +527,16 @@ auto ArchiveWriter::add_dict_var_to_logtype(std::string_view var, LogTypeDiction
     return clp::EncodedVariableInterpreter::encode_and_add_dict_var(var, logtype, *m_var_dict);
 }
 
-auto ArchiveWriter::update_logtype_stats(ParsedMessage::ClpString& clp_str)
-        -> ystdlib::error_handling::Result<clp::logtype_dictionary_id_t> {
+auto ArchiveWriter::update_logtype_stats(std::string_view logtype)
+        -> ystdlib::error_handling::Result<logtype_id_t> {
     if (false == m_experimental_stats.has_value()) {
         return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
     }
 
-    clp::logtype_dictionary_id_t id{};
-    m_log_dict->add_entry(clp_str.m_logtype, id);
+    logtype_id_t id{};
+    m_typed_log_type_dict->add_entry(logtype, id);
     auto& logtype_stats{m_experimental_stats.value().m_logtype_stats};
-    logtype_stats.at_or_create(id, clp_str.m_var_type_names).increment_count();
+    logtype_stats.at_or_create(id).increment_count();
     return id;
 }
 

@@ -1,6 +1,5 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -14,6 +13,7 @@
 #include <boost/uuid/random_generator.hpp>
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/finite_automata/Capture.hpp>
+#include <log_surgeon/log_mechanic.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/Token.hpp>
 #include <simdjson.h>
@@ -60,11 +60,21 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
-    explicit JsonParser(JsonParserOption const& option);
+    struct ParserHandle {
+        ParserHandle(log_mechanic::Schema* schema) : m_schema(schema), m_parser(m_schema) {}
 
-    // Destructor
-    ~JsonParser() = default;
+        ~ParserHandle() { logmech_schema_drop(m_schema); }
+
+        ParserHandle(ParserHandle const&) = delete;
+        auto operator=(ParserHandle const&) -> ParserHandle& = delete;
+        ParserHandle(ParserHandle&&) noexcept = default;
+        auto operator=(ParserHandle&&) noexcept -> ParserHandle& = default;
+
+        log_mechanic::Schema* m_schema;
+        log_mechanic::ParserHandle m_parser;
+    };
+
+    explicit JsonParser(JsonParserOption const& option);
 
     /**
      * Ingests the input described by `JsonParserOption`.
@@ -233,33 +243,15 @@ private:
      * Parse an unstructured log message using log surgeon and store its components in the current
      * parsed message, clp-s schema, and dictionaries.
      * @param parent_node_id The parent clp-s node ID.
-     * @param view The unstructured log message to parse.
+     * @param log_msg The unstructured log message to parse.
      * @return A result containing an error code indicating the failure:
      * - ClpsErrorCodeEnum::Failure if parsing fails.
      * - Forwards `store_capture_groups`'s return values on failure.
      * - Forwards `m_archive_writer->update_logtype_stats`'s return values on failure.
      * - Forwards `m_archive_writer->update_var_stats`'s return values on failure.
      */
-    auto parse_log_message(int32_t parent_node_id, std::string_view view)
+    auto parse_log_message(int32_t parent_node_id, std::string_view log_msg)
             -> ystdlib::error_handling::Result<void>;
-
-    /**
-     * Store the components of all the capture groups within `root_var` in the current parsed
-     * message, clp-s schema, and dictionaries.
-     * @param event The log event containing the `root_var` and the `captures`.
-     * @param root_var The root log surgeon variable token for the `captures`.
-     * @param root_var_node_id The clp-s node ID representing the `root_var` of the capture groups.
-     * @param clp_str The logtype and encoded vars being built for `event`.
-     * @return A result containing an error code indicating the failure:
-     * - Forwards `update_logtype_stats`'s return values on failure.
-     * - Forwards `get_capture_positions`'s return values on failure.
-     */
-    auto store_capture_groups(
-            log_surgeon::LogEvent const& event,
-            log_surgeon::Token& root_var,
-            int32_t root_var_node_id,
-            ParsedMessage::ClpString& clp_str
-    ) -> ystdlib::error_handling::Result<void>;
 
     std::vector<Path> m_input_paths;
     NetworkAuthOption m_network_auth{};
@@ -287,7 +279,7 @@ private:
 
     std::vector<ArchiveStats> m_archive_stats;
 
-    std::unique_ptr<log_surgeon::BufferParser> m_log_surgeon_parser;
+    std::unique_ptr<ParserHandle> m_log_surgeon_parser;
 };
 }  // namespace clp_s
 

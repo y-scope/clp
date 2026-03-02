@@ -777,6 +777,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::timestamp_pattern
             date::date
             fmt::fmt
+            log_mechanic
             log_surgeon::log_surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
