@@ -36,7 +36,7 @@ use crate::{
         wait_for_compression_job_completion_and_update_metadata,
     },
     ingestion_job::{IngestionJobState, S3ScannerState, SqsListenerState},
-    ingestion_job_manager::IngestionJobId,
+    ingestion_job_manager::{IngestionJobId, TerminalStatus},
 };
 
 /// A bundle of objects for log-ingestor to recovery from a restart.
@@ -129,10 +129,7 @@ impl ClpIngestionJobContext {
     ///
     /// # Returns
     ///
-    /// A boolean indicating whether the job has stopped with an error:
-    ///
-    /// * `true` indicates the job ends in [`ClpIngestionJobStatus::Failed`] status.
-    /// * `false` indicates the job ends in [`ClpIngestionJobStatus::Finished`] status.
+    /// The terminal status of the job indicating whether it has stopped with an error.
     ///
     /// # Errors
     ///
@@ -140,10 +137,10 @@ impl ClpIngestionJobContext {
     ///
     /// * Forwards [`ClpIngestionState::get_job_status`]'s return values on failure.
     /// * Forwards [`ClpIngestionState::end`]'s return values on failure.
-    pub async fn shutdown(self) -> anyhow::Result<bool> {
+    pub async fn shutdown(self) -> anyhow::Result<TerminalStatus> {
         self.listener.shutdown_and_join().await;
         if ClpIngestionJobStatus::Failed == self.ingestion_state.get_job_status().await? {
-            return Ok(true);
+            return Ok(TerminalStatus::Failed);
         }
         self.ingestion_state.end().await.inspect_err(|e| {
             tracing::error!(
@@ -152,7 +149,7 @@ impl ClpIngestionJobContext {
                 "Failed to end ingestion job while the job instance has been removed."
             );
         })?;
-        Ok(false)
+        Ok(TerminalStatus::Finished)
     }
 }
 
@@ -361,7 +358,7 @@ impl ClpDbIngestionConnector {
         const QUERY: &str = formatcp!(
             "SELECT `ingestion_job_id`, `compression_job_id`, COUNT(*) as `num_submitted` FROM \
              `{table}` WHERE `compression_job_id` IS NOT NULL AND `status` = ? GROUP BY \
-             `compression_job_id` ORDER BY `compression_job_id` ASC;",
+             `ingestion_job_id`, `compression_job_id` ORDER BY `compression_job_id` ASC;",
             table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
         );
         let all_rows: Vec<(IngestionJobId, CompressionJobId, i64)> = sqlx::query_as(QUERY)

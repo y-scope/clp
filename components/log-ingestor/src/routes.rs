@@ -19,7 +19,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     ingestion_job::IngestionJobId,
-    ingestion_job_manager::{Error as IngestionJobManagerError, IngestionJobManagerState},
+    ingestion_job_manager::{
+        Error as IngestionJobManagerError,
+        IngestionJobManagerState,
+        TerminalStatus,
+    },
 };
 
 #[derive(utoipa::OpenApi)]
@@ -110,13 +114,6 @@ impl IntoResponse for Error {
 struct CreationResponse {
     /// The ID of the created ingestion job.
     id: IngestionJobId,
-}
-
-#[derive(Clone, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-enum TerminalStatus {
-    Finished,
-    Failed,
 }
 
 #[derive(Clone, Serialize, ToSchema)]
@@ -280,7 +277,7 @@ async fn terminate_ingestion_job(
     Path(job_id): Path<IngestionJobId>,
 ) -> Result<Json<TerminateResponse>, Error> {
     tracing::info!(job_id = ? job_id, "Stop and delete ingestion job.");
-    let terminated_with_error = ingestion_job_manager_state
+    let terminal_status = ingestion_job_manager_state
         .shutdown_and_remove_job_instance(job_id)
         .await
         .map_err(|err| {
@@ -290,10 +287,6 @@ async fn terminate_ingestion_job(
     tracing::info!(job_id = ? job_id, "The ingestion job has been deleted.");
     Ok(Json(TerminateResponse {
         id: job_id,
-        terminal_status: if terminated_with_error {
-            TerminalStatus::Failed
-        } else {
-            TerminalStatus::Finished
-        },
+        terminal_status,
     }))
 }

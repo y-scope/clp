@@ -14,7 +14,9 @@ use clp_rust_utils::{
     },
     job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
 };
+use serde::Serialize;
 use tokio::sync::Mutex;
+use utoipa::ToSchema;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
@@ -41,6 +43,14 @@ pub enum Error {
 
     #[error("A region code must be specified when using the default AWS endpoint")]
     MissingRegionCode,
+}
+
+/// Status of a terminated ingestion job.
+#[derive(Clone, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TerminalStatus {
+    Finished,
+    Failed,
 }
 
 /// An async-safe state for creating and managing ingestion jobs.
@@ -156,10 +166,7 @@ impl IngestionJobManagerState {
     ///
     /// # Returns
     ///
-    /// A boolean indicating whether the job has stopped with an error:
-    ///
-    /// * `true` indicates the job ends in [`ClpIngestionJobStatus::Failed`] status.
-    /// * `false` indicates the job ends in [`ClpIngestionJobStatus::Finished`] status.
+    /// The terminal status of the job indicating whether it has stopped with an error.
     ///
     /// # Errors
     ///
@@ -172,15 +179,18 @@ impl IngestionJobManagerState {
     pub async fn shutdown_and_remove_job_instance(
         &self,
         job_id: IngestionJobId,
-    ) -> Result<bool, Error> {
+    ) -> Result<TerminalStatus, Error> {
         let mut job_table = self.inner.job_table.lock().await;
         let job_to_remove = job_table.remove(&job_id);
         drop(job_table);
 
         if let Some(entry) = job_to_remove {
             entry.ingestion_job_instance.shutdown_and_join().await;
-            let has_error = entry.ingestion_job_context.shutdown().await?;
-            return Ok(has_error);
+            return entry
+                .ingestion_job_context
+                .shutdown()
+                .await
+                .map_err(Into::into);
         }
 
         // The ID does not exist in the in-memory job table.
@@ -196,7 +206,7 @@ impl IngestionJobManagerState {
         if ClpIngestionJobStatus::Finished == status {
             // The job has already finished. Keep the operation idempotent by not overwriting the
             // status.
-            Ok(false)
+            Ok(TerminalStatus::Finished)
         } else {
             self.inner
                 .clp_db_ingestion_connector
@@ -205,7 +215,7 @@ impl IngestionJobManagerState {
                     "Ingestion job instance not found on shutdown.".to_string(),
                 )
                 .await?;
-            Ok(true)
+            Ok(TerminalStatus::Failed)
         }
     }
 
