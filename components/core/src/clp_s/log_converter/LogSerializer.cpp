@@ -61,9 +61,7 @@ auto LogSerializer::add_message(std::string_view timestamp, std::string_view mes
             .size = static_cast<uint32_t>(fields.size()),
             .ptr = fields.data()
     };
-    if (false == m_serializer.serialize_msgpack_map(cEmptyMap, record)) {
-        return std::errc::invalid_argument;
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(m_serializer.serialize_msgpack_map(cEmptyMap, record));
     if (m_serializer.get_ir_buf_view().size() > cMaxIrBufSize) {
         flush_buffer();
     }
@@ -76,9 +74,7 @@ auto LogSerializer::add_message(std::string_view message) -> ystdlib::error_hand
             .val = msgpack::object{message}
     };
     msgpack::object_map const record{.size = 1U, .ptr = &message_field};
-    if (false == m_serializer.serialize_msgpack_map(cEmptyMap, record)) {
-        return std::errc::invalid_argument;
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(m_serializer.serialize_msgpack_map(cEmptyMap, record));
     if (m_serializer.get_ir_buf_view().size() > cMaxIrBufSize) {
         flush_buffer();
     }
