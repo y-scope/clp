@@ -62,7 +62,8 @@ Within each ingestion job, `log-ingestor` maintains a **persistent ingestion sta
 the metadata of discovered log files and the progress of ingestion. Using this state, `log-ingestor`
 guarantees the following behavior after a restart:
 
-* **No data loss**: Log files that were successfully ingested before the crash will not be lost.
+* **No data loss for ingested files**: Log files that were successfully ingested before the crash
+  will not be lost.
 * **Buffered data recovery**: Any log files buffered in memory before the crash will be recovered
   and eventually submitted for compression.
 * **Isolation of completed work**:
