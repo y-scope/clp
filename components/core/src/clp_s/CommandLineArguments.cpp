@@ -605,6 +605,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<uint64_t>(&m_max_num_results)->value_name("MAX")->
                             default_value(m_max_num_results),
                     "The maximum number of results to output"
+            )(
+                    "dataset",
+                    po::value<std::string>(&m_dataset)->value_name("DATASET"),
+                    "The dataset name to include in each result document"
             );
 
             po::options_description file_output_handler_options("File Output Handler Options");

@@ -28,9 +28,9 @@ pub struct QueryConfig {
     /// The search query as a KQL string.
     pub query_string: String,
 
-    /// The dataset to search within. If not provided, only `default` dataset will be searched.
+    /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub datasets: Option<Vec<String>>,
 
     /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
@@ -58,7 +58,7 @@ pub struct QueryConfig {
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
         Self {
-            dataset: value.dataset,
+            datasets: value.datasets,
             query_string: value.query_string,
             max_num_results: value.max_num_results,
             begin_timestamp: value.time_range_begin_millisecs,
@@ -128,10 +128,10 @@ impl Client {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.dataset.is_none() {
-            search_job_config.dataset = match self.config.package.storage_engine {
+        if search_job_config.datasets.is_none() {
+            search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some("default".to_owned()),
+                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
         }
         if search_job_config.max_num_results == 0 {

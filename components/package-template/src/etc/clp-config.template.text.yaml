@@ -51,6 +51,7 @@ log_ingestor: null
 #  host: "localhost"
 #  port: 7000
 #  jobs_poll_delay: 0.1  # seconds
+#  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
 #
