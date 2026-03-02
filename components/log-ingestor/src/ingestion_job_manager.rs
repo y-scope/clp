@@ -18,7 +18,6 @@ use tokio::sync::Mutex;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    compression::wait_for_compression_job_completion_and_update_metadata,
     ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
 };
 
@@ -85,7 +84,7 @@ impl IngestionJobManagerState {
             }
         };
 
-        let (clp_db_ingestion_connector, recoverable_ingestion_jobs) =
+        let (clp_db_ingestion_connector, recovery_context) =
             ClpDbIngestionConnector::connect(clp_config, clp_credentials).await?;
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
@@ -94,69 +93,19 @@ impl IngestionJobManagerState {
         });
         let ingestion_job_manager = Self { inner };
 
-        // Recover ingestion jobs
-        for ingestion_job_context in recoverable_ingestion_jobs {
-            let job_id = ingestion_job_context.get_job_id();
-            tracing::info!(
-                job_id = ? job_id,
-                "Recovering ingestion job."
-            );
-
-            let _unfinished_compression_jobs = match ingestion_job_context
-                .get_compression_state()
-                .get_all_unfinished_compression_jobs()
-                .await
-            {
-                Ok(unfinished_compression_jobs) => unfinished_compression_jobs,
-                Err(e) => {
-                    tracing::error!(
-                        job_id = ? job_id,
-                        error = ? e,
-                        "Failed to get unfinished compression job on ingestion job recovery. \
-                            Recovering skipped."
-                    );
-                    Vec::new()
-                }
-            };
-            for (compression_job_id, num_submitted) in ingestion_job_context
-                .get_compression_state()
-                .get_all_unfinished_compression_jobs()
-                .await?
-            {
-                tracing::info!(
-                    ingestion_job_id = ? job_id,
-                    compression_job_id = ? compression_job_id,
-                    num_submitted = ? num_submitted,
-                    "Recovering a coroutine to wait for unfinished compression job."
-                );
-                let compression_job_state = ingestion_job_context.get_compression_state();
-                tokio::spawn(async move {
-                    wait_for_compression_job_completion_and_update_metadata(
-                        compression_job_state,
-                        compression_job_id,
-                        usize::try_from(num_submitted)
-                            .expect("Number of submitted items exceeds usize::MAX"),
-                    )
-                    .await;
-                });
-            }
-
-            tracing::info!(
-                job_id = ? job_id,
-                "Creating ingestion job instance on recovery."
-            );
-            if let Err(e) = ingestion_job_manager
-                .create_s3_ingestion_job_instance(ingestion_job_context)
-                .await
-            {
-                tracing::error!(
-                    job_id = ? job_id,
-                    error = ? e,
-                    "Failed to create ingestion job instance on recovery. Recovery for this job \
-                        skipped."
-                );
-            }
-        }
+        // Recover log-ingestor
+        let (unfinished_compression_jobs, recoverable_ingestion_jobs, inactive_ingestion_jobs) = (
+            recovery_context.unfinished_compression_jobs,
+            recovery_context.recoverable_ingestion_jobs,
+            recovery_context.inactive_ingestion_jobs,
+        );
+        try_recover_waiting_coroutines_for_unfinished_compression_jobs(unfinished_compression_jobs);
+        try_recover_ingestion_job_instances(
+            ingestion_job_manager.clone(),
+            recoverable_ingestion_jobs,
+        )
+        .await;
+        try_recover_inactive_ingestion_jobs(inactive_ingestion_jobs).await;
 
         Ok(ingestion_job_manager)
     }
@@ -399,4 +348,125 @@ struct IngestionJobTableEntry {
 /// vice versa.
 fn is_mutually_prefix_free(a: &str, b: &str) -> bool {
     !a.starts_with(b) && !b.starts_with(a)
+}
+
+/// Recovers coroutines to wait for the completion of unfinished compression jobs from the given
+/// list of waitable compression job contexts.
+fn try_recover_waiting_coroutines_for_unfinished_compression_jobs(
+    unfinished_compression_jobs: Vec<ClpCompressionJobContext>,
+) {
+    for compression_job_context in unfinished_compression_jobs {
+        let compression_job_id = compression_job_context.get_compression_job_id();
+        tracing::info!(
+            compression_job_id = ? compression_job_id,
+            "Recovering a coroutine to wait for an unfinished compression job on ingestion job \
+                recovery."
+        );
+        compression_job_context.detach_and_wait_for_completion_and_update_metadata();
+    }
+}
+
+/// Recovers ingestion job instances from the given list of recoverable ingestion job contexts.
+///
+/// For each recoverable ingestion job, this function attempts to:
+///
+/// 1. Refill the ingestion buffer with the buffered objects previously ingested.
+/// 2. Create a running ingestion job instance and adds it to the job table.
+///
+/// # NOTE
+///
+/// This method is best-effort. If an error happens, it will be logged and the recovery process for
+/// the given ingestion job will be skipped.
+async fn try_recover_ingestion_job_instances(
+    ingestion_job_manager: IngestionJobManagerState,
+    recoverable_ingestion_jobs: Vec<ClpIngestionJobContext>,
+) {
+    let mut num_recovered_jobs = 0;
+    for ingestion_job_context in recoverable_ingestion_jobs {
+        let job_id = ingestion_job_context.get_job_id();
+        tracing::info!(
+            job_id = ? job_id,
+            "Recovering ingestion job."
+        );
+
+        try_refill_ingestion_buffer(&ingestion_job_context).await;
+
+        tracing::info!(
+            job_id = ? job_id,
+            "Creating ingestion job instance on recovery."
+        );
+        if let Err(e) = ingestion_job_manager
+            .create_s3_ingestion_job_instance(ingestion_job_context)
+            .await
+        {
+            tracing::error!(
+                job_id = ? job_id,
+                error = ? e,
+                "Failed to create ingestion job instance on recovery. Recovery for this job \
+                    skipped."
+            );
+        }
+        num_recovered_jobs += 1;
+    }
+    tracing::info!("Ingestion job recovery completed. Total recovered jobs: {num_recovered_jobs}.");
+}
+
+/// Recovers inactive ingestion jobs from the given list of ingestion job context.
+///
+/// For inactive compression jobs, this function only refills their ingestion buffers. Once this
+/// function returns, the ingestion contexts are dropped, which closes the underlying compression
+/// listeners. Any remaining buffered objects will then be submitted for compression.
+///
+/// # NOTE
+///
+/// This method is best-effort. If an error happens, it will be logged and the recovery process for
+/// the given ingestion job will be skipped.
+async fn try_recover_inactive_ingestion_jobs(inactive_ingestion_jobs: Vec<ClpIngestionJobContext>) {
+    for ingestion_job_context in inactive_ingestion_jobs {
+        try_refill_ingestion_buffer(&ingestion_job_context).await;
+    }
+}
+
+/// Recovers the ingestion buffer by sending the previously buffered objects to the ingestion buffer
+/// sender for compression.
+///
+/// # NOTE
+///
+/// This method is best-effort. If an error happens, it will be logged and the recovery process for
+/// the given ingestion job will be skipped.
+async fn try_refill_ingestion_buffer(ingestion_job_context: &ClpIngestionJobContext) {
+    let job_id = ingestion_job_context.get_job_id();
+    tracing::info!(
+        job_id = ? job_id,
+        "Refilling ingestion buffer with previously buffered objects on recovery."
+    );
+
+    let ingestion_job_state = ingestion_job_context.get_ingestion_state();
+    let buffered_objects = match ingestion_job_state.get_buffered_object_metadata().await {
+        Ok(buffered_objects) => buffered_objects,
+        Err(e) => {
+            tracing::error!(
+                job_id = ? job_id,
+                error = ? e,
+                "Failed to get buffered objects on ingestion job recovery. Recovering skipped."
+            );
+            return;
+        }
+    };
+    tracing::info!(
+        job_id = ? job_id,
+        num_buffered_objects = ? buffered_objects.len(),
+        "Sending buffered objects to ingestion buffer on recovery."
+    );
+    if let Err(e) = ingestion_job_context
+        .get_ingestion_buffer_sender()
+        .send(buffered_objects)
+        .await
+    {
+        tracing::error!(
+            job_id = ? job_id,
+            error = ? e,
+            "Failed to send buffered objects to ingestion buffer on recovery. Recovering skipped."
+        );
+    }
 }
