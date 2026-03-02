@@ -28,7 +28,7 @@
 
 namespace clp_s {
 struct JsonParserOption {
-    std::vector<Path> input_paths;
+    std::vector<std::pair<Path, std::string>> input_paths_and_canonical_filenames;
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size{};
@@ -76,12 +76,14 @@ private:
      * beyond the target encoded size.
      * @param reader
      * @param path
+     * @param file_name_in_metadata
      * @param archive_creator_id
      * @return Whether ingestion was successful or not.
      */
     [[nodiscard]] auto ingest_json(
             std::shared_ptr<clp::ReaderInterface> reader,
             Path const& path,
+            std::string const& file_name_in_metadata,
             std::string const& archive_creator_id
     ) -> bool;
 
@@ -90,12 +92,14 @@ private:
      * beyond the target encoded size.
      * @param reader
      * @param path
+     * @param file_name_in_metadata
      * @param archive_creator_id
      * @return Whether ingestion was successful or not.
      */
     [[nodiscard]] auto ingest_kvir(
             std::shared_ptr<clp::ReaderInterface> reader,
             Path const& path,
+            std::string const& file_name_in_metadata,
             std::string const& archive_creator_id
     ) -> bool;
 
@@ -221,7 +225,7 @@ private:
     static bool
     check_and_log_curl_error(Path const& path, std::shared_ptr<clp::ReaderInterface> reader);
 
-    std::vector<Path> m_input_paths;
+    std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
 
     Schema m_current_schema;
@@ -239,6 +243,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
     bool m_retain_float_format{false};
+    std::optional<std::string> m_path_prefix_to_remove{};
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
