@@ -53,9 +53,7 @@ In a multi-host cluster:
 To configure CLP for multi-host deployment, you'll need to:
 
 1. [configure and run CLP's environment setup scripts](#clp-environment-setup).
-2. [update CLP's *generated* configuration to support a multi-host deployment](
-   #updating-clps-generated-configuration).
-3. [distribute and configure the CLP package on all hosts in your cluster](
+2. [distribute and configure the CLP package on all hosts in your cluster](
    #distributing-the-set-up-package).
 
 ### CLP environment setup
@@ -70,6 +68,18 @@ To configure CLP for multi-host deployment, you'll need to:
 3. Edit CLP's configuration file:
 
    * Open `etc/clp-config.yaml`.
+   * Configure which services should be bundled (managed by the `clp-package` Docker Compose
+     project) vs. external.
+
+     ```yaml
+     bundled:
+       # Remove services you want to run on specific hosts or use external instances
+       - database      # Remove if running on a dedicated host or using external MySQL-compatible DB
+       - queue         # Remove if running on a dedicated host or using external RabbitMQ
+       - redis         # Remove if running on a dedicated host or using external Redis
+       - results_cache # Remove if running on a dedicated host or using external MongoDB
+     ```
+
    * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
      plan to run the specific service.
    * When using local filesystem storage (i.e., not S3), set `logs_input.storage.directory`,
@@ -89,33 +99,6 @@ To configure CLP for multi-host deployment, you'll need to:
    * Generate an `.env` file with all necessary environment variables
    * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
    * Create `var/www/webui/server/dist/settings.json` (the `webui` server's configuration file)
-
-### Updating CLP's generated configuration
-
-The last step in the previous section (`sbin/start-clp.sh --setup-only`) will generate any necessary
-configuration files, but they're unsuitable for use across multiple hosts (they're designed for use
-on a single host).
-
-:::{note}
-As mentioned at the beginning of this guide, this setup will be made simpler in a future release.
-:::
-
-To update the generated configuration files for use across multiple hosts:
-
-1. Edit `var/log/.clp-config.yaml`:
-
-    * Update all `host` fields to use the actual hostname or IP address where each service will run
-      (matching what you configured in `etc/clp-config.yaml`).
-    * Similarly, update any `port` fields.
-    * For example, if your database runs on `192.168.1.10:3306`, ensure `database.host` is set to
-      `192.168.1.10` and `database.port` is `3306`.
-
-2. Edit `var/www/webui/server/dist/settings.json`:
-
-    * Update `SqlDbHost` to the actual hostname or IP address of your database service.
-    * Update `SqlDbPort` if you changed the database port.
-    * Update `MongoDbHost` to the actual hostname or IP address of your results cache service.
-    * Update `MongoDbPort` if you changed the results cache port.
 
 ### Distributing the set-up package
 

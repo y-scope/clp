@@ -43,7 +43,9 @@
               },
               "example": {
                 "query_string": "*",
-                "dataset": "default",
+                "datasets": [
+                  "default"
+                ],
                 "time_range_begin_millisecs": 0,
                 "time_range_end_millisecs": 17356896,
                 "ignore_case": true,
@@ -67,6 +69,36 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/query/{search_job_id}": {
+      "delete": {
+        "tags": [],
+        "description": "Cancels a previously submitted query job.",
+        "operationId": "cancel_query",
+        "parameters": [
+          {
+            "name": "search_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cancellation request was submitted successfully."
+          },
+          "404": {
+            "description": "No cancellable query job with the given ID was found."
           },
           "500": {
             "description": ""
@@ -123,12 +155,15 @@
             "type": "boolean",
             "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
           },
-          "dataset": {
+          "datasets": {
             "type": [
-              "string",
+              "array",
               "null"
             ],
-            "description": "The dataset to search within. If not provided, only `default` dataset will be searched."
+            "items": {
+              "type": "string"
+            },
+            "description": "The datasets to search within. If not provided, only `default` dataset will be searched."
           },
           "ignore_case": {
             "type": "boolean",

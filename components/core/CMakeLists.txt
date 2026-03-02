@@ -308,11 +308,6 @@ if(CLP_NEED_ZSTD)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.
     find_package(zstd 1.4.8 REQUIRED)
     message(STATUS "Found zstd ${zstd_VERSION}")
-    if(CLP_USE_STATIC_LIBS)
-        set(zstd_TARGET zstd::libzstd_static)
-    else()
-        set(zstd_TARGET zstd::libzstd_shared)
-    endif()
 endif()
 
 if(CLP_NEED_LIBLZMA)
@@ -506,6 +501,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrErrorCode.cpp
         src/clp/ffi/ir_stream/IrErrorCode.hpp
+        src/clp/ffi/ir_stream/IrSerializationError.cpp
+        src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
@@ -575,6 +572,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
+        src/clp/SchemaSearcher.cpp
+        src/clp/SchemaSearcher.hpp
         src/clp/ir/constants.hpp
         src/clp/ir/EncodedTextAst.cpp
         src/clp/ir/EncodedTextAst.hpp
@@ -704,6 +703,11 @@ set(SOURCE_FILES_unitTest
         tests/clp_s_test_utils.cpp
         tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
+        tests/MockLogTypeDictionary.hpp
+        tests/MockVariableDictionary.hpp
+        tests/SchemaSearcherTest.hpp
+        tests/search_test_utils.cpp
+        tests/search_test_utils.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedReader.cpp
@@ -731,6 +735,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
+        tests/test-SchemaSearcher.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
@@ -785,9 +790,12 @@ if(CLP_ENABLE_TESTS)
             clp::string_utils
             ystdlib::containers
             ystdlib::error_handling
-            ${zstd_TARGET}
+            zstd::libzstd_static
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20
+            )
+    target_compile_definitions(unitTest
+            PRIVATE CLP_ENABLE_TESTS
             )
 endif()

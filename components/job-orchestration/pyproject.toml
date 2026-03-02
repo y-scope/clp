@@ -1,6 +1,6 @@
 [project]
 name = "job-orchestration"
-version = "0.8.1-dev"
+version = "0.9.1-dev"
 description = "Scheduler and worker cluster for CLP's distributed architecture."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
