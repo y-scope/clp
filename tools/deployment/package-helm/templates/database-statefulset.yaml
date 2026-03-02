@@ -1,3 +1,4 @@
+{{- if has "database" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -18,10 +19,6 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "database"
     spec:
-      securityContext:
-        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
-        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
-        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
       containers:
         - name: "database"
           image: >-
@@ -33,7 +30,7 @@ spec:
           imagePullPolicy: "Always"
           env:
             - name: "MYSQL_DATABASE"
-              value: {{ .Values.clpConfig.database.name | quote }}
+              value: {{ .Values.clpConfig.database.names.clp | quote }}
             - name: "MYSQL_USER"
               valueFrom:
                 secretKeyRef:
@@ -53,10 +50,11 @@ spec:
             - name: "database"
               containerPort: 3306
           volumeMounts:
-            - name: "database-data"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "database"
+                "name" "data"
+              ) | quote }}
               mountPath: "/var/lib/mysql"
-            - name: "database-logs"
-              mountPath: "/var/log/mysql"
             - name: "config"
               mountPath: "/etc/mysql/conf.d/logging.cnf"
               subPath: "mysql-logging.cnf"
@@ -78,30 +76,15 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
-        name: "database-data"
+        name: {{ include "clp.volumeName" (dict
+            "component_category" "database"
+            "name" "data"
+          ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "database"
         resources:
           requests:
             storage: "20Gi"
-    - metadata:
-        name: "database-logs"
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "database"
-        resources:
-          requests:
-            storage: "5Gi"
+{{- end }}

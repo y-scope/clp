@@ -5,7 +5,22 @@ import shutil
 import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import IO
+from typing import Any, IO
+
+import yaml
+
+
+def clear_directory(directory: Path) -> None:
+    """
+    Removes the contents of `directory` without removing `directory` itself.
+
+    :param directory:
+    """
+    if not directory.exists():
+        return
+
+    for item in directory.iterdir():
+        remove_path(item)
 
 
 def get_binary_path(name: str) -> str:
@@ -64,6 +79,51 @@ def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
         return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
 
 
+def load_yaml_to_dict(path: Path) -> dict[str, Any]:
+    """
+    Parses a YAML file into a dictionary.
+
+    :param path:
+    :return: Dictionary parsed from the file.
+    :raise ValueError: if the file contains invalid YAML.
+    :raise ValueError: if the file cannot be read.
+    :raise TypeError: if the file does not have a top-level mapping.
+    """
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            target_dict = yaml.safe_load(file)
+    except yaml.YAMLError as err:
+        err_msg = f"Invalid YAML in target file '{path}'"
+        raise ValueError(err_msg) from err
+    except OSError as err:
+        err_msg = f"Cannot read target file '{path}'"
+        raise ValueError(err_msg) from err
+
+    if not isinstance(target_dict, dict):
+        err_msg = f"Target file '{path}' must have a top-level mapping."
+        raise TypeError(err_msg)
+
+    return target_dict
+
+
+def remove_path(path_to_remove: Path) -> None:
+    """
+    Remove a file, directory, or symlink at `path_to_remove` if it exists.
+
+    :param path_to_remove:
+    :raise: Propagates `pathlib.Path.unlink`'s exceptions.
+    :raise: Propagates `shutil.rmtree`'s exceptions.
+    """
+    if path_to_remove.is_symlink():
+        path_to_remove.unlink()
+    elif not path_to_remove.exists():
+        return
+    elif path_to_remove.is_dir():
+        shutil.rmtree(path_to_remove)
+    else:
+        path_to_remove.unlink()
+
+
 def resolve_path_env_var(var_name: str) -> Path:
     """
     :param var_name: Name of the environment variable holding a path.
@@ -73,30 +133,6 @@ def resolve_path_env_var(var_name: str) -> Path:
     :raise: Propagates `Path.resolve`'s exceptions.
     """
     return Path(get_env_var(var_name)).expanduser().resolve()
-
-
-def unlink(rm_path: Path, force: bool = True) -> None:
-    """
-    Remove a file or directory at `path`.
-
-    :param rm_path:
-    :param force: Whether to force remove with sudo priviledges in case the normal operation fails.
-                  Defaults to True.
-    """
-    try:
-        shutil.rmtree(rm_path)
-    except FileNotFoundError:
-        pass
-    except PermissionError:
-        if not force:
-            raise
-
-        sudo_rm_cmds = ["sudo", "rm", "-rf", str(rm_path)]
-        try:
-            subprocess.run(sudo_rm_cmds, check=True)
-        except subprocess.CalledProcessError as e:
-            err_msg = f"Failed to remove {rm_path} due to lack of superuser privileges (sudo)."
-            raise OSError(err_msg) from e
 
 
 def validate_dir_exists(dir_path: Path) -> None:

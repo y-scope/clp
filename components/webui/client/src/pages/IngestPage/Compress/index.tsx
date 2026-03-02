@@ -16,14 +16,15 @@ import {submitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import ClpSFormItems from "./ClpSFormItems";
-import PathsInputFormItem from "./PathsInputFormItem";
+import PathsSelectFormItem from "./PathsSelectFormItem";
 import SubmitFormItem from "./SubmitFormItem";
 
 
 type FormValues = {
-    paths: string;
+    paths: string[];
     dataset?: string;
     timestampKey?: string;
+    unstructured?: boolean;
 };
 
 
@@ -55,21 +56,17 @@ const Compress = () => {
     });
 
     const handleSubmit = (values: FormValues) => {
-        // eslint-disable-next-line no-warning-comments
-        // TODO: replace the UI with a file selector and remove below string manipulation.
-        // Convert multiline input to array of paths.
-        const paths = values.paths
-            .split("\n")
-            .map((path) => path.trim())
-            .filter((path) => 0 < path.length);
-
-        const payload: CompressionJobCreation = {paths};
+        const payload: CompressionJobCreation = {paths: values.paths};
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            payload.dataset = ("undefined" === typeof values.dataset) ?
-                CLP_DEFAULT_DATASET_NAME :
-                values.dataset;
-            if ("undefined" !== typeof values.timestampKey) {
+            if ("undefined" === typeof values.dataset || 0 === values.dataset.length) {
+                payload.dataset = CLP_DEFAULT_DATASET_NAME;
+            } else {
+                payload.dataset = values.dataset;
+            }
+            if (true === values.unstructured) {
+                payload.unstructured = true;
+            } else if ("undefined" !== typeof values.timestampKey) {
                 payload.timestampKey = values.timestampKey;
             }
         }
@@ -84,7 +81,7 @@ const Compress = () => {
                 layout={"vertical"}
                 onFinish={handleSubmit}
             >
-                <PathsInputFormItem/>
+                <PathsSelectFormItem/>
                 {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <ClpSFormItems/>}
                 <SubmitFormItem isSubmitting={isSubmitting}/>
 

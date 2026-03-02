@@ -15,8 +15,8 @@ pub struct Config {
     pub package: Package,
     pub database: Database,
     pub results_cache: ResultsCache,
-    pub api_server: ApiServer,
-    pub log_ingestor: LogIngestor,
+    pub api_server: Option<ApiServer>,
+    pub log_ingestor: Option<LogIngestor>,
     pub logs_directory: String,
     pub stream_output: StreamOutput,
     pub logs_input: LogsInput,
@@ -29,14 +29,38 @@ impl Default for Config {
             package: Package::default(),
             database: Database::default(),
             results_cache: ResultsCache::default(),
-            api_server: ApiServer::default(),
-            log_ingestor: LogIngestor::default(),
+            api_server: None,
+            log_ingestor: None,
             logs_directory: "var/log".to_owned(),
             stream_output: StreamOutput::default(),
             logs_input: LogsInput::Fs {
                 config: FsIngestion::default(),
             },
             archive_output: ArchiveOutput::default(),
+        }
+    }
+}
+
+/// Database names for CLP components.
+///
+/// # NOTE
+///
+///
+/// This struct mirrors all allowed DB names from `clp_py_utils.clp_config.ClpDbNameType`. Instead
+/// of storing them in a map, we use a struct to ensure all expected names are always present and
+/// reject all unknown fields.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct ClpDbNames {
+    pub clp: String,
+    pub spider: String,
+}
+
+impl Default for ClpDbNames {
+    fn default() -> Self {
+        Self {
+            clp: "clp-db".to_owned(),
+            spider: "spider-db".to_owned(),
         }
     }
 }
@@ -53,7 +77,7 @@ impl Default for Config {
 pub struct Database {
     pub host: String,
     pub port: u16,
-    pub name: String,
+    pub names: ClpDbNames,
 }
 
 impl Default for Database {
@@ -61,7 +85,7 @@ impl Default for Database {
         Self {
             host: "localhost".to_owned(),
             port: 3306,
-            name: "clp-db".to_owned(),
+            names: ClpDbNames::default(),
         }
     }
 }
@@ -192,25 +216,32 @@ impl Default for StreamOutputStorage {
     }
 }
 
+/// Mirror of `clp_py_utils.clp_config.LogIngestor`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
-    #[serde(rename = "buffer_timeout")]
-    pub buffer_timeout_sec: u64,
-    pub buffer_size_threshold: u64,
+    #[serde(rename = "buffer_flush_timeout")]
+    pub buffer_flush_timeout_sec: u64,
+    pub buffer_flush_threshold: u64,
     pub channel_capacity: usize,
+    pub logging_level: String,
 }
 
 impl Default for LogIngestor {
     fn default() -> Self {
         Self {
             host: "localhost".to_owned(),
-            port: 3270,
-            buffer_timeout_sec: 300,
-            buffer_size_threshold: 50 * 1024 * 1024,
+            port: 3002,
+            buffer_flush_timeout_sec: 300,
+            buffer_flush_threshold: 4096 * 1024 * 1024, // 4 GiB
             channel_capacity: 10,
+            logging_level: "INFO".to_owned(),
         }
     }
 }

@@ -1,0 +1,114 @@
+name: "clp-package-helm"
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/clp-package-helm.yaml"
+      - "taskfiles/helm.yaml"
+      - "tools/deployment/package-helm/**"
+  push:
+    paths:
+      - ".github/workflows/clp-package-helm.yaml"
+      - "taskfiles/helm.yaml"
+      - "tools/deployment/package-helm/**"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        with:
+          submodules: "recursive"
+
+          # Fetch all history for all branches; otherwise, `helm lint` would complain about not
+          # finding the `origin/main` branch.
+          fetch-depth: 0
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli@3.48.0"
+
+      - name: "Lint Helm charts"
+        shell: "bash"
+        run: "task lint:check-helm"
+
+  publish:
+    # Publish from `main` and `vA.B.C` release branches.
+    if: >-
+      github.event_name != 'pull_request'
+      && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/v'))
+    needs: "lint"
+    runs-on: "ubuntu-24.04"
+    permissions:
+      # To push to the `gh-pages` branch.
+      contents: "write"
+    steps:
+      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        with:
+          submodules: "recursive"
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli@3.48.0"
+
+      - name: "Package Helm chart"
+        shell: "bash"
+        run: "task helm:package"
+
+      - name: "Checkout branch `gh-pages`"
+        uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        with:
+          path: "gh-pages"
+          ref: "gh-pages"
+
+      - name: "Get chart version"
+        id: "get-chart-version"
+        uses: "mikefarah/yq@065b200af9851db0d5132f50bc10b1406ea5c0a8"  # v4.50.1
+        with:
+          cmd: "yq '.version' 'tools/deployment/package-helm/Chart.yaml'"
+
+      - name: "Update Helm repository"
+        id: "update-helm-repo"
+        shell: "bash"
+        run: |-
+          chart_tgz="clp-${{steps.get-chart-version.outputs.result}}.tgz"
+
+          # Skip if this chart version already exists.
+          if [[ -f "gh-pages/${chart_tgz}" ]]; then
+            echo "Chart ${chart_tgz} already exists, skipping publish."
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cp "build/clp-package-helm"/*.tgz "gh-pages/"
+
+          # Update index.yaml, merging with existing index if present.
+          . "build/toolchains/helm/env"
+          url="${{github.server_url}}/${{github.repository}}/raw/gh-pages"
+          if [[ -f "gh-pages/index.yaml" ]]; then
+            helm repo index "gh-pages" --merge "gh-pages/index.yaml" --url "${url}"
+          else
+            helm repo index "gh-pages" --url "${url}"
+          fi
+
+      - name: "Push to gh-pages branch"
+        if: "steps.update-helm-repo.outputs.skip_publish != 'true'"
+        shell: "bash"
+        working-directory: "gh-pages"
+        run: |-
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git add "*.tgz" "index.yaml"
+          commit_message="ci(helm): Publish clp-${{steps.get-chart-version.outputs.result}}"
+          commit_message+=" from ${{github.ref_name}} (${{github.sha}})."
+          git commit -m "$commit_message"
+          git push

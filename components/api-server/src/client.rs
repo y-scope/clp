@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use async_stream::stream;
 use clp_rust_utils::{
+    aws::AWS_DEFAULT_REGION,
     clp_config::{
         AwsAuthentication,
         package::{
@@ -9,7 +10,7 @@ use clp_rust_utils::{
             credentials::Credentials,
         },
     },
-    database::mysql::create_mysql_pool,
+    database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
 };
 use futures::{Stream, StreamExt};
@@ -27,9 +28,9 @@ pub struct QueryConfig {
     /// The search query as a KQL string.
     pub query_string: String,
 
-    /// The dataset to search within. If not provided, only `default` dataset will be searched.
+    /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub datasets: Option<Vec<String>>,
 
     /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
@@ -37,32 +38,33 @@ pub struct QueryConfig {
 
     /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
-    pub begin_timestamp: Option<i64>,
+    pub time_range_begin_millisecs: Option<i64>,
 
     /// The ending timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
-    pub end_timestamp: Option<i64>,
+    pub time_range_end_millisecs: Option<i64>,
 
     /// Whether the string match should be case-insensitive.
     #[serde(default)]
     pub ignore_case: bool,
 
-    /// Whether to write the search results to files. If `false`, results will be stored in
-    /// `MongoDB`.
+    /// Whether to buffer search results in `MongoDB`.
+    /// By default, search results are buffered in temporary files. When set to `true`, results
+    /// will be stored in `MongoDB` instead.
     #[serde(default)]
-    pub write_to_file: bool,
+    pub buffer_results_in_mongodb: bool,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
         Self {
-            dataset: value.dataset,
+            datasets: value.datasets,
             query_string: value.query_string,
             max_num_results: value.max_num_results,
-            begin_timestamp: value.begin_timestamp,
-            end_timestamp: value.end_timestamp,
+            begin_timestamp: value.time_range_begin_millisecs,
+            end_timestamp: value.time_range_end_millisecs,
             ignore_case: value.ignore_case,
-            write_to_file: value.write_to_file,
+            write_to_file: !value.buffer_results_in_mongodb,
             ..Default::default()
         }
     }
@@ -88,10 +90,16 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`create_mysql_pool`]'s errors on failure.
+    /// * [`ClientError::ConfigIsNone`] if `config.api_server` is `None`.
+    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
     /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
     pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        let sql_pool = create_mysql_pool(&config.database, &credentials.database, 10).await?;
+        if config.api_server.is_none() {
+            return Err(ClientError::ConfigIsNone);
+        }
+
+        let sql_pool =
+            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
 
         let mongo_uri = format!(
             "mongodb://{}:{}/{}?directConnection=true",
@@ -120,15 +128,15 @@ impl Client {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.dataset.is_none() {
-            search_job_config.dataset = match self.config.package.storage_engine {
+        if search_job_config.datasets.is_none() {
+            search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some("default".to_owned()),
+                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
         }
         if search_job_config.max_num_results == 0 {
             search_job_config.max_num_results =
-                self.config.api_server.default_max_num_query_results;
+                self.get_api_server_config().default_max_num_query_results;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -161,6 +169,7 @@ impl Client {
     /// * Forwards [`Client::get_status`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
+    /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
@@ -172,17 +181,21 @@ impl Client {
         >,
         ClientError,
     > {
-        let mut delay_ms = self.config.api_server.query_job_polling.initial_backoff_ms;
-        let max_delay_ms = self.config.api_server.query_job_polling.max_backoff_ms;
+        let api_server_config = self.get_api_server_config();
+        let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
+        let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
         loop {
             match self.get_status(search_job_id).await? {
                 QueryJobStatus::Succeeded => {
                     break;
                 }
-                QueryJobStatus::Failed | QueryJobStatus::Cancelled | QueryJobStatus::Killed => {
+                QueryJobStatus::Failed
+                | QueryJobStatus::Cancelled
+                | QueryJobStatus::Killed
+                | QueryJobStatus::Cancelling => {
                     return Err(ClientError::QueryNotSucceeded);
                 }
-                QueryJobStatus::Running | QueryJobStatus::Pending | QueryJobStatus::Cancelling => {
+                QueryJobStatus::Running | QueryJobStatus::Pending => {
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
                     delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
                 }
@@ -197,7 +210,7 @@ impl Client {
                     inner: self.fetch_results_from_file(search_job_id),
                 },
                 StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self.fetch_results_from_s3(search_job_id).await,
+                    inner: self.fetch_results_from_s3(search_job_id).await?,
                 },
             };
             return Ok(stream);
@@ -206,6 +219,37 @@ impl Client {
         self.fetch_results_from_mongo(search_job_id)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
+    }
+
+    /// Submits a cancellation request for a search job.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::SearchJobNotFound`] if no matching job was found (e.g., the job doesn't
+    ///   exist or is not in a cancellable state).
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
+        let result = sqlx::query(&format!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
+        ))
+        .bind::<i32>(QueryJobStatus::Cancelling.into())
+        .bind(search_job_id)
+        .bind::<i32>(QueryJobStatus::Pending.into())
+        .bind::<i32>(QueryJobStatus::Running.into())
+        .execute(&self.sql_pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(ClientError::SearchJobNotFound(search_job_id));
+        }
+
+        Ok(())
     }
 
     /// Retrieves the status of a previously submitted search job.
@@ -311,13 +355,20 @@ impl Client {
     /// * Forwards [`aws_smithy_types::byte_stream::ByteStream::collect`]'s return values on
     ///   failure.
     ///
+    /// # Errors
+    ///
+    /// Return an error if:
+    ///
+    /// * [`ClientError::Aws`] if a region code is not provided when using the default AWS S3
+    ///   endpoint.
+    ///
     /// # Panics
     ///
     /// Panics if the stream output storage is not S3.
     async fn fetch_results_from_s3(
         &self,
         search_job_id: u64,
-    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
             unreachable!();
@@ -326,13 +377,22 @@ impl Client {
         let AwsAuthentication::Credentials { credentials } = &s3_config.aws_authentication;
 
         let s3_config = s3_config.clone();
-        let credentials = credentials.clone();
+        if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
+            return Err(ClientError::Aws {
+                description: "a region code must be given when using the default AWS S3 endpoint"
+                    .to_owned(),
+            });
+        }
 
+        let credentials = credentials.clone();
         let s3_client = clp_rust_utils::s3::create_new_client(
-            s3_config.region_code.as_str(),
             credentials.access_key_id.as_str(),
             credentials.secret_access_key.as_str(),
-            None,
+            s3_config
+                .region_code
+                .as_ref()
+                .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
+            s3_config.endpoint_url.as_ref(),
         )
         .await;
 
@@ -345,7 +405,7 @@ impl Client {
             .into_paginator()
             .send();
 
-        stream! {
+        Ok(stream! {
             while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
@@ -372,7 +432,7 @@ impl Client {
                     }
                 }
             }
-        }
+        })
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
@@ -421,6 +481,22 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
+    }
+
+    /// # Returns
+    ///
+    /// A reference to the API server configuration.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.config.api_server` is `None`.
+    const fn get_api_server_config(
+        &self,
+    ) -> &clp_rust_utils::clp_config::package::config::ApiServer {
+        self.config
+            .api_server
+            .as_ref()
+            .expect("api_server configuration is missing")
     }
 }
 

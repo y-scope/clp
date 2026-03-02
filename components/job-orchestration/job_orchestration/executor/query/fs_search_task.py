@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.s3_utils import (
-    generate_s3_virtual_hosted_style_url,
+    generate_s3_url,
     get_credential_env_vars,
     s3_put,
 )
@@ -66,19 +66,18 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
+    dataset: str,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
     ]
-
-    dataset = search_config.dataset
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
         try:
-            s3_url = generate_s3_virtual_hosted_style_url(
-                s3_config.region_code, s3_config.bucket, s3_object_key
+            s3_url = generate_s3_url(
+                s3_config.endpoint_url, s3_config.region_code, s3_config.bucket, s3_object_key
             )
         except ValueError as ex:
             logger.error(f"Encountered error while generating S3 url: {ex}")
@@ -112,6 +111,7 @@ def _make_command_and_env_vars(
     search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
+    dataset: str | None = None,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
 
@@ -121,7 +121,7 @@ def _make_command_and_env_vars(
         )
     elif StorageEngine.CLP_S == storage_engine:
         command, env_vars = _make_core_clp_s_command_and_env_vars(
-            clp_home, worker_config, archive_id, search_config
+            clp_home, worker_config, archive_id, search_config, dataset
         )
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
@@ -180,9 +180,11 @@ def _make_command_and_env_vars(
             "results-cache",
             "--uri", results_cache_uri,
             "--collection", results_collection,
-            "--max-num-results", str(search_config.max_num_results)
+            "--max-num-results", str(search_config.max_num_results),
         ))
         # fmt: on
+        if dataset is not None:
+            command.extend(("--dataset", dataset))
 
     return command, env_vars
 
@@ -196,6 +198,7 @@ def search(
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
     task_name = "search"
 
@@ -230,6 +233,7 @@ def search(
         search_config=search_config,
         results_cache_uri=results_cache_uri,
         results_collection=job_id,
+        dataset=dataset,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")

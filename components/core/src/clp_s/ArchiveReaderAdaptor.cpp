@@ -75,7 +75,10 @@ ArchiveReaderAdaptor::try_read_archive_file_info(ZstdDecompressor& decompressor,
 
 ErrorCode
 ArchiveReaderAdaptor::try_read_timestamp_dictionary(ZstdDecompressor& decompressor, size_t size) {
-    return m_timestamp_dictionary->read(decompressor);
+    return m_timestamp_dictionary->read(
+            decompressor,
+            m_archive_header.has_deprecated_timestamp_format()
+    );
 }
 
 ErrorCode ArchiveReaderAdaptor::try_read_archive_info(ZstdDecompressor& decompressor, size_t size) {
@@ -190,7 +193,7 @@ ErrorCode ArchiveReaderAdaptor::try_read_header(clp::ReaderInterface& reader) {
     if (0
         != std::memcmp(
                 m_archive_header.magic_number,
-                cStructuredSFAMagicNumber,
+                cStructuredSFAMagicNumber.data(),
                 sizeof(cStructuredSFAMagicNumber)
         ))
     {

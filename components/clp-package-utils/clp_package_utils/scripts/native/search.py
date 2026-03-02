@@ -27,7 +27,7 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
-    validate_dataset_exists,
+    validate_datasets_exist,
     wait_for_query_job,
 )
 
@@ -37,9 +37,8 @@ logger = logging.getLogger(__file__)
 def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
-    dataset: str | None,
+    datasets: list[str] | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -49,7 +48,7 @@ def create_and_monitor_job_in_db(
     count_by_time_bucket_size: int | None,
 ):
     search_config = SearchJobConfig(
-        dataset=dataset,
+        datasets=datasets,
         query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
@@ -66,10 +65,6 @@ def create_and_monitor_job_in_db(
         search_config.aggregation_config = AggregationConfig(
             count_by_time_bucket_size=count_by_time_bucket_size
         )
-    if tags:
-        tag_list = [tag.strip().lower() for tag in tags.split(",") if tag]
-        if len(tag_list) > 0:
-            search_config.tags = tag_list
 
     sql_adapter = SqlAdapter(db_config)
     job_id = submit_query_job(sql_adapter, search_config, QueryJobType.SEARCH_OR_AGGREGATION)
@@ -120,9 +115,8 @@ def get_worker_connection_handler(raw_output: bool):
 async def do_search_without_aggregation(
     db_config: Database,
     results_cache: ResultsCache,
-    dataset: str | None,
+    datasets: list[str] | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -150,9 +144,8 @@ async def do_search_without_aggregation(
             create_and_monitor_job_in_db,
             db_config,
             results_cache,
-            dataset,
+            datasets,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -188,9 +181,8 @@ async def do_search_without_aggregation(
 async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
-    dataset: str | None,
+    datasets: list[str] | None,
     wildcard_query: str,
-    tags: str | None,
     begin_timestamp: int | None,
     end_timestamp: int | None,
     ignore_case: bool,
@@ -203,9 +195,8 @@ async def do_search(
         await do_search_without_aggregation(
             db_config,
             results_cache,
-            dataset,
+            datasets,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -217,9 +208,8 @@ async def do_search(
             create_and_monitor_job_in_db,
             db_config,
             results_cache,
-            dataset,
+            datasets,
             wildcard_query,
-            tags,
             begin_timestamp,
             end_timestamp,
             ignore_case,
@@ -245,12 +235,9 @@ def main(argv):
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "--dataset",
-        type=str,
+        action="append",
         default=None,
-        help="The dataset that the archives belong to.",
-    )
-    args_parser.add_argument(
-        "-t", "--tags", help="Comma-separated list of tags of archives to search."
+        help="A dataset to search. Can be specified multiple times.",
     )
     args_parser.add_argument(
         "--begin-time",
@@ -288,6 +275,10 @@ def main(argv):
     else:
         logger.setLevel(logging.INFO)
 
+    if parsed_args.count and parsed_args.count_by_time is not None:
+        logger.error("--count and --count-by-time are mutually exclusive.")
+        return -1
+
     if (
         parsed_args.begin_time is not None
         and parsed_args.end_time is not None
@@ -298,7 +289,7 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(config_file_path)
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
     except:
@@ -306,10 +297,18 @@ def main(argv):
         return -1
 
     database_config: Database = clp_config.database
-    dataset = parsed_args.dataset
-    if dataset is not None:
+    datasets = parsed_args.dataset
+    if datasets is not None:
+        max_datasets_per_query = clp_config.query_scheduler.max_datasets_per_query
+        if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
+            logger.error(
+                "Number of datasets (%d) exceeds max_datasets_per_query=%s.",
+                len(datasets),
+                max_datasets_per_query,
+            )
+            return -1
         try:
-            validate_dataset_exists(database_config, dataset)
+            validate_datasets_exist(database_config, datasets)
         except Exception as e:
             logger.error(e)
             return -1
@@ -319,9 +318,8 @@ def main(argv):
             do_search(
                 database_config,
                 clp_config.results_cache,
-                dataset,
+                datasets,
                 parsed_args.wildcard_query,
-                parsed_args.tags,
                 parsed_args.begin_time,
                 parsed_args.end_time,
                 parsed_args.ignore_case,

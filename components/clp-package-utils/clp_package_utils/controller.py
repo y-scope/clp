@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import logging
 import multiprocessing
@@ -28,10 +29,12 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OrchestrationType,
     QUERY_JOBS_TABLE_NAME,
@@ -186,10 +189,17 @@ class BaseController(ABC):
 
         # Connection config
         env_vars |= {
-            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
             "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
-            "CLP_DB_PORT": str(self._clp_config.database.port),
         }
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_DB_PORT": str(self._clp_config.database.port),
+                "CLP_EXTRA_HOST_DATABASE_NAME": DB_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_DATABASE_ADDR": _resolve_external_host(
+                    self._clp_config.database.host
+                ),
+            }
+
         if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
             env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
 
@@ -259,10 +269,12 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
-        env_vars |= {
-            "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
-            "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
-        }
+        if BundledService.QUEUE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
+                "CLP_EXTRA_HOST_QUEUE_NAME": QUEUE_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_QUEUE_ADDR": _resolve_external_host(self._clp_config.queue.host),
+            }
 
         # Credentials
         env_vars |= {
@@ -341,10 +353,12 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Connection config
-        env_vars |= {
-            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
-            "CLP_REDIS_PORT": str(self._clp_config.redis.port),
-        }
+        if BundledService.REDIS not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_REDIS_PORT": str(self._clp_config.redis.port),
+                "CLP_EXTRA_HOST_REDIS_NAME": REDIS_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_REDIS_ADDR": _resolve_external_host(self._clp_config.redis.host),
+            }
 
         # Credentials
         env_vars |= {
@@ -440,9 +454,15 @@ class BaseController(ABC):
         # Connection config
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
-            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
-            "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
         }
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+                "CLP_EXTRA_HOST_RESULTS_CACHE_NAME": RESULTS_CACHE_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_RESULTS_CACHE_ADDR": _resolve_external_host(
+                    self._clp_config.results_cache.host
+                ),
+            }
 
         return env_vars
 
@@ -605,6 +625,43 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the log ingestor component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = LOG_INGESTOR_COMPONENT_NAME
+        if self._clp_config.log_ingestor is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        if self._clp_config.logs_input.type != StorageType.S3:
+            logger.info(
+                "%s is only applicable for S3 logs input type, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_HOST": _get_ip_from_hostname(self._clp_config.log_ingestor.host),
+            "CLP_LOG_INGESTOR_PORT": str(self._clp_config.log_ingestor.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
+        }
+
+        return env_vars
+
     def _set_up_env_for_webui(self, container_clp_config: ClpConfig) -> EnvVarsDict:
         """
         Sets up environment variables and settings for the Web UI component.
@@ -644,6 +701,7 @@ class BaseController(ABC):
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
+            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
@@ -653,20 +711,13 @@ class BaseController(ABC):
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         }
-        resolved_client_settings_json_path = resolve_host_path_in_container(
-            client_settings_json_path
-        )
-        client_settings_json = self._read_and_update_settings_json(
-            resolved_client_settings_json_path, client_settings_json_updates
-        )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
-            client_settings_json_file.write(json.dumps(client_settings_json))
 
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
@@ -679,7 +730,17 @@ class BaseController(ABC):
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
+            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
+            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
+            "ArchiveOutputTargetDictionariesSize": (
+                self._clp_config.archive_output.target_dictionaries_size
+            ),
+            "ArchiveOutputTargetEncodedFileSize": (
+                self._clp_config.archive_output.target_encoded_file_size
+            ),
+            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
         }
 
         stream_storage = self._clp_config.stream_output.storage
@@ -710,6 +771,22 @@ class BaseController(ABC):
         else:
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
+
+        if StorageType.FS == self._clp_config.logs_input.type:
+            client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+        else:
+            client_settings_json_updates["LogsInputRootDir"] = None
+            server_settings_json_updates["LogsInputRootDir"] = None
+
+        resolved_client_settings_json_path = resolve_host_path_in_container(
+            client_settings_json_path
+        )
+        client_settings_json = self._read_and_update_settings_json(
+            resolved_client_settings_json_path, client_settings_json_updates
+        )
+        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
+            client_settings_json_file.write(json.dumps(client_settings_json))
 
         resolved_server_settings_json_path = resolve_host_path_in_container(
             server_settings_json_path
@@ -861,17 +938,30 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: ClpConfig, instance_id: str) -> None:
+    def __init__(
+        self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
+    ) -> None:
+        """Initializes the DockerComposeController."""
         self._project_name = f"clp-package-{instance_id}"
+        self._restart_policy = restart_policy
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
+        """
+        Sets up environment variables and directories for all components and writes them to the
+        `.env` file.
+        """
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         env_vars = EnvVarsDict()
+
+        # Restart Policy
+        env_vars |= {
+            "CLP_RESTART_POLICY": self._restart_policy,
+        }
 
         # Credentials
         if self._clp_config.stream_output.storage.type == StorageType.S3:
@@ -946,6 +1036,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_api_server()
+        env_vars |= self._set_up_env_for_log_ingestor()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
@@ -1086,3 +1177,20 @@ def _get_ip_from_hostname(hostname: str) -> str:
     :return: The resolved IP address.
     """
     return socket.gethostbyname(hostname)
+
+
+def _resolve_external_host(hostname: str) -> str:
+    """
+    Resolves a hostname to an address suitable for Docker's ``extra_hosts``.
+
+    When the hostname resolves to a loopback address, returns Docker's ``host-gateway`` token so
+    that containers can reach services running on the Docker host. For any other hostname, falls
+    back to standard DNS resolution.
+
+    :param hostname:
+    :return: The resolved address.
+    """
+    resolved_ip = _get_ip_from_hostname(hostname)
+    if ipaddress.ip_address(resolved_ip).is_loopback:
+        return "host-gateway"
+    return resolved_ip

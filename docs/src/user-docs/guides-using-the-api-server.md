@@ -32,10 +32,9 @@ following commands to submit a query to clp-json and stream the results.
        -H "Content-Type: application/json" \
        -d '{
           "query_string": "*log*",
-          "dataset": "default",
+          "datasets": ["default"],
           "ignore_case": false,
-          "max_num_results": 100,
-          "write_to_file": false
+          "max_num_results": 100
        }'
    ```
 
@@ -57,14 +56,14 @@ following commands to submit a query to clp-json and stream the results.
    Example streamed output:
 
    ```text
-   data: {"timestamp": 1633036800, "message": "Example log message"}
+   data: {"timestamp": 1767225600000, "message": "Example log message"}
 
-   data: {"timestamp": 1633036810, "message": "Another matched log line"}
+   data: {"timestamp": 1767225600010, "message": "Another matched log line"}
 
-   data: {"timestamp": 1633036820, "message": "No logs found" }
+   data: {"timestamp": 1767225600020, "message": "No logs found" }
    ```
 
 [OpenAPI]: https://swagger.io/specification/
 [release-choices]: ./quick-start/index.md#choosing-a-flavor
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
-[swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/api-server-openapi.json
+[swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json

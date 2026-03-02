@@ -7,6 +7,7 @@
 
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/base.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -616,40 +617,65 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
 
         auto default_patterns_result{get_all_default_timestamp_patterns()};
         REQUIRE_FALSE(default_patterns_result.has_error());
+        auto default_quoted_patterns_result{get_all_default_quoted_timestamp_patterns()};
+        REQUIRE_FALSE(default_quoted_patterns_result.has_error());
         auto const default_patterns{std::move(default_patterns_result.value())};
+        auto const default_quoted_patterns{std::move(default_quoted_patterns_result.value())};
         std::string generated_pattern;
         for (auto const& expected_result : expected_parsing_results) {
             auto const timestamp_pattern_result{TimestampPattern::create(expected_result.pattern)};
             REQUIRE_FALSE(timestamp_pattern_result.has_error());
-            auto const result{parse_timestamp(
-                    expected_result.timestamp,
-                    timestamp_pattern_result.value(),
-                    false,
-                    generated_pattern
-            )};
+            auto const expected_quoted_pattern{fmt::format(R"("{}")", expected_result.pattern)};
+            auto const quoted_timestamp_pattern_result{
+                    TimestampPattern::create(expected_quoted_pattern)
+            };
+            REQUIRE_FALSE(quoted_timestamp_pattern_result.has_error());
+            auto const quoted_timestamp{fmt::format(R"("{}")", expected_result.timestamp)};
+
+            auto const [quoted_content, quoted_pattern] = GENERATE(
+                    std::make_pair(false, false),
+                    std::make_pair(false, true),
+                    std::make_pair(true, true)
+            );
+            auto const& timestamp{quoted_content ? quoted_timestamp : expected_result.timestamp};
+            auto const& expected_marshalled_timestamp{
+                    quoted_pattern ? quoted_timestamp : expected_result.timestamp
+            };
+            auto const& pattern{
+                    quoted_pattern ? quoted_timestamp_pattern_result.value()
+                                   : timestamp_pattern_result.value()
+            };
+            auto const& pattern_str{
+                    quoted_pattern ? expected_quoted_pattern : expected_result.pattern
+            };
+            auto const& pattern_list{quoted_pattern ? default_quoted_patterns : default_patterns};
+            auto const result{
+                    parse_timestamp(timestamp, pattern, quoted_content, generated_pattern)
+            };
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
-            REQUIRE(expected_result.pattern == result.value().second);
+            REQUIRE(pattern_str == result.value().second);
+
             auto const searched_result{search_known_timestamp_patterns(
-                    expected_result.timestamp,
-                    default_patterns,
-                    false,
+                    timestamp,
+                    pattern_list,
+                    quoted_content,
                     generated_pattern
             )};
             REQUIRE(searched_result.has_value());
             // NOLINTBEGIN(bugprone-unchecked-optional-access)
             REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);
-            REQUIRE(expected_result.pattern == searched_result.value().second);
+            REQUIRE(pattern_str == searched_result.value().second);
             // NOLINTEND(bugprone-unchecked-optional-access)
 
             std::string marshalled_timestamp;
             auto const marshal_result{marshal_timestamp(
                     expected_result.epoch_timestamp,
-                    timestamp_pattern_result.value(),
+                    pattern,
                     marshalled_timestamp
             )};
             REQUIRE_FALSE(marshal_result.has_error());
-            REQUIRE(expected_result.timestamp == marshalled_timestamp);
+            REQUIRE(expected_marshalled_timestamp == marshalled_timestamp);
         }
     }
 

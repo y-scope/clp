@@ -27,8 +27,9 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
             return clp_s::search::ast::LiteralType::ArrayT;
         case NodeType::NullValue:
             return clp_s::search::ast::LiteralType::NullT;
-        case NodeType::DateString:
-            return clp_s::search::ast::LiteralType::EpochDateT;
+        case NodeType::DeprecatedDateString:
+        case NodeType::Timestamp:
+            return clp_s::search::ast::LiteralType::TimestampT;
         case NodeType::Metadata:
         case NodeType::Unknown:
         default:
@@ -106,7 +107,7 @@ size_t SchemaTree::store(std::string const& archives_dir, int compression_level)
 
         auto key = node.get_key_name();
         schema_tree_compressor.write_numeric_value(key.size());
-        schema_tree_compressor.write(key.begin(), key.size());
+        schema_tree_compressor.write(key.data(), key.size());
         schema_tree_compressor.write_numeric_value(node.get_type());
     }
 

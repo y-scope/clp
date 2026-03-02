@@ -1,13 +1,14 @@
-import {useCallback} from "react";
+import React, {
+    type ComponentProps,
+    useCallback,
+    useState,
+} from "react";
 
 import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
-    ConfigProvider,
     DatePicker,
-    Select,
-    theme,
+    GetProp,
 } from "antd";
-import dayjs from "dayjs";
 
 import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
@@ -16,12 +17,18 @@ import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import TimeRangeFooter from "./Presto/TimeRangeFooter";
-import TimeDateInput from "./TimeDateInput";
+import TimeDateInput, {type TimeDateInputProps} from "./TimeDateInput";
+import TimeRangePanel from "./TimeRangePanel/index";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
-    TIME_RANGE_OPTION_NAMES,
 } from "./utils";
+
+
+type RangePickerDates = Parameters<
+    NonNullable<
+        GetProp<ComponentProps<typeof DatePicker.RangePicker>, "onCalendarChange">
+    >>[0];
 
 
 /**
@@ -35,34 +42,54 @@ const TimeRangeInput = () => {
     const {
         timeRange,
         updateTimeRange,
-        timeRangeOption,
         updateTimeRangeOption,
         searchUiState,
     } = useSearchStore();
 
-    const {token} = theme.useToken();
+    const [isOpen, setIsOpen] = useState(false);
 
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
-    const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
-                           sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
+    const isPrestoGuided =
+        SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
+        sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
-    const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
-        updateTimeRangeOption(newTimeRangeOption);
-    };
-
-    const handleRangePickerChange = (
-        dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+    const handleRangePickerChange = useCallback((
+        dates: RangePickerDates
     ) => {
         if (!isValidDateRange(dates)) {
             return;
         }
+
+        // User manually changed the dates, switch to CUSTOM
+        updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
 
         // Treat range picker selection as UTC by dropping any timezone offset supplied by antd.
         updateTimeRange([
             dates[0].utc(true),
             dates[1].utc(true),
         ]);
+    }, [updateTimeRange,
+        updateTimeRangeOption]);
+
+    const handleOpenChange = (open: boolean) => {
+        setIsOpen(open);
     };
+
+    const handleClose = useCallback(() => {
+        setIsOpen(false);
+    }, []);
+
+    const panelRender = useCallback((panelNode: React.ReactNode) => (
+        <TimeRangePanel
+            panelNode={panelNode}
+            onClose={handleClose}/>
+    ), [handleClose]);
+
+    const inputComponent = useCallback((props: TimeDateInputProps) => (
+        <TimeDateInput
+            {...props}
+            isPickerOpen={isOpen}/>
+    ), [isOpen]);
 
     const renderFooter = useCallback(() => {
         if (false === isPrestoGuided) {
@@ -76,45 +103,22 @@ const TimeRangeInput = () => {
         <div
             className={styles["timeRangeInputContainer"]}
         >
-            <Select
-                listHeight={400}
-                options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
-                popupMatchSelectWidth={false}
+            <DatePicker.RangePicker
+                allowClear={true}
+                className={styles["rangePicker"] || ""}
+                open={isOpen}
+                panelRender={panelRender}
+                renderExtraFooter={renderFooter}
+                showTime={true}
                 size={"middle"}
-                value={timeRangeOption}
-                variant={"filled"}
-                className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
-                    (styles["customSelected"] || "") :
-                    ""}
-                disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                            searchUiState === SEARCH_UI_STATE.QUERYING}
-                onChange={handleSelectChange}/>
-            {/* Customize disabled styling to make date strings easier to read */}
-            <ConfigProvider
-                theme={{
-                    token: {
-                        colorBgContainerDisabled: token.colorBgLayout,
-                        colorTextDisabled: token.colorTextSecondary,
-                    },
+                value={timeRange}
+                components={{
+                    input: inputComponent,
                 }}
-            >
-                <DatePicker.RangePicker
-                    allowClear={true}
-                    className={styles["rangePicker"] || ""}
-                    renderExtraFooter={renderFooter}
-                    showTime={true}
-                    size={"middle"}
-                    value={timeRange}
-                    components={{
-                        input: TimeDateInput,
-                    }}
-                    disabled={timeRangeOption !== TIME_RANGE_OPTION.CUSTOM ||
-                                searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
-                    onCalendarChange={(dates) => {
-                        handleRangePickerChange(dates);
-                    }}/>
-            </ConfigProvider>
+                onCalendarChange={handleRangePickerChange}
+                onOpenChange={handleOpenChange}/>
         </div>
     );
 };
