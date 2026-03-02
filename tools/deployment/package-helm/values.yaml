@@ -86,6 +86,7 @@ clpConfig:
 
   # API server config
   api_server:
+    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30301
     default_max_num_query_results: 1000
     query_job_polling:
@@ -161,16 +162,19 @@ clpConfig:
     logging_level: "INFO"
 
   webui:
+    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
   mcp_server: null
+  #   serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   port: 30800
   #   logging_level: "INFO"
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
+    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30302
     # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
     # arrives.
@@ -245,3 +249,18 @@ credentials:
 
   redis:
     password: "pass"
+
+# Optional Ingress resource for routing external traffic to CLP services.
+# Enable this when using ClusterIP services behind a load balancer (e.g., nginx-ingress, AWS ALB).
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  annotations: {}
+  #   alb.ingress.kubernetes.io/scheme: internet-facing
+  #   alb.ingress.kubernetes.io/target-type: ip
+  #   alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:...
+  tls: []
+  #   - secretName: clp-tls
+  #     hosts:
+  #       - clp.example.com
