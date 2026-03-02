@@ -204,12 +204,12 @@ certificates without disabling SSL.
 
 The following proxy environment variables are forwarded as Docker build args when set:
 
-| Variable | Description |
-|---|---|
-| `HTTP_PROXY` / `http_proxy` | HTTP proxy URL |
-| `HTTPS_PROXY` / `https_proxy` | HTTPS proxy URL |
-| `ALL_PROXY` / `all_proxy` | SOCKS/catch-all proxy URL |
-| `NO_PROXY` / `no_proxy` | Comma-separated list of hosts to bypass |
+| Variable                      | Description                             |
+|-------------------------------|-----------------------------------------|
+| `HTTP_PROXY` / `http_proxy`   | HTTP proxy URL                          |
+| `HTTPS_PROXY` / `https_proxy` | HTTPS proxy URL                         |
+| `ALL_PROXY` / `all_proxy`     | SOCKS/catch-all proxy URL               |
+| `NO_PROXY` / `no_proxy`       | Comma-separated list of hosts to bypass |
 
 When a proxy URL points to localhost (`127.0.0.1`, `localhost`, or `[::1]`), `--network host` is
 automatically added to the Docker build so the container can reach the host's proxy. This can be
