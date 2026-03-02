@@ -503,7 +503,7 @@ impl Client {
         dataset_name: &str,
     ) -> Result<Vec<String>, ClientError> {
         static VALID_DATASET_NAME_REGEX: std::sync::LazyLock<regex::Regex> =
-            std::sync::LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap());
+            std::sync::LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9_]+$").unwrap());
         if !VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
             return Err(ClientError::InvalidDatasetName);
         }

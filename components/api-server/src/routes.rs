@@ -233,7 +233,7 @@ async fn get_timestamp_column_name(
         .get_timestamp_column_name(&dataset_name)
         .await
         .map_err(|err| {
-            tracing::error!(
+            tracing::warn!(
                 "Failed to get timestamp keys for dataset '{}': {:?}",
                 dataset_name,
                 err
