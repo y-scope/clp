@@ -1,7 +1,5 @@
 """Tests for the clp-json package."""
 
-import logging
-
 import pytest
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -15,9 +13,6 @@ from tests.utils.asserting_utils import (
 )
 from tests.utils.clp_mode_utils import CLP_API_SERVER_COMPONENT, CLP_BASE_COMPONENTS
 from tests.utils.config import PackageInstance, PackageModeConfig
-
-logger = logging.getLogger(__name__)
-
 
 # Mode description for this module.
 CLP_JSON_MODE = PackageModeConfig(
@@ -36,27 +31,26 @@ CLP_JSON_MODE = PackageModeConfig(
 pytestmark = [
     pytest.mark.package,
     pytest.mark.clp_json,
-    pytest.mark.parametrize("fixt_package_test_config", [CLP_JSON_MODE], indirect=True),
+    pytest.mark.parametrize(
+        "fixt_package_test_config", [CLP_JSON_MODE], indirect=True, ids=[CLP_JSON_MODE.mode_name]
+    ),
 ]
 
 
 @pytest.mark.startup
 def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the `clp-json` package starts up successfully.
+    Validates that the `clp-json` package starts up successfully.
 
     :param fixt_package_instance:
     """
     validate_package_instance(fixt_package_instance)
 
-    log_msg = "test_clp_json_startup was successful."
-    logger.info(log_msg)
-
 
 @pytest.mark.compression
 def test_clp_json_compression(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the `clp-json` package successfully compresses some dataset.
+    Validates that the `clp-json` package successfully compresses some dataset.
 
     :param fixt_package_instance:
     """
@@ -65,14 +59,11 @@ def test_clp_json_compression(fixt_package_instance: PackageInstance) -> None:
     # TODO: compress some dataset and check the correctness of compression.
     assert True
 
-    log_msg = "test_clp_json_compression was successful."
-    logger.info(log_msg)
-
 
 @pytest.mark.search
 def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
     """
-    Validate that the `clp-json` package successfully searches some dataset.
+    Validates that the `clp-json` package successfully searches some dataset.
 
     :param fixt_package_instance:
     """
@@ -83,6 +74,3 @@ def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
     # TODO: search through that dataset and check the correctness of the search results.
 
     assert True
-
-    log_msg = "test_clp_json_search was successful."
-    logger.info(log_msg)
