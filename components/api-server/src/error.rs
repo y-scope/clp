@@ -27,6 +27,9 @@ pub enum ClientError {
 
     #[error("Search job not found: {0}")]
     SearchJobNotFound(u64),
+
+    #[error("Invalid dataset name")]
+    InvalidDatasetName,
 }
 
 /// Empty trait to mark errors that indicate malformed data.

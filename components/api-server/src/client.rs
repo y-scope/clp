@@ -483,6 +483,45 @@ impl Client {
         Ok(mapped)
     }
 
+    /// Retrieves timestamp column names for a given dataset.
+    ///
+    /// Queries the `clp_{dataset_name}_column_metadata` table for columns with type 14
+    /// (timestamp).
+    ///
+    /// # Returns
+    ///
+    /// A vector of timestamp column name strings on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    pub async fn get_timestamp_column_name(
+        &self,
+        dataset_name: &str,
+    ) -> Result<Vec<String>, ClientError> {
+        static VALID_DATASET_NAME_REGEX: std::sync::LazyLock<regex::Regex> =
+            std::sync::LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9_-]+$").unwrap());
+        if !VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+            return Err(ClientError::InvalidDatasetName);
+        }
+        let table_name = format!("clp_{dataset_name}_column_metadata");
+        // `14i32` must be kept in sync with `NodeType::Timestamp` in
+        // `components/core/src/clp_s/SchemaTree.hpp`.
+        let rows = sqlx::query(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
+            .bind(14i32)
+            .fetch_all(&self.sql_pool)
+            .await?;
+
+        let names = rows
+            .iter()
+            .map(|row| row.try_get("name"))
+            .collect::<Result<Vec<String>, _>>()?;
+        Ok(names)
+    }
+
     /// # Returns
     ///
     /// A reference to the API server configuration.
