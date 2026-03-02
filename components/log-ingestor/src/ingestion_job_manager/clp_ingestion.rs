@@ -353,7 +353,8 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when failing to
+    ///   fetch already-submitted compression jobs.
     async fn get_unfinished_compression_jobs(
         &self,
     ) -> anyhow::Result<Vec<ClpCompressionJobContext>> {
@@ -384,7 +385,7 @@ impl ClpDbIngestionConnector {
         Ok(all)
     }
 
-    /// Creates necessary tables for CLP ingestion.
+    /// Creates all required DB tables for CLP ingestion.
     ///
     /// # Returns
     ///
@@ -475,8 +476,8 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when fetching
-    ///   recoverable jobs.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when fetching job
+    ///   metadata.
     async fn load_ingestion_jobs(
         &self,
     ) -> anyhow::Result<(Vec<ClpIngestionJobContext>, Vec<ClpIngestionJobContext>)> {

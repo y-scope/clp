@@ -405,8 +405,9 @@ async fn try_recover_ingestion_job_instances(
                 "Failed to create ingestion job instance on recovery. Recovery for this job \
                     skipped."
             );
+        } else {
+            num_recovered_jobs += 1;
         }
-        num_recovered_jobs += 1;
     }
     tracing::info!("Ingestion job recovery completed. Total recovered jobs: {num_recovered_jobs}.");
 }
