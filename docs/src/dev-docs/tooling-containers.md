@@ -219,11 +219,11 @@ overridden with `DOCKER_NETWORK`.
 
 Each distro supports an environment variable to override the default package mirror:
 
-| Variable | Distro | Example |
-|---|---|---|
+| Variable              | Distro                                      | Example                                  |
+|-----------------------|---------------------------------------------|------------------------------------------|
 | `DNF_MIRROR_BASE_URL` | manylinux_2_28 (AlmaLinux), centos-stream-9 | `https://internal.example.com/almalinux` |
-| `APK_MIRROR_URL` | musllinux_1_2 (Alpine) | `https://internal.example.com/alpine` |
-| `APT_MIRROR_URL` | ubuntu-jammy | `https://internal.example.com/ubuntu` |
+| `APK_MIRROR_URL`      | musllinux_1_2 (Alpine)                      | `https://internal.example.com/alpine`    |
+| `APT_MIRROR_URL`      | ubuntu-jammy                                | `https://internal.example.com/ubuntu`    |
 
 ### Other build flags
 
