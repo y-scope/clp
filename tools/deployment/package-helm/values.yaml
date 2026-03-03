@@ -250,16 +250,15 @@ credentials:
   redis:
     password: "pass"
 
-# Optional Ingress resource for routing external traffic to CLP services.
-# Enable this when using ClusterIP services behind a load balancer (e.g., nginx-ingress, AWS ALB).
-ingress:
+# Optional Gateway API resources for routing external traffic to CLP services.
+# Requires the Gateway API CRDs and a compatible controller (e.g., nginx-gateway-fabric,
+# Envoy Gateway, Traefik v3, Istio).
+# Enable this when using ClusterIP services behind a load balancer.
+gateway:
   enabled: false
-  className: ""
-  host: ""
+  className: ""  # GatewayClass name (e.g., "nginx", "eg", "istio", "traefik")
+  host: ""  # Optional hostname filter for the Gateway listener
   annotations: {}
-  #   alb.ingress.kubernetes.io/scheme: internet-facing
-  #   alb.ingress.kubernetes.io/target-type: ip
-  #   alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:...
   tls: []
   #   - secretName: clp-tls
   #     hosts:
