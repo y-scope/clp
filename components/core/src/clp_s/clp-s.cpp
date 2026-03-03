@@ -39,7 +39,7 @@
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
-#include "TimestampPattern.hpp"
+#include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
 using clp_s::cArchiveFormatDevelopmentVersionFlag;
@@ -94,7 +94,8 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     }
 
     clp_s::JsonParserOption option{};
-    option.input_paths = command_line_arguments.get_input_paths();
+    option.input_paths_and_canonical_filenames
+            = command_line_arguments.get_input_paths_and_canonical_filenames();
     option.network_auth = command_line_arguments.get_network_auth();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
@@ -183,10 +184,12 @@ bool search_archive(
         return true;
     }
 
-    ast::SetTimestampLiteralPrecision date_precision_pass{
-            ast::TimestampLiteral::Precision::Milliseconds
-    };
-    expr = date_precision_pass.run(expr);
+    if (archive_reader->has_deprecated_timestamp_format()) {
+        ast::SetTimestampLiteralPrecision date_precision_pass{
+                ast::TimestampLiteral::Precision::Milliseconds
+        };
+        expr = date_precision_pass.run(expr);
+    }
 
     // Narrow against schemas
     auto match_pass = std::make_shared<SchemaMatch>(
@@ -265,7 +268,8 @@ bool search_archive(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
                         command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results()
+                        command_line_arguments.get_max_num_results(),
+                        command_line_arguments.get_dataset()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
@@ -302,7 +306,6 @@ int main(int argc, char const* argv[]) {
         return 1;
     }
 
-    clp_s::TimestampPattern::init();
     mongocxx::instance const mongocxx_instance{};
     clp::CurlGlobalInstance const curl_instance{};
 

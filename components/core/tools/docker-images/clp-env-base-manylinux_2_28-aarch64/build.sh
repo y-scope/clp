@@ -9,6 +9,7 @@ component_root="${script_dir}/../../../"
 
 build_cmd=(
     docker buildx build
+    --pull
     --platform linux/arm64
     --tag clp-core-dependencies-aarch64-manylinux_2_28:dev
     "$component_root"

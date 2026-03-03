@@ -22,8 +22,10 @@ sbin/start-clp.sh
 ```
 
 ```{tip}
-To validate configuration and prepare directories without launching services, add the
-`--setup-only` flag (e.g., `sbin/start-clp.sh --setup-only`).
+To validate configuration and prepare directories without launching services, add the `--setup-only`
+flag (e.g., `sbin/start-clp.sh --setup-only`). To use external databases or other third-party
+services instead of bundled services, see the
+[external database guide](../guides-external-database.md).
 ```
 
 ```{note}
@@ -39,9 +41,6 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 First, create a `kind` cluster:
 
 ```bash
-# Data and logs directory for the CLP Package
-export CLP_HOME="$HOME/clp"
-
 # Host port mappings
 export CLP_WEBUI_PORT=30000
 export CLP_RESULTS_CACHE_PORT=30017
@@ -56,15 +55,6 @@ export CLP_DB_ROOT_PASS=$(openssl rand -hex 16)
 export CLP_QUEUE_PASS=$(openssl rand -hex 16)
 export CLP_REDIS_PASS=$(openssl rand -hex 16)
 
-# Create required directories
-mkdir -p \
-    "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-    "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-    "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-    "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-    "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-    "$CLP_HOME/var/tmp"
-
 # Create the `kind` cluster
 cat <<EOF | kind create cluster --name clp --config=-
 kind: Cluster
@@ -72,9 +62,6 @@ apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
   extraMounts:
-  - hostPath: $CLP_HOME
-    containerPath: $CLP_HOME
-
   # Mount for logs input (change the paths as needed; not needed if using S3 input)
   - hostPath: /home
     containerPath: /home
@@ -98,31 +85,16 @@ EOF
 Then, install the Helm chart:
 
 ```bash
-# Download and extract the Helm chart from the CLP repository.
-mkdir -p "$HOME/clp-package-helm"
-curl \
-  --silent \
-  --location https://github.com/y-scope/clp/archive/refs/heads/DOCS_VAR_CLP_GIT_REF.tar.gz \
-  | tar \
-    --extract \
-    --gzip \
-    --strip-components=4 \
-    --directory "$HOME/clp-package-helm" \
-    "clp-DOCS_VAR_CLP_GIT_REF/tools/deployment/package-helm"
-cd "$HOME/clp-package-helm"
+helm repo add clp https://y-scope.github.io/clp
+helm repo update clp
 
-helm install clp . \
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.api_server.port="$CLP_API_SERVER_PORT" \
   --set clpConfig.log_ingestor.port="$CLP_LOG_INGESTOR_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
   --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
-  --set clpConfig.data_directory="$CLP_HOME/var/data" \
-  --set clpConfig.logs_directory="$CLP_HOME/var/log" \
-  --set clpConfig.tmp_directory="$CLP_HOME/var/tmp" \
-  --set clpConfig.archive_output.storage.directory="$CLP_HOME/var/data/archives" \
-  --set clpConfig.stream_output.storage.directory="$CLP_HOME/var/data/streams" \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
@@ -319,7 +291,7 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following elemen
 3. **The time range selector**. CLP will search for log events that are in the specified time range.
    You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`) from the dropdown, or
    choose `Custom` and set the start time and end time directly.
-4. **The dataset selector**. CLP will search for log events that belong to the selected dataset.
+4. **The dataset selector**. CLP will search for log events that belong to the selected datasets.
 5. **The search results timeline**. After a query, the timeline will show the number of results
    across the time range of your query.
    * You can click and drag to zoom into a time range.
@@ -395,6 +367,10 @@ To narrow your search to a specific time range:
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
   * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
 * Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
+
+To search within specific datasets, add `--dataset <name>` for each dataset. This flag can be
+specified multiple times, e.g. `--dataset ds1 --dataset ds2`. If not specified, the `default` dataset
+will be searched.
 
 To perform case-insensitive searches, add the `--ignore-case` flag.
 

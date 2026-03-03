@@ -19,7 +19,6 @@ def compress(
     self: Task,
     job_id: int,
     task_id: int,
-    tag_ids: list[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
@@ -27,7 +26,6 @@ def compress(
     return compression_entry_point(
         job_id,
         task_id,
-        tag_ids,
         clp_io_config_json,
         paths_to_compress_json,
         clp_metadata_db_connection_config,

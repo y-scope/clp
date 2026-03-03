@@ -45,7 +45,6 @@ class S3InputConfig(S3Config):
 
 
 class OutputConfig(BaseModel):
-    tags: list[str] | None = None
     target_archive_size: int
     target_dictionaries_size: int
     target_segment_size: int
@@ -67,7 +66,7 @@ class AggregationConfig(BaseModel):
 
 
 class QueryJobConfig(BaseModel):
-    dataset: str | None = None
+    pass
 
 
 class ExtractIrJobConfig(QueryJobConfig):
@@ -78,14 +77,15 @@ class ExtractIrJobConfig(QueryJobConfig):
 
 
 class ExtractJsonJobConfig(QueryJobConfig):
+    dataset: str | None = None
     archive_id: str
     target_chunk_size: int | None = None
 
 
 class SearchJobConfig(QueryJobConfig):
+    datasets: list[str] | None = None
     query_string: str
     max_num_results: int
-    tags: list[str] | None = None
     begin_timestamp: int | None = None
     end_timestamp: int | None = None
     ignore_case: bool = False

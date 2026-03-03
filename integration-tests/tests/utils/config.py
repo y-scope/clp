@@ -14,7 +14,8 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.utils import (
-    unlink,
+    clear_directory,
+    remove_path,
     validate_dir_exists,
     validate_file_exists,
 )
@@ -70,11 +71,17 @@ class PackagePathConfig:
     #: Root directory containing all CLP package contents.
     clp_package_dir: Path
 
+    #: Root directory where all package test scripts and data are stored.
+    package_test_scripts_dir: Path
+
     #: Root directory for package tests output.
     test_root_dir: InitVar[Path]
 
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
+
+    #: Directory where decompressed logs will be stored.
+    package_decompression_dir: Path = field(init=False, repr=True)
 
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
@@ -94,9 +101,15 @@ class PackagePathConfig:
             )
             raise RuntimeError(err_msg)
 
-        # Initialize directory for package tests.
+        # Validate directory for package test scripts.
+        validate_dir_exists(self.package_test_scripts_dir)
+
+        # Initialize directory for package test output.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        object.__setattr__(
+            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -119,40 +132,87 @@ class PackagePathConfig:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
+    @property
+    def compress_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "compress.sh"
+
+    @property
+    def decompress_script_path(self) -> Path:
+        """:return: The absolute path to the package decompress script."""
+        return self.clp_package_dir / "sbin" / "decompress.sh"
+
+    @property
+    def clp_json_test_data_path(self) -> Path:
+        """:return: The absolute path to the data for clp-json tests."""
+        return self.package_test_scripts_dir / "clp_json" / "data"
+
+    @property
+    def clp_text_test_data_path(self) -> Path:
+        """:return: The absolute path to the data for clp-text tests."""
+        return self.package_test_scripts_dir / "clp_text" / "data"
+
+    def clear_package_archives(self) -> None:
+        """Removes the contents of `clp-package/var/data/archives`."""
+        archives_dir = self.clp_package_dir / "var" / "data" / "archives"
+        clear_directory(archives_dir)
+
 
 @dataclass(frozen=True)
-class PackageConfig:
-    """Metadata for a specific configuration of the CLP package."""
+class PackageCompressionJob:
+    """A compression job for a package test."""
 
-    #: Path configuration for this package.
-    path_config: PackagePathConfig
+    #: The absolute path to the dataset (either a file or directory).
+    path_to_original_dataset: Path
+
+    #: Options to specify in the compression command.
+    options: list[str] | None
+
+    #: Positional arguments to specify in the compression command (do not put paths to compress)
+    positional_args: list[str] | None
+
+
+@dataclass(frozen=True)
+class PackageModeConfig:
+    """Mode configuration for the CLP package."""
 
     #: Name of the package operation mode.
     mode_name: str
 
-    #: The list of CLP components that this package needs.
-    component_list: list[str]
-
-    #: The Pydantic representation of a CLP package configuration.
+    #: The Pydantic representation of the package operation mode.
     clp_config: ClpConfig
 
-    #: The base port from which all ports for the components are derived.
+    #: The list of CLP components that this package needs.
+    component_list: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PackageTestConfig:
+    """Metadata for a specific test of the CLP package."""
+
+    #: Path configuration for this package test.
+    path_config: PackagePathConfig
+
+    #: Mode configuration for this package test.
+    mode_config: PackageModeConfig
+
+    #: The base port from which all port assignments are derived.
     base_port: int
 
     def __post_init__(self) -> None:
-        """Write the temporary config file for this package."""
+        """Write the temporary config file for this package test."""
         self._write_temp_config_file()
 
     @property
     def temp_config_file_path(self) -> Path:
         """:return: The absolute path to the temporary configuration file for the package."""
-        return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yaml"
+        return self.path_config.temp_config_dir / f"clp-config-{self.mode_config.mode_name}.yaml"
 
     def _write_temp_config_file(self) -> None:
-        """Writes the temporary config file for this package."""
+        """Writes the temporary config file for this package test."""
         temp_config_file_path = self.temp_config_file_path
 
-        payload = self.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
+        payload = self.mode_config.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
 
         tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as f:
@@ -165,7 +225,7 @@ class PackageInstance:
     """Metadata for a running instance of the CLP package."""
 
     #: The configuration for this package instance.
-    package_config: PackageConfig
+    package_test_config: PackageTestConfig
 
     #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
@@ -176,10 +236,10 @@ class PackageInstance:
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the temp config file exists.
-        validate_file_exists(self.package_config.temp_config_file_path)
+        validate_file_exists(self.package_test_config.temp_config_file_path)
 
         # Set clp_instance_id from instance-id file.
-        path_config = self.package_config.path_config
+        path_config = self.package_test_config.path_config
         clp_instance_id_file_path = path_config.clp_log_dir / "instance-id"
         validate_file_exists(clp_instance_id_file_path)
         clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
@@ -298,5 +358,5 @@ class CompressionTestPathConfig:
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
-        unlink(self.compression_dir)
-        unlink(self.decompression_dir)
+        remove_path(self.compression_dir)
+        remove_path(self.decompression_dir)

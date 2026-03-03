@@ -16,6 +16,8 @@ REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
 # shellcheck source=.set-up-common.sh
 source "${script_dir}/.set-up-common.sh"
 
+parse_common_args "$@"
+
 echo "=== Multi-node setup with shared worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Worker nodes: ${NUM_WORKER_NODES}"
@@ -32,10 +34,13 @@ generate_kind_config "${NUM_WORKER_NODES}" | kind create cluster --name "${CLUST
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
+# Word splitting is intentional: get_image_helm_args returns multiple --set flags.
+# shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
     --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
     --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "reducer.replicas=${REDUCER_REPLICAS}"
+    --set "reducer.replicas=${REDUCER_REPLICAS}" \
+    $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
 
 wait_for_cluster_ready

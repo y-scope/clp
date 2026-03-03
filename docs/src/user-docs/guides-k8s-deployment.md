@@ -113,13 +113,11 @@ Once your cluster is ready, you can install CLP using the Helm chart.
 
 ### Getting the chart
 
-The CLP Helm chart is located in the repository at
-[`tools/deployment/package-helm/`][clp-helm-chart].
+The CLP Helm chart is published to a [Helm repository][clp-helm-repo] hosted on GitHub Pages.
 
 ```bash
-# Clone the repository (if you haven't already)
-git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
-cd clp/tools/deployment/package-helm
+helm repo add clp https://y-scope.github.io/clp
+helm repo update clp
 ```
 
 #### Production cluster requirements (optional)
@@ -127,72 +125,25 @@ cd clp/tools/deployment/package-helm
 The following configurations are optional but recommended for production deployments. You can skip
 this section for testing or development.
 
-1. **Storage for CLP package services' data and logs** (optional, for centralized debugging):
-
-   The Helm chart creates static PersistentVolumes using local host paths by default, so no
-   StorageClass configuration is required for basic deployments. For easier debugging, you can
-   configure a centralized storage backend for the following directories:
-
-   * `data_directory` - where CLP stores runtime data
-   * `logs_directory` - where CLP services write logs
-   * `tmp_directory` - where temporary files are stored
-
-   :::{note}
-   We aim to improve the logging infrastructure so mapping log volumes will not be required in the
-   future. See [y-scope/clp#1760][logging-infra-issue] for details.
-   :::
-
-2. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
+1. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
 
    :::{tip}
    [S3 storage][s3-storage] is **strongly recommended** for multi-node clusters as it does not
    require shared local storage between workers. If you use S3 storage, you can skip this section.
    :::
 
-   For multi-node clusters using filesystem storage, the following directories **must** be
-   accessible from all worker nodes at the same paths. Without shared storage, compressed logs
-   created by one worker cannot be searched by other workers.
+   If storage type is set to `fs`, users must manually provision the persistent volumes and update
+   `accessModes` of PVCs.
 
-   * `archive_output.storage.directory` - where compressed archives are stored
-   * `stream_output.storage.directory` - where stream files are stored
-   * `logs_input.directory` - where input logs are read from
-
-   Set up NFS, SeaweedFS, or another shared filesystem to provide this access. See the
-   [SeaweedFS section][seaweedfs-setup] in the Docker Compose deployment guide for setup
-   instructions.
-
-3. **External databases** (recommended for production):
+2. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
      MariaDB/MySQL and MongoDB databases
 
 ### Basic installation
 
-Create the required directories on all worker nodes:
+Generate credentials and install CLP:
 
 ```bash
-export CLP_HOME="/tmp/clp"
-
-mkdir -p \
-  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-  "$CLP_HOME/var/tmp"
-```
-
-Then on the **control-plane node**, create the required directories, generate credentials, and
-install CLP:
-
-```bash
-export CLP_HOME="/tmp/clp"
-
-mkdir -p \
-  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-  "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-  "$CLP_HOME/var/tmp"
-
 # Credentials (change these for production)
 export CLP_DB_PASS="pass"
 export CLP_DB_ROOT_PASS="root-pass"
@@ -204,12 +155,7 @@ export CLP_COMPRESSION_WORKER_REPLICAS=1
 export CLP_QUERY_WORKER_REPLICAS=1
 export CLP_REDUCER_REPLICAS=1
 
-helm install clp . \
-  --set clpConfig.data_directory="$CLP_HOME/var/data" \
-  --set clpConfig.logs_directory="$CLP_HOME/var/log" \
-  --set clpConfig.tmp_directory="$CLP_HOME/var/tmp" \
-  --set clpConfig.archive_output.storage.directory="$CLP_HOME/var/data/archives" \
-  --set clpConfig.stream_output.storage.directory="$CLP_HOME/var/data/streams" \
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
@@ -225,7 +171,7 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 `/etc/fstab`), enable distributed storage mode and configure multiple worker replicas:
 
 ```bash
-helm install clp . \
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set distributedDeployment=true \
   --set compressionWorker.replicas=3 \
   --set queryWorker.replicas=3 \
@@ -288,7 +234,7 @@ credentials:
 Install with custom values:
 
 ```bash
-helm install clp . -f custom-values.yaml
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f custom-values.yaml
 ```
 
 ::::{tip}
@@ -324,6 +270,8 @@ To run compression workers, query workers, and reducers in separate node pools:
    ```{code-block} yaml
    :caption: dedicated-scheduling.yaml
 
+   distributedDeployment: true
+
    compressionWorker:
      replicas: 2
      scheduling:
@@ -346,7 +294,7 @@ To run compression workers, query workers, and reducers in separate node pools:
 3. Install:
 
    ```bash
-   helm install clp . -f dedicated-scheduling.yaml --set distributedDeployment=true
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f dedicated-scheduling.yaml
    ```
 
 #### Shared node pool
@@ -363,6 +311,8 @@ To run all worker types in the same node pool:
 
    ```{code-block} yaml
    :caption: shared-scheduling.yaml
+
+   distributedDeployment: true
 
    compressionWorker:
      replicas: 2
@@ -393,7 +343,7 @@ To run all worker types in the same node pool:
 3. Install:
 
    ```bash
-   helm install clp . -f shared-scheduling.yaml --set distributedDeployment=true
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
 ---
@@ -520,7 +470,11 @@ kubectl exec -it <pod-name> -- /bin/bash
 To debug Helm chart issues:
 
 ```bash
-helm install clp . --dry-run --debug
+# For debugging the published chart from the repository
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG --dry-run --debug
+
+# For debugging local chart changes during development
+helm install clp /path/to/local/chart --dry-run --debug
 ```
 
 ---
@@ -541,9 +495,9 @@ helm uninstall clp
 ```
 
 :::{warning}
-Uninstalling the Helm release will delete all CLP pods and services. However, PersistentVolumes
-with the `Retain` policy will preserve your data. To completely remove all data, delete the PVs and
-the data directories manually.
+Uninstalling the Helm release will delete all CLP pods and services. However, dynamically
+provisioned PersistentVolumeClaims (database, results cache, archives, streams) may be retained
+depending on the cluster's `reclaimPolicy`. To completely remove all data, delete the PVCs manually.
 :::
 
 ---
@@ -586,7 +540,7 @@ To tear down a `kubeadm` cluster:
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
-[clp-helm-chart]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/tools/deployment/package-helm
+[clp-helm-repo]: https://y-scope.github.io/clp
 [clp-releases]: https://github.com/y-scope/clp/releases
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
@@ -598,7 +552,6 @@ To tear down a `kubeadm` cluster:
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
-[logging-infra-issue]: https://github.com/y-scope/clp/issues/1760
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3
