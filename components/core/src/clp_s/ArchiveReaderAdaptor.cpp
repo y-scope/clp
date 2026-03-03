@@ -26,15 +26,19 @@ ArchiveReaderAdaptor::ArchiveReaderAdaptor(
         NetworkAuthOption const& network_auth
 )
         : m_archive_path{archive_path},
-          m_network_auth{network_auth},
-          m_single_file_archive{false},
-          m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()} {
+          m_network_auth{network_auth} {
     if (InputSource::Filesystem != archive_path.source
         || std::filesystem::is_regular_file(archive_path.path))
     {
         m_single_file_archive = true;
     }
 }
+
+ArchiveReaderAdaptor::ArchiveReaderAdaptor(
+        std::shared_ptr<clp::ReaderInterface> single_file_archive_reader
+)
+        : m_single_file_archive{true},
+          m_reader{single_file_archive_reader} {}
 
 ErrorCode
 ArchiveReaderAdaptor::try_read_archive_file_info(ZstdDecompressor& decompressor, size_t size) {
@@ -253,6 +257,11 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
 }
 
 std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
+    if (nullptr != m_reader) {
+        // Reader already initialized
+        return m_reader;
+    }
+
     if (InputSource::Filesystem == m_archive_path.source && false == m_single_file_archive) {
         try {
             return std::make_shared<clp::FileReader>(
