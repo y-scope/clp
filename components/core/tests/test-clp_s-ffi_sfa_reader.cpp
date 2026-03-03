@@ -1,52 +1,94 @@
 #include <filesystem>
 #include <fstream>
-#include <optional>
+#include <cstdint>
 #include <string>
 #include <string_view>
-#include <cstdint>
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
 #include "../src/clp_s/ffi/sfa/ClpArchiveReader.hpp"
-#include "clp_s_test_utils.hpp"
-#include "TestOutputCleaner.hpp"
 
 namespace {
-constexpr std::string_view cTestArchiveDirectory{"test-clp_s-ffi-sfa-reader-archive"};
-constexpr std::string_view cTestInputFile{"test_no_floats_sorted.jsonl"};
-}  // namespace
+constexpr std::string_view cSfaReaderLogsDirectory{"test_log_files"};
+constexpr std::string_view cSfaReaderArchivesDirectory{"test_single_file_archives"};
+constexpr std::string_view cArchiveNoFloats{"test_no_floats_sorted.clp"};
+constexpr std::string_view cArchiveFloatTimestamp{"test_search_float_timestamp.clp"};
 
-TEST_CASE("clp_s_ffi_sfa_reader_get_archive_id", "[clp-s][ffi][sfa]") {
-    TestOutputCleaner const test_cleanup{{std::string{cTestArchiveDirectory}}};
-    auto const input_path = get_test_input_local_path(cTestInputFile);
+auto get_tests_dir() -> std::filesystem::path {
+    std::filesystem::path const current_file_path{__FILE__};
+    return current_file_path.parent_path();
+}
 
-    REQUIRE_NOTHROW(
-            std::ignore = compress_archive(
-                    input_path,
-                    std::string{cTestArchiveDirectory},
-                    std::nullopt,
-                    false,
-                    true,
-                    false
-            )
-    );
+auto get_archive_local_path(std::string_view const archive_name) -> std::filesystem::path {
+    return get_tests_dir() / cSfaReaderArchivesDirectory / archive_name;
+}
 
-    auto const archive_path = std::filesystem::directory_iterator{
-            std::filesystem::path{cTestArchiveDirectory}
-    }->path();
+auto get_log_local_path_from_archive_name(std::string_view const archive_name)
+        -> std::filesystem::path {
+    std::filesystem::path archive_path{archive_name};
+    auto log_name = archive_path.stem().string() + ".jsonl";
+    return get_tests_dir() / cSfaReaderLogsDirectory / log_name;
+}
+
+auto get_num_lines(std::filesystem::path const& path) -> uint64_t {
+    std::ifstream input_file{path};
+    REQUIRE(input_file.is_open());
+
+    uint64_t num_lines{0};
+    std::string line;
+    while (std::getline(input_file, line)) {
+        ++num_lines;
+    }
+    return num_lines;
+}
+
+auto assert_archive_event_count_matches_log(std::string_view const archive_name) -> void {
+    auto const archive_path = get_archive_local_path(archive_name);
+    auto const log_path = get_log_local_path_from_archive_name(archive_name);
+    REQUIRE(std::filesystem::exists(archive_path));
+    REQUIRE(std::filesystem::exists(log_path));
 
     auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(archive_path.string());
     REQUIRE_FALSE(reader_result.has_error());
     auto& reader = reader_result.value();
-    REQUIRE(archive_path.filename().string() == reader.get_archive_id());
 
-    uint64_t expected_event_count{0};
-    {
-        std::ifstream input_file{input_path};
-        std::string line;
-        while (std::getline(input_file, line)) {
-            ++expected_event_count;
-        }
-    }
-    REQUIRE(expected_event_count == reader.get_event_count());
+    auto const expected_event_count = get_num_lines(log_path);
+    REQUIRE(reader.get_archive_id() == archive_path.filename().string());
+    REQUIRE(reader.get_event_count() == expected_event_count);
+}
+
+auto assert_archive_event_count_matches_log_in_memory(std::string_view const archive_name) -> void {
+    auto const archive_path = get_archive_local_path(archive_name);
+    auto const log_path = get_log_local_path_from_archive_name(archive_name);
+    REQUIRE(std::filesystem::exists(archive_path));
+    REQUIRE(std::filesystem::exists(log_path));
+
+    auto mmap_result = clp::ReadOnlyMemoryMappedFile::create(archive_path.string());
+    REQUIRE_FALSE(mmap_result.has_error());
+    auto& mapped_archive = mmap_result.value();
+    auto const view = mapped_archive.get_view();
+    REQUIRE_FALSE(view.empty());
+
+    auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(
+            std::span<char const>{view.data(), view.size()},
+            archive_name
+    );
+    REQUIRE_FALSE(reader_result.has_error());
+    auto& reader = reader_result.value();
+
+    auto const expected_event_count = get_num_lines(log_path);
+    REQUIRE(reader.get_archive_id() == archive_name);
+    REQUIRE(reader.get_event_count() == expected_event_count);
+}
+}  // namespace
+
+TEST_CASE("clp_s_ffi_sfa_reader_matches_test_no_floats_sorted", "[clp-s][ffi][sfa]") {
+    assert_archive_event_count_matches_log(cArchiveNoFloats);
+    assert_archive_event_count_matches_log_in_memory(cArchiveNoFloats);
+}
+
+TEST_CASE("clp_s_ffi_sfa_reader_matches_test_search_float_timestamp", "[clp-s][ffi][sfa]") {
+    assert_archive_event_count_matches_log(cArchiveFloatTimestamp);
+    assert_archive_event_count_matches_log_in_memory(cArchiveFloatTimestamp);
 }
