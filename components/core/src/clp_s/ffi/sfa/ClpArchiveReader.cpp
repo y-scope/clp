@@ -1,12 +1,20 @@
 #include "ClpArchiveReader.hpp"
 
+#include <cstdint>
 #include <memory>
+#include <span>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <system_error>
+#include <utility>
 
+#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/BufferReader.hpp>
+#include <clp_s/ArchiveReader.hpp>
+#include <clp_s/InputConfig.hpp>
 
 namespace clp_s::ffi::sfa {
 auto ClpArchiveReader::create(std::string_view archive_path)
@@ -39,8 +47,10 @@ ClpArchiveReader::~ClpArchiveReader() noexcept {
     if (nullptr != m_archive_reader) {
         try {
             m_archive_reader->close();
+        } catch (std::exception const& ex) {
+            SPDLOG_DEBUG("Ignoring exception while closing ClpArchiveReader: {}", ex.what());
         } catch (...) {
-            // Suppress exceptions in destructor.
+            SPDLOG_DEBUG("Ignoring unknown exception while closing ClpArchiveReader.");
         }
         m_archive_reader.reset();
     }

@@ -6,6 +6,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -62,7 +63,7 @@ public:
 private:
     // Constructors
     explicit ClpArchiveReader(std::unique_ptr<clp_s::ArchiveReader> reader)
-            : m_archive_reader(std::move(reader)) {}
+            : m_archive_reader{std::move(reader)} {}
 
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
