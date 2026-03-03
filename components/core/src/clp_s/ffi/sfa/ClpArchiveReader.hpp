@@ -1,14 +1,15 @@
 #ifndef CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP
 #define CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP
 
+#include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
-#include <cstdint>
-#include <span>
+
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReader.hpp>
-#include <ystdlib/error_handling/Result.hpp>
 
 namespace clp_s::ffi::sfa {
 /**
@@ -33,7 +34,8 @@ public:
      * error code indicating the failure:
      * - `std::errc::io_error` if archive open/initialization fails.
      */
-    [[nodiscard]] static auto create(std::span<char const> archive_data, std::string_view archive_id)
+    [[nodiscard]] static auto
+    create(std::span<char const> archive_data, std::string_view archive_id)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor

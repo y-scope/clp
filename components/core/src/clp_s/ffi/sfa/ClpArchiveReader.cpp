@@ -4,8 +4,9 @@
 #include <stdexcept>
 #include <system_error>
 
-#include <clp/BufferReader.hpp>
 #include <ystdlib/error_handling/Result.hpp>
+
+#include <clp/BufferReader.hpp>
 
 namespace clp_s::ffi::sfa {
 auto ClpArchiveReader::create(std::string_view archive_path)
