@@ -6,9 +6,11 @@ use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetad
 use non_empty_string::NonEmptyString;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
-use uuid::Uuid;
 
-use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::S3ScannerState};
+use crate::{
+    aws_client_manager::AwsClientManagerType,
+    ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState},
+};
 
 /// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
 /// object metadata for newly created objects.
@@ -16,8 +18,12 @@ use crate::{aws_client_manager::AwsClientManagerType, ingestion_job::S3ScannerSt
 /// # Type Parameters
 ///
 /// * [`S3ClientManager`]: The type of the AWS S3 client manager.
-/// * [`State`]: The type that implements [`S3ScannerState`] for managing S3 scanner states.
-struct Task<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState> {
+/// * [`State`]: The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
+///   scanner states.
+struct Task<
+    S3ClientManager: AwsClientManagerType<Client>,
+    State: IngestionJobState + S3ScannerState,
+> {
     s3_client_manager: S3ClientManager,
     scanning_interval: Duration,
     config: S3ScannerConfig,
@@ -25,7 +31,7 @@ struct Task<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState
     state: State,
 }
 
-impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
+impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S3ScannerState>
     Task<S3ClientManager, State>
 {
     /// Runs the S3 scanner task to scan the given bucket.
@@ -125,7 +131,6 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
                 size: size.try_into()?,
                 id: None,
             };
-            tracing::info!(object = ? object_metadata, "Scanned new object metadata on S3.");
             object_metadata_to_ingest.push(object_metadata);
         }
 
@@ -157,15 +162,16 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: S3ScannerState>
 ///
 /// # Type Parameters
 ///
-/// * [`State`]: The type that implements [`S3ScannerState`] for managing S3 scanner states.
-pub struct S3Scanner<State: S3ScannerState> {
-    id: Uuid,
+/// * [`State`]: The type that implements [`IngestionJobState`] + [`S3ScannerState`] for managing S3
+///   scanner states.
+pub struct S3Scanner<State: IngestionJobState + S3ScannerState> {
+    id: IngestionJobId,
     cancel_token: CancellationToken,
     handle: tokio::task::JoinHandle<Result<()>>,
-    _state: State,
+    state: State,
 }
 
-impl<State: S3ScannerState> S3Scanner<State> {
+impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
     /// Creates and spawns a new [`S3Scanner`] backed by a [`Task`].
     ///
     /// This function spawns a [`Task`]. The spawned task will periodically scan the configured S3
@@ -180,7 +186,7 @@ impl<State: S3ScannerState> S3Scanner<State> {
     /// A newly created instance of [`S3Scanner`].
     #[must_use]
     pub fn spawn<S3ClientManager: AwsClientManagerType<Client>>(
-        id: Uuid,
+        id: IngestionJobId,
         s3_client_manager: S3ClientManager,
         config: S3ScannerConfig,
         state: State,
@@ -196,40 +202,68 @@ impl<State: S3ScannerState> S3Scanner<State> {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
+        let cloned_state = state.clone();
         let handle = tokio::spawn(async move {
-            task.run(child_cancel_token).await.inspect_err(|err| {
-                tracing::error!(error = ? err, "S3 scanner task execution failed.");
-            })
+            let result = task.run(child_cancel_token).await;
+            match &result {
+                Ok(()) => {}
+                Err(err) => {
+                    tracing::error!(
+                        error = ? err,
+                        job_id = ? id,
+                        "S3 scanner task execution failed."
+                    );
+                    cloned_state
+                        .fail(format!("S3 scanner task execution failed: {err}"))
+                        .await;
+                }
+            }
+            result
         });
         Self {
             id,
             cancel_token,
             handle,
-            _state: state,
+            state,
         }
     }
 
     /// Shuts down and waits for the underlying task to complete.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards the underlying task's return values on failure ([`Task::run`]).
-    pub async fn shutdown_and_join(self) -> Result<()> {
+    pub async fn shutdown_and_join(self) {
         self.cancel_token.cancel();
-        self.handle.await?
+        match self.handle.await {
+            Ok(Ok(())) => {
+                tracing::info!(
+                    job_id = ? self.id,
+                    "S3 scanner task completed successfully."
+                );
+            }
+            Ok(Err(_)) => {
+                // We don't need to log the error here because the underlying task will log it.
+                tracing::warn!(
+                    job_id = ? self.id,
+                    "S3 scanner task completed with an error."
+                );
+            }
+            Err(err) => {
+                tracing::warn!(
+                    error = ? err,
+                    job_id = ? self.id,
+                    "S3 scanner task panicked."
+                );
+                self.state
+                    .fail(format!("S3 scanner task panicked: {err}"))
+                    .await;
+            }
+        }
+        tracing::info!(job_id = ? self.id, "S3 scanner job shutdown complete.");
     }
 
     /// # Returns
     ///
-    /// The UUID of this scanner.
+    /// The ID of this scanner.
     #[must_use]
-    pub fn get_id(&self) -> String {
-        self.id.to_string()
+    pub const fn get_id(&self) -> IngestionJobId {
+        self.id
     }
 }

@@ -32,9 +32,9 @@ following commands to submit a query to clp-json and stream the results.
        -H "Content-Type: application/json" \
        -d '{
           "query_string": "*log*",
-          "dataset": "default",
+          "datasets": ["default"],
           "ignore_case": false,
-          "max_num_results": 100,
+          "max_num_results": 100
        }'
    ```
 
