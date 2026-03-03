@@ -596,6 +596,14 @@ IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag) {
     return IRErrorCode_Success;
 }
 
+auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result<encoded_tag_t> {
+    encoded_tag_t tag{};
+    if (ErrorCode_Success != reader.try_read_numeric_value(tag)) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    return tag;
+}
+
 IRErrorCode deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
@@ -680,6 +688,15 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
     }
     utc_offset = UtcOffset{serialized_utc_offset};
     return IRErrorCode_Success;
+}
+
+auto deserialize_utc_offset_change(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<UtcOffset> {
+    int64_t serialized_utc_offset{};
+    if (false == deserialize_int(reader, serialized_utc_offset)) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    return UtcOffset{serialized_utc_offset};
 }
 
 namespace four_byte_encoding {

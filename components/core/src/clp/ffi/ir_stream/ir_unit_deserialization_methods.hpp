@@ -47,16 +47,6 @@ namespace clp::ffi::ir_stream {
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>>;
 
 /**
- * Deserializes a UTC offset change IR unit.
- * @param reader
- * @return A result containing the new UTC offset or an error code indicating the failure:
- * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is truncated.
- * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
- */
-[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
-        -> ystdlib::error_handling::Result<UtcOffset>;
-
-/**
  * Deserializes a key-value pair log event IR unit.
  * @param reader
  * @param tag

@@ -70,6 +70,16 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
 [[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
 
 /**
+ * Deserializes the tag for the next packet.
+ * @param reader
+ * @return The tag of the next packet on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ * deserialize
+ */
+[[nodiscard]] auto deserialize_tag(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<encoded_tag_t>;
+
+/**
  * Deserializes a log event from the given stream
  * @tparam encoded_variable_t
  * @param reader
@@ -77,8 +87,8 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @param logtype Returns the logtype
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
- * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding case) or
- * the timestamp delta (in the four-byte encoding case)
+ * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding
+ * case) or the timestamp delta (in the four-byte encoding case)
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
@@ -210,6 +220,16 @@ IRErrorCode deserialize_preamble(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+
+/**
+ * Deserializes a UTC offset change packet.
+ * @param reader
+ * @return A result containing the deserialized UTC offset or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ * deserialize
+ */
+auto deserialize_utc_offset_change(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<UtcOffset>;
 
 /**
  * Validates whether the given protocol version can be supported by the current build.
