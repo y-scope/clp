@@ -1,7 +1,5 @@
 import argparse
 import datetime
-import logging
-import os
 import signal
 import sys
 import time
@@ -22,11 +20,10 @@ from clp_py_utils.clp_config import (
     OrchestrationType,
     StorageEngine,
 )
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
-    get_tags_table_name,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
@@ -271,14 +268,12 @@ def search_and_schedule_new_tasks(
         )
 
         # Prepare paths buffer
-        tag_ids = _get_tag_ids_for_job(db_context, clp_io_config, table_prefix, dataset)
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
             empty_directories_allowed=True,
             scheduling_job_id=job_id,
             clp_io_config=clp_io_config,
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
-            tag_ids=tag_ids,
         )
 
         # Process input paths
@@ -426,14 +421,8 @@ def main(argv) -> int | None:
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args = args_parser.parse_args(argv[1:])
 
-    # Setup logging
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "compression_scheduler.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-
-    # Update logging level based on config
-    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+    # Setup optional file logging and logging level.
+    configure_logging(logger, "compression_scheduler")
 
     # Register the SIGTERM handler
     signal.signal(signal.SIGTERM, sigterm_handler)
@@ -682,36 +671,6 @@ def _ensure_dataset_exists(
             clp_config.archive_output,
         )
         existing_datasets.add(dataset)
-
-
-def _get_tag_ids_for_job(
-    db_context: DbContext, clp_io_config: ClpIoConfig, table_prefix: str, dataset: str
-) -> list[int]:
-    """
-    Gets tag IDs for a compression job.
-
-    :param db_context:
-    :param clp_io_config:
-    :param table_prefix:
-    :param dataset:
-    :return: List of tag IDs.
-    """
-    tag_ids = []
-    if clp_io_config.output.tags:
-        tags_table_name = get_tags_table_name(table_prefix, dataset)
-        db_context.cursor.executemany(
-            f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
-            [(tag,) for tag in clp_io_config.output.tags],
-        )
-        db_context.connection.commit()
-        db_context.cursor.execute(
-            f"SELECT tag_id FROM {tags_table_name} WHERE tag_name IN (%s)"
-            % ", ".join(["%s"] * len(clp_io_config.output.tags)),
-            clp_io_config.output.tags,
-        )
-        tag_ids = [tags["tag_id"] for tags in db_context.cursor.fetchall()]
-        db_context.connection.commit()
-    return tag_ids
 
 
 def _handle_failed_compression_job(

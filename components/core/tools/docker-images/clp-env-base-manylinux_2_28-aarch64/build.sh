@@ -9,6 +9,7 @@ component_root="${script_dir}/../../../"
 
 build_cmd=(
     docker buildx build
+    --pull
     --platform linux/arm64
     --build-arg "ALMALINUX_MIRROR=${ALMALINUX_MIRROR:-}"
     --build-arg "QUAY_MIRROR=${QUAY_MIRROR:-quay.io}"

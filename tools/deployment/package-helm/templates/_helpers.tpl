@@ -111,48 +111,9 @@ Used for:
 {{- end }}
 
 {{/*
-Creates a local PersistentVolume.
-
-@param {object} root Root template context
-@param {string} component_category (e.g., "database", "shared-data")
-@param {string} name (e.g., "archives", "data", "logs")
-@param {string} nodeRole Node role for affinity. Targets nodes with label
-  "node-role.kubernetes.io/<nodeRole>". Always falls back to
-  "node-role.kubernetes.io/control-plane"
-@param {string} capacity Storage capacity
-@param {string[]} accessModes Access modes
-@param {string} hostPath Absolute path on host
-@return {string} YAML-formatted PersistentVolume resource
-*/}}
-{{- define "clp.createLocalPv" -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
-  labels:
-    {{- include "clp.labels" .root | nindent 4 }}
-    app.kubernetes.io/component: {{ .component_category | quote }}
-spec:
-  capacity:
-    storage: {{ .capacity }}
-  accessModes: {{ .accessModes }}
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: {{ .hostPath | quote }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: {{ printf "node-role.kubernetes.io/%s" .nodeRole | quote }}
-              operator: "Exists"
-        - matchExpressions:
-            - key: "node-role.kubernetes.io/control-plane"
-              operator: "Exists"
-{{- end }}
-
-{{/*
 Creates a PersistentVolumeClaim for the given component.
+
+Uses the cluster's default StorageClass for dynamic provisioning.
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
@@ -171,11 +132,6 @@ metadata:
     app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
   accessModes: {{ .accessModes }}
-  storageClassName: "local-storage"
-  selector:
-    matchLabels:
-      {{- include "clp.selectorLabels" .root | nindent 6 }}
-      app.kubernetes.io/component: {{ .component_category | quote }}
   resources:
     requests:
       storage: {{ .capacity }}
@@ -196,6 +152,131 @@ persistentVolumeClaim:
 {{- end }}
 
 {{/*
+Checks if a given service is in the bundled list.
+
+@param {object} root Root template context
+@param {string} service The service name to check (e.g., "database", "queue", "redis",
+  "results_cache")
+@return {string} "true" if bundled, empty string otherwise
+*/}}
+{{- define "clp.isBundled" -}}
+{{- if has .service .root.Values.clpConfig.bundled -}}true{{- end -}}
+{{- end }}
+
+
+{{/*
+Gets the host for the database service.
+
+@param {object} . Root template context
+@return {string} The database host
+*/}}
+{{- define "clp.databaseHost" -}}
+{{- if has "database" .Values.clpConfig.bundled -}}
+{{- printf "%s-database" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.database.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the database service.
+
+@param {object} . Root template context
+@return {string} The database port
+*/}}
+{{- define "clp.databasePort" -}}
+{{- if has "database" .Values.clpConfig.bundled -}}
+3306
+{{- else -}}
+{{- .Values.clpConfig.database.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the host for the queue service.
+
+@param {object} . Root template context
+@return {string} The queue host
+*/}}
+{{- define "clp.queueHost" -}}
+{{- if has "queue" .Values.clpConfig.bundled -}}
+{{- printf "%s-queue" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.queue.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the queue service.
+
+@param {object} . Root template context
+@return {string} The queue port
+*/}}
+{{- define "clp.queuePort" -}}
+{{- if has "queue" .Values.clpConfig.bundled -}}
+5672
+{{- else -}}
+{{- .Values.clpConfig.queue.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the host for the Redis service.
+
+@param {object} . Root template context
+@return {string} The Redis host
+*/}}
+{{- define "clp.redisHost" -}}
+{{- if has "redis" .Values.clpConfig.bundled -}}
+{{- printf "%s-redis" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.redis.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the Redis service.
+
+@param {object} . Root template context
+@return {string} The Redis port
+*/}}
+{{- define "clp.redisPort" -}}
+{{- if has "redis" .Values.clpConfig.bundled -}}
+6379
+{{- else -}}
+{{- .Values.clpConfig.redis.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the host for the results cache service.
+
+@param {object} . Root template context
+@return {string} The results cache host
+*/}}
+{{- define "clp.resultsCacheHost" -}}
+{{- if has "results_cache" .Values.clpConfig.bundled -}}
+{{- printf "%s-results-cache" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.results_cache.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the results cache service.
+
+@param {object} . Root template context
+@return {string} The results cache port
+*/}}
+{{- define "clp.resultsCachePort" -}}
+{{- if has "results_cache" .Values.clpConfig.bundled -}}
+27017
+{{- else -}}
+{{- .Values.clpConfig.results_cache.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Gets the BROKER_URL env var for Celery workers.
 
 @param {object} . Root template context
@@ -204,9 +285,10 @@ Gets the BROKER_URL env var for Celery workers.
 {{- define "clp.celeryBrokerUrlEnvVar" -}}
 {{- $user := .Values.credentials.queue.username -}}
 {{- $pass := .Values.credentials.queue.password -}}
-{{- $host := printf "%s-queue" (include "clp.fullname" .) -}}
+{{- $host := include "clp.queueHost" . -}}
+{{- $port := include "clp.queuePort" . | int -}}
 name: "BROKER_URL"
-value: {{ printf "amqp://%s:%s@%s:5672" $user $pass $host | quote }}
+value: {{ printf "amqp://%s:%s@%s:%d" $user $pass $host $port | quote }}
 {{- end }}
 
 {{/*
@@ -218,9 +300,10 @@ Gets the RESULT_BACKEND env var for Celery workers.
 */}}
 {{- define "clp.celeryResultBackendEnvVar" -}}
 {{- $pass := .root.Values.credentials.redis.password -}}
-{{- $host := printf "%s-redis" (include "clp.fullname" .root) -}}
+{{- $host := include "clp.redisHost" .root -}}
+{{- $port := include "clp.redisPort" .root | int -}}
 name: "RESULT_BACKEND"
-value: {{ printf "redis://default:%s@%s:6379/%d" $pass $host (int .database) | quote }}
+value: {{ printf "redis://default:%s@%s:%d/%d" $pass $host $port (int .database) | quote }}
 {{- end }}
 
 {{/*
@@ -297,3 +380,44 @@ command: [
   "--timeout=300s"
 ]
 {{- end }}
+
+{{/*
+Creates scheduling configuration (nodeSelector, affinity, tolerations, topologySpreadConstraints)
+for a component.
+
+When distributedDeployment is false (single-node mode), a control-plane toleration is automatically
+added so pods can be scheduled on tainted control-plane nodes without manual untainting.
+
+@param {object} root Root template context
+@param {string} component Key name in top-level Values (e.g., "compressionWorker", "queryWorker")
+@return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
+  topologySpreadConstraints)
+*/}}
+{{- define "clp.createSchedulingConfigs" -}}
+{{- $componentConfig := index .root.Values .component | default dict -}}
+{{- $scheduling := $componentConfig.scheduling | default dict -}}
+{{- $tolerations := $scheduling.tolerations | default list -}}
+{{- if not .root.Values.distributedDeployment -}}
+{{- $tolerations = append $tolerations (dict
+    "key" "node-role.kubernetes.io/control-plane"
+    "operator" "Exists"
+    "effect" "NoSchedule"
+) -}}
+{{- end -}}
+{{- with $scheduling.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $scheduling.affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with $scheduling.topologySpreadConstraints }}
+topologySpreadConstraints:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}{{/* define "clp.createSchedulingConfigs" */}}

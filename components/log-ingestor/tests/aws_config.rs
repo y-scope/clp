@@ -9,6 +9,7 @@ const DEFAULT_AWS_ACCOUNT_ID: &str = "000000000000";
 const DEFAULT_AWS_REGION: &str = "us-east-1";
 
 /// AWS service configuration for tests.
+#[derive(Clone)]
 pub struct AwsConfig {
     pub endpoint: NonEmptyString,
     pub access_key_id: String,

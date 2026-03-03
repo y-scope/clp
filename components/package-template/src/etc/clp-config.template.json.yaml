@@ -21,7 +21,7 @@
 #  # arrives.
 #  buffer_flush_timeout: 300
 #  # The log buffer size (in bytes) that triggers a flush for compression.
-#  buffer_flush_threshold: 268435456 # 256 MiB
+#  buffer_flush_threshold: 4294967296  # 4 GiB
 #  # The capacity of the internal channel used for communication between an ingestion job and the
 #  # log buffer.
 #  channel_capacity: 10
@@ -39,7 +39,12 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yaml"
 #
-#bundled: ["database", "queue", "redis", "results_cache"]
+## Remove any bundled services below if you wish to use your own.
+#bundled:
+#  - "database"
+#  - "queue"
+#  - "redis"
+#  - "results_cache"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -64,6 +69,7 @@
 #  host: "localhost"
 #  port: 7000
 #  jobs_poll_delay: 0.1  # seconds
+#  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
 #
