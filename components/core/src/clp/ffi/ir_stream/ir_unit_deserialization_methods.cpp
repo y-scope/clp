@@ -423,12 +423,11 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
 ) -> ystdlib::error_handling::Result<void> {
     auto const tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
 
-    auto encoded_text_ast_result{deserialize_encoded_text_ast<encoded_variable_t>(reader, tag)};
-    if (encoded_text_ast_result.has_error()) {
-        return to_ir_deserialization_error(encoded_text_ast_result.error());
-    }
+    auto encoded_text_ast{YSTDLIB_ERROR_HANDLING_TRYX(
+            deserialize_encoded_text_ast_result<encoded_variable_t>(reader, tag)
+    )};
 
-    node_id_value_pairs.emplace(node_id, Value{std::move(encoded_text_ast_result.value())});
+    node_id_value_pairs.emplace(node_id, Value{std::move(encoded_text_ast)});
     return ystdlib::error_handling::success();
 }
 

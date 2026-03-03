@@ -12,6 +12,7 @@
 #include "../EncodedTextAst.hpp"
 #include "../StringBlob.hpp"
 #include "byteswap.hpp"
+#include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
 
@@ -567,6 +568,28 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
     return std::move(encoded_text_ast_result.value());
 }
 
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+[[nodiscard]] auto
+deserialize_encoded_text_ast_result(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> ystdlib::error_handling::Result<EncodedTextAst<encoded_variable_t>> {
+    auto const result{deserialize_encoded_text_ast<encoded_variable_t>(reader, encoded_tag)};
+    if (result.has_error()) {
+        switch (result.error()) {
+            case IRErrorCode_Incomplete_IR:
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+            case IRErrorCode_Corrupted_IR:
+                return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
+            case IRErrorCode_Decode_Error:
+                return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
+            case IRErrorCode_Eof:
+                return IrDeserializationError{IrDeserializationErrorEnum::EndOfStream};
+            default:
+                return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
+        }
+    }
+    return result.value();
+}
+
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) {
     char buffer[cProtocol::MagicNumberLength];
     auto error_code = reader.try_read_exact_length(buffer, cProtocol::MagicNumberLength);
@@ -775,4 +798,14 @@ template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag
 ) -> boost::outcome_v2::std_checked<EncodedTextAst<eight_byte_encoded_variable_t>, IRErrorCode>;
+
+template auto deserialize_encoded_text_ast_result<four_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<EncodedTextAst<four_byte_encoded_variable_t>>;
+
+template auto deserialize_encoded_text_ast_result<eight_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<EncodedTextAst<eight_byte_encoded_variable_t>>;
 }  // namespace clp::ffi::ir_stream

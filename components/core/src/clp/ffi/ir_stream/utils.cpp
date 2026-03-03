@@ -70,20 +70,4 @@ auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
             return std::errc::not_supported;
     }
 }
-
-auto to_ir_deserialization_error(IRErrorCode ir_error_code) -> IrDeserializationError {
-    assert(IRErrorCode_Success != ir_error_code);
-    switch (ir_error_code) {
-        case IRErrorCode_Incomplete_IR:
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        case IRErrorCode_Corrupted_IR:
-            return IrDeserializationError{IrDeserializationErrorEnum::CorruptedIR};
-        case IRErrorCode_Decode_Error:
-            return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
-        case IRErrorCode_Eof:
-            return IrDeserializationError{IrDeserializationErrorEnum::EndOfStream};
-        default:
-            return IrDeserializationError{IrDeserializationErrorEnum::DecodingMethodFailure};
-    }
-}
 }  // namespace clp::ffi::ir_stream

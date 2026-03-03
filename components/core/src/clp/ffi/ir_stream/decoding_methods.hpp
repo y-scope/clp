@@ -141,6 +141,23 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
         -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode>;
 
 /**
+ * Deserializes an encoded text AST from the given reader.
+ * @tparam encoded_variable_t
+ * @param reader
+ * @param encoded_tag
+ * @return A result containing the deserialized encoded text AST on success, or an error code
+ *  indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data.
+ * - IrDeserializationErrorEnum::CorruptedIR if the IR stream is invalid.
+ * - IrDeserializationErrorEnum::DecodingMethodFailure on decode failure.
+ * - IrDeserializationErrorEnum::EndOfStream if the stream has reached end-of-file.
+ */
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+[[nodiscard]] auto
+deserialize_encoded_text_ast_result(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> ystdlib::error_handling::Result<EncodedTextAst<encoded_variable_t>>;
+
+/**
  * Decodes the IR message calls the given methods to handle each component of the message
  * @tparam unescape_logtype Whether to remove the escape characters from the logtype before calling
  * \p ConstantHandler
