@@ -35,11 +35,13 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
 
 /**
  * @param tag
- * @return The corresponding schema tree node type on success.
- * @return std::nullopt if the tag doesn't match to any defined schema tree node type.
+ * @return The corresponding schema tree node type on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't match to any defined schema
+ * tree node type.
  */
 [[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag)
-        -> std::optional<SchemaTree::Node::Type>;
+        -> ystdlib::error_handling::Result<SchemaTree::Node::Type>;
 
 /**
  * Deserializes the parent ID of a schema tree node.
@@ -49,8 +51,8 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  *   - Whether the node ID is for an auto-generated node.
  *   - The decoded node ID.
  * - The possible error codes:
- *   - Forwards `deserialize_tag`'s return values.
- * @return Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
+ *   - Forwards `deserialize_tag`'s return values on failure.
+ *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>>;
@@ -59,9 +61,9 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * Deserializes the key name of a schema tree node.
  * @param reader
  * @param key_name Returns the deserialized key name.
- * @return A void result on success.
- * @return Forwards `deserialize_tag`'s return values on failure.
- * @return Forwards `deserialize_string`'s return values on failure.
+ * @return A void result on success, or an error code indicating the failure:
+ * - Forwards `deserialize_tag`'s return values on failure.
+ * - Forwards `deserialize_string`'s return values on failure.
  */
 [[nodiscard]] auto
 deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
@@ -72,10 +74,10 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param reader
  * @param tag
  * @param val Returns the deserialized value.
- * @return A void result on success.
- * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * @return IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to an integer
- * packet.
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * - IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to an integer
+ *   packet.
  */
 [[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
         -> ystdlib::error_handling::Result<void>;
@@ -85,10 +87,9 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param reader
  * @param tag
  * @param deserialized_str Returns the deserialized string.
- * @return A void result on success.
- * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * @return IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to a string
- * packet.
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * - IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to a string packet.
  */
 [[nodiscard]] auto
 deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& deserialized_str)
@@ -104,10 +105,10 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  *   - The auto-generated node-ID-value pairs.
  *   - The IDs of all user-generated keys.
  * - The possible error codes:
- *   - Forwards `deserialize_tag`'s return values.
- *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  *   - IrDeserializationErrorEnum::InvalidKeyOrdering if the IR stream contains auto-generated key
  *     IDs *after* a user-generated key ID has been deserialized.
+ *   - Forwards `deserialize_tag`'s return values on failure.
+ *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values on failure
  */
 [[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         ReaderInterface& reader,
@@ -120,14 +121,14 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param tag
  * @param node_id The node ID that corresponds to the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
- * @return A void result on success.
- * @return IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * @return IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't correspond to any
- * known value type.
- * @return Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return
- * values on any other failure.
- * @return Forwards `deserialize_int_val`'s return values on failure.
- * @return Forwards `deserialize_string`'s return values on failure.
+ * @return A void result on success or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't correspond to any
+ *   known value type.
+ * - Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return values on
+ * failure.
+ * - Forwards `deserialize_int_val`'s return values on failure.
+ * - Forwards `deserialize_string`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
@@ -143,9 +144,9 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param node_id The node ID that corresponds to the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized encoded text
  * AST.
- * @return A void result on success.
- * @return Forwards `deserialize_tag`'s return values on failure.
- * @return Forwards `deserialize_encoded_text_ast`'s return values on failure.
+ * @return A void result on success, or an error code indicating the failure:
+ * - Forwards `deserialize_tag`'s return values on failure.
+ * - Forwards `deserialize_encoded_text_ast`'s return values on failure.
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
@@ -161,12 +162,10 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
  * @param tag
  * @param schema The log event's schema.
  * @param node_id_value_pairs Returns the constructed ID-value pairs.
- * @return A void result on success.
- * @return IrDeserializationErrorEnum::DuplicateKey if a key is duplicated in the deserialized log
- * event.
- * @return Forwards `deserialize_tag`'s return values on failure.
- * @return Forwards `deserialize_value_and_insert_to_node_id_value_pairs`'s return values on
- * failure.
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::DuplicateKey if a key is duplicated in the deserialized log event.
+ * - Forwards `deserialize_tag`'s return values on failure.
+ * - Forwards `deserialize_value_and_insert_to_node_id_value_pairs`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_value_and_construct_node_id_value_pairs(
         ReaderInterface& reader,
@@ -187,7 +186,8 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
  */
 [[nodiscard]] auto is_encoded_key_id_tag(encoded_tag_t tag) -> bool;
 
-auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree::Node::Type> {
+auto schema_tree_node_tag_to_type(encoded_tag_t tag)
+        -> ystdlib::error_handling::Result<SchemaTree::Node::Type> {
     switch (tag) {
         case cProtocol::Payload::SchemaTreeNodeInt:
             return SchemaTree::Node::Type::Int;
@@ -202,7 +202,7 @@ auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree
         case cProtocol::Payload::SchemaTreeNodeObj:
             return SchemaTree::Node::Type::Obj;
         default:
-            return std::nullopt;
+            return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedNodeType};
     }
 }
 
@@ -225,8 +225,7 @@ auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string&
     if (auto const err{deserialize_tag(reader, str_packet_tag)}; IRErrorCode_Success != err) {
         return to_ir_deserialization_error(err);
     }
-    YSTDLIB_ERROR_HANDLING_TRYV(deserialize_string(reader, str_packet_tag, key_name));
-    return ystdlib::error_handling::success();
+    return deserialize_string(reader, str_packet_tag, key_name);
 }
 
 auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
@@ -529,11 +528,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         encoded_tag_t tag,
         std::string& key_name
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    auto const type{schema_tree_node_tag_to_type(tag)};
-    if (false == type.has_value()) {
-        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedNodeType};
-    }
-
+    auto const type = YSTDLIB_ERROR_HANDLING_TRYX(schema_tree_node_tag_to_type(tag));
     auto const parent_node_id_result{deserialize_schema_tree_node_parent_id(reader)};
     if (parent_node_id_result.has_error()) {
         return parent_node_id_result.error();
@@ -541,7 +536,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
     auto const [is_auto_generated, parent_id]{parent_node_id_result.value()};
     YSTDLIB_ERROR_HANDLING_TRYV(deserialize_schema_tree_node_key_name(reader, key_name));
 
-    return {is_auto_generated, SchemaTree::NodeLocator{parent_id, key_name, type.value()}};
+    return {is_auto_generated, SchemaTree::NodeLocator{parent_id, key_name, type}};
 }
 
 auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
