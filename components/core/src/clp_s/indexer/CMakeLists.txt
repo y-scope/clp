@@ -31,6 +31,8 @@ set(
         ../../clp/ffi/ir_stream/decoding_methods.cpp
         ../../clp/ffi/ir_stream/decoding_methods.hpp
         ../../clp/ffi/ir_stream/decoding_methods.inc
+        ../../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../../clp/ffi/ir_stream/IrSerializationError.hpp
         ../../clp/ffi/ir_stream/protocol_constants.hpp
         ../../clp/ffi/ir_stream/utils.cpp
         ../../clp/ffi/ir_stream/utils.hpp
@@ -151,7 +153,7 @@ if(CLP_BUILD_EXECUTABLES)
                 spdlog::spdlog
                 ystdlib::containers
                 ystdlib::error_handling
-                ${zstd_TARGET}
+                zstd::libzstd_static
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
