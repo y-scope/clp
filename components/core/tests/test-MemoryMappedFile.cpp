@@ -2,6 +2,7 @@
 #include <array>
 #include <cstddef>
 #include <filesystem>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -45,7 +46,10 @@ TEST_CASE("memory_mapped_file_view_basic", "[ReadOnlyMemoryMappedFile]") {
     clp::FileReader file_reader{test_input_path.string()};
     auto const expected{read_content(file_reader)};
 
-    clp::ReadOnlyMemoryMappedFile const mmap_file{test_input_path.string()};
+    auto result{clp::ReadOnlyMemoryMappedFile::create(test_input_path.string())};
+    REQUIRE_FALSE(result.has_error());
+    auto const mmap_file{std::move(result.value())};
+
     auto const view{mmap_file.get_view()};
     REQUIRE((view.size() == expected.size()));
     REQUIRE(std::equal(view.begin(), view.end(), expected.cbegin()));
@@ -56,7 +60,11 @@ TEST_CASE("memory_mapped_file_view_empty", "[ReadOnlyMemoryMappedFile]") {
             get_test_dir() / std::filesystem::path{"test_schema_files"} / "empty_schema.txt"
     };
 
-    clp::ReadOnlyMemoryMappedFile const mmap_file{test_input_path.string()};
+    auto result{clp::ReadOnlyMemoryMappedFile::create(test_input_path.string())};
+    REQUIRE_FALSE(result.has_error());
+    auto const mmap_file{std::move(result.value())};
+
     auto const view{mmap_file.get_view()};
     REQUIRE(view.empty());
 }
+

@@ -21,6 +21,9 @@ DATABASE_DEFAULT_PORT = 3306
 PRESTO_QUERY_MEMORY_RATIO = 0.5
 PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 
+# S3 URL constant
+AWS_S3_DOMAIN = "amazonaws.com"
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -260,9 +263,6 @@ def _add_clp_s3_env_vars(
         s3_bucket = _get_required_config_value(
             clp_config, f"{s3_config_key}.bucket", clp_config_file_path
         )
-        s3_region_code = _get_required_config_value(
-            clp_config, f"{s3_config_key}.region_code", clp_config_file_path
-        )
 
         aws_auth_key = f"{s3_config_key}.aws_authentication"
         aws_auth_type_key = f"{aws_auth_key}.type"
@@ -284,13 +284,36 @@ def _add_clp_s3_env_vars(
     except KeyError:
         return False
 
+    s3_endpoint_url = _get_config_value(clp_config, f"{s3_config_key}.endpoint_url")
+    s3_region_code = _get_config_value(clp_config, f"{s3_config_key}.region_code")
+    s3_end_point = _resolve_s3_endpoint_url(s3_endpoint_url, s3_region_code, s3_bucket)
+
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
-    s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_BUCKET"] = s3_bucket
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
 
     return True
+
+
+def _resolve_s3_endpoint_url(
+    endpoint_url: str | None, region_code: str | None, bucket_name: str
+) -> str:
+    """
+    Returns the resolved S3 endpoint URL, or constructs an AWS S3 URL if not provided.
+
+    :param endpoint_url: Custom S3 endpoint URL.
+    :param region_code: AWS region code.
+    :param bucket_name:
+    :return: The S3 endpoint URL.
+    """
+    if endpoint_url is not None:
+        return endpoint_url.rstrip("/")
+
+    if region_code is None:
+        return f"https://{bucket_name}.s3.{AWS_S3_DOMAIN}"
+    return f"https://{bucket_name}.s3.{region_code}.{AWS_S3_DOMAIN}"
 
 
 def _add_memory_env_vars(env_vars: dict[str, str]) -> bool:
@@ -359,6 +382,7 @@ def _generate_worker_clp_properties(
             "clp.storage-type": "PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE",
             "clp.s3-auth-provider": "PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER",
             "clp.s3-access-key-id": "PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID",
+            "clp.s3-bucket": "PRESTO_WORKER_CLPPROPERTIES_S3_BUCKET",
             "clp.s3-end-point": "PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT",
             "clp.s3-secret-access-key": "PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY",
         }

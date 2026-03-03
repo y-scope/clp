@@ -38,12 +38,13 @@ enum class NodeType : uint8_t {
     Object,
     UnstructuredArray,
     NullValue,
-    DateString,
+    DeprecatedDateString,
     StructuredArray,
     Metadata,
     DeltaInteger,
     FormattedFloat,
     DictionaryFloat,
+    Timestamp,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
@@ -79,7 +80,7 @@ public:
               m_type(type),
               m_count(0),
               m_depth(depth) {
-        memcpy(m_key_name_buf.get(), key_name.begin(), key_name.size());
+        memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
     }
 
     /**

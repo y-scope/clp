@@ -1,8 +1,10 @@
 #ifndef CLP_SPDLOG_WITH_SPECIALIZATIONS_HPP
 #define CLP_SPDLOG_WITH_SPECIALIZATIONS_HPP
 
+#include <cstddef>
+
 #include <fmt/format.h>
-#include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>  // IWYU pragma: export
 
 #include "ErrorCode.hpp"
 #include "ffi/search/ExactVariableToken.hpp"

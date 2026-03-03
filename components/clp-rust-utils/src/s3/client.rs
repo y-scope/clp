@@ -22,18 +22,19 @@ pub async fn create_new_client(
     region_id: &str,
     endpoint: Option<&NonEmptyString>,
 ) -> Client {
-    let credential = Credentials::new(
+    let credentials = Credentials::new(
         access_key_id,
         secret_access_key,
         None,
         None,
-        "clp-credential-provider",
+        "clp-credentials-provider",
     );
-    let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let mut config_builder = Builder::from(&base_config)
-        .credentials_provider(credential)
-        .region(Some(Region::new(region_id.to_string())))
-        .force_path_style(true);
+    let base_config = aws_config::defaults(BehaviorVersion::latest())
+        .credentials_provider(credentials)
+        .region(Region::new(region_id.to_string()))
+        .load()
+        .await;
+    let mut config_builder = Builder::from(&base_config).force_path_style(true);
     config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
     let config = config_builder.build();
     Client::from_conf(config)

@@ -1,3 +1,4 @@
+{{- if has "queue" .Values.clpConfig.bundled }}
 apiVersion: "v1"
 kind: "Service"
 metadata:
@@ -13,3 +14,4 @@ spec:
   ports:
     - port: 5672
       targetPort: "queue"
+{{- end }}

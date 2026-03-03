@@ -69,7 +69,8 @@ public:
     bool has_array_search(int32_t schema_id);
 
 private:
-    std::unordered_map<uint32_t, std::set<ast::ColumnDescriptor*>> m_column_to_descriptor;
+    std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
+            m_column_to_descriptor;
     // TODO: The value in the map can be a set of k:v pairs with a hash & comparison
     // that only considers the key since each column descriptor only has one matching
     // column id per schema
@@ -91,21 +92,24 @@ private:
      * @param node_id
      * @return true if matching is successful, false otherwise
      */
-    bool populate_column_mapping(ast::ColumnDescriptor* column, int32_t node_id);
+    bool
+    populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column, int32_t node_id);
 
     /**
      * Populates the column mapping for a given column
      * @param column
      * @return
      */
-    bool populate_column_mapping(ast::ColumnDescriptor* column);
+    bool populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column);
 
     /**
      * Populates the column mapping for a given expression
      * @param cur
      * @return The transformed expression
      */
-    std::shared_ptr<ast::Expression> populate_column_mapping(std::shared_ptr<ast::Expression> cur);
+    std::shared_ptr<ast::Expression> populate_column_mapping(
+            std::shared_ptr<ast::Expression> const& cur
+    );
 
     /**
      * Populates the schema mapping

@@ -1,25 +1,26 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+mod clp_ingestion;
 
+use std::{collections::HashMap, sync::Arc};
+
+pub use clp_ingestion::*;
 use clp_rust_utils::{
     clp_config::{
         AwsAuthentication,
         AwsCredentials,
         package::{
-            config::{ArchiveOutput, Config as ClpConfig, LogsInput},
+            config::{Config as ClpConfig, LogsInput},
             credentials::Credentials as ClpCredentials,
         },
     },
-    job_config::ingestion::s3::{BaseConfig, S3ScannerConfig, SqsListenerConfig},
-    s3::ObjectMetadata,
+    job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
 };
-use non_empty_string::NonEmptyString;
-use tokio::sync::{Mutex, mpsc};
-use uuid::Uuid;
+use serde::Serialize;
+use tokio::sync::Mutex;
+use utoipa::ToSchema;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    compression::{Buffer, CompressionJobSubmitter, Listener},
-    ingestion_job::{IngestionJob, S3Scanner},
+    ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
 };
 
 /// Errors for ingestion job manager operations.
@@ -29,7 +30,7 @@ pub enum Error {
     InternalError(#[from] anyhow::Error),
 
     #[error("Ingestion job not found: {0}")]
-    JobNotFound(Uuid),
+    JobNotFound(IngestionJobId),
 
     #[error("Prefix conflict: {0}")]
     PrefixConflict(String),
@@ -37,8 +38,19 @@ pub enum Error {
     #[error("Custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
 
+    #[error("Invalid job config: {0}")]
+    InvalidConfig(#[from] ConfigError),
+
     #[error("A region code must be specified when using the default AWS endpoint")]
     MissingRegionCode,
+}
+
+/// Status of a terminated ingestion job.
+#[derive(Clone, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TerminalStatus {
+    Finished,
+    Failed,
 }
 
 /// An async-safe state for creating and managing ingestion jobs.
@@ -60,15 +72,18 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
-    /// * The logs input type in the CLP configuration is unsupported.
-    /// * Forwards [`clp_rust_utils::database::mysql::create_mysql_pool`]'s return values on
-    ///   failure.
+    /// * [`anyhow::Error`] if the logs input type in the CLP configuration is unsupported.
+    /// * Forwards [`ClpDbIngestionConnector::connect`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `clp_config.log_ingestor` is `None`.
     pub async fn from_config(
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<Self> {
-        let aws_credentials = match clp_config.logs_input {
-            LogsInput::S3 { config } => match config.aws_authentication {
+        let aws_credentials = match &clp_config.logs_input {
+            LogsInput::S3 { config } => match config.aws_authentication.clone() {
                 AwsAuthentication::Credentials { credentials } => credentials,
             },
             LogsInput::Fs { .. } => {
@@ -78,124 +93,134 @@ impl IngestionJobManagerState {
                 ));
             }
         };
-        let mysql_pool = clp_rust_utils::database::mysql::create_mysql_pool(
-            &clp_config.database,
-            &clp_credentials.database,
-            10,
-        )
-        .await?;
+
+        let (clp_db_ingestion_connector, recovery_context) =
+            ClpDbIngestionConnector::connect(clp_config, clp_credentials).await?;
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
-            buffer_flush_timeout: Duration::from_secs(
-                clp_config.log_ingestor.buffer_flush_timeout_sec,
-            ),
-            buffer_flush_threshold: clp_config.log_ingestor.buffer_flush_threshold,
-            channel_capacity: clp_config.log_ingestor.channel_capacity,
+            clp_db_ingestion_connector,
             aws_credentials,
-            archive_output_config: clp_config.archive_output,
-            mysql_pool,
         });
-        Ok(Self { inner })
+        let ingestion_job_manager = Self { inner };
+
+        // Recover log-ingestor
+        let (unfinished_compression_jobs, recoverable_ingestion_jobs, inactive_ingestion_jobs) = (
+            recovery_context.unfinished_compression_jobs,
+            recovery_context.recoverable_ingestion_jobs,
+            recovery_context.inactive_ingestion_jobs,
+        );
+        try_recover_waiting_coroutines_for_unfinished_compression_jobs(unfinished_compression_jobs);
+        try_recover_ingestion_job_instances(
+            ingestion_job_manager.clone(),
+            recoverable_ingestion_jobs,
+        )
+        .await;
+        try_recover_inactive_ingestion_jobs(inactive_ingestion_jobs).await;
+
+        Ok(ingestion_job_manager)
     }
 
-    /// Creates a new S3 scanner ingestion job.
+    /// Registers a new S3 ingestion job with the given config in CLP DB and creates a running job
+    /// instance in the underlying job table.
     ///
     /// # Returns
     ///
-    /// `Ok(Uuid)` containing the job ID on success.
+    /// The ID of the created ingestion job on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::MissingRegionCode`] if both the endpoint URL and region are unspecified.
-    /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
-    pub async fn create_s3_scanner_job(&self, config: S3ScannerConfig) -> Result<Uuid, Error> {
-        if config.base.endpoint_url.is_none() && config.base.region.is_none() {
-            return Err(Error::MissingRegionCode);
+    /// * Forwards [`Self::create_s3_ingestion_job_instance`]'s return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::create_ingestion_job`]'s return values on failure.
+    pub async fn register_and_create_s3_ingestion_job(
+        &self,
+        config: S3IngestionJobConfig,
+    ) -> Result<IngestionJobId, Error> {
+        let ingestion_job_context = self
+            .inner
+            .clp_db_ingestion_connector
+            .create_ingestion_job(config)
+            .await?;
+        let ingestion_state = ingestion_job_context.get_ingestion_state();
+        match self
+            .create_s3_ingestion_job_instance(ingestion_job_context)
+            .await
+        {
+            Ok(()) => Ok(ingestion_state.get_job_id()),
+            Err(e) => {
+                ingestion_state
+                    .fail(format!("Failed to add S3 ingestion job instance: {e}"))
+                    .await;
+                Err(e)
+            }
         }
-        let s3_client_manager = S3ClientWrapper::create(
-            config.base.region.as_ref(),
-            self.inner.aws_credentials.access_key_id.as_str(),
-            self.inner.aws_credentials.secret_access_key.as_str(),
-            config.base.endpoint_url.as_ref(),
-        )
-        .await;
-        self.create_s3_ingestion_job(config.base.clone(), move |job_id, sender| {
-            let scanner = S3Scanner::spawn(job_id, s3_client_manager, config, sender);
-            IngestionJob::S3Scanner(scanner)
-        })
-        .await
     }
 
-    /// Creates a new SQS listener ingestion job.
+    /// Shuts down and removes an ingestion job instance by its ID.
+    ///
+    /// # NOTE
+    ///
+    /// This method only removes the running job instance. It does not remove the job from CLP DB.
+    /// The job status and stats will still be accessible after calling this method.
     ///
     /// # Returns
     ///
-    /// `Ok(Uuid)` containing the job ID on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::create_s3_ingestion_job`]'s return values on failure.
-    pub async fn create_sqs_listener_job(&self, config: SqsListenerConfig) -> Result<Uuid, Error> {
-        let ingestion_job_config = config.base.clone();
-        if let Some(endpoint_url) = &ingestion_job_config.endpoint_url {
-            return Err(Error::CustomEndpointUrlNotSupported(format!(
-                "SQS listener ingestion jobs do not support custom endpoint URLs yet. Endpoint \
-                 URL: {endpoint_url}"
-            )));
-        }
-        let sqs_client_manager = SqsClientWrapper::create(
-            config.base.region.as_ref(),
-            self.inner.aws_credentials.access_key_id.as_str(),
-            self.inner.aws_credentials.secret_access_key.as_str(),
-        )
-        .await;
-        self.create_s3_ingestion_job(ingestion_job_config, move |job_id, sender| {
-            let listener = crate::ingestion_job::SqsListener::spawn(
-                job_id,
-                sqs_client_manager,
-                config,
-                sender,
-            );
-            IngestionJob::SqsListener(listener)
-        })
-        .await
-    }
-
-    /// Shuts down and removes an ingestion job by its ID.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
+    /// The terminal status of the job indicating whether it has stopped with an error.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
-    /// * Forwards [`IngestionJob::shutdown_and_join`]'s return value on failure.
-    /// * Forwards [`Listener::shutdown_and_join`]'s return value on failure.
-    pub async fn shutdown_and_remove_job(&self, job_id: Uuid) -> Result<(), Error> {
+    /// * Forwards [`ClpIngestionJobContext::shutdown`]'s return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::get_job_status`]' return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::try_fail`]'s return values on failure.
+    pub async fn shutdown_and_remove_job_instance(
+        &self,
+        job_id: IngestionJobId,
+    ) -> Result<TerminalStatus, Error> {
         let mut job_table = self.inner.job_table.lock().await;
         let job_to_remove = job_table.remove(&job_id);
         drop(job_table);
 
-        match job_to_remove {
-            Some(entry) => {
-                entry.ingestion_job.shutdown_and_join().await?;
-                tracing::debug!("Ingestion job {} shut down.", job_id);
-                entry.listener.shutdown_and_join().await?;
-                tracing::debug!("Ingestion job {}'s listener shut down.", job_id);
-                Ok(())
-            }
-            None => Err(Error::JobNotFound(job_id)),
+        if let Some(entry) = job_to_remove {
+            entry.ingestion_job_instance.shutdown_and_join().await;
+            return entry
+                .ingestion_job_context
+                .shutdown()
+                .await
+                .map_err(Into::into);
+        }
+
+        // The ID does not exist in the in-memory job table.
+        let Some(status) = self
+            .inner
+            .clp_db_ingestion_connector
+            .get_job_status(job_id)
+            .await?
+        else {
+            return Err(Error::JobNotFound(job_id));
+        };
+
+        if ClpIngestionJobStatus::Finished == status {
+            // The job has already finished. Keep the operation idempotent by not overwriting the
+            // status.
+            Ok(TerminalStatus::Finished)
+        } else {
+            self.inner
+                .clp_db_ingestion_connector
+                .try_fail(
+                    job_id,
+                    "Ingestion job instance not found on shutdown.".to_string(),
+                )
+                .await?;
+            Ok(TerminalStatus::Failed)
         }
     }
 
-    /// Creates a new S3 ingestion job with key prefix conflict detection.
+    /// Creates a new S3 ingestion job instance and adds it to the job table with key prefix
+    /// conflict detection.
     ///
     /// When multiple ingestion jobs run in parallel, this function ensures that key prefixes do not
     /// conflict with each other, preventing duplicate object ingestion.
@@ -207,38 +232,50 @@ impl IngestionJobManagerState {
     /// * The datasets of an existing job and the new job are identical, and
     /// * The key prefixes are not mutually prefix-free (i.e., one is a prefix of the other).
     ///
-    /// # Type Parameters
-    ///
-    /// * `JobCreationCallback` - A callback function type that the caller implements to create the
-    ///   ingestion job with the desired type.
-    ///
     /// # Returns
     ///
-    /// `Ok(Uuid)` containing the job ID on success.
+    /// `Ok(())` on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::InternalError`] if a job ID collision is detected (which is unlikely in
+    ///   practice).
     /// * [`Error::PrefixConflict`] if the given key prefix conflicts with an existing job's prefix.
-    async fn create_s3_ingestion_job<JobCreationCallback>(
+    /// * Forwards [`ValidatedSqsListenerConfig::validate_and_create`]'s return values on failure.
+    /// * Forwards [`ClpIngestionState::start`]'s return values on failure.
+    async fn create_s3_ingestion_job_instance(
         &self,
-        ingestion_job_config: BaseConfig,
-        create_ingestion_job: JobCreationCallback,
-    ) -> Result<Uuid, Error>
-    where
-        JobCreationCallback: FnOnce(Uuid, mpsc::Sender<ObjectMetadata>) -> IngestionJob, {
+        ingestion_job_context: ClpIngestionJobContext,
+    ) -> Result<(), Error> {
+        let base_config = ingestion_job_context
+            .get_ingestion_job_config()
+            .as_base_config()
+            .clone();
+        let job_id = ingestion_job_context.get_job_id();
         let mut job_table = self.inner.job_table.lock().await;
+
+        if job_table.contains_key(&job_id) {
+            return Err(Error::InternalError(anyhow::anyhow!(
+                "Job ID collision detected: An ingestion job with ID {job_id} already exists."
+            )));
+        }
+
         for table_entry in job_table.values() {
+            let existing_job_base_config = table_entry
+                .ingestion_job_context
+                .get_ingestion_job_config()
+                .as_base_config();
             // TODO: We should avoid being verbose for checking each field one by one (tracked by
             // #1805)
-            if table_entry.endpoint_url != ingestion_job_config.endpoint_url
-                || table_entry.region != ingestion_job_config.region
-                || table_entry.bucket_name != ingestion_job_config.bucket_name
-                || table_entry.dataset != ingestion_job_config.dataset
+            if existing_job_base_config.endpoint_url != base_config.endpoint_url
+                || existing_job_base_config.region != base_config.region
+                || existing_job_base_config.bucket_name != base_config.bucket_name
+                || existing_job_base_config.dataset != base_config.dataset
                 || is_mutually_prefix_free(
-                    table_entry.key_prefix.as_str(),
-                    ingestion_job_config.key_prefix.as_str(),
+                    existing_job_base_config.key_prefix.as_str(),
+                    base_config.key_prefix.as_str(),
                 )
             {
                 continue;
@@ -247,78 +284,72 @@ impl IngestionJobManagerState {
                 "Cannot create ingestion job with prefix '{}' as it conflicts with existing job \
                  with prefix '{}', which ingests from the same region and bucket into the same \
                  dataset.",
-                ingestion_job_config.key_prefix, table_entry.key_prefix
+                base_config.key_prefix, existing_job_base_config.key_prefix
             )));
         }
 
-        let job_id = {
-            loop {
-                let candidate_job_id = Uuid::new_v4();
-                if !job_table.contains_key(&candidate_job_id) {
-                    break candidate_job_id;
-                }
+        let ingestion_state = ingestion_job_context.get_ingestion_state();
+        let ingestion_job_instance = match ingestion_job_context.get_ingestion_job_config().clone()
+        {
+            S3IngestionJobConfig::SqsListener(config) => {
+                let sqs_client_manager = SqsClientWrapper::create(
+                    config.base.region.as_ref(),
+                    self.inner.aws_credentials.access_key_id.as_str(),
+                    self.inner.aws_credentials.secret_access_key.as_str(),
+                )
+                .await;
+                let validated_config = ValidatedSqsListenerConfig::validate_and_create(config)?;
+                ingestion_state.start().await?;
+                IngestionJob::SqsListener(crate::ingestion_job::SqsListener::spawn(
+                    job_id,
+                    &sqs_client_manager,
+                    &validated_config,
+                    ingestion_state.clone(),
+                ))
+            }
+            S3IngestionJobConfig::S3Scanner(config) => {
+                let s3_client_manager = S3ClientWrapper::create(
+                    config.base.region.as_ref(),
+                    self.inner.aws_credentials.access_key_id.as_str(),
+                    self.inner.aws_credentials.secret_access_key.as_str(),
+                    config.base.endpoint_url.as_ref(),
+                )
+                .await;
+                ingestion_state.start().await?;
+                IngestionJob::S3Scanner(S3Scanner::spawn(
+                    job_id,
+                    s3_client_manager,
+                    config,
+                    ingestion_state.clone(),
+                ))
             }
         };
 
-        // At this point, we use one listener per ingestion job. However, the listener itself is
-        // designed to be shared among multiple ingestion jobs in the future.
-        let job_listener = self.create_listener(&ingestion_job_config);
-        let sender = job_listener.get_new_sender();
         job_table.insert(
             job_id,
             IngestionJobTableEntry {
-                ingestion_job: create_ingestion_job(job_id, sender),
-                listener: job_listener,
-                bucket_name: ingestion_job_config.bucket_name,
-                region: ingestion_job_config.region,
-                key_prefix: ingestion_job_config.key_prefix,
-                endpoint_url: ingestion_job_config.endpoint_url,
-                dataset: ingestion_job_config.dataset,
+                ingestion_job_instance,
+                ingestion_job_context,
             },
         );
+
         drop(job_table);
 
-        Ok(job_id)
-    }
-
-    /// # Returns
-    ///
-    /// A new listener for receiving object metadata to ingest.
-    fn create_listener(&self, ingestion_job_config: &BaseConfig) -> Listener {
-        let submitter = CompressionJobSubmitter::new(
-            self.inner.mysql_pool.clone(),
-            self.inner.aws_credentials.clone(),
-            &self.inner.archive_output_config,
-            ingestion_job_config,
-        );
-        Listener::spawn(
-            Buffer::new(submitter, self.inner.buffer_flush_threshold),
-            self.inner.buffer_flush_timeout,
-            self.inner.channel_capacity,
-        )
+        Ok(())
     }
 }
 
 /// Internal shared states for managing ingestion jobs. Must be wrapped in an `Arc`.
 struct IngestionJobManager {
-    job_table: Mutex<HashMap<Uuid, IngestionJobTableEntry>>,
-    buffer_flush_timeout: Duration,
-    buffer_flush_threshold: u64,
-    channel_capacity: usize,
+    job_table: Mutex<HashMap<IngestionJobId, IngestionJobTableEntry>>,
+    clp_db_ingestion_connector: ClpDbIngestionConnector,
     aws_credentials: AwsCredentials,
-    archive_output_config: ArchiveOutput,
-    mysql_pool: sqlx::MySqlPool,
 }
 
 /// Represents an entry in the ingestion job table.
 struct IngestionJobTableEntry {
-    ingestion_job: IngestionJob,
-    listener: Listener,
-    region: Option<NonEmptyString>,
-    bucket_name: NonEmptyString,
-    key_prefix: NonEmptyString,
-    endpoint_url: Option<NonEmptyString>,
-    dataset: Option<NonEmptyString>,
+    ingestion_job_instance: IngestionJob<ClpIngestionState>,
+    ingestion_job_context: ClpIngestionJobContext,
 }
 
 /// # Returns:
@@ -327,4 +358,126 @@ struct IngestionJobTableEntry {
 /// vice versa.
 fn is_mutually_prefix_free(a: &str, b: &str) -> bool {
     !a.starts_with(b) && !b.starts_with(a)
+}
+
+/// Recovers coroutines to wait for the completion of unfinished compression jobs from the given
+/// list of waitable compression job contexts.
+fn try_recover_waiting_coroutines_for_unfinished_compression_jobs(
+    unfinished_compression_jobs: Vec<ClpCompressionJobContext>,
+) {
+    for compression_job_context in unfinished_compression_jobs {
+        let compression_job_id = compression_job_context.get_compression_job_id();
+        tracing::info!(
+            compression_job_id = ? compression_job_id,
+            "Recovering a coroutine to wait for an unfinished compression job on ingestion job \
+                recovery."
+        );
+        compression_job_context.detach_and_wait_for_completion_and_update_metadata();
+    }
+}
+
+/// Recovers ingestion job instances from the given list of recoverable ingestion job contexts.
+///
+/// For each recoverable ingestion job, this function attempts to:
+///
+/// 1. Refill the ingestion buffer with the buffered objects previously ingested.
+/// 2. Create a running ingestion job instance and adds it to the job table.
+///
+/// # NOTE
+///
+/// This method is best-effort. If an error happens, it will be logged and the recovery process for
+/// the given ingestion job will be skipped.
+async fn try_recover_ingestion_job_instances(
+    ingestion_job_manager: IngestionJobManagerState,
+    recoverable_ingestion_jobs: Vec<ClpIngestionJobContext>,
+) {
+    let mut num_recovered_jobs = 0;
+    for ingestion_job_context in recoverable_ingestion_jobs {
+        let job_id = ingestion_job_context.get_job_id();
+        tracing::info!(
+            job_id = ? job_id,
+            "Recovering ingestion job."
+        );
+
+        try_refill_ingestion_buffer(&ingestion_job_context).await;
+
+        tracing::info!(
+            job_id = ? job_id,
+            "Creating ingestion job instance on recovery."
+        );
+        if let Err(e) = ingestion_job_manager
+            .create_s3_ingestion_job_instance(ingestion_job_context)
+            .await
+        {
+            tracing::error!(
+                job_id = ? job_id,
+                error = ? e,
+                "Failed to create ingestion job instance on recovery. Recovery for this job \
+                    skipped."
+            );
+        } else {
+            num_recovered_jobs += 1;
+        }
+    }
+    tracing::info!("Ingestion job recovery completed. Total recovered jobs: {num_recovered_jobs}.");
+}
+
+/// Recovers inactive ingestion jobs from the given list of ingestion job context.
+///
+/// For inactive compression jobs, this function only refills their ingestion buffers. Once this
+/// function returns, the ingestion contexts are dropped, which closes the underlying compression
+/// listeners. Any remaining buffered objects will then be submitted for compression.
+///
+/// # NOTE
+///
+/// This method is best-effort. If an error happens, it will be logged and the recovery process for
+/// the given ingestion job will be skipped.
+async fn try_recover_inactive_ingestion_jobs(inactive_ingestion_jobs: Vec<ClpIngestionJobContext>) {
+    for ingestion_job_context in inactive_ingestion_jobs {
+        try_refill_ingestion_buffer(&ingestion_job_context).await;
+    }
+}
+
+/// Recovers the ingestion buffer by sending the previously buffered objects to the ingestion buffer
+/// sender for compression.
+///
+/// # NOTE
+///
+/// This method is best-effort. If an error happens, it will be logged and the recovery process for
+/// the given ingestion job will be skipped.
+async fn try_refill_ingestion_buffer(ingestion_job_context: &ClpIngestionJobContext) {
+    let job_id = ingestion_job_context.get_job_id();
+    tracing::info!(
+        job_id = ? job_id,
+        "Refilling ingestion buffer with previously buffered objects on recovery."
+    );
+
+    let ingestion_job_state = ingestion_job_context.get_ingestion_state();
+    let buffered_objects = match ingestion_job_state.get_buffered_object_metadata().await {
+        Ok(buffered_objects) => buffered_objects,
+        Err(e) => {
+            tracing::error!(
+                job_id = ? job_id,
+                error = ? e,
+                "Failed to get buffered objects on ingestion job recovery. Recovering skipped."
+            );
+            return;
+        }
+    };
+    tracing::info!(
+        job_id = ? job_id,
+        num_buffered_objects = ? buffered_objects.len(),
+        "Sending buffered objects to ingestion buffer on recovery."
+    );
+    if let Err(e) = ingestion_job_context
+        .get_ingestion_buffer_sender()
+        .send(buffered_objects)
+        .await
+    {
+        tracing::error!(
+            job_id = ? job_id,
+            error = ? e,
+            "Failed to send buffered objects to ingestion buffer on recovery. Recovering skipped."
+        );
+    }
 }

@@ -14,6 +14,7 @@ const From = () => {
         <div className={guidedGrid["gridItem"]}>
             <InputLabel width={LABEL_WIDTH}>FROM</InputLabel>
             <DatasetSelect
+                isMultiSelect={false}
                 className={
                     `${guidedGrid["noLeftBorderRadiusSelect"]} ${
                         guidedGrid["widthSelect"]}`

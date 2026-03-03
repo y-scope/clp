@@ -24,6 +24,7 @@ type FormValues = {
     paths: string[];
     dataset?: string;
     timestampKey?: string;
+    unstructured?: boolean;
 };
 
 
@@ -58,10 +59,14 @@ const Compress = () => {
         const payload: CompressionJobCreation = {paths: values.paths};
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            payload.dataset = ("undefined" === typeof values.dataset) ?
-                CLP_DEFAULT_DATASET_NAME :
-                values.dataset;
-            if ("undefined" !== typeof values.timestampKey) {
+            if ("undefined" === typeof values.dataset || 0 === values.dataset.length) {
+                payload.dataset = CLP_DEFAULT_DATASET_NAME;
+            } else {
+                payload.dataset = values.dataset;
+            }
+            if (true === values.unstructured) {
+                payload.unstructured = true;
+            } else if ("undefined" !== typeof values.timestampKey) {
                 payload.timestampKey = values.timestampKey;
             }
         }

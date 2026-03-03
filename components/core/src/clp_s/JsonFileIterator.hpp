@@ -24,7 +24,7 @@ public:
     explicit JsonFileIterator(
             clp::ReaderInterface& reader,
             size_t max_document_size,
-            size_t buf_size = 1024 * 1024 /*1MB default*/
+            size_t buf_size = 1024 * 1024 /* 1 MiB default */
     );
     ~JsonFileIterator();
 
