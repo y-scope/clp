@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 
-#include "../FileWriter.hpp"
+#include <clp_s/FileWriter.hpp>
 #include "BloomFilter.hpp"
 #include "FilterConfig.hpp"
 

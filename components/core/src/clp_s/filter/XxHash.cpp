@@ -1,6 +1,5 @@
 #include "XxHash.hpp"
 
-#define XXH_INLINE_ALL
 #include <xxhash.h>
 
 namespace clp_s::filter::xxhash {

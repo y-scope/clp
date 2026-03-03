@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "../FileWriter.hpp"
+#include <clp_s/FileWriter.hpp>
 
 namespace clp {
 class ReaderInterface;

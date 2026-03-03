@@ -3,7 +3,7 @@
 #include <optional>
 #include <string>
 
-#include "../../clp/string_utils/string_utils.hpp"
+#include <clp/string_utils/string_utils.hpp>
 #include "FilterFile.hpp"
 
 namespace clp_s::filter {

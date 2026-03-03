@@ -1,7 +1,7 @@
 #include "FilterBuilder.hpp"
 
-#include "../../clp/string_utils/string_utils.hpp"
-#include "../FileWriter.hpp"
+#include <clp/string_utils/string_utils.hpp>
+#include <clp_s/FileWriter.hpp>
 #include "FilterFile.hpp"
 
 namespace clp_s::filter {

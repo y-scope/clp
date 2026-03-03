@@ -2,8 +2,8 @@
 
 #include <cstring>
 
-#include "../../clp/ErrorCode.hpp"
-#include "../../clp/ReaderInterface.hpp"
+#include <clp/ErrorCode.hpp>
+#include <clp/ReaderInterface.hpp>
 
 namespace clp_s::filter {
 void write_filter_file(FileWriter& writer, FilterType type, BloomFilter const& filter) {

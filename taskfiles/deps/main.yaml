@@ -562,22 +562,19 @@ tasks:
   xxhash:
     internal: true
     vars:
-      LIB_NAME: "xxhash"
-      XXHASH_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      LIB_NAME: "xxHash"
     run: "once"
-    deps:
-      - task: "utils:init"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "baee0c6afd4f03165de7a4e67988d16f0f2b257b51d0e3cb91909302a26a79c4"
-          OUTPUT_DIR: "{{.XXHASH_OUTPUT_DIR}}"
-          URL: "https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.2.tar.gz"
-      - >-
-        echo "set(
-        CLP_XXHASH_INCLUDE_DIRECTORY \"{{.XXHASH_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+          CMAKE_GEN_ARGS:
+            - "-DXXHASH_BUILD_XXHSUM=OFF"
+            - "-DBUILD_SHARED_LIBS=ON"
+            - '-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install'
+          LIB_NAME: "{{.LIB_NAME}}"
+          TARBALL_SHA256: "aae608dfe8213dfd05d909a57718ef82f30722c392344583d3f39050c7f29a80"
+          TARBALL_URL: "https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.3.tar.gz"
+          CMAKE_SOURCE_DIR: "cmake_unofficial"
 
   yaml-cpp:
     internal: true

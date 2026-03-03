@@ -5,24 +5,29 @@
 #include <limits>
 #include <utility>
 
-#include "../../clp/ErrorCode.hpp"
-#include "../../clp/ReaderInterface.hpp"
+#include <clp/ErrorCode.hpp>
+#include <clp/ReaderInterface.hpp>
 #include "XxHash.hpp"
 
 namespace clp_s::filter {
 namespace {
-constexpr size_t kDefaultBitArraySize{64};
-constexpr uint32_t kDefaultNumHashFunctions{1};
-constexpr uint32_t kMinNumHashFunctions{1};
-constexpr uint32_t kMaxNumHashFunctions{20};
-constexpr uint64_t kPrimaryHashSeed{0};
-constexpr uint64_t kSecondaryHashSeed{0x9e37'79b9'7f4a'7c15ULL};
+constexpr size_t cDefaultBitArraySize{64};
+constexpr uint32_t cDefaultNumHashFunctions{1};
+constexpr uint32_t cMinNumHashFunctions{1};
+constexpr uint32_t cMaxNumHashFunctions{20};
+constexpr uint64_t cPrimaryHashSeed{0};
+constexpr uint64_t cSecondaryHashSeed{0x9e37'79b9'7f4a'7c15ULL};
+constexpr size_t cNumBitsInByte{8};
+
+size_t min_bytes_containing_bits(size_t num_bits) {
+    return (num_bits + (cNumBitsInByte - 1)) / cNumBitsInByte;
+}
 }  // namespace
 
 BloomFilter::BloomFilter()
-        : m_bit_array_size(kDefaultBitArraySize),
-          m_num_hash_functions(kDefaultNumHashFunctions),
-          m_bit_array((kDefaultBitArraySize + 7) / 8, 0) {}
+        : m_bit_array_size(cDefaultBitArraySize),
+          m_num_hash_functions(cDefaultNumHashFunctions),
+          m_bit_array(min_bytes_containing_bits(cDefaultBitArraySize), 0) {}
 
 BloomFilter::BloomFilter(size_t expected_num_elements, double false_positive_rate) {
     auto [bit_array_size, num_hash_functions]
@@ -31,14 +36,14 @@ BloomFilter::BloomFilter(size_t expected_num_elements, double false_positive_rat
     m_bit_array_size = bit_array_size;
     m_num_hash_functions = num_hash_functions;
 
-    size_t const num_bytes = (m_bit_array_size + 7) / 8;
+    size_t const num_bytes = min_bytes_containing_bits(m_bit_array_size);
     m_bit_array.resize(num_bytes, 0);
 }
 
 std::pair<size_t, uint32_t>
 BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate) {
     if (expected_num_elements == 0 || false_positive_rate <= 0.0 || false_positive_rate >= 1.0) {
-        return {kDefaultBitArraySize, kDefaultNumHashFunctions};
+        return {cDefaultBitArraySize, cDefaultNumHashFunctions};
     }
 
     double const ln2 = std::log(2.0);
@@ -49,7 +54,7 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
     if (false == std::isfinite(ideal_bit_array_size)
         || ideal_bit_array_size > static_cast<double>(std::numeric_limits<size_t>::max()))
     {
-        return {kDefaultBitArraySize, kDefaultNumHashFunctions};
+        return {cDefaultBitArraySize, cDefaultNumHashFunctions};
     }
     auto const bit_array_size
             = std::max<size_t>(1, static_cast<size_t>(std::ceil(ideal_bit_array_size)));
@@ -59,14 +64,14 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
     );
 
     uint32_t const capped_num_hash_functions
-            = std::clamp(num_hash_functions, kMinNumHashFunctions, kMaxNumHashFunctions);
+            = std::clamp(num_hash_functions, cMinNumHashFunctions, cMaxNumHashFunctions);
 
     return {bit_array_size, capped_num_hash_functions};
 }
 
 void BloomFilter::add(std::string_view value) {
-    uint64_t const h1 = xxhash::hash64(value, kPrimaryHashSeed);
-    uint64_t h2 = xxhash::hash64(value, kSecondaryHashSeed);
+    uint64_t const h1 = xxhash::hash64(value, cPrimaryHashSeed);
+    uint64_t h2 = xxhash::hash64(value, cSecondaryHashSeed);
     if (0 == h2) {
         h2 = 1;
     }
@@ -76,8 +81,8 @@ void BloomFilter::add(std::string_view value) {
 }
 
 bool BloomFilter::possibly_contains(std::string_view value) const {
-    uint64_t const h1 = xxhash::hash64(value, kPrimaryHashSeed);
-    uint64_t h2 = xxhash::hash64(value, kSecondaryHashSeed);
+    uint64_t const h1 = xxhash::hash64(value, cPrimaryHashSeed);
+    uint64_t h2 = xxhash::hash64(value, cSecondaryHashSeed);
     if (0 == h2) {
         h2 = 1;
     }
@@ -91,14 +96,14 @@ bool BloomFilter::possibly_contains(std::string_view value) const {
 }
 
 void BloomFilter::set_bit(size_t bit_index) {
-    size_t const byte_index = bit_index / 8;
-    size_t const bit_offset = bit_index % 8;
+    size_t const byte_index = bit_index / cNumBitsInByte;
+    size_t const bit_offset = bit_index % cNumBitsInByte;
     m_bit_array[byte_index] |= static_cast<uint8_t>(1u << bit_offset);
 }
 
 bool BloomFilter::test_bit(size_t bit_index) const {
-    size_t const byte_index = bit_index / 8;
-    size_t const bit_offset = bit_index % 8;
+    size_t const byte_index = bit_index / cNumBitsInByte;
+    size_t const bit_offset = bit_index % cNumBitsInByte;
     return (m_bit_array[byte_index] & static_cast<uint8_t>(1u << bit_offset)) != 0;
 }
 
@@ -116,7 +121,7 @@ bool BloomFilter::read_from_file(clp::ReaderInterface& reader) {
     if (clp::ErrorCode_Success != reader.try_read_numeric_value(num_hash_functions)) {
         return false;
     }
-    if (num_hash_functions < kMinNumHashFunctions || num_hash_functions > kMaxNumHashFunctions) {
+    if (num_hash_functions < cMinNumHashFunctions || num_hash_functions > cMaxNumHashFunctions) {
         return false;
     }
 
@@ -136,7 +141,7 @@ bool BloomFilter::read_from_file(clp::ReaderInterface& reader) {
     if (bit_array_bytes > std::numeric_limits<size_t>::max()) {
         return false;
     }
-    size_t const expected_bit_array_bytes = (bit_array_size + 7) / 8;
+    size_t const expected_bit_array_bytes = min_bytes_containing_bits(bit_array_size);
     if (bit_array_bytes != expected_bit_array_bytes) {
         return false;
     }
