@@ -30,6 +30,9 @@ pub enum ClientError {
 
     #[error("Invalid dataset name")]
     InvalidDatasetName,
+
+    #[error("Dataset not found: {0}")]
+    DatasetNotFound(String),
 }
 
 /// Empty trait to mark errors that indicate malformed data.

@@ -485,8 +485,8 @@ impl Client {
 
     /// Retrieves timestamp column names for a given dataset.
     ///
-    /// Queries the `clp_{dataset_name}_column_metadata` table for columns with type 14
-    /// (timestamp).
+    /// Queries the `clp_{dataset_name}_column_metadata` table for columns with type
+    /// [`TIMESTAMP_NODE_TYPE`].
     ///
     /// # Returns
     ///
@@ -497,23 +497,38 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
-    pub async fn get_timestamp_column_name(
+    pub async fn get_timestamp_column_names(
         &self,
         dataset_name: &str,
     ) -> Result<Vec<String>, ClientError> {
+        // Must be kept in sync with `NodeType::Timestamp` in
+        // `components/core/src/clp_s/SchemaTree.hpp`.
+        const TIMESTAMP_NODE_TYPE: i8 = 14;
+        // MySQL error number for "Table doesn't exist".
+        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
+
         static VALID_DATASET_NAME_REGEX: std::sync::LazyLock<regex::Regex> =
             std::sync::LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9_]+$").unwrap());
         if !VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
             return Err(ClientError::InvalidDatasetName);
         }
         let table_name = format!("clp_{dataset_name}_column_metadata");
-        // `14i32` must be kept in sync with `NodeType::Timestamp` in
-        // `components/core/src/clp_s/SchemaTree.hpp`.
         let rows = sqlx::query(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
-            .bind(14i32)
+            .bind(TIMESTAMP_NODE_TYPE)
             .fetch_all(&self.sql_pool)
-            .await?;
+            .await
+            .map_err(|err| {
+                if let sqlx::Error::Database(db_err) = &err
+                    && let Some(mysql_err) =
+                        db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                    && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                {
+                    return ClientError::DatasetNotFound(dataset_name.to_owned());
+                }
+                err.into()
+            })?;
 
         let names = rows
             .iter()
