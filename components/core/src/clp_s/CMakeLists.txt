@@ -9,6 +9,8 @@ option(
         ON
 )
 
+add_subdirectory(ffi)
+
 set(
         CLP_S_CLP_SOURCES
         ../clp/BoundedReader.cpp

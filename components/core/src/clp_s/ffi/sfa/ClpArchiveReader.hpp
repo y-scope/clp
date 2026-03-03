@@ -5,10 +5,10 @@
 #include <string>
 #include <string_view>
 #include <cstdint>
+#include <span>
 
+#include <clp_s/ArchiveReader.hpp>
 #include <ystdlib/error_handling/Result.hpp>
-
-#include "../../ArchiveReader.hpp"
 
 namespace clp_s::ffi::sfa {
 /**
@@ -24,6 +24,16 @@ public:
      * - `std::errc::io_error` if archive open/initialization fails.
      */
     [[nodiscard]] static auto create(std::string_view archive_path)
+            -> ystdlib::error_handling::Result<ClpArchiveReader>;
+
+    /**
+     * @param archive_data Bytes of a single-file archive.
+     * @param archive_id Identifier to assign to this archive.
+     * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
+     * error code indicating the failure:
+     * - `std::errc::io_error` if archive open/initialization fails.
+     */
+    [[nodiscard]] static auto create(std::span<char const> archive_data, std::string_view archive_id)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor

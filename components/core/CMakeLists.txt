@@ -404,6 +404,7 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/QueryRunner.hpp
     src/clp_s/search/SchemaMatch.cpp
     src/clp_s/search/SchemaMatch.hpp
+    src/clp_s/test/test_InputConfig.cpp
     src/clp_s/TimestampDictionaryReader.cpp
     src/clp_s/TimestampDictionaryReader.hpp
     src/clp_s/TimestampDictionaryWriter.cpp
@@ -715,6 +716,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-ffi_sfa_reader.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp

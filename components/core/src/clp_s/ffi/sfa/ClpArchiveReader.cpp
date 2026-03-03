@@ -1,7 +1,11 @@
 #include "ClpArchiveReader.hpp"
 
+#include <memory>
 #include <stdexcept>
 #include <system_error>
+
+#include <clp/BufferReader.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 namespace clp_s::ffi::sfa {
 auto ClpArchiveReader::create(std::string_view archive_path)
@@ -12,6 +16,19 @@ auto ClpArchiveReader::create(std::string_view archive_path)
         reader->open(path, NetworkAuthOption{});
 
         return ClpArchiveReader{std::move(reader)};
+    } catch (...) {
+        return std::errc::io_error;
+    }
+}
+
+auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_view archive_id)
+        -> ystdlib::error_handling::Result<ClpArchiveReader> {
+    try {
+        auto archive_reader = std::make_unique<clp_s::ArchiveReader>();
+        auto reader = std::make_shared<clp::BufferReader>(archive_data.data(), archive_data.size());
+        archive_reader->open(reader, archive_id);
+
+        return ClpArchiveReader{std::move(archive_reader)};
     } catch (...) {
         return std::errc::io_error;
     }
