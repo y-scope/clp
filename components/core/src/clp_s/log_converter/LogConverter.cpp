@@ -26,13 +26,14 @@ namespace {
  * minus sign for timezone offsets.
  */
 constexpr std::string_view cTimestampSchema{
-        R"(timestamp:(\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
+        R"(header:(?<timestamp>((\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
         R"(((Jan(uary){0,1})|(Feb(ruary){0,1})|(Mar(ch){0,1})|(Apr(il){0,1})|(May)|(Jun(e){0,1})|)"
         R"((Jul(y){0,1})|(Aug(ust){0,1})|(Sep(tember){0,1})|(Oct(ober){0,1})|(Nov(ember){0,1})|)"
-        R"((Dec(ember){0,1}))[ /\-]\d{2,4})[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
-        R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1})"
+        R"((Dec(ember){0,1}))[ /\-]\d{2,4}))[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
+        R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1}))"
 };
-constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n\[\(:)"};
+
+constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
 }  // namespace
 
 auto LogConverter::convert_file(

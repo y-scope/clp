@@ -28,9 +28,9 @@ pub struct QueryConfig {
     /// The search query as a KQL string.
     pub query_string: String,
 
-    /// The dataset to search within. If not provided, only `default` dataset will be searched.
+    /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub datasets: Option<Vec<String>>,
 
     /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
@@ -58,7 +58,7 @@ pub struct QueryConfig {
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
         Self {
-            dataset: value.dataset,
+            datasets: value.datasets,
             query_string: value.query_string,
             max_num_results: value.max_num_results,
             begin_timestamp: value.time_range_begin_millisecs,
@@ -128,10 +128,10 @@ impl Client {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.dataset.is_none() {
-            search_job_config.dataset = match self.config.package.storage_engine {
+        if search_job_config.datasets.is_none() {
+            search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some("default".to_owned()),
+                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
         }
         if search_job_config.max_num_results == 0 {
@@ -189,10 +189,13 @@ impl Client {
                 QueryJobStatus::Succeeded => {
                     break;
                 }
-                QueryJobStatus::Failed | QueryJobStatus::Cancelled | QueryJobStatus::Killed => {
+                QueryJobStatus::Failed
+                | QueryJobStatus::Cancelled
+                | QueryJobStatus::Killed
+                | QueryJobStatus::Cancelling => {
                     return Err(ClientError::QueryNotSucceeded);
                 }
-                QueryJobStatus::Running | QueryJobStatus::Pending | QueryJobStatus::Cancelling => {
+                QueryJobStatus::Running | QueryJobStatus::Pending => {
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
                     delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
                 }
@@ -216,6 +219,37 @@ impl Client {
         self.fetch_results_from_mongo(search_job_id)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
+    }
+
+    /// Submits a cancellation request for a search job.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::SearchJobNotFound`] if no matching job was found (e.g., the job doesn't
+    ///   exist or is not in a cancellable state).
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
+        let result = sqlx::query(&format!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
+        ))
+        .bind::<i32>(QueryJobStatus::Cancelling.into())
+        .bind(search_job_id)
+        .bind::<i32>(QueryJobStatus::Pending.into())
+        .bind::<i32>(QueryJobStatus::Running.into())
+        .execute(&self.sql_pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(ClientError::SearchJobNotFound(search_job_id));
+        }
+
+        Ok(())
     }
 
     /// Retrieves the status of a previously submitted search job.
