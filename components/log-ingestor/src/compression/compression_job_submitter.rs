@@ -9,6 +9,7 @@ use clp_rust_utils::{
     },
     job_config::{
         ClpIoConfig,
+        CompressionJobId,
         CompressionJobStatus,
         InputConfig,
         OutputConfig,
@@ -108,6 +109,55 @@ impl CompressionJobSubmitter {
     }
 }
 
+/// Waits for the compression job to complete and updates the submitted metadata in the state
+/// accordingly.
+///
+/// # NOTE
+///
+/// This function will be called inside a detached coroutine. Errors are logged only instead of
+/// returning them to the caller.
+pub async fn wait_for_compression_job_completion_and_update_metadata(
+    state: ClpCompressionState,
+    compression_job_id: CompressionJobId,
+    num_objects_submitted: usize,
+) {
+    let ingestion_job_id = state.get_ingestion_job_id();
+    match state
+        .wait_for_compression_and_update_submitted_metadata(
+            compression_job_id,
+            num_objects_submitted,
+        )
+        .await
+    {
+        Ok((compression_job_status, message)) => match compression_job_status {
+            CompressionJobStatus::Succeeded => tracing::info!(
+                ingestion_job_id = ? ingestion_job_id,
+                compression_job_id = ? compression_job_id,
+                "Compression job succeeded."
+            ),
+            CompressionJobStatus::Failed | CompressionJobStatus::Killed => tracing::warn!(
+                ingestion_job_id = ? ingestion_job_id,
+                compression_job_id = ? compression_job_id,
+                compression_job_status = ? compression_job_status,
+                compression_job_status_msg = ? message,
+                "Compression job failed."
+            ),
+            _ => unreachable!(
+                "Unknown compression job status: {:?}",
+                compression_job_status
+            ),
+        },
+        Err(e) => {
+            tracing::error!(
+                ingestion_job_id = ? ingestion_job_id,
+                compression_job_id = ? compression_job_id,
+                error = ? e,
+                "Failed to wait for CLP compression job completion."
+            );
+        }
+    }
+}
+
 /// Submits a CLP compression job with the given IO config template and waits for its completion.
 ///
 /// # NOTE
@@ -143,41 +193,10 @@ async fn submit_clp_compression_job_and_wait_for_completion(
         "Compression job submitted."
     );
 
-    let (compression_job_status, message) = match state
-        .wait_for_compression_and_update_submitted_metadata(
-            compression_job_id,
-            num_objects_submitted,
-        )
-        .await
-    {
-        Ok(result_pair) => result_pair,
-        Err(e) => {
-            tracing::error!(
-                ingestion_job_id = ? ingestion_job_id,
-                compression_job_id = ? compression_job_id,
-                error = ? e,
-                "Failed to wait for CLP compression job completion."
-            );
-            return;
-        }
-    };
-
-    match compression_job_status {
-        CompressionJobStatus::Succeeded => tracing::info!(
-            ingestion_job_id = ? ingestion_job_id,
-            compression_job_id = ? compression_job_id,
-            "Compression job succeeded."
-        ),
-        CompressionJobStatus::Failed | CompressionJobStatus::Killed => tracing::warn!(
-            ingestion_job_id = ? ingestion_job_id,
-            compression_job_id = ? compression_job_id,
-            compression_job_status = ? compression_job_status,
-            compression_job_status_msg = ? message,
-            "Compression job failed."
-        ),
-        _ => unreachable!(
-            "Unknown compression job status: {:?}",
-            compression_job_status
-        ),
-    }
+    wait_for_compression_job_completion_and_update_metadata(
+        state,
+        compression_job_id,
+        num_objects_submitted,
+    )
+    .await;
 }
