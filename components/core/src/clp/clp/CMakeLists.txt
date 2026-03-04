@@ -93,6 +93,7 @@ set(
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
         ../ReadOnlyMemoryMappedFile.hpp
+        ../ScopedProfiler.hpp
         ../spdlog_with_specializations.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp

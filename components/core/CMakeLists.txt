@@ -631,6 +631,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
         src/clp/ReadOnlyMemoryMappedFile.hpp
+        src/clp/ScopedProfiler.hpp
         src/clp/spdlog_with_specializations.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp
