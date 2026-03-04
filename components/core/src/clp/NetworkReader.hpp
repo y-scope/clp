@@ -70,8 +70,8 @@ public:
      * CURL error details set by the underlying CURL handler.
      */
     struct CurlErrorInfo {
-        CURLcode code;
-        std::string_view message;
+        CURLcode const code;
+        std::string_view const message;
     };
 
     // Constants
