@@ -95,6 +95,12 @@ option(
     ON
 )
 
+option(
+    CLP_BUILD_CLP_S_ENABLE_CURL
+    "Include libcurl support for clp-s."
+    ON
+)
+
 # Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
 #
 # @param {string} TARGET_CLP_BUILD_OPTION

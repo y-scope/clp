@@ -14,13 +14,13 @@
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#if !CLP_S_EXCLUDE_LIBCURL
+#if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/aws/AwsAuthenticationSigner.hpp"
 #endif
 #include "../clp/BufferedReader.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
-#if !CLP_S_EXCLUDE_LIBCURL
+#if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/NetworkReader.hpp"
 #endif
 #include "../clp/ReaderInterface.hpp"
@@ -159,7 +159,7 @@ auto try_create_file_reader(std::string_view const file_path)
     }
 }
 
-#if CLP_S_EXCLUDE_LIBCURL
+#if !CLP_BUILD_CLP_S_ENABLE_CURL
 auto try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth)
         -> std::shared_ptr<clp::ReaderInterface> {
     std::ignore = url;

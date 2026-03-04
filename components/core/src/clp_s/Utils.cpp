@@ -11,7 +11,7 @@
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
-#if !CLP_S_EXCLUDE_LIBCURL
+#if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/NetworkReader.hpp"
 #endif
 #include "archive_constants.hpp"
@@ -152,7 +152,7 @@ bool FileUtils::get_last_non_empty_path_component(std::string_view const path, s
     return false;
 }
 
-#if CLP_S_EXCLUDE_LIBCURL
+#if !CLP_BUILD_CLP_S_ENABLE_CURL
 auto
 NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
         -> bool {

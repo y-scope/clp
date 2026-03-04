@@ -3,12 +3,6 @@ add_subdirectory(log_converter)
 add_subdirectory(search)
 add_subdirectory(timestamp_parser)
 
-option(
-        CLP_S_EXCLUDE_LIBCURL
-        "Exclude libcurl support from clp-s."
-        ON
-)
-
 set(
         CLP_S_CLP_SOURCES
         ../clp/BoundedReader.cpp
@@ -131,7 +125,7 @@ set(
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
 )
-if(NOT CLP_S_EXCLUDE_LIBCURL)
+if(CLP_BUILD_CLP_S_ENABLE_CURL)
         list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
 endif()
 
@@ -159,7 +153,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 spdlog::spdlog
                 ystdlib::error_handling
         )
-        if(NOT CLP_S_EXCLUDE_LIBCURL)
+        if(CLP_BUILD_CLP_S_ENABLE_CURL)
                 target_link_libraries(
                         clp_s_clp_dependencies
                         PRIVATE
@@ -240,7 +234,7 @@ if(CLP_BUILD_CLP_S_IO)
         target_compile_definitions(
                 clp_s_io
                 PRIVATE
-                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
         )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
@@ -307,7 +301,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
         target_compile_definitions(
                 clp_s_archive_writer
                 PRIVATE
-                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
         )
         target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_writer PUBLIC ../)
@@ -376,7 +370,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
         target_compile_definitions(
                 clp_s_archive_reader
                 PRIVATE
-                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
         )
         target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_reader PUBLIC ../)
@@ -473,7 +467,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_definitions(
                 clp-s
                 PRIVATE
-                CLP_S_EXCLUDE_LIBCURL=$<BOOL:${CLP_S_EXCLUDE_LIBCURL}>
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
         )
         target_compile_features(clp-s PRIVATE cxx_std_20)
         target_include_directories(clp-s PRIVATE ../)
