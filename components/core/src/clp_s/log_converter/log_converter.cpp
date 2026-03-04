@@ -71,6 +71,15 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
     }
 
     for (auto const& path : command_line_arguments.get_input_paths()) {
+        if (clp_s::InputSource::Filesystem == path.source) {
+            std::error_code ec{};
+            auto const file_size{std::filesystem::file_size(path.path, ec)};
+            if (std::errc{} == ec && 0 == file_size) {
+                SPDLOG_INFO("Skipping empty file: {}", path.path);
+                continue;
+            }
+        }
+
         auto reader{clp_s::try_create_reader(path, command_line_arguments.get_network_auth())};
         if (nullptr == reader) {
             SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
