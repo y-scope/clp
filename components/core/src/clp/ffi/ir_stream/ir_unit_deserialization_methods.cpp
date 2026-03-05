@@ -218,8 +218,11 @@ auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
 
 auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
         -> ystdlib::error_handling::Result<void> {
-    auto const str_packet_tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
-    return deserialize_string(reader, str_packet_tag, key_name);
+    return deserialize_string(
+            reader,
+            YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader)),
+            key_name
+    );
 }
 
 auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
