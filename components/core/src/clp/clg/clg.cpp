@@ -478,7 +478,7 @@ static void print_result_binary(
 }
 
 int main(int argc, char const* argv[]) {
-    PROFILE_SCOPE(Profiler::FragmentedMeasurementIndex::Search);
+    PROFILE_SCOPE("clg::main");
 
     // Program-wide initialization
     try {

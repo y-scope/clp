@@ -23,7 +23,8 @@ using std::vector;
 
 namespace clp::clp {
 int run(int argc, char const* argv[]) {
-    PROFILE_SCOPE(Profiler::FragmentedMeasurementIndex::Compression);
+    ProfilerReporter profiler_reporter;
+    PROFILE_SCOPE("clp::main");
 
     // Program-wide initialization
     try {
@@ -34,7 +35,6 @@ int run(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    ProfilerReporter profiler_reporter;
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clp");

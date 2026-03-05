@@ -125,7 +125,7 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive& archive_writer,
         bool use_heuristic
 ) {
-    PROFILE_SCOPE(Profiler::FragmentedMeasurementIndex::ParseLogFile);
+    PROFILE_SCOPE("FileCompressor::compress_file");
 
     string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
 
