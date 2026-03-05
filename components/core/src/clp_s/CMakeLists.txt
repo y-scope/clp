@@ -156,8 +156,9 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         if(CLP_BUILD_CLP_S_ENABLE_CURL)
                 target_link_libraries(
                         clp_s_clp_dependencies
-                        PRIVATE
+                        PUBLIC
                         ${CURL_LIBRARIES}
+                        PRIVATE
                         OpenSSL::Crypto
                 )
         endif()
