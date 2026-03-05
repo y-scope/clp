@@ -513,7 +513,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         encoded_tag_t tag,
         std::string& key_name
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    auto const type = YSTDLIB_ERROR_HANDLING_TRYX(schema_tree_node_tag_to_type(tag));
+    auto const type{YSTDLIB_ERROR_HANDLING_TRYX(schema_tree_node_tag_to_type(tag))};
     auto const parent_node_id_result{deserialize_schema_tree_node_parent_id(reader)};
     if (parent_node_id_result.has_error()) {
         return parent_node_id_result.error();
