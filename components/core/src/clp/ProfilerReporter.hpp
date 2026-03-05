@@ -14,6 +14,8 @@ namespace clp {
  * Usage:
  * - Define a `ProfilerReporter` at any logical unit that encompasses all operations you want to
  *   profile. A common place is in the `main()` function of an executables.
+ * - If `ScopedProfiler` or `Profiler` is used in the same scope as `ProfilerReporter`,
+ *   `ProfilerReporter`must be declared first, such that its destructor is called last.
  * - Once the object is destructured (scope exit), the runtime measurmenets are reported.
  *
  * Notes:

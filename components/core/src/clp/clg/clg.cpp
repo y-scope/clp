@@ -478,6 +478,7 @@ static void print_result_binary(
 }
 
 int main(int argc, char const* argv[]) {
+    ProfilerReporter profiler_reporter;
     PROFILE_SCOPE("clg::main");
 
     // Program-wide initialization
@@ -489,7 +490,6 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    ProfilerReporter profiler_reporter;
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clg");
