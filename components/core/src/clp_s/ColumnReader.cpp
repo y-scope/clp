@@ -16,15 +16,13 @@
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/ColumnWriter.hpp>
 #include <clp_s/Defs.hpp>
-#include <clp_s/ErrorCode.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
-#include <clp_s/ReaderUtils.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/Utils.hpp>
 
 namespace clp_s {
 auto Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_values = reader.read_unaligned_span<int64_t>(num_messages);
+    m_values = reader.read_unaligned_span_u64<int64_t>(num_messages);
 }
 
 auto Int64ColumnReader::extract_value(uint64_t cur_message)
@@ -33,7 +31,7 @@ auto Int64ColumnReader::extract_value(uint64_t cur_message)
 }
 
 auto DeltaEncodedInt64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_values = reader.read_unaligned_span<int64_t>(num_messages);
+    m_values = reader.read_unaligned_span_u64<int64_t>(num_messages);
     if (num_messages > 0) {
         m_cur_idx = 0;
         m_cur_value = m_values[0];
@@ -62,12 +60,12 @@ auto DeltaEncodedInt64ColumnReader::extract_value(uint64_t cur_message)
 }
 
 auto FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_values = reader.read_unaligned_span<double>(num_messages);
+    m_values = reader.read_unaligned_span_u64<double>(num_messages);
 }
 
 auto FormattedFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_values = reader.read_unaligned_span<double>(num_messages);
-    m_formats = reader.read_unaligned_span<float_format_t>(num_messages);
+    m_values = reader.read_unaligned_span_u64<double>(num_messages);
+    m_formats = reader.read_unaligned_span_u64<float_format_t>(num_messages);
 }
 
 auto Int64ColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
@@ -93,7 +91,7 @@ auto FormattedFloatColumnReader::extract_value(uint64_t cur_message)
 }
 
 auto BooleanColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_values = reader.read_unaligned_span<uint8_t>(num_messages);
+    m_values = reader.read_unaligned_span_u64<uint8_t>(num_messages);
 }
 
 auto FloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
@@ -114,7 +112,7 @@ auto BooleanColumnReader::extract_value(uint64_t cur_message)
 }
 
 auto DictionaryFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_var_dict_ids = reader.read_unaligned_span<variable_dictionary_id_t>(num_messages);
+    m_var_dict_ids = reader.read_unaligned_span_u64<variable_dictionary_id_t>(num_messages);
 }
 
 auto DictionaryFloatColumnReader::extract_value(uint64_t cur_message)
@@ -130,21 +128,10 @@ auto DictionaryFloatColumnReader::extract_string_value_into_buffer(
 }
 
 auto ClpStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    auto const num_messages_result = ReaderUtils::try_uint64_to_size_t(num_messages);
-    if (num_messages_result.has_error()) {
-        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-    }
-    m_logtypes = reader.read_unaligned_span<uint64_t>(num_messages_result.value());
+    m_logtypes = reader.read_unaligned_span_u64<uint64_t>(num_messages);
 
     auto const encoded_vars_length_u64{reader.read_value<uint64_t>()};
-    auto const encoded_vars_length_result
-            = ReaderUtils::try_uint64_to_size_t(encoded_vars_length_u64);
-    if (encoded_vars_length_result.has_error()) {
-        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-    }
-    auto const encoded_vars_length = encoded_vars_length_result.value();
-
-    m_encoded_vars = reader.read_unaligned_span<int64_t>(encoded_vars_length);
+    m_encoded_vars = reader.read_unaligned_span_u64<int64_t>(encoded_vars_length_u64);
 }
 
 auto
@@ -217,7 +204,7 @@ auto ClpStringColumnReader::get_encoded_vars(uint64_t cur_message) -> UnalignedM
 }
 
 auto VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_variables = reader.read_unaligned_span<uint64_t>(num_messages);
+    m_variables = reader.read_unaligned_span_u64<uint64_t>(num_messages);
 }
 
 auto VariableStringColumnReader::extract_value(uint64_t cur_message)
@@ -245,8 +232,8 @@ auto VariableStringColumnReader::get_variable_id(uint64_t cur_message) -> uint64
 
 auto DeprecatedDateStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages)
         -> void {
-    m_timestamps = reader.read_unaligned_span<int64_t>(num_messages);
-    m_timestamp_encodings = reader.read_unaligned_span<int64_t>(num_messages);
+    m_timestamps = reader.read_unaligned_span_u64<int64_t>(num_messages);
+    m_timestamp_encodings = reader.read_unaligned_span_u64<int64_t>(num_messages);
 }
 
 auto DeprecatedDateStringColumnReader::extract_value(uint64_t cur_message)
@@ -273,7 +260,7 @@ auto DeprecatedDateStringColumnReader::get_encoded_time(uint64_t cur_message) ->
 
 auto TimestampColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
     m_timestamps.load(reader, num_messages);
-    m_timestamp_encodings = reader.read_unaligned_span<uint64_t>(num_messages);
+    m_timestamp_encodings = reader.read_unaligned_span_u64<uint64_t>(num_messages);
 }
 
 auto TimestampColumnReader::extract_value(uint64_t cur_message)
