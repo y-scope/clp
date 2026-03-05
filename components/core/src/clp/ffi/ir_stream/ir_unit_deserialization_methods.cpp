@@ -121,7 +121,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param tag
  * @param node_id The node ID that corresponds to the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
- * @return A void result on success or an error code indicating the failure:
+ * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't correspond to any
  *   known value type.
