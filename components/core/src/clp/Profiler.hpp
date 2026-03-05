@@ -70,8 +70,32 @@ public:
         }
     }
 
+    static auto check_init() -> bool {
+        if constexpr (PROF_ACTIVE) {
+            if (false == m_initialized) {
+                SPDLOG_ERROR("Profiler used without calling Profiler::init()");
+            }
+            return m_initialized;
+        }
+        return false;
+    }
+
+    static auto check_runtime_timer_exists(std::string const& name) -> bool {
+        if constexpr (PROF_ACTIVE) {
+            if (false == m_runtime_measurements.contains(name)) {
+                SPDLOG_ERROR("Attempt to get runtime measurment of non existent timer {}", name);
+                return false;;
+            }
+            return true;
+        }
+        return false;
+    }
+
     static auto start_runtime_measurement(std::string const& name) -> void {
         if constexpr (PROF_ACTIVE) {
+            if (false == check_init()) {
+                return;
+            }
             // implicitly creates the timer if it doesn't exist yet
             m_runtime_measurements[name].start();
         }
@@ -79,18 +103,27 @@ public:
 
     static auto stop_runtime_measurement(std::string const& name) -> void {
         if constexpr (PROF_ACTIVE) {
+            if (false == check_init() || false == check_runtime_timer_exists(name)) {
+                return;
+            }
             m_runtime_measurements[name].stop();
         }
     }
 
     static auto reset_runtime_measurement(std::string const& name) -> void {
         if constexpr (PROF_ACTIVE) {
+            if (false == check_init() || false == check_runtime_timer_exists(name)) {
+                return;
+            }
             m_runtime_measurements[name].reset();
         }
     }
 
     static auto get_runtime_measurement_in_seconds(std::string const& name) -> double {
         if constexpr (PROF_ACTIVE) {
+            if (false == check_init() || false == check_runtime_timer_exists(name)) {
+                return 0;
+            }
             return m_runtime_measurements[name].get_time_taken_in_seconds();
         } else {
             return 0;
@@ -98,38 +131,55 @@ public:
     }
 
     static auto print_all_runtime_measurements() -> void {
-        for (auto const& [name, stopwatch] : m_runtime_measurements) {
-            SPDLOG_INFO("Measurement {}: {} s", name, get_runtime_measurement_in_seconds(name));
+        if constexpr (PROF_ACTIVE) {
+            if (false == check_init()) {
+                return;
+            }
+            for (auto const& [name, stopwatch] : m_runtime_measurements) {
+                SPDLOG_INFO("Measurement {}: {} s", name, get_runtime_measurement_in_seconds(name));
+            }
         }
     }
 
     template <CompileTimeMeasurementIndex index>
-    static void start_compile_time_measurement() {
+    static auto start_compile_time_measurement() -> void {
         if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)])
         {
+            if (false == check_init()) {
+                return;
+            }
             (*m_compile_time_measurements)[enum_to_underlying_type(index)].start();
         }
     }
 
     template <CompileTimeMeasurementIndex index>
-    static void stop_compile_time_measurement() {
+    static auto stop_compile_time_measurement() -> void {
         if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)])
         {
+            if (false == check_init()) {
+                return;
+            }
             (*m_compile_time_measurements)[enum_to_underlying_type(index)].stop();
         }
     }
 
     template <CompileTimeMeasurementIndex index>
-    static void reset_compile_time_measurement() {
+    static auto reset_compile_time_measurement() -> void {
         if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)])
         {
+            if (false == check_init()) {
+                return;
+            }
             (*m_compile_time_measurements)[enum_to_underlying_type(index)].reset();
         }
     }
 
     template <CompileTimeMeasurementIndex index>
-    static double get_compile_time_measurement_in_seconds() {
+    static auto get_compile_time_measurement_in_seconds() -> double {
         if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)]) {
+            if (false == check_init()) {
+                return 0;
+            }
             return (*m_compile_time_measurements)[enum_to_underlying_type(index)]
                     .get_time_taken_in_seconds();
         } else {
