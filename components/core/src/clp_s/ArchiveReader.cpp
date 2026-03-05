@@ -1,5 +1,6 @@
 #include "ArchiveReader.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <system_error>
 #include <utility>
@@ -54,8 +55,8 @@ void ArchiveReader::read_metadata() {
 
     m_stream_reader.read_metadata(m_table_metadata_decompressor);
 
-    size_t num_separate_column_schemas;
-    if (auto error
+    uint64_t num_separate_column_schemas{0};
+    if (auto const error
         = m_table_metadata_decompressor.try_read_numeric_value(num_separate_column_schemas);
         ErrorCodeSuccess != error)
     {
@@ -66,8 +67,8 @@ void ArchiveReader::read_metadata() {
         throw OperationFailed(ErrorCode::ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
 
-    size_t num_schemas;
-    if (auto error = m_table_metadata_decompressor.try_read_numeric_value(num_schemas);
+    uint64_t num_schemas{0};
+    if (auto const error = m_table_metadata_decompressor.try_read_numeric_value(num_schemas);
         ErrorCodeSuccess != error)
     {
         throw OperationFailed(error, __FILENAME__, __LINE__);
@@ -76,7 +77,7 @@ void ArchiveReader::read_metadata() {
     bool prev_metadata_initialized{false};
     SchemaReader::SchemaMetadata prev_metadata{};
     int32_t prev_schema_id{};
-    for (size_t i = 0; i < num_schemas; ++i) {
+    for (uint64_t i{0}; i < num_schemas; ++i) {
         uint64_t stream_id;
         uint64_t stream_offset;
         int32_t schema_id;

@@ -16,7 +16,9 @@
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/ColumnWriter.hpp>
 #include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
+#include <clp_s/ReaderUtils.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/Utils.hpp>
 
@@ -128,8 +130,20 @@ auto DictionaryFloatColumnReader::extract_string_value_into_buffer(
 }
 
 auto ClpStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
-    m_logtypes = reader.read_unaligned_span<uint64_t>(num_messages);
-    auto encoded_vars_length{reader.read_value<size_t>()};
+    auto const num_messages_result = ReaderUtils::try_uint64_to_size_t(num_messages);
+    if (num_messages_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    m_logtypes = reader.read_unaligned_span<uint64_t>(num_messages_result.value());
+
+    auto const encoded_vars_length_u64{reader.read_value<uint64_t>()};
+    auto const encoded_vars_length_result
+            = ReaderUtils::try_uint64_to_size_t(encoded_vars_length_u64);
+    if (encoded_vars_length_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    auto const encoded_vars_length = encoded_vars_length_result.value();
+
     m_encoded_vars = reader.read_unaligned_span<int64_t>(encoded_vars_length);
 }
 
