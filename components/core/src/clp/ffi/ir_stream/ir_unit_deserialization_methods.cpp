@@ -35,10 +35,10 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
 
 /**
  * @param tag
- * @return The corresponding schema tree node type on success, or an error code indicating the
- * failure:
+ * @return A result containing the corresponding schema tree node type on success, or an error code
+ * indicating the failure:
  * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't match to any defined schema
- * tree node type.
+ *   tree node type.
  */
 [[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag)
         -> ystdlib::error_handling::Result<SchemaTree::Node::Type>;
