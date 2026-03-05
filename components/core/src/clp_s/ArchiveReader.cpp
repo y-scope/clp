@@ -30,7 +30,7 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
     }
 
     m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
-    load_archive();
+    initialize_archive_reader();
 }
 
 auto ArchiveReader::open(
@@ -48,10 +48,10 @@ auto ArchiveReader::open(
     m_archive_id = archive_id;
 
     m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
-    load_archive();
+    initialize_archive_reader();
 }
 
-auto ArchiveReader::load_archive() -> void {
+auto ArchiveReader::initialize_archive_reader() -> void {
     if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }

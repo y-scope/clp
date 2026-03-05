@@ -175,9 +175,9 @@ public:
 
 private:
     /**
-     * Loads archive metadata from the reader adaptor and initializes all read data structures.
+     * Reads archive metadata and prepares the archive reader for subsequent archive reads.
      */
-    auto load_archive() -> void;
+    auto initialize_archive_reader() -> void;
 
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
