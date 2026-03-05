@@ -42,9 +42,9 @@ public:
     void open(Path const& archive_path, NetworkAuthOption const& network_auth);
 
     /**
-     * Manages an already open single-file archive reader.
+     * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
      * @param single_file_archive_reader The already opened archive reader
-     * @param archive_id The unique name or identifier of the archive
+     * @param archive_id The unique name or identifier for the archive
      */
     auto open(
             std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,

@@ -63,7 +63,7 @@ public:
 
     /**
      * Creates an adaptor around an already opened single-file archive reader.
-     * @param single_file_archive_reader
+     * @param single_file_archive_reader An already-opened single-file archive stream.
      */
     explicit ArchiveReaderAdaptor(std::shared_ptr<clp::ReaderInterface> single_file_archive_reader);
 
