@@ -93,9 +93,6 @@ public:
 
     static auto start_runtime_measurement(std::string const& name) -> void {
         if constexpr (PROF_ACTIVE) {
-            if (false == check_init()) {
-                return;
-            }
             // implicitly creates the timer if it doesn't exist yet
             m_runtime_measurements[name].start();
         }
@@ -103,7 +100,7 @@ public:
 
     static auto stop_runtime_measurement(std::string const& name) -> void {
         if constexpr (PROF_ACTIVE) {
-            if (false == check_init() || false == check_runtime_timer_exists(name)) {
+            if (false == check_runtime_timer_exists(name)) {
                 return;
             }
             m_runtime_measurements[name].stop();
@@ -118,7 +115,7 @@ public:
 
     static auto get_runtime_measurement_in_seconds(std::string const& name) -> double {
         if constexpr (PROF_ACTIVE) {
-            if (false == check_init() || false == check_runtime_timer_exists(name)) {
+            if (false == check_runtime_timer_exists(name)) {
                 return 0;
             }
             return m_runtime_measurements[name].get_time_taken_in_seconds();
@@ -129,9 +126,6 @@ public:
 
     static auto print_all_runtime_measurements() -> void {
         if constexpr (PROF_ACTIVE) {
-            if (false == check_init()) {
-                return;
-            }
             for (auto const& [name, stopwatch] : m_runtime_measurements) {
                 SPDLOG_INFO("Measurement {}: {} s", name, get_runtime_measurement_in_seconds(name));
             }

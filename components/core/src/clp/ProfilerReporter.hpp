@@ -25,7 +25,7 @@ namespace clp {
  */
 class ProfilerReporter {
 public:
-    ProfilerReporter() { Profiler::init(); }
+    ProfilerReporter() = default;
     ~ProfilerReporter() { Profiler::print_all_runtime_measurements(); }
 
     ProfilerReporter(const ProfilerReporter&) = delete;

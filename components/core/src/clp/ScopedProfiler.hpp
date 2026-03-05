@@ -25,7 +25,6 @@ namespace clp {
 class ScopedProfiler {
 public:
     ScopedProfiler(std::string const& name) : m_name(name) {
-        Profiler::init();
         Profiler::start_runtime_measurement(name);
     }
 
