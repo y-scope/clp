@@ -11,8 +11,6 @@
 #include "ReaderUtils.hpp"
 
 namespace clp_s {
-using ReaderUtils::try_uint64_to_size_t;
-
 void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
     switch (m_state) {
         case PackedStreamReaderState::Uninitialized:
@@ -29,7 +27,7 @@ void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
         throw OperationFailed(error, __FILE__, __LINE__);
     }
 
-    auto const num_streams_result = try_uint64_to_size_t(num_streams_u64);
+    auto const num_streams_result = ReaderUtils::try_uint64_to_size_t(num_streams_u64);
     if (num_streams_result.has_error()) {
         throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
     }
@@ -47,7 +45,7 @@ void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
             throw OperationFailed(error, __FILE__, __LINE__);
         }
 
-        auto const file_offset_result = try_uint64_to_size_t(file_offset_u64);
+        auto const file_offset_result = ReaderUtils::try_uint64_to_size_t(file_offset_u64);
         if (file_offset_result.has_error()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
@@ -59,7 +57,8 @@ void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
             throw OperationFailed(error, __FILE__, __LINE__);
         }
 
-        auto const uncompressed_size_result = try_uint64_to_size_t(uncompressed_size_u64);
+        auto const uncompressed_size_result
+                = ReaderUtils::try_uint64_to_size_t(uncompressed_size_u64);
         if (uncompressed_size_result.has_error()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
@@ -137,7 +136,8 @@ PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, 
         throw OperationFailed(static_cast<ErrorCode>(error), __FILE__, __LINE__);
     }
 
-    auto const end_pos_result = try_uint64_to_size_t(m_adaptor->get_header().compressed_size);
+    auto const end_pos_result
+            = ReaderUtils::try_uint64_to_size_t(m_adaptor->get_header().compressed_size);
     if (end_pos_result.has_error()) {
         throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
     }
