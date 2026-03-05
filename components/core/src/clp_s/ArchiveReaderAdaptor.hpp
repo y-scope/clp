@@ -53,7 +53,19 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    // Constructors
+    /**
+     * Creates an adaptor for an archive identified by path and source type.
+     * @param archive_path Path/URL for a directory archive or a single-file archive.
+     * @param network_auth Authentication options for network inputs.
+     */
     explicit ArchiveReaderAdaptor(Path const& archive_path, NetworkAuthOption const& network_auth);
+
+    /**
+     * Creates an adaptor around an already opened single-file archive reader.
+     * @param single_file_archive_reader
+     */
+    explicit ArchiveReaderAdaptor(std::shared_ptr<clp::ReaderInterface> single_file_archive_reader);
 
     /**
      * Loads metadata for an archive including the header and metadata section. This method must be

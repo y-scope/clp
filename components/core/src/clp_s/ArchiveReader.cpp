@@ -30,7 +30,28 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
     }
 
     m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+    load_archive();
+}
 
+auto ArchiveReader::open(
+        std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
+        std::string_view archive_id
+) -> void {
+    if (m_is_open) {
+        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
+    }
+    m_is_open = true;
+
+    if (nullptr == single_file_archive_reader || archive_id.empty()) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    m_archive_id = archive_id;
+
+    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(single_file_archive_reader);
+    load_archive();
+}
+
+auto ArchiveReader::load_archive() -> void {
     if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
