@@ -87,6 +87,11 @@ named `default`.
 
 ### Limitations
 
+* `archive-manager.sh` is not supported for Kubernetes (Helm) deployments when using filesystem
+  storage (`archive_output.storage.type: "fs"`). See the [note above](#admin-tools) for details.
+
+* `archive-manager.sh` doesn't support managing archives stored on object storage.
+
 * `archive-manager.sh` assumes that archive timestamps and the timestamps specified by the user
   are in the **UTC** time zone. (This is because CLP currently doesn't support parsing time zone
   information from log events that have it.) Using the script on archives with non-UTC timestamps
@@ -98,9 +103,6 @@ named `default`.
   ```cpp
   adjusted_epoch_timestamp_millis = epoch_timestamp_millis - signed_utc_offset_millis
   ```
-
-* `archive-manager.sh` doesn't support managing archives stored on object storage. This limitation
-  will be addressed in a future release.
 
 ---
 
@@ -142,3 +144,8 @@ directory.
     ```
 
     * Replace `<dataset_0>`, `<dataset_1>`, etc. with the names of the datasets to delete.
+
+### Limitations
+
+* `dataset-manager.sh` is not supported for Kubernetes (Helm) deployments when using filesystem
+  storage (`archive_output.storage.type: "fs"`). See the [note above](#admin-tools) for details.
