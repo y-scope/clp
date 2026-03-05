@@ -129,9 +129,8 @@ auto DictionaryFloatColumnReader::extract_string_value_into_buffer(
 
 auto ClpStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) -> void {
     m_logtypes = reader.read_unaligned_span_u64<uint64_t>(num_messages);
-
-    auto const encoded_vars_length_u64{reader.read_value<uint64_t>()};
-    m_encoded_vars = reader.read_unaligned_span_u64<int64_t>(encoded_vars_length_u64);
+    auto const encoded_vars_length{reader.read_value<uint64_t>()};
+    m_encoded_vars = reader.read_unaligned_span_u64<int64_t>(encoded_vars_length);
 }
 
 auto
