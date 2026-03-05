@@ -177,7 +177,7 @@ public:
     // Methods inherited from BaseColumnWriter
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
-    auto store(ZstdCompressor& compressor) -> void override;
+    auto store(ZstdCompressor& compressor) const -> void override;
 
     auto get_total_header_size() const -> size_t override { return sizeof(size_t); }
 
