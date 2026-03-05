@@ -190,8 +190,7 @@ public:
      * @param compression_level
      * @return the compressed size of the SchemaTree in bytes
      */
-    [[nodiscard]] auto store(std::string const& archives_dir, int compression_level) const
-            -> size_t;
+    [[nodiscard]] auto store(std::string const& archives_dir, int compression_level) -> size_t;
 
     /**
      * Clear the schema tree

@@ -146,7 +146,7 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
     return sizeof(int64_t) + (sizeof(int64_t) * (m_encoded_vars.size() - offset));
 }
 
-auto ClpStringColumnWriter::store(ZstdCompressor& compressor) const -> void {
+auto ClpStringColumnWriter::store(ZstdCompressor& compressor) -> void {
     size_t logtypes_size{m_logtypes.size() * sizeof(int64_t)};
     compressor.write(reinterpret_cast<char const*>(m_logtypes.data()), logtypes_size);
     size_t encoded_vars_size{m_encoded_vars.size() * sizeof(int64_t)};

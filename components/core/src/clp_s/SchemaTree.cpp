@@ -94,7 +94,7 @@ int32_t SchemaTree::get_metadata_field_id(std::string_view const field_name) con
     return -1;
 }
 
-auto SchemaTree::store(std::string const& archives_dir, int compression_level) const -> size_t {
+auto SchemaTree::store(std::string const& archives_dir, int compression_level) -> size_t {
     FileWriter schema_tree_writer;
     ZstdCompressor schema_tree_compressor;
 
