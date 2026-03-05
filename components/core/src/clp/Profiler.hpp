@@ -110,12 +110,9 @@ public:
         }
     }
 
-    static auto reset_runtime_measurement(std::string const& name) -> void {
+    static auto reset_runtime_measurements() -> void {
         if constexpr (PROF_ACTIVE) {
-            if (false == check_init() || false == check_runtime_timer_exists(name)) {
-                return;
-            }
-            m_runtime_measurements[name].reset();
+            m_runtime_measurements.clear();
         }
     }
 

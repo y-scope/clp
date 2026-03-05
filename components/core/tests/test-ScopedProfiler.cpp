@@ -19,7 +19,7 @@ TEST_CASE("macro_is_set", "[profiler]") {
 
 TEST_CASE("scoped_profiler_starts_and_stops_timer_automatically", "[profiler]") {
     Profiler::init();
-    Profiler::reset_runtime_measurement(cName);
+    Profiler::reset_runtime_measurements();
 
     {
         ScopedProfiler profiler(cName);
@@ -33,7 +33,7 @@ TEST_CASE("scoped_profiler_starts_and_stops_timer_automatically", "[profiler]") 
 
 TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[profiler]") {
     Profiler::init();
-    Profiler::reset_runtime_measurement(cName);
+    Profiler::reset_runtime_measurements();
 
     {
         ScopedProfiler profiler(cName);
@@ -54,7 +54,7 @@ TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[profiler]") {
 
 TEST_CASE("scoped_profiler_macro_works", "[profiler]") {
     Profiler::init();
-    Profiler::reset_runtime_measurement(cName);
+    Profiler::reset_runtime_measurements();
 
     {
         PROFILE_SCOPE(cName);
