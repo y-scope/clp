@@ -47,7 +47,8 @@ auto ArchiveReader::open(
     }
     m_archive_id = archive_id;
 
-    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
+    m_archive_reader_adaptor
+            = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
     initialize_archive_reader();
 }
 
