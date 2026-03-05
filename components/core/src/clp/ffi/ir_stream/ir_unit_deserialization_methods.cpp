@@ -126,7 +126,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't correspond to any
  *   known value type.
  * - Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return values on
- * failure.
+ *   failure.
  * - Forwards `deserialize_int_val`'s return values on failure.
  * - Forwards `deserialize_string`'s return values on failure.
  */
