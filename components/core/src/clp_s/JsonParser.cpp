@@ -681,7 +681,7 @@ bool JsonParser::ingest() {
             case FileType::Zstd:
             case FileType::Unknown:
             default: {
-                std::ignore = NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+                NetworkUtils::check_and_log_curl_error(path.path, reader.get());
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
                 std::ignore = m_archive_writer->close();
                 return false;
