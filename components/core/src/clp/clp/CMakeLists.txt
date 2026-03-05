@@ -87,6 +87,7 @@ set(
         ../Platform.hpp
         ../Profiler.cpp
         ../Profiler.hpp
+        ../ProfilerReporter.hpp
         ../Query.cpp
         ../Query.hpp
         ../ReaderInterface.cpp

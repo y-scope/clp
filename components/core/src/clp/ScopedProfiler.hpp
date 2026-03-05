@@ -7,12 +7,12 @@ namespace clp {
 /**
  * RAII wrapper to measure the execution time of a code scope.
  *
- * This class starts a continuous measurement in its constructor and stops it in its destructor. It
+ * This class starts a fragmented measurement in its constructor and stops it in its destructor. It
  * reports the measured time to the corresponding slot in the profiler. Use this class when you want
  * to measure a single logical phase of your program (e.g., a method) without calling start/stop.
  *
  * Usage for a logical phase:
- * - Define a unique measurement `index` in `Profiler::ContinuousMeasurementIndex`. Each `index`
+ * - Define a unique measurement `index` in `Profiler::FragmentedsMeasurementIndex`. Each `index`
  *   corresponds to a slot in the profiler that accumulates total time.
  * - Use macro PROFILE_SCOPE(`index`) at the top of the logical phase, ideally this is always done
  *   at the top of a method for organization and clarity.
@@ -22,12 +22,12 @@ namespace clp {
  * - Safe with early returns and exceptions because stopping occurs in the destructor.
  * - All measurements respect `PROF_ENABLED`, so no code is generated when profiling is disabled.
  */
-template <Profiler::ContinuousMeasurementIndex index>
+template <Profiler::FragmentedMeasurementIndex index>
 class ScopedProfiler {
 public:
-    inline ScopedProfiler() { Profiler::start_continuous_measurement<index>(); }
+    ScopedProfiler() { Profiler::start_fragmented_measurement<index>(); }
 
-    inline ~ScopedProfiler() { Profiler::stop_continuous_measurement<index>(); }
+    ~ScopedProfiler() { Profiler::stop_fragmented_measurement<index>(); }
 
     ScopedProfiler(const ScopedProfiler&) = delete;
     ScopedProfiler& operator=(const ScopedProfiler&) = delete;
