@@ -15,7 +15,7 @@
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
 #include "../ir/constants.hpp"
-#include "../Profiler.hpp"
+#include "../ProfilerReporter.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -42,6 +42,7 @@ using clp::GrepCore;
 using clp::ir::cIrFileExtension;
 using clp::load_lexer_from_file;
 using clp::logtype_dictionary_id_t;
+using clp::ProfilerReporter;
 using clp::Query;
 using clp::segment_id_t;
 using clp::streaming_archive::MetadataDB;
@@ -580,7 +581,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    clp::Profiler::init();
+    ProfilerReporter profiler_reporter;
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");

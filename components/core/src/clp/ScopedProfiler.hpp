@@ -25,7 +25,10 @@ namespace clp {
 template <Profiler::FragmentedMeasurementIndex index>
 class ScopedProfiler {
 public:
-    ScopedProfiler() { Profiler::start_fragmented_measurement<index>(); }
+    ScopedProfiler() {
+        Profiler::init();
+        Profiler::start_fragmented_measurement<index>();
+    }
 
     ~ScopedProfiler() { Profiler::stop_fragmented_measurement<index>(); }
 

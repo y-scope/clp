@@ -46,13 +46,12 @@ class Profiler {
 public:
     // Types
     enum class ContinuousMeasurementIndex : size_t {
-        Compression = 0,
-        ParseLogFile,
-        Search,
         Length
     };
     enum class FragmentedMeasurementIndex : size_t {
-        Search = 0,
+        Compression = 0,
+        ParseLogFile,
+        Search,
         Length
     };
 
@@ -60,13 +59,12 @@ public:
     // NOTE: We use lambdas so that we can programmatically initialize the constexpr array
     static constexpr auto cContinuousMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(ContinuousMeasurementIndex::Length)> enabled{};
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Compression)] = true;
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::ParseLogFile)] = true;
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Search)] = true;
         return enabled;
     }();
     static constexpr auto cFragmentedMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(FragmentedMeasurementIndex::Length)> enabled{};
+        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Compression)] = true;
+        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ParseLogFile)] = true;
         enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Search)] = true;
         return enabled;
     }();
@@ -162,33 +160,4 @@ private:
     static std::vector<Stopwatch>* m_continuous_measurements;
 };
 }  // namespace clp
-
-// Macros to log the measurements
-// NOTE: We use macros so that we can add the measurement index to the log (not easy to do with
-// templates).
-#define LOG_CONTINUOUS_MEASUREMENT(x) \
-    if (PROF_ACTIVE \
-        && ::clp::Profiler::cContinuousMeasurementEnabled[enum_to_underlying_type(x)]) \
-    { \
-        SPDLOG_INFO( \
-                "{} took {} s", \
-                #x, \
-                ::clp::Profiler::get_continuous_measurement_in_seconds<x>() \
-        ); \
-    }
-#define LOG_FRAGMENTED_MEASUREMENT(x) \
-    if (PROF_ACTIVE \
-        && ::clp::Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) \
-    { \
-        SPDLOG_INFO( \
-                "{} took {} s", \
-                #x, \
-                ::clp::Profiler::get_fragmented_measurement_in_seconds<x>() \
-        ); \
-    }
-#define PROFILER_SPDLOG_INFO(...) \
-    if (PROF_ACTIVE) { \
-        SPDLOG_INFO(__VA_ARGS__); \
-    }
-
 #endif  // CLP_PROFILER_HPP
