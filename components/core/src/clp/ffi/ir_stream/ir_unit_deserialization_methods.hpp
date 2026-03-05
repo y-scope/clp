@@ -18,7 +18,7 @@
 namespace clp::ffi::ir_stream {
 /**
  * @param tag
- * @return The IR unit type as indicated by the given tag on success.
+ * @return The IR unit type indicated by the given tag on success.
  * @return std::nullopt if the tag doesn't represent a valid IR unit.
  */
 [[nodiscard]] auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> std::optional<IrUnitType>;
@@ -57,9 +57,9 @@ namespace clp::ffi::ir_stream {
  * @param utc_offset UTC offset used to construct the KV-pair log event.
  * @return A result containing the deserialized log event or an error code indicating the failure:
  * - IrDeserializationErrorEnum::InvalidTag if the log event is empty but the tag is not
- *   ValueEmpty.
+ *   `cProtocol::Payload::ValueEmpty`.
  * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values on
- * failure.
+ *   failure.
  * - Forwards `deserialize_value_and_construct_node_id_value_pairs`'s return values on failure.
  * - Forwards `KeyValuePairLogEvent::create`'s return values on failure.
  */

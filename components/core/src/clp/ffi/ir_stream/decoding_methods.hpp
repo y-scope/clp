@@ -72,9 +72,10 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
 /**
  * Deserializes the tag for the next packet.
  * @param reader
- * @return The tag of the next packet on success, or an error code indicating the failure:
+ * @return A result containing the tag of the next packet on success, or an error code indicating
+ * the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
- * deserialize
+ *   deserialize.
  */
 [[nodiscard]] auto deserialize_tag(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<encoded_tag_t>;
@@ -146,7 +147,7 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
  * @param reader
  * @param encoded_tag
  * @return A result containing the deserialized encoded text AST on success, or an error code
- *  indicating the failure:
+ * indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data.
  * - IrDeserializationErrorEnum::CorruptedIR if the IR stream is invalid.
  * - IrDeserializationErrorEnum::DecodingMethodFailure on decode failure.
@@ -243,9 +244,9 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
  * @param reader
  * @return A result containing the deserialized UTC offset or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
- * deserialize
+ *   deserialize
  */
-auto deserialize_utc_offset_change(ReaderInterface& reader)
+[[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<UtcOffset>;
 
 /**

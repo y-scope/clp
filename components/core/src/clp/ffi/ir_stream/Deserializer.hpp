@@ -373,8 +373,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         }
 
         case IrUnitType::UtcOffsetChange: {
-            auto const new_utc_offset
-                    = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_utc_offset_change(reader));
+            auto const new_utc_offset{
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_utc_offset_change(reader))
+            };
             if (auto const err{
                         m_ir_unit_handler.handle_utc_offset_change(m_utc_offset, new_utc_offset)
                 };
