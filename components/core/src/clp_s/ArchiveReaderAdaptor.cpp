@@ -270,7 +270,6 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
 
 std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
     if (nullptr != m_reader) {
-        // Reader already open
         return m_reader;
     }
 
