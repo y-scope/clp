@@ -124,12 +124,8 @@ public:
         }
     }
 
-    static auto print_all_runtime_measurements() -> void {
-        if constexpr (PROF_ACTIVE) {
-            for (auto const& [name, stopwatch] : m_runtime_measurements) {
-                SPDLOG_INFO("Measurement {}: {} s", name, get_runtime_measurement_in_seconds(name));
-            }
-        }
+    static auto get_runtime_measurements() -> std::unordered_map<std::string, Stopwatch> const& {
+        return m_runtime_measurements;
     }
 
     template <CompileTimeMeasurementIndex index>

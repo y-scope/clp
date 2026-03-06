@@ -1,7 +1,13 @@
 #ifndef CLP_PROFILER_REPORT_HPP
 #define CLP_PROFILER_REPORT_HPP
 
+#include <string>
+#include <unordered_map>
+
+#include <spdlog/spdlog.h>
+
 #include "Profiler.hpp"
+#include "Stopwatch.hpp"
 
 namespace clp {
 /**
@@ -26,12 +32,28 @@ namespace clp {
 class ProfilerReporter {
 public:
     ProfilerReporter() = default;
-    ~ProfilerReporter() { Profiler::print_all_runtime_measurements(); }
+    explicit ProfilerReporter(std::unordered_map<std::string, Stopwatch>& sink) : m_sink(&sink) {}
+
+    ~ProfilerReporter() {
+        if (nullptr != m_sink) {
+            *m_sink = Profiler::get_runtime_measurements();
+            return;
+        }
+
+        SPDLOG_INFO("---MEASUREMENTS START---");
+        for (auto const& [name, stopwatch] : Profiler::get_runtime_measurements()) {
+            SPDLOG_INFO("{}: {} s", name, Profiler::get_runtime_measurement_in_seconds(name));
+        }
+        SPDLOG_INFO("----MEASUREMENTS END----");
+    }
 
     ProfilerReporter(const ProfilerReporter&) = delete;
     ProfilerReporter& operator=(const ProfilerReporter&) = delete;
     ProfilerReporter(ProfilerReporter&&) = delete;
     ProfilerReporter& operator=(ProfilerReporter&&) = delete;
+
+private:
+    std::unordered_map<std::string, Stopwatch>* m_sink{nullptr};
 };
 }  // namespace clp
 

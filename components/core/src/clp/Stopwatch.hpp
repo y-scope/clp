@@ -16,7 +16,7 @@ public:
     void stop();
     void reset();
 
-    double get_time_taken_in_seconds();
+    auto get_time_taken_in_seconds() const -> double;
 
 private:
     // Variables

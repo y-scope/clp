@@ -20,7 +20,7 @@ void Stopwatch::reset() {
     m_time_taken = std::chrono::steady_clock::duration::zero();
 }
 
-double Stopwatch::get_time_taken_in_seconds() {
+auto Stopwatch::get_time_taken_in_seconds() const -> double {
     std::chrono::duration<double> time_taken_in_seconds = m_time_taken;
     return time_taken_in_seconds.count();
 }
