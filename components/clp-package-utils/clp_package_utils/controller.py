@@ -990,7 +990,7 @@ class DockerComposeController(BaseController):
         self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
     ) -> None:
         """Initializes the DockerComposeController."""
-        self._project_name = f"clp-package-{instance_id[-4:]}"
+        self._project_name = f"clp-package-{instance_id}"
         self._restart_policy = restart_policy
         super().__init__(clp_config)
 
