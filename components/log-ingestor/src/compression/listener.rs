@@ -55,9 +55,10 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                     match optional_object_metadata {
                         None => {
                             self.buffer.submit().await?;
-                            return Err(
-                                anyhow::anyhow!("Listener channel has been closed unexpectedly")
+                            tracing::info!(
+                                "All senders have been dropped. The channel will be closed."
                             );
+                            return Ok(());
                         }
                         Some(object_metadata_to_ingest) => {
                             self.buffer.add(object_metadata_to_ingest).await?;
@@ -126,19 +127,20 @@ impl Listener {
     }
 
     /// Shuts down the listener and waits for the underlying task to complete.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards the underlying task's return values on failure ([`ListenerTask::run`]).
-    pub async fn shutdown_and_join(self) -> Result<()> {
+    pub async fn shutdown_and_join(self) {
         self.cancel_token.cancel();
-        self.handle.await?
+        match self.handle.await {
+            Ok(Ok(())) => {
+                tracing::info!("Listener shutdown successfully.");
+            }
+            Ok(Err(_)) => {
+                // We don't need to log the error here because the underlying coroutine will log it.
+                tracing::warn!("Listener shutdown with an error.");
+            }
+            Err(err) => {
+                tracing::warn!(error = ? err, "Listener panicked.");
+            }
+        }
     }
 
     /// # Returns
