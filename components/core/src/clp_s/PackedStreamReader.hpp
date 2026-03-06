@@ -41,6 +41,8 @@ public:
      * Reads packed stream metadata from the provided compression stream. Must be invoked before
      * reading packed streams.
      * @param decompressor an open ZstdDecompressor pointing to the packed stream metadata
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `ReaderUtils::try_uint64_to_size_t`'s return values on failure.
      */
     [[nodiscard]] auto read_metadata(ZstdDecompressor& decompressor)
             -> ystdlib::error_handling::Result<void>;
