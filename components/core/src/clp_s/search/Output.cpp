@@ -37,7 +37,11 @@ bool Output::filter() {
     bool has_array = false;
     bool has_array_search = false;
 
-    m_archive_reader->read_metadata();
+    if (auto const result{m_archive_reader->read_metadata()}; result.has_error()) {
+        SPDLOG_ERROR("Failed to read archive metadata.");
+        return false;
+    }
+
     for (auto schema_id : m_archive_reader->get_schema_ids()) {
         if (m_match->schema_matched(schema_id)) {
             matched_schemas.push_back(schema_id);

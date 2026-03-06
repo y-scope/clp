@@ -1,6 +1,8 @@
 #ifndef CLP_S_SCHEMAREADER_HPP
 #define CLP_S_SCHEMAREADER_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
@@ -55,10 +57,10 @@ public:
     };
 
     struct SchemaMetadata {
-        uint64_t stream_id;
-        uint64_t stream_offset;
-        uint64_t num_messages;
-        uint64_t uncompressed_size;
+        size_t stream_id{0};
+        size_t stream_offset{0};
+        uint64_t num_messages{0};
+        size_t uncompressed_size{0};
     };
 
     // Constructor
