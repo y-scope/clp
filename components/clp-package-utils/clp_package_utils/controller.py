@@ -649,12 +649,14 @@ class BaseController(ABC):
         instance_id_file = self._clp_config.logs_directory / "instance-id"
         resolved_id_file = resolve_host_path_in_container(instance_id_file)
         if resolved_id_file.exists():
-            with open(resolved_id_file, "r") as f:
+            with resolved_id_file.open("r") as f:
                 env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
 
-        version_file = resolve_host_path_in_container(self._clp_config._version_file_path)
+        version_file = resolve_host_path_in_container(
+            self._clp_config.logs_directory.parent / "VERSION"
+        )
         if version_file.exists():
-            with open(version_file, "r") as f:
+            with version_file.open("r") as f:
                 env_vars["CLP_VERSION"] = f.read().strip()
 
         env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
