@@ -56,8 +56,9 @@ void ArchiveReader::read_metadata() {
     m_stream_reader.read_metadata(m_table_metadata_decompressor);
 
     uint64_t num_separate_column_schemas{0};
-    if (auto const error
-        = m_table_metadata_decompressor.try_read_numeric_value(num_separate_column_schemas);
+    if (auto const error{
+                m_table_metadata_decompressor.try_read_numeric_value(num_separate_column_schemas)
+        };
         ErrorCodeSuccess != error)
     {
         throw OperationFailed(error, __FILENAME__, __LINE__);
@@ -68,7 +69,7 @@ void ArchiveReader::read_metadata() {
     }
 
     uint64_t num_schemas{0};
-    if (auto const error = m_table_metadata_decompressor.try_read_numeric_value(num_schemas);
+    if (auto const error{m_table_metadata_decompressor.try_read_numeric_value(num_schemas)};
         ErrorCodeSuccess != error)
     {
         throw OperationFailed(error, __FILENAME__, __LINE__);

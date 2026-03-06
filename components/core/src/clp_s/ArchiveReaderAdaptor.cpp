@@ -304,8 +304,9 @@ std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_
     size_t file_offset = m_files_section_offset + it->o;
     ++it;
 
-    auto const next_file_offset_result
-            = ReaderUtils::try_uint64_to_size_t(m_archive_header.compressed_size);
+    auto const next_file_offset_result{
+            ReaderUtils::try_uint64_to_size_t(m_archive_header.compressed_size)
+    };
     if (next_file_offset_result.has_error()) {
         throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
     }
