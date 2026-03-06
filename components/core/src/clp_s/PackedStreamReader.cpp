@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "../clp/BoundedReader.hpp"
 #include "../clp/ErrorCode.hpp"
 #include "archive_constants.hpp"
@@ -11,7 +13,8 @@
 #include "ReaderUtils.hpp"
 
 namespace clp_s {
-void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
+auto PackedStreamReader::read_metadata(ZstdDecompressor& decompressor)
+        -> ystdlib::error_handling::Result<void> {
     switch (m_state) {
         case PackedStreamReaderState::Uninitialized:
             m_state = PackedStreamReaderState::MetadataRead;
@@ -21,51 +24,42 @@ void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
     }
 
     uint64_t num_streams_u64{0};
-    if (auto error = decompressor.try_read_numeric_value(num_streams_u64);
+    if (auto const error{decompressor.try_read_numeric_value(num_streams_u64)};
         ErrorCodeSuccess != error)
     {
         throw OperationFailed(error, __FILE__, __LINE__);
     }
 
-    auto const num_streams_result = ReaderUtils::try_uint64_to_size_t(num_streams_u64);
-    if (num_streams_result.has_error()) {
-        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-    }
-    auto const num_streams = num_streams_result.value();
-
+    auto const num_streams{
+            YSTDLIB_ERROR_HANDLING_TRYX(ReaderUtils::try_uint64_to_size_t(num_streams_u64))
+    };
     m_stream_metadata.reserve(num_streams);
 
     for (size_t i{0}; i < num_streams; ++i) {
         uint64_t file_offset_u64{0};
         uint64_t uncompressed_size_u64{0};
 
-        if (auto error = decompressor.try_read_numeric_value(file_offset_u64);
+        if (auto const error{decompressor.try_read_numeric_value(file_offset_u64)};
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILE__, __LINE__);
         }
 
-        auto const file_offset_result = ReaderUtils::try_uint64_to_size_t(file_offset_u64);
-        if (file_offset_result.has_error()) {
-            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-        }
-        auto const file_offset = file_offset_result.value();
-
-        if (auto error = decompressor.try_read_numeric_value(uncompressed_size_u64);
+        if (auto const error{decompressor.try_read_numeric_value(uncompressed_size_u64)};
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILE__, __LINE__);
         }
 
-        auto const uncompressed_size_result
-                = ReaderUtils::try_uint64_to_size_t(uncompressed_size_u64);
-        if (uncompressed_size_result.has_error()) {
-            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-        }
-        auto const uncompressed_size = uncompressed_size_result.value();
-
+        auto const file_offset{
+                YSTDLIB_ERROR_HANDLING_TRYX(ReaderUtils::try_uint64_to_size_t(file_offset_u64))
+        };
+        auto const uncompressed_size{YSTDLIB_ERROR_HANDLING_TRYX(
+                ReaderUtils::try_uint64_to_size_t(uncompressed_size_u64)
+        )};
         m_stream_metadata.emplace_back(file_offset, uncompressed_size);
     }
+    return ystdlib::error_handling::success();
 }
 
 void PackedStreamReader::open_packed_streams(std::shared_ptr<ArchiveReaderAdaptor> adaptor) {
@@ -136,8 +130,9 @@ PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, 
         throw OperationFailed(static_cast<ErrorCode>(error), __FILE__, __LINE__);
     }
 
-    auto const end_pos_result
-            = ReaderUtils::try_uint64_to_size_t(m_adaptor->get_header().compressed_size);
+    auto const end_pos_result{
+            ReaderUtils::try_uint64_to_size_t(m_adaptor->get_header().compressed_size)
+    };
     if (end_pos_result.has_error()) {
         throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
     }

@@ -38,7 +38,7 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        auto const key_length_result = try_uint64_to_size_t(key_length_u64);
+        auto const key_length_result{try_uint64_to_size_t(key_length_u64)};
         if (key_length_result.has_error()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
@@ -95,7 +95,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
     schema_id_decompressor.open(*schema_id_reader, cDecompressorFileReadBufferCapacity);
 
     uint64_t schema_size{0};
-    auto error_code = schema_id_decompressor.try_read_numeric_value(schema_size);
+    auto error_code{schema_id_decompressor.try_read_numeric_value(schema_size)};
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }

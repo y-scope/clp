@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "../clp/ReaderInterface.hpp"
 #include "ArchiveReaderAdaptor.hpp"
 #include "ZstdDecompressor.hpp"
@@ -40,7 +42,8 @@ public:
      * reading packed streams.
      * @param decompressor an open ZstdDecompressor pointing to the packed stream metadata
      */
-    void read_metadata(ZstdDecompressor& decompressor);
+    [[nodiscard]] auto read_metadata(ZstdDecompressor& decompressor)
+            -> ystdlib::error_handling::Result<void>;
 
     /**
      * Opens a file reader for the tables section. Must be invoked before reading packed streams.
