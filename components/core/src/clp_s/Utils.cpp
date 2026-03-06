@@ -156,7 +156,7 @@ bool FileUtils::get_last_non_empty_path_component(std::string_view const path, s
 auto
 NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
         -> bool {
-    auto const* network_reader = dynamic_cast<clp::NetworkReader const*>(reader);
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
     if (nullptr == network_reader) {
         return false;
     }
@@ -166,8 +166,8 @@ NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterfa
         SPDLOG_ERROR(
                 "Encountered curl error while reading {} - Code: {} - Message: {}",
                 path,
-                static_cast<int64_t>(curl_error_info->code),
-                curl_error_info->message
+                static_cast<int64_t>(curl_error_info->code()),
+                curl_error_info->message()
         );
         return true;
     }

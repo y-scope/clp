@@ -98,7 +98,7 @@ auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader)
     };
     auto const curl_error_info{reader.get_curl_error_info()};
     if (curl_error_info.has_value()) {
-        message_to_log += "\nError message:\n" + std::string{curl_error_info->message};
+        message_to_log += "\nError message:\n" + std::string{curl_error_info->message()};
     }
     WARN(message_to_log);
     return false;

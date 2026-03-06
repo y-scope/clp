@@ -14,8 +14,10 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/BoundedReader.hpp"
+#include "../clp/ErrorCode.hpp"
 #include "../clp/FileReader.hpp"
 #include "archive_constants.hpp"
+#include "ErrorCode.hpp"
 #include "InputConfig.hpp"
 #include "RangeIndexWriter.hpp"
 #include "SingleFileArchiveDefs.hpp"
@@ -26,7 +28,8 @@ ArchiveReaderAdaptor::ArchiveReaderAdaptor(
         NetworkAuthOption const& network_auth
 )
         : m_archive_path{archive_path},
-          m_network_auth{network_auth} {
+          m_network_auth{network_auth},
+          m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()} {
     if (InputSource::Filesystem != archive_path.source
         || std::filesystem::is_regular_file(archive_path.path))
     {
@@ -38,7 +41,16 @@ ArchiveReaderAdaptor::ArchiveReaderAdaptor(
         std::shared_ptr<clp::ReaderInterface> single_file_archive_reader
 )
         : m_single_file_archive{true},
-          m_reader{single_file_archive_reader} {}
+          m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()},
+          m_reader{std::move(single_file_archive_reader)} {
+    if (nullptr == m_reader) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    if (auto const rc = m_reader->try_seek_from_begin(0); clp::ErrorCode::ErrorCode_Success != rc) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
+}
 
 ErrorCode
 ArchiveReaderAdaptor::try_read_archive_file_info(ZstdDecompressor& decompressor, size_t size) {
@@ -258,7 +270,6 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
 
 std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
     if (nullptr != m_reader) {
-        // Reader already initialized
         return m_reader;
     }
 

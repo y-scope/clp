@@ -42,9 +42,9 @@ public:
     void open(Path const& archive_path, NetworkAuthOption const& network_auth);
 
     /**
-     * Manages an already open single-file archive reader.
+     * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
      * @param single_file_archive_reader The already opened archive reader
-     * @param archive_id The unique name or identifier of the archive
+     * @param archive_id The unique name or identifier for the archive
      */
     auto open(
             std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
@@ -175,9 +175,9 @@ public:
 
 private:
     /**
-     * Loads archive metadata from the reader adaptor and initializes all read data structures.
+     * Reads archive metadata and prepares the archive reader for subsequent archive reads.
      */
-    auto load_archive() -> void;
+    auto initialize_archive_reader() -> void;
 
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.

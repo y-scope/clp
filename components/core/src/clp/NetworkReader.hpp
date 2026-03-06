@@ -69,11 +69,20 @@ public:
     /**
      * CURL error details set by the underlying CURL handler.
      */
-    struct CurlErrorInfo {
-        CurlErrorInfo(CURLcode code, std::string_view message) : code{code}, message{message} {}
+    class CurlErrorInfo {
+    public:
+        // Constructor
+        CurlErrorInfo(CURLcode code, std::string_view message) : m_code{code}, m_message{message} {}
 
-        CURLcode const code;
-        std::string_view const message;
+        // Methods
+        [[nodiscard]] auto code() const -> CURLcode { return m_code; }
+
+        [[nodiscard]] auto message() const -> std::string_view { return m_message; }
+
+    private:
+        // Members
+        CURLcode m_code;
+        std::string_view m_message;
     };
 
     // Constants

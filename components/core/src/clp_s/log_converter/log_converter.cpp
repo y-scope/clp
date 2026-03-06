@@ -56,8 +56,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
             case clp_s::FileType::Zstd:
             case clp_s::FileType::Unknown:
             default: {
-                std::ignore
-                        = clp_s::NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+                clp_s::NetworkUtils::check_and_log_curl_error(path.path, reader.get());
                 SPDLOG_ERROR("Received input that was not unstructured logtext: {}.", path.path);
                 return false;
             }
