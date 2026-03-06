@@ -124,7 +124,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * - IrDeserializationErrorEnum::UnknownValueType if the tag doesn't correspond to any
- * known value type.
+ *   known value type.
  * - Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return values on
  *   failure.
  * - Forwards `deserialize_int_val`'s return values on failure.

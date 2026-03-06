@@ -89,7 +89,7 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
  * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding case) or
- * the timestamp delta (in the four-byte encoding case).
+ * the timestamp delta (in the four-byte encoding case)
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
