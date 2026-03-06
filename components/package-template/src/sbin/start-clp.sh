@@ -62,9 +62,19 @@ if [[ "$telemetry_prompt_needed" == "true" ]]; then
         if [[ "$telemetry_response" =~ ^[Nn]$ ]]; then
             # User opted out — persist to config
             if [[ -f "$clp_config_path" ]]; then
-                echo "" >> "$clp_config_path"
-                echo "telemetry:" >> "$clp_config_path"
-                echo "  disable: true" >> "$clp_config_path"
+                if grep -q "^telemetry:" "$clp_config_path" 2>/dev/null; then
+                    # Replace existing telemetry block (key + indented lines)
+                    sed -i '/^telemetry:/,/^[^[:space:]]/{/^telemetry:/!{/^[^[:space:]]/!d};}' \
+                        "$clp_config_path"
+                    sed -i 's/^telemetry:.*/telemetry:\n  disable: true/' "$clp_config_path"
+                else
+                    # Append telemetry block with grouped redirect
+                    {
+                        echo ""
+                        echo "telemetry:"
+                        echo "  disable: true"
+                    } >> "$clp_config_path"
+                fi
             else
                 printf "telemetry:\n  disable: true\n" > "$clp_config_path"
             fi
