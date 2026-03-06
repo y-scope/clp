@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/outcome/std_result.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
@@ -88,8 +88,8 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @param logtype Returns the logtype
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
- * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding
- * case) or the timestamp delta (in the four-byte encoding case)
+ * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding case) or
+ * the timestamp delta (in the four-byte encoding case).
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
@@ -139,23 +139,6 @@ auto deserialize_encoded_text_ast(
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
-        -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode>;
-
-/**
- * Deserializes an encoded text AST from the given reader.
- * @tparam encoded_variable_t
- * @param reader
- * @param encoded_tag
- * @return A result containing the deserialized encoded text AST on success, or an error code
- * indicating the failure:
- * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data.
- * - IrDeserializationErrorEnum::CorruptedIR if the IR stream is invalid.
- * - IrDeserializationErrorEnum::DecodingMethodFailure on decode failure.
- * - IrDeserializationErrorEnum::EndOfStream if the stream has reached end-of-file.
- */
-template <ir::EncodedVariableTypeReq encoded_variable_t>
-[[nodiscard]] auto
-deserialize_encoded_text_ast_result(ReaderInterface& reader, encoded_tag_t encoded_tag)
         -> ystdlib::error_handling::Result<EncodedTextAst<encoded_variable_t>>;
 
 /**

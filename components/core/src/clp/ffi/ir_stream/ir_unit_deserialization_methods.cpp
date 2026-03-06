@@ -37,8 +37,8 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * @param tag
  * @return A result containing the corresponding schema tree node type on success, or an error code
  * indicating the failure:
- * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't match to any defined schema
- *   tree node type.
+ * - IrDeserializationErrorEnum::UnknownSchemaTreeNodeType if the tag doesn't match to any defined
+ *   schema tree node type.
  */
 [[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag)
         -> ystdlib::error_handling::Result<SchemaTree::Node::Type>;
@@ -77,7 +77,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * - IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to an integer
- *   packet.
+ * packet.
  */
 [[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
         -> ystdlib::error_handling::Result<void>;
@@ -105,8 +105,8 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  *   - The auto-generated node-ID-value pairs.
  *   - The IDs of all user-generated keys.
  * - The possible error codes:
- *   - IrDeserializationErrorEnum::InvalidKeyOrdering if the IR stream contains auto-generated key
- *     IDs *after* a user-generated key ID has been deserialized.
+ *   - IrDeserializationErrorEnum::InvalidKeyGroupOrdering if the IR stream contains auto-generated
+ * key IDs *after* a user-generated key ID has been deserialized.
  *   - Forwards `deserialize_tag`'s return values on failure.
  *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values on failure
  */
@@ -123,8 +123,8 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
  * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * - IrDeserializationErrorEnum::UnsupportedNodeType if the tag doesn't correspond to any
- *   known value type.
+ * - IrDeserializationErrorEnum::UnknownValueType if the tag doesn't correspond to any
+ * known value type.
  * - Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return values on
  *   failure.
  * - Forwards `deserialize_int_val`'s return values on failure.
@@ -202,7 +202,7 @@ auto schema_tree_node_tag_to_type(encoded_tag_t tag)
         case cProtocol::Payload::SchemaTreeNodeObj:
             return SchemaTree::Node::Type::Obj;
         default:
-            return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedNodeType};
+            return IrDeserializationError{IrDeserializationErrorEnum::UnknownSchemaTreeNodeType};
     }
 }
 
@@ -342,7 +342,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         }
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (is_auto_generated) {
-            return IrDeserializationError{IrDeserializationErrorEnum::InvalidKeyOrdering};
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidKeyGroupOrdering};
         }
         user_gen_schema.push_back(node_id);
 
@@ -413,7 +413,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
             node_id_value_pairs.emplace(node_id, std::nullopt);
             break;
         default:
-            return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedNodeType};
+            return IrDeserializationError{IrDeserializationErrorEnum::UnknownValueType};
     }
     return ystdlib::error_handling::success();
 }
@@ -425,12 +425,12 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> ystdlib::error_handling::Result<void> {
     auto const tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
-
-    auto encoded_text_ast{YSTDLIB_ERROR_HANDLING_TRYX(
-            deserialize_encoded_text_ast_result<encoded_variable_t>(reader, tag)
-    )};
-
-    node_id_value_pairs.emplace(node_id, Value{std::move(encoded_text_ast)});
+    node_id_value_pairs.emplace(
+            node_id,
+            Value{YSTDLIB_ERROR_HANDLING_TRYX(
+                    deserialize_encoded_text_ast<encoded_variable_t>(reader, tag)
+            )}
+    );
     return ystdlib::error_handling::success();
 }
 

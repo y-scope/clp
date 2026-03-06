@@ -29,13 +29,13 @@ namespace clp::ffi::ir_stream {
  * @param tag
  * @param key_name Returns the key name of the deserialized new node. This should be the underlying
  * storage of the returned schema tree node locator.
- * @return A result containing a pair or an error code indicating the failure:
+ * @return A result containing a pair on success, or an error code indicating the failure:
  * - The pair:
  *   - Whether the node is for auto-generated keys schema tree.
  *   - The locator of the inserted schema tree node.
  * - The possible error codes:
  *   - IrDeserializationErrorEnum::IncompleteStream if the IR stream is truncated.
- *   - IrDeserializationErrorEnum::UnsupportedNodeType if the deserialized node type isn't
+ *   - IrDeserializationErrorEnum::UnknownSchemaTreeNodeType if the deserialized node type isn't
  *     supported.
  *   - Forwards `deserialize_schema_tree_node_key_name`'s return values.
  *   - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
