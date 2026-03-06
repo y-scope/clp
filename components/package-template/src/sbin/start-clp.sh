@@ -24,7 +24,9 @@ telemetry_prompt_needed=false
 clp_config_path="${CLP_HOME}/etc/clp-config.yaml"
 
 # Check env vars first
-if [[ "${CLP_DISABLE_TELEMETRY:-}" == "true" ]] || [[ "${CLP_DISABLE_TELEMETRY:-}" == "1" ]]; then
+clp_disable_telemetry_lower="${CLP_DISABLE_TELEMETRY:-}"
+clp_disable_telemetry_lower="${clp_disable_telemetry_lower,,}"
+if [[ "$clp_disable_telemetry_lower" == "true" ]] || [[ "$clp_disable_telemetry_lower" == "1" ]]; then
     telemetry_prompt_needed=false
 elif [[ "${DO_NOT_TRACK:-}" == "1" ]]; then
     telemetry_prompt_needed=false
