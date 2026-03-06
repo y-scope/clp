@@ -53,7 +53,9 @@ void ArchiveReader::read_metadata() {
     );
     m_table_metadata_decompressor.open(*table_metadata_reader, cDecompressorFileReadBufferCapacity);
 
-    m_stream_reader.read_metadata(m_table_metadata_decompressor);
+    if (auto const result{m_stream_reader.read_metadata(m_table_metadata_decompressor)}; result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
 
     uint64_t num_separate_column_schemas{0};
     if (auto const error{
