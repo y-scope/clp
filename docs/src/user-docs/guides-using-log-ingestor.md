@@ -68,7 +68,7 @@ guarantees the following, even in the presence of crashes or restarts of `log-in
   * This is because failures of the compression cluster are external to `log-ingestor`. Future
     versions of CLP will address this limitation.
 * Any file submitted for compression will *only* be compressed once.
-  * This is because for [SQS listener](#sqs-listener) ingestion jobs, the process of deleting
+  * This is because for [SQS listener](#sqs-listener) ingestion jobs, the processes for deleting
     messages from the SQS queue and recording the files for ingestion are not synchronized. As a
     result, a failure during this process may cause the same file to be ingested multiple times.
 :::
