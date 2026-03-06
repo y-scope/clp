@@ -5,21 +5,12 @@ add_subdirectory(timestamp_parser)
 
 set(
         CLP_S_CLP_SOURCES
-        ../clp/aws/AwsAuthenticationSigner.cpp
-        ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
         ../clp/BoundedReader.hpp
         ../clp/BufferedReader.cpp
         ../clp/BufferedReader.hpp
         ../clp/BufferReader.cpp
         ../clp/BufferReader.hpp
-        ../clp/CurlDownloadHandler.cpp
-        ../clp/CurlDownloadHandler.hpp
-        ../clp/CurlEasyHandle.hpp
-        ../clp/CurlGlobalInstance.cpp
-        ../clp/CurlGlobalInstance.hpp
-        ../clp/CurlOperationFailed.hpp
-        ../clp/CurlStringList.hpp
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/Defs.h
@@ -72,8 +63,6 @@ set(
         ../clp/FileReader.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        ../clp/hash_utils.cpp
-        ../clp/hash_utils.hpp
         ../clp/SchemaSearcher.cpp
         ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
@@ -86,8 +75,6 @@ set(
         ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
-        ../clp/NetworkReader.cpp
-        ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
         ../clp/Query.cpp
@@ -122,6 +109,26 @@ set(
         ../clp/WriterInterface.hpp
 )
 
+set(
+        CLP_S_CLP_CURL_SOURCES
+        ../clp/aws/AwsAuthenticationSigner.cpp
+        ../clp/aws/AwsAuthenticationSigner.hpp
+        ../clp/hash_utils.cpp
+        ../clp/hash_utils.hpp
+        ../clp/CurlDownloadHandler.cpp
+        ../clp/CurlDownloadHandler.hpp
+        ../clp/CurlEasyHandle.hpp
+        ../clp/CurlGlobalInstance.cpp
+        ../clp/CurlGlobalInstance.hpp
+        ../clp/CurlOperationFailed.hpp
+        ../clp/CurlStringList.hpp
+        ../clp/NetworkReader.cpp
+        ../clp/NetworkReader.hpp
+)
+if(CLP_BUILD_CLP_S_ENABLE_CURL)
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
+endif()
+
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
@@ -140,14 +147,21 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 zstd::libzstd_static
                 PRIVATE
                 Boost::regex
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
-                OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
         )
+        if(CLP_BUILD_CLP_S_ENABLE_CURL)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PUBLIC
+                        ${CURL_LIBRARIES}
+                        PRIVATE
+                        OpenSSL::Crypto
+                )
+        endif()
 endif()
 
 set(
@@ -218,6 +232,11 @@ if(CLP_BUILD_CLP_S_IO)
                 ${CLP_S_IO_SOURCES}
         )
         add_library(clp_s::io ALIAS clp_s_io)
+        target_compile_definitions(
+                clp_s_io
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+        )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
@@ -280,6 +299,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
         )
         add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+        target_compile_definitions(
+                clp_s_archive_writer
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+        )
         target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_writer PUBLIC ../)
         target_link_libraries(
@@ -296,7 +320,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
@@ -345,6 +368,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 ${CLP_S_ARCHIVE_READER_SOURCES}
         )
         add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+        target_compile_definitions(
+                clp_s_archive_reader
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+        )
         target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_reader PUBLIC ../)
         target_link_libraries(
@@ -361,7 +389,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
@@ -437,6 +464,11 @@ if(CLP_BUILD_EXECUTABLES)
                 clp-s
                 clp-s.cpp
                 ${CLP_S_EXE_SOURCES}
+        )
+        target_compile_definitions(
+                clp-s
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
         )
         target_compile_features(clp-s PRIVATE cxx_std_20)
         target_include_directories(clp-s PRIVATE ../)
