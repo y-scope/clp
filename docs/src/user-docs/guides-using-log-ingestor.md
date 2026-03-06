@@ -51,35 +51,26 @@ will be routed through CLP's [API server](./guides-using-the-api-server.md) in a
 
 ### Fault tolerance
 
-`log-ingestor` is designed to tolerate unexpected crashes or restarts without losing ingestion
-progress.
+`log-ingestor` is designed to tolerate unexpected crashes or restarts without losing information
+about ingestion jobs or the files that have been submitted for compression. Note that this does not
+include fault tolerance of the components external to `log-ingestor`. Specifically, `log-ingestor`
+guarantees the following, even in the presence of crashes or restarts of `log-ingestor`:
 
-At the **job level**, `log-ingestor` automatically restores all ingestion job instances that were
-previously running. After a restart, these jobs are resumed without requiring users to manually
-recreate or resubmit them.
-
-Within each ingestion job, `log-ingestor` maintains a **persistent ingestion state** that records
-the metadata of discovered log files and the progress of ingestion. Using this state, `log-ingestor`
-guarantees the following behavior after a restart:
-
-* **No data loss for ingested files**: Log files that were successfully ingested before the crash
-  will not be lost.
-* **Buffered data recovery**: Any log files buffered in memory before the crash will be recovered
-  and eventually submitted for compression.
-* **Isolation of completed work**:
-  * Files that have already been compressed will not be re-ingested or recompressed.
-  * Files that were previously submitted for compression will not be submitted again, and their
-    compression results will be correctly tracked when the compression job finishes.
+* Any ingestion job successfully submitted to `log-ingestor` will run continuously.
+* Within an ingestion job, any files that have been found on S3 or received as messages from SQS
+  queue will eventually be submitted for compression.
 
 :::{note}
-`log-ingestor`'s fault tolerance model does not guarantee zero duplication for all ingestion job
-types. Some jobs interact with external systems whose state is not synchronized with CLP's
-persistent state.
+`log-ingestor` **DOES NOT** guarantee the following after a crash or restart:
 
-For example, [SQS listener](#sqs-listener) ingestion jobs delete messages from an SQS queue after
-processing them. If a crash occurs after a message has been processed but before the deletion
-request is sent, the message may be delivered again after restart. In this case, the corresponding
-log file may be ingested more than once.
+* Any file submitted for compression (that can be compressed successfully) will eventually be
+  compressed successfully.
+  * This is because failures of the compression cluster are external to `log-ingestor`. Future
+    versions of CLP will address this limitation.
+* Any file submitted for compression will *only* be compressed once.
+  * This is because for [SQS listener](#sqs-listener) ingestion jobs, the process of deleting
+    messages from the SQS queue and recording the files for ingestion are not synchronized. As a
+    result, a failure during this process may cause the same file to be ingested multiple times.
 :::
 
 ---
