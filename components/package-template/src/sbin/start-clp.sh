@@ -31,7 +31,7 @@ if [[ "$clp_disable_telemetry_lower" == "true" ]] || [[ "$clp_disable_telemetry_
 elif [[ "${DO_NOT_TRACK:-}" == "1" ]]; then
     telemetry_prompt_needed=false
 # Check if telemetry is already configured in the config file
-elif [[ -f "$clp_config_path" ]] && grep -q "telemetry:" "$clp_config_path" 2>/dev/null; then
+elif [[ -f "$clp_config_path" ]] && grep -q -E '^telemetry:' "$clp_config_path" 2>/dev/null; then
     telemetry_prompt_needed=false
 # Check if instance-id exists (not first run)
 elif [[ -f "${CLP_HOME}/var/log/instance-id" ]]; then
