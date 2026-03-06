@@ -1,10 +1,8 @@
-use std::env;
-use std::time::Duration;
+use std::{env, time::Duration};
 
 use chrono::Utc;
-use serde::Serialize;
-
 use clp_rust_utils::clp_config::package::config::Config;
+use serde::Serialize;
 
 const TELEMETRY_ENDPOINT: &str = "https://telemetry.yscope.io/v1/events";
 const TELEMETRY_SEND_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60); // 24 hours
