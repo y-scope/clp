@@ -264,7 +264,7 @@ impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
             ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
-            ClientError::InvalidDatasetName => Self::BadRequest("Invalid dataset name.".to_owned()),
+            ClientError::InvalidDatasetName => Self::BadRequest(format!("{err}")),
             _ => Self::InternalServer,
         }
     }
