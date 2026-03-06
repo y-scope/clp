@@ -42,7 +42,11 @@ public:
 
         SPDLOG_INFO("---MEASUREMENTS START---");
         for (auto const& [name, stopwatch] : Profiler::get_runtime_measurements()) {
-            SPDLOG_INFO("{}: {} s", name, Profiler::get_runtime_measurement_in_seconds(name));
+            auto total{stopwatch.get_time_taken_in_seconds()};
+            auto calls{stopwatch.get_call_count()};
+            auto avg{calls > 0 ? total/calls : 0.0};
+
+            SPDLOG_INFO("{}: total {:.3f} s | calls {} | avg {:.3f} s", name, total, calls, avg);
         }
         SPDLOG_INFO("----MEASUREMENTS END----");
     }
