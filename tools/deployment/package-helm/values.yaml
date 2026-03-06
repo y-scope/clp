@@ -4,14 +4,6 @@ fullnameOverride: ""
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
 
-securityContext:
-  firstParty:
-    uid: 1000
-    gid: 1000
-  thirdParty:
-    uid: 1000
-    gid: 1000
-
 image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
@@ -19,13 +11,12 @@ image:
     tag: "main"
 
 # - If false: Single-node deployment.
-#   - PVs use local storage bound to a single node.
 #   - Pods automatically tolerate control-plane taints.
 #   - Each worker deployment supports only 1 replica.
 # - If true: Multi-node deployment.
-#   - PVs use a path on the host (`hostPath`) without node affinity.
-#   - `hostPath` must point to externally managed shared storage (e.g., NFS/CephFS) mounted at the
-#      same path on all nodes.
+#   - When using filesystem storage (`archive_output.storage.type: "fs"`), the PVC-backed
+#     directories must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+#     the same path).
 distributedDeployment: false
 
 # Number of concurrent processes per worker pod.
@@ -79,14 +70,16 @@ reducer:
   #       topologyKey: "kubernetes.io/hostname"
   #       whenUnsatisfiable: "DoNotSchedule"
 
-storage:
-  # Name of the StorageClass for PVs and PVCs.
-  # - If set to "local-storage" (default), the chart will create a StorageClass
-  #   with volumeBindingMode=WaitForFirstConsumer.
-  # - If set to any other value, that StorageClass must already exist in the cluster.
-  storageClassName: "local-storage"
-
 clpConfig:
+  # List of third-party services bundled (deployed) as part of the chart.
+  # Remove a service from this list to use an external instance instead, and configure its host/port
+  # accordingly in the service-specific sections below.
+  bundled:
+    - "database"
+    - "queue"
+    - "redis"
+    - "results_cache"
+
   package:
     storage_engine: "clp-s"
     query_engine: "clp-s"
@@ -110,6 +103,10 @@ clpConfig:
 
   database:
     type: "mariadb"  # "mariadb" or "mysql"
+    # Host and port for the database service. When "database" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
     port: 30306
     names:
       clp: "clp-db"
@@ -125,7 +122,19 @@ clpConfig:
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
 
+  queue:
+    # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 5672
+
   redis:
+    # Host and port for the Redis service. When "redis" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 6379
     query_backend_database: 0
     compression_backend_database: 1
 
@@ -134,6 +143,10 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   results_cache:
+    # Host and port for the results cache service. When "results_cache" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
     port: 30017
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"
@@ -215,23 +228,6 @@ clpConfig:
     sweep_interval:
       archive: 60
       search_result: 30
-
-  # Location where other data (besides archives) are stored. It will be created if
-  # it doesn't exist.
-  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
-  # will be raised if so.
-  data_directory: "/tmp/clp/var/data"
-
-  # Location where logs are stored. It will be created if it doesn't exist.
-  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
-  # will be raised if so.
-  logs_directory: "/tmp/clp/var/log"
-
-  # Location where temporary runtime data are stored. It will be created if
-  # it doesn't exist.
-  # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
-  # will be raised if so.
-  tmp_directory: "/tmp/clp/var/tmp"
 
   # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
   aws_config_directory: null
