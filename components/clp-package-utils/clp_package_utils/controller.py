@@ -666,6 +666,7 @@ class BaseController(ABC):
             "CLP_HOST_ARCH",
             "CLP_DISABLE_TELEMETRY",
             "CLP_TELEMETRY_DEBUG",
+            "DO_NOT_TRACK",
         ):
             val = os.environ.get(var)
             if val is not None:
