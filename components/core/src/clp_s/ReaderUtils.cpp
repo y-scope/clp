@@ -38,7 +38,7 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        auto const key_length_result = cast_uint64_to_size_t(key_length_u64);
+        auto const key_length_result = try_uint64_to_size_t(key_length_u64);
         if (key_length_result.has_error()) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }

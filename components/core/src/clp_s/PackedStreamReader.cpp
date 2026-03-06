@@ -1,8 +1,14 @@
 #include "PackedStreamReader.hpp"
 
+#include <cstddef>
+#include <cstdint>
+
 #include "../clp/BoundedReader.hpp"
+#include "../clp/ErrorCode.hpp"
 #include "archive_constants.hpp"
 #include "ArchiveReaderAdaptor.hpp"
+#include "ErrorCode.hpp"
+#include "ReaderUtils.hpp"
 
 namespace clp_s {
 void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
@@ -14,27 +20,49 @@ void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
             throw OperationFailed(ErrorCodeNotReady, __FILE__, __LINE__);
     }
 
-    size_t num_streams;
-    if (auto error = decompressor.try_read_numeric_value(num_streams); ErrorCodeSuccess != error) {
+    uint64_t num_streams_u64{0};
+    if (auto error = decompressor.try_read_numeric_value(num_streams_u64);
+        ErrorCodeSuccess != error)
+    {
         throw OperationFailed(error, __FILE__, __LINE__);
     }
+
+    auto const num_streams_result = ReaderUtils::try_uint64_to_size_t(num_streams_u64);
+    if (num_streams_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    auto const num_streams = num_streams_result.value();
+
     m_stream_metadata.reserve(num_streams);
 
-    for (size_t i = 0; i < num_streams; ++i) {
-        size_t file_offset;
-        size_t uncompressed_size;
+    for (size_t i{0}; i < num_streams; ++i) {
+        uint64_t file_offset_u64{0};
+        uint64_t uncompressed_size_u64{0};
 
-        if (auto error = decompressor.try_read_numeric_value(file_offset);
+        if (auto error = decompressor.try_read_numeric_value(file_offset_u64);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILE__, __LINE__);
         }
 
-        if (auto error = decompressor.try_read_numeric_value(uncompressed_size);
+        auto const file_offset_result = ReaderUtils::try_uint64_to_size_t(file_offset_u64);
+        if (file_offset_result.has_error()) {
+            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+        }
+        auto const file_offset = file_offset_result.value();
+
+        if (auto error = decompressor.try_read_numeric_value(uncompressed_size_u64);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILE__, __LINE__);
         }
+
+        auto const uncompressed_size_result
+                = ReaderUtils::try_uint64_to_size_t(uncompressed_size_u64);
+        if (uncompressed_size_result.has_error()) {
+            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+        }
+        auto const uncompressed_size = uncompressed_size_result.value();
 
         m_stream_metadata.emplace_back(file_offset, uncompressed_size);
     }
@@ -108,7 +136,13 @@ PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, 
         throw OperationFailed(static_cast<ErrorCode>(error), __FILE__, __LINE__);
     }
 
-    size_t end_pos = m_adaptor->get_header().compressed_size;
+    auto const end_pos_result
+            = ReaderUtils::try_uint64_to_size_t(m_adaptor->get_header().compressed_size);
+    if (end_pos_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    size_t end_pos{end_pos_result.value()};
+
     if ((stream_id + 1) < m_stream_metadata.size()) {
         end_pos = m_begin_offset + m_stream_metadata[stream_id + 1].file_offset;
     }

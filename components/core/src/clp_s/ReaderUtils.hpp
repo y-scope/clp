@@ -74,29 +74,18 @@ public:
     );
 
     /**
-     * Converts a uint64_t value read from CLP-S archive bytes into size_t with bounds checking.
-     *
-     * `size_t` is pointer-sized and therefore platform dependent. If numeric values were
-     * serialized using `size_t` on a 64-bit producer, decoding on a narrower target
-     * (e.g., wasm32) can truncate the value and corrupt decoding state. This helper
-     * ensures that values read from the archive can be safely represented as `size_t`
-     * before they are used for local buffer or container sizes.
-     *
-     * In the long term, the archive format should record explicit numeric serialization
-     * widths rather than relying on platform-sized types.
-     *
-     * @param deserialized_num Numeric value deserialized from archive data.
-     * @return the converted size_t on success.
-     * @return std::errc::value_too_large if the value cannot fit in size_t on this platform.
+     * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.
+     * @param value The 64-bit value deserialized from archive metadata.
+     * @return Converted `size_t` on success.
+     * @return std::errc::value_too_large if the value cannot fit in `size_t`.
      */
-    [[nodiscard]] static auto cast_uint64_to_size_t(uint64_t deserialized_num)
+    [[nodiscard]] static auto try_uint64_to_size_t(uint64_t value)
             -> ystdlib::error_handling::Result<size_t> {
-        if (deserialized_num > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        if (value > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
             return std::errc::value_too_large;
         }
-        return static_cast<size_t>(deserialized_num);
+        return static_cast<size_t>(value);
     }
-
 
 private:
     /**
