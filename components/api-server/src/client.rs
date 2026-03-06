@@ -485,9 +485,6 @@ impl Client {
 
     /// Retrieves timestamp column names for a given dataset.
     ///
-    /// Queries the `clp_{dataset_name}_column_metadata` table for columns with type
-    /// [`TIMESTAMP_NODE_TYPE`].
-    ///
     /// # Returns
     ///
     /// A vector of timestamp column name strings on success.
