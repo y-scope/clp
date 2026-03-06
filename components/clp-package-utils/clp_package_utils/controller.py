@@ -652,9 +652,7 @@ class BaseController(ABC):
             with resolved_id_file.open("r") as f:
                 env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
 
-        version_file = resolve_host_path_in_container(
-            self._clp_config.logs_directory.parent / "VERSION"
-        )
+        version_file = resolve_host_path_in_container(self._clp_home / "VERSION")
         if version_file.exists():
             with version_file.open("r") as f:
                 env_vars["CLP_VERSION"] = f.read().strip()
