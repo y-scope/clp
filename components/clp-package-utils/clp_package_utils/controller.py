@@ -1179,9 +1179,9 @@ def get_or_create_instance_id(clp_config: ClpConfig) -> str:
 
     if resolved_instance_id_file_path.exists():
         with open(resolved_instance_id_file_path, "r") as f:
-            instance_id = f.readline()
+            instance_id = f.readline().strip()
     else:
-        instance_id = str(uuid.uuid4())
+        instance_id = uuid.uuid4().hex[-4:]
         with open(resolved_instance_id_file_path, "w") as f:
             f.write(instance_id)
 
