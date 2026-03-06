@@ -56,7 +56,8 @@ if [[ "$telemetry_prompt_needed" == "true" ]]; then
         echo "You can disable telemetry at any time by setting CLP_DISABLE_TELEMETRY=true"
         echo "or by blocking https://telemetry.yscope.io at the network level."
         echo ""
-        read -r -p "Enable anonymous telemetry to help improve CLP? [Y/n] " telemetry_response
+        read -r -p "Enable anonymous telemetry to help improve CLP? [Y/n] " telemetry_response \
+            || telemetry_response=""
         echo "================================================================================"
 
         if [[ "$telemetry_response" =~ ^[Nn]$ ]]; then
