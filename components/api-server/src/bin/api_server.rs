@@ -70,6 +70,9 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Cannot connect to CLP")?;
 
+    // Spawn telemetry background task (non-blocking, failures are silent)
+    tokio::spawn(api_server::telemetry::run_telemetry_loop(config));
+
     let router = api_server::routes::from_client(client)?;
 
     tracing::info!("Server started at {addr}");

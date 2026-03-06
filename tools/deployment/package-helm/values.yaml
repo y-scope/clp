@@ -169,6 +169,11 @@ clpConfig:
   #   port: 30800
   #   logging_level: "INFO"
 
+  # Anonymous usage telemetry. Set to true to disable.
+  # See: https://docs.yscope.com/clp/main/user-guide/telemetry
+  telemetry:
+    disable: false
+
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
     port: 30302

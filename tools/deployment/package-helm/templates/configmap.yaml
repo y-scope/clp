@@ -219,6 +219,8 @@ data:
     {{- else }}
     mcp_server: null
     {{- end }}
+    telemetry:
+      disable: {{ .Values.clpConfig.telemetry.disable }}
 
   mysql-logging.cnf: |
     [mysqld]

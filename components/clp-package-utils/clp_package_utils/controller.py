@@ -645,6 +645,32 @@ class BaseController(ABC):
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
 
+        # Telemetry env vars
+        instance_id_file = self._clp_config.logs_directory / "instance-id"
+        resolved_id_file = resolve_host_path_in_container(instance_id_file)
+        if resolved_id_file.exists():
+            with open(resolved_id_file, "r") as f:
+                env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
+
+        version_file = resolve_host_path_in_container(self._clp_config._version_file_path)
+        if version_file.exists():
+            with open(version_file, "r") as f:
+                env_vars["CLP_VERSION"] = f.read().strip()
+
+        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
+
+        # Pass through host OS info (set by start-clp.sh)
+        for var in (
+            "CLP_HOST_OS",
+            "CLP_HOST_OS_VERSION",
+            "CLP_HOST_ARCH",
+            "CLP_DISABLE_TELEMETRY",
+            "CLP_TELEMETRY_DEBUG",
+        ):
+            val = os.environ.get(var)
+            if val is not None:
+                env_vars[var] = val
+
         return env_vars
 
     def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
@@ -964,7 +990,7 @@ class DockerComposeController(BaseController):
         self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
     ) -> None:
         """Initializes the DockerComposeController."""
-        self._project_name = f"clp-package-{instance_id}"
+        self._project_name = f"clp-package-{instance_id[-4:]}"
         self._restart_policy = restart_policy
         super().__init__(clp_config)
 
@@ -1155,7 +1181,7 @@ def get_or_create_instance_id(clp_config: ClpConfig) -> str:
         with open(resolved_instance_id_file_path, "r") as f:
             instance_id = f.readline()
     else:
-        instance_id = str(uuid.uuid4())[-4:]
+        instance_id = str(uuid.uuid4())
         with open(resolved_instance_id_file_path, "w") as f:
             f.write(instance_id)
 

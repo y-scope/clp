@@ -48,6 +48,12 @@ spec:
                   key: "username"
             - name: "RUST_LOG"
               value: "INFO"
+            - name: "CLP_DEPLOYMENT_METHOD"
+              value: "helm"
+            {{- if .Values.clpConfig.telemetry.disable }}
+            - name: "CLP_DISABLE_TELEMETRY"
+              value: "true"
+            {{- end }}
           ports:
             - name: "api-server"
               containerPort: 3001
