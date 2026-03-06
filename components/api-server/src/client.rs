@@ -506,9 +506,7 @@ impl Client {
         // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        static VALID_DATASET_NAME_REGEX: std::sync::LazyLock<regex::Regex> =
-            std::sync::LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9_]+$").unwrap());
-        if !VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
             return Err(ClientError::InvalidDatasetName);
         }
         let table_name = format!("clp_{dataset_name}_column_metadata");

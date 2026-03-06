@@ -251,7 +251,7 @@ enum HandlerError {
     #[error("Not found")]
     NotFound,
     #[error("Bad request: {0}")]
-    BadRequest(&'static str),
+    BadRequest(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -264,7 +264,7 @@ impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
             ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
-            ClientError::InvalidDatasetName => Self::BadRequest("Invalid dataset name."),
+            ClientError::InvalidDatasetName => Self::BadRequest("Invalid dataset name.".to_owned()),
             _ => Self::InternalServer,
         }
     }
