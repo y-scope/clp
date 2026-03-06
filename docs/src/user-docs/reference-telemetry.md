@@ -97,7 +97,10 @@ The JSON payload will be logged to the API server log file instead of being tran
 
 The telemetry implementation is fully open source:
 
-- **Client**: `components/api-server/src/telemetry.rs`
-- **Consent prompt**: `components/package-template/src/sbin/start-clp.sh`
+- **Client**:
+  [components/api-server/src/telemetry.rs](https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/api-server/src/telemetry.rs)
+- **Consent prompt**:
+  [components/package-template/src/sbin/start-clp.sh](https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/package-template/src/sbin/start-clp.sh)
 - **Configuration**: `telemetry.disable` in `clp-config.yaml`
-- **Server**: `clp-telemetry-server/`
+- **Server**:
+  [clp-telemetry-server](https://github.com/y-scope/clp-telemetry-server)
