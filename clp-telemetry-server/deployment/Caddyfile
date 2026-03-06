@@ -1,3 +1,0 @@
-telemetry.yscope.io {
-    reverse_proxy telemetry-server:8080
-}
