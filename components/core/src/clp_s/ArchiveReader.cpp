@@ -1,5 +1,6 @@
 #include "ArchiveReader.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <system_error>
@@ -68,18 +69,61 @@ auto ArchiveReader::initialize_archive_reader() -> void {
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
 }
 
-void ArchiveReader::read_metadata() {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
+auto ArchiveReader::read_single_schema_metadata()
+        -> ystdlib::error_handling::Result<std::pair<int32_t, SchemaReader::SchemaMetadata>> {
+    uint64_t stream_id_u64{0};
+    uint64_t stream_offset_u64{0};
+    int32_t schema_id{0};
+    uint64_t num_messages{0};
+
+    if (auto const error{m_table_metadata_decompressor.try_read_numeric_value(stream_id_u64)};
+        ErrorCodeSuccess != error)
+    {
+        return std::errc::io_error;
+    }
+    auto const stream_id{
+            YSTDLIB_ERROR_HANDLING_TRYX(ReaderUtils::try_uint64_to_size_t(stream_id_u64))
+    };
+
+    if (auto const error{m_table_metadata_decompressor.try_read_numeric_value(stream_offset_u64)};
+        ErrorCodeSuccess != error)
+    {
+        return std::errc::io_error;
+    }
+    auto const stream_offset{
+            YSTDLIB_ERROR_HANDLING_TRYX(ReaderUtils::try_uint64_to_size_t(stream_offset_u64))
+    };
+
+    if (stream_offset > m_stream_reader.get_uncompressed_stream_size(stream_id)) {
+        return std::errc::illegal_byte_sequence;
+    }
+
+    if (auto const error{m_table_metadata_decompressor.try_read_numeric_value(schema_id)};
+        ErrorCodeSuccess != error)
+    {
+        return std::errc::io_error;
+    }
+
+    if (auto const error{m_table_metadata_decompressor.try_read_numeric_value(num_messages)};
+        ErrorCodeSuccess != error)
+    {
+        return std::errc::io_error;
+    }
+
+    return std::make_pair(
+            schema_id,
+            SchemaReader::SchemaMetadata{stream_id, stream_offset, num_messages, 0}
+    );
+}
+
+auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
+    constexpr size_t cDecompressorFileReadBufferCapacity{64 * 1024};  // 64 KiB
     auto table_metadata_reader = m_archive_reader_adaptor->checkout_reader_for_section(
             constants::cArchiveTableMetadataFile
     );
     m_table_metadata_decompressor.open(*table_metadata_reader, cDecompressorFileReadBufferCapacity);
 
-    if (auto const result{m_stream_reader.read_metadata(m_table_metadata_decompressor)};
-        result.has_error())
-    {
-        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(m_stream_reader.read_metadata(m_table_metadata_decompressor));
 
     uint64_t num_separate_column_schemas{0};
     if (auto const error{
@@ -91,7 +135,7 @@ void ArchiveReader::read_metadata() {
     }
 
     if (0 != num_separate_column_schemas) {
-        throw OperationFailed(ErrorCode::ErrorCodeUnsupported, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
 
     uint64_t num_schemas{0};
@@ -100,61 +144,30 @@ void ArchiveReader::read_metadata() {
     {
         throw OperationFailed(error, __FILENAME__, __LINE__);
     }
+    if (0 == num_schemas) {
+        throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+    }
 
-    bool prev_metadata_initialized{false};
-    SchemaReader::SchemaMetadata prev_metadata{};
-    int32_t prev_schema_id{};
-    for (uint64_t i{0}; i < num_schemas; ++i) {
-        uint64_t stream_id;
-        uint64_t stream_offset;
-        int32_t schema_id;
-        uint64_t num_messages;
-
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(stream_id);
-            ErrorCodeSuccess != error)
-        {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
-        }
-
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(stream_offset);
-            ErrorCodeSuccess != error)
-        {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
-        }
-
-        if (stream_offset > m_stream_reader.get_uncompressed_stream_size(stream_id)) {
-            throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
-        }
-
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(schema_id);
-            ErrorCodeSuccess != error)
-        {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
-        }
-
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(num_messages);
-            ErrorCodeSuccess != error)
-        {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
-        }
-
-        if (prev_metadata_initialized) {
-            uint64_t uncompressed_size{0};
-            if (stream_id != prev_metadata.stream_id) {
-                uncompressed_size
-                        = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
-                          - prev_metadata.stream_offset;
-            } else {
-                uncompressed_size = stream_offset - prev_metadata.stream_offset;
-            }
-            prev_metadata.uncompressed_size = uncompressed_size;
-            m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
-        } else {
-            prev_metadata_initialized = true;
-        }
-        prev_metadata = {stream_id, stream_offset, num_messages, 0};
-        prev_schema_id = schema_id;
+    auto [prev_schema_id,
+          prev_metadata]{YSTDLIB_ERROR_HANDLING_TRYX(read_single_schema_metadata())};
+    m_schema_ids.push_back(prev_schema_id);
+    for (uint64_t i{1}; i < num_schemas; ++i) {
+        auto const [schema_id, metadata]{
+                YSTDLIB_ERROR_HANDLING_TRYX(read_single_schema_metadata())
+        };
         m_schema_ids.push_back(schema_id);
+
+        if (metadata.stream_id != prev_metadata.stream_id) {
+            prev_metadata.uncompressed_size
+                    = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
+                      - prev_metadata.stream_offset;
+        } else {
+            prev_metadata.uncompressed_size = metadata.stream_offset - prev_metadata.stream_offset;
+        }
+        m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
+
+        prev_schema_id = schema_id;
+        prev_metadata = metadata;
     }
     prev_metadata.uncompressed_size
             = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
@@ -163,10 +176,14 @@ void ArchiveReader::read_metadata() {
     m_table_metadata_decompressor.close();
 
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
+
+    return ystdlib::error_handling::success();
 }
 
 void ArchiveReader::read_dictionaries_and_metadata() {
-    read_metadata();
+    if (auto const result{read_metadata()}; result.has_error()) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
     m_var_dict->read_entries();
     m_log_dict->read_entries();
     m_array_dict->read_entries();
