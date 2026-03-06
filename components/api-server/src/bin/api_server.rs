@@ -71,11 +71,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Cannot connect to CLP")?;
 
     // Spawn telemetry background task (non-blocking, failures are silent)
-    let telemetry_cancel = tokio_util::sync::CancellationToken::new();
-    tokio::spawn(api_server::telemetry::run_telemetry_loop(
-        config,
-        telemetry_cancel.clone(),
-    ));
+    tokio::spawn(api_server::telemetry::run_telemetry_loop(config));
 
     let router = api_server::routes::from_client(client)?;
 
@@ -83,9 +79,5 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
-
-    // Signal the telemetry loop to stop
-    telemetry_cancel.cancel();
-
     Ok(())
 }

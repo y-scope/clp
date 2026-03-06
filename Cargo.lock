@@ -134,7 +134,6 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
- "tokio-util",
  "tower-http",
  "tracing",
  "utoipa",
