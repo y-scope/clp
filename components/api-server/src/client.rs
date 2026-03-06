@@ -512,25 +512,22 @@ impl Client {
             return Err(ClientError::InvalidDatasetName);
         }
         let table_name = format!("clp_{dataset_name}_column_metadata");
-        let rows = sqlx::query(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
-            .bind(TIMESTAMP_NODE_TYPE)
-            .fetch_all(&self.sql_pool)
-            .await
-            .map_err(|err| {
-                if let sqlx::Error::Database(db_err) = &err
-                    && let Some(mysql_err) =
-                        db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                    && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-                {
-                    return ClientError::DatasetNotFound(dataset_name.to_owned());
-                }
-                err.into()
-            })?;
+        let names: Vec<String> =
+            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
+                .bind(TIMESTAMP_NODE_TYPE)
+                .fetch_all(&self.sql_pool)
+                .await
+                .map_err(|err| {
+                    if let sqlx::Error::Database(db_err) = &err
+                        && let Some(mysql_err) =
+                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                    {
+                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                    }
+                    err.into()
+                })?;
 
-        let names = rows
-            .iter()
-            .map(|row| row.try_get("name"))
-            .collect::<Result<Vec<String>, _>>()?;
         Ok(names)
     }
 
