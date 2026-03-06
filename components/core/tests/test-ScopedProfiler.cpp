@@ -27,8 +27,10 @@ TEST_CASE("scoped_profiler_starts_and_stops_timer_automatically", "[profiler]") 
     }
 
     auto const measured{Profiler::get_runtime_measurement_in_seconds(cName)};
+    auto const calls{Profiler::get_runtime_call_count(cName)};
     REQUIRE(measured >= 0.05);
     REQUIRE(measured < 0.14);
+    REQUIRE(calls == 1);
 }
 
 TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[profiler]") {
@@ -48,8 +50,10 @@ TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[profiler]") {
     }
 
     auto const measured{Profiler::get_runtime_measurement_in_seconds(cName)};
+    auto const calls{Profiler::get_runtime_call_count(cName)};
     REQUIRE(measured >= 0.05);
     REQUIRE(measured < 0.14);
+    REQUIRE(calls == 2);
 }
 
 TEST_CASE("scoped_profiler_macro_works", "[profiler]") {
@@ -62,6 +66,8 @@ TEST_CASE("scoped_profiler_macro_works", "[profiler]") {
     }
 
     auto const measured{Profiler::get_runtime_measurement_in_seconds(cName)};
+    auto const calls{Profiler::get_runtime_call_count(cName)};
     REQUIRE(measured >= 0.05);
     REQUIRE(measured < 0.14);
+    REQUIRE(calls == 1);
 }

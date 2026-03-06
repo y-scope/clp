@@ -18,16 +18,21 @@ using std::string;
 using std::unordered_map;
 
 using Sink = unordered_map<string, Stopwatch>;
-using ExpectedSink = unordered_map<string, double>;
+using ExpectedSink = unordered_map<string, std::pair<double, uint32_t>>;
 
 constexpr double cTimerMarginOfError{0.1};
 
 auto check_sink(Sink const& actual_sink, ExpectedSink const& expected_sink) {
-    for (auto const& [name, expected_time] : expected_sink) {
+    for (auto const& [name, expected] : expected_sink) {
+        auto expected_time{expected.first};
+        auto expected_calls{expected.second};
+
         REQUIRE(actual_sink.contains(name));
-        auto const time{actual_sink.at(name).get_time_taken_in_seconds()};
-        REQUIRE(time >= expected_time);
-        REQUIRE(time < expected_time + cTimerMarginOfError);
+        auto const actual_time{actual_sink.at(name).get_time_taken_in_seconds()};
+        auto const actual_calls{actual_sink.at(name).get_call_count()};
+        REQUIRE(actual_time >= expected_time);
+        REQUIRE(actual_time < expected_time + cTimerMarginOfError);
+        REQUIRE(actual_calls == expected_calls);
     }
 }
 
@@ -63,8 +68,8 @@ TEST_CASE("profiler_reporter_reports_runtime_measurements", "[profiler]") {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    check_sink(sink1, {{"scope0",0}, {"scope1",0.01}});
-    check_sink(sink2, {{"scope0",0}, {"scope1",0.01}, {"scope2",0.02}});
-    check_sink(sink3, {{"scope0",0}, {"scope1",0.01}, {"scope2",0.07}});
-    check_sink(sink0, {{"scope0",0.18}, {"scope1",0.01}, {"scope2",0.07}});
+    check_sink(sink1, {{"scope0",{0,0}}, {"scope1",{0.01,1}}});
+    check_sink(sink2, {{"scope0",{0,0}}, {"scope1",{0.01,1}}, {"scope2",{0.02,1}}});
+    check_sink(sink3, {{"scope0",{0,0}}, {"scope1",{0.01,1}}, {"scope2",{0.07,2}}});
+    check_sink(sink0, {{"scope0",{0.18,1}}, {"scope1",{0.01,1}}, {"scope2",{0.07,2}}});
 }

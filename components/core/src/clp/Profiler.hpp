@@ -124,6 +124,17 @@ public:
         }
     }
 
+    static auto get_runtime_call_count(std::string const& name) -> uint32_t {
+        if constexpr (PROF_ACTIVE) {
+            if (false == check_runtime_timer_exists(name)) {
+                return 0;
+            }
+            return m_runtime_measurements[name].get_call_count();
+        } else {
+            return 0;
+        }
+    }
+
     static auto get_runtime_measurements() -> std::unordered_map<std::string, Stopwatch> const& {
         return m_runtime_measurements;
     }
