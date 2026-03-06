@@ -5,7 +5,7 @@ use clp_rust_utils::clp_config::package::config::Config;
 use serde::Serialize;
 
 const TELEMETRY_ENDPOINT: &str = "https://telemetry.yscope.io/v1/events";
-const TELEMETRY_SEND_INTERVAL: Duration = Duration::from_hours(24); // 24 hours
+const TELEMETRY_SEND_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60); // 24 hours
 const TELEMETRY_HTTP_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Schema version for the telemetry payload.
