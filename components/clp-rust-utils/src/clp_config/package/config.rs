@@ -319,16 +319,10 @@ pub enum LogsInput {
 }
 
 /// Mirror of `clp_py_utils.clp_config.Telemetry`.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Telemetry {
     pub disable: bool,
-}
-
-impl Default for Telemetry {
-    fn default() -> Self {
-        Self { disable: false }
-    }
 }
 
 #[cfg(test)]

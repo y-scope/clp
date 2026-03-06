@@ -5,7 +5,7 @@ use clp_rust_utils::clp_config::package::config::Config;
 use serde::Serialize;
 
 const TELEMETRY_ENDPOINT: &str = "https://telemetry.yscope.io/v1/events";
-const TELEMETRY_SEND_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60); // 24 hours
+const TELEMETRY_SEND_INTERVAL: Duration = Duration::from_hours(24); // 24 hours
 const TELEMETRY_HTTP_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Schema version for the telemetry payload.
@@ -35,23 +35,23 @@ fn is_telemetry_disabled(config: &Config) -> bool {
     }
 
     // Check CLP_DISABLE_TELEMETRY env var
-    if let Ok(val) = env::var("CLP_DISABLE_TELEMETRY") {
-        if val.eq_ignore_ascii_case("true") || val == "1" {
-            return true;
-        }
+    if let Ok(val) = env::var("CLP_DISABLE_TELEMETRY")
+        && (val.eq_ignore_ascii_case("true") || val == "1")
+    {
+        return true;
     }
 
     // Check DO_NOT_TRACK env var (https://consoledonottrack.com/)
-    if let Ok(val) = env::var("DO_NOT_TRACK") {
-        if val == "1" {
-            return true;
-        }
+    if let Ok(val) = env::var("DO_NOT_TRACK")
+        && val == "1"
+    {
+        return true;
     }
 
     false
 }
 
-fn get_storage_engine_str(config: &Config) -> &'static str {
+const fn get_storage_engine_str(config: &Config) -> &'static str {
     match config.package.storage_engine {
         clp_rust_utils::clp_config::package::config::StorageEngine::Clp => "clp",
         clp_rust_utils::clp_config::package::config::StorageEngine::ClpS => "clp-s",
@@ -83,9 +83,8 @@ fn build_event(event_type: &str, config: &Config) -> TelemetryEvent {
 }
 
 async fn send_event(client: &reqwest::Client, event: &TelemetryEvent) {
-    let is_debug = env::var("CLP_TELEMETRY_DEBUG")
-        .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
-        .unwrap_or(false);
+    let is_debug =
+        env::var("CLP_TELEMETRY_DEBUG").is_ok_and(|v| v.eq_ignore_ascii_case("true") || v == "1");
 
     if is_debug {
         match serde_json::to_string_pretty(event) {
