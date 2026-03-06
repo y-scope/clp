@@ -21,8 +21,8 @@ void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
     }
 
     uint64_t num_streams_u64{0};
-    if (auto const error{decompressor.try_read_numeric_value(num_streams_u64)} : ErrorCodeSuccess
-        != error)
+    if (auto const error{decompressor.try_read_numeric_value(num_streams_u64)};
+        ErrorCodeSuccess != error)
     {
         throw OperationFailed(error, __FILE__, __LINE__);
     }
