@@ -1,5 +1,7 @@
 use std::{env, time::Duration};
 
+use tokio_util::sync::CancellationToken;
+
 use chrono::Utc;
 use clp_rust_utils::clp_config::package::config::Config;
 use serde::Serialize;
@@ -107,11 +109,17 @@ async fn send_event(client: &reqwest::Client, event: &TelemetryEvent) {
 /// Runs the telemetry background loop. Sends a `deployment_start` event on startup
 /// and a `heartbeat` event every 24 hours. All failures are silently ignored.
 ///
+/// The loop respects the given [`CancellationToken`]: when the token is cancelled
+/// the function returns promptly, allowing a clean shutdown.
+///
 /// This function is designed to be spawned as a background tokio task:
 /// ```ignore
-/// tokio::spawn(telemetry::run_telemetry_loop(config));
+/// let cancel = CancellationToken::new();
+/// tokio::spawn(telemetry::run_telemetry_loop(config, cancel.clone()));
+/// // later, to stop:
+/// cancel.cancel();
 /// ```
-pub async fn run_telemetry_loop(config: Config) {
+pub async fn run_telemetry_loop(config: Config, cancel: CancellationToken) {
     if is_telemetry_disabled(&config) {
         tracing::info!("Anonymous telemetry is disabled.");
         return;
@@ -134,11 +142,17 @@ pub async fn run_telemetry_loop(config: Config) {
     let start_event = build_event("deployment_start", &config);
     send_event(&client, &start_event).await;
 
-    // Periodic heartbeat
+    // Periodic heartbeat — exit when cancellation is requested
     loop {
-        tokio::time::sleep(TELEMETRY_SEND_INTERVAL).await;
-
-        let heartbeat_event = build_event("heartbeat", &config);
-        send_event(&client, &heartbeat_event).await;
+        tokio::select! {
+            () = cancel.cancelled() => {
+                tracing::info!("Telemetry loop cancelled, shutting down.");
+                break;
+            }
+            () = tokio::time::sleep(TELEMETRY_SEND_INTERVAL) => {
+                let heartbeat_event = build_event("heartbeat", &config);
+                send_event(&client, &heartbeat_event).await;
+            }
+        }
     }
 }
