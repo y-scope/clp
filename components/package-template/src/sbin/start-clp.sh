@@ -34,10 +34,30 @@ elif [[ "${DO_NOT_TRACK:-}" == "1" ]]; then
 elif [[ -f "$clp_config_path" ]] && grep -q -E '^telemetry:' "$clp_config_path" 2>/dev/null; then
     telemetry_prompt_needed=false
 # Check if instance-id exists (not first run)
-elif [[ -f "${CLP_HOME}/var/log/instance-id" ]]; then
-    telemetry_prompt_needed=false
 else
-    telemetry_prompt_needed=true
+    # Determine the logs directory: read from config if set, otherwise use the default.
+    clp_logs_dir="${CLP_HOME}/var/log"
+    if [[ -f "$clp_config_path" ]]; then
+        configured_logs_dir=$(
+            grep -E '^logs_directory:' "$clp_config_path" 2>/dev/null \
+                | sed 's/^logs_directory:[[:space:]]*//' \
+                | sed 's/[[:space:]]*$//' \
+                | sed "s/^['\"]//; s/['\"]$//"
+        )
+        if [[ -n "$configured_logs_dir" ]]; then
+            if [[ "$configured_logs_dir" == /* ]]; then
+                clp_logs_dir="$configured_logs_dir"
+            else
+                clp_logs_dir="${CLP_HOME}/${configured_logs_dir}"
+            fi
+        fi
+    fi
+
+    if [[ -f "${clp_logs_dir}/instance-id" ]]; then
+        telemetry_prompt_needed=false
+    else
+        telemetry_prompt_needed=true
+    fi
 fi
 
 if [[ "$telemetry_prompt_needed" == "true" ]]; then
