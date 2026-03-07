@@ -183,9 +183,11 @@ private:
     ArchiveFileInfoPacket m_archive_file_info{};
     ArchiveHeader m_archive_header{};
     ArchiveInfoPacket m_archive_info{};
-    size_t m_files_section_offset{};
+    size_t m_files_section_offset{0};
     std::optional<std::string> m_current_reader_holder;
-    std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
+    std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary{
+            std::make_shared<TimestampDictionaryReader>()
+    };
     std::shared_ptr<clp::ReaderInterface> m_reader;
     std::vector<RangeIndexEntry> m_range_index;
 };
