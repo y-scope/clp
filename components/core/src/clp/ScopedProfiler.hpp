@@ -45,6 +45,6 @@ private:
 #define CLP_CONCAT(x, y) CLP_CONCAT_IMPL(x, y)
 
 #define PROFILE_SCOPE(x) \
-    ::clp::ScopedProfiler CLP_CONCAT(__clp_profile_scope_, __LINE__){x}
+    ::clp::ScopedProfiler CLP_CONCAT(__clp_profile_scope_, __LINE__)(x)
 
 #endif  // CLP_SCOPED_PROFILER_HPP

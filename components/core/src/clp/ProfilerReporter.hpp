@@ -32,6 +32,7 @@ namespace clp {
 class ProfilerReporter {
 public:
     ProfilerReporter() = default;
+
     explicit ProfilerReporter(std::unordered_map<std::string, Stopwatch>& sink) : m_sink(&sink) {}
 
     ~ProfilerReporter() {
