@@ -1,6 +1,7 @@
 pub mod aws;
 pub mod clp_config;
 pub mod database;
+pub mod dataset;
 mod error;
 pub mod job_config;
 pub mod logging;
