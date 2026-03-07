@@ -23,6 +23,7 @@ void Stopwatch::stop() {
 
 void Stopwatch::reset() {
     m_time_taken = std::chrono::steady_clock::duration::zero();
+    m_call_count = 0;
 }
 
 auto Stopwatch::get_time_taken_in_seconds() const -> double {
