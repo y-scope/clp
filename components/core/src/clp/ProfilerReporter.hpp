@@ -1,5 +1,5 @@
-#ifndef CLP_PROFILER_REPORT_HPP
-#define CLP_PROFILER_REPORT_HPP
+#ifndef CLP_PROFILER_REPORTER_HPP
+#define CLP_PROFILER_REPORTER_HPP
 
 #include <string>
 #include <unordered_map>
@@ -62,4 +62,4 @@ private:
 };
 }  // namespace clp
 
-#endif  // CLP_PROFILER_REPORT_HPP
+#endif  // CLP_PROFILER_REPORTER_HPP
