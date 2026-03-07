@@ -9,6 +9,7 @@
 
 #include <array>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <spdlog/spdlog.h>
@@ -74,7 +75,11 @@ public:
     static auto check_init() -> bool {
         if constexpr (PROF_ACTIVE) {
             if (false == m_initialized) {
-                SPDLOG_ERROR("Profiler used without calling Profiler::init()");
+                static bool s_logged{false};
+                if (false == s_logged) {
+                    s_logged = true;
+                    SPDLOG_ERROR("Profiler used without calling Profiler::init()");
+                }
             }
             return m_initialized;
         }
@@ -84,7 +89,11 @@ public:
     static auto check_runtime_timer_exists(std::string const& name) -> bool {
         if constexpr (PROF_ACTIVE) {
             if (false == m_runtime_measurements.contains(name)) {
-                SPDLOG_ERROR("Attempt to get runtime measurement of non existent timer {}", name);
+                static std::unordered_set<std::string> s_logged_names;
+                if (false == s_logged_names.contains(name)) {
+                    s_logged_names.insert(name);
+                    SPDLOG_ERROR("Attempt to get runtime measurement of non existent timer {}", name);
+                }
                 return false;
             }
             return true;
