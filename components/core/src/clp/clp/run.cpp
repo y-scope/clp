@@ -5,7 +5,6 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../Profiler.hpp"
 #include "../ProfilerReporter.hpp"
 #include "../ScopedProfiler.hpp"
 #include "../spdlog_with_specializations.hpp"
@@ -15,7 +14,6 @@
 #include "decompression.hpp"
 #include "utils.hpp"
 
-using clp::Profiler;
 using clp::ProfilerReporter;
 using std::string;
 using std::unordered_set;
