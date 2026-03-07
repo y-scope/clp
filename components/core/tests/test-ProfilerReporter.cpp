@@ -68,8 +68,8 @@ TEST_CASE("profiler_reporter_reports_runtime_measurements", "[profiler]") {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    check_sink(sink1, {{"scope0",{0,0}}, {"scope1",{0.01,1}}});
-    check_sink(sink2, {{"scope0",{0,0}}, {"scope1",{0.01,1}}, {"scope2",{0.02,1}}});
-    check_sink(sink3, {{"scope0",{0,0}}, {"scope1",{0.01,1}}, {"scope2",{0.07,2}}});
-    check_sink(sink0, {{"scope0",{0.18,1}}, {"scope1",{0.01,1}}, {"scope2",{0.07,2}}});
+    check_sink(sink1, {{"scope0", {0, 0}}, {"scope1", {0.01, 1}}});
+    check_sink(sink2, {{"scope0", {0, 0}}, {"scope1", {0.01, 1}}, {"scope2", {0.02, 1}}});
+    check_sink(sink3, {{"scope0", {0, 0}}, {"scope1", {0.01, 1}}, {"scope2", {0.07, 2}}});
+    check_sink(sink0, {{"scope0", {0.18, 1}}, {"scope1", {0.01, 1}}, {"scope2", {0.07, 2}}});
 }

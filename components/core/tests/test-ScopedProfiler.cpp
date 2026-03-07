@@ -8,7 +8,6 @@
 #include <clp/type_utils.hpp>
 
 using clp::Profiler;
-using clp::Profiler;
 using clp::ScopedProfiler;
 
 constexpr auto cName{"ProfileName"};

@@ -30,8 +30,8 @@ public:
 
     ~ScopedProfiler() { Profiler::stop_runtime_measurement(m_name); }
 
-    ScopedProfiler(const ScopedProfiler&) = delete;
-    ScopedProfiler& operator=(const ScopedProfiler&) = delete;
+    ScopedProfiler(ScopedProfiler const&) = delete;
+    ScopedProfiler& operator=(ScopedProfiler const&) = delete;
     ScopedProfiler(ScopedProfiler&&) = delete;
     ScopedProfiler& operator=(ScopedProfiler&&) = delete;
 
@@ -44,6 +44,7 @@ private:
 
 #define CLP_CONCAT(x, y) CLP_CONCAT_IMPL(x, y)
 
-#define PROFILE_SCOPE(x) ::clp::ScopedProfiler CLP_CONCAT(__clp_profile_scope_, __LINE__){x}
+#define PROFILE_SCOPE(x) \
+    ::clp::ScopedProfiler CLP_CONCAT(__clp_profile_scope_, __LINE__){x}
 
 #endif  // CLP_SCOPED_PROFILER_HPP

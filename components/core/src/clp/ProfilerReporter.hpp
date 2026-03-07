@@ -44,15 +44,15 @@ public:
         for (auto const& [name, stopwatch] : Profiler::get_runtime_measurements()) {
             auto total{stopwatch.get_time_taken_in_seconds()};
             auto calls{stopwatch.get_call_count()};
-            auto avg{calls > 0 ? total/calls : 0.0};
+            auto avg{calls > 0 ? total / calls : 0.0};
 
             SPDLOG_INFO("{}: total {:.3f} s | calls {} | avg {:.3f} s", name, total, calls, avg);
         }
         SPDLOG_INFO("----MEASUREMENTS END----");
     }
 
-    ProfilerReporter(const ProfilerReporter&) = delete;
-    ProfilerReporter& operator=(const ProfilerReporter&) = delete;
+    ProfilerReporter(ProfilerReporter const&) = delete;
+    ProfilerReporter& operator=(ProfilerReporter const&) = delete;
     ProfilerReporter(ProfilerReporter&&) = delete;
     ProfilerReporter& operator=(ProfilerReporter&&) = delete;
 

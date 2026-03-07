@@ -84,7 +84,7 @@ public:
         if constexpr (PROF_ACTIVE) {
             if (false == m_runtime_measurements.contains(name)) {
                 SPDLOG_ERROR("Attempt to get runtime measurment of non existent timer {}", name);
-                return false;;
+                return false;
             }
             return true;
         }
@@ -141,8 +141,7 @@ public:
 
     template <CompileTimeMeasurementIndex index>
     static auto start_compile_time_measurement() -> void {
-        if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)])
-        {
+        if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)]) {
             if (false == check_init()) {
                 return;
             }
@@ -152,8 +151,7 @@ public:
 
     template <CompileTimeMeasurementIndex index>
     static auto stop_compile_time_measurement() -> void {
-        if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)])
-        {
+        if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)]) {
             if (false == check_init()) {
                 return;
             }
@@ -163,8 +161,7 @@ public:
 
     template <CompileTimeMeasurementIndex index>
     static auto reset_compile_time_measurement() -> void {
-        if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)])
-        {
+        if constexpr (PROF_ACTIVE && cMeasurementEnabled[enum_to_underlying_type(index)]) {
             if (false == check_init()) {
                 return;
             }
