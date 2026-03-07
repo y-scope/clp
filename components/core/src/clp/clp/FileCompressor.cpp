@@ -28,8 +28,6 @@ using clp::ir::four_byte_encoded_variable_t;
 using clp::ir::has_ir_stream_magic_number;
 using clp::ir::LogEventDeserializer;
 using clp::ParsedMessage;
-using clp::Profiler;
-using clp::ScopedProfiler;
 using clp::streaming_archive::writer::split_archive;
 using clp::streaming_archive::writer::split_file;
 using clp::streaming_archive::writer::split_file_and_archive;
