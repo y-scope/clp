@@ -1,5 +1,8 @@
 #include "Stopwatch.hpp"
 
+#include <chrono>
+#include <cstdint>
+
 namespace clp {
 Stopwatch::Stopwatch() {
     reset();
@@ -14,14 +17,21 @@ void Stopwatch::stop() {
 
     auto time_taken = end - m_begin;
     m_time_taken += time_taken;
+
+    m_call_count++;
 }
 
 void Stopwatch::reset() {
     m_time_taken = std::chrono::steady_clock::duration::zero();
+    m_call_count = 0;
 }
 
-double Stopwatch::get_time_taken_in_seconds() {
+auto Stopwatch::get_time_taken_in_seconds() const -> double {
     std::chrono::duration<double> time_taken_in_seconds = m_time_taken;
     return time_taken_in_seconds.count();
+}
+
+auto Stopwatch::get_call_count() const -> uint32_t {
+    return m_call_count;
 }
 }  // namespace clp

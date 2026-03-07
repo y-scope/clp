@@ -1,11 +1,9 @@
 #include "Profiler.hpp"
 
-#include <memory>
-
-using std::unique_ptr;
 using std::vector;
 
 namespace clp {
-vector<Stopwatch>* Profiler::m_fragmented_measurements = nullptr;
-vector<Stopwatch>* Profiler::m_continuous_measurements = nullptr;
+std::unordered_map<std::string, Stopwatch> Profiler::m_runtime_measurements;
+vector<Stopwatch>* Profiler::m_compile_time_measurements = nullptr;
+bool Profiler::m_initialized = false;
 }  // namespace clp
