@@ -12,11 +12,11 @@ using clp::ScopedProfiler;
 
 constexpr auto cName{"ProfileName"};
 
-TEST_CASE("macro_is_set", "[profiler]") {
+TEST_CASE("macro_is_set", "[ScopedProfiler]") {
     REQUIRE(PROF_ACTIVE == 1);
 }
 
-TEST_CASE("scoped_profiler_starts_and_stops_timer_automatically", "[profiler]") {
+TEST_CASE("scoped_profiler_starts_and_stops_timer_automatically", "[ScopedProfiler][Stopwatch]") {
     Profiler::init();
     Profiler::reset_runtime_measurements();
 
@@ -32,7 +32,7 @@ TEST_CASE("scoped_profiler_starts_and_stops_timer_automatically", "[profiler]") 
     REQUIRE(calls == 1);
 }
 
-TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[profiler]") {
+TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[ScopedProfiler][Stopwatch]") {
     Profiler::init();
     Profiler::reset_runtime_measurements();
 
@@ -55,7 +55,7 @@ TEST_CASE("scoped_profiler_accumulates_across_multiple_scopes", "[profiler]") {
     REQUIRE(calls == 2);
 }
 
-TEST_CASE("scoped_profiler_macro_works", "[profiler]") {
+TEST_CASE("scoped_profiler_macro_works", "[ScopedProfiler][Stopwatch]") {
     Profiler::init();
     Profiler::reset_runtime_measurements();
 

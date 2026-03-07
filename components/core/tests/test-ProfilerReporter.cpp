@@ -36,7 +36,7 @@ auto check_sink(Sink const& actual_sink, ExpectedSink const& expected_sink) {
     }
 }
 
-TEST_CASE("profiler_reporter_reports_runtime_measurements", "[profiler]") {
+TEST_CASE("profiler_reporter_reports_runtime_measurements", "[ProfilerReporter][Stopwatch]") {
     Sink sink0;
     Sink sink1;
     Sink sink2;
