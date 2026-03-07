@@ -92,7 +92,7 @@ public:
                 static std::unordered_set<std::string> s_logged_names;
                 if (false == s_logged_names.contains(name)) {
                     s_logged_names.insert(name);
-                    SPDLOG_ERROR("Attempt to get runtime measurement of non existent timer {}", name);
+                    SPDLOG_ERROR("Attempt to get non-existent runtime measurement: {}", name);
                 }
                 return false;
             }
