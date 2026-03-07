@@ -125,8 +125,6 @@ bool FileCompressor::compress_file(
 ) {
     PROFILE_SCOPE("FileCompressor::compress_file");
 
-    string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
-
     BufferedReader buffered_file_reader{make_unique<FileReader>(file_to_compress.get_path())};
 
     // Check that file is UTF-8 encoded
