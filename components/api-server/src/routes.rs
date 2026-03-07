@@ -36,6 +36,10 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
         .routes(routes!(query))
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
+        .route(
+            "/column_metadata/{dataset_name}/timestamp",
+            get(get_timestamp_column_names),
+        )
         .with_state(client)
         .split_for_parts();
     let api_json = api.to_json()?;
@@ -221,6 +225,24 @@ async fn cancel_query(
     }
 }
 
+async fn get_timestamp_column_names(
+    State(client): State<Client>,
+    Path(dataset_name): Path<String>,
+) -> Result<Json<Vec<String>>, HandlerError> {
+    let names = client
+        .get_timestamp_column_names(&dataset_name)
+        .await
+        .map_err(|err| {
+            tracing::error!(
+                "Failed to get timestamp column names for dataset '{}': {:?}",
+                dataset_name,
+                err
+            );
+            HandlerError::from(err)
+        })?;
+    Ok(Json(names))
+}
+
 /// Generic errors for request handlers.
 #[derive(Error, Debug)]
 enum HandlerError {
@@ -228,6 +250,8 @@ enum HandlerError {
     InternalServer,
     #[error("Not found")]
     NotFound,
+    #[error("Bad request: {0}")]
+    BadRequest(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -239,7 +263,8 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound(_) => Self::NotFound,
+            ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::InvalidDatasetName => Self::BadRequest(format!("{err}")),
             _ => Self::InternalServer,
         }
     }
@@ -251,6 +276,7 @@ impl IntoResponse for HandlerError {
         match self {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
         }
     }
 }
