@@ -7,12 +7,14 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "mcp-server"
 spec:
-  type: "NodePort"
+  type: {{ .Values.clpConfig.mcp_server.serviceType | quote }}
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "mcp-server"
   ports:
     - port: 8000
       targetPort: "mcp"
+      {{- if and (eq .Values.clpConfig.mcp_server.serviceType "NodePort") .Values.clpConfig.mcp_server.port }}
       nodePort: {{ .Values.clpConfig.mcp_server.port }}
+      {{- end }}
 {{- end }}

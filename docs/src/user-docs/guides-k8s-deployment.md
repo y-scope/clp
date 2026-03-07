@@ -346,6 +346,120 @@ To run all worker types in the same node pool:
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
+### Service types and Ingress
+
+By default, externally-accessible services (Web UI, API server, log ingestor, MCP server) use
+`NodePort` with fixed port numbers. You can change the service type to `ClusterIP` or
+`LoadBalancer` using the `serviceType` key for each service, and optionally add an [Ingress]
+resource for production deployments behind a load balancer.
+
+#### Using ClusterIP with Ingress
+
+For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), the standard pattern is `ClusterIP`
+services behind an Ingress controller:
+
+```{code-block} yaml
+:caption: clusterip-ingress.yaml
+
+clpConfig:
+  # Switch external services to ClusterIP
+  webui:
+    serviceType: "ClusterIP"
+  api_server:
+    serviceType: "ClusterIP"
+
+# Enable Ingress
+ingress:
+  enabled: true
+  className: "alb"  # "alb" for AWS, "nginx" for nginx-ingress, etc.
+  host: "clp.example.com"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+  tls:
+    - secretName: clp-tls
+      hosts:
+        - clp.example.com
+```
+
+Install:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f clusterip-ingress.yaml
+```
+
+#### Custom NodePort numbers
+
+To use `NodePort` with different port numbers:
+
+```{code-block} yaml
+:caption: custom-nodeports.yaml
+
+clpConfig:
+  webui:
+    port: 31000
+  api_server:
+    port: 31001
+```
+
+### Service types and Gateway
+
+By default, externally-accessible services (Web UI, API server, log ingestor, MCP server) use
+`NodePort` with fixed port numbers. You can change the service type to `ClusterIP` or
+`LoadBalancer` using the `serviceType` key for each service, and optionally add [Gateway API]
+resources for production deployments behind a load balancer.
+
+#### Using ClusterIP with Gateway API
+
+For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), the standard pattern is `ClusterIP`
+services behind a [Gateway API] controller such as [nginx-gateway-fabric], Envoy Gateway, or
+Istio:
+
+```{code-block} yaml
+:caption: clusterip-gateway.yaml
+
+clpConfig:
+  # Switch external services to ClusterIP
+  webui:
+    serviceType: "ClusterIP"
+  api_server:
+    serviceType: "ClusterIP"
+
+# Enable Gateway API resources
+gateway:
+  enabled: true
+  className: "nginx"  # GatewayClass name from your controller
+  host: "clp.example.com"
+```
+
+Install:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f clusterip-gateway.yaml
+```
+
+The chart creates a `Gateway` listener on port 80 and `HTTPRoute` resources that route:
+
+| Path | Backend |
+|---|---|
+| `/api/v2/` | api-server (prefix stripped) |
+| `/mcp/` | mcp-server (prefix stripped) |
+| `/` | webui (catch-all) |
+
+#### Custom NodePort numbers
+
+To use `NodePort` with different port numbers:
+
+```{code-block} yaml
+:caption: custom-nodeports.yaml
+
+clpConfig:
+  webui:
+    port: 31000
+  api_server:
+    port: 31001
+```
+
 ---
 
 ## Verifying the deployment
@@ -553,12 +667,15 @@ To tear down a `kubeadm` cluster:
 [docker-compose-deployment]: guides-docker-compose-deployment.md
 [eks]: https://aws.amazon.com/eks/
 [external-db-guide]: guides-external-database.md
+[Gateway API]: https://gateway-api.sigs.k8s.io/
 [gke]: https://cloud.google.com/kubernetes-engine
 [Helm]: https://helm.sh/
+[Ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [k3s]: https://k3s.io/
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
+[nginx-gateway-fabric]: https://github.com/nginx/nginx-gateway-fabric
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3
