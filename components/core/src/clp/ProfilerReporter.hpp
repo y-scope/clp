@@ -22,12 +22,12 @@ namespace clp {
  *   profile. A common place is in the `main()` function of an executables.
  * - If `ScopedProfiler` or `Profiler` is used in the same scope as `ProfilerReporter`,
  *   `ProfilerReporter`must be declared first, such that its destructor is called last.
- * - Once the object is destructured (scope exit), the runtime measurmenets are reported.
+ * - Once the object is destructed (scope exit), the runtime measurmenets are reported.
  *
  * Notes:
  *  - Only runtime measurements (those tracked by string names) are reported. This class is
  *    primarily designed to work in tandem with the `ScopedProfiler` class.
- *  - Copy and move operations are removed to prevent accidentaly multiple reporting.
+ *  - Copy and move operations are removed to prevent accidental multiple reporting.
  */
 class ProfilerReporter {
 public:
