@@ -8,7 +8,7 @@ image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
-    tag: "main"
+    tag: "0.10.0"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
