@@ -12,6 +12,7 @@
 #include "../EncodedTextAst.hpp"
 #include "../StringBlob.hpp"
 #include "byteswap.hpp"
+#include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
 
@@ -526,7 +527,7 @@ auto deserialize_encoded_text_ast(
 
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
-        -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode> {
+        -> ystdlib::error_handling::Result<EncodedTextAst<encoded_variable_t>> {
     StringBlob string_blob;
     vector<encoded_variable_t> encoded_vars;
     bool is_encoded_var{};
@@ -534,7 +535,7 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
         if (is_encoded_var) {
             encoded_variable_t encoded_variable{};
             if (false == deserialize_int(reader, encoded_variable)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             encoded_vars.push_back(encoded_variable);
         } else {
@@ -543,28 +544,24 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
                 };
                 IRErrorCode_Success != error_code)
             {
-                return error_code;
+                return EncodedTextAstError{EncodedTextAstErrorEnum::MissingDictVar};
             }
         }
         if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-            return IRErrorCode_Incomplete_IR;
+            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
         }
     }
 
     if (auto const error_code{deserialize_and_append_logtype(reader, encoded_tag, string_blob)};
         IRErrorCode_Success != error_code)
     {
-        return error_code;
+        return EncodedTextAstError{EncodedTextAstErrorEnum::MissingLogtype};
     }
 
-    auto encoded_text_ast_result = EncodedTextAst<encoded_variable_t>::create(
+    return EncodedTextAst<encoded_variable_t>::create(
             std::move(encoded_vars),
             std::move(string_blob)
     );
-    if (encoded_text_ast_result.has_error()) {
-        return IRErrorCode_Corrupted_IR;
-    }
-    return std::move(encoded_text_ast_result.value());
 }
 
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) {
@@ -594,6 +591,14 @@ IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag) {
         return IRErrorCode_Incomplete_IR;
     }
     return IRErrorCode_Success;
+}
+
+auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result<encoded_tag_t> {
+    encoded_tag_t tag{};
+    if (ErrorCode_Success != reader.try_read_numeric_value(tag)) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    return tag;
 }
 
 IRErrorCode deserialize_preamble(
@@ -682,6 +687,15 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
     return IRErrorCode_Success;
 }
 
+auto deserialize_utc_offset_change(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<UtcOffset> {
+    int64_t serialized_utc_offset{};
+    if (false == deserialize_int(reader, serialized_utc_offset)) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    return UtcOffset{serialized_utc_offset};
+}
+
 namespace four_byte_encoding {
 IRErrorCode deserialize_log_event(
         ReaderInterface& reader,
@@ -752,10 +766,10 @@ template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
 template auto deserialize_encoded_text_ast<four_byte_encoded_variable_t>(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag
-) -> boost::outcome_v2::std_checked<EncodedTextAst<four_byte_encoded_variable_t>, IRErrorCode>;
+) -> ystdlib::error_handling::Result<EncodedTextAst<four_byte_encoded_variable_t>>;
 
 template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag
-) -> boost::outcome_v2::std_checked<EncodedTextAst<eight_byte_encoded_variable_t>, IRErrorCode>;
+) -> ystdlib::error_handling::Result<EncodedTextAst<eight_byte_encoded_variable_t>>;
 }  // namespace clp::ffi::ir_stream

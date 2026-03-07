@@ -1,5 +1,6 @@
 #include "utils.hpp"
 
+#include <cassert>
 #include <cstdint>
 #include <string_view>
 #include <system_error>
@@ -10,6 +11,7 @@
 
 #include "../../type_utils.hpp"
 #include "decoding_methods.hpp"
+#include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {

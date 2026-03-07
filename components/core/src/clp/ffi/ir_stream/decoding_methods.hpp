@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/outcome/std_result.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
@@ -70,6 +70,17 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
 [[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
 
 /**
+ * Deserializes the tag for the next packet.
+ * @param reader
+ * @return A result containing the tag of the next packet on success, or an error code indicating
+ * the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ */
+[[nodiscard]] auto deserialize_tag(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<encoded_tag_t>;
+
+/**
  * Deserializes a log event from the given stream
  * @tparam encoded_variable_t
  * @param reader
@@ -128,7 +139,7 @@ auto deserialize_encoded_text_ast(
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
-        -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode>;
+        -> ystdlib::error_handling::Result<EncodedTextAst<encoded_variable_t>>;
 
 /**
  * Decodes the IR message calls the given methods to handle each component of the message
@@ -210,6 +221,16 @@ IRErrorCode deserialize_preamble(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+
+/**
+ * Deserializes a UTC offset change packet.
+ * @param reader
+ * @return A result containing the deserialized UTC offset or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize
+ */
+[[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<UtcOffset>;
 
 /**
  * Validates whether the given protocol version can be supported by the current build.
