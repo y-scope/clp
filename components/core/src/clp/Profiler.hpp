@@ -21,7 +21,7 @@ namespace clp {
  * Class to time code.
  *
  * A Measurement can be taken over a single continuous operation, or called multiple times to
- * accumulate fragemented measurements into a single total run time.
+ * accumulate fragmented measurements into a single total run time.
  *
  * There are two ways to add a measurement:
  * 1. For measurements that are taken a small number of times use a runtime measurement.
