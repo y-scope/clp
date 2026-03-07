@@ -56,12 +56,14 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::submit`]'s return values on failure.
-    pub async fn add(&mut self, object_metadata: ObjectMetadata) -> Result<()> {
-        self.total_size += object_metadata.size;
-        self.buf.push(object_metadata);
+    pub async fn add(&mut self, object_metadata_to_ingest: Vec<ObjectMetadata>) -> Result<()> {
+        for object_metadata in object_metadata_to_ingest {
+            self.total_size += object_metadata.size;
+            self.buf.push(object_metadata);
 
-        if self.total_size >= self.size_threshold {
-            self.submit().await?;
+            if self.total_size >= self.size_threshold {
+                self.submit().await?;
+            }
         }
 
         Ok(())

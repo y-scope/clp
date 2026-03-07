@@ -2,15 +2,18 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <memory>
 #include <sstream>
+#include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "archive_constants.hpp"
-#include "Defs.hpp"
-#include "SchemaTree.hpp"
-#include "SingleFileArchiveDefs.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -333,12 +336,13 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                         std::make_unique<ClpStringColumnWriter>(id, m_var_dict, m_array_dict)
                 );
                 break;
-            case NodeType::DateString:
-                writer->append_column(std::make_unique<DateStringColumnWriter>(id));
-                break;
             case NodeType::DeltaInteger:
                 writer->append_column(std::make_unique<DeltaEncodedInt64ColumnWriter>(id));
                 break;
+            case NodeType::Timestamp:
+                writer->append_column(std::make_unique<TimestampColumnWriter>(id));
+                break;
+            case NodeType::DeprecatedDateString:
             case NodeType::Metadata:
             case NodeType::NullValue:
             case NodeType::Object:

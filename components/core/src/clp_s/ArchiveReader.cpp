@@ -1,14 +1,22 @@
 #include "ArchiveReader.hpp"
 
-#include <filesystem>
-#include <string_view>
+#include <memory>
+#include <system_error>
+#include <utility>
+#include <vector>
 
-#include "archive_constants.hpp"
-#include "ArchiveReaderAdaptor.hpp"
-#include "InputConfig.hpp"
-#include "ReaderUtils.hpp"
+#include <fmt/core.h>
+#include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
-using std::string_view;
+#include <clp/ir/types.hpp>
+#include <clp/type_utils.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/ReaderUtils.hpp>
 
 namespace clp_s {
 void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
@@ -22,7 +30,29 @@ void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& netw
     }
 
     m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+    initialize_archive_reader();
+}
 
+auto ArchiveReader::open(
+        std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
+        std::string_view archive_id
+) -> void {
+    if (m_is_open) {
+        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
+    }
+    m_is_open = true;
+
+    if (nullptr == single_file_archive_reader || archive_id.empty()) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    m_archive_id = archive_id;
+
+    m_archive_reader_adaptor
+            = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
+    initialize_archive_reader();
+}
+
+auto ArchiveReader::initialize_archive_reader() -> void {
     if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
@@ -212,8 +242,12 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::UnstructuredArray:
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
             break;
-        case NodeType::DateString:
-            column_reader = new DateStringColumnReader(column_id, get_timestamp_dictionary());
+        case NodeType::DeprecatedDateString:
+            column_reader
+                    = new DeprecatedDateStringColumnReader(column_id, get_timestamp_dictionary());
+            break;
+        case NodeType::Timestamp:
+            column_reader = new TimestampColumnReader(column_id, get_timestamp_dictionary());
             break;
         // No need to push columns without associated object readers into the SchemaReader.
         case NodeType::Metadata:
@@ -268,10 +302,11 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(column_id);
                 break;
-            // UnstructuredArray and DateString currently aren't supported as part of any unordered
-            // object, so we disregard them here
+            // UnstructuredArray, DeprecatedDateString, and Timestamp currently aren't supported as
+            // part of any unordered object, so we disregard them here
             case NodeType::UnstructuredArray:
-            case NodeType::DateString:
+            case NodeType::DeprecatedDateString:
+            case NodeType::Timestamp:
             // No need to push columns without associated object readers into the SchemaReader.
             case NodeType::StructuredArray:
             case NodeType::Object:
