@@ -56,8 +56,8 @@ public:
 
     // Methods
     /**
-     * Static initializer for class. This must be called before using the class. This is meant to be
-     * process lifetime storage, so the vector is never freed.
+     * Static initializer for class. This must be called before using compile-time measurements.
+     * This is meant to be process lifetime storage, so the vector is never freed.
      */
     static void init() {
         if constexpr (PROF_ACTIVE) {
