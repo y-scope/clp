@@ -2,6 +2,7 @@
 name = "clp-rust-utils"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 
 [dependencies]
 aws-config = "1.8.12"
