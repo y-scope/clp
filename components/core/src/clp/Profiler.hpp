@@ -83,7 +83,7 @@ public:
     static auto check_runtime_timer_exists(std::string const& name) -> bool {
         if constexpr (PROF_ACTIVE) {
             if (false == m_runtime_measurements.contains(name)) {
-                SPDLOG_ERROR("Attempt to get runtime measurment of non existent timer {}", name);
+                SPDLOG_ERROR("Attempt to get runtime measurement of non existent timer {}", name);
                 return false;
             }
             return true;
