@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: "redis"
-          image: "redis:7.2.4"
+          image: "redis:7.4.8"
           imagePullPolicy: "Always"
           env:
             - name: "REDIS_PASSWORD"
