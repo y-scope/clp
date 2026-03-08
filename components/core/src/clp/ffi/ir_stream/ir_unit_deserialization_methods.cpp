@@ -106,7 +106,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  *   - The IDs of all user-generated keys.
  * - The possible error codes:
  *   - IrDeserializationErrorEnum::InvalidKeyGroupOrdering if the IR stream contains auto-generated
- * key IDs *after* a user-generated key ID has been deserialized.
+ *     key IDs *after* a user-generated key ID has been deserialized.
  *   - Forwards `deserialize_tag`'s return values on failure.
  *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values on failure
  */

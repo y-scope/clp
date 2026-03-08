@@ -225,7 +225,8 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
 /**
  * Deserializes a UTC offset change packet.
  * @param reader
- * @return A result containing the deserialized UTC offset or an error code indicating the failure:
+ * @return A result containing the deserialized UTC offset on success, or an error code indicating
+ * the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
  *   deserialize
  */

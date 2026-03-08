@@ -16,24 +16,23 @@ template <>
 auto IrErrorCategory::message(IrDeserializationErrorEnum error_enum) const -> std::string {
     switch (error_enum) {
         case IrDeserializationErrorEnum::DuplicateKey:
-            return "a key is duplicated in the deserialized log event";
+            return "duplicated keys are found in the same kv-pair log event";
         case IrDeserializationErrorEnum::EndOfStream:
-            return "the end-of-stream IR unit has already been consumed";
+            return "reached end-of-stream IR unit";
         case IrDeserializationErrorEnum::IncompleteStream:
-            return "the IR stream ended with a truncated IR unit or did not terminate with an "
-                   "end-of-stream IR unit";
+            return "incomplete IR stream";
         case IrDeserializationErrorEnum::InvalidKeyGroupOrdering:
-            return "auto-generated key IDs appear after user-generated key IDs in the log event";
+            return "invalid key-ID-group ordering";
         case IrDeserializationErrorEnum::InvalidTag:
-            return "the tag byte does not match the expected type";
+            return "invalid tag";
         case IrDeserializationErrorEnum::UnsupportedMetadataFormat:
-            return "the IR stream uses an unsupported metadata format, version, or structure";
+            return "IR stream metadata format unsupported";
         case IrDeserializationErrorEnum::UnsupportedVersion:
-            return "the IR stream uses an unsupported version";
+            return "IR stream version unsupported";
         case IrDeserializationErrorEnum::UnknownSchemaTreeNodeType:
-            return "the schema tree node type is unknown";
+            return "unknown schema tree node type";
         case IrDeserializationErrorEnum::UnknownValueType:
-            return "the serialized value type is unknown";
+            return "unknown value type";
         default:
             return "unknown error code enum";
     }
