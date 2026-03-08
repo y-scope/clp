@@ -56,11 +56,50 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    struct SchemaMetadata {
-        size_t stream_id{0};
-        size_t stream_offset{0};
-        uint64_t num_messages{0};
-        size_t uncompressed_size{0};
+    /**
+     * Metadata describing one schema table entry.
+     *
+     * Fields (except `num_messages`) are stored as `size_t` instead of their serialized type
+     * `uint64_t` because they are passed to buffer and index APIs that operate on pointer sized
+     * offsets. Deserialized metadata must therefore be converted before constructing this object.
+     */
+    class SchemaMetadata {
+    public:
+        // Constructors
+        SchemaMetadata() = default;
+
+        /**
+         * Constructs metadata without `uncompressed_size`, which is derived later after reading
+         * neighboring schema entries.
+         *
+         * @param stream_id
+         * @param stream_offset
+         * @param num_messages
+         */
+        SchemaMetadata(size_t stream_id, size_t stream_offset, uint64_t num_messages)
+                : m_stream_id{stream_id},
+                  m_stream_offset{stream_offset},
+                  m_num_messages{num_messages} {}
+
+        // Methods
+        [[nodiscard]] auto stream_id() const -> size_t { return m_stream_id; }
+
+        [[nodiscard]] auto stream_offset() const -> size_t { return m_stream_offset; }
+
+        [[nodiscard]] auto num_messages() const -> uint64_t { return m_num_messages; }
+
+        [[nodiscard]] auto uncompressed_size() const -> size_t { return m_uncompressed_size; }
+
+        auto set_uncompressed_size(size_t uncompressed_size) -> void {
+            m_uncompressed_size = uncompressed_size;
+        }
+
+    private:
+        // Members
+        size_t m_stream_id{0};
+        size_t m_stream_offset{0};
+        uint64_t m_num_messages{0};
+        size_t m_uncompressed_size{0};
     };
 
     // Constructor

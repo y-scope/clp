@@ -112,7 +112,7 @@ auto ArchiveReader::read_single_schema_metadata()
 
     return std::make_pair(
             schema_id,
-            SchemaReader::SchemaMetadata{stream_id, stream_offset, num_messages, 0}
+            SchemaReader::SchemaMetadata{stream_id, stream_offset, num_messages}
     );
 }
 
@@ -157,25 +157,27 @@ auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
         };
         m_schema_ids.push_back(schema_id);
 
-        if (metadata.stream_offset < prev_metadata.stream_offset) {
+        if (metadata.stream_id() != prev_metadata.stream_id()) {
+            prev_metadata.set_uncompressed_size(
+                    m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id())
+                    - prev_metadata.stream_offset()
+            );
+        } else if (metadata.stream_offset() < prev_metadata.stream_offset()) {
             throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
-        }
-
-        if (metadata.stream_id != prev_metadata.stream_id) {
-            prev_metadata.uncompressed_size
-                    = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
-                      - prev_metadata.stream_offset;
         } else {
-            prev_metadata.uncompressed_size = metadata.stream_offset - prev_metadata.stream_offset;
+            prev_metadata.set_uncompressed_size(
+                    metadata.stream_offset() - prev_metadata.stream_offset()
+            );
         }
         m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
 
         prev_schema_id = schema_id;
         prev_metadata = metadata;
     }
-    prev_metadata.uncompressed_size
-            = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
-              - prev_metadata.stream_offset;
+    prev_metadata.set_uncompressed_size(
+            m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id())
+            - prev_metadata.stream_offset()
+    );
     m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
     m_table_metadata_decompressor.close();
 
@@ -213,10 +215,13 @@ SchemaReader& ArchiveReader::read_schema_table(
             should_marshal_records
     );
 
-    auto& schema_metadata = m_id_to_schema_metadata[schema_id];
-    auto stream_buffer = read_stream(schema_metadata.stream_id, true);
-    m_schema_reader
-            .load(stream_buffer, schema_metadata.stream_offset, schema_metadata.uncompressed_size);
+    auto const& schema_metadata = m_id_to_schema_metadata[schema_id];
+    auto stream_buffer = read_stream(schema_metadata.stream_id(), true);
+    m_schema_reader.load(
+            stream_buffer,
+            schema_metadata.stream_offset(),
+            schema_metadata.uncompressed_size()
+    );
     return m_schema_reader;
 }
 
@@ -226,12 +231,12 @@ std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::read_all_tables() {
     for (auto schema_id : m_schema_ids) {
         auto schema_reader = std::make_shared<SchemaReader>();
         initialize_schema_reader(*schema_reader, schema_id, true, true);
-        auto& schema_metadata = m_id_to_schema_metadata[schema_id];
-        auto stream_buffer = read_stream(schema_metadata.stream_id, false);
+        auto const& schema_metadata = m_id_to_schema_metadata[schema_id];
+        auto stream_buffer = read_stream(schema_metadata.stream_id(), false);
         schema_reader->load(
                 stream_buffer,
-                schema_metadata.stream_offset,
-                schema_metadata.uncompressed_size
+                schema_metadata.stream_offset(),
+                schema_metadata.uncompressed_size()
         );
         readers.push_back(std::move(schema_reader));
     }
@@ -365,7 +370,7 @@ void ArchiveReader::initialize_schema_reader(
             m_projection,
             schema_id,
             schema.get_ordered_schema_view(),
-            m_id_to_schema_metadata[schema_id].num_messages,
+            m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records
     );
     auto timestamp_column_ids

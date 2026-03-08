@@ -38,7 +38,12 @@ bool Output::filter() {
     bool has_array_search = false;
 
     if (auto const result{m_archive_reader->read_metadata()}; result.has_error()) {
-        SPDLOG_ERROR("Failed to read archive metadata.");
+        auto const error{result.error()};
+        SPDLOG_ERROR(
+                "Failed to read archive metadata: {} - {}",
+                error.category().name(),
+                error.message()
+        );
         return false;
     }
 
