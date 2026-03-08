@@ -55,7 +55,7 @@ public:
 
     /**
      * Reads the dictionaries and metadata.
-     * @throws OperationFailed if reading or decompressing metdata fails.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
     void read_dictionaries_and_metadata();
 
