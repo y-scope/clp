@@ -157,14 +157,12 @@ auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
         };
         m_schema_ids.push_back(schema_id);
 
-        if (metadata.stream_offset < prev_metadata.stream_offset) {
-            throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
-        }
-
         if (metadata.stream_id != prev_metadata.stream_id) {
             prev_metadata.uncompressed_size
                     = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
                       - prev_metadata.stream_offset;
+        } else if (metadata.stream_offset < prev_metadata.stream_offset) {
+            throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
         } else {
             prev_metadata.uncompressed_size = metadata.stream_offset - prev_metadata.stream_offset;
         }

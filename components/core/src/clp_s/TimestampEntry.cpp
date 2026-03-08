@@ -82,7 +82,6 @@ ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor) {
         m_column_ids.insert(id);
     }
 
-    uint64_t encoding{0};
     error_code = decompressor.try_read_numeric_value<TimestampEncoding>(m_encoding);
     if (ErrorCodeSuccess != error_code) {
         return error_code;

@@ -99,7 +99,6 @@ public:
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_single_schema_metadata`'s return values on failure.
      * - Forwards `PackedStreamReader::read_metadata`'s return values on failure.
-     * - Forwards `ReaderUtils::try_uint64_to_size_t`'s return values on failure.
      * @throws OperationFailed if archive metadata is empty or corrupt.
      * @throws OperationFailed if archive metadata stream offset is not strictly incremental.
      * @throws OperationFailed if reading or decompressing metadata fails.
