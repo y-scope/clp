@@ -11,6 +11,7 @@ namespace clp::ffi::ir_stream {
  */
 enum class IrDeserializationErrorEnum : uint8_t {
     DuplicateKey,
+    EncodedTextAstDeserializationFailure,
     EndOfStream,
     IncompleteStream,
     InvalidKeyGroupOrdering,

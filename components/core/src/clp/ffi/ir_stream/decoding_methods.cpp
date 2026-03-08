@@ -544,7 +544,9 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
                 };
                 IRErrorCode_Success != error_code)
             {
-                return EncodedTextAstError{EncodedTextAstErrorEnum::MissingDictVar};
+                return IrDeserializationError{
+                        IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure
+                };
             }
         }
         if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
@@ -555,7 +557,9 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
     if (auto const error_code{deserialize_and_append_logtype(reader, encoded_tag, string_blob)};
         IRErrorCode_Success != error_code)
     {
-        return EncodedTextAstError{EncodedTextAstErrorEnum::MissingLogtype};
+        return IrDeserializationError{
+                IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure
+        };
     }
 
     return EncodedTextAst<encoded_variable_t>::create(

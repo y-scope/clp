@@ -132,10 +132,9 @@ auto deserialize_encoded_text_ast(
  * @param encoded_tag
  * @return A result containing the deserialized encoded text AST on success, or an error code
  * indicating the failure:
- * - IRErrorCode_Corrupted_IR: if IR stream is invalid.
- * - IRErrorCode_Incomplete_IR: if IR stream is incomplete.
- * - Forwards `deserialize_and_append_logtype`'s return values on failure.
- * - Forwards `deserialize_and_append_dict_var`'s return values on failure.
+ * - IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure: if the encoded text AST
+ *   cannot be deserialized
+ * - IrDeserializationErrorEnum::IncompleteStream: if the IR stream is incomplete
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)

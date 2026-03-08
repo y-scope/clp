@@ -17,6 +17,8 @@ auto IrErrorCategory::message(IrDeserializationErrorEnum error_enum) const -> st
     switch (error_enum) {
         case IrDeserializationErrorEnum::DuplicateKey:
             return "duplicated keys are found in the same kv-pair log event";
+        case IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure:
+            return "failed to deserialize an encoded text AST";
         case IrDeserializationErrorEnum::EndOfStream:
             return "reached end-of-stream IR unit";
         case IrDeserializationErrorEnum::IncompleteStream:
