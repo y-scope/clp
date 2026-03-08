@@ -483,6 +483,52 @@ impl Client {
         Ok(mapped)
     }
 
+    /// Retrieves timestamp column names for a given dataset.
+    ///
+    /// # Returns
+    ///
+    /// A vector of timestamp column name strings on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    pub async fn get_timestamp_column_names(
+        &self,
+        dataset_name: &str,
+    ) -> Result<Vec<String>, ClientError> {
+        // Must be kept in sync with `NodeType::Timestamp` in
+        // `components/core/src/clp_s/SchemaTree.hpp`.
+        const TIMESTAMP_NODE_TYPE: i8 = 14;
+        // MySQL error number for "Table doesn't exist".
+        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
+
+        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+            return Err(ClientError::InvalidDatasetName);
+        }
+        let table_name = format!("clp_{dataset_name}_column_metadata");
+        let names: Vec<String> =
+            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
+                .bind(TIMESTAMP_NODE_TYPE)
+                .fetch_all(&self.sql_pool)
+                .await
+                .map_err(|err| {
+                    if let sqlx::Error::Database(db_err) = &err
+                        && let Some(mysql_err) =
+                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                    {
+                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                    }
+                    err.into()
+                })?;
+
+        Ok(names)
+    }
+
     /// # Returns
     ///
     /// A reference to the API server configuration.
