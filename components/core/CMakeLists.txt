@@ -308,6 +308,11 @@ if(CLP_NEED_ZSTD)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.
     find_package(zstd 1.4.8 REQUIRED)
     message(STATUS "Found zstd ${zstd_VERSION}")
+    if(CLP_USE_STATIC_LIBS)
+        set(zstd_TARGET zstd::libzstd_static)
+    else()
+        set(zstd_TARGET zstd::libzstd_shared)
+    endif()
 endif()
 
 if(CLP_NEED_LIBLZMA)
@@ -327,6 +332,13 @@ if(CLP_NEED_SQLITE)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
     include(cmake/Modules/FindLibraryDependencies.cmake)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+endif()
+
+if(CLP_NEED_XXHASH)
+    find_package(xxHash 0.8.3 CONFIG REQUIRED)
+    if(xxHash_FOUND)
+        message(STATUS "Found xxHash ${xxHash_VERSION}")
+    endif()
 endif()
 
 add_subdirectory(src/clp/regex_utils)
@@ -402,7 +414,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/QueryRunner.hpp
     src/clp_s/search/SchemaMatch.cpp
     src/clp_s/search/SchemaMatch.hpp
-    src/clp_s/test/test_InputConfig.cpp
     src/clp_s/TimestampDictionaryReader.cpp
     src/clp_s/TimestampDictionaryReader.hpp
     src/clp_s/TimestampDictionaryWriter.cpp
@@ -712,6 +723,7 @@ set(SOURCE_FILES_unitTest
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedReader.cpp
+        tests/test-clp_s-bloom_filter.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
@@ -773,6 +785,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            clp_s::filter
             date::date
             fmt::fmt
             log_surgeon::log_surgeon
@@ -791,7 +804,7 @@ if(CLP_ENABLE_TESTS)
             clp::string_utils
             ystdlib::containers
             ystdlib::error_handling
-            zstd::libzstd_static
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

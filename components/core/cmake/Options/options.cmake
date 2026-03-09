@@ -101,6 +101,12 @@ option(
     ON
 )
 
+option(
+    CLP_BUILD_CLP_S_FILTER
+    "Build clp_s::filter."
+    ON
+)
+
 # Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
 #
 # @param {string} TARGET_CLP_BUILD_OPTION
@@ -168,6 +174,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_REGEX_UTILS
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_ENABLE_CURL
+        CLP_BUILD_CLP_S_FILTER
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
@@ -267,6 +274,17 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_SPDLOG
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD
+    )
+endfunction()
+
+function(validate_clp_s_filter_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_FILTER)
+endfunction()
+
+function(set_clp_s_filter_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_XXHASH
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -435,6 +453,11 @@ function(validate_and_setup_all_clp_dependency_flags)
         set_clp_s_clp_dependencies_dependencies()
     endif()
 
+    if (CLP_BUILD_CLP_S_FILTER)
+        validate_clp_s_filter_dependencies()
+        set_clp_s_filter_dependencies()
+    endif()
+
     if (CLP_BUILD_CLP_S_IO)
         validate_clp_s_io_dependencies()
         set_clp_s_io_dependencies()
@@ -504,6 +527,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
+        CLP_NEED_XXHASH
         CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD
