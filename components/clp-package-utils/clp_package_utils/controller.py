@@ -645,6 +645,33 @@ class BaseController(ABC):
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
 
+        # Telemetry env vars
+        instance_id_file = self._clp_config.logs_directory / "instance-id"
+        resolved_id_file = resolve_host_path_in_container(instance_id_file)
+        if resolved_id_file.exists():
+            with resolved_id_file.open("r") as f:
+                env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
+
+        version_file = resolve_host_path_in_container(self._clp_home / "VERSION")
+        if version_file.exists():
+            with version_file.open("r") as f:
+                env_vars["CLP_VERSION"] = f.read().strip()
+
+        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
+
+        # Pass through host OS info (set by start-clp.sh)
+        for var in (
+            "CLP_HOST_OS",
+            "CLP_HOST_OS_VERSION",
+            "CLP_HOST_ARCH",
+            "CLP_DISABLE_TELEMETRY",
+            "CLP_TELEMETRY_DEBUG",
+            "DO_NOT_TRACK",
+        ):
+            val = os.environ.get(var)
+            if val is not None:
+                env_vars[var] = val
+
         return env_vars
 
     def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
@@ -1153,9 +1180,9 @@ def get_or_create_instance_id(clp_config: ClpConfig) -> str:
 
     if resolved_instance_id_file_path.exists():
         with open(resolved_instance_id_file_path, "r") as f:
-            instance_id = f.readline()
+            instance_id = f.readline().strip()
     else:
-        instance_id = str(uuid.uuid4())[-4:]
+        instance_id = uuid.uuid4().hex
         with open(resolved_instance_id_file_path, "w") as f:
             f.write(instance_id)
 
