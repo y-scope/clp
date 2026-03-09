@@ -5,37 +5,80 @@
 #include <cstdint>
 #include <string_view>
 #include <utility>
-#include <vector>
 
-#include <clp_s/FileWriter.hpp>
+#include <ystdlib/containers/Array.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
-namespace clp {
-class ReaderInterface;
-}  // namespace clp
+#include <clp/ReaderInterface.hpp>
+#include <clp/WriterInterface.hpp>
+
+#include "ErrorCode.hpp"
 
 namespace clp_s::filter {
+/**
+ * A Bloom filter for variable dictionary values.
+ */
 class BloomFilter {
 public:
-    BloomFilter(size_t expected_num_elements, double false_positive_rate);
+    // Factory functions
+    /**
+     * @param expected_num_elements Expected number of inserted values.
+     * @param false_positive_rate Target false-positive rate in the range [1e-6, 1).
+     * @return A result containing a constructed BloomFilter on success, or an error code
+     * indicating the failure:
+     * - ErrorCodeEnum::InvalidFalsePositiveRate if the false-positive rate is not in [1e-6, 1).
+     * - ErrorCodeEnum::ParameterComputationOutOfRange if parameter computation overflows.
+     */
+    [[nodiscard]] static auto create(size_t expected_num_elements, double false_positive_rate)
+            -> ystdlib::error_handling::Result<BloomFilter>;
 
-    BloomFilter();
+    /**
+     * Reads Bloom filter payload fields from a reader.
+     * @param reader
+     * @return A result containing a parsed BloomFilter on success, or an error code indicating
+     * the failure:
+     * - ErrorCodeEnum::CorruptFilterPayload for malformed payload fields.
+     * - ErrorCodeEnum::ReadFailure for truncated/failed reads.
+     */
+    [[nodiscard]] static auto try_read_from_file(clp::ReaderInterface& reader)
+            -> ystdlib::error_handling::Result<BloomFilter>;
 
+    // Methods
+    /**
+     * Adds a value to the filter.
+     * @param value
+     */
     void add(std::string_view value);
+
+    /**
+     * @param value
+     * @return true if the value may be present, false if definitely not present.
+     */
     [[nodiscard]] bool possibly_contains(std::string_view value) const;
 
-    void write_to_file(FileWriter& writer) const;
-    [[nodiscard]] bool read_from_file(clp::ReaderInterface& reader);
+    /**
+     * Writes Bloom filter payload fields to a writer.
+     * @param writer
+     */
+    void write_to_file(clp::WriterInterface& writer) const;
 
 private:
-    [[nodiscard]] static std::pair<size_t, uint32_t>
-    compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate);
+    BloomFilter(
+            size_t bit_array_size,
+            uint32_t num_hash_functions,
+            ystdlib::containers::Array<uint8_t> bit_array
+    );
+
+    [[nodiscard]] static auto
+    compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
+            -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>>;
 
     void set_bit(size_t bit_index);
     [[nodiscard]] bool test_bit(size_t bit_index) const;
 
     size_t m_bit_array_size{0};
     uint32_t m_num_hash_functions{0};
-    std::vector<uint8_t> m_bit_array;
+    ystdlib::containers::Array<uint8_t> m_bit_array;
 };
 }  // namespace clp_s::filter
 

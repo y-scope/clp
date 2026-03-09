@@ -2,14 +2,8 @@ set(
         CLP_S_FILTER_SOURCES
         BloomFilter.cpp
         BloomFilter.hpp
-        FilterBuilder.cpp
-        FilterBuilder.hpp
-        FilterConfig.cpp
-        FilterConfig.hpp
-        FilterFile.cpp
-        FilterFile.hpp
-        FilterReader.cpp
-        FilterReader.hpp
+        ErrorCode.cpp
+        ErrorCode.hpp
         XxHash.cpp
         XxHash.hpp
 )
@@ -26,8 +20,9 @@ if(CLP_BUILD_CLP_S_FILTER)
                 clp_s_filter
                 PUBLIC
                 clp_s::io
+                ystdlib::containers
+                ystdlib::error_handling
                 PRIVATE
-                clp::string_utils
                 xxHash::xxhash
         )
 endif()
