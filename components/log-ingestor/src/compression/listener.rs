@@ -1,7 +1,6 @@
 use std::{pin::Pin, time::Duration};
 
 use anyhow::Result;
-use clp_rust_utils::s3::ObjectMetadata;
 use tokio::{
     select,
     sync::mpsc,
@@ -9,7 +8,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::compression::{Buffer, BufferSubmitter};
+use crate::compression::{Buffer, BufferSubmitter, CompressionBufferEntry};
 
 /// Represents a listener task that buffers and submits S3 object metadata.
 ///
@@ -18,7 +17,7 @@ use crate::compression::{Buffer, BufferSubmitter};
 struct ListenerTask<Submitter: BufferSubmitter> {
     buffer: Buffer<Submitter>,
     timeout: Duration,
-    receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
+    receiver: mpsc::Receiver<Vec<CompressionBufferEntry>>,
 }
 
 impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
@@ -50,9 +49,9 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                     return Ok(());
                 }
 
-                // New object metadata received.
-                optional_object_metadata = self.receiver.recv() => {
-                    match optional_object_metadata {
+                // New object metadata refs received.
+                optional_refs = self.receiver.recv() => {
+                    match optional_refs {
                         None => {
                             self.buffer.submit().await?;
                             tracing::info!(
@@ -60,8 +59,8 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                             );
                             return Ok(());
                         }
-                        Some(object_metadata_to_ingest) => {
-                            self.buffer.add(object_metadata_to_ingest).await?;
+                        Some(refs) => {
+                            self.buffer.add(refs).await?;
                         }
                     }
                 }
@@ -77,10 +76,10 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     }
 }
 
-/// Represents a listener that accepts S3 object metadata from multiple senders and buffers them
-/// for submission.
+/// Represents a listener that accepts S3 object metadata refs from multiple senders and buffers
+/// them for submission.
 pub struct Listener {
-    sender: mpsc::Sender<Vec<ObjectMetadata>>,
+    sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
     cancel_token: CancellationToken,
     handle: tokio::task::JoinHandle<Result<()>>,
 }
@@ -89,8 +88,8 @@ impl Listener {
     /// Creates and spawns a new [`Listener`] backed by a [`ListenerTask`].
     ///
     /// This function spawns a [`ListenerTask`]. The spawned task will buffer incoming
-    /// [`ObjectMetadata`] values and call the supplied `Submitter` when either the buffer's
-    /// threshold is reached or the configured `timeout` fires.
+    /// [`CompressionBufferEntry`] values and call the supplied `Submitter` when either the
+    /// buffer's threshold is reached or the configured `timeout` fires.
     ///
     /// # Type parameters
     ///
@@ -144,15 +143,15 @@ impl Listener {
     }
 
     /// # Returns
-    /// A new `mpsc::Sender<Vec<ObjectMetadata>>` that can be used to send metadata to this
-    /// listener.
+    /// A new `mpsc::Sender<Vec<CompressionBufferEntry>>` that can be used to send metadata
+    /// refs to this listener.
     ///
     /// The returned sender is a cheap clone of the listener's internal channel sender. It can be
     /// freely cloned and moved to other tasks; multiple senders may concurrently send to the same
     /// listener. Messages sent by a single sender preserve order; messages from different senders
     /// are interleaved in the order they are received by the runtime.
     #[must_use]
-    pub fn get_new_sender(&self) -> mpsc::Sender<Vec<ObjectMetadata>> {
+    pub fn get_new_sender(&self) -> mpsc::Sender<Vec<CompressionBufferEntry>> {
         self.sender.clone()
     }
 }

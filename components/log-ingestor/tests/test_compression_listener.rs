@@ -2,16 +2,21 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use clp_rust_utils::{s3::ObjectMetadata, types::non_empty_string::ExpectedNonEmpty};
-use log_ingestor::compression::{Buffer, BufferSubmitter, DEFAULT_LISTENER_CAPACITY, Listener};
-use non_empty_string::NonEmptyString;
+use clp_rust_utils::s3::S3ObjectMetadataId;
+use log_ingestor::compression::{
+    Buffer,
+    BufferSubmitter,
+    CompressionBufferEntry,
+    DEFAULT_LISTENER_CAPACITY,
+    Listener,
+};
 use tokio::sync::{Mutex, mpsc};
 
 const TEST_OBJECT_SIZE: u64 = 1024;
 
 /// A test submitter that stores submitted buffers in memory for inspection.
 struct TestBufferSubmitter {
-    store: Arc<Mutex<Vec<Vec<ObjectMetadata>>>>,
+    store: Arc<Mutex<Vec<Vec<S3ObjectMetadataId>>>>,
 }
 
 impl TestBufferSubmitter {
@@ -21,41 +26,41 @@ impl TestBufferSubmitter {
         }
     }
 
-    fn shared_store(&self) -> Arc<Mutex<Vec<Vec<ObjectMetadata>>>> {
+    fn shared_store(&self) -> Arc<Mutex<Vec<Vec<S3ObjectMetadataId>>>> {
         self.store.clone()
     }
 }
 
 #[async_trait]
 impl BufferSubmitter for TestBufferSubmitter {
-    async fn submit(&self, buffer: &[ObjectMetadata]) -> Result<()> {
-        let store = self.store.clone();
-        let _submitted_results = store.lock().await.push(buffer.to_vec());
+    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
+        self.store.lock().await.push(buffer.to_vec());
         Ok(())
     }
 }
 
-/// Sends a list of objects to the listener via the provided sender.
-async fn send_to_listener(objects: Vec<ObjectMetadata>, sender: mpsc::Sender<Vec<ObjectMetadata>>) {
+/// Sends [`CompressionBufferEntry`] values to the listener via the provided sender.
+async fn send_to_listener(
+    refs: Vec<CompressionBufferEntry>,
+    sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
+) {
     sender
-        .send(objects)
+        .send(refs)
         .await
-        .expect("Failed to send objects to listener");
+        .expect("Failed to send refs to listener");
 }
 
-/// Creates a vector of [`ObjectMetadata`] objects for a given bucket. Each object will have a
-/// unique key and a fixed size of [`TEST_OBJECT_SIZE`].
+/// Creates [`CompressionBufferEntry`] values for testing. IDs start at `id_start`.
+/// [`TEST_OBJECT_SIZE`].
 ///
 /// # Returns
 ///
-/// A vector of created objects for testing.
-fn create_test_objects(bucket_name: &str, count: usize) -> Vec<ObjectMetadata> {
-    (0..count)
-        .map(|i| ObjectMetadata {
-            bucket: NonEmptyString::from_string(bucket_name.to_string()),
-            key: NonEmptyString::from_string(format!("object-{i}")),
+/// A vector of [`CompressionBufferEntry`] for testing.
+fn create_test_refs(id_start: S3ObjectMetadataId, count: usize) -> Vec<CompressionBufferEntry> {
+    (id_start..id_start + count as S3ObjectMetadataId)
+        .map(|id| CompressionBufferEntry {
+            id,
             size: TEST_OBJECT_SIZE,
-            id: None,
         })
         .collect()
 }
@@ -63,8 +68,6 @@ fn create_test_objects(bucket_name: &str, count: usize) -> Vec<ObjectMetadata> {
 #[tokio::test]
 async fn test_compression_listener() -> Result<()> {
     const DEFAULT_TIMEOUT_SECONDS: u64 = 4;
-    const BUCKET_0: &str = "bucket-0";
-    const BUCKET_1: &str = "bucket-1";
 
     let submitter = TestBufferSubmitter::new();
     let shared = submitter.shared_store();
@@ -76,24 +79,18 @@ async fn test_compression_listener() -> Result<()> {
         DEFAULT_LISTENER_CAPACITY,
     );
 
-    let bucket_0_objects = create_test_objects(BUCKET_0, 100);
-    let bucket_1_objects = create_test_objects(BUCKET_1, 200);
+    let refs1 = create_test_refs(1, 100);
+    let refs2 = create_test_refs(101, 100);
+    let refs3 = create_test_refs(201, 100);
 
-    // Spawn three tasks that send into the listener concurrently:
-    // 1) send all of `bucket_0_objects`
-    // 2) send the first 100 objects of `bucket_1_objects`
-    // 3) send the last 100 objects of `bucket_1_objects`
+    // Spawn three tasks that send into the listener concurrently
     let sender1 = listener.get_new_sender();
     let sender2 = listener.get_new_sender();
     let sender3 = listener.get_new_sender();
 
-    let objs1 = bucket_0_objects.clone();
-    let objs2 = bucket_1_objects[..100].to_vec();
-    let objs3 = bucket_1_objects[100..].to_vec();
-
-    let h1 = tokio::spawn(async move { send_to_listener(objs1, sender1).await });
-    let h2 = tokio::spawn(async move { send_to_listener(objs2, sender2).await });
-    let h3 = tokio::spawn(async move { send_to_listener(objs3, sender3).await });
+    let h1 = tokio::spawn(async move { send_to_listener(refs1, sender1).await });
+    let h2 = tokio::spawn(async move { send_to_listener(refs2, sender2).await });
+    let h3 = tokio::spawn(async move { send_to_listener(refs3, sender3).await });
 
     // Wait for all sender tasks to finish
     h1.await.unwrap();
@@ -110,16 +107,13 @@ async fn test_compression_listener() -> Result<()> {
     // The first two triggered by buffer size limit, the last one by timeout.
     assert_eq!(submitted_buffers.len(), 3);
 
-    let mut actual_total_submitted: Vec<ObjectMetadata> =
-        submitted_buffers.iter().flatten().cloned().collect();
-    actual_total_submitted.sort();
+    let mut actual_ids: Vec<S3ObjectMetadataId> =
+        submitted_buffers.iter().flatten().copied().collect();
+    actual_ids.sort_unstable();
 
-    let mut expected_total_submitted = Vec::new();
-    expected_total_submitted.extend_from_slice(&bucket_0_objects);
-    expected_total_submitted.extend_from_slice(&bucket_1_objects);
-    expected_total_submitted.sort();
+    let expected_ids: Vec<S3ObjectMetadataId> = (1..=300).collect();
+    assert_eq!(expected_ids, actual_ids);
 
-    assert_eq!(expected_total_submitted, actual_total_submitted);
     submitted_buffers.clear();
     drop(submitted_buffers);
 
