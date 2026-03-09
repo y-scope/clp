@@ -54,8 +54,13 @@ auto assert_archive_event_count_matches_log(std::string_view const archive_name)
     auto& reader = reader_result.value();
 
     auto const expected_event_count = get_num_lines(log_path);
-    REQUIRE(reader.get_archive_id() == archive_path.filename().string());
-    REQUIRE(reader.get_event_count() == expected_event_count);
+    auto archive_id_result = reader.get_archive_id();
+    REQUIRE_FALSE(archive_id_result.has_error());
+    REQUIRE(archive_id_result.value() == archive_path.filename().string());
+
+    auto event_count_result = reader.get_event_count();
+    REQUIRE_FALSE(event_count_result.has_error());
+    REQUIRE(event_count_result.value() == expected_event_count);
 }
 
 auto assert_archive_event_count_matches_log_in_memory(std::string_view const archive_name) -> void {
@@ -78,8 +83,13 @@ auto assert_archive_event_count_matches_log_in_memory(std::string_view const arc
     auto& reader = reader_result.value();
 
     auto const expected_event_count = get_num_lines(log_path);
-    REQUIRE(reader.get_archive_id() == archive_name);
-    REQUIRE(reader.get_event_count() == expected_event_count);
+    auto archive_id_result = reader.get_archive_id();
+    REQUIRE_FALSE(archive_id_result.has_error());
+    REQUIRE(archive_id_result.value() == archive_name);
+
+    auto event_count_result = reader.get_event_count();
+    REQUIRE_FALSE(event_count_result.has_error());
+    REQUIRE(event_count_result.value() == expected_event_count);
 }
 }  // namespace
 

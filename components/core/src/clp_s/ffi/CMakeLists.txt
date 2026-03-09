@@ -1,5 +1,7 @@
 set(
         CLP_S_FFI_SFA_SOURCES
+        sfa/SfaErrorCode.cpp
+        sfa/SfaErrorCode.hpp
         sfa/ClpArchiveReader.cpp
         sfa/ClpArchiveReader.hpp
 )

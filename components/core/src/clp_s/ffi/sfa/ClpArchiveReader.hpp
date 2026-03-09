@@ -23,7 +23,7 @@ public:
      * @param archive_path Path to the single-file archive.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
-     * - `std::errc::io_error` if archive open/initialization fails.
+     * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      */
     [[nodiscard]] static auto create(std::string_view archive_path)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
@@ -33,7 +33,7 @@ public:
      * @param archive_id Identifier to assign to this archive.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
-     * - `std::errc::io_error` if archive open/initialization fails.
+     * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      */
     [[nodiscard]] static auto
     create(std::span<char const> archive_data, std::string_view archive_id)
@@ -51,14 +51,18 @@ public:
     [[nodiscard]] auto operator=(ClpArchiveReader&&) -> ClpArchiveReader& = default;
 
     /**
-     * @return The archive ID.
+     * @return A result containing the archive ID on success, or an error code indicating the
+     * failure:
+     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized or has already been closed.
      */
-    [[nodiscard]] auto get_archive_id() const -> std::string;
+    [[nodiscard]] auto get_archive_id() const -> ystdlib::error_handling::Result<std::string>;
 
     /**
-     * @return The total number of events in the archive.
+     * @return A result containing the total number of events in the archive on success, or an
+     * error code indicating the failure:
+     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized or has already been closed.
      */
-    [[nodiscard]] auto get_event_count() const -> uint64_t;
+    [[nodiscard]] auto get_event_count() const -> ystdlib::error_handling::Result<uint64_t>;
 
 private:
     // Constructors
