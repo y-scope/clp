@@ -11,7 +11,7 @@ from strenum import LowercaseStrEnum
 class InputType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
-    INGESTOR = auto()
+    METADATA = auto()
 
 
 class PathsToCompress(BaseModel):
@@ -45,8 +45,8 @@ class S3InputConfig(S3Config):
         return value
 
 
-class LogIngestorSubmittedS3InputConfig(S3Config):
-    type: Literal[InputType.INGESTOR.value] = InputType.INGESTOR.value
+class S3ObjectMetadataInputConfig(S3Config):
+    type: Literal[InputType.METADATA.value] = InputType.METADATA.value
     ingestion_job_id: int
     dataset: str | None = None
     timestamp_key: str | None = None
@@ -70,7 +70,7 @@ class OutputConfig(BaseModel):
 
 
 class ClpIoConfig(BaseModel):
-    input: FsInputConfig | S3InputConfig | LogIngestorSubmittedS3InputConfig
+    input: FsInputConfig | S3InputConfig | S3ObjectMetadataInputConfig
     output: OutputConfig
 
 

@@ -48,8 +48,8 @@ from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
     InputType,
-    LogIngestorSubmittedS3InputConfig,
     S3InputConfig,
+    S3ObjectMetadataInputConfig,
 )
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
@@ -188,23 +188,22 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def _fetch_ingested_s3_object_metadata(
-    metadata_ids: list[int],
-    ingestion_job_id: int,
-    db_cursor: Any,
-) -> list[dict[str, Any]]:
+def _process_s3_object_metadata_input(
+    s3_object_metadata_input_config: S3ObjectMetadataInputConfig,
+    paths_to_compress_buffer: PathsToCompressBuffer,
+    db_context: DbContext,
+) -> None:
     """
     Fetches S3 object metadata rows from the INGESTED_S3_OBJECT_METADATA_TABLE_NAME table for the
-    given metadata_ids and ingestion_job_id.
+    given metadata_ids and ingestion_job_id, and adds the metadata to paths_to_compress_buffer.
 
-    :param metadata_ids: IDs to fetch.
-    :param ingestion_job_id: Ingestion job to filter by.
-    :param db_cursor: Database cursor for the query.
-    :return: List of row dicts with "id", "key", and "size".
+    :param s3_object_metadata_input_config:
+    :param paths_to_compress_buffer:
+    :param db_context:
     :raises RuntimeError: If no rows are found, or if any requested metadata_id is missing.
     """
-    if not metadata_ids:
-        return []
+    metadata_ids = s3_object_metadata_input_config.metadata_ids
+    ingestion_job_id = s3_object_metadata_input_config.ingestion_job_id
 
     placeholders = ", ".join(["%s"] * len(metadata_ids))
     query = (
@@ -212,8 +211,8 @@ def _fetch_ingested_s3_object_metadata(
         f"WHERE id IN ({placeholders}) AND ingestion_job_id = %s"
     )
     params = (*metadata_ids, ingestion_job_id)
-    db_cursor.execute(query, params)
-    metadata_list = db_cursor.fetchall()
+    db_context.cursor.execute(query, params)
+    metadata_list = db_context.cursor.fetchall()
     if not metadata_list:
         raise RuntimeError(
             f"No rows found in {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} for the given "
@@ -230,28 +229,6 @@ def _fetch_ingested_s3_object_metadata(
             f"ingestion_job_id {ingestion_job_id}: {sorted(missing_ids)}."
         )
 
-    return metadata_list
-
-
-def _process_log_ingestor_submitted_s3_input(
-    log_ingestor_submitted_s3_input_config: LogIngestorSubmittedS3InputConfig,
-    paths_to_compress_buffer: PathsToCompressBuffer,
-    db_context: DbContext,
-) -> None:
-    """
-    Retrieves S3 object metadata based on the config's metadata_ids and ingestion_job_id,
-    then adds FileMetadata for each row to paths_to_compress_buffer.
-
-    :param log_ingestor_submitted_s3_input_config:
-    :param paths_to_compress_buffer:
-    :param db_context:
-    :raises: Propagates `_fetch_ingested_s3_object_metadata`'s exceptions.
-    """
-    metadata_ids = log_ingestor_submitted_s3_input_config.metadata_ids
-    ingestion_job_id = log_ingestor_submitted_s3_input_config.ingestion_job_id
-    metadata_list = _fetch_ingested_s3_object_metadata(
-        metadata_ids, ingestion_job_id, db_context.cursor
-    )
     for metadata in metadata_list:
         file_metadata = FileMetadata(path=Path(metadata["key"]), size=int(metadata["size"]))
         paths_to_compress_buffer.add_file(file_metadata)
@@ -395,21 +372,19 @@ def search_and_schedule_new_tasks(
                     },
                 )
                 return
-        elif input_type == InputType.INGESTOR.value:
+        elif input_type == InputType.METADATA.value:
             try:
-                _process_log_ingestor_submitted_s3_input(
+                _process_s3_object_metadata_input(
                     input_config, paths_to_compress_buffer, db_context
                 )
             except Exception as err:
-                logger.exception(
-                    "Failed to process log ingestor submitted S3 input for job %s", job_id
-                )
+                logger.exception("Failed to process S3 object metadata input for job %s", job_id)
                 update_compression_job_metadata(
                     db_context,
                     job_id,
                     {
                         "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"Log ingestor submitted S3 input failure: {err}",
+                        "status_msg": f"S3 object metadata input failure: {err}",
                     },
                 )
                 return

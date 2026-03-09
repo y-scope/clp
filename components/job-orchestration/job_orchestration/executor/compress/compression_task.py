@@ -36,11 +36,12 @@ from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     InputType,
-    LogIngestorSubmittedS3InputConfig,
     PathsToCompress,
     S3InputConfig,
+    S3ObjectMetadataInputConfig,
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
+from job_orchestration.scheduler.utils import _is_s3_based_input
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -138,7 +139,7 @@ def _generate_fs_logs_list(
 def _generate_s3_logs_list(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
-    s3_input_config: S3InputConfig | LogIngestorSubmittedS3InputConfig,
+    s3_input_config: S3InputConfig | S3ObjectMetadataInputConfig,
 ) -> None:
     # S3 object keys are stored as file_paths in `PathsToCompress`
     object_keys = paths_to_compress.file_paths
@@ -272,9 +273,7 @@ def _make_clp_s_command_and_env(
     # fmt: on
 
     compression_env_vars = dict(os.environ)
-    if (
-        InputType.S3 == clp_config.input.type or InputType.INGESTOR == clp_config.input.type
-    ) and not clp_config.input.unstructured:
+    if _is_s3_based_input(clp_config.input.type) and not clp_config.input.unstructured:
         compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
@@ -316,7 +315,7 @@ def _make_log_converter_command_and_env(
     # fmt: on
 
     conversion_env_vars = dict(os.environ)
-    if InputType.S3 == clp_config.input.type or InputType.INGESTOR == clp_config.input.type:
+    if _is_s3_based_input(clp_config.input.type):
         conversion_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         conversion_cmd.append("--auth")
         conversion_cmd.append("s3")
@@ -395,7 +394,7 @@ def run_clp(
     logs_list_path = tmp_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:
         _generate_fs_logs_list(logs_list_path, paths_to_compress)
-    elif InputType.S3 == input_type or InputType.INGESTOR == input_type:
+    elif _is_s3_based_input(input_type):
         _generate_s3_logs_list(logs_list_path, paths_to_compress, clp_config.input)
     else:
         error_msg = f"Unsupported input type: {input_type}."
