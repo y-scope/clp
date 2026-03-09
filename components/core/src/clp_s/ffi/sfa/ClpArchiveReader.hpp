@@ -40,7 +40,7 @@ public:
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor
-    ~ClpArchiveReader() noexcept;
+    ~ClpArchiveReader();
 
     // Delete copy constructor and assignment operator
     ClpArchiveReader(ClpArchiveReader const&) = delete;

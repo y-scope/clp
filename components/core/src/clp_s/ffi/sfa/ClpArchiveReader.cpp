@@ -43,7 +43,7 @@ auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_vi
     }
 }
 
-ClpArchiveReader::~ClpArchiveReader() noexcept {
+ClpArchiveReader::~ClpArchiveReader() {
     if (nullptr != m_archive_reader) {
         try {
             m_archive_reader->close();
