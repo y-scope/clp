@@ -186,9 +186,6 @@ clpConfig:
   archive_output:
     storage:
       type: "fs"
-      # NOTE: This directory must not overlap with any path used in CLP's execution container. An
-      # error will be raised if so.
-      directory: "/tmp/clp/var/data/archives"
 
     # Retention period for archives, in minutes. Set to null to disable automatic deletion.
     retention_period: null
@@ -214,9 +211,6 @@ clpConfig:
   stream_output:
     storage:
       type: "fs"
-      # NOTE: This directory must not overlap with any path used in CLP's execution container. An
-      # error will be raised if so.
-      directory: "/tmp/clp/var/data/streams"
 
     # How large each stream file should be before being split into a new stream file
     target_uncompressed_size: 134217728  # 128 MB
