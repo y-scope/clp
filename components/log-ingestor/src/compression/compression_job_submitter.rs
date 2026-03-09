@@ -10,14 +10,14 @@ use clp_rust_utils::{
         ClpIoConfig,
         CompressionJobId,
         CompressionJobStatus,
+        IngestionJobId,
         InputConfig,
+        LogIngestorSubmittedS3InputConfig,
         OutputConfig,
-        S3InputConfig,
         ingestion::s3::BaseConfig,
     },
-    s3::{ObjectMetadata, S3ObjectMetadataId},
+    s3::S3ObjectMetadataId,
 };
-use non_empty_string::NonEmptyString;
 
 use crate::{compression::BufferSubmitter, ingestion_job_manager::ClpCompressionState};
 
@@ -32,22 +32,13 @@ pub struct CompressionJobSubmitter {
 
 #[async_trait]
 impl BufferSubmitter for CompressionJobSubmitter {
-    async fn submit(&self, buffer: &[ObjectMetadata]) -> Result<()> {
-        let id_and_key_pairs = buffer
-            .iter()
-            .map(|object_metadata| {
-                (
-                    object_metadata.id.expect("the ingestion ID must be set"),
-                    object_metadata.key.clone(),
-                )
-            })
-            .collect();
+    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
         let io_config_template = self.io_config_template.clone();
         let state = self.state.clone();
         tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
             state,
             io_config_template,
-            id_and_key_pairs,
+            buffer.to_vec(),
         ));
         Ok(())
     }
@@ -66,8 +57,9 @@ impl CompressionJobSubmitter {
         aws_authentication: AwsAuthentication,
         archive_output_config: &ArchiveOutput,
         ingestion_job_config: &BaseConfig,
+        ingestion_job_id: IngestionJobId,
     ) -> Self {
-        let s3_input_config = S3InputConfig {
+        let log_ingestor_submitted_s3_input_config = LogIngestorSubmittedS3InputConfig {
             s3_config: S3Config {
                 bucket: ingestion_job_config.bucket_name.clone(),
                 region_code: ingestion_job_config.region.clone(),
@@ -75,7 +67,8 @@ impl CompressionJobSubmitter {
                 endpoint_url: ingestion_job_config.endpoint_url.clone(),
                 aws_authentication,
             },
-            keys: None,
+            ingestion_job_id,
+            metadata_ids: None,
             // NOTE: Workaround for #1735
             dataset: Some(
                 ingestion_job_config
@@ -94,8 +87,8 @@ impl CompressionJobSubmitter {
             compression_level: archive_output_config.compression_level,
         };
         let io_config_template = ClpIoConfig {
-            input: InputConfig::S3InputConfig {
-                config: s3_input_config,
+            input: InputConfig::LogIngestorSubmittedS3InputConfig {
+                config: log_ingestor_submitted_s3_input_config,
             },
             output: output_config,
         };
@@ -164,14 +157,14 @@ pub async fn wait_for_compression_job_completion_and_update_metadata(
 async fn submit_clp_compression_job_and_wait_for_completion(
     state: ClpCompressionState,
     io_config_template: ClpIoConfig,
-    id_and_key_pairs: Vec<(S3ObjectMetadataId, NonEmptyString)>,
+    object_metadata_ids: Vec<S3ObjectMetadataId>,
 ) {
     let ingestion_job_id = state.get_ingestion_job_id();
-    let num_objects_submitted = id_and_key_pairs.len();
+    let num_objects_submitted = object_metadata_ids.len();
     tracing::info!(ingestion_job_id = ? ingestion_job_id, "Submitting CLP compression job.");
 
     let compression_job_id = match state
-        .submit_for_compression(io_config_template, id_and_key_pairs)
+        .submit_for_compression(io_config_template, &object_metadata_ids)
         .await
     {
         Ok(id) => id,

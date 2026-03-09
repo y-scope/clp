@@ -2,11 +2,10 @@ mod s3_scanner;
 mod sqs_listener;
 mod state;
 
+pub use clp_rust_utils::job_config::IngestionJobId;
 pub use s3_scanner::*;
 pub use sqs_listener::*;
 pub use state::*;
-
-pub type IngestionJobId = u64;
 
 /// Enum for different types of ingestion jobs.
 ///
