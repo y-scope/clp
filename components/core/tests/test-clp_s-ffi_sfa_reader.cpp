@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -26,7 +27,7 @@ auto get_archive_local_path(std::string_view const archive_name) -> std::filesys
 
 auto get_log_local_path_from_archive_name(std::string_view const archive_name)
         -> std::filesystem::path {
-    std::filesystem::path archive_path{archive_name};
+    std::filesystem::path const archive_path{archive_name};
     auto log_name = archive_path.stem().string() + ".jsonl";
     return get_tests_dir() / cSfaReaderLogsDirectory / log_name;
 }
@@ -50,16 +51,16 @@ auto assert_archive_event_count_matches_log(std::string_view const archive_name)
     REQUIRE(std::filesystem::exists(log_path));
 
     auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(archive_path.string());
-    REQUIRE_FALSE(reader_result.has_error());
+    REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();
 
     auto const expected_event_count = get_num_lines(log_path);
     auto archive_id_result = reader.get_archive_id();
-    REQUIRE_FALSE(archive_id_result.has_error());
+    REQUIRE(false == archive_id_result.has_error());
     REQUIRE(archive_id_result.value() == archive_path.filename().string());
 
     auto event_count_result = reader.get_event_count();
-    REQUIRE_FALSE(event_count_result.has_error());
+    REQUIRE(false == event_count_result.has_error());
     REQUIRE(event_count_result.value() == expected_event_count);
 }
 
@@ -70,25 +71,25 @@ auto assert_archive_event_count_matches_log_in_memory(std::string_view const arc
     REQUIRE(std::filesystem::exists(log_path));
 
     auto mmap_result = clp::ReadOnlyMemoryMappedFile::create(archive_path.string());
-    REQUIRE_FALSE(mmap_result.has_error());
+    REQUIRE(false == mmap_result.has_error());
     auto& mapped_archive = mmap_result.value();
     auto const view = mapped_archive.get_view();
-    REQUIRE_FALSE(view.empty());
+    REQUIRE(false == view.empty());
 
     auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(
             std::span<char const>{view.data(), view.size()},
             archive_name
     );
-    REQUIRE_FALSE(reader_result.has_error());
+    REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();
 
     auto const expected_event_count = get_num_lines(log_path);
     auto archive_id_result = reader.get_archive_id();
-    REQUIRE_FALSE(archive_id_result.has_error());
+    REQUIRE(false == archive_id_result.has_error());
     REQUIRE(archive_id_result.value() == archive_name);
 
     auto event_count_result = reader.get_event_count();
-    REQUIRE_FALSE(event_count_result.has_error());
+    REQUIRE(false == event_count_result.has_error());
     REQUIRE(event_count_result.value() == expected_event_count);
 }
 }  // namespace

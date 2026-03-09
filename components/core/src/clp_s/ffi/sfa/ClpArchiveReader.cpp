@@ -1,9 +1,9 @@
 #include "ClpArchiveReader.hpp"
 
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
