@@ -16,6 +16,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s_ffi_sfa
                 PUBLIC
                 clp_s::archive_reader
+                ystdlib::error_handling
                 PRIVATE
                 spdlog::spdlog
         )
