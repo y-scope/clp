@@ -94,7 +94,6 @@ prestoWorker:
   #       topologyKey: "kubernetes.io/hostname"
   #       whenUnsatisfiable: "DoNotSchedule"
 
-
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
   # Remove a service from this list to use an external instance instead, and configure its host/port
