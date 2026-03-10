@@ -19,6 +19,8 @@ auto SfaErrorCategory::message(SfaErrorCodeEnum error_enum) const -> std::string
             return "the end of the stream has already been reached";
         case SfaErrorCodeEnum::IoFailure:
             return "an I/O operation failed";
+        case SfaErrorCodeEnum::NoMemory:
+            return "insufficient memory";
         case SfaErrorCodeEnum::NotInit:
             return "the object is not initialized or has already been closed";
         default:

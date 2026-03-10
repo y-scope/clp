@@ -12,6 +12,7 @@ namespace clp_s::ffi::sfa {
 enum class SfaErrorCodeEnum : uint8_t {
     EndOfStream,
     IoFailure,
+    NoMemory,
     NotInit,
 };
 

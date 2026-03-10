@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <new>
 #include <span>
 #include <string>
 #include <string_view>
@@ -36,9 +37,19 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
 
 auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_view archive_id)
         -> Result<ClpArchiveReader> {
+    std::shared_ptr<std::vector<char>> archive_data_owner;
     try {
-        auto archive_data_owner
+        archive_data_owner
                 = std::make_shared<std::vector<char>>(archive_data.begin(), archive_data.end());
+    } catch (std::bad_alloc const&) {
+        SPDLOG_ERROR(
+                "Failed to copy archive bytes into owned storage for archive {}: out of memory.",
+                archive_id
+        );
+        return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
+    }
+
+    try {
         auto reader = std::make_shared<clp::BufferReader>(
                 archive_data_owner->data(),
                 archive_data_owner->size()

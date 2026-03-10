@@ -43,6 +43,7 @@ public:
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
+     * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
      */
     [[nodiscard]] static auto
     create(std::span<char const> archive_data, std::string_view archive_id)
