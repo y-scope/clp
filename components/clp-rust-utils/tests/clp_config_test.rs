@@ -1,6 +1,6 @@
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials, S3Config},
-    job_config::{ClpIoConfig, InputConfig, S3ObjectMetadataInputConfig, OutputConfig},
+    job_config::{ClpIoConfig, InputConfig, OutputConfig, S3ObjectMetadataInputConfig},
     serde::BrotliMsgpack,
     types::non_empty_string::ExpectedNonEmpty,
 };
@@ -44,13 +44,13 @@ fn test_clp_io_config_serialization() {
     let brotli_compressed_msgpack = BrotliMsgpack::serialize(&config)
         .expect("Brotli-compressed MessagePack serialized config.");
     let expected = "1bc80100e4ffbf9f0b909134588545d1fdd9f7bd15164db4d3eaf8a66eb\
-        23ebef29a6d1a13ec2fdb9869162f8bd36dded129a9e934ba56c970ae984c6794977ea55a32d3e6c6\
-        5b7094d745b2e80361b69e1458756b8ae12087e1c44617fb80a079d7c80b1bb68cd1d3f1c7b3595e1\
-        1b8086f389101929d68092fcc5f02f58ccf85ed22b014d19ca87ce9f5308464cb33910e2ca2b206ca\
-        e9700fa1825dbf55619f4ca7b3d52a94b36d2866ce58ee40ede45ccda62bd91aa89a536e288f91667\
-        3a00afe1d270593783c5005fc2ca5398a64474424e111ec0f11721cac67bda316b085f05b744236b9\
-        7e5262a1186f80ea40fc877c3edf6b71431d29541135e000bdfe34304b36f6cc316d79a03ff3b6d90\
-        f282d5c581504";
+        23ebef25ab5694cb0bf6c63a6593c294eb77947a7a4a6d3e85ac5c3b9623c9d515ef48aa981a92dc\
+        30547795d248b3e1066eb498155bba6180eb21f4e6c74b10f089a778d9cb061cb183d1d7f3c9be51\
+        5818bf086131920d98996f0c2fc2950cff85cd82e024b11cd88ca975e0f4388b73c1369c7222a6b\
+        a09c0cf7102ad8f55b15f6c9743a5bad4239db8662e68ce506d40eced56cba92ad816a7952adf7fbd\
+        f6c0b349b0355f0efb2754015f0b394a628921d11918487bf3f44c8b1bf9ed58e5ac0e6c26fd109e\
+        9e4fa498985623c01aa03f11ff2f97cafc51575245745d48003f4fad3c02c59d933c7b4e581eeccdb6\
+        63fa0b470615510";
     assert_eq!(expected, hex::encode(brotli_compressed_msgpack));
 
     let json_serialized_result = serde_json::to_string_pretty(&config);
@@ -58,7 +58,7 @@ fn test_clp_io_config_serialization() {
     let json_serialized = json_serialized_result.unwrap();
     let expected = serde_json::json!({
       "input": {
-        "type": "ingestor",
+        "type": "metadata",
         "bucket": "yscope",
         "region_code": "us-east-2",
         "key_prefix": "sample-logs/cockroachdb.clp.zst",
