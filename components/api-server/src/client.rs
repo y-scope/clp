@@ -28,9 +28,9 @@ pub struct QueryConfig {
     /// The search query as a KQL string.
     pub query_string: String,
 
-    /// The dataset to search within. If not provided, only `default` dataset will be searched.
+    /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub datasets: Option<Vec<String>>,
 
     /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
@@ -58,7 +58,7 @@ pub struct QueryConfig {
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
         Self {
-            dataset: value.dataset,
+            datasets: value.datasets,
             query_string: value.query_string,
             max_num_results: value.max_num_results,
             begin_timestamp: value.time_range_begin_millisecs,
@@ -128,10 +128,10 @@ impl Client {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.dataset.is_none() {
-            search_job_config.dataset = match self.config.package.storage_engine {
+        if search_job_config.datasets.is_none() {
+            search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some("default".to_owned()),
+                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
         }
         if search_job_config.max_num_results == 0 {
@@ -481,6 +481,52 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
+    }
+
+    /// Retrieves timestamp column names for a given dataset.
+    ///
+    /// # Returns
+    ///
+    /// A vector of timestamp column name strings on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    pub async fn get_timestamp_column_names(
+        &self,
+        dataset_name: &str,
+    ) -> Result<Vec<String>, ClientError> {
+        // Must be kept in sync with `NodeType::Timestamp` in
+        // `components/core/src/clp_s/SchemaTree.hpp`.
+        const TIMESTAMP_NODE_TYPE: i8 = 14;
+        // MySQL error number for "Table doesn't exist".
+        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
+
+        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+            return Err(ClientError::InvalidDatasetName);
+        }
+        let table_name = format!("clp_{dataset_name}_column_metadata");
+        let names: Vec<String> =
+            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
+                .bind(TIMESTAMP_NODE_TYPE)
+                .fetch_all(&self.sql_pool)
+                .await
+                .map_err(|err| {
+                    if let sqlx::Error::Database(db_err) = &err
+                        && let Some(mysql_err) =
+                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                    {
+                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                    }
+                    err.into()
+                })?;
+
+        Ok(names)
     }
 
     /// # Returns

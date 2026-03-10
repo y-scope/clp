@@ -1,16 +1,21 @@
 #include "ArchiveWriter.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <sstream>
+#include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "archive_constants.hpp"
-#include "Defs.hpp"
-#include "SchemaTree.hpp"
-#include "SingleFileArchiveDefs.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -412,9 +417,9 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     };
     std::sort(schemas.begin(), schemas.end(), comp);
 
-    uint64_t current_stream_offset = 0;
-    uint64_t current_stream_id = 0;
-    uint64_t current_table_file_offset = 0;
+    uint64_t current_stream_offset{0};
+    uint64_t current_stream_id{0};
+    uint64_t current_table_file_offset{0};
     m_tables_compressor.open(m_tables_file_writer, m_compression_level);
     for (auto it : schemas) {
         it->second->store(m_tables_compressor);
@@ -439,7 +444,7 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
         }
     }
 
-    m_table_metadata_compressor.write_numeric_value(stream_metadata.size());
+    m_table_metadata_compressor.write_numeric_value(static_cast<uint64_t>(stream_metadata.size()));
     for (auto& stream : stream_metadata) {
         m_table_metadata_compressor.write_numeric_value(stream.file_offset);
         m_table_metadata_compressor.write_numeric_value(stream.uncompressed_size);
@@ -447,10 +452,10 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
 
     // The current implementation doesn't store large tables as separate columns, so this is always
     // zero.
-    size_t const num_separate_column_schemas{0};
+    uint64_t const num_separate_column_schemas{0};
     m_table_metadata_compressor.write_numeric_value(num_separate_column_schemas);
 
-    m_table_metadata_compressor.write_numeric_value(schema_metadata.size());
+    m_table_metadata_compressor.write_numeric_value(static_cast<uint64_t>(schema_metadata.size()));
     for (auto& schema : schema_metadata) {
         m_table_metadata_compressor.write_numeric_value(schema.stream_id);
         m_table_metadata_compressor.write_numeric_value(schema.stream_offset);

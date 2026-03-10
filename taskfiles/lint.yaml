@@ -128,12 +128,13 @@ tasks:
 
   check-cpp-format:
     sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.TASKFILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/tests/**/*"
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
+      - "{{.TASKFILE}}"
     deps: ["cpp-lint-configs", "venv"]
     cmds:
       - task: ":utils:cpp-lint:clang-format"
@@ -256,7 +257,6 @@ tasks:
             - "clp/DictionaryReader.hpp"
             - "clp/DictionaryWriter.hpp"
             - "clp/EncodedVariableInterpreter.cpp"
-            - "clp/EncodedVariableInterpreter.hpp"
             - "clp/ErrorCode.hpp"
             - "clp/ffi/encoding_methods.cpp"
             - "clp/ffi/encoding_methods.hpp"
@@ -381,8 +381,6 @@ tasks:
             - "clp/streaming_compression/passthrough/Decompressor.hpp"
             - "clp/streaming_compression/zstd/Decompressor.cpp"
             - "clp/streaming_compression/zstd/Decompressor.hpp"
-            - "clp/string_utils/string_utils.cpp"
-            - "clp/string_utils/string_utils.hpp"
             - "clp/StringReader.cpp"
             - "clp/StringReader.hpp"
             - "clp/Thread.cpp"
@@ -409,15 +407,12 @@ tasks:
             - "clp_s/ArchiveWriter.hpp"
             - "clp_s/BufferViewReader.hpp"
             - "clp_s/clp-s.cpp"
-            - "clp_s/ColumnReader.cpp"
-            - "clp_s/ColumnReader.hpp"
             - "clp_s/ColumnWriter.cpp"
             - "clp_s/ColumnWriter.hpp"
             - "clp_s/CommandLineArguments.cpp"
             - "clp_s/CommandLineArguments.hpp"
             - "clp_s/Compressor.hpp"
             - "clp_s/Decompressor.hpp"
-            - "clp_s/DictionaryEntry.cpp"
             - "clp_s/DictionaryEntry.hpp"
             - "clp_s/DictionaryReader.hpp"
             - "clp_s/DictionaryWriter.cpp"
@@ -447,7 +442,6 @@ tasks:
             - "clp_s/OutputHandlerImpl.hpp"
             - "clp_s/PackedStreamReader.cpp"
             - "clp_s/PackedStreamReader.hpp"
-            - "clp_s/ParsedMessage.hpp"
             - "clp_s/ReaderUtils.cpp"
             - "clp_s/ReaderUtils.hpp"
             - "clp_s/Schema.cpp"
@@ -748,7 +742,6 @@ tasks:
             - "test-Segment.cpp"
             - "test-SQLiteDB.cpp"
             - "test-Stopwatch.cpp"
-            - "test-string_utils.cpp"
             - "test-TimestampPattern.cpp"
             - "test-utf8_utils.cpp"
             - "test-Utils.cpp"
@@ -886,9 +879,9 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
+      - "{{.ROOT_DIR}}/lint-requirements.txt"
       - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
-      - "lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
     deps:

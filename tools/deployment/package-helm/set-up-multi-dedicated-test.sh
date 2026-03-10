@@ -19,6 +19,8 @@ PRESTO_WORKER_REPLICAS="${PRESTO_WORKER_REPLICAS:-2}"
 # shellcheck source=.set-up-common.sh
 source "${script_dir}/.set-up-common.sh"
 
+parse_common_args "$@"
+
 echo "=== Multi-node setup with dedicated worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Compression nodes: ${NUM_COMPRESSION_NODES}"
@@ -62,6 +64,8 @@ done
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
+# Word splitting is intentional: get_image_helm_args returns multiple --set flags.
+# shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
     --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
@@ -71,6 +75,7 @@ helm install test "${script_dir}" \
     --set "reducer.replicas=${REDUCER_REPLICAS}" \
     --set "reducer.scheduling.nodeSelector.yscope\.io/nodeType=query" \
     --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
-    --set "prestoWorker.scheduling.nodeSelector.yscope\.io/nodeType=presto"
+    --set "prestoWorker.scheduling.nodeSelector.yscope\.io/nodeType=presto" \
+    $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
 
 wait_for_cluster_ready

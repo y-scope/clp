@@ -1,6 +1,9 @@
 #ifndef CLP_S_BUFFER_VIEW_READER_HPP
 #define CLP_S_BUFFER_VIEW_READER_HPP
 
+#include <cstdint>
+#include <limits>
+
 #include "TraceableException.hpp"
 #include "Utils.hpp"
 
@@ -37,7 +40,11 @@ public:
     }
 
     template <typename T>
-    UnalignedMemSpan<T> read_unaligned_span(size_t length) {
+    [[nodiscard]] auto read_unaligned_span(size_t length) -> UnalignedMemSpan<T> {
+        if (length > std::numeric_limits<size_t>::max() / sizeof(T)) {
+            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+        }
+
         size_t span_length_in_bytes = sizeof(T) * length;
         if (m_remaining_size < span_length_in_bytes) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
@@ -46,6 +53,14 @@ public:
         m_buffer += span_length_in_bytes;
         m_remaining_size -= span_length_in_bytes;
         return tmp;
+    }
+
+    template <typename T>
+    [[nodiscard]] auto read_unaligned_span_u64(uint64_t length_u64) -> UnalignedMemSpan<T> {
+        if (length_u64 > std::numeric_limits<size_t>::max()) {
+            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+        }
+        return read_unaligned_span<T>(static_cast<size_t>(length_u64));
     }
 
     size_t get_remaining_size() { return m_remaining_size; }
