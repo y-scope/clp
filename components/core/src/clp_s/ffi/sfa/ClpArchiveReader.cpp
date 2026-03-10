@@ -23,46 +23,53 @@ template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
 
 auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
-    try {
-        auto path = get_path_object_for_raw_path(archive_path);
-        auto reader = std::make_unique<clp_s::ArchiveReader>();
-        reader->open(path, NetworkAuthOption{});
+    std::unique_ptr<clp_s::ArchiveReader> reader;
 
-        return ClpArchiveReader{std::move(reader), nullptr};
+    try {
+        auto path{get_path_object_for_raw_path(archive_path)};
+        reader = std::make_unique<clp_s::ArchiveReader>();
+        reader->open(path, NetworkAuthOption{});
+    } catch (std::bad_alloc const&) {
+        SPDLOG_ERROR(
+                "Failed to create ClpArchiveReader for archive {}: out of memory.",
+                archive_path
+        );
+        return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
     } catch (std::exception const& ex) {
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
         return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
     }
+
+    return ClpArchiveReader{std::move(reader), nullptr};
 }
 
 auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_view archive_id)
         -> Result<ClpArchiveReader> {
+    std::unique_ptr<clp_s::ArchiveReader> archive_reader;
     std::shared_ptr<std::vector<char>> archive_data_owner;
+
     try {
         archive_data_owner
                 = std::make_shared<std::vector<char>>(archive_data.begin(), archive_data.end());
+        auto reader{std::make_shared<clp::BufferReader>(
+                archive_data_owner->data(),
+                archive_data_owner->size()
+        )};
+
+        archive_reader = std::make_unique<clp_s::ArchiveReader>();
+        archive_reader->open(reader, archive_id);
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
-                "Failed to copy archive bytes into owned storage for archive {}: out of memory.",
+                "Failed to create ClpArchiveReader for archive {}: out of memory.",
                 archive_id
         );
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
-    }
-
-    try {
-        auto reader = std::make_shared<clp::BufferReader>(
-                archive_data_owner->data(),
-                archive_data_owner->size()
-        );
-
-        auto archive_reader = std::make_unique<clp_s::ArchiveReader>();
-        archive_reader->open(reader, archive_id);
-
-        return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
     } catch (std::exception const& ex) {
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
         return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
     }
+
+    return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
 }
 
 ClpArchiveReader::~ClpArchiveReader() {
