@@ -248,8 +248,11 @@ helm template clp . -f custom-values.yaml
 
 ### Using Presto as the query engine
 
-To use [Presto][presto-guide] as the query engine instead of the default clp-s query pipeline, set
-`query_engine` to `"presto"` and configure the Presto-specific settings:
+To use [Presto][presto-guide] as the query engine, set `query_engine` to `"presto"` and configure
+the Presto-specific settings. The `query_engine` setting controls which search interface the Web UI
+displays. Presto runs alongside the existing compression pipeline; setting the clp-s native query
+components to `null` is optional but recommended to save resources when you don't need both query
+paths:
 
 ```{code-block} yaml
 :caption: presto-values.yaml
@@ -271,9 +274,8 @@ clpConfig:
     storage_engine: "clp-s"
     query_engine: "presto"
 
-  # Disable the clp-s query pipeline since Presto replaces it.
-  # NOTE: The API server currently depends on the clp-s query pipeline and does not work with
-  # Presto. Keep it enabled if you need the API server; disable it if not.
+  # Optional: Disable the clp-s native query pipeline to save resources.
+  # NOTE: The API server depends on the clp-s native query pipeline.
   api_server: null
   query_scheduler: null
   query_worker: null
@@ -314,8 +316,8 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f presto-values.yaml
 ```
 
 :::{note}
-When `query_engine` is set to `"presto"`, the chart deploys a Presto coordinator and Presto
-worker(s) instead of the query scheduler, query workers, reducers, and results cache.
+Presto is deployed when `clpConfig.presto` is set to a non-null value. To disable the clp-s native query
+components, set their config keys to `null` as shown above.
 :::
 
 For more details on querying logs through Presto, see the [Using Presto][presto-guide] guide.
