@@ -704,8 +704,8 @@ impl ClpIngestionState {
         Ok(status)
     }
 
-    /// Gets all buffered S3 object metadata references ingested for the underlying ingestion job
-    /// from CLP DB.
+    /// Gets all buffered S3 object metadata for the underlying ingestion job from CLP DB as
+    /// [`CompressionBufferEntry`] values.
     ///
     /// # Returns
     ///
@@ -1090,10 +1090,10 @@ impl ClpCompressionState {
         }
 
         let mut io_config = io_config_template;
-        let log_ingestor_submitted_s3_input_config = match &mut io_config.input {
-            InputConfig::LogIngestorSubmittedS3InputConfig { config } => config,
+        let s3_object_metadata_input_config = match &mut io_config.input {
+            InputConfig::S3ObjectMetadataInputConfig { config } => config,
         };
-        log_ingestor_submitted_s3_input_config.metadata_ids = Some(object_metadata_ids.to_vec());
+        s3_object_metadata_input_config.metadata_ids = Some(object_metadata_ids.to_vec());
 
         let mut tx = self.db_pool.begin().await?;
 

@@ -13,7 +13,7 @@ use clp_rust_utils::{
         CompressionJobStatus,
         IngestionJobId,
         InputConfig,
-        LogIngestorSubmittedS3InputConfig,
+        S3ObjectMetadataInputConfig,
         OutputConfig,
         ingestion::s3::BaseConfig,
     },
@@ -60,7 +60,7 @@ impl CompressionJobSubmitter {
         ingestion_job_config: &BaseConfig,
         ingestion_job_id: IngestionJobId,
     ) -> Self {
-        let log_ingestor_submitted_s3_input_config = LogIngestorSubmittedS3InputConfig {
+        let s3_object_metadata_input_config = S3ObjectMetadataInputConfig {
             s3_config: S3Config {
                 bucket: ingestion_job_config.bucket_name.clone(),
                 region_code: ingestion_job_config.region.clone(),
@@ -90,8 +90,8 @@ impl CompressionJobSubmitter {
             compression_level: archive_output_config.compression_level,
         };
         let io_config_template = ClpIoConfig {
-            input: InputConfig::LogIngestorSubmittedS3InputConfig {
-                config: log_ingestor_submitted_s3_input_config,
+            input: InputConfig::S3ObjectMetadataInputConfig {
+                config: s3_object_metadata_input_config,
             },
             output: output_config,
         };
