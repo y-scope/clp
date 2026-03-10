@@ -375,8 +375,6 @@ To run compression workers, query workers, and reducers in separate node pools:
        nodeSelector:
          yscope.io/nodeType: "query"
 
-   # If using Presto as the query engine, configure prestoWorker instead of
-   # queryWorker and reducer.
    prestoWorker:
      replicas: 2
      scheduling:
@@ -432,8 +430,6 @@ To run all worker types in the same node pool:
        nodeSelector:
          yscope.io/nodeType: "compute"
 
-   # If using Presto as the query engine, configure prestoWorker instead of
-   # queryWorker and reducer.
    prestoWorker:
      replicas: 2
      scheduling:
