@@ -80,10 +80,12 @@ private:
     // Constructors
     explicit ClpArchiveReader(
             std::unique_ptr<clp_s::ArchiveReader> reader,
-            std::shared_ptr<std::vector<char>> archive_data
+            std::shared_ptr<std::vector<char>> archive_data,
+            uint64_t event_count
     )
             : m_archive_reader{std::move(reader)},
-              m_archive_data{std::move(archive_data)} {}
+              m_archive_data{std::move(archive_data)},
+              m_event_count{event_count} {}
 
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
