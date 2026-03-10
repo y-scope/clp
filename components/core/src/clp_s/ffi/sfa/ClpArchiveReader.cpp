@@ -73,6 +73,9 @@ auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_vi
 }
 
 ClpArchiveReader::~ClpArchiveReader() {
+    // FFI frontends may invoke destruction paths multiple times (e.g., explicit close followed by
+    // GC finalization). Guard against this by checking for a null reader before attempting to
+    // close.
     if (nullptr == m_archive_reader) {
         return;
     }
