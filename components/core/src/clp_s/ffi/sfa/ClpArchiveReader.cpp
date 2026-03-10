@@ -102,13 +102,24 @@ ClpArchiveReader::ClpArchiveReader(
           m_archive_data{std::move(archive_data)},
           m_event_count{event_count} {}
 
-// Default move constructor
-ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&&) noexcept = default;
+ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&& rhs) noexcept
+        : m_archive_reader{std::move(rhs.m_archive_reader)},
+          m_archive_data{std::move(rhs.m_archive_data)},
+          m_event_count{std::exchange(rhs.m_event_count, 0)} {}
 
-// Default move assignment operator
-auto ClpArchiveReader::operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader& = default;
+auto ClpArchiveReader::operator=(ClpArchiveReader&& rhs) noexcept -> ClpArchiveReader& {
+    if (this == &rhs) {
+        return *this;
+    }
 
-ClpArchiveReader::~ClpArchiveReader() {
+    close();
+    m_archive_reader = std::move(rhs.m_archive_reader);
+    m_archive_data = std::move(rhs.m_archive_data);
+    m_event_count = std::exchange(rhs.m_event_count, 0);
+    return *this;
+}
+
+auto ClpArchiveReader::close() noexcept -> void {
     // FFI frontends may invoke destruction paths multiple times (e.g., explicit close followed by
     // GC finalization). Guard against this by checking for a null reader before attempting to
     // close.
@@ -122,6 +133,10 @@ ClpArchiveReader::~ClpArchiveReader() {
         SPDLOG_ERROR("Exception while closing ClpArchiveReader: {}", ex.what());
     }
     m_archive_reader.reset();
+}
+
+ClpArchiveReader::~ClpArchiveReader() {
+    close();
 }
 
 auto ClpArchiveReader::get_archive_id() const -> Result<std::string> {
