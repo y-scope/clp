@@ -11,7 +11,10 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clp_s/ArchiveReader.hpp>
+namespace clp_s {
+// Forward include
+class ArchiveReader;
+}  // namespace clp_s
 
 namespace clp_s::ffi::sfa {
 /**
@@ -56,9 +59,8 @@ public:
     ClpArchiveReader(ClpArchiveReader const&) = delete;
     auto operator=(ClpArchiveReader const&) -> ClpArchiveReader& = delete;
 
-    // Default move constructor and assignment operator
-    ClpArchiveReader(ClpArchiveReader&&) = default;
-    [[nodiscard]] auto operator=(ClpArchiveReader&&) -> ClpArchiveReader& = default;
+    ClpArchiveReader(ClpArchiveReader&&) noexcept;
+    [[nodiscard]] auto operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader&;
 
     /**
      * @return A result containing the archive ID on success, or an error code indicating the

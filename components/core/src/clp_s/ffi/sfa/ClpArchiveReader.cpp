@@ -22,6 +22,12 @@ namespace clp_s::ffi::sfa {
 template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
 
+// Default move constructor
+ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&&) noexcept = default;
+
+// Default move assignment operator
+auto ClpArchiveReader::operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader& = default;
+
 auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> reader;
 
