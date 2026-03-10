@@ -15,12 +15,12 @@ pub struct S3Config {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AwsAuthentication {
-    #[serde(rename = "credentials")]
-    Credentials { credentials: AwsCredentials },
-
     /// Uses the default AWS SDK credential provider chain.
     #[serde(rename = "default")]
     Default,
+
+    #[serde(rename = "credentials")]
+    Credentials { credentials: AwsCredentials },
 }
 
 impl AwsAuthentication {
@@ -30,11 +30,11 @@ impl AwsAuthentication {
     #[must_use]
     pub const fn credentials_pair(&self) -> Option<(&str, &str)> {
         match self {
+            Self::Default => None,
             Self::Credentials { credentials } => Some((
                 credentials.access_key_id.as_str(),
                 credentials.secret_access_key.as_str(),
             )),
-            Self::Default => None,
         }
     }
 }

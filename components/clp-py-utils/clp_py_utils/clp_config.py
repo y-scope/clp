@@ -165,10 +165,10 @@ class StorageType(LowercaseStrEnum):
 
 
 class AwsAuthType(LowercaseStrEnum):
+    default = auto()
     credentials = auto()
     profile = auto()
     env_vars = auto()
-    default = auto()
 
 
 AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
