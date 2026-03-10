@@ -64,12 +64,26 @@ int run(int argc, char const* argv[]) {
             // Capture groups are temporarily disabled, until NFA intersection support for search.
             auto const& lexer{reader_parser->get_log_parser().m_lexer};
             for (auto const& [rule_id, rule_name] : lexer.m_id_symbol) {
-                if (lexer.get_captures_from_rule_id(rule_id).has_value()) {
-                    throw std::runtime_error(
-                            schema_file_path + ": error: the schema rule '" + rule_name
-                            + "' has a regex pattern containing capture groups.\n"
-                    );
+                auto optional_captures{lexer.get_captures_from_rule_id(rule_id)};
+                if (false == optional_captures.has_value()) {
+                    continue;
                 }
+
+                auto const& captures{optional_captures.value()};
+                if (captures.empty()) {
+                    continue;
+                }
+
+                if ("header" == rule_name && 1 == captures.size()
+                    && "timestamp" == captures[0]->get_name())
+                {
+                    continue;
+                }
+
+                throw std::runtime_error(
+                        schema_file_path + ": error: the schema rule '" + rule_name
+                        + "' has a regex pattern containing capture groups.\n"
+                );
             }
         }
 

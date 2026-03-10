@@ -39,7 +39,12 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yaml"
 #
-#bundled: ["database", "queue", "redis", "results_cache"]
+## Remove any bundled services below if you wish to use your own.
+#bundled:
+#  - "database"
+#  - "queue"
+#  - "redis"
+#  - "results_cache"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -64,6 +69,7 @@
 #  host: "localhost"
 #  port: 7000
 #  jobs_poll_delay: 0.1  # seconds
+#  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
 #

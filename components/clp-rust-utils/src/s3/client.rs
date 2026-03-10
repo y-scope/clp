@@ -5,10 +5,13 @@ use aws_sdk_s3::{
 };
 use non_empty_string::NonEmptyString;
 
+use crate::clp_config::AwsAuthentication;
+
 /// Creates a new S3 client.
 ///
-/// When `credentials` is `Some`, the client uses the given access key pair. When `None`, the client
-/// uses the default AWS SDK credential provider chain.
+/// When `aws_authentication` is [`AwsAuthentication::Credentials`], the client uses the given
+/// access key pair. When [`AwsAuthentication::Default`], the client uses the default AWS SDK
+/// credential provider chain.
 ///
 /// # Notes
 ///
@@ -22,14 +25,14 @@ use non_empty_string::NonEmptyString;
 pub async fn create_new_client(
     region_id: &str,
     endpoint: Option<&NonEmptyString>,
-    credentials: Option<(&str, &str)>,
+    aws_authentication: &AwsAuthentication,
 ) -> Client {
     let mut config_defaults =
         aws_config::defaults(BehaviorVersion::latest()).region(Region::new(region_id.to_string()));
-    if let Some((access_key_id, secret_access_key)) = credentials {
+    if let AwsAuthentication::Credentials { credentials } = aws_authentication {
         config_defaults = config_defaults.credentials_provider(Credentials::new(
-            access_key_id,
-            secret_access_key,
+            credentials.access_key_id.as_str(),
+            credentials.secret_access_key.as_str(),
             None,
             None,
             "clp-credentials-provider",

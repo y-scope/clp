@@ -28,6 +28,19 @@ pub trait IngestionJobState: Send + Sync + Clone + 'static {
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
     async fn end(&self) -> anyhow::Result<()>;
+
+    /// Fails the ingestion job.
+    ///
+    /// # Parameters
+    ///
+    /// * `msg`: A message describing the failure reason.
+    ///
+    /// # NOTE
+    ///
+    /// Implementations should not propagate errors produced while failing the job. If an error
+    /// occurs, it should be logged and otherwise ignored, so the caller can prioritize propagating
+    /// the *original* error that triggered the failure over any secondary error from this method.
+    async fn fail(&self, msg: String);
 }
 
 /// An abstract layer for managing [`crate::ingestion_job::SqsListener`] states.
@@ -97,6 +110,8 @@ impl IngestionJobState for ZeroFaultToleranceIngestionJobState {
     async fn end(&self) -> anyhow::Result<()> {
         Ok(())
     }
+
+    async fn fail(&self, _msg: String) {}
 }
 
 #[async_trait]

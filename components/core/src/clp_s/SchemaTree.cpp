@@ -1,5 +1,8 @@
 #include "SchemaTree.hpp"
 
+#include <cstddef>
+#include <cstdint>
+
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
 #include "search/ast/Literal.hpp"
@@ -91,7 +94,7 @@ int32_t SchemaTree::get_metadata_field_id(std::string_view const field_name) con
     return -1;
 }
 
-size_t SchemaTree::store(std::string const& archives_dir, int compression_level) {
+auto SchemaTree::store(std::string const& archives_dir, int compression_level) -> size_t {
     FileWriter schema_tree_writer;
     ZstdCompressor schema_tree_compressor;
 
@@ -101,13 +104,13 @@ size_t SchemaTree::store(std::string const& archives_dir, int compression_level)
     );
     schema_tree_compressor.open(schema_tree_writer, compression_level);
 
-    schema_tree_compressor.write_numeric_value(m_nodes.size());
+    schema_tree_compressor.write_numeric_value(static_cast<uint64_t>(m_nodes.size()));
     for (auto const& node : m_nodes) {
         schema_tree_compressor.write_numeric_value(node.get_parent_id());
 
         auto key = node.get_key_name();
-        schema_tree_compressor.write_numeric_value(key.size());
-        schema_tree_compressor.write(key.begin(), key.size());
+        schema_tree_compressor.write_numeric_value(static_cast<uint64_t>(key.size()));
+        schema_tree_compressor.write(key.data(), key.size());
         schema_tree_compressor.write_numeric_value(node.get_type());
     }
 

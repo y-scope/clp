@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "../clp/ReaderInterface.hpp"
 #include "ArchiveReaderAdaptor.hpp"
 #include "ZstdDecompressor.hpp"
@@ -39,8 +41,11 @@ public:
      * Reads packed stream metadata from the provided compression stream. Must be invoked before
      * reading packed streams.
      * @param decompressor an open ZstdDecompressor pointing to the packed stream metadata
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `ReaderUtils::try_uint64_to_size_t`'s return values on failure.
      */
-    void read_metadata(ZstdDecompressor& decompressor);
+    [[nodiscard]] auto read_metadata(ZstdDecompressor& decompressor)
+            -> ystdlib::error_handling::Result<void>;
 
     /**
      * Opens a file reader for the tables section. Must be invoked before reading packed streams.

@@ -55,6 +55,7 @@ fn create_test_objects(bucket_name: &str, count: usize) -> Vec<ObjectMetadata> {
             bucket: NonEmptyString::from_string(bucket_name.to_string()),
             key: NonEmptyString::from_string(format!("object-{i}")),
             size: TEST_OBJECT_SIZE,
+            id: None,
         })
         .collect()
 }
@@ -123,7 +124,7 @@ async fn test_compression_listener() -> Result<()> {
     drop(submitted_buffers);
 
     // Clean up
-    listener.shutdown_and_join().await.unwrap();
+    listener.shutdown_and_join().await;
     assert!(shared.lock().await.is_empty());
 
     Ok(())

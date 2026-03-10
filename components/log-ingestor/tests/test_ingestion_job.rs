@@ -5,6 +5,7 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
 use clp_rust_utils::{
+    clp_config::{AwsAuthentication, AwsCredentials},
     job_config::ingestion::s3::{
         BaseConfig,
         S3ScannerConfig,
@@ -16,7 +17,7 @@ use clp_rust_utils::{
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{SqsListener, ZeroFaultToleranceIngestionJobState},
+    ingestion_job::{IngestionJobId, SqsListener, ZeroFaultToleranceIngestionJobState},
 };
 use non_empty_string::NonEmptyString;
 use tokio::sync::mpsc;
@@ -103,6 +104,7 @@ async fn upload_and_receive(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
+            id: None,
         })
         .collect();
 
@@ -138,6 +140,7 @@ async fn upload_noise_objects(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
+            id: None,
         })
         .collect();
 
@@ -148,18 +151,21 @@ async fn upload_noise_objects(
 
 /// Runs SQS listener test with the given job config.
 async fn run_sqs_listener_test(
-    job_id: Uuid,
+    job_id: IngestionJobId,
     prefix: NonEmptyString,
     aws_config: AwsConfig,
     sqs_listener_config: SqsListenerConfig,
 ) -> Result<()> {
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.to_string(),
+            secret_access_key: aws_config.secret_access_key.to_string(),
+        },
+    };
     let sqs_client = clp_rust_utils::sqs::create_new_client(
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
-        Some((
-            aws_config.access_key_id.as_str(),
-            aws_config.secret_access_key.as_str(),
-        )),
+        &aws_auth,
     )
     .await;
 
@@ -176,10 +182,7 @@ async fn run_sqs_listener_test(
     let s3_client = clp_rust_utils::s3::create_new_client(
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
-        Some((
-            aws_config.access_key_id.as_str(),
-            aws_config.secret_access_key.as_str(),
-        )),
+        &aws_auth,
     )
     .await;
 
@@ -215,7 +218,7 @@ async fn run_sqs_listener_test(
 /// # Returns
 ///
 /// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}`.
-fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
+fn get_testing_prefix_as_non_empty_string(job_id: IngestionJobId) -> NonEmptyString {
     NonEmptyString::from_string(format!("test-{job_id}"))
 }
 
@@ -224,8 +227,8 @@ fn get_testing_prefix_as_non_empty_string(job_id: &Uuid) -> NonEmptyString {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_sqs_listener() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
-    let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
 
     let num_tasks_to_test = vec![1, 4, 16, 32];
 
@@ -267,18 +270,21 @@ async fn test_sqs_listener() -> Result<()> {
 #[serial_test::serial]
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_s3_scanner() -> Result<()> {
-    let job_id = Uuid::new_v4();
-    let prefix = get_testing_prefix_as_non_empty_string(&job_id);
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
 
     let aws_config = AwsConfig::from_env()?;
 
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.to_string(),
+            secret_access_key: aws_config.secret_access_key.to_string(),
+        },
+    };
     let s3_client = clp_rust_utils::s3::create_new_client(
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
-        Some((
-            aws_config.access_key_id.as_str(),
-            aws_config.secret_access_key.as_str(),
-        )),
+        &aws_auth,
     )
     .await;
 
@@ -324,7 +330,7 @@ async fn test_s3_scanner() -> Result<()> {
     let (mut created_objects, mut received_objects) = upload_and_receive_handle
         .await
         .context("Error while awaiting upload and receive")?;
-    s3_scanner.shutdown_and_join().await?;
+    s3_scanner.shutdown_and_join().await;
 
     created_objects.sort();
     received_objects.sort();

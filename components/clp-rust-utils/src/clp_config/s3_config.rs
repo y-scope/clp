@@ -23,22 +23,6 @@ pub enum AwsAuthentication {
     Credentials { credentials: AwsCredentials },
 }
 
-impl AwsAuthentication {
-    /// Returns the access key pair as `Some((access_key_id, secret_access_key))` for explicit
-    /// credentials, or `None` for authentication methods that rely on the default credential
-    /// provider chain.
-    #[must_use]
-    pub const fn credentials_pair(&self) -> Option<(&str, &str)> {
-        match self {
-            Self::Default => None,
-            Self::Credentials { credentials } => Some((
-                credentials.access_key_id.as_str(),
-                credentials.secret_access_key.as_str(),
-            )),
-        }
-    }
-}
-
 /// Represents AWS credentials.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AwsCredentials {
