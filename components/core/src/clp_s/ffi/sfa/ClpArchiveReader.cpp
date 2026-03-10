@@ -131,12 +131,4 @@ auto ClpArchiveReader::get_archive_id() const -> Result<std::string> {
 
     return std::string{m_archive_reader->get_archive_id()};
 }
-
-auto ClpArchiveReader::get_event_count() const -> Result<uint64_t> {
-    if (nullptr == m_archive_reader) {
-        return SfaErrorCode{SfaErrorCodeEnum::NotInit};
-    }
-
-    return m_event_count;
-}
 }  // namespace clp_s::ffi::sfa

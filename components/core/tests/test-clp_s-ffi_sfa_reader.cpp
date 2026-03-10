@@ -59,9 +59,8 @@ auto assert_archive_event_count_matches_log(std::string_view const archive_name)
     REQUIRE(false == archive_id_result.has_error());
     REQUIRE(archive_id_result.value() == archive_path.filename().string());
 
-    auto event_count_result = reader.get_event_count();
-    REQUIRE(false == event_count_result.has_error());
-    REQUIRE(event_count_result.value() == expected_event_count);
+    auto const event_count = reader.get_event_count();
+    REQUIRE(event_count == expected_event_count);
 }
 
 auto assert_archive_event_count_matches_log_in_memory(std::string_view const archive_name) -> void {
@@ -88,9 +87,8 @@ auto assert_archive_event_count_matches_log_in_memory(std::string_view const arc
     REQUIRE(false == archive_id_result.has_error());
     REQUIRE(archive_id_result.value() == archive_name);
 
-    auto event_count_result = reader.get_event_count();
-    REQUIRE(false == event_count_result.has_error());
-    REQUIRE(event_count_result.value() == expected_event_count);
+    auto const event_count = reader.get_event_count();
+    REQUIRE(event_count == expected_event_count);
 }
 }  // namespace
 

@@ -69,11 +69,9 @@ public:
     [[nodiscard]] auto get_archive_id() const -> ystdlib::error_handling::Result<std::string>;
 
     /**
-     * @return A result containing the total number of events in the archive on success, or an
-     * error code indicating the failure:
-     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized or has already been closed.
+     * @return The total number of events in the archive.
      */
-    [[nodiscard]] auto get_event_count() const -> ystdlib::error_handling::Result<uint64_t>;
+    [[nodiscard]] auto get_event_count() const -> uint64_t { return m_event_count; }
 
 private:
     // Constructors
