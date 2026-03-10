@@ -946,7 +946,6 @@ class ClpConfig(BaseModel):
             raise ValueError(f"tmp_directory is invalid: {ex}")
 
     def validate_aws_config_dir(self, use_host_mount: bool = False):
-        profile_auth_used = False
         auth_configs = []
 
         if StorageType.S3 == self.logs_input.type:
@@ -956,15 +955,22 @@ class ClpConfig(BaseModel):
         if StorageType.S3 == self.stream_output.storage.type:
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
-        for auth in auth_configs:
-            if AwsAuthType.profile == auth.type:
-                profile_auth_used = True
-                break
+        auth_types_used = {auth.type for auth in auth_configs}
+        default_auth_used = AwsAuthType.default in auth_types_used
+        profile_auth_used = AwsAuthType.profile in auth_types_used
+        config_dir_allowed = profile_auth_used or default_auth_used
 
         if profile_auth_used:
             if self.aws_config_directory is None:
                 raise ValueError(
                     "aws_config_directory must be set when using profile authentication"
+                )
+
+        if self.aws_config_directory is not None:
+            if not config_dir_allowed:
+                raise ValueError(
+                    "aws_config_directory is only supported with 'profile' or 'default'"
+                    " authentication"
                 )
             resolved_aws_config_dir = (
                 resolve_host_path_in_container(self.aws_config_directory)
@@ -975,10 +981,6 @@ class ClpConfig(BaseModel):
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
-        if not profile_auth_used and self.aws_config_directory is not None:
-            raise ValueError(
-                "aws_config_directory should not be set when profile authentication is not used"
-            )
 
     def validate_api_server(self):
         if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
