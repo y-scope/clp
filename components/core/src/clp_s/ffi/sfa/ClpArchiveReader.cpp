@@ -39,12 +39,6 @@ namespace {
 }
 }  // namespace
 
-// Default move constructor
-ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&&) noexcept = default;
-
-// Default move assignment operator
-auto ClpArchiveReader::operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader& = default;
-
 auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> reader;
     uint64_t event_count{0};
@@ -98,6 +92,21 @@ auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_vi
 
     return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner), event_count};
 }
+
+ClpArchiveReader::ClpArchiveReader(
+        std::unique_ptr<clp_s::ArchiveReader> reader,
+        std::shared_ptr<std::vector<char>> archive_data,
+        uint64_t event_count
+)
+        : m_archive_reader{std::move(reader)},
+          m_archive_data{std::move(archive_data)},
+          m_event_count{event_count} {}
+
+// Default move constructor
+ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&&) noexcept = default;
+
+// Default move assignment operator
+auto ClpArchiveReader::operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader& = default;
 
 ClpArchiveReader::~ClpArchiveReader() {
     // FFI frontends may invoke destruction paths multiple times (e.g., explicit close followed by
