@@ -54,7 +54,8 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         }
     }
 
-    /// Adds [`CompressionBufferEntry`] values to the buffer and submits if the size threshold is reached.
+    /// Adds [`CompressionBufferEntry`] values to the buffer and submits if the size threshold is
+    /// reached.
     ///
     /// # Returns
     ///
