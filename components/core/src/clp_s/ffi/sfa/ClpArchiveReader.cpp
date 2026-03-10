@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
@@ -26,7 +27,7 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
         auto reader = std::make_unique<clp_s::ArchiveReader>();
         reader->open(path, NetworkAuthOption{});
 
-        return ClpArchiveReader{std::move(reader)};
+        return ClpArchiveReader{std::move(reader), nullptr};
     } catch (std::exception const& ex) {
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
         return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
@@ -36,11 +37,17 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
 auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_view archive_id)
         -> Result<ClpArchiveReader> {
     try {
+        auto archive_data_owner
+                = std::make_shared<std::vector<char>>(archive_data.begin(), archive_data.end());
+        auto reader = std::make_shared<clp::BufferReader>(
+                archive_data_owner->data(),
+                archive_data_owner->size()
+        );
+
         auto archive_reader = std::make_unique<clp_s::ArchiveReader>();
-        auto reader = std::make_shared<clp::BufferReader>(archive_data.data(), archive_data.size());
         archive_reader->open(reader, archive_id);
 
-        return ClpArchiveReader{std::move(archive_reader)};
+        return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
     } catch (std::exception const& ex) {
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
         return SfaErrorCode{SfaErrorCodeEnum::IoFailure};

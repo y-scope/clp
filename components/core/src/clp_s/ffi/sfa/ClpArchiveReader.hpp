@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -20,6 +21,8 @@ class ClpArchiveReader {
 public:
     // Factory functions
     /**
+     * Creates an SFA reader from a filesystem archive path.
+     *
      * @param archive_path Path to the single-file archive.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
@@ -29,6 +32,12 @@ public:
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     /**
+     * Creates an SFA reader from in-memory archive bytes.
+     *
+     * This overload copies the archive bytes referenced by the span into reader-owned storage so
+     * the * returned reader does not depend on the lifetime of the caller-provided buffer, which
+     * may be transient.
+     *
      * @param archive_data Bytes of a single-file archive.
      * @param archive_id Identifier to assign to this archive.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
@@ -66,11 +75,16 @@ public:
 
 private:
     // Constructors
-    explicit ClpArchiveReader(std::unique_ptr<clp_s::ArchiveReader> reader)
-            : m_archive_reader{std::move(reader)} {}
+    explicit ClpArchiveReader(
+            std::unique_ptr<clp_s::ArchiveReader> reader,
+            std::shared_ptr<std::vector<char>> archive_data
+    )
+            : m_archive_reader{std::move(reader)},
+              m_archive_data{std::move(archive_data)} {}
 
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
+    std::shared_ptr<std::vector<char>> m_archive_data;
 };
 }  // namespace clp_s::ffi::sfa
 
