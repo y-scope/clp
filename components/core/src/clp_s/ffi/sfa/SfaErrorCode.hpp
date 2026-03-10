@@ -10,7 +10,6 @@ namespace clp_s::ffi::sfa {
  * Error code enum for SFA API operations.
  */
 enum class SfaErrorCodeEnum : uint8_t {
-    EndOfStream,
     IoFailure,
     NoMemory,
     NotInit,
