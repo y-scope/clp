@@ -101,11 +101,14 @@ auto ClpArchiveReader::get_event_count() const -> Result<uint64_t> {
         return SfaErrorCode{SfaErrorCodeEnum::NotInit};
     }
 
-    uint64_t event_count{0};
-    for (auto const& range : m_archive_reader->get_range_index()) {
-        event_count += static_cast<uint64_t>(range.end_index - range.start_index);
+    if (0 == m_event_count) {
+        uint64_t event_count{0};
+        for (auto const& range : m_archive_reader->get_range_index()) {
+            event_count += static_cast<uint64_t>(range.end_index - range.start_index);
+        }
+        m_event_count = event_count;
     }
 
-    return event_count;
+    return m_event_count;
 }
 }  // namespace clp_s::ffi::sfa

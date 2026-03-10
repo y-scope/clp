@@ -86,6 +86,7 @@ private:
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
     std::shared_ptr<std::vector<char>> m_archive_data;
+    uint64_t m_event_count{0};
 };
 }  // namespace clp_s::ffi::sfa
 
