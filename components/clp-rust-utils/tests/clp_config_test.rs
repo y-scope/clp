@@ -1,6 +1,6 @@
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials, S3Config},
-    job_config::{ClpIoConfig, InputConfig, LogIngestorSubmittedS3InputConfig, OutputConfig},
+    job_config::{ClpIoConfig, InputConfig, S3ObjectMetadataInputConfig, OutputConfig},
     serde::BrotliMsgpack,
     types::non_empty_string::ExpectedNonEmpty,
 };
@@ -22,8 +22,8 @@ fn test_clp_io_config_serialization() {
         },
     };
     let config = ClpIoConfig {
-        input: InputConfig::LogIngestorSubmittedS3InputConfig {
-            config: LogIngestorSubmittedS3InputConfig {
+        input: InputConfig::S3ObjectMetadataInputConfig {
+            config: S3ObjectMetadataInputConfig {
                 s3_config,
                 ingestion_job_id: 1,
                 metadata_ids: None,

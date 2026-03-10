@@ -10,7 +10,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::compression::{Buffer, BufferSubmitter, CompressionBufferEntry};
 
-/// Represents a listener task that buffers and submits S3 object metadata.
+/// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits when full or on timeout.
 ///
 /// # Type Parameters
 /// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
@@ -21,11 +21,11 @@ struct ListenerTask<Submitter: BufferSubmitter> {
 }
 
 impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
-    /// Runs the listener task to buffer and submit S3 object metadata. Submission can be triggered
-    /// in three ways:
+    /// Runs the listener task to buffer and submit [`CompressionBufferEntry`] values. Submission can
+    /// be triggered in three ways:
     /// * Receiving a cancellation signal via the provided [`cancel_token`].
-    /// * The buffer capacity is reached after receiving a new object metadata.
-    /// * A timeout occurs without receiving new object metadata.
+    /// * The buffer's size threshold is reached after receiving new entries.
+    /// * A timeout occurs without receiving new entries.
     ///
     /// # Returns
     ///
@@ -76,8 +76,8 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     }
 }
 
-/// Represents a listener that accepts S3 object metadata refs from multiple senders and buffers
-/// them for submission.
+/// Represents a listener that accepts [`CompressionBufferEntry`] values from multiple senders and buffers them
+/// for submission.
 pub struct Listener {
     sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
     cancel_token: CancellationToken,
@@ -143,8 +143,8 @@ impl Listener {
     }
 
     /// # Returns
-    /// A new `mpsc::Sender<Vec<CompressionBufferEntry>>` that can be used to send metadata
-    /// refs to this listener.
+    /// A new `mpsc::Sender<Vec<CompressionBufferEntry>>` that can be used to send
+    /// [`CompressionBufferEntry`] values to this listener.
     ///
     /// The returned sender is a cheap clone of the listener's internal channel sender. It can be
     /// freely cloned and moved to other tasks; multiple senders may concurrently send to the same

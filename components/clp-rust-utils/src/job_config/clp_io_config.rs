@@ -18,9 +18,9 @@ pub type IngestionJobId = u64;
 #[serde(tag = "type")]
 pub enum InputConfig {
     #[serde(rename = "ingestor")]
-    LogIngestorSubmittedS3InputConfig {
+    S3ObjectMetadataInputConfig {
         #[serde(flatten)]
-        config: LogIngestorSubmittedS3InputConfig,
+        config: S3ObjectMetadataInputConfig,
     },
 }
 
@@ -37,7 +37,7 @@ pub struct S3InputConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct LogIngestorSubmittedS3InputConfig {
+pub struct S3ObjectMetadataInputConfig {
     #[serde(flatten)]
     pub s3_config: S3Config,
 
