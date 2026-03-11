@@ -132,9 +132,9 @@ auto deserialize_encoded_text_ast(
  * @param encoded_tag
  * @return A result containing the deserialized encoded text AST on success, or an error code
  * indicating the failure:
- * - IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure: if the encoded text AST
- *   cannot be deserialized
- * - IrDeserializationErrorEnum::IncompleteStream: if the IR stream is incomplete
+ * - IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure if the encoded text AST
+ *   cannot be deserialized.
+ * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is incomplete.
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
@@ -227,7 +227,7 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
  * @return A result containing the deserialized UTC offset on success, or an error code indicating
  * the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
- *   deserialize
+ *   deserialize.
  */
 [[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<UtcOffset>;

@@ -77,7 +77,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * - IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to an integer
- * packet.
+ *   packet.
  */
 [[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
         -> ystdlib::error_handling::Result<void>;
@@ -108,7 +108,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  *   - IrDeserializationErrorEnum::InvalidKeyGroupOrdering if the IR stream contains auto-generated
  *     key IDs *after* a user-generated key ID has been deserialized.
  *   - Forwards `deserialize_tag`'s return values on failure.
- *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values on failure
+ *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         ReaderInterface& reader,
@@ -123,8 +123,8 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * @param node_id_value_pairs Returns the ID-value pair constructed from the deserialized value.
  * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
- * - IrDeserializationErrorEnum::UnknownValueType if the tag doesn't correspond to any
- *   known value type.
+ * - IrDeserializationErrorEnum::UnknownValueType if the tag doesn't correspond to any known value
+ *   type.
  * - Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return values on
  *   failure.
  * - Forwards `deserialize_int_val`'s return values on failure.
