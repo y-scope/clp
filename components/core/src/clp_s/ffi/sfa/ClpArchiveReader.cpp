@@ -45,6 +45,9 @@ auto ClpArchiveReader::create_from_bytes(std::span<char const> archive_data)
         -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> archive_reader;
     std::shared_ptr<std::vector<char>> archive_data_owner;
+    // `clp_s::ArchiveReader` requires an archive ID, but
+    // `clp_s::ffi::sfa::ClpArchiveReader` never uses it. Provide a dummy value
+    // solely to satisfy the constructor.
     constexpr std::string_view cDefaultArchiveId{"default"};
 
     try {
@@ -60,8 +63,7 @@ auto ClpArchiveReader::create_from_bytes(std::span<char const> archive_data)
         return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
-                "Failed to create ClpArchiveReader for archive {}: out of memory.",
-                cDefaultArchiveId
+                "Failed to create ClpArchiveReader: out of memory."
         );
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
     } catch (std::exception const& ex) {
