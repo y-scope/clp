@@ -62,9 +62,7 @@ auto ClpArchiveReader::create_from_bytes(std::span<char const> archive_data)
         archive_reader->open(reader, cDefaultArchiveId);
         return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
     } catch (std::bad_alloc const&) {
-        SPDLOG_ERROR(
-                "Failed to create ClpArchiveReader: out of memory."
-        );
+        SPDLOG_ERROR("Failed to create ClpArchiveReader: out of memory.");
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
     } catch (std::exception const& ex) {
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
