@@ -53,8 +53,7 @@ impl SqsClientWrapper {
 
     pub async fn create(region: Option<&NonEmptyString>, aws_auth: &AwsAuthentication) -> Self {
         let region_str = region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-        let sqs_client =
-            clp_rust_utils::sqs::create_new_client(region_str, None, aws_auth).await;
+        let sqs_client = clp_rust_utils::sqs::create_new_client(region_str, None, aws_auth).await;
         Self::from(sqs_client)
     }
 }
@@ -84,12 +83,8 @@ impl S3ClientWrapper {
         aws_auth: &AwsAuthentication,
     ) -> Self {
         let region_str = region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-        let s3_client = clp_rust_utils::s3::create_new_client(
-            region_str,
-            endpoint_url,
-            aws_auth,
-        )
-        .await;
+        let s3_client =
+            clp_rust_utils::s3::create_new_client(region_str, endpoint_url, aws_auth).await;
         Self::from(s3_client)
     }
 }
