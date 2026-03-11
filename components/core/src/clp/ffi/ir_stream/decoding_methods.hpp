@@ -54,20 +54,13 @@ private:
  * Deserializes the IR stream's encoding type
  * @param reader
  * @param is_four_bytes_encoding Returns the encoding type
- * @return ErrorCode_Success on success
- * @return ErrorCode_Corrupted_IR if reader contains invalid IR
- * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidMagicNumber if reader contains an invalid magic number.
  */
-IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
-
-/**
- * Deserializes the tag for the next packet.
- * @param reader
- * @param tag Returns the tag of the next packet.
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
- */
-[[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
+auto get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding)
+        -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes the tag for the next packet.
@@ -90,9 +83,11 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @param dict_vars Returns the dictionary variables
  * @param timestamp_or_timestamp_delta Returns the timestamp (in the eight-byte encoding case) or
  * the timestamp delta (in the four-byte encoding case)
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_encoded_text_ast`'s return values on failure.
+ * - Forwards `deserialize_timestamp`'s return values on failure.
  */
 template <typename encoded_variable_t>
 auto deserialize_log_event(
@@ -102,7 +97,7 @@ auto deserialize_log_event(
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars,
         ir::epoch_time_ms_t& timestamp_or_timestamp_delta
-) -> IRErrorCode;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes an encoded text AST from the given stream
@@ -112,9 +107,12 @@ auto deserialize_log_event(
  * @param logtype Returns the logtype
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if `reader` contains invalid IR
- * @return IRErrorCode_Incomplete_IR if `reader` doesn't contain enough data
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_int`'s return values on failure.
+ * - Forwards `deserialize_dict_var`'s return values on failure.
+ * - Forwards `deserialize_logtype`'s return values on failure.
  */
 template <typename encoded_variable_t>
 auto deserialize_encoded_text_ast(
@@ -123,7 +121,7 @@ auto deserialize_encoded_text_ast(
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars
-) -> IRErrorCode;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes an encoded text AST from the given reader.
@@ -132,9 +130,12 @@ auto deserialize_encoded_text_ast(
  * @param encoded_tag
  * @return A result containing the deserialized encoded text AST on success, or an error code
  * indicating the failure:
- * - IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure if the encoded text AST
- *   cannot be deserialized.
- * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is incomplete.
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_int`'s return values on failure.
+ * - Forwards `deserialize_and_append_dict_var`'s return values on failure.
+ * - Forwards `deserialize_and_append_logtype`'s return values on failure.
+ * - Forwards `EncodedTextAst::create`'s return values on failure.
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
@@ -186,48 +187,40 @@ void generic_decode_message(
  * @param metadata_type Returns the type of the metadata deserialized from the IR
  * @param metadata_pos Returns the starting position of the metadata in reader
  * @param metadata_size Returns the size of the metadata deserialized from the IR
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_metadata`'s return values.
  */
-IRErrorCode deserialize_preamble(
+auto deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
-);
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes the preamble for an IR stream.
  * @param reader
  * @param metadata_type Returns the type of the metadata deserialized from the IR
  * @param metadata Returns the metadata in the given vector
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_metadata`'s return values.
  */
-IRErrorCode deserialize_preamble(
+auto deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
-);
-
-/**
- * Deserializes a UTC offset change packet.
- * @param reader
- * @param utc_offset The deserialized UTC offset.
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
- */
-IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes a UTC offset change packet.
  * @param reader
  * @return A result containing the deserialized UTC offset on success, or an error code indicating
  * the failure:
- * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
- *   deserialize.
+ * - Forwards `deserialize_int`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<UtcOffset>;
@@ -256,17 +249,15 @@ namespace eight_byte_encoding {
  * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp Returns the deserialized timestamp
- * @return ErrorCode_Success on success
- * @return ErrorCode_Corrupted_IR if reader contains invalid IR
- * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
- * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success, or an error code indicating the failure:
+ * - Forwards `generic_deserialize_log_event`'s return values on failure.
  */
-IRErrorCode deserialize_log_event(
+auto deserialize_log_event(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp
-);
+) -> ystdlib::error_handling::Result<void>;
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {
@@ -276,17 +267,15 @@ namespace four_byte_encoding {
  * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp_delta Returns the deserialized timestamp delta
- * @return ErrorCode_Success on success
- * @return ErrorCode_Corrupted_IR if reader contains invalid IR
- * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
- * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success, or an error code indicating the failure:
+ * - Forwards `generic_deserialize_log_event`'s return values on failure.
  */
-IRErrorCode deserialize_log_event(
+auto deserialize_log_event(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp_delta
-);
+) -> ystdlib::error_handling::Result<void>;
 }  // namespace four_byte_encoding
 }  // namespace clp::ffi::ir_stream
 

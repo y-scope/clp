@@ -451,9 +451,9 @@ bool FileCompressor::compress_ir_stream(
         ReaderInterface& reader
 ) {
     bool uses_four_byte_encoding{false};
-    auto ir_error_code = ffi::ir_stream::get_encoding_type(reader, uses_four_byte_encoding);
-    if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
-        SPDLOG_ERROR("Cannot compress {}, IR error={}", path, static_cast<int>(ir_error_code));
+    auto result = ffi::ir_stream::get_encoding_type(reader, uses_four_byte_encoding);
+    if (result.has_error()) {
+        SPDLOG_ERROR("Cannot compress {}, IR error={}", path, result.error().message());
         return false;
     }
 

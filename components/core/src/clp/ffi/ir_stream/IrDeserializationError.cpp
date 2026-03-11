@@ -25,8 +25,12 @@ auto IrErrorCategory::message(IrDeserializationErrorEnum error_enum) const -> st
             return "incomplete IR stream";
         case IrDeserializationErrorEnum::InvalidKeyGroupOrdering:
             return "invalid key-ID-group ordering";
+        case IrDeserializationErrorEnum::InvalidMagicNumber:
+            return "IR stream starts with an invalid magic number";
         case IrDeserializationErrorEnum::InvalidTag:
             return "invalid tag";
+        case IrDeserializationErrorEnum::MessageDecodingFailure:
+            return "message decoding failed";
         case IrDeserializationErrorEnum::UnsupportedMetadataFormat:
             return "IR stream metadata format unsupported";
         case IrDeserializationErrorEnum::UnsupportedVersion:

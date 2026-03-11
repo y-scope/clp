@@ -17,16 +17,9 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
-    auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
-    if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
-        switch (ir_error_code) {
-            case ffi::ir_stream::IRErrorCode_Incomplete_IR:
-                return std::errc::result_out_of_range;
-            case ffi::ir_stream::IRErrorCode_Corrupted_IR:
-            default:
-                return std::errc::protocol_error;
-        }
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata)
+    );
 
     if (ffi::ir_stream::cProtocol::Metadata::EncodingJson != metadata_type) {
         return std::errc::protocol_not_supported;
@@ -74,20 +67,15 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     // Process any packets before the log event
     ffi::ir_stream::encoded_tag_t tag{};
     while (true) {
-        auto ir_error_code = ffi::ir_stream::deserialize_tag(m_reader, tag);
-        if (ffi::ir_stream::IRErrorCode_Incomplete_IR == ir_error_code) {
-            return std::errc::result_out_of_range;
-        }
-
+        tag = YSTDLIB_ERROR_HANDLING_TRYX(ffi::ir_stream::deserialize_tag(m_reader));
         if (ffi::ir_stream::cProtocol::Eof == tag) {
             return std::errc::no_message;
         }
 
         if (ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {
-            ir_error_code = ffi::ir_stream::deserialize_utc_offset_change(m_reader, m_utc_offset);
-            if (ffi::ir_stream::IRErrorCode_Incomplete_IR == ir_error_code) {
-                return std::errc::result_out_of_range;
-            }
+            m_utc_offset = YSTDLIB_ERROR_HANDLING_TRYX(
+                    ffi::ir_stream::deserialize_utc_offset_change(m_reader)
+            );
         } else {
             // Packet must be a log event
             break;
@@ -99,23 +87,16 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     std::vector<std::string> dict_vars;
     std::vector<encoded_variable_t> encoded_vars;
 
-    auto ir_error_code = ffi::ir_stream::deserialize_log_event(
-            m_reader,
-            tag,
-            logtype,
-            encoded_vars,
-            dict_vars,
-            timestamp_or_timestamp_delta
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            ffi::ir_stream::deserialize_log_event(
+                    m_reader,
+                    tag,
+                    logtype,
+                    encoded_vars,
+                    dict_vars,
+                    timestamp_or_timestamp_delta
+            )
     );
-    if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
-        switch (ir_error_code) {
-            case ffi::ir_stream::IRErrorCode_Incomplete_IR:
-                return std::errc::result_out_of_range;
-            case ffi::ir_stream::IRErrorCode_Corrupted_IR:
-            default:
-                return std::errc::protocol_error;
-        }
-    }
 
     epoch_time_ms_t timestamp{};
     if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {

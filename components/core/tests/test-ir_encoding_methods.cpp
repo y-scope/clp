@@ -24,6 +24,7 @@
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/Deserializer.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/IrDeserializationError.hpp"
 #include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ffi/ir_stream/search/test/utils.hpp"
@@ -51,6 +52,8 @@ using clp::ffi::ir_stream::deserialize_utc_offset_change;
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
+using clp::ffi::ir_stream::IrDeserializationError;
+using clp::ffi::ir_stream::IrDeserializationErrorEnum;
 using clp::ffi::ir_stream::IRErrorCode;
 using clp::ffi::ir_stream::search::test::unpack_and_serialize_msgpack_bytes;
 using clp::ffi::ir_stream::serialize_utc_offset_change;
@@ -469,19 +472,19 @@ bool serialize_preamble(
  * @param tag
  * @param message
  * @param decoded_ts Returns the decoded timestamp
- * @return IRErrorCode_Success on success
- * @return Same as the clp::ffi::ir_stream::eight_byte_encoding::deserialize_log_event when
- * encoded_variable_t == eight_byte_encoded_variable_t
- * @return Same as the clp::ffi::ir_stream::four_byte_encoding::deserialize_log_event when
- * encoded_variable_t == four_byte_encoded_variable_t
+ * @return A void result on success, or an error code indicating the failure:
+ * - Forwards `clp::ffi::ir_stream::eight_byte_encoding::deserialize_log_event`'s return values on
+ * failure when `encoded_variable_t == eight_byte_encoded_variable_t`
+ * - Forwards `clp::ffi::ir_stream::four_byte_encoding::deserialize_log_event`'s return values on
+ * failure when `encoded_variable_t == four_byte_encoded_variable_t`
  */
 template <typename encoded_variable_t>
-IRErrorCode deserialize_log_event(
+auto deserialize_log_event(
         BufferReader& reader,
         encoded_tag_t tag,
         string& message,
         epoch_time_ms_t& decoded_ts
-);
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Struct to hold the timestamp info from the IR stream's metadata
@@ -565,12 +568,12 @@ bool serialize_preamble(
 }
 
 template <typename encoded_variable_t>
-IRErrorCode deserialize_log_event(
+auto deserialize_log_event(
         BufferReader& reader,
         encoded_tag_t tag,
         string& message,
         epoch_time_ms_t& decoded_ts
-) {
+) -> ystdlib::error_handling::Result<void> {
     static_assert(
             is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
@@ -615,8 +618,7 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(eight_byte_encoding_vec.data()),
             eight_byte_encoding_vec.size()
     };
-    REQUIRE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding).has_error());
     REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
 
     // Test four-byte encoding
@@ -629,8 +631,7 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size()
     };
-    REQUIRE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding).has_error());
     REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
 
     // Test error on empty and incomplete ir_buffer
@@ -638,15 +639,15 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
             0
     );
-    REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Incomplete_IR);
+    REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding).error()
+            == IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream});
 
     BufferReader incomplete_buffer{
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size() - 1
     };
-    REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Incomplete_IR);
+    REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding).error()
+            == IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream});
 
     // Test error on invalid encoding
     vector<int8_t> const invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
@@ -654,8 +655,8 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(invalid_ir_vec.data()),
             invalid_ir_vec.size()
     };
-    REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Corrupted_IR);
+    REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding).error()
+            == IrDeserializationError{IrDeserializationErrorEnum::InvalidMagicNumber});
 }
 
 TEMPLATE_TEST_CASE(
@@ -681,8 +682,7 @@ TEMPLATE_TEST_CASE(
     // Check if encoding type is properly read
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(get_encoding_type(ir_buffer, is_four_bytes_encoding).has_error());
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
     REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
@@ -691,8 +691,9 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t metadata_type{0};
     size_t metadata_pos{0};
     uint16_t metadata_size{0};
-    REQUIRE(deserialize_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(
+            deserialize_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size).has_error()
+    );
     REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
 
     char* metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data()) + metadata_pos};
@@ -722,8 +723,7 @@ TEMPLATE_TEST_CASE(
     // Test if preamble can be decoded by the string copy method
     std::vector<int8_t> json_metadata_vec;
     ir_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(deserialize_preamble(ir_buffer, metadata_type, json_metadata_vec)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(deserialize_preamble(ir_buffer, metadata_type, json_metadata_vec).has_error());
     string_view json_metadata_copied{
             size_checked_pointer_cast<char const>(json_metadata_vec.data()),
             json_metadata_vec.size()
@@ -738,13 +738,15 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     incomplete_preamble_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(deserialize_preamble(
-                    incomplete_preamble_buffer,
-                    metadata_type,
-                    metadata_pos,
-                    metadata_size
-            )
-            == IRErrorCode::IRErrorCode_Incomplete_IR);
+    auto incomplete_preamble_result = deserialize_preamble(
+            incomplete_preamble_buffer,
+            metadata_type,
+            metadata_pos,
+            metadata_size
+    );
+    REQUIRE(incomplete_preamble_result.has_error());
+    REQUIRE(IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream}
+            == incomplete_preamble_result.error());
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
@@ -752,13 +754,15 @@ TEMPLATE_TEST_CASE(
             size_checked_pointer_cast<char const>(ir_buf.data()),
             ir_buf.size()
     };
-    REQUIRE(deserialize_preamble(
-                    corrupted_preamble_buffer,
-                    metadata_type,
-                    metadata_pos,
-                    metadata_size
-            )
-            == IRErrorCode::IRErrorCode_Corrupted_IR);
+    auto corrupted_preamble_result = deserialize_preamble(
+            corrupted_preamble_buffer,
+            metadata_type,
+            metadata_pos,
+            metadata_size
+    );
+    REQUIRE(corrupted_preamble_result.has_error());
+    REQUIRE(IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat}
+            == corrupted_preamble_result.error());
 }
 
 TEMPLATE_TEST_CASE(
@@ -781,21 +785,27 @@ TEMPLATE_TEST_CASE(
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
     epoch_time_ms_t timestamp;
-    encoded_tag_t tag;
 
     // Test if message can be decoded properly
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event<TestType>(ir_buffer, tag, decoded_message, timestamp));
+    auto result = deserialize_tag(ir_buffer);
+    REQUIRE_FALSE(result.has_error());
+    auto tag = result.value();
+    REQUIRE_FALSE(
+            deserialize_log_event<TestType>(ir_buffer, tag, decoded_message, timestamp).has_error()
+    );
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
     REQUIRE(ir_buffer.get_pos() == encoded_message_end_pos);
 
     // Test corrupted IR
     ir_buffer.seek_from_begin(encoded_message_start_pos + 1);
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Corrupted_IR
-            == deserialize_log_event<TestType>(ir_buffer, tag, message, timestamp));
+    result = deserialize_tag(ir_buffer);
+    REQUIRE_FALSE(result.has_error());
+    tag = result.value();
+    auto corrupted_result = deserialize_log_event<TestType>(ir_buffer, tag, message, timestamp);
+    REQUIRE(corrupted_result.has_error());
+    REQUIRE(IrDeserializationError{IrDeserializationErrorEnum::InvalidTag}
+            == corrupted_result.error());
 
     // Test incomplete IR
     ir_buf.resize(encoded_message_end_pos - 4);
@@ -803,11 +813,14 @@ TEMPLATE_TEST_CASE(
             size_checked_pointer_cast<char const>(ir_buf.data()),
             ir_buf.size()
     };
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(incomplete_preamble_buffer, tag));
-    REQUIRE(
-            IRErrorCode::IRErrorCode_Incomplete_IR
-            == deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp)
-    );
+    result = deserialize_tag(incomplete_preamble_buffer);
+    REQUIRE_FALSE(result.has_error());
+    tag = result.value();
+    auto incomplete_result
+            = deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp);
+    REQUIRE(incomplete_result.has_error());
+    REQUIRE(IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream}
+            == incomplete_result.error());
 }
 
 // NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
@@ -840,21 +853,24 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
 
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape{ir_buf};
-    encoded_tag_t tag;
     ir_with_extra_escape.at(logtype_end_pos - 1)
             = enum_to_underlying_type(VariablePlaceholder::Escape);
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
             ir_with_extra_escape.size()
     };
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_with_extra_escape_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
-            == deserialize_log_event<eight_byte_encoded_variable_t>(
-                    ir_with_extra_escape_buffer,
-                    tag,
-                    decoded_message,
-                    timestamp
-            ));
+    auto result = deserialize_tag(ir_with_extra_escape_buffer);
+    REQUIRE_FALSE(result.has_error());
+    auto tag = result.value();
+    auto extra_escape_result = deserialize_log_event<eight_byte_encoded_variable_t>(
+            ir_with_extra_escape_buffer,
+            tag,
+            decoded_message,
+            timestamp
+    );
+    REQUIRE(extra_escape_result.has_error());
+    REQUIRE(IrDeserializationError{IrDeserializationErrorEnum::MessageDecodingFailure}
+            == extra_escape_result.error());
 
     // Test if an extra placeholder triggers a decoder error
     auto ir_with_extra_placeholder{ir_buf};
@@ -864,15 +880,18 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
             size_checked_pointer_cast<char const>(ir_with_extra_placeholder.data()),
             ir_with_extra_placeholder.size()
     };
-    REQUIRE(IRErrorCode::IRErrorCode_Success
-            == deserialize_tag(ir_with_extra_placeholder_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
-            == deserialize_log_event<eight_byte_encoded_variable_t>(
-                    ir_with_extra_placeholder_buffer,
-                    tag,
-                    decoded_message,
-                    timestamp
-            ));
+    result = deserialize_tag(ir_with_extra_placeholder_buffer);
+    REQUIRE_FALSE(result.has_error());
+    tag = result.value();
+    auto extra_placeholder_result = deserialize_log_event<eight_byte_encoded_variable_t>(
+            ir_with_extra_placeholder_buffer,
+            tag,
+            decoded_message,
+            timestamp
+    );
+    REQUIRE(extra_placeholder_result.has_error());
+    REQUIRE(IrDeserializationError{IrDeserializationErrorEnum::MessageDecodingFailure}
+            == extra_placeholder_result.error());
 }
 
 TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_log_event]") {
@@ -901,16 +920,19 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
-    encoded_tag_t tag;
     epoch_time_ms_t decoded_delta_ts{};
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event<four_byte_encoded_variable_t>(
+    auto result = deserialize_tag(ir_buffer);
+    REQUIRE_FALSE(result.has_error());
+    auto tag = result.value();
+    REQUIRE_FALSE(
+            deserialize_log_event<four_byte_encoded_variable_t>(
                     ir_buffer,
                     tag,
                     decoded_message,
                     decoded_delta_ts
-            ));
+            )
+                    .has_error()
+    );
     REQUIRE(message == decoded_message);
     REQUIRE(decoded_delta_ts == ts_delta);
 }
@@ -1006,8 +1028,7 @@ TEMPLATE_TEST_CASE(
     };
 
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding).has_error());
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
 
     // Test if preamble can be properly decoded
@@ -1015,8 +1036,10 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t metadata_type;
     size_t metadata_pos;
     uint16_t metadata_size;
-    REQUIRE(deserialize_preamble(complete_ir_buffer, metadata_type, metadata_pos, metadata_size)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(
+            deserialize_preamble(complete_ir_buffer, metadata_type, metadata_pos, metadata_size)
+                    .has_error()
+    );
     REQUIRE(encoded_preamble_end_pos == complete_ir_buffer.get_pos());
 
     auto* json_metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data() + metadata_pos)};
@@ -1034,23 +1057,30 @@ TEMPLATE_TEST_CASE(
     string decoded_message;
     epoch_time_ms_t ts_or_ts_delta{};
     UtcOffset utc_offset{0};
-    encoded_tag_t tag;
     epoch_time_ms_t prev_ts{preamble_ts};
+    encoded_tag_t tag;
     for (auto const& log_event : test_log_events) {
-        REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
+        auto tag_result = deserialize_tag(complete_ir_buffer);
+        REQUIRE_FALSE(tag_result.has_error());
+        tag = tag_result.value();
         if (clp::ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {
-            REQUIRE(IRErrorCode::IRErrorCode_Success
-                    == deserialize_utc_offset_change(complete_ir_buffer, utc_offset));
-            REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
+            auto utc_offset_result = deserialize_utc_offset_change(complete_ir_buffer);
+            REQUIRE_FALSE(utc_offset_result.has_error());
+            utc_offset = utc_offset_result.value();
+            tag_result = deserialize_tag(complete_ir_buffer);
+            REQUIRE_FALSE(tag_result.has_error());
+            tag = tag_result.value();
         }
 
-        REQUIRE(IRErrorCode::IRErrorCode_Success
-                == deserialize_log_event<TestType>(
+        REQUIRE_FALSE(
+                deserialize_log_event<TestType>(
                         complete_ir_buffer,
                         tag,
                         decoded_message,
                         ts_or_ts_delta
-                ));
+                )
+                        .has_error()
+        );
         auto timestamp{ts_or_ts_delta};
         if constexpr (is_same_v<TestType, four_byte_encoded_variable_t>) {
             timestamp += prev_ts;
@@ -1060,7 +1090,9 @@ TEMPLATE_TEST_CASE(
         REQUIRE(log_event.get_timestamp() == timestamp);
         REQUIRE(log_event.get_utc_offset() == utc_offset);
     }
-    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
+    auto tag_result = deserialize_tag(complete_ir_buffer);
+    REQUIRE_FALSE(tag_result.has_error());
+    tag = tag_result.value();
     REQUIRE(clp::ffi::ir_stream::cProtocol::Eof == tag);
     REQUIRE(complete_ir_buffer.get_pos() == ir_buf.size());
 }
@@ -1095,8 +1127,7 @@ TEMPLATE_TEST_CASE(
     };
 
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE_FALSE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding).has_error());
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
 
     auto create_result = LogEventDeserializer<TestType>::create(complete_ir_buffer);
@@ -1147,10 +1178,7 @@ TEMPLATE_TEST_CASE(
     BufferReader buffer_reader{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
 
     bool is_four_byte_encoding{};
-    REQUIRE(
-            (IRErrorCode::IRErrorCode_Success
-             == get_encoding_type(buffer_reader, is_four_byte_encoding))
-    );
+    REQUIRE_FALSE(get_encoding_type(buffer_reader, is_four_byte_encoding).has_error());
     if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
         REQUIRE(is_four_byte_encoding);
     } else {
@@ -1159,10 +1187,7 @@ TEMPLATE_TEST_CASE(
 
     encoded_tag_t metadata_type{};
     vector<int8_t> metadata_bytes;
-    REQUIRE(
-            (IRErrorCode::IRErrorCode_Success
-             == deserialize_preamble(buffer_reader, metadata_type, metadata_bytes))
-    );
+    REQUIRE_FALSE(deserialize_preamble(buffer_reader, metadata_type, metadata_bytes).has_error());
     REQUIRE((clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type));
     string_view const metadata_view{
             size_checked_pointer_cast<char const>(metadata_bytes.data()),
@@ -1185,17 +1210,20 @@ TEMPLATE_TEST_CASE(
     );
     REQUIRE((expected_metadata == metadata));
 
-    encoded_tag_t encoded_tag{};
-    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    auto tag_result = deserialize_tag(buffer_reader);
+    REQUIRE_FALSE(tag_result.has_error());
+    auto encoded_tag = tag_result.value();
     REQUIRE((clp::ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == encoded_tag));
+
     UtcOffset utc_offset_change{0};
-    REQUIRE(
-            (IRErrorCode::IRErrorCode_Success
-             == deserialize_utc_offset_change(buffer_reader, utc_offset_change))
-    );
+    auto utc_offset_change_result = deserialize_utc_offset_change(buffer_reader);
+    REQUIRE_FALSE(utc_offset_change_result.has_error());
+    utc_offset_change = utc_offset_change_result.value();
     REQUIRE((cBeijingUtcOffset == utc_offset_change));
 
-    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    tag_result = deserialize_tag(buffer_reader);
+    REQUIRE_FALSE(tag_result.has_error());
+    encoded_tag = tag_result.value();
     REQUIRE((clp::ffi::ir_stream::cProtocol::Eof == encoded_tag));
 
     char eof{};
@@ -1423,8 +1451,9 @@ TEMPLATE_TEST_CASE(
         REQUIRE_FALSE(cSerializationMethodToTest(node_id, output_buf).has_error());
 
         BufferReader reader{size_checked_pointer_cast<char>(output_buf.data()), output_buf.size()};
-        encoded_tag_t tag{};
-        REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(reader, tag)));
+        auto tag_result = deserialize_tag(reader);
+        REQUIRE_FALSE(tag_result.has_error());
+        auto tag = tag_result.value();
         auto const result{cDeserializationMethodToTest(tag, reader)};
         REQUIRE_FALSE(result.has_error());
         auto const [is_auto_generated, deserialized_node_id]{result.value()};
