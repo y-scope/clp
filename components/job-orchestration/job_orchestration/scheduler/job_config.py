@@ -56,7 +56,7 @@ class S3ObjectMetadataInputConfig(S3Config):
     @field_validator("metadata_ids")
     @classmethod
     def validate_metadata_ids_non_empty(cls, value: list[int]) -> list[int]:
-        if not value:
+        if len(value) == 0:
             raise ValueError("metadata_ids cannot be an empty list")
         return value
 

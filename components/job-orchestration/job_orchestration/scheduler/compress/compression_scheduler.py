@@ -194,8 +194,9 @@ def _process_s3_object_metadata_input(
     db_context: DbContext,
 ) -> None:
     """
-    Fetches S3 object metadata rows from the INGESTED_S3_OBJECT_METADATA_TABLE_NAME table for the
-    given metadata_ids and ingestion_job_id, and adds the metadata to paths_to_compress_buffer.
+    Fetches S3 object metadata rows from the `INGESTED_S3_OBJECT_METADATA_TABLE_NAME` table for the
+    given `metadata_ids` and `ingestion_job_id`, and adds the metadata to
+    `paths_to_compress_buffer`.
 
     :param s3_object_metadata_input_config:
     :param paths_to_compress_buffer:
@@ -207,7 +208,7 @@ def _process_s3_object_metadata_input(
 
     placeholders = ", ".join(["%s"] * len(metadata_ids))
     query = (
-        f"SELECT id, `key`, size FROM {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} "
+        f"SELECT `id`, `key`, `size` FROM {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} "
         f"WHERE id IN ({placeholders}) AND ingestion_job_id = %s"
     )
     params = (*metadata_ids, ingestion_job_id)

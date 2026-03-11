@@ -21,7 +21,7 @@ from job_orchestration.scheduler.job_config import InputType
 
 
 def _is_s3_based_input(input_type: InputType) -> bool:
-    return input_type in {InputType.S3, InputType.METADATA}
+    return InputType.S3 != input_type and InputType.METADATA != input_type
 
 
 def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> list[int] | None:
