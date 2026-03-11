@@ -5,7 +5,6 @@
 #include <memory>
 #include <new>
 #include <span>
-#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -22,7 +21,7 @@ namespace clp_s::ffi::sfa {
 template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
 
-auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
+auto ClpArchiveReader::create_from_path(std::string_view archive_path) -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> reader;
 
     try {
@@ -42,10 +41,11 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
     }
 }
 
-auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_view archive_id)
+auto ClpArchiveReader::create_from_bytes(std::span<char const> archive_data)
         -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> archive_reader;
     std::shared_ptr<std::vector<char>> archive_data_owner;
+    constexpr std::string_view cDefaultArchiveId{"default"};
 
     try {
         archive_data_owner
@@ -56,12 +56,12 @@ auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_vi
         )};
 
         archive_reader = std::make_unique<clp_s::ArchiveReader>();
-        archive_reader->open(reader, archive_id);
+        archive_reader->open(reader, cDefaultArchiveId);
         return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
                 "Failed to create ClpArchiveReader for archive {}: out of memory.",
-                archive_id
+                cDefaultArchiveId
         );
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
     } catch (std::exception const& ex) {
@@ -126,13 +126,5 @@ auto ClpArchiveReader::precompute_archive_metadata() -> void {
         auto const end_idx{static_cast<uint64_t>(range.end_index)};
         m_event_count += end_idx - start_idx;
     }
-}
-
-auto ClpArchiveReader::get_archive_id() const -> Result<std::string> {
-    if (nullptr == m_archive_reader) {
-        return SfaErrorCode{SfaErrorCodeEnum::NotInit};
-    }
-
-    return std::string{m_archive_reader->get_archive_id()};
 }
 }  // namespace clp_s::ffi::sfa

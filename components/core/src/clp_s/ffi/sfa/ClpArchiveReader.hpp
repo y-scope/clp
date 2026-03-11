@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <memory>
 #include <span>
-#include <string>
 #include <string_view>
 #include <vector>
 
@@ -30,7 +29,7 @@ public:
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      */
-    [[nodiscard]] static auto create(std::string_view archive_path)
+    [[nodiscard]] static auto create_from_path(std::string_view archive_path)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     /**
@@ -41,14 +40,12 @@ public:
      * may be transient.
      *
      * @param archive_data Bytes of a single-file archive.
-     * @param archive_id Identifier to assign to this archive.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
      */
-    [[nodiscard]] static auto
-    create(std::span<char const> archive_data, std::string_view archive_id)
+    [[nodiscard]] static auto create_from_bytes(std::span<char const> archive_data)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor
@@ -60,13 +57,6 @@ public:
 
     ClpArchiveReader(ClpArchiveReader&&) noexcept;
     [[nodiscard]] auto operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader&;
-
-    /**
-     * @return A result containing the archive ID on success, or an error code indicating the
-     * failure:
-     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized or has already been closed.
-     */
-    [[nodiscard]] auto get_archive_id() const -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * @return The total number of events in the archive.

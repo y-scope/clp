@@ -50,15 +50,11 @@ auto assert_archive_event_count_matches_log(std::string_view const archive_name)
     REQUIRE(std::filesystem::exists(archive_path));
     REQUIRE(std::filesystem::exists(log_path));
 
-    auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(archive_path.string());
+    auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create_from_path(archive_path.string());
     REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();
 
     auto const expected_event_count = get_num_lines(log_path);
-    auto archive_id_result = reader.get_archive_id();
-    REQUIRE(false == archive_id_result.has_error());
-    REQUIRE(archive_id_result.value() == archive_path.filename().string());
-
     auto const event_count = reader.get_event_count();
     REQUIRE(event_count == expected_event_count);
 }
@@ -75,17 +71,13 @@ auto assert_archive_event_count_matches_log_in_memory(std::string_view const arc
     auto const view = mapped_archive.get_view();
     REQUIRE(false == view.empty());
 
-    auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create(
-            std::span<char const>{view.data(), view.size()},
-            archive_name
+    auto reader_result = clp_s::ffi::sfa::ClpArchiveReader::create_from_bytes(
+            std::span<char const>{view.data(), view.size()}
     );
     REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();
 
     auto const expected_event_count = get_num_lines(log_path);
-    auto archive_id_result = reader.get_archive_id();
-    REQUIRE(false == archive_id_result.has_error());
-    REQUIRE(archive_id_result.value() == archive_name);
 
     auto const event_count = reader.get_event_count();
     REQUIRE(event_count == expected_event_count);
