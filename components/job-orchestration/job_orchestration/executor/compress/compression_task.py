@@ -41,7 +41,7 @@ from job_orchestration.scheduler.job_config import (
     S3ObjectMetadataInputConfig,
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
-from job_orchestration.scheduler.utils import _is_s3_based_input
+from job_orchestration.scheduler.utils import is_s3_based_input
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -273,7 +273,7 @@ def _make_clp_s_command_and_env(
     # fmt: on
 
     compression_env_vars = dict(os.environ)
-    if _is_s3_based_input(clp_config.input.type) and not clp_config.input.unstructured:
+    if is_s3_based_input(clp_config.input.type) and not clp_config.input.unstructured:
         compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
@@ -315,7 +315,7 @@ def _make_log_converter_command_and_env(
     # fmt: on
 
     conversion_env_vars = dict(os.environ)
-    if _is_s3_based_input(clp_config.input.type):
+    if is_s3_based_input(clp_config.input.type):
         conversion_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         conversion_cmd.append("--auth")
         conversion_cmd.append("s3")
@@ -394,7 +394,7 @@ def run_clp(
     logs_list_path = tmp_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:
         _generate_fs_logs_list(logs_list_path, paths_to_compress)
-    elif _is_s3_based_input(input_type):
+    elif is_s3_based_input(input_type):
         _generate_s3_logs_list(logs_list_path, paths_to_compress, clp_config.input)
     else:
         error_msg = f"Unsupported input type: {input_type}."

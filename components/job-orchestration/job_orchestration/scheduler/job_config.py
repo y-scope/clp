@@ -11,7 +11,7 @@ from strenum import LowercaseStrEnum
 class InputType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
-    METADATA = auto()
+    S3_OBJECT_METADATA = auto()
 
 
 class PathsToCompress(BaseModel):
@@ -46,18 +46,18 @@ class S3InputConfig(S3Config):
 
 
 class S3ObjectMetadataInputConfig(S3Config):
-    type: Literal[InputType.METADATA.value] = InputType.METADATA.value
+    type: Literal[InputType.S3_OBJECT_METADATA.value] = InputType.S3_OBJECT_METADATA.value
     ingestion_job_id: int
     dataset: str | None = None
     timestamp_key: str | None = None
     unstructured: bool = False
-    metadata_ids: list[int]
+    s3_object_metadata_ids: list[int]
 
-    @field_validator("metadata_ids")
+    @field_validator("s3_object_metadata_ids")
     @classmethod
-    def validate_metadata_ids_non_empty(cls, value: list[int]) -> list[int]:
+    def validate_s3_object_metadata_ids_non_empty(cls, value: list[int]) -> list[int]:
         if len(value) == 0:
-            raise ValueError("metadata_ids cannot be an empty list")
+            raise ValueError("s3_object_metadata_ids cannot be an empty list")
         return value
 
 

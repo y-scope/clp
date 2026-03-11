@@ -195,7 +195,7 @@ def _process_s3_object_metadata_input(
 ) -> None:
     """
     Fetches S3 object metadata rows from the `INGESTED_S3_OBJECT_METADATA_TABLE_NAME` table for the
-    given `metadata_ids` and `ingestion_job_id`, and adds the metadata to
+    given `s3_object_metadata_ids` and `ingestion_job_id`, and adds the metadata to
     `paths_to_compress_buffer`.
 
     :param s3_object_metadata_input_config:
@@ -203,34 +203,41 @@ def _process_s3_object_metadata_input(
     :param db_context:
     :raises RuntimeError: If no rows are found, or if any requested metadata_id is missing.
     """
-    metadata_ids = s3_object_metadata_input_config.metadata_ids
+    s3_object_metadata_ids = s3_object_metadata_input_config.s3_object_metadata_ids
     ingestion_job_id = s3_object_metadata_input_config.ingestion_job_id
 
-    placeholders = ", ".join(["%s"] * len(metadata_ids))
+    requested_ids = set(s3_object_metadata_ids)
+    if len(requested_ids) != len(s3_object_metadata_ids):
+        raise ValueError("s3_object_metadata_ids must be a list of unique IDs")
+
+    placeholders = ", ".join(["%s"] * len(s3_object_metadata_ids))
     query = (
         f"SELECT `id`, `key`, `size` FROM {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} "
         f"WHERE id IN ({placeholders}) AND ingestion_job_id = %s"
     )
-    params = (*metadata_ids, ingestion_job_id)
+    params = (*s3_object_metadata_ids, ingestion_job_id)
     db_context.cursor.execute(query, params)
     metadata_list = db_context.cursor.fetchall()
-    if not metadata_list:
+    if len(metadata_list) == 0:
         raise RuntimeError(
             f"No rows found in {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} for the given "
-            f"metadata_ids and ingestion_job_id {ingestion_job_id}."
+            f"s3_object_metadata_ids and ingestion_job_id {ingestion_job_id}."
         )
-
     # Validate that all requested IDs are present.
     returned_ids = {row["id"] for row in metadata_list}
-    requested_ids = set(metadata_ids)
     missing_ids = requested_ids - returned_ids
-    if missing_ids:
+    if len(missing_ids) > 0:
         raise RuntimeError(
             f"Missing metadata rows in {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} for "
             f"ingestion_job_id {ingestion_job_id}: {sorted(missing_ids)}."
         )
 
     for metadata in metadata_list:
+        if not metadata["key"].startswith(s3_object_metadata_input_config.key_prefix):
+            raise RuntimeError(
+                f"Metadata key {metadata['key']} does not start with the key prefix "
+                f"{s3_object_metadata_input_config.key_prefix}."
+            )
         file_metadata = FileMetadata(path=Path(metadata["key"]), size=int(metadata["size"]))
         paths_to_compress_buffer.add_file(file_metadata)
 
@@ -373,7 +380,7 @@ def search_and_schedule_new_tasks(
                     },
                 )
                 return
-        elif input_type == InputType.METADATA.value:
+        elif input_type == InputType.S3_OBJECT_METADATA.value:
             try:
                 _process_s3_object_metadata_input(
                     input_config, paths_to_compress_buffer, db_context
