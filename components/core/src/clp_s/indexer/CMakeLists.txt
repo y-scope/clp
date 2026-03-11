@@ -31,6 +31,8 @@ set(
         ../../clp/ffi/ir_stream/decoding_methods.cpp
         ../../clp/ffi/ir_stream/decoding_methods.hpp
         ../../clp/ffi/ir_stream/decoding_methods.inc
+        ../../clp/ffi/ir_stream/IrDeserializationError.cpp
+        ../../clp/ffi/ir_stream/IrDeserializationError.hpp
         ../../clp/ffi/ir_stream/IrSerializationError.cpp
         ../../clp/ffi/ir_stream/IrSerializationError.hpp
         ../../clp/ffi/ir_stream/protocol_constants.hpp
