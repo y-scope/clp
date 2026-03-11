@@ -5,6 +5,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -90,7 +91,7 @@ auto assert_archive_event_count_matches_log_in_memory(
     REQUIRE(false == view.empty());
 
     auto reader_result{clp_s::ffi::sfa::ClpArchiveReader::create_from_bytes(
-            std::span<char const>{view.data(), view.size()}
+            std::vector<char>{view.begin(), view.end()}
     )};
     REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();

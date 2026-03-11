@@ -4,7 +4,6 @@
 #include <exception>
 #include <memory>
 #include <new>
-#include <span>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -41,18 +40,17 @@ auto ClpArchiveReader::create_from_path(std::string_view archive_path) -> Result
     }
 }
 
-auto ClpArchiveReader::create_from_bytes(std::span<char const> archive_data)
+auto ClpArchiveReader::create_from_bytes(std::vector<char>&& archive_data)
         -> Result<ClpArchiveReader> {
-    std::unique_ptr<clp_s::ArchiveReader> archive_reader;
-    std::shared_ptr<std::vector<char>> archive_data_owner;
-    // `clp_s::ArchiveReader` requires an archive ID, but
-    // `clp_s::ffi::sfa::ClpArchiveReader` never uses it. Provide a dummy value
-    // solely to satisfy the constructor.
+    // `clp_s::ArchiveReader` requires an archive ID, but `clp_s::ffi::sfa::ClpArchiveReader` never
+    // uses it. Provide a dummy value solely to satisfy the constructor.
     constexpr std::string_view cDefaultArchiveId{"default"};
 
+    std::unique_ptr<clp_s::ArchiveReader> archive_reader;
+    std::shared_ptr<std::vector<char>> archive_data_owner;
+
     try {
-        archive_data_owner
-                = std::make_shared<std::vector<char>>(archive_data.begin(), archive_data.end());
+        archive_data_owner = std::make_shared<std::vector<char>>(std::move(archive_data));
         auto reader{std::make_shared<clp::BufferReader>(
                 archive_data_owner->data(),
                 archive_data_owner->size()

@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <span>
 #include <string_view>
 #include <vector>
 
@@ -33,11 +32,7 @@ public:
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     /**
-     * Creates an SFA reader from in-memory archive bytes.
-     *
-     * This overload copies the archive bytes referenced by the span into reader-owned storage so
-     * the * returned reader does not depend on the lifetime of the caller-provided buffer, which
-     * may be transient.
+     * Creates an SFA reader from in memory archive bytes, taking ownership of the buffer.
      *
      * @param archive_data Bytes of a single-file archive.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
@@ -45,7 +40,7 @@ public:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
      */
-    [[nodiscard]] static auto create_from_bytes(std::span<char const> archive_data)
+    [[nodiscard]] static auto create_from_bytes(std::vector<char>&& archive_data)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor
