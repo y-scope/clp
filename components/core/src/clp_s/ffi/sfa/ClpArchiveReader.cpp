@@ -22,32 +22,14 @@ namespace clp_s::ffi::sfa {
 template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
 
-namespace {
-/**
- * Computes the total number of log events in the archive by summing event counts across all
- * range-index entries.
- *
- * @param archive_reader Open archive reader whose range index will be summed.
- * @return Total number of log events in the archive.
- */
-[[nodiscard]] auto calculate_event_count(clp_s::ArchiveReader const& archive_reader) -> uint64_t {
-    uint64_t event_count{0};
-    for (auto const& range : archive_reader.get_range_index()) {
-        event_count += static_cast<uint64_t>(range.end_index - range.start_index);
-    }
-    return event_count;
-}
-}  // namespace
-
 auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> reader;
-    uint64_t event_count{0};
 
     try {
         auto path{get_path_object_for_raw_path(archive_path)};
         reader = std::make_unique<clp_s::ArchiveReader>();
         reader->open(path, NetworkAuthOption{});
-        event_count = calculate_event_count(*reader);
+        return ClpArchiveReader{std::move(reader), nullptr};
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
                 "Failed to create ClpArchiveReader for archive {}: out of memory.",
@@ -58,15 +40,12 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
         return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
     }
-
-    return ClpArchiveReader{std::move(reader), nullptr, event_count};
 }
 
 auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_view archive_id)
         -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> archive_reader;
     std::shared_ptr<std::vector<char>> archive_data_owner;
-    uint64_t event_count{0};
 
     try {
         archive_data_owner
@@ -78,7 +57,7 @@ auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_vi
 
         archive_reader = std::make_unique<clp_s::ArchiveReader>();
         archive_reader->open(reader, archive_id);
-        event_count = calculate_event_count(*archive_reader);
+        return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)};
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
                 "Failed to create ClpArchiveReader for archive {}: out of memory.",
@@ -89,23 +68,20 @@ auto ClpArchiveReader::create(std::span<char const> archive_data, std::string_vi
         SPDLOG_ERROR("Exception while creating ClpArchiveReader: {}", ex.what());
         return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
     }
-
-    return ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner), event_count};
 }
 
 ClpArchiveReader::ClpArchiveReader(
         std::unique_ptr<clp_s::ArchiveReader> reader,
-        std::shared_ptr<std::vector<char>> archive_data,
-        uint64_t event_count
+        std::shared_ptr<std::vector<char>> archive_data
 )
         : m_archive_reader{std::move(reader)},
-          m_archive_data{std::move(archive_data)},
-          m_event_count{event_count} {}
+          m_archive_data{std::move(archive_data)} {
+    precompute_archive_metadata();
+}
 
-ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&& rhs) noexcept
-        : m_archive_reader{std::move(rhs.m_archive_reader)},
-          m_archive_data{std::move(rhs.m_archive_data)},
-          m_event_count{std::exchange(rhs.m_event_count, 0)} {}
+ClpArchiveReader::ClpArchiveReader(ClpArchiveReader&& rhs) noexcept {
+    move_from(rhs);
+}
 
 auto ClpArchiveReader::operator=(ClpArchiveReader&& rhs) noexcept -> ClpArchiveReader& {
     if (this == &rhs) {
@@ -113,30 +89,43 @@ auto ClpArchiveReader::operator=(ClpArchiveReader&& rhs) noexcept -> ClpArchiveR
     }
 
     close();
-    m_archive_reader = std::move(rhs.m_archive_reader);
-    m_archive_data = std::move(rhs.m_archive_data);
-    m_event_count = std::exchange(rhs.m_event_count, 0);
+    move_from(rhs);
     return *this;
+}
+
+ClpArchiveReader::~ClpArchiveReader() noexcept {
+    close();
 }
 
 auto ClpArchiveReader::close() noexcept -> void {
     // FFI frontends may invoke destruction paths multiple times (e.g., explicit close followed by
     // GC finalization). Guard against this by checking for a null reader before attempting to
     // close.
-    if (nullptr == m_archive_reader) {
-        return;
+    if (nullptr != m_archive_reader) {
+        try {
+            m_archive_reader->close();
+        } catch (std::exception const& ex) {
+            SPDLOG_ERROR("Exception while closing ClpArchiveReader: {}", ex.what());
+        }
+        m_archive_reader.reset();
     }
-
-    try {
-        m_archive_reader->close();
-    } catch (std::exception const& ex) {
-        SPDLOG_ERROR("Exception while closing ClpArchiveReader: {}", ex.what());
-    }
-    m_archive_reader.reset();
+    m_event_count = 0;
 }
 
-ClpArchiveReader::~ClpArchiveReader() {
-    close();
+auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
+    m_archive_reader = std::move(rhs.m_archive_reader);
+    m_archive_data = std::move(rhs.m_archive_data);
+    m_event_count = std::exchange(rhs.m_event_count, 0);
+}
+
+auto ClpArchiveReader::precompute_archive_metadata() -> void {
+    auto const& range_index{m_archive_reader->get_range_index()};
+
+    for (auto const& range : range_index) {
+        auto const start_idx{static_cast<uint64_t>(range.start_index)};
+        auto const end_idx{static_cast<uint64_t>(range.end_index)};
+        m_event_count += end_idx - start_idx;
+    }
 }
 
 auto ClpArchiveReader::get_archive_id() const -> Result<std::string> {

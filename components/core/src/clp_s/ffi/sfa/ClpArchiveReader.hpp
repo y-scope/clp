@@ -52,7 +52,7 @@ public:
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor
-    ~ClpArchiveReader();
+    ~ClpArchiveReader() noexcept;
 
     // Delete copy constructor and assignment operator
     ClpArchiveReader(ClpArchiveReader const&) = delete;
@@ -77,8 +77,7 @@ private:
     // Constructors
     explicit ClpArchiveReader(
             std::unique_ptr<clp_s::ArchiveReader> reader,
-            std::shared_ptr<std::vector<char>> archive_data,
-            uint64_t event_count
+            std::shared_ptr<std::vector<char>> archive_data
     );
 
     // Methods
@@ -86,6 +85,18 @@ private:
      * Cleans up underlying resources.
      */
     auto close() noexcept -> void;
+
+    /**
+     * Moves owned state from rhs into this object and resets moved-from state.
+     *
+     * @param rhs Source reader to move from.
+     */
+    auto move_from(ClpArchiveReader& rhs) noexcept -> void;
+
+    /**
+     * Precomputes metadata from the archive range index.
+     */
+    auto precompute_archive_metadata() -> void;
 
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
