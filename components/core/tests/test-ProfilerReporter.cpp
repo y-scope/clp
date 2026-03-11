@@ -73,3 +73,24 @@ TEST_CASE("profiler_reporter_reports_runtime_measurements", "[ProfilerReporter][
     check_sink(sink3, {{"scope0", {0, 0}}, {"scope1", {0.01, 1}}, {"scope2", {0.07, 2}}});
     check_sink(sink0, {{"scope0", {0.18, 1}}, {"scope1", {0.01, 1}}, {"scope2", {0.07, 2}}});
 }
+
+TEST_CASE("profiler_reporter_respects_disable_scopes", "[ProfilerReporter][Stopwatch]") {
+    Sink sink;
+
+    Profiler::reset_runtime_measurements();
+    {
+        ProfilerReporter profiler(sink, {"scope1"});
+
+        PROFILE_SCOPE("scope0");
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        PROFILE_SCOPE("scope1");
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        PROFILE_SCOPE("scope2");
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    }
+
+    REQUIRE_FALSE(sink.contains("scope1"));
+    check_sink(sink, {{"scope0", {0.01, 1}}, {"scope2", {0.03, 1}}});
+}
