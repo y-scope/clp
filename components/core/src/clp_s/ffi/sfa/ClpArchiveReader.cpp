@@ -122,9 +122,7 @@ auto ClpArchiveReader::precompute_archive_metadata() -> void {
     auto const& range_index{m_archive_reader->get_range_index()};
 
     for (auto const& range : range_index) {
-        auto const start_idx{static_cast<uint64_t>(range.start_index)};
-        auto const end_idx{static_cast<uint64_t>(range.end_index)};
-        m_event_count += end_idx - start_idx;
+        m_event_count += static_cast<uint64_t>(range.end_index - range.start_index);
     }
 }
 }  // namespace clp_s::ffi::sfa
