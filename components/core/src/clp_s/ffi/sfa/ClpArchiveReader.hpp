@@ -28,7 +28,7 @@ public:
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      */
-    [[nodiscard]] static auto create_from_path(std::string_view archive_path)
+    [[nodiscard]] static auto create(std::string_view archive_path)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     /**
@@ -40,7 +40,7 @@ public:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
      */
-    [[nodiscard]] static auto create_from_bytes(std::vector<char>&& archive_data)
+    [[nodiscard]] static auto create(std::vector<char>&& archive_data)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor

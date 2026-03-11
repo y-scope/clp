@@ -70,7 +70,7 @@ auto assert_archive_event_count_matches_log(
 ) -> void {
     REQUIRE(std::filesystem::exists(archive_path));
 
-    auto reader_result{clp_s::ffi::sfa::ClpArchiveReader::create_from_path(archive_path.string())};
+    auto reader_result{clp_s::ffi::sfa::ClpArchiveReader::create(archive_path.string())};
     REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();
 
@@ -90,9 +90,9 @@ auto assert_archive_event_count_matches_log_in_memory(
     auto const view{mapped_archive.get_view()};
     REQUIRE(false == view.empty());
 
-    auto reader_result{clp_s::ffi::sfa::ClpArchiveReader::create_from_bytes(
-            std::vector<char>{view.begin(), view.end()}
-    )};
+    auto reader_result{
+            clp_s::ffi::sfa::ClpArchiveReader::create(std::vector<char>{view.begin(), view.end()})
+    };
     REQUIRE(false == reader_result.has_error());
     auto& reader = reader_result.value();
 

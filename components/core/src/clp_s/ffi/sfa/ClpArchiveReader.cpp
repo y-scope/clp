@@ -20,7 +20,7 @@ namespace clp_s::ffi::sfa {
 template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
 
-auto ClpArchiveReader::create_from_path(std::string_view archive_path) -> Result<ClpArchiveReader> {
+auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
     std::unique_ptr<clp_s::ArchiveReader> reader;
 
     try {
@@ -40,8 +40,7 @@ auto ClpArchiveReader::create_from_path(std::string_view archive_path) -> Result
     }
 }
 
-auto ClpArchiveReader::create_from_bytes(std::vector<char>&& archive_data)
-        -> Result<ClpArchiveReader> {
+auto ClpArchiveReader::create(std::vector<char>&& archive_data) -> Result<ClpArchiveReader> {
     // `clp_s::ArchiveReader` requires an archive ID, but `clp_s::ffi::sfa::ClpArchiveReader` never
     // uses it. Provide a dummy value solely to satisfy the constructor.
     constexpr std::string_view cDefaultArchiveId{"default"};
