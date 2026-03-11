@@ -58,6 +58,8 @@ class S3ObjectMetadataInputConfig(S3Config):
     def validate_s3_object_metadata_ids_non_empty(cls, value: list[int]) -> list[int]:
         if len(value) == 0:
             raise ValueError("s3_object_metadata_ids cannot be an empty list")
+        if len(value) != len(set(value)):
+            raise ValueError("s3_object_metadata_ids must be a list of unique IDs")
         return value
 
 

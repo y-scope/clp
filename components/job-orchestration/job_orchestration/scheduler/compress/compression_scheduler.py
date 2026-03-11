@@ -206,10 +206,6 @@ def _process_s3_object_metadata_input(
     s3_object_metadata_ids = s3_object_metadata_input_config.s3_object_metadata_ids
     ingestion_job_id = s3_object_metadata_input_config.ingestion_job_id
 
-    requested_ids = set(s3_object_metadata_ids)
-    if len(requested_ids) != len(s3_object_metadata_ids):
-        raise ValueError("s3_object_metadata_ids must be a list of unique IDs")
-
     placeholders = ", ".join(["%s"] * len(s3_object_metadata_ids))
     query = (
         f"SELECT `id`, `key`, `size` FROM {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} "
@@ -225,6 +221,7 @@ def _process_s3_object_metadata_input(
         )
     # Validate that all requested IDs are present.
     returned_ids = {row["id"] for row in metadata_list}
+    requested_ids = set(s3_object_metadata_ids)
     missing_ids = requested_ids - returned_ids
     if len(missing_ids) > 0:
         raise RuntimeError(
