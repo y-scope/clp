@@ -12,8 +12,6 @@
 #include <clp/ReaderInterface.hpp>
 #include <clp/WriterInterface.hpp>
 
-#include "ErrorCode.hpp"
-
 namespace clp_s::filter {
 /**
  * A Bloom filter for variable dictionary values.
@@ -48,19 +46,19 @@ public:
      * Adds a value to the filter.
      * @param value
      */
-    void add(std::string_view value);
+    auto add(std::string_view value) -> void;
 
     /**
      * @param value
      * @return true if the value may be present, false if definitely not present.
      */
-    [[nodiscard]] bool possibly_contains(std::string_view value) const;
+    [[nodiscard]] auto possibly_contains(std::string_view value) const -> bool;
 
     /**
      * Writes Bloom filter payload fields to a writer.
      * @param writer
      */
-    void write_to_file(clp::WriterInterface& writer) const;
+    auto write_to_file(clp::WriterInterface& writer) const -> void;
 
 private:
     BloomFilter(
@@ -73,8 +71,8 @@ private:
     compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
             -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>>;
 
-    void set_bit(size_t bit_index);
-    [[nodiscard]] bool test_bit(size_t bit_index) const;
+    auto set_bit(size_t bit_index) -> void;
+    [[nodiscard]] auto test_bit(size_t bit_index) const -> bool;
 
     size_t m_bit_array_size{0};
     uint32_t m_num_hash_functions{0};

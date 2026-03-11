@@ -2,10 +2,20 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <numbers>
+#include <string_view>
 #include <utility>
 
+#include <ystdlib/containers/Array.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
 #include <clp/ErrorCode.hpp>
+#include <clp/ReaderInterface.hpp>
+#include <clp/type_utils.hpp>
+#include <clp/WriterInterface.hpp>
 
 #include "ErrorCode.hpp"
 #include "XxHash.hpp"
@@ -21,8 +31,8 @@ constexpr uint64_t cPrimaryHashSeed{0};
 constexpr uint64_t cSecondaryHashSeed{0x9e37'79b9'7f4a'7c15ULL};
 constexpr size_t cNumBitsInByte{8};
 
-size_t min_bytes_containing_bits(size_t num_bits) {
-    return num_bits / cNumBitsInByte + (0 != (num_bits % cNumBitsInByte) ? 1 : 0);
+auto min_bytes_containing_bits(size_t num_bits) -> size_t {
+    return (num_bits / cNumBitsInByte) + ((0 != (num_bits % cNumBitsInByte)) ? 1 : 0);
 }
 }  // namespace
 
@@ -62,7 +72,7 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
         return std::make_pair(cDefaultBitArraySize, cDefaultNumHashFunctions);
     }
 
-    double const ln2{std::log(2.0)};
+    double const ln2{std::numbers::ln2_v<double>};
     double const ln2_squared{ln2 * ln2};
     auto const ideal_bit_array_size
             = (-static_cast<double>(expected_num_elements) * std::log(false_positive_rate)
@@ -85,7 +95,7 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
     return std::make_pair(bit_array_size, capped_num_hash_functions);
 }
 
-void BloomFilter::add(std::string_view value) {
+auto BloomFilter::add(std::string_view value) -> void {
     uint64_t const h1{xxhash::hash64(value, cPrimaryHashSeed)};
     uint64_t h2{xxhash::hash64(value, cSecondaryHashSeed)};
     if (0 == h2) {
@@ -96,7 +106,7 @@ void BloomFilter::add(std::string_view value) {
     }
 }
 
-bool BloomFilter::possibly_contains(std::string_view value) const {
+auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
     uint64_t const h1{xxhash::hash64(value, cPrimaryHashSeed)};
     uint64_t h2{xxhash::hash64(value, cSecondaryHashSeed)};
     if (0 == h2) {
@@ -111,24 +121,27 @@ bool BloomFilter::possibly_contains(std::string_view value) const {
     return true;
 }
 
-void BloomFilter::set_bit(size_t bit_index) {
+auto BloomFilter::set_bit(size_t bit_index) -> void {
     size_t const byte_index{bit_index / cNumBitsInByte};
     size_t const bit_offset{bit_index % cNumBitsInByte};
-    m_bit_array.data()[byte_index] |= static_cast<uint8_t>(1u << bit_offset);
+    m_bit_array.at(byte_index) |= static_cast<uint8_t>(1U << bit_offset);
 }
 
-bool BloomFilter::test_bit(size_t bit_index) const {
+auto BloomFilter::test_bit(size_t bit_index) const -> bool {
     size_t const byte_index{bit_index / cNumBitsInByte};
     size_t const bit_offset{bit_index % cNumBitsInByte};
-    return (m_bit_array.data()[byte_index] & static_cast<uint8_t>(1u << bit_offset)) != 0;
+    return (m_bit_array.at(byte_index) & static_cast<uint8_t>(1U << bit_offset)) != 0;
 }
 
-void BloomFilter::write_to_file(clp::WriterInterface& writer) const {
+auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
     writer.write_numeric_value<uint32_t>(m_num_hash_functions);
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array.size()));
     if (false == m_bit_array.empty()) {
-        writer.write(reinterpret_cast<char const*>(m_bit_array.data()), m_bit_array.size());
+        writer.write(
+                clp::size_checked_pointer_cast<char const>(m_bit_array.data()),
+                m_bit_array.size()
+        );
     }
 }
 
@@ -167,7 +180,7 @@ auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
     if (false == bit_array.empty()) {
         if (clp::ErrorCode_Success
             != reader.try_read_exact_length(
-                    reinterpret_cast<char*>(bit_array.data()),
+                    clp::size_checked_pointer_cast<char>(bit_array.data()),
                     static_cast<size_t>(bit_array_bytes)
             ))
         {

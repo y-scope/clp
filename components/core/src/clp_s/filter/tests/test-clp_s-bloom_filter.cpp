@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -13,9 +14,10 @@ namespace {
 constexpr size_t cInsertions{10'000};
 constexpr size_t cQueries{10'000};
 constexpr double cFalsePositiveRate{0.001};
+constexpr double cBelowMinFalsePositiveRate{1e-7};
 
 [[nodiscard]] auto make_odd(uint64_t value) -> uint64_t {
-    return value * 2 + 1;
+    return (value * 2) + 1;
 }
 
 [[nodiscard]] auto make_even(uint64_t value) -> uint64_t {
@@ -24,7 +26,8 @@ constexpr double cFalsePositiveRate{0.001};
 }  // namespace
 
 TEST_CASE("BloomFilter create rejects invalid false positive rates", "[clp_s][filter]") {
-    auto below_min_fpr_result = clp_s::filter::BloomFilter::create(cInsertions, 1e-7);
+    auto below_min_fpr_result
+            = clp_s::filter::BloomFilter::create(cInsertions, cBelowMinFalsePositiveRate);
     REQUIRE(below_min_fpr_result.has_error());
     REQUIRE(clp_s::filter::ErrorCode{clp_s::filter::ErrorCodeEnum::InvalidFalsePositiveRate}
             == below_min_fpr_result.error());
@@ -76,7 +79,7 @@ TEST_CASE("BloomFilter false positive rate is bounded", "[clp_s][filter]") {
     double const sigma{std::sqrt(
             cFalsePositiveRate * (1.0 - cFalsePositiveRate) / static_cast<double>(cQueries)
     )};
-    double const allowed_false_positive_rate{cFalsePositiveRate + 3.0 * sigma};
+    double const allowed_false_positive_rate{cFalsePositiveRate + (3.0 * sigma)};
     INFO("False positive rate: " << false_positive_rate);
     INFO("Allowed max FPR: " << allowed_false_positive_rate);
     REQUIRE(false_positive_rate <= allowed_false_positive_rate);

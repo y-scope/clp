@@ -19,7 +19,7 @@ if(CLP_BUILD_CLP_S_FILTER)
         target_link_libraries(
                 clp_s_filter
                 PUBLIC
-                clp_s::io
+                clp_s::clp_dependencies
                 ystdlib::containers
                 ystdlib::error_handling
                 PRIVATE
