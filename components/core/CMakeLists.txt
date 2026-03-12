@@ -330,7 +330,7 @@ if(CLP_NEED_SQLITE)
 endif()
 
 if(CLP_NEED_XXHASH)
-    find_package(xxHash 0.8.3 EXACT CONFIG REQUIRED)
+    find_package(xxHash 0.8.3 CONFIG REQUIRED)
     if(xxHash_FOUND)
         message(STATUS "Found xxHash ${xxHash_VERSION}")
     endif()

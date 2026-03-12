@@ -41,25 +41,23 @@ BloomFilter::BloomFilter(
         uint32_t num_hash_functions,
         ystdlib::containers::Array<uint8_t> bit_array
 )
-        : m_bit_array_size(bit_array_size),
-          m_num_hash_functions(num_hash_functions),
-          m_bit_array(std::move(bit_array)) {}
+        : m_bit_array_size{bit_array_size},
+          m_num_hash_functions{num_hash_functions},
+          m_bit_array{std::move(bit_array)} {}
 
 auto BloomFilter::create(size_t expected_num_elements, double false_positive_rate)
         -> ystdlib::error_handling::Result<BloomFilter> {
-    auto const optimal_parameters
-            = compute_optimal_parameters(expected_num_elements, false_positive_rate);
-    if (optimal_parameters.has_error()) {
-        return optimal_parameters.error();
-    }
-    auto const [bit_array_size, num_hash_functions] = optimal_parameters.value();
+    auto const optimal_parameters{YSTDLIB_ERROR_HANDLING_TRYX(
+            compute_optimal_parameters(expected_num_elements, false_positive_rate)
+    )};
+    auto const [bit_array_size, num_hash_functions]{optimal_parameters};
 
     size_t const num_bytes{min_bytes_containing_bits(bit_array_size)};
-    return BloomFilter(
+    return BloomFilter{
             bit_array_size,
             num_hash_functions,
             ystdlib::containers::Array<uint8_t>(num_bytes)
-    );
+    };
 }
 
 auto
@@ -89,8 +87,9 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
             static_cast<double>(bit_array_size) / static_cast<double>(expected_num_elements) * ln2
     );
 
-    uint32_t const capped_num_hash_functions
-            = std::clamp(num_hash_functions, cMinNumHashFunctions, cMaxNumHashFunctions);
+    uint32_t const capped_num_hash_functions{
+            std::clamp(num_hash_functions, cMinNumHashFunctions, cMaxNumHashFunctions)
+    };
 
     return std::make_pair(bit_array_size, capped_num_hash_functions);
 }
@@ -187,6 +186,6 @@ auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
             return ErrorCode{ErrorCodeEnum::ReadFailure};
         }
     }
-    return BloomFilter(bit_array_size, num_hash_functions, std::move(bit_array));
+    return BloomFilter{bit_array_size, num_hash_functions, std::move(bit_array)};
 }
 }  // namespace clp_s::filter

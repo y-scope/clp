@@ -31,10 +31,10 @@ public:
             -> ystdlib::error_handling::Result<BloomFilter>;
 
     /**
-     * Reads Bloom filter payload fields from a reader.
+     * Reads a serialized representation of a bloom filter from a reader.
      * @param reader
-     * @return A result containing a parsed BloomFilter on success, or an error code indicating
-     * the failure:
+     * @return A result containing an initialized BloomFilter on success, or an error code
+     * indicating the failure:
      * - ErrorCodeEnum::CorruptFilterPayload for malformed payload fields.
      * - ErrorCodeEnum::ReadFailure for truncated/failed reads.
      */
@@ -55,7 +55,7 @@ public:
     [[nodiscard]] auto possibly_contains(std::string_view value) const -> bool;
 
     /**
-     * Writes Bloom filter payload fields to a writer.
+     * Writes a serialized representation of a bloom filter to a writer.
      * @param writer
      */
     auto write_to_file(clp::WriterInterface& writer) const -> void;
