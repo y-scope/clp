@@ -239,19 +239,11 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
         QueryHandlerType query_handler
 ) -> ystdlib::error_handling::Result<Deserializer> {
     bool is_four_byte_encoded{};
-    if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(get_encoding_type(reader, is_four_byte_encoded));
 
     std::vector<int8_t> metadata;
     encoded_tag_t metadata_type{};
-    if (auto const err{deserialize_preamble(reader, metadata_type, metadata)};
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(deserialize_preamble(reader, metadata_type, metadata));
 
     if (cProtocol::Metadata::EncodingJson != metadata_type) {
         return std::errc::protocol_not_supported;
@@ -293,10 +285,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         return std::errc::operation_not_permitted;
     }
 
-    encoded_tag_t tag{};
-    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
-        return ir_error_code_to_errc(err);
-    }
+    auto tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
 
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
     if (false == optional_ir_unit_type.has_value()) {

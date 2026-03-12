@@ -47,11 +47,14 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void;
  * Deserializes an integer from the given reader
  * @tparam integer_t Type of the integer to deserialize
  * @param reader
- * @param value Returns the deserialized integer
- * @return Whether the reader contained enough data to deserialize.
+ * @return A result containing the deserialized integer on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
+ *   deserialize.
  */
 template <IntegerType integer_t>
-[[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
+[[nodiscard]] auto deserialize_int(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<integer_t>;
 
 /**
  * Serializes a string using CLP's encoding for unstructured text.
@@ -156,12 +159,13 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
 }
 
 template <IntegerType integer_t>
-auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
+auto deserialize_int(ReaderInterface& reader) -> ystdlib::error_handling::Result<integer_t> {
     integer_t value_little_endian;
     if (reader.try_read_numeric_value(value_little_endian) != clp::ErrorCode_Success) {
-        return false;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
 
+    integer_t value;
     constexpr auto cReadSize = sizeof(integer_t);
     if constexpr (cReadSize == 1) {
         value = value_little_endian;
@@ -172,7 +176,7 @@ auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
     } else if constexpr (cReadSize == 8) {
         value = bswap_64(value_little_endian);
     }
-    return true;
+    return value;
 }
 
 template <typename encoded_variable_t>
@@ -251,10 +255,9 @@ auto deserialize_and_decode_schema_tree_node_id(
     auto size_dependent_deserialize_and_decode_schema_tree_node_id
             = [&reader]<SignedIntegerType encoded_node_id_t>()
             -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
-        encoded_node_id_t encoded_node_id{};
-        if (false == deserialize_int(reader, encoded_node_id)) {
-            return std::errc::result_out_of_range;
-        }
+        auto encoded_node_id{
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<encoded_node_id_t>(reader))
+        };
         if (0 > encoded_node_id) {
             return {true,
                     static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))};
