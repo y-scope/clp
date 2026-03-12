@@ -24,7 +24,6 @@
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/Deserializer.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
-#include "../src/clp/ffi/ir_stream/IrErrorCode.hpp"
 #include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ffi/ir_stream/search/test/utils.hpp"
