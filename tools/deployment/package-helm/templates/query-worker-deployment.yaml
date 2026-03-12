@@ -22,6 +22,7 @@ spec:
         "root" .
         "component" "queryWorker"
       ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       containers:
         - name: "query-worker"
