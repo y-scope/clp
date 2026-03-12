@@ -209,7 +209,7 @@ def _process_s3_object_metadata_input(
     placeholders = ", ".join(["%s"] * len(s3_object_metadata_ids))
     query = (
         f"SELECT `id`, `key`, `size` FROM {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} "
-        f"WHERE id IN ({placeholders}) AND ingestion_job_id = %s"
+        f"WHERE `id` IN ({placeholders}) AND `ingestion_job_id` = %s"
     )
     params = (*s3_object_metadata_ids, ingestion_job_id)
     db_context.cursor.execute(query, params)
@@ -219,6 +219,7 @@ def _process_s3_object_metadata_input(
             f"No rows found in {INGESTED_S3_OBJECT_METADATA_TABLE_NAME} for the given "
             f"s3_object_metadata_ids and ingestion_job_id {ingestion_job_id}."
         )
+
     # Validate that all requested IDs are present.
     returned_ids = {row["id"] for row in metadata_list}
     requested_ids = set(s3_object_metadata_ids)
