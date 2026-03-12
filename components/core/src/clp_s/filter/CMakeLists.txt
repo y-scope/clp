@@ -4,6 +4,8 @@ set(
         BloomFilter.hpp
         ErrorCode.cpp
         ErrorCode.hpp
+        HashAlgorithm.cpp
+        HashAlgorithm.hpp
         XxHash.cpp
         XxHash.hpp
 )

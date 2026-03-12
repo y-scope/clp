@@ -12,6 +12,8 @@
 #include <clp/ReaderInterface.hpp>
 #include <clp/WriterInterface.hpp>
 
+#include "HashAlgorithm.hpp"
+
 namespace clp_s::filter {
 /**
  * A Bloom filter for variable dictionary values.
@@ -24,7 +26,7 @@ public:
      * @param false_positive_rate Target false-positive rate in the range [1e-6, 1).
      * @return A result containing a constructed BloomFilter on success, or an error code
      * indicating the failure:
-     * - ErrorCodeEnum::InvalidFalsePositiveRate if the false-positive rate is not in [1e-6, 1).
+     * - ErrorCodeEnum::InvalidFalsePositiveRate if false_positive_rate is not in [1e-6, 1).
      * - ErrorCodeEnum::ParameterComputationOutOfRange if parameter computation overflows.
      */
     [[nodiscard]] static auto create(size_t expected_num_elements, double false_positive_rate)
@@ -35,6 +37,7 @@ public:
      * @param reader
      * @return A result containing an initialized BloomFilter on success, or an error code
      * indicating the failure:
+     * - ErrorCodeEnum::UnsupportedHashAlgorithm if hash algorithm id is not supported.
      * - ErrorCodeEnum::CorruptFilterPayload for malformed payload fields.
      * - ErrorCodeEnum::ReadFailure for truncated/failed reads.
      */
@@ -50,7 +53,7 @@ public:
 
     /**
      * @param value
-     * @return true if the value may be present, false if definitely not present.
+     * @return true if the value may be present, false if the value is definitely not present.
      */
     [[nodiscard]] auto possibly_contains(std::string_view value) const -> bool;
 
@@ -64,6 +67,7 @@ private:
     BloomFilter(
             size_t bit_array_size,
             uint32_t num_hash_functions,
+            HashAlgorithm hash_algorithm,
             ystdlib::containers::Array<uint8_t> bit_array
     );
 
@@ -76,6 +80,7 @@ private:
 
     size_t m_bit_array_size{0};
     uint32_t m_num_hash_functions{0};
+    HashAlgorithm m_hash_algorithm{HashAlgorithm::Xxh364};
     ystdlib::containers::Array<uint8_t> m_bit_array;
 };
 }  // namespace clp_s::filter

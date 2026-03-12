@@ -18,7 +18,7 @@
 #include <clp/WriterInterface.hpp>
 
 #include "ErrorCode.hpp"
-#include "XxHash.hpp"
+#include "HashAlgorithm.hpp"
 
 namespace clp_s::filter {
 namespace {
@@ -27,6 +27,7 @@ constexpr uint32_t cDefaultNumHashFunctions{1};
 constexpr uint32_t cMinNumHashFunctions{1};
 constexpr uint32_t cMaxNumHashFunctions{20};
 constexpr double cMinFalsePositiveRate{1e-6};
+constexpr HashAlgorithm cDefaultHashAlgorithm{HashAlgorithm::Xxh364};
 constexpr uint64_t cPrimaryHashSeed{0};
 constexpr uint64_t cSecondaryHashSeed{0x9e37'79b9'7f4a'7c15ULL};
 constexpr size_t cNumBitsInByte{8};
@@ -39,10 +40,12 @@ auto min_bytes_containing_bits(size_t num_bits) -> size_t {
 BloomFilter::BloomFilter(
         size_t bit_array_size,
         uint32_t num_hash_functions,
+        HashAlgorithm hash_algorithm,
         ystdlib::containers::Array<uint8_t> bit_array
 )
         : m_bit_array_size{bit_array_size},
           m_num_hash_functions{num_hash_functions},
+          m_hash_algorithm{hash_algorithm},
           m_bit_array{std::move(bit_array)} {}
 
 auto BloomFilter::create(size_t expected_num_elements, double false_positive_rate)
@@ -56,6 +59,7 @@ auto BloomFilter::create(size_t expected_num_elements, double false_positive_rat
     return BloomFilter{
             bit_array_size,
             num_hash_functions,
+            cDefaultHashAlgorithm,
             ystdlib::containers::Array<uint8_t>(num_bytes)
     };
 }
@@ -95,8 +99,8 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
 }
 
 auto BloomFilter::add(std::string_view value) -> void {
-    uint64_t const h1{xxhash::hash64(value, cPrimaryHashSeed)};
-    uint64_t h2{xxhash::hash64(value, cSecondaryHashSeed)};
+    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
+    uint64_t h2{hash64(m_hash_algorithm, value, cSecondaryHashSeed)};
     if (0 == h2) {
         h2 = 1;
     }
@@ -106,8 +110,8 @@ auto BloomFilter::add(std::string_view value) -> void {
 }
 
 auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
-    uint64_t const h1{xxhash::hash64(value, cPrimaryHashSeed)};
-    uint64_t h2{xxhash::hash64(value, cSecondaryHashSeed)};
+    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
+    uint64_t h2{hash64(m_hash_algorithm, value, cSecondaryHashSeed)};
     if (0 == h2) {
         h2 = 1;
     }
@@ -133,6 +137,7 @@ auto BloomFilter::test_bit(size_t bit_index) const -> bool {
 }
 
 auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
+    writer.write_numeric_value(static_cast<uint8_t>(m_hash_algorithm));
     writer.write_numeric_value<uint32_t>(m_num_hash_functions);
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array.size()));
@@ -146,6 +151,16 @@ auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
 
 auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
         -> ystdlib::error_handling::Result<BloomFilter> {
+    uint8_t hash_algorithm_u8{};
+    if (clp::ErrorCode_Success != reader.try_read_numeric_value(hash_algorithm_u8)) {
+        return ErrorCode{ErrorCodeEnum::ReadFailure};
+    }
+    auto const optional_hash_algorithm{try_parse_hash_algorithm(hash_algorithm_u8)};
+    if (false == optional_hash_algorithm.has_value()) {
+        return ErrorCode{ErrorCodeEnum::UnsupportedHashAlgorithm};
+    }
+    auto const hash_algorithm{optional_hash_algorithm.value()};
+
     uint32_t num_hash_functions{};
     if (clp::ErrorCode_Success != reader.try_read_numeric_value(num_hash_functions)) {
         return ErrorCode{ErrorCodeEnum::ReadFailure};
@@ -158,7 +173,7 @@ auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
     if (clp::ErrorCode_Success != reader.try_read_numeric_value(bit_array_size_u64)) {
         return ErrorCode{ErrorCodeEnum::ReadFailure};
     }
-    if (bit_array_size_u64 == 0 || bit_array_size_u64 > std::numeric_limits<size_t>::max()) {
+    if (0 == bit_array_size_u64 || bit_array_size_u64 > std::numeric_limits<size_t>::max()) {
         return ErrorCode{ErrorCodeEnum::CorruptFilterPayload};
     }
     size_t const bit_array_size{static_cast<size_t>(bit_array_size_u64)};
@@ -186,6 +201,6 @@ auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
             return ErrorCode{ErrorCodeEnum::ReadFailure};
         }
     }
-    return BloomFilter{bit_array_size, num_hash_functions, std::move(bit_array)};
+    return BloomFilter{bit_array_size, num_hash_functions, hash_algorithm, std::move(bit_array)};
 }
 }  // namespace clp_s::filter

@@ -21,6 +21,8 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "False-positive rate must be in the range [1e-6, 1).";
         case ErrorCodeEnum::ParameterComputationOutOfRange:
             return "Bloom filter parameter computation overflowed or produced invalid values.";
+        case ErrorCodeEnum::UnsupportedHashAlgorithm:
+            return "Bloom filter hash algorithm is unsupported.";
         case ErrorCodeEnum::CorruptFilterPayload:
             return "Bloom filter payload is malformed or inconsistent.";
         case ErrorCodeEnum::ReadFailure:

@@ -9,6 +9,7 @@ namespace clp_s::filter {
 enum class ErrorCodeEnum : uint8_t {
     InvalidFalsePositiveRate = 1,
     ParameterComputationOutOfRange,
+    UnsupportedHashAlgorithm,
     CorruptFilterPayload,
     ReadFailure,
 };
