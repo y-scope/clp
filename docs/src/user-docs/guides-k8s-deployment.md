@@ -429,9 +429,9 @@ How to compress and search unstructured text logs.
 
 :::{note}
 By default (`allowHostAccessForSbinScripts: true`), the database and results cache are exposed on
-NodePorts, allowing you to use `sbin/` scripts from the CLP package. Download a
-[release][clp-releases] matching the chart's `appVersion`, then update the following configurations
-in `etc/clp-config.yaml`:
+NodePorts, allowing you to use `sbin/compress.sh` and `sbin/search.sh` from the CLP package.
+Download a [release][clp-releases] matching the chart's `appVersion`, then update the following
+configurations in `etc/clp-config.yaml`:
 
 ```yaml
 database:
@@ -443,6 +443,12 @@ results_cache:
 Alternatively, use the Web UI ([clp-json][webui-clp-json] or [clp-text][webui-clp-text]) to compress
 logs and search interactively, or the [API server][api-server] to submit queries and view results
 programmatically.
+
+The [admin tools][admin-tools] (`sbin/admin-tools/archive-manager.sh` and
+`sbin/admin-tools/dataset-manager.sh`) are **not supported** in Kubernetes deployments with
+filesystem storage (`archive_output.storage.type: "fs"`). Those scripts require direct filesystem
+access to the archive directory via Docker bind mounts, which is not possible when archives are
+backed by PVCs inside the cluster.
 :::
 
 ---
@@ -537,6 +543,7 @@ To tear down a `kubeadm` cluster:
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
 
+[admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
