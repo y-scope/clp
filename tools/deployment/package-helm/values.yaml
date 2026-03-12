@@ -193,7 +193,8 @@ clpConfig:
   #   port: 30800
   #   logging_level: "INFO"
 
-  # Presto query engine config. Uncomment to enable Presto deployments.
+  # Presto query engine config. Uncomment to enable Presto deployments. If you want the Web UI to
+  # expose Presto SQL, also set `package.query_engine: "presto"`.
   presto: null
   #   port: 30889
   #   coordinator:
