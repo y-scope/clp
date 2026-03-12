@@ -12,6 +12,7 @@ NUM_WORKER_NODES="${NUM_WORKER_NODES:-2}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
 REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
+PRESTO_WORKER_REPLICAS="${PRESTO_WORKER_REPLICAS:-2}"
 
 # shellcheck source=.set-up-common.sh
 source "${script_dir}/.set-up-common.sh"
@@ -24,6 +25,7 @@ echo "Worker nodes: ${NUM_WORKER_NODES}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
 echo "Reducers: ${REDUCER_REPLICAS}"
+echo "Presto workers: ${PRESTO_WORKER_REPLICAS}"
 echo ""
 
 prepare_environment "${CLUSTER_NAME}"
@@ -41,6 +43,7 @@ helm install test "${script_dir}" \
     --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
     --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
     --set "reducer.replicas=${REDUCER_REPLICAS}" \
+    --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
     $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
 
 wait_for_cluster_ready
