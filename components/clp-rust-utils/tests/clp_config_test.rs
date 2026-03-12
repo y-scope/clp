@@ -1,6 +1,6 @@
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials, S3Config},
-    job_config::{ClpIoConfig, InputConfig, OutputConfig, S3InputConfig},
+    job_config::{ClpIoConfig, InputConfig, OutputConfig, S3ObjectMetadataInputConfig},
     serde::BrotliMsgpack,
     types::non_empty_string::ExpectedNonEmpty,
 };
@@ -22,10 +22,11 @@ fn test_clp_io_config_serialization() {
         },
     };
     let config = ClpIoConfig {
-        input: InputConfig::S3InputConfig {
-            config: S3InputConfig {
+        input: InputConfig::S3ObjectMetadataInputConfig {
+            config: S3ObjectMetadataInputConfig {
                 s3_config,
-                keys: None,
+                ingestion_job_id: 1,
+                metadata_ids: None,
                 dataset: Some(NonEmptyString::from_static_str("test-dataset")),
                 timestamp_key: Some(NonEmptyString::from_static_str("timestamp")),
                 unstructured: false,
@@ -42,12 +43,14 @@ fn test_clp_io_config_serialization() {
 
     let brotli_compressed_msgpack = BrotliMsgpack::serialize(&config)
         .expect("Brotli-compressed MessagePack serialized config.");
-    let expected = "1ba80100e4ffdf9f43284b650e496850ba5f98ef7b53044b04d074faa66eb23ebef25c0d1a13ac\
-        4b17669ac5cbe254cffc4e749bb4c455d2f61c988e679697db09ba171ce575912c9a14986d0e05f87e4dd1babca\
-        9d5b5d1c5267067deea8cacf9928cf673f1a75a627945e06c7cbe6c6b21d98945e16df94ba0d5fce7c2d61158ca\
-        6541545e74dd2e9e6e790fd24191a86c1efb597b4f9e82aadfaab0f7f87c81440262811c44fc671677003b39270\
-        2be7820095035db7be96769d799a348764444621df0fb4382c2fdba353b5a24ae147e0ba5f3def513120b64bf01\
-        aa2df16f31180cafc98d35a4544544c0267abd69708e6ce25962baa581e1cc970a7a2301b070ca0c";
+    let expected = "1bc80100e4ffbf9f0b909134588545d1fdd9f7bd15164db4d3eaf8a66eb\
+        23ebef25ab5694cb0bf6c63a6593c294eb77947a7a4a6d3e85ac5c3b9623c9d515ef48aa981a92dc\
+        30547795d248b3e1066eb498155bba6180eb21f4e6c74b10f089a778d9cb061cb183d1d7f3c9be51\
+        5818bf086131920d98996f0c2fc2950cff85cd82e024b11cd88ca975e0f4388b73c1369c7222a6b\
+        a09c0cf7102ad8f55b15f6c9743a5bad4239db8662e68ce506d40eced56cba92ad816a7952adf7fbd\
+        f6c0b349b0355f0efb2754015f0b394a628921d11918487bf3f44c8b1bf9ed58e5ac0e6c26fd109e\
+        9e4fa498985623c01aa03f11ff2f97cafc51575245745d48003f4fad3c02c59d933c7b4e581eeccdb6\
+        63fa0b470615510";
     assert_eq!(expected, hex::encode(brotli_compressed_msgpack));
 
     let json_serialized_result = serde_json::to_string_pretty(&config);
@@ -55,7 +58,7 @@ fn test_clp_io_config_serialization() {
     let json_serialized = json_serialized_result.unwrap();
     let expected = serde_json::json!({
       "input": {
-        "type": "s3",
+        "type": "metadata",
         "bucket": "yscope",
         "region_code": "us-east-2",
         "key_prefix": "sample-logs/cockroachdb.clp.zst",
@@ -67,7 +70,8 @@ fn test_clp_io_config_serialization() {
             "secret_access_key": "SECRET_ACCESS_KEY"
           }
         },
-        "keys": null,
+        "ingestion_job_id": 1,
+        "metadata_ids": null,
         "dataset": "test-dataset",
         "timestamp_key": "timestamp",
         "unstructured": false
