@@ -12,6 +12,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/BufferReader.hpp>
+#include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ffi/sfa/SfaErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
@@ -107,19 +108,38 @@ auto ClpArchiveReader::close() noexcept -> void {
         m_archive_reader.reset();
     }
     m_event_count = 0;
+    m_file_names.clear();
+    m_file_infos.clear();
 }
 
 auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_archive_reader = std::move(rhs.m_archive_reader);
     m_archive_data = std::move(rhs.m_archive_data);
     m_event_count = std::exchange(rhs.m_event_count, 0);
+    m_file_names = std::move(rhs.m_file_names);
+    m_file_infos = std::move(rhs.m_file_infos);
 }
 
 auto ClpArchiveReader::precompute_archive_metadata() -> void {
     auto const& range_index{m_archive_reader->get_range_index()};
+    m_file_names.reserve(range_index.size());
+    m_file_infos.reserve(range_index.size());
 
     for (auto const& range : range_index) {
-        m_event_count += static_cast<uint64_t>(range.end_index - range.start_index);
+        auto const start_idx{static_cast<uint64_t>(range.start_index)};
+        auto const end_idx{static_cast<uint64_t>(range.end_index)};
+        m_event_count += end_idx - start_idx;
+
+        auto const filename_it{
+                range.fields.find(std::string{clp_s::constants::range_index::cFilename})
+        };
+        if (range.fields.end() == filename_it || false == filename_it->is_string()) {
+            continue;
+        }
+        auto const filename{filename_it->get<std::string>()};
+
+        m_file_names.push_back(filename);
+        m_file_infos.emplace_back(filename, start_idx, end_idx);
     }
 }
 }  // namespace clp_s::ffi::sfa

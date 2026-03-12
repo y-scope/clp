@@ -15,6 +15,33 @@ class ArchiveReader;
 
 namespace clp_s::ffi::sfa {
 /**
+ * Metadata describing a single source file's event-index range within a single-file archive.
+ */
+class FileInfo {
+public:
+    // Constructor
+    FileInfo(std::string_view file_name, uint64_t start_index, uint64_t end_index)
+            : m_file_name{file_name},
+              m_start_index{start_index},
+              m_end_index{end_index} {}
+
+    // Methods
+    [[nodiscard]] auto get_file_name() const -> std::string const& { return m_file_name; }
+
+    [[nodiscard]] auto get_start_index() const -> uint64_t { return m_start_index; }
+
+    [[nodiscard]] auto get_end_index() const -> uint64_t { return m_end_index; }
+
+    [[nodiscard]] auto get_event_count() const -> uint64_t { return m_end_index - m_start_index; }
+
+private:
+    // Members
+    std::string m_file_name;
+    uint64_t m_start_index{0};
+    uint64_t m_end_index{0};
+};
+
+/**
  * A thin wrapper around `clp_s::ArchiveReader` for single file archive FFI entrypoints.
  */
 class ClpArchiveReader {
@@ -58,6 +85,18 @@ public:
      */
     [[nodiscard]] auto get_event_count() const -> uint64_t { return m_event_count; }
 
+    /**
+     * @return Source file names in range-index order.
+     */
+    [[nodiscard]] auto get_file_names() const -> std::vector<std::string> { return m_file_names; }
+
+    /**
+     * @return Source file infos in range-index order.
+     */
+    [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> const& {
+        return m_file_infos;
+    }
+
 private:
     // Constructors
     explicit ClpArchiveReader(
@@ -87,6 +126,8 @@ private:
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
     std::shared_ptr<std::vector<char>> m_archive_data;
     uint64_t m_event_count{0};
+    std::vector<std::string> m_file_names;
+    std::vector<FileInfo> m_file_infos;
 };
 }  // namespace clp_s::ffi::sfa
 
