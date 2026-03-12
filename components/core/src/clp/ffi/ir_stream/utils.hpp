@@ -20,6 +20,7 @@
 #include "byteswap.hpp"
 #include "decoding_methods.hpp"
 #include "encoding_methods.hpp"
+#include "IrDeserializationError.hpp"
 #include "IrSerializationError.hpp"
 #include "protocol_constants.hpp"
 
