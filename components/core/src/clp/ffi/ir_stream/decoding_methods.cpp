@@ -32,9 +32,9 @@ namespace {
  * @param encoded_tag
  * @param string_blob The string blob to append the deserialized logtype to.
  * @return A void result on success, or an error code indicating the failure:
- * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
  *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - Forwards `deserialize_int`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_and_append_logtype(
@@ -49,9 +49,9 @@ namespace {
  * @param encoded_tag
  * @param string_blob The string blob to append the deserialized logtype to.
  * @return A void result on success, or an error code indicating the failure:
- * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
  *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - Forwards `deserialize_int`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_and_append_dict_var(
@@ -142,9 +142,9 @@ static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var);
  * @param encoded_tag
  * @param logtype Returns the logtype
  * @return A void result on success, or an error code indicating the failure:
- * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
  *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - Forwards `deserialize_int`'s return values on failure.
  */
 static auto deserialize_logtype(ReaderInterface& reader, encoded_tag_t encoded_tag, string& logtype)
@@ -156,9 +156,9 @@ static auto deserialize_logtype(ReaderInterface& reader, encoded_tag_t encoded_t
  * @param encoded_tag
  * @return A result containing the dictionary variable on success, or an error code indicating the
  * failure:
- * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - IrDeserializationErrorEnum::IncompleteStream if the input buffer doesn't contain enough data to
  *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - Forwards `deserialize_int`'s return values on failure.
  */
 static auto deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_tag)
@@ -172,9 +172,9 @@ static auto deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_
  * @param ts Returns the timestamp delta if encoded_variable_t == four_byte_encoded_variable_t or
  * the actual timestamp if encoded_variable_t == eight_byte_encoded_variable_t
  * @return A void result on success, or an error code indicating the failure:
- * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
  *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the encoded tag is invalid.
  * - Forwards `deserialize_int`'s return values on failure.
  */
 template <typename encoded_variable_t>
@@ -272,14 +272,11 @@ static auto deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_
     // Deserialize variable's length
     size_t var_length;
     if (cProtocol::Payload::VarStrLenUByte == encoded_tag) {
-        auto length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader))};
-        var_length = length;
+        var_length = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader));
     } else if (cProtocol::Payload::VarStrLenUShort == encoded_tag) {
-        auto length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader))};
-        var_length = length;
+        var_length = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader));
     } else if (cProtocol::Payload::VarStrLenInt == encoded_tag) {
-        auto length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int32_t>(reader))};
-        var_length = length;
+        var_length = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int32_t>(reader));
     } else {
         return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
