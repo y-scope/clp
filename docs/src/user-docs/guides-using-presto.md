@@ -26,9 +26,9 @@ CLP supports Presto through two deployment methods:
 ## Kubernetes (Helm)
 
 When deploying CLP on Kubernetes using Helm, Presto can be enabled by setting `clpConfig.presto` to
-a non-null configuration and `query_engine` to `"presto"`. The `query_engine` setting controls which
-search interface the Web UI displays. Presto runs alongside the existing compression pipeline; the
-clp-s native query components can optionally be disabled to save resources.
+a non-null configuration and `webui.query_engine` to `"presto"`. The `query_engine` setting controls
+which search interface the Web UI displays. Presto runs alongside the existing compression pipeline;
+the clp-s native query components can optionally be disabled to save resources.
 
 ### Requirements
 
@@ -42,7 +42,7 @@ clp-s native query components can optionally be disabled to save resources.
    :caption: presto-values.yaml
 
    clpConfig:
-     package:
+     webui:
        query_engine: "presto"
 
      # Optional: Disable the clp-s native query pipeline to save resources.

@@ -200,6 +200,8 @@ clpConfig:
   # Use clp-text, instead of clp-json (default)
   package:
     storage_engine: "clp"  # Use "clp-s" for clp-json, "clp" for clp-text
+
+  webui:
     query_engine: "clp"   # Use "clp-s" for clp-json, "clp" for clp-text, "presto" for Presto
 
   # Configure archive output
@@ -248,11 +250,11 @@ helm template clp . -f custom-values.yaml
 
 ### Using Presto as the query engine
 
-To use [Presto][presto-guide] as the query engine, set `query_engine` to `"presto"` and configure
-the Presto-specific settings. The `query_engine` setting controls which search interface the Web UI
-displays. Presto runs alongside the existing compression pipeline; setting the clp-s native query
-components to `null` is optional but recommended to save resources when you don't need both query
-paths:
+To use [Presto][presto-guide] as the query engine, set `webui.query_engine` to `"presto"` and
+configure the Presto-specific settings. The `query_engine` setting controls which search interface
+the Web UI displays. Presto runs alongside the existing compression pipeline; setting the clp-s
+native query components to `null` is optional but recommended to save resources when you don't need
+both query paths:
 
 ```{code-block} yaml
 :caption: presto-values.yaml
@@ -260,18 +262,17 @@ paths:
 image:
   prestoCoordinator:
     repository: "ghcr.io/y-scope/presto/coordinator"
-    tag: "dev"
+    tag: "clp-v0.10.0"
   prestoWorker:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
-    tag: "dev"
+    tag: "clp-v0.10.0"
 
 prestoWorker:
   # See below "Worker scheduling" for more details on configuring Presto scheduling
   replicas: 2
 
 clpConfig:
-  package:
-    storage_engine: "clp-s"
+  webui:
     query_engine: "presto"
 
   # Optional: Disable the clp-s native query pipeline to save resources.

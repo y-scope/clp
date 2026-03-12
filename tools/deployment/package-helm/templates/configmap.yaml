@@ -127,7 +127,7 @@ data:
     log_ingestor: null
     {{- end }}
     package:
-      query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
+      query_engine: {{ .Values.clpConfig.webui.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
@@ -254,7 +254,7 @@ data:
   webui-client-settings.json: |
     {
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
-      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
@@ -323,7 +323,7 @@ data:
         {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
       "ArchiveOutputTargetSegmentSize":
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
-      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       {{- if .Values.clpConfig.presto }}
       "PrestoHost": "{{ include "clp.fullname" . }}-presto-coordinator",
