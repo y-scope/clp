@@ -1,0 +1,13 @@
+.clpSRow {
+    display: flex;
+    gap: 10px;
+}
+
+.clpSTimeRange {
+    margin-left: auto;
+}
+
+.clpSQuery {
+    flex: 1;
+    min-width: 0;
+}
