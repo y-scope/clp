@@ -329,6 +329,13 @@ if(CLP_NEED_SQLITE)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 endif()
 
+if(CLP_NEED_XXHASH)
+    find_package(xxHash 0.8.3 CONFIG REQUIRED)
+    if(xxHash_FOUND)
+        message(STATUS "Found xxHash ${xxHash_VERSION}")
+    endif()
+endif()
+
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
@@ -359,6 +366,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/filter/tests/test-clp_s-bloom_filter.cpp
+    src/clp_s/filter/tests/test-clp_s-xxhash.cpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
     src/clp_s/ffi/sfa/ClpArchiveReader.cpp
@@ -778,6 +787,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            clp_s::filter
             date::date
             fmt::fmt
             log_surgeon::log_surgeon
