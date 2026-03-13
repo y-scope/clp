@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -91,7 +92,7 @@ public:
     [[nodiscard]] auto get_file_names() const -> std::vector<std::string> { return m_file_names; }
 
     /**
-     * @return Source file infos in range-index order.
+     * @return Source file metadata in range index order.
      */
     [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> const& {
         return m_file_infos;
@@ -118,9 +119,15 @@ private:
     auto move_from(ClpArchiveReader& rhs) noexcept -> void;
 
     /**
-     * Precomputes metadata from the archive range index.
+     * Precomputes archive metadata from the range index.
+     *
+     * Assumes range-index entries are ordered and globally contiguous in log-event index space,
+     * i.e., each entry starts at the previous entry's end.
+     *
+     * @return A void result on success, or an error code indicating the failure:
+     * - `SfaErrorCodeEnum::MalformedRangeIndex` if range-index metadata violates the assumption.
      */
-    auto precompute_archive_metadata() -> void;
+    [[nodiscard]] auto precompute_archive_metadata() -> ystdlib::error_handling::Result<void>;
 
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
