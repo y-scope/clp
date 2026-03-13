@@ -3,11 +3,13 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <stack>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -646,6 +648,15 @@ void JsonParser::parse_line(
 bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& [path, file_name_in_metadata] : m_input_paths_and_canonical_filenames) {
+        if (InputSource::Filesystem == path.source) {
+            std::error_code ec{};
+            auto const file_size{std::filesystem::file_size(path.path, ec)};
+            if (std::errc{} == ec && 0 == file_size) {
+                SPDLOG_INFO("Skipping empty file: {}", path.path);
+                continue;
+            }
+        }
+
         auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
             std::ignore = m_archive_writer->close();
