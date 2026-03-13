@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
@@ -88,45 +89,30 @@ auto assert_reader_matches_expected(ClpArchiveReader const& reader, uint64_t exp
     REQUIRE(expected_event_count == file_info.get_event_count());
 }
 
-auto test_archive_created_from_path(
-        std::filesystem::path const& archive_path,
-        uint64_t expected_event_count
-) -> Result<void> {
-    auto reader{YSTDLIB_ERROR_HANDLING_TRYX(ClpArchiveReader::create(archive_path.string()))};
-    assert_reader_matches_expected(reader, expected_event_count);
-    return success();
+auto create_reader_from_path(std::filesystem::path const& archive_path)
+        -> Result<ClpArchiveReader> {
+    return ClpArchiveReader::create(archive_path.string());
 }
 
-auto test_archive_created_from_bytes(
-        std::filesystem::path const& archive_path,
-        uint64_t expected_event_count
-) -> Result<void> {
-    auto mapped_archive{
+auto create_reader_from_bytes(std::filesystem::path const& archive_path)
+        -> Result<ClpArchiveReader> {
+    auto const mapped_archive{
             YSTDLIB_ERROR_HANDLING_TRYX(ReadOnlyMemoryMappedFile::create(archive_path.string()))
     };
     auto const view{mapped_archive.get_view()};
     REQUIRE(false == view.empty());
-
-    auto reader{YSTDLIB_ERROR_HANDLING_TRYX(
-            ClpArchiveReader::create(std::vector<char>{view.begin(), view.end()})
-    )};
-    assert_reader_matches_expected(reader, expected_event_count);
-    return success();
+    return ClpArchiveReader::create(std::vector<char>{view.begin(), view.end()});
 }
 
-auto run_single_log_file_case(std::string_view log_name) -> Result<void> {
-    auto const log_path{get_log_local_path(log_name)};
-    REQUIRE(std::filesystem::exists(log_path));
+auto
+run_single_log_file_test(std::filesystem::path const& archive_path, uint64_t expected_event_count)
+        -> Result<void> {
+    auto const r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path))};
+    assert_reader_matches_expected(r_path, expected_event_count);
 
-    auto const archive_path{generate_single_file_archive(log_path)};
-    REQUIRE(std::filesystem::exists(archive_path));
+    auto const r_bytes{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path))};
+    assert_reader_matches_expected(r_bytes, expected_event_count);
 
-    auto const expected_event_count{get_num_lines(log_path)};
-
-    YSTDLIB_ERROR_HANDLING_TRYV(test_archive_created_from_path(archive_path, expected_event_count));
-    YSTDLIB_ERROR_HANDLING_TRYV(
-            test_archive_created_from_bytes(archive_path, expected_event_count)
-    );
     return success();
 }
 }  // namespace
@@ -134,13 +120,15 @@ auto run_single_log_file_case(std::string_view log_name) -> Result<void> {
 TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
     TestOutputCleaner const test_cleanup{{get_archive_output_root_dir().string()}};
 
-    SECTION("test_no_floats_sorted") {
-        auto const test_result{run_single_log_file_case(cInputNoFloats)};
-        REQUIRE(false == test_result.has_error());
-    }
+    auto const log_file_name{GENERATE(cInputNoFloats, cInputFloatTimestamp)};
 
-    SECTION("test_search_float_timestamp") {
-        auto const test_result{run_single_log_file_case(cInputFloatTimestamp)};
-        REQUIRE(false == test_result.has_error());
-    }
+    auto const log_path{get_log_local_path(log_file_name)};
+    REQUIRE(std::filesystem::exists(log_path));
+
+    auto const archive_path{generate_single_file_archive(log_path)};
+    REQUIRE(std::filesystem::exists(archive_path));
+
+    auto const expected_event_count{get_num_lines(log_path)};
+    auto const test_result{run_single_log_file_test(archive_path, expected_event_count)};
+    REQUIRE(false == test_result.has_error());
 }
