@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use clp_rust_utils::{
     clp_config::{
         AwsAuthentication,
-        AwsCredentials,
         package::{
             config::{ArchiveOutput, Config as ClpConfig, LogsInput},
             credentials::Credentials as ClpCredentials,
@@ -157,7 +156,7 @@ impl ClpIngestionJobContext {
 pub struct ClpDbIngestionConnector {
     db_pool: MySqlPool,
     channel_capacity: usize,
-    aws_credentials: AwsCredentials,
+    aws_authentication: AwsAuthentication,
     archive_output_config: ArchiveOutput,
     buffer_flush_timeout: Duration,
     buffer_flush_threshold: u64,
@@ -197,10 +196,8 @@ impl ClpDbIngestionConnector {
             .as_ref()
             .expect("log_ingestor configuration is missing");
 
-        let aws_credentials = match clp_config.logs_input {
-            LogsInput::S3 { config } => match config.aws_authentication {
-                AwsAuthentication::Credentials { credentials } => credentials,
-            },
+        let aws_authentication = match clp_config.logs_input {
+            LogsInput::S3 { config } => config.aws_authentication,
             LogsInput::Fs { .. } => {
                 panic!(
                     "Invalid CLP config: Unsupported logs input type. The current implementation \
@@ -221,7 +218,7 @@ impl ClpDbIngestionConnector {
         let connector = Self {
             db_pool: mysql_pool,
             channel_capacity: log_ingestor_config.channel_capacity,
-            aws_credentials,
+            aws_authentication,
             archive_output_config: clp_config.archive_output.clone(),
             buffer_flush_timeout: Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
             buffer_flush_threshold: log_ingestor_config.buffer_flush_threshold,
@@ -430,7 +427,7 @@ impl ClpDbIngestionConnector {
 
         let submitter = CompressionJobSubmitter::new(
             compression_state.clone(),
-            self.aws_credentials.clone(),
+            self.aws_authentication.clone(),
             &self.archive_output_config,
             config.as_base_config(),
         );
