@@ -70,8 +70,11 @@ auto get_num_lines(std::filesystem::path const& path) -> uint64_t {
     return num_lines;
 }
 
-auto assert_reader_matches_expected(ClpArchiveReader const& reader, uint64_t expected_event_count)
-        -> void {
+auto assert_reader_matches_expected(
+        ClpArchiveReader const& reader,
+        std::string const& expected_file_name,
+        uint64_t expected_event_count
+) -> void {
     auto const event_count{reader.get_event_count()};
     REQUIRE(event_count == expected_event_count);
 
@@ -82,8 +85,8 @@ auto assert_reader_matches_expected(ClpArchiveReader const& reader, uint64_t exp
 
     auto const& file_name{file_names.front()};
     auto const& file_info{file_infos.front()};
-    REQUIRE(false == file_name.empty());
-    REQUIRE(file_info.get_file_name() == file_name);
+    REQUIRE(expected_file_name == file_name);
+    REQUIRE(expected_file_name == file_info.get_file_name());
     REQUIRE(0 == file_info.get_start_index());
     REQUIRE(expected_event_count == file_info.get_end_index());
     REQUIRE(expected_event_count == file_info.get_event_count());
@@ -104,14 +107,16 @@ auto create_reader_from_bytes(std::filesystem::path const& archive_path)
     return ClpArchiveReader::create(std::vector<char>{view.begin(), view.end()});
 }
 
-auto
-run_single_log_file_test(std::filesystem::path const& archive_path, uint64_t expected_event_count)
-        -> Result<void> {
+auto run_single_log_file_test(
+        std::filesystem::path const& archive_path,
+        std::string const& expected_file_name,
+        uint64_t expected_event_count
+) -> Result<void> {
     auto const r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path))};
-    assert_reader_matches_expected(r_path, expected_event_count);
+    assert_reader_matches_expected(r_path, expected_file_name, expected_event_count);
 
     auto const r_bytes{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path))};
-    assert_reader_matches_expected(r_bytes, expected_event_count);
+    assert_reader_matches_expected(r_bytes, expected_file_name, expected_event_count);
 
     return success();
 }
@@ -129,6 +134,8 @@ TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
     REQUIRE(std::filesystem::exists(archive_path));
 
     auto const expected_event_count{get_num_lines(log_path)};
-    auto const test_result{run_single_log_file_test(archive_path, expected_event_count)};
+    auto const test_result{
+            run_single_log_file_test(archive_path, log_path.string(), expected_event_count)
+    };
     REQUIRE(false == test_result.has_error());
 }
