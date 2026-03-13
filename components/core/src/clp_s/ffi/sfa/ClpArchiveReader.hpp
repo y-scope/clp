@@ -55,6 +55,8 @@ public:
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
+     * - `SfaErrorCodeEnum::NoMemory` if archive initialization fails due to OOM issues.
+     * - Forwards `ClpArchiveReader::precompute_archive_metadata`'s return values on failure.
      */
     [[nodiscard]] static auto create(std::string_view archive_path)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
@@ -67,6 +69,7 @@ public:
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
+     * - Forwards `ClpArchiveReader::precompute_archive_metadata`'s return values on failure.
      */
     [[nodiscard]] static auto create(std::vector<char>&& archive_data)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
