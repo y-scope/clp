@@ -361,6 +361,10 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileWriter.hpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
+    src/clp_s/ffi/sfa/ClpArchiveReader.cpp
+    src/clp_s/ffi/sfa/ClpArchiveReader.hpp
+    src/clp_s/ffi/sfa/SfaErrorCode.cpp
+    src/clp_s/ffi/sfa/SfaErrorCode.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -500,8 +504,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
-        src/clp/ffi/ir_stream/IrErrorCode.cpp
-        src/clp/ffi/ir_stream/IrErrorCode.hpp
+        src/clp/ffi/ir_stream/IrDeserializationError.cpp
+        src/clp/ffi/ir_stream/IrDeserializationError.hpp
         src/clp/ffi/ir_stream/IrSerializationError.cpp
         src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
@@ -714,6 +718,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-ffi_sfa_reader.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
