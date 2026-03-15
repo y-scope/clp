@@ -68,7 +68,7 @@ impl CompressionJobSubmitter {
                 aws_authentication,
             },
             ingestion_job_id,
-            metadata_ids: None,
+            s3_object_metadata_ids: None,
             // NOTE: Workaround for #1735
             dataset: Some(
                 ingestion_job_config

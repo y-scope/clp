@@ -1090,7 +1090,7 @@ impl ClpCompressionState {
         let s3_object_metadata_input_config = match &mut io_config.input {
             InputConfig::S3ObjectMetadataInputConfig { config } => config,
         };
-        s3_object_metadata_input_config.metadata_ids = Some(object_metadata_ids.to_vec());
+        s3_object_metadata_input_config.s3_object_metadata_ids = Some(object_metadata_ids.to_vec());
 
         let mut tx = self.db_pool.begin().await?;
 

@@ -17,7 +17,7 @@ pub type IngestionJobId = u64;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "type")]
 pub enum InputConfig {
-    #[serde(rename = "metadata")]
+    #[serde(rename = "s3_object_metadata")]
     S3ObjectMetadataInputConfig {
         #[serde(flatten)]
         config: S3ObjectMetadataInputConfig,
@@ -42,7 +42,7 @@ pub struct S3ObjectMetadataInputConfig {
     pub s3_config: S3Config,
 
     pub ingestion_job_id: IngestionJobId,
-    pub metadata_ids: Option<Vec<S3ObjectMetadataId>>,
+    pub s3_object_metadata_ids: Option<Vec<S3ObjectMetadataId>>,
     pub dataset: Option<NonEmptyString>,
     pub timestamp_key: Option<NonEmptyString>,
     pub unstructured: bool,
