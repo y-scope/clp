@@ -97,7 +97,7 @@ public:
     /**
      * @return Source file metadata in range index order.
      */
-    [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> const& {
+    [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> {
         return m_file_infos;
     }
 
