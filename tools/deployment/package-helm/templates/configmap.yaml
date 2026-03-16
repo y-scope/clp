@@ -338,7 +338,7 @@ data:
   presto-coordinator-catalog-clp.properties: |
     connector.name=clp
     clp.metadata-provider-type=mysql
-    clp.metadata-db-url=jdbc:mysql://{{ include "clp.fullname" $ }}-database:3306
+    clp.metadata-db-url=jdbc:mysql://{{ include "clp.databaseHost" $ }}:{{ include "clp.databasePort" $ }}
     clp.metadata-db-name={{ $.Values.clpConfig.database.names.clp }}
     clp.metadata-db-user={{ $.Values.credentials.database.username }}
     clp.metadata-db-password={{ $.Values.credentials.database.password }}
