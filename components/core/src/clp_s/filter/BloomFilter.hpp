@@ -35,7 +35,7 @@ public:
      * @param reader
      * @return A result containing an initialized BloomFilter on success, or an error code
      * indicating the failure:
-     * - ErrorCodeEnum::UnsupportedHashAlgorithm if hash algorithm id is not supported.
+     * - ErrorCodeEnum::UnsupportedHashAlgorithm if hash algorithm ID is not supported.
      * - ErrorCodeEnum::CorruptFilterPayload for malformed payload fields.
      * - ErrorCodeEnum::ReadFailure for truncated/failed reads.
      */
