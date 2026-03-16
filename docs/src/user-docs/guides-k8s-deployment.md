@@ -250,78 +250,8 @@ helm template clp . -f custom-values.yaml
 
 ### Using Presto as the query engine
 
-To use [Presto][presto-guide] as the query engine, set `webui.query_engine` to `"presto"` and
-configure the Presto-specific settings. The `query_engine` setting controls which search interface
-the Web UI displays. Presto runs alongside the existing compression pipeline; setting the clp-s
-native query components to `null` is optional but recommended to save resources when you don't need
-both query paths:
-
-```{code-block} yaml
-:caption: presto-values.yaml
-
-image:
-  prestoCoordinator:
-    repository: "ghcr.io/y-scope/presto/coordinator"
-    tag: "clp-v0.10.0"
-  prestoWorker:
-    repository: "ghcr.io/y-scope/presto/prestissimo-worker"
-    tag: "clp-v0.10.0"
-
-prestoWorker:
-  # See below "Worker scheduling" for more details on configuring Presto scheduling
-  replicas: 2
-
-clpConfig:
-  webui:
-    query_engine: "presto"
-
-  # Optional: Disable the clp-s native query pipeline to save resources.
-  # NOTE: The API server depends on the clp-s native query pipeline.
-  api_server: null
-  query_scheduler: null
-  query_worker: null
-  reducer: null
-
-  # Disable results cache retention since the Presto integration doesn't yet support garbage
-  # collection of search results.
-  results_cache:
-    retention_period: null
-
-  presto:
-    port: 30889
-    coordinator:
-      logging_level: "INFO"
-      query_max_memory_gb: 1
-      query_max_memory_per_node_gb: 1
-    worker:
-      query_memory_gb: 4
-      system_memory_gb: 8
-    # Split filter config for the Presto CLP connector. For each dataset you want to query, add a
-    # filter entry. Replace <dataset> with the dataset name (use "default" if you didn't specify one
-    # when compressing) and <timestamp-key> with the timestamp key used during compression.
-    # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
-    split_filter:
-      clp.default.<dataset>:
-        - columnName: "<timestamp-key>"
-          customOptions:
-            rangeMapping:
-              lowerBound: "begin_timestamp"
-              upperBound: "end_timestamp"
-          required: false
-```
-
-Install with the Presto values:
-
-```bash
-helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f presto-values.yaml
-```
-
-:::{note}
-Presto is deployed when `clpConfig.presto` is set to a non-null value. To disable the clp-s native query
-components, set their config keys to `null` as shown above.
-:::
-
-For more details on querying logs through Presto, see the [Using Presto][presto-guide] guide.
+To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
+instructions, including the Helm values file and installation steps.
 
 ### Worker scheduling
 
