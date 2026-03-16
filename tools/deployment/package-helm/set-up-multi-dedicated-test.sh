@@ -55,7 +55,7 @@ done
 # whichever node claims them first, which conflicts with nodeSelector when workers are on dedicated
 # node pools.
 echo "Creating shared-data PersistentVolumes..."
-kubectl apply -f - <<'PVEOF'
+kubectl apply -f - <<'EOF'
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -89,7 +89,7 @@ spec:
   hostPath:
     path: /var/data/streams
     type: DirectoryOrCreate
-PVEOF
+EOF
 
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
