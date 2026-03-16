@@ -121,6 +121,7 @@ auto ClpArchiveReader::close() noexcept -> void {
     m_file_names.clear();
     m_file_infos.clear();
     m_tables.clear();
+    m_log_events.clear();
 }
 
 auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
@@ -130,16 +131,21 @@ auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_file_names = std::move(rhs.m_file_names);
     m_file_infos = std::move(rhs.m_file_infos);
     m_tables = std::move(rhs.m_tables);
+    m_log_events = std::move(rhs.m_log_events);
 }
 
-auto ClpArchiveReader::decode() -> Result<std::vector<LogEvent>> {
+auto ClpArchiveReader::decode_all() -> Result<std::vector<LogEvent>> {
+    if (m_log_events.size() == m_event_count) {
+        return m_log_events;
+    }
+
     if (nullptr == m_archive_reader) {
         return SfaErrorCode{SfaErrorCodeEnum::NotInit};
     }
 
     try {
-        std::vector<LogEvent> decoded_events;
-        decoded_events.reserve(m_event_count);
+        m_log_events.clear();
+        m_log_events.reserve(m_event_count);
 
         std::string message;
         int64_t timestamp{0};
@@ -174,12 +180,10 @@ auto ClpArchiveReader::decode() -> Result<std::vector<LogEvent>> {
                         nullptr
                 ))
             {
-                decoded_events.emplace_back(log_event_idx, timestamp, std::move(message));
+                m_log_events.emplace_back(log_event_idx, timestamp, std::move(message));
             }
         }
-
-        close();
-        return decoded_events;
+        return m_log_events;
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR("Failed to decode archive: out of memory.");
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};

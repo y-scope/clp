@@ -107,8 +107,8 @@ public:
     /**
      * Decodes all log events in global log-event-index order.
      *
-     * This operation is one-shot: on success it closes the reader and releases resources before
-     * returning.
+     * Results are cached after the first successful decode. Subsequent calls return the cached
+     * decoded events.
      *
      * @return A result containing decoded log events on success, or an error indicating the
      * failure:
@@ -116,7 +116,7 @@ public:
      * - `SfaErrorCodeEnum::NoMemory` if decoding fails due to OOM issues.
      * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized.
      */
-    [[nodiscard]] auto decode() -> ystdlib::error_handling::Result<std::vector<LogEvent>>;
+    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<std::vector<LogEvent>>;
 
 private:
     // Constructors
@@ -156,6 +156,7 @@ private:
     std::vector<std::string> m_file_names;
     std::vector<FileInfo> m_file_infos;
     std::vector<std::shared_ptr<clp_s::SchemaReader>> m_tables;
+    std::vector<LogEvent> m_log_events;
 };
 }  // namespace clp_s::ffi::sfa
 

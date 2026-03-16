@@ -95,7 +95,7 @@ auto assert_reader_matches_expected(
 auto
 assert_decoded_log_event_idx_matches_index(ClpArchiveReader& reader, uint64_t expected_event_count)
         -> Result<void> {
-    auto const decoded_events{YSTDLIB_ERROR_HANDLING_TRYX(reader.decode())};
+    auto const decoded_events{YSTDLIB_ERROR_HANDLING_TRYX(reader.decode_all())};
     REQUIRE(expected_event_count == static_cast<uint64_t>(decoded_events.size()));
 
     int64_t expected_log_event_idx{0};
