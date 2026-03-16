@@ -423,7 +423,7 @@ data:
 
     # Query coordinator for version and append to config
     DISCOVERY_URI="http://{{ include "clp.fullname" $ }}-presto-coordinator:8889"
-    PRESTO_VERSION=$(wget -q -O - "${DISCOVERY_URI}/v1/info" | jq -r '.version')
+    PRESTO_VERSION=$(curl -sf "${DISCOVERY_URI}/v1/info" | jq -r '.version')
     echo "presto.version=${PRESTO_VERSION}" >> "${PRESTO_CONFIG_DIR}/config.properties"
 
     # Set node identity from hostname
