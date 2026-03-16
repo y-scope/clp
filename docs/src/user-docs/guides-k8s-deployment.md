@@ -588,7 +588,6 @@ To tear down a `kubeadm` cluster:
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
-[logging-infra-issue]: https://github.com/y-scope/clp/issues/1760
 [presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
