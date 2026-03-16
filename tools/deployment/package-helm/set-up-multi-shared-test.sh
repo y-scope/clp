@@ -19,6 +19,11 @@ source "${script_dir}/.set-up-common.sh"
 
 parse_common_args "$@"
 
+# When --presto is passed, use non-zero defaults for Presto replicas if not explicitly set.
+if [[ "${ENABLE_PRESTO}" == "true" ]]; then
+    [[ "${PRESTO_WORKER_REPLICAS}" -eq 0 ]] && PRESTO_WORKER_REPLICAS=2
+fi
+
 echo "=== Multi-node setup with shared worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Worker nodes: ${NUM_WORKER_NODES}"
@@ -26,6 +31,7 @@ echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
 echo "Reducers: ${REDUCER_REPLICAS}"
 echo "Presto workers: ${PRESTO_WORKER_REPLICAS}"
+echo "Presto: ${ENABLE_PRESTO}"
 echo ""
 
 prepare_environment "${CLUSTER_NAME}"
@@ -36,7 +42,7 @@ generate_kind_config "${NUM_WORKER_NODES}" | kind create cluster --name "${CLUST
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
-# Word splitting is intentional: get_image_helm_args returns multiple --set flags.
+# Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
@@ -44,6 +50,7 @@ helm install test "${script_dir}" \
     --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
     --set "reducer.replicas=${REDUCER_REPLICAS}" \
     --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
 
 wait_for_cluster_ready
