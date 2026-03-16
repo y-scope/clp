@@ -12,7 +12,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "results-cache-indices-creator"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       restartPolicy: "OnFailure"
       {{- if has "results_cache" .Values.clpConfig.bundled }}
       initContainers:
