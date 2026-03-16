@@ -1,3 +1,4 @@
+{{- if has "queue" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -18,10 +19,6 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "queue"
     spec:
-      securityContext:
-        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
-        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
-        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
       containers:
         - name: "queue"
           image: "rabbitmq:3.9.8"
@@ -38,16 +35,12 @@ spec:
                   name: {{ include "clp.fullname" . }}-queue
                   key: "password"
             - name: "RABBITMQ_LOGS"
-              value: "/var/log/rabbitmq/rabbitmq.log"
+              value: "-"
+            - name: "RABBITMQ_SASL_LOGS"
+              value: "-"
           ports:
             - name: "queue"
               containerPort: 5672
-          volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "queue"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/rabbitmq"
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &queue-health-check
@@ -55,21 +48,4 @@ spec:
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *queue-health-check
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: "Delete"
-  volumeClaimTemplates:
-    - metadata:
-        name: {{ include "clp.volumeName" (dict
-            "component_category" "queue"
-            "name" "logs"
-          ) | quote }}
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "queue"
-        resources:
-          requests:
-            storage: "5Gi"
+{{- end }}

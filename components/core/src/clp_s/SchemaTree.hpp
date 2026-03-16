@@ -38,7 +38,7 @@ enum class NodeType : uint8_t {
     Object,
     UnstructuredArray,
     NullValue,
-    DateString,
+    DeprecatedDateString,
     StructuredArray,
     Metadata,
     DeltaInteger,
@@ -80,7 +80,7 @@ public:
               m_type(type),
               m_count(0),
               m_depth(depth) {
-        memcpy(m_key_name_buf.get(), key_name.begin(), key_name.size());
+        memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
     }
 
     /**
@@ -190,7 +190,7 @@ public:
      * @param compression_level
      * @return the compressed size of the SchemaTree in bytes
      */
-    [[nodiscard]] size_t store(std::string const& archives_dir, int compression_level);
+    [[nodiscard]] auto store(std::string const& archives_dir, int compression_level) -> size_t;
 
     /**
      * Clear the schema tree
