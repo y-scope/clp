@@ -1,9 +1,9 @@
 #include "XxHash.hpp"
 
-#include <xxhash.h>
-
 #include <cstdint>
 #include <string_view>
+
+#include <xxhash.h>
 
 namespace clp_s::filter::xxhash {
 auto hash64(std::string_view value, uint64_t seed) -> uint64_t {

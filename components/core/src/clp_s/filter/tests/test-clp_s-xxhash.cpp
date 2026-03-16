@@ -1,9 +1,10 @@
-#include <array>
 #include <cstdint>
 #include <string_view>
+#include <tuple>
 
 #include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <clp_s/filter/XxHash.hpp>
 
@@ -12,27 +13,19 @@
  * If upstream behavior changes (e.g., due to version drift), this test should fail.
  */
 TEST_CASE("XxHash v0.8.3 seeded hash sanity vectors", "[clp_s][filter]") {
-    struct TestCase {
-        std::string_view input;
-        uint64_t seed;
-        uint64_t expected_hash;
-    };
+    using TestCase = std::tuple<std::string_view, uint64_t, uint64_t>;
 
-    std::array<TestCase, 8> const test_cases{{
-            {.input = "", .seed = 0ULL, .expected_hash = 0x2d06'8005'38d3'94c2ULL},
-            {.input = "", .seed = 1ULL, .expected_hash = 0x4dc5'b0cc'826f'6703ULL},
-            {.input = "a", .seed = 0ULL, .expected_hash = 0xe6c6'32b6'1e96'4e1fULL},
-            {.input = "a", .seed = 1ULL, .expected_hash = 0xd2f6'd099'6f37'a720ULL},
-            {.input = "hello", .seed = 0ULL, .expected_hash = 0x9555'e855'5c62'dcfdULL},
-            {.input = "hello", .seed = 42ULL, .expected_hash = 0xbafa'072f'07db'7937ULL},
-            {.input = "CLP", .seed = 0ULL, .expected_hash = 0x70da'c239'055f'38a5ULL},
-            {.input = "The quick brown fox jumps over the lazy dog",
-             .seed = 42ULL,
-             .expected_hash = 0xb4a3'f3c3'6b3c'7d26ULL},
-    }};
+    auto const [input, seed, expected_hash] = GENERATE(
+            TestCase{"", 0ULL, 0x2d06'8005'38d3'94c2ULL},
+            TestCase{"", 1ULL, 0x4dc5'b0cc'826f'6703ULL},
+            TestCase{"a", 0ULL, 0xe6c6'32b6'1e96'4e1fULL},
+            TestCase{"a", 1ULL, 0xd2f6'd099'6f37'a720ULL},
+            TestCase{"hello", 0ULL, 0x9555'e855'5c62'dcfdULL},
+            TestCase{"hello", 42ULL, 0xbafa'072f'07db'7937ULL},
+            TestCase{"CLP", 0ULL, 0x70da'c239'055f'38a5ULL},
+            TestCase{"The quick brown fox jumps over the lazy dog", 42ULL, 0xb4a3'f3c3'6b3c'7d26ULL}
+    );
 
-    for (auto const& [input, seed, expected_hash] : test_cases) {
-        INFO("input=" << input << ", seed=" << seed);
-        REQUIRE(clp_s::filter::xxhash::hash64(input, seed) == expected_hash);
-    }
+    CAPTURE(input, seed, expected_hash);
+    REQUIRE(clp_s::filter::xxhash::hash64(input, seed) == expected_hash);
 }

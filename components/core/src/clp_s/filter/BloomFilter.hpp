@@ -24,10 +24,8 @@ public:
     /**
      * @param expected_num_elements Expected number of inserted values.
      * @param false_positive_rate Target false-positive rate in the range [1e-6, 1).
-     * @return A result containing a constructed BloomFilter on success, or an error code
-     * indicating the failure:
-     * - ErrorCodeEnum::InvalidFalsePositiveRate if false_positive_rate is not in [1e-6, 1).
-     * - ErrorCodeEnum::ParameterComputationOutOfRange if parameter computation overflows.
+     * @return A result containing a constructed BloomFilter on success.
+     * @return Forwards `compute_optimal_parameters`'s return values on failure.
      */
     [[nodiscard]] static auto create(size_t expected_num_elements, double false_positive_rate)
             -> ystdlib::error_handling::Result<BloomFilter>;
@@ -71,6 +69,19 @@ private:
             ystdlib::containers::Array<uint8_t> bit_array
     );
 
+    /**
+     * Computes the optimal Bloom filter parameters from the given inputs.
+     * @param expected_num_elements
+     * @param false_positive_rate
+     * @return A result containing a pair of Bloom filter parameters on success:
+     * - The number of bits in the Bloom filter's bit array.
+     * - The number of hash functions to apply when mapping an element to positions in the bit
+     *   array.
+     * @return An error code indicating the failure:
+     * - ErrorCodeEnum::InvalidFalsePositiveRate if `false_positive_rate` is out of the supported
+     *   range [1e-6, 1).
+     * - ErrorCodeEnum::ParameterComputationOutOfRange if the computed parameters overflow.
+     */
     [[nodiscard]] static auto
     compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
             -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>>;

@@ -14,7 +14,7 @@ enum class HashAlgorithm : uint8_t {
 };
 
 /**
- * @param hash_algorithm Encoded algorithm id from serialized payload.
+ * @param hash_algorithm Encoded algorithm ID from serialized payload.
  * @return Parsed hash algorithm when supported; std::nullopt otherwise.
  */
 [[nodiscard]] auto try_parse_hash_algorithm(uint8_t hash_algorithm) -> std::optional<HashAlgorithm>;

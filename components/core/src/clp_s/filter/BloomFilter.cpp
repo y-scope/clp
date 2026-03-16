@@ -32,7 +32,7 @@ constexpr uint64_t cPrimaryHashSeed{0};
 constexpr uint64_t cSecondaryHashSeed{0x9e37'79b9'7f4a'7c15ULL};
 constexpr size_t cNumBitsInByte{8};
 
-auto min_bytes_containing_bits(size_t num_bits) -> size_t {
+[[nodiscard]] auto min_bytes_containing_bits(size_t num_bits) -> size_t {
     return (num_bits / cNumBitsInByte) + ((0 != (num_bits % cNumBitsInByte)) ? 1 : 0);
 }
 }  // namespace
@@ -50,10 +50,9 @@ BloomFilter::BloomFilter(
 
 auto BloomFilter::create(size_t expected_num_elements, double false_positive_rate)
         -> ystdlib::error_handling::Result<BloomFilter> {
-    auto const optimal_parameters{YSTDLIB_ERROR_HANDLING_TRYX(
+    auto const [bit_array_size, num_hash_functions] = YSTDLIB_ERROR_HANDLING_TRYX(
             compute_optimal_parameters(expected_num_elements, false_positive_rate)
-    )};
-    auto const [bit_array_size, num_hash_functions]{optimal_parameters};
+    );
 
     size_t const num_bytes{min_bytes_containing_bits(bit_array_size)};
     return BloomFilter{
@@ -100,10 +99,7 @@ BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double fal
 
 auto BloomFilter::add(std::string_view value) -> void {
     uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
-    uint64_t h2{hash64(m_hash_algorithm, value, cSecondaryHashSeed)};
-    if (0 == h2) {
-        h2 = 1;
-    }
+    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
     for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
         set_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size));
     }
@@ -111,10 +107,7 @@ auto BloomFilter::add(std::string_view value) -> void {
 
 auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
     uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
-    uint64_t h2{hash64(m_hash_algorithm, value, cSecondaryHashSeed)};
-    if (0 == h2) {
-        h2 = 1;
-    }
+    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
     for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
         if (false == test_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size))) {
             return false;

@@ -80,7 +80,6 @@ TEST_CASE("BloomFilter false positive rate is bounded", "[clp_s][filter]") {
             cFalsePositiveRate * (1.0 - cFalsePositiveRate) / static_cast<double>(cQueries)
     )};
     double const allowed_false_positive_rate{cFalsePositiveRate + (3.0 * sigma)};
-    INFO("False positive rate: " << false_positive_rate);
-    INFO("Allowed max FPR: " << allowed_false_positive_rate);
+    CAPTURE(false_positive_rate, allowed_false_positive_rate);
     REQUIRE(false_positive_rate <= allowed_false_positive_rate);
 }
