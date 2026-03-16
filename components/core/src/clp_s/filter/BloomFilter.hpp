@@ -62,13 +62,6 @@ public:
     auto write_to_file(clp::WriterInterface& writer) const -> void;
 
 private:
-    BloomFilter(
-            size_t bit_array_size,
-            uint32_t num_hash_functions,
-            HashAlgorithm hash_algorithm,
-            ystdlib::containers::Array<uint8_t> bit_array
-    );
-
     /**
      * Computes the optimal Bloom filter parameters from the given inputs.
      * @param expected_num_elements
@@ -85,6 +78,13 @@ private:
     [[nodiscard]] static auto
     compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
             -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>>;
+
+    BloomFilter(
+            size_t bit_array_size,
+            uint32_t num_hash_functions,
+            HashAlgorithm hash_algorithm,
+            ystdlib::containers::Array<uint8_t> bit_array
+    );
 
     auto set_bit(size_t bit_index) -> void;
     [[nodiscard]] auto test_bit(size_t bit_index) const -> bool;

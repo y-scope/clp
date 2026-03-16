@@ -37,17 +37,6 @@ constexpr size_t cNumBitsInByte{8};
 }
 }  // namespace
 
-BloomFilter::BloomFilter(
-        size_t bit_array_size,
-        uint32_t num_hash_functions,
-        HashAlgorithm hash_algorithm,
-        ystdlib::containers::Array<uint8_t> bit_array
-)
-        : m_bit_array_size{bit_array_size},
-          m_num_hash_functions{num_hash_functions},
-          m_hash_algorithm{hash_algorithm},
-          m_bit_array{std::move(bit_array)} {}
-
 auto BloomFilter::create(size_t expected_num_elements, double false_positive_rate)
         -> ystdlib::error_handling::Result<BloomFilter> {
     auto const [bit_array_size, num_hash_functions] = YSTDLIB_ERROR_HANDLING_TRYX(
@@ -61,85 +50,6 @@ auto BloomFilter::create(size_t expected_num_elements, double false_positive_rat
             cDefaultHashAlgorithm,
             ystdlib::containers::Array<uint8_t>(num_bytes)
     };
-}
-
-auto
-BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
-        -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>> {
-    if (false_positive_rate < cMinFalsePositiveRate || false_positive_rate >= 1.0) {
-        return ErrorCode{ErrorCodeEnum::InvalidFalsePositiveRate};
-    }
-    if (0 == expected_num_elements) {
-        return std::make_pair(cDefaultBitArraySize, cDefaultNumHashFunctions);
-    }
-
-    double const ln2{std::numbers::ln2_v<double>};
-    double const ln2_squared{ln2 * ln2};
-    auto const ideal_bit_array_size
-            = (-static_cast<double>(expected_num_elements) * std::log(false_positive_rate)
-               / ln2_squared);
-    if (false == std::isfinite(ideal_bit_array_size)
-        || ideal_bit_array_size > static_cast<double>(std::numeric_limits<size_t>::max()))
-    {
-        return ErrorCode{ErrorCodeEnum::ParameterComputationOutOfRange};
-    }
-    auto const bit_array_size
-            = std::max<size_t>(1, static_cast<size_t>(std::ceil(ideal_bit_array_size)));
-
-    auto const num_hash_functions = static_cast<uint32_t>(
-            static_cast<double>(bit_array_size) / static_cast<double>(expected_num_elements) * ln2
-    );
-
-    uint32_t const capped_num_hash_functions{
-            std::clamp(num_hash_functions, cMinNumHashFunctions, cMaxNumHashFunctions)
-    };
-
-    return std::make_pair(bit_array_size, capped_num_hash_functions);
-}
-
-auto BloomFilter::add(std::string_view value) -> void {
-    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
-    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
-    for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
-        set_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size));
-    }
-}
-
-auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
-    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
-    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
-    for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
-        if (false == test_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size))) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-auto BloomFilter::set_bit(size_t bit_index) -> void {
-    size_t const byte_index{bit_index / cNumBitsInByte};
-    size_t const bit_offset{bit_index % cNumBitsInByte};
-    m_bit_array.at(byte_index) |= static_cast<uint8_t>(1U << bit_offset);
-}
-
-auto BloomFilter::test_bit(size_t bit_index) const -> bool {
-    size_t const byte_index{bit_index / cNumBitsInByte};
-    size_t const bit_offset{bit_index % cNumBitsInByte};
-    return (m_bit_array.at(byte_index) & static_cast<uint8_t>(1U << bit_offset)) != 0;
-}
-
-auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
-    writer.write_numeric_value(static_cast<uint8_t>(m_hash_algorithm));
-    writer.write_numeric_value<uint32_t>(m_num_hash_functions);
-    writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
-    writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array.size()));
-    if (false == m_bit_array.empty()) {
-        writer.write(
-                clp::size_checked_pointer_cast<char const>(m_bit_array.data()),
-                m_bit_array.size()
-        );
-    }
 }
 
 auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
@@ -195,5 +105,95 @@ auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
         }
     }
     return BloomFilter{bit_array_size, num_hash_functions, hash_algorithm, std::move(bit_array)};
+}
+
+auto BloomFilter::add(std::string_view value) -> void {
+    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
+    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
+    for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
+        set_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size));
+    }
+}
+
+auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
+    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
+    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
+    for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
+        if (false == test_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
+    writer.write_numeric_value(static_cast<uint8_t>(m_hash_algorithm));
+    writer.write_numeric_value<uint32_t>(m_num_hash_functions);
+    writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
+    writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array.size()));
+    if (false == m_bit_array.empty()) {
+        writer.write(
+                clp::size_checked_pointer_cast<char const>(m_bit_array.data()),
+                m_bit_array.size()
+        );
+    }
+}
+
+auto
+BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
+        -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>> {
+    if (false_positive_rate < cMinFalsePositiveRate || false_positive_rate >= 1.0) {
+        return ErrorCode{ErrorCodeEnum::InvalidFalsePositiveRate};
+    }
+    if (0 == expected_num_elements) {
+        return std::make_pair(cDefaultBitArraySize, cDefaultNumHashFunctions);
+    }
+
+    double const ln2{std::numbers::ln2_v<double>};
+    double const ln2_squared{ln2 * ln2};
+    auto const ideal_bit_array_size
+            = (-static_cast<double>(expected_num_elements) * std::log(false_positive_rate)
+               / ln2_squared);
+    if (false == std::isfinite(ideal_bit_array_size)
+        || ideal_bit_array_size > static_cast<double>(std::numeric_limits<size_t>::max()))
+    {
+        return ErrorCode{ErrorCodeEnum::ParameterComputationOutOfRange};
+    }
+    auto const bit_array_size
+            = std::max<size_t>(1, static_cast<size_t>(std::ceil(ideal_bit_array_size)));
+
+    auto const num_hash_functions = static_cast<uint32_t>(
+            static_cast<double>(bit_array_size) / static_cast<double>(expected_num_elements) * ln2
+    );
+
+    uint32_t const capped_num_hash_functions{
+            std::clamp(num_hash_functions, cMinNumHashFunctions, cMaxNumHashFunctions)
+    };
+
+    return std::make_pair(bit_array_size, capped_num_hash_functions);
+}
+
+BloomFilter::BloomFilter(
+        size_t bit_array_size,
+        uint32_t num_hash_functions,
+        HashAlgorithm hash_algorithm,
+        ystdlib::containers::Array<uint8_t> bit_array
+)
+        : m_bit_array_size{bit_array_size},
+          m_num_hash_functions{num_hash_functions},
+          m_hash_algorithm{hash_algorithm},
+          m_bit_array{std::move(bit_array)} {}
+
+auto BloomFilter::set_bit(size_t bit_index) -> void {
+    size_t const byte_index{bit_index / cNumBitsInByte};
+    size_t const bit_offset{bit_index % cNumBitsInByte};
+    m_bit_array.at(byte_index) |= static_cast<uint8_t>(1U << bit_offset);
+}
+
+auto BloomFilter::test_bit(size_t bit_index) const -> bool {
+    size_t const byte_index{bit_index / cNumBitsInByte};
+    size_t const bit_offset{bit_index % cNumBitsInByte};
+    return (m_bit_array.at(byte_index) & static_cast<uint8_t>(1U << bit_offset)) != 0;
 }
 }  // namespace clp_s::filter
