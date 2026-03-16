@@ -29,8 +29,10 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
         auto path{get_path_object_for_raw_path(archive_path)};
         reader = std::make_unique<clp_s::ArchiveReader>();
         reader->open(path, NetworkAuthOption{});
+
         auto clp_archive_reader{ClpArchiveReader{std::move(reader), nullptr}};
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
+
         return clp_archive_reader;
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
@@ -61,10 +63,12 @@ auto ClpArchiveReader::create(std::vector<char>&& archive_data) -> Result<ClpArc
 
         archive_reader = std::make_unique<clp_s::ArchiveReader>();
         archive_reader->open(reader, cDefaultArchiveId);
+
         auto clp_archive_reader{
                 ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)}
         };
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
+
         return clp_archive_reader;
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR("Failed to create ClpArchiveReader: out of memory.");
@@ -115,6 +119,7 @@ auto ClpArchiveReader::close() noexcept -> void {
     m_event_count = 0;
     m_file_names.clear();
     m_file_infos.clear();
+    m_tables.clear();
 }
 
 auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
@@ -123,6 +128,64 @@ auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_event_count = std::exchange(rhs.m_event_count, 0);
     m_file_names = std::move(rhs.m_file_names);
     m_file_infos = std::move(rhs.m_file_infos);
+    m_tables = std::move(rhs.m_tables);
+}
+
+auto ClpArchiveReader::decode() -> Result<std::vector<LogEvent>> {
+    if (nullptr == m_archive_reader) {
+        return SfaErrorCode{SfaErrorCodeEnum::NotInit};
+    }
+
+    try {
+        std::vector<LogEvent> decoded_events;
+        decoded_events.reserve(m_event_count);
+
+        std::string message;
+        int64_t timestamp{0};
+        int64_t log_event_idx{0};
+        while (true) {
+            std::shared_ptr<clp_s::SchemaReader> next_table{nullptr};
+            uint64_t next_idx{0};
+
+            for (auto const& table : m_tables) {
+                if (nullptr == table) {
+                    SPDLOG_ERROR("Failed to decode archive: encountered null schema table.");
+                    return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
+                }
+                if (table->done()) {
+                    continue;
+                }
+                auto const current_idx{table->get_next_log_event_idx()};
+                if (nullptr == next_table || current_idx < next_idx) {
+                    next_table = table;
+                    next_idx = current_idx;
+                }
+            }
+
+            if (nullptr == next_table) {
+                break;
+            }
+
+            if (next_table->get_next_message_with_metadata(
+                        message,
+                        timestamp,
+                        log_event_idx,
+                        nullptr
+                ))
+            {
+                decoded_events.emplace_back(log_event_idx, timestamp, std::move(message));
+            }
+        }
+
+        close();
+        return decoded_events;
+    } catch (std::bad_alloc const&) {
+        SPDLOG_ERROR("Failed to decode archive: out of memory.");
+        return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
+    } catch (std::exception const& ex) {
+        SPDLOG_ERROR("Exception while decoding archive: {}", ex.what());
+        return SfaErrorCode{SfaErrorCodeEnum::IoFailure};
+    }
 }
 
 auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
@@ -152,6 +215,10 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
 
         prev_end_idx = end_idx;
     }
+
+    m_archive_reader->read_dictionaries_and_metadata();
+    m_archive_reader->open_packed_streams();
+    m_tables = m_archive_reader->read_all_tables();
 
     return ystdlib::error_handling::success();
 }

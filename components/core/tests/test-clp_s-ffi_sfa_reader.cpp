@@ -92,6 +92,18 @@ auto assert_reader_matches_expected(
     REQUIRE(expected_event_count == file_info.get_event_count());
 }
 
+auto
+assert_decoded_log_event_idx_matches_index(ClpArchiveReader& reader, uint64_t expected_event_count)
+        -> Result<void> {
+    auto const decoded_events{YSTDLIB_ERROR_HANDLING_TRYX(reader.decode())};
+    REQUIRE(expected_event_count == static_cast<uint64_t>(decoded_events.size()));
+
+    for (size_t i{0}; i < decoded_events.size(); ++i) {
+        REQUIRE(static_cast<int64_t>(i) == decoded_events[i].get_log_event_idx());
+    }
+    return success();
+}
+
 auto create_reader_from_path(std::filesystem::path const& archive_path)
         -> Result<ClpArchiveReader> {
     return ClpArchiveReader::create(archive_path.string());
@@ -112,11 +124,17 @@ auto run_single_log_file_test(
         std::string const& expected_file_name,
         uint64_t expected_event_count
 ) -> Result<void> {
-    auto const r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path))};
+    auto r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path))};
     assert_reader_matches_expected(r_path, expected_file_name, expected_event_count);
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            assert_decoded_log_event_idx_matches_index(r_path, expected_event_count)
+    );
 
-    auto const r_bytes{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path))};
+    auto r_bytes{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path))};
     assert_reader_matches_expected(r_bytes, expected_file_name, expected_event_count);
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            assert_decoded_log_event_idx_matches_index(r_bytes, expected_event_count)
+    );
 
     return success();
 }

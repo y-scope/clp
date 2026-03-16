@@ -9,9 +9,12 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "LogEvent.hpp"
+
 namespace clp_s {
 // Forward include
 class ArchiveReader;
+class SchemaReader;
 }  // namespace clp_s
 
 namespace clp_s::ffi::sfa {
@@ -97,9 +100,21 @@ public:
     /**
      * @return Source file metadata in range index order.
      */
-    [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> {
-        return m_file_infos;
-    }
+    [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> { return m_file_infos; }
+
+    /**
+     * Decodes all log events in global log-event-index order.
+     *
+     * This operation is one-shot: on success it closes the reader and releases resources before
+     * returning.
+     *
+     * @return A result containing decoded log events on success, or an error indicating the
+     * failure:
+     * - `SfaErrorCodeEnum::IoFailure` if decoding fails due to archive read/decode errors.
+     * - `SfaErrorCodeEnum::NoMemory` if decoding fails due to OOM issues.
+     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized.
+     */
+    [[nodiscard]] auto decode() -> ystdlib::error_handling::Result<std::vector<LogEvent>>;
 
 private:
     // Constructors
@@ -138,6 +153,7 @@ private:
     uint64_t m_event_count{0};
     std::vector<std::string> m_file_names;
     std::vector<FileInfo> m_file_infos;
+    std::vector<std::shared_ptr<clp_s::SchemaReader>> m_tables;
 };
 }  // namespace clp_s::ffi::sfa
 
