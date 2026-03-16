@@ -15,8 +15,8 @@
 #include <clp/BufferReader.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReader.hpp>
-#include <clp_s/ffi/sfa/SfaErrorCode.hpp>
 #include <clp_s/ffi/sfa/LogEvent.hpp>
+#include <clp_s/ffi/sfa/SfaErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 
 namespace clp_s::ffi::sfa {
