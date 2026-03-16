@@ -1,5 +1,6 @@
 #include "ArchiveReaderAdaptor.hpp"
 
+#include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -14,10 +15,13 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/BoundedReader.hpp"
+#include "../clp/ErrorCode.hpp"
 #include "../clp/FileReader.hpp"
 #include "archive_constants.hpp"
+#include "ErrorCode.hpp"
 #include "InputConfig.hpp"
 #include "RangeIndexWriter.hpp"
+#include "ReaderUtils.hpp"
 #include "SingleFileArchiveDefs.hpp"
 
 namespace clp_s {
@@ -27,12 +31,26 @@ ArchiveReaderAdaptor::ArchiveReaderAdaptor(
 )
         : m_archive_path{archive_path},
           m_network_auth{network_auth},
-          m_single_file_archive{false},
           m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()} {
     if (InputSource::Filesystem != archive_path.source
         || std::filesystem::is_regular_file(archive_path.path))
     {
         m_single_file_archive = true;
+    }
+}
+
+ArchiveReaderAdaptor::ArchiveReaderAdaptor(
+        std::shared_ptr<clp::ReaderInterface> single_file_archive_reader
+)
+        : m_single_file_archive{true},
+          m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()},
+          m_reader{std::move(single_file_archive_reader)} {
+    if (nullptr == m_reader) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    if (auto const rc = m_reader->try_seek_from_begin(0); clp::ErrorCode::ErrorCode_Success != rc) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 }
 
@@ -75,7 +93,10 @@ ArchiveReaderAdaptor::try_read_archive_file_info(ZstdDecompressor& decompressor,
 
 ErrorCode
 ArchiveReaderAdaptor::try_read_timestamp_dictionary(ZstdDecompressor& decompressor, size_t size) {
-    return m_timestamp_dictionary->read(decompressor);
+    return m_timestamp_dictionary->read(
+            decompressor,
+            m_archive_header.has_deprecated_timestamp_format()
+    );
 }
 
 ErrorCode ArchiveReaderAdaptor::try_read_archive_info(ZstdDecompressor& decompressor, size_t size) {
@@ -250,6 +271,10 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
 }
 
 std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
+    if (nullptr != m_reader) {
+        return m_reader;
+    }
+
     if (InputSource::Filesystem == m_archive_path.source && false == m_single_file_archive) {
         try {
             return std::make_shared<clp::FileReader>(
@@ -298,7 +323,15 @@ std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_
 
     size_t file_offset = m_files_section_offset + it->o;
     ++it;
-    size_t next_file_offset{m_archive_header.compressed_size};
+
+    auto const next_file_offset_result{
+            ReaderUtils::try_uint64_to_size_t(m_archive_header.compressed_size)
+    };
+    if (next_file_offset_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    size_t next_file_offset{next_file_offset_result.value()};
+
     if (m_archive_file_info.files.end() != it) {
         next_file_offset = m_files_section_offset + it->o;
     }

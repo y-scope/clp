@@ -1,8 +1,0 @@
-{{- include "clp.createStaticPv" (dict
-  "root" .
-  "component_category" "query-worker"
-  "name" "logs"
-  "capacity" "5Gi"
-  "accessModes" (list "ReadWriteOnce")
-  "hostPath" (printf "%s/query_worker" .Values.clpConfig.logs_directory)
-) }}

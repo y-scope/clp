@@ -1,25 +1,29 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
-#include <optional>
+#include <cstddef>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
 
-#include "../clp/streaming_archive/Constants.hpp"
-#include "archive_constants.hpp"
-#include "DictionaryWriter.hpp"
-#include "RangeIndexWriter.hpp"
-#include "Schema.hpp"
-#include "SchemaMap.hpp"
-#include "SchemaTree.hpp"
-#include "SchemaWriter.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryWriter.hpp"
+#include <clp/streaming_archive/Constants.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryWriter.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/RangeIndexWriter.hpp>
+#include <clp_s/Schema.hpp>
+#include <clp_s/SchemaMap.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/SchemaWriter.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryWriter.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -73,19 +77,19 @@ public:
         return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
     }
 
-    auto get_id() const -> std::string const& { return m_id; }
+    [[nodiscard]] auto get_id() const -> std::string const& { return m_id; }
 
-    auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
+    [[nodiscard]] auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
 
-    auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
+    [[nodiscard]] auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
 
-    auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
+    [[nodiscard]] auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
 
-    auto get_compressed_size() const -> size_t { return m_compressed_size; }
+    [[nodiscard]] auto get_compressed_size() const -> size_t { return m_compressed_size; }
 
-    auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
+    [[nodiscard]] auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
 
-    auto get_is_split() const -> bool { return m_is_split; }
+    [[nodiscard]] auto get_is_split() const -> bool { return m_is_split; }
 
 private:
     std::string m_id;
@@ -192,34 +196,49 @@ public:
     int32_t add_schema(Schema const& schema) { return m_schema_map.add_schema(schema); }
 
     /**
-     * Ingests a timestamp entry from a string
+     * Ingests a timestamp entry from a string.
      * @param key
      * @param node_id
      * @param timestamp
-     * @param pattern_id
-     * @return the epoch time corresponding to the string timestamp
+     * @param is_json_literal
+     * @return Forwards `TimestampDictionaryWriter::ingest_string_timestamp`'s return values.
      */
-    epochtime_t ingest_timestamp_entry(
+    [[nodiscard]] auto ingest_string_timestamp(
             std::string_view key,
             int32_t node_id,
             std::string_view timestamp,
-            uint64_t& pattern_id
-    ) {
-        return m_timestamp_dict.ingest_entry(key, node_id, timestamp, pattern_id);
+            bool is_json_literal
+    ) -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_string_timestamp(key, node_id, timestamp, is_json_literal);
     }
 
     /**
-     * Ingests a timestamp entry from a number
-     * @param column_key
+     * Ingests a numeric JSON entry.
+     * @param key
      * @param node_id
      * @param timestamp
+     * @return Forwards `TimestampDictionaryWriter::ingest_numeric_json_timestamp`'s return values.
      */
-    void ingest_timestamp_entry(std::string_view key, int32_t node_id, double timestamp) {
-        m_timestamp_dict.ingest_entry(key, node_id, timestamp);
+    [[nodiscard]] auto
+    ingest_numeric_json_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
+            -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_numeric_json_timestamp(key, node_id, timestamp);
     }
 
-    void ingest_timestamp_entry(std::string_view key, int32_t node_id, int64_t timestamp) {
-        m_timestamp_dict.ingest_entry(key, node_id, timestamp);
+    /**
+     * Ingests an unknown precision epoch timestamp.
+     * @param key
+     * @param node_id
+     * @param timestamp
+     * @return Forwards `TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp`'s
+     * return values.
+     */
+    [[nodiscard]] auto ingest_unknown_precision_epoch_timestamp(
+            std::string_view key,
+            int32_t node_id,
+            int64_t timestamp
+    ) -> std::pair<epochtime_t, uint64_t> {
+        return m_timestamp_dict.ingest_unknown_precision_epoch_timestamp(key, node_id, timestamp);
     }
 
     /**
@@ -347,7 +366,7 @@ private:
     SchemaMap m_schema_map;
     SchemaTree m_schema_tree;
 
-    std::map<int32_t, SchemaWriter*> m_id_to_schema_writer;
+    std::map<int32_t, std::unique_ptr<SchemaWriter>> m_id_to_schema_writer;
 
     FileWriter m_tables_file_writer;
     FileWriter m_table_metadata_file_writer;

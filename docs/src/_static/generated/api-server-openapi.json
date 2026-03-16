@@ -43,7 +43,9 @@
               },
               "example": {
                 "query_string": "*",
-                "dataset": "default",
+                "datasets": [
+                  "default"
+                ],
                 "time_range_begin_millisecs": 0,
                 "time_range_end_millisecs": 17356896,
                 "ignore_case": true,
@@ -153,12 +155,15 @@
             "type": "boolean",
             "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
           },
-          "dataset": {
+          "datasets": {
             "type": [
-              "string",
+              "array",
               "null"
             ],
-            "description": "The dataset to search within. If not provided, only `default` dataset will be searched."
+            "items": {
+              "type": "string"
+            },
+            "description": "The datasets to search within. If not provided, only `default` dataset will be searched."
           },
           "ignore_case": {
             "type": "boolean",

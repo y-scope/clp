@@ -60,7 +60,7 @@ class ClpConnector:
         job_config = msgpack.packb(
             {
                 "begin_timestamp": begin_ts,
-                "dataset": CLP_DEFAULT_DATASET_NAME,
+                "datasets": [CLP_DEFAULT_DATASET_NAME],
                 "end_timestamp": end_ts,
                 "ignore_case": True,
                 "max_num_results": SEARCH_MAX_NUM_RESULTS,

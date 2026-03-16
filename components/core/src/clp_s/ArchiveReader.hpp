@@ -1,21 +1,27 @@
 #ifndef CLP_S_ARCHIVEREADER_HPP
 #define CLP_S_ARCHIVEREADER_HPP
 
+#include <cstddef>
 #include <map>
-#include <set>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
-#include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryReader.hpp"
-#include "InputConfig.hpp"
-#include "PackedStreamReader.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaReader.hpp"
-#include "search/Projection.hpp"
-#include "SingleFileArchiveDefs.hpp"
-#include "TimestampDictionaryReader.hpp"
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/PackedStreamReader.hpp>
+#include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaReader.hpp>
+#include <clp_s/search/Projection.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -38,7 +44,18 @@ public:
     void open(Path const& archive_path, NetworkAuthOption const& network_auth);
 
     /**
+     * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
+     * @param single_file_archive_reader The already opened archive reader
+     * @param archive_id The unique name or identifier for the archive
+     */
+    auto open(
+            std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
+            std::string_view archive_id
+    ) -> void;
+
+    /**
      * Reads the dictionaries and metadata.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
     void read_dictionaries_and_metadata();
 
@@ -79,8 +96,14 @@ public:
 
     /**
      * Reads the metadata from the archive.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `ArchiveReader::read_single_schema_metadata`'s return values on failure.
+     * - Forwards `PackedStreamReader::read_metadata`'s return values on failure.
+     * @throws OperationFailed if archive metadata is empty or corrupt.
+     * @throws OperationFailed if archive metadata stream offset is not strictly incremental.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
-    void read_metadata();
+    [[nodiscard]] auto read_metadata() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Reads a table from the archive.
@@ -149,9 +172,35 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    [[nodiscard]] auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+
+    /**
+     * @return Whether this archive can contain columns with the deprecated DateString timestamp
+     * format.
+     */
+    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
+        return get_header().has_deprecated_timestamp_format();
+    }
 
 private:
+    /**
+     * Reads archive metadata and prepares the archive reader for subsequent archive reads.
+     */
+    auto initialize_archive_reader() -> void;
+
+    /**
+     * Reads a single schema table entry from the table metadata stream.
+     * @return A result containing a pair:
+     * - The schema ID.
+     * - The schema metadata with `uncompressed_size` not yet computed.
+     * on success, or an error code indicating the failure:
+     * - std::errc::io_error if reading from the metadata stream fails.
+     * - std::errc::illegal_byte_sequence if the stream offset exceeds the stream size.
+     * - Forwards `ReaderUtils::try_uint64_to_size_t`'s return values on failure.
+     */
+    [[nodiscard]] auto read_single_schema_metadata()
+            -> ystdlib::error_handling::Result<std::pair<int32_t, SchemaReader::SchemaMetadata>>;
+
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
      * @param reader

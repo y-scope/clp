@@ -125,8 +125,6 @@ dependencies = [
  "tokio",
  "tower-http",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
  "utoipa",
  "utoipa-axum",
 ]
@@ -893,13 +891,17 @@ dependencies = [
  "hex",
  "non-empty-string",
  "num_enum",
+ "regex",
  "rmp-serde",
  "secrecy",
  "serde",
  "serde_json",
  "serde_yaml",
  "sqlx",
+ "strum",
  "thiserror",
+ "tracing-appender",
+ "tracing-subscriber",
  "utoipa",
 ]
 
@@ -2168,13 +2170,13 @@ dependencies = [
  "serde_json",
  "serial_test",
  "sqlx",
+ "strum",
+ "strum_macros",
  "thiserror",
  "tokio",
  "tokio-util",
  "tower-http",
  "tracing",
- "tracing-appender",
- "tracing-subscriber",
  "utoipa",
  "utoipa-axum",
  "uuid",
@@ -2766,9 +2768,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.12.2"
+version = "1.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
+checksum = "e10754a14b9137dd7b1e3e5b0493cc9171fdd105e0ab477f51b72e7f3ac0e276"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3549,6 +3551,24 @@ name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+
+[[package]]
+name = "strum"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
+
+[[package]]
+name = "strum_macros"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
 
 [[package]]
 name = "subtle"

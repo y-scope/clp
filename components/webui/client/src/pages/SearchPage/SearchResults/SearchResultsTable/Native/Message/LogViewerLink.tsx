@@ -8,11 +8,11 @@ import {
 } from "antd";
 
 import {STREAM_TYPE} from "../../../../../../config";
-import useSearchStore from "../../../../SearchState";
 import styles from "./index.module.css";
 
 
 interface LogViewerLinkProps {
+    dataset: string;
     fileText: string;
     logEventIdx: number;
     streamId: string;
@@ -22,18 +22,19 @@ interface LogViewerLinkProps {
  * Render a link to the log viewer.
  *
  * @param props
+ * @param props.dataset
  * @param props.fileText
  * @param props.logEventIdx
  * @param props.streamId
  * @return
  */
 const LogViewerLink = ({
+    dataset,
     fileText,
     logEventIdx,
     streamId,
 }: LogViewerLinkProps) => {
     const {token} = theme.useToken();
-    const cachedDataset = useSearchStore((state) => state.cachedDataset);
 
     const searchParams = new URLSearchParams({
         type: encodeURIComponent(STREAM_TYPE),
@@ -41,8 +42,8 @@ const LogViewerLink = ({
         logEventIdx: encodeURIComponent(logEventIdx),
     });
 
-    if (null !== cachedDataset) {
-        searchParams.append("dataset", cachedDataset);
+    if ("" !== dataset) {
+        searchParams.append("dataset", dataset);
     }
 
     return (

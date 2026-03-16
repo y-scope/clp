@@ -15,11 +15,10 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
   * `docker-buildx-plugin` >= 0.15.1
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
-* Python 3.10 or newer
+* Python >= 3.10
 * python3-dev
 * python3-venv (for the version of Python installed)
-* [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
+* [Task] >= 3.48.0
 * [uv] >= 0.8
 
 ## Setup
@@ -93,4 +92,3 @@ task clean
 [design-deployment-orchestration]: design-deployment-orchestration.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352

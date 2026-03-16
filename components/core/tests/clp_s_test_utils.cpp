@@ -30,8 +30,9 @@ auto compress_archive(
     REQUIRE((std::filesystem::is_directory(archive_directory)));
 
     clp_s::JsonParserOption parser_option{};
-    parser_option.input_paths.emplace_back(
-            clp_s::Path{.source = clp_s::InputSource::Filesystem, .path = file_path}
+    parser_option.input_paths_and_canonical_filenames.emplace_back(
+            clp_s::Path{.source = clp_s::InputSource::Filesystem, .path = file_path},
+            file_path
     );
     parser_option.archives_dir = archive_directory;
     parser_option.target_encoded_size = cDefaultTargetEncodedSize;
@@ -46,7 +47,6 @@ auto compress_archive(
         parser_option.timestamp_key = std::move(timestamp_key.value());
     }
 
-    clp_s::TimestampPattern::init();
     clp_s::JsonParser parser{parser_option};
     std::vector<clp_s::ArchiveStats> archive_stats;
     REQUIRE(parser.ingest());
