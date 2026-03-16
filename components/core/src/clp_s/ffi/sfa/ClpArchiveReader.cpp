@@ -16,6 +16,7 @@
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ffi/sfa/SfaErrorCode.hpp>
+#include <clp_s/ffi/sfa/LogEvent.hpp>
 #include <clp_s/InputConfig.hpp>
 
 namespace clp_s::ffi::sfa {
@@ -145,7 +146,7 @@ auto ClpArchiveReader::decode() -> Result<std::vector<LogEvent>> {
         int64_t log_event_idx{0};
         while (true) {
             std::shared_ptr<clp_s::SchemaReader> next_table{nullptr};
-            uint64_t next_idx{0};
+            int64_t next_idx{0};
 
             for (auto const& table : m_tables) {
                 if (nullptr == table) {
@@ -193,14 +194,14 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
     m_file_names.reserve(range_index.size());
     m_file_infos.reserve(range_index.size());
 
-    uint64_t prev_end_idx{0};
+    int64_t prev_end_idx{0};
     for (auto const& range : range_index) {
-        auto const start_idx{static_cast<uint64_t>(range.start_index)};
-        auto const end_idx{static_cast<uint64_t>(range.end_index)};
+        auto const start_idx{static_cast<int64_t>(range.start_index)};
+        auto const end_idx{static_cast<int64_t>(range.end_index)};
         if (start_idx >= end_idx || start_idx != prev_end_idx) {
             return SfaErrorCode{SfaErrorCodeEnum::MalformedRangeIndex};
         }
-        m_event_count += end_idx - start_idx;
+        m_event_count += static_cast<uint64_t>(end_idx - start_idx);
 
         auto const filename_it{
                 range.fields.find(std::string{clp_s::constants::range_index::cFilename})

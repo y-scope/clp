@@ -87,8 +87,8 @@ auto assert_reader_matches_expected(
     auto const& file_info{file_infos.front()};
     REQUIRE(expected_file_name == file_name);
     REQUIRE(expected_file_name == file_info.get_file_name());
-    REQUIRE(0 == file_info.get_start_index());
-    REQUIRE(expected_event_count == file_info.get_end_index());
+    REQUIRE(0LL == file_info.get_start_index());
+    REQUIRE(static_cast<int64_t>(expected_event_count) == file_info.get_end_index());
     REQUIRE(expected_event_count == file_info.get_event_count());
 }
 
@@ -98,8 +98,10 @@ assert_decoded_log_event_idx_matches_index(ClpArchiveReader& reader, uint64_t ex
     auto const decoded_events{YSTDLIB_ERROR_HANDLING_TRYX(reader.decode())};
     REQUIRE(expected_event_count == static_cast<uint64_t>(decoded_events.size()));
 
-    for (size_t i{0}; i < decoded_events.size(); ++i) {
-        REQUIRE(static_cast<int64_t>(i) == decoded_events[i].get_log_event_idx());
+    int64_t expected_log_event_idx{0};
+    for (auto const& decoded_event : decoded_events) {
+        REQUIRE(expected_log_event_idx == decoded_event.get_log_event_idx());
+        ++expected_log_event_idx;
     }
     return success();
 }
