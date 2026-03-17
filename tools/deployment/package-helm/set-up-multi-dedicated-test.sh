@@ -71,6 +71,45 @@ for ((i = query_end; i < total_workers; i++)); do
     kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=presto --overwrite
 done
 
+# Pre-create shared-data PVs with hostPath (no node affinity) so PVCs bind to them instead of
+# dynamically provisioned node-local volumes. Without this, the local-path-provisioner pins PVs to
+# whichever node claims them first, which conflicts with nodeSelector when workers are on dedicated
+# node pools.
+echo "Creating shared-data PersistentVolumes..."
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-clp-shared-data-archives
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes: [ReadWriteOnce]
+  storageClassName: ""
+  claimRef:
+    namespace: default
+    name: test-clp-shared-data-archives
+  hostPath:
+    path: /var/data/archives
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-clp-shared-data-streams
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes: [ReadWriteOnce]
+  storageClassName: ""
+  claimRef:
+    namespace: default
+    name: test-clp-shared-data-streams
+  hostPath:
+    path: /var/data/streams
+    type: DirectoryOrCreate
+EOF
+
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
