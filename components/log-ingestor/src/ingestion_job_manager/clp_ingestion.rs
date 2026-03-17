@@ -431,7 +431,6 @@ impl ClpDbIngestionConnector {
             self.aws_authentication.clone(),
             &self.archive_output_config,
             config.as_base_config(),
-            job_id,
         );
 
         let listener = Listener::spawn(

@@ -10,7 +10,6 @@ use clp_rust_utils::{
         ClpIoConfig,
         CompressionJobId,
         CompressionJobStatus,
-        IngestionJobId,
         InputConfig,
         OutputConfig,
         S3ObjectMetadataInputConfig,
@@ -57,8 +56,8 @@ impl CompressionJobSubmitter {
         aws_authentication: AwsAuthentication,
         archive_output_config: &ArchiveOutput,
         ingestion_job_config: &BaseConfig,
-        ingestion_job_id: IngestionJobId,
     ) -> Self {
+        let ingestion_job_id = clp_compression_state.get_ingestion_job_id();
         let s3_object_metadata_input_config = S3ObjectMetadataInputConfig {
             s3_config: S3Config {
                 bucket: ingestion_job_config.bucket_name.clone(),
