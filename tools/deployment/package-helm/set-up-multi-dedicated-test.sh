@@ -55,7 +55,7 @@ done
 # whichever node claims them first, which conflicts with nodeSelector when workers are on dedicated
 # node pools.
 echo "Creating shared-data PersistentVolumes..."
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -64,8 +64,7 @@ spec:
   capacity:
     storage: 50Gi
   accessModes: [ReadWriteOnce]
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: standard
+  storageClassName: ""
   claimRef:
     namespace: default
     name: test-clp-shared-data-archives
@@ -81,8 +80,7 @@ spec:
   capacity:
     storage: 20Gi
   accessModes: [ReadWriteOnce]
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: standard
+  storageClassName: ""
   claimRef:
     namespace: default
     name: test-clp-shared-data-streams
