@@ -25,7 +25,7 @@ pub trait BufferSubmitter {
     async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()>;
 }
 
-/// A buffer that accumulates object metadata IDs and a running total size, and submits when the
+/// A buffer that accumulates object metadata IDs and submits when the
 /// size threshold is reached.
 ///
 /// # Type Parameters:
@@ -70,9 +70,9 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         &mut self,
         object_metadata_to_ingest: Vec<CompressionBufferEntry>,
     ) -> Result<()> {
-        for ref_ in object_metadata_to_ingest {
-            self.total_size += ref_.size;
-            self.buf.push(ref_.id);
+        for entry in object_metadata_to_ingest {
+            self.total_size += entry.size;
+            self.buf.push(entry.id);
 
             if self.total_size >= self.size_threshold {
                 self.submit().await?;

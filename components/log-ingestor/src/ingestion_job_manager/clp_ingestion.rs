@@ -706,7 +706,7 @@ impl ClpIngestionState {
     ///
     /// # Returns
     ///
-    /// A vector of [`CompressionBufferEntry`] for each row in
+    /// A vector of [`CompressionBufferEntry`] where each entry represents a row in
     /// [`IngestedS3ObjectMetadataStatus::Buffered`] for the underlying ingestion job on success.
     ///
     /// # Errors
@@ -888,19 +888,19 @@ impl ClpIngestionState {
                 );
             })?;
 
-        let mut refs = Vec::with_capacity(objects.len());
+        let mut buffer_entries = Vec::with_capacity(objects.len());
         for (chunk_id, chunk) in objects.chunks_mut(chunk_size).enumerate() {
             for (next_metadata_id, object) in
                 (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..)
                     .zip(chunk.iter_mut())
             {
-                refs.push(CompressionBufferEntry {
+                buffer_entries.push(CompressionBufferEntry {
                     id: next_metadata_id,
                     size: object.size,
                 });
             }
         }
-        self.sender.send(refs).await?;
+        self.sender.send(buffer_entries).await?;
         Ok(())
     }
 }

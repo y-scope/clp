@@ -50,9 +50,9 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                     return Ok(());
                 }
 
-                // New object metadata refs received.
-                optional_refs = self.receiver.recv() => {
-                    match optional_refs {
+                // New object metadata entries received.
+                optional_entries = self.receiver.recv() => {
+                    match optional_entries {
                         None => {
                             self.buffer.submit().await?;
                             tracing::info!(
@@ -60,8 +60,8 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                             );
                             return Ok(());
                         }
-                        Some(refs) => {
-                            self.buffer.add(refs).await?;
+                        Some(entries) => {
+                            self.buffer.add(entries).await?;
                         }
                     }
                 }

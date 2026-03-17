@@ -41,13 +41,13 @@ impl BufferSubmitter for TestBufferSubmitter {
 
 /// Sends [`CompressionBufferEntry`] values to the listener via the provided sender.
 async fn send_to_listener(
-    refs: Vec<CompressionBufferEntry>,
+    buffer_entries: Vec<CompressionBufferEntry>,
     sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
 ) {
     sender
-        .send(refs)
+        .send(buffer_entries)
         .await
-        .expect("Failed to send refs to listener");
+        .expect("Failed to send buffer entries to listener");
 }
 
 /// Creates [`CompressionBufferEntry`] values for testing. IDs start at `id_start`.
@@ -56,7 +56,7 @@ async fn send_to_listener(
 /// # Returns
 ///
 /// A vector of [`CompressionBufferEntry`] for testing.
-fn create_test_refs(id_start: S3ObjectMetadataId, count: usize) -> Vec<CompressionBufferEntry> {
+fn create_test_buffer_entries(id_start: S3ObjectMetadataId, count: usize) -> Vec<CompressionBufferEntry> {
     (id_start..id_start + count as S3ObjectMetadataId)
         .map(|id| CompressionBufferEntry {
             id,
@@ -79,18 +79,18 @@ async fn test_compression_listener() -> Result<()> {
         DEFAULT_LISTENER_CAPACITY,
     );
 
-    let refs1 = create_test_refs(1, 100);
-    let refs2 = create_test_refs(101, 100);
-    let refs3 = create_test_refs(201, 100);
+    let entries1 = create_test_buffer_entries(1, 100);
+    let entries2 = create_test_buffer_entries(101, 100);
+    let entries3 = create_test_buffer_entries(201, 100);
 
     // Spawn three tasks that send into the listener concurrently
     let sender1 = listener.get_new_sender();
     let sender2 = listener.get_new_sender();
     let sender3 = listener.get_new_sender();
 
-    let h1 = tokio::spawn(async move { send_to_listener(refs1, sender1).await });
-    let h2 = tokio::spawn(async move { send_to_listener(refs2, sender2).await });
-    let h3 = tokio::spawn(async move { send_to_listener(refs3, sender3).await });
+    let h1 = tokio::spawn(async move { send_to_listener(entries1, sender1).await });
+    let h2 = tokio::spawn(async move { send_to_listener(entries2, sender2).await });
+    let h3 = tokio::spawn(async move { send_to_listener(entries3, sender3).await });
 
     // Wait for all sender tasks to finish
     h1.await.unwrap();
