@@ -54,11 +54,10 @@ done
 # dynamically provisioned node-local volumes. Without this, the local-path-provisioner pins PVs to
 # whichever node claims them first, which conflicts with nodeSelector when workers are on dedicated
 # node pools.
-echo "Creating shared-data directories on all nodes..."
-for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
-    docker exec "${node}" mkdir -p /var/data/archives /var/data/streams
-    docker exec "${node}" chmod 777 /var/data/archives /var/data/streams
-done
+# Pre-create shared-data directories under CLP_HOME, which kind's extraMounts expose on every node.
+# Without a shared path, hostPath PVs would only contain data on the node that wrote it.
+shared_data_dir="${CLP_HOME}/data"
+mkdir -p "${shared_data_dir}/archives" "${shared_data_dir}/streams"
 
 echo "Creating shared-data PersistentVolumes..."
 kubectl apply -f - <<EOF
@@ -75,8 +74,7 @@ spec:
     namespace: default
     name: test-clp-shared-data-archives
   hostPath:
-    path: /var/data/archives
-
+    path: ${shared_data_dir}/archives
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -91,8 +89,7 @@ spec:
     namespace: default
     name: test-clp-shared-data-streams
   hostPath:
-    path: /var/data/streams
-
+    path: ${shared_data_dir}/streams
 EOF
 
 echo "Installing Helm chart..."
