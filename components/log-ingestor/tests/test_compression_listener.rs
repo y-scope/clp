@@ -56,7 +56,10 @@ async fn send_to_listener(
 /// # Returns
 ///
 /// A vector of [`CompressionBufferEntry`] for testing.
-fn create_test_buffer_entries(id_start: S3ObjectMetadataId, count: usize) -> Vec<CompressionBufferEntry> {
+fn create_test_buffer_entries(
+    id_start: S3ObjectMetadataId,
+    count: usize,
+) -> Vec<CompressionBufferEntry> {
     (id_start..id_start + count as S3ObjectMetadataId)
         .map(|id| CompressionBufferEntry {
             id,
