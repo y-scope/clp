@@ -6,8 +6,6 @@ from tests.utils.config import (
 )
 from tests.utils.subprocess_utils import run_and_log_subprocess
 
-DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
-
 
 def start_clp_package(package_test_config: PackageTestConfig) -> None:
     """

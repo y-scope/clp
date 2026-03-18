@@ -1,4 +1,4 @@
-"""Module docstring."""
+"""Utilities for subprocess management."""
 
 import logging
 import subprocess
@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 def run_and_log_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    """Docstring."""
+    """
+    Runs a subprocess from `cmd` and logs output.
+
+    :param cmd:
+    """
     log_msg = f"Running '{Path(cmd[0]).name}' subprocess. Command: {cmd}"
     logger.info(log_msg)
     proc = subprocess.run(

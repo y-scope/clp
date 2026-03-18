@@ -11,10 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 def log_subprocess_output_to_file(
-    subprocess: subprocess.CompletedProcess[str],
+    proc: subprocess.CompletedProcess[str],
     cmd: list[str],
 ) -> None:
-    """Docstring."""
+    """
+    Logs subprocess output summary to a unique file.
+
+    :param proc:
+    :param cmd:
+    """
     now = datetime.datetime.now()  # noqa: DTZ005
     test_run_id = now.strftime("%Y-%m-%d-%H-%M-%S")
     subprocess_output_file_path = (
@@ -22,8 +27,8 @@ def log_subprocess_output_to_file(
     )
     subprocess_output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    stdout_content = subprocess.stdout or "(empty)"
-    stderr_content = subprocess.stderr or "(empty)"
+    stdout_content = proc.stdout or "(empty)"
+    stderr_content = proc.stderr or "(empty)"
 
     if not stdout_content.endswith("\n"):
         stdout_content += "\n"
@@ -36,7 +41,7 @@ def log_subprocess_output_to_file(
         f"{sep}\n",
         f"Timestamp at completion : {now.strftime('%Y-%m-%d %H:%M:%S')}\n",
         f"Command                 : {cmd}\n",
-        f"Return Code             : {subprocess.returncode}\n",
+        f"Return Code             : {proc.returncode}\n",
         "\n\n",
         "captured stdout\n",
         f"{sep}\n",
