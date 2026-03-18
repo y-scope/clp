@@ -58,8 +58,8 @@ public:
 private:
     FilterBuilder(FilterType type, FilterNormalization normalization, BloomFilter bloom_filter);
 
-    FilterType m_type;
-    FilterNormalization m_normalization;
+    FilterType m_type{};
+    FilterNormalization m_normalization{};
     BloomFilter m_bloom_filter;
 };
 }  // namespace clp_s::filter

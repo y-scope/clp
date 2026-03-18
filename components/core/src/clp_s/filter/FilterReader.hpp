@@ -26,7 +26,7 @@ public:
      * - ErrorCodeEnum::UnsupportedFilterNormalization if the filter normalization ID is not
      *   supported.
      * - ErrorCodeEnum::ReadFailure for truncated/failed reads.
-     * @return Forwards the underlying filter implementation's return values on payload read
+     * - Forwards the underlying filter implementation's return values on payload read
      * failure.
      */
     [[nodiscard]] static auto try_read_from_file(clp::ReaderInterface& reader)
@@ -50,8 +50,8 @@ public:
 private:
     FilterReader(FilterType type, FilterNormalization normalization, BloomFilter bloom_filter);
 
-    FilterType m_type;
-    FilterNormalization m_normalization;
+    FilterType m_type{};
+    FilterNormalization m_normalization{};
     BloomFilter m_bloom_filter;
 };
 }  // namespace clp_s::filter
