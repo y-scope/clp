@@ -8,6 +8,7 @@ from clp_py_utils.clp_config import (
     Package,
     QueryEngine,
     StorageEngine,
+    WebUi,
 )
 
 from tests.utils.asserting_utils import (
@@ -27,6 +28,8 @@ CLP_TEXT_MODE = PackageModeConfig(
     clp_config=ClpConfig(
         package=Package(
             storage_engine=StorageEngine.CLP,
+        ),
+        webui=WebUi(
             query_engine=QueryEngine.CLP,
         ),
         api_server=None,

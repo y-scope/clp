@@ -127,7 +127,6 @@ data:
     log_ingestor: null
     {{- end }}
     package:
-      query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     query_scheduler:
       host: "{{ include "clp.fullname" . }}-query-scheduler"
@@ -208,6 +207,7 @@ data:
     webui:
       host: "localhost"
       port: 4000
+      query_engine: {{ .Values.clpConfig.webui.query_engine | quote }}
       rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
@@ -242,7 +242,7 @@ data:
   webui-client-settings.json: |
     {
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
-      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
       "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
@@ -311,7 +311,7 @@ data:
         {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
       "ArchiveOutputTargetSegmentSize":
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
-      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       "PrestoHost": null,
       "PrestoPort": null

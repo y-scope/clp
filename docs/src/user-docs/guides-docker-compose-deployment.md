@@ -131,9 +131,9 @@ below indicate how to do so, with comments indicating the startup order and depe
 services.
 
 :::{note}
-For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
-`package.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
-`reducer` services.
+When using the Presto query engine, you can disable the Celery query pipeline by setting
+`query_scheduler`, `query_worker`, and `reducer` to `null` in `clp-config.yaml`. When set to
+`null`, these services will not be started.
 :::
 
 :::{tip}

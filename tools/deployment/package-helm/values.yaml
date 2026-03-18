@@ -82,7 +82,6 @@ clpConfig:
 
   package:
     storage_engine: "clp-s"
-    query_engine: "clp-s"
 
   # API server config
   api_server:
@@ -162,6 +161,7 @@ clpConfig:
 
   webui:
     port: 30000
+    query_engine: "clp-s"
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
