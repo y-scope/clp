@@ -390,7 +390,12 @@ data:
     clp.storage-type=s3
     clp.s3-auth-provider=clp_package
     clp.s3-access-key-id={{ .s3_config.aws_authentication.credentials.access_key_id }}
-    clp.s3-end-point=https://{{ .s3_config.bucket }}.s3.{{ .s3_config.region_code }}.amazonaws.com/
+    clp.s3-bucket={{ .s3_config.bucket }}
+    {{- if .s3_config.endpoint_url }}
+    clp.s3-end-point={{ trimSuffix "/" .s3_config.endpoint_url }}
+    {{- else }}
+    clp.s3-end-point=https://s3.{{ .s3_config.region_code }}.amazonaws.com
+    {{- end }}
     clp.s3-secret-access-key={{ .s3_config.aws_authentication.credentials.secret_access_key }}
     {{- end }}{{/* if eq .type "s3" */}}
     {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
