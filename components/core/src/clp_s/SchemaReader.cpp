@@ -5,6 +5,7 @@
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/BufferViewReader.hpp>
+#include <clp_s/ErrorCode.hpp>
 #include <clp_s/Schema.hpp>
 
 namespace clp_s {
@@ -224,7 +225,7 @@ bool SchemaReader::get_next_message(std::string& message) {
         message += '\n';
     }
 
-    m_cur_message++;
+    ++m_cur_message;
     return true;
 }
 
@@ -232,7 +233,7 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
     while (m_cur_message < m_num_messages && nullptr != filter
            && false == filter->filter(m_cur_message))
     {
-        m_cur_message++;
+        ++m_cur_message;
     }
 
     if (m_cur_message >= m_num_messages) {
@@ -250,7 +251,7 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
         }
     }
 
-    m_cur_message++;
+    ++m_cur_message;
     return true;
 }
 
@@ -265,7 +266,7 @@ bool SchemaReader::get_next_message_with_metadata(
     while (m_cur_message < m_num_messages && nullptr != filter
            && false == filter->filter(m_cur_message))
     {
-        m_cur_message++;
+        ++m_cur_message;
     }
 
     if (m_cur_message >= m_num_messages) {
@@ -286,7 +287,7 @@ bool SchemaReader::get_next_message_with_metadata(
     timestamp = m_get_timestamp();
     log_event_idx = get_next_log_event_idx();
 
-    m_cur_message++;
+    ++m_cur_message;
     return true;
 }
 
