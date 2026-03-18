@@ -88,7 +88,7 @@ Creates timings for liveness probes.
 @return {string} YAML-formatted liveness probe timing configuration
 */}}
 {{- define "clp.livenessProbeTimings" -}}
-initialDelaySeconds: 60
+initialDelaySeconds: 180
 periodSeconds: 30
 timeoutSeconds: 4
 failureThreshold: 3
