@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -15,7 +16,29 @@
 #include "FilterOptions.hpp"
 
 namespace clp_s::filter {
-auto FilterReader::try_read_from_file(clp::ReaderInterface& reader)
+namespace {
+[[nodiscard]] auto try_parse_filter_type_id(uint8_t filter_type_id) -> std::optional<FilterType> {
+    if (static_cast<uint8_t>(FilterType::Bloom) == filter_type_id) {
+        return FilterType::Bloom;
+    }
+
+    return std::nullopt;
+}
+
+[[nodiscard]] auto try_parse_filter_normalization_id(uint8_t filter_normalization_id)
+        -> std::optional<FilterNormalization> {
+    if (static_cast<uint8_t>(FilterNormalization::None) == filter_normalization_id) {
+        return FilterNormalization::None;
+    }
+    if (static_cast<uint8_t>(FilterNormalization::Lowercase) == filter_normalization_id) {
+        return FilterNormalization::Lowercase;
+    }
+
+    return std::nullopt;
+}
+}  // namespace
+
+auto FilterReader::try_read(clp::ReaderInterface& reader)
         -> ystdlib::error_handling::Result<FilterReader> {
     std::array<char, cFilterFileMagic.size()> magic{};
     if (clp::ErrorCode_Success
@@ -49,7 +72,7 @@ auto FilterReader::try_read_from_file(clp::ReaderInterface& reader)
         return ErrorCode{ErrorCodeEnum::UnsupportedFilterNormalization};
     }
 
-    auto bloom_filter{YSTDLIB_ERROR_HANDLING_TRYX(BloomFilter::try_read_from_file(reader))};
+    auto bloom_filter{YSTDLIB_ERROR_HANDLING_TRYX(BloomFilter::try_read(reader))};
     return FilterReader{
             optional_filter_type.value(),
             optional_filter_normalization.value(),
@@ -60,6 +83,15 @@ auto FilterReader::try_read_from_file(clp::ReaderInterface& reader)
 auto FilterReader::possibly_contains(std::string_view value) const -> bool {
     auto const normalized_value{normalize_string(value, m_normalization)};
     return m_bloom_filter.possibly_contains(normalized_value);
+}
+
+auto FilterReader::possibly_contains_wildcard(std::string_view) const -> bool {
+    switch (m_type) {
+        case FilterType::Bloom:
+            return true;
+    }
+
+    return true;
 }
 
 FilterReader::FilterReader(

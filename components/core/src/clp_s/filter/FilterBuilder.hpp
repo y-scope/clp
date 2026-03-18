@@ -13,7 +13,7 @@
 
 namespace clp_s::filter {
 /**
- * Builds variable-dictionary filters and writes them to a writer.
+ * Builds filters and writes them to a writer.
  */
 class FilterBuilder {
 public:
@@ -46,11 +46,8 @@ public:
      * Writes a serialized filter representation to a writer.
      * @param writer
      */
-    auto write_to_file(clp::WriterInterface& writer) const -> void;
+    auto write(clp::WriterInterface& writer) const -> void;
 
-    /**
-     * @return The configured filter type.
-     */
     [[nodiscard]] auto get_type() const -> FilterType { return m_type; }
 
     [[nodiscard]] auto get_normalization() const -> FilterNormalization { return m_normalization; }

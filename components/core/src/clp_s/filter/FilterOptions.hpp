@@ -9,14 +9,14 @@
 
 namespace clp_s::filter {
 /**
- * Supported filter types for variable dictionaries.
+ * Supported filter representations.
  */
 enum class FilterType : uint8_t {
     Bloom = 1,
 };
 
 /**
- * Supported normalization strategies for variable dictionary values.
+ * Supported normalization strategies for filter values.
  */
 enum class FilterNormalization : uint8_t {
     None = 0,
@@ -29,27 +29,12 @@ enum class FilterNormalization : uint8_t {
 constexpr std::array<char, 4> cFilterFileMagic{{'C', 'L', 'P', 'F'}};
 
 /**
- * Parses a serialized filter type ID.
- * @param filter_type_id Encoded filter type ID from serialized payload.
- * @return Parsed filter type for known IDs, or std::nullopt otherwise.
- */
-[[nodiscard]] auto try_parse_filter_type_id(uint8_t filter_type_id) -> std::optional<FilterType>;
-
-/**
  * Parses a filter type string.
  * @param filter_type_string Case-sensitive filter type string.
  * @return Parsed filter type for known strings, or std::nullopt otherwise.
  */
 [[nodiscard]] auto try_parse_filter_type(std::string_view filter_type_string)
         -> std::optional<FilterType>;
-
-/**
- * Parses a serialized filter normalization ID.
- * @param filter_normalization_id Encoded filter normalization ID from serialized payload.
- * @return Parsed filter normalization for known IDs, or std::nullopt otherwise.
- */
-[[nodiscard]] auto try_parse_filter_normalization_id(uint8_t filter_normalization_id)
-        -> std::optional<FilterNormalization>;
 
 /**
  * Returns a copy of the given string after applying the specified filter normalization strategy.

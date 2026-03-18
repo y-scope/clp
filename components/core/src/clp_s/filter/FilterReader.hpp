@@ -29,7 +29,7 @@ public:
      * - Forwards the underlying filter implementation's return values on payload read
      * failure.
      */
-    [[nodiscard]] static auto try_read_from_file(clp::ReaderInterface& reader)
+    [[nodiscard]] static auto try_read(clp::ReaderInterface& reader)
             -> ystdlib::error_handling::Result<FilterReader>;
 
     /**
@@ -41,8 +41,14 @@ public:
     [[nodiscard]] auto possibly_contains(std::string_view value) const -> bool;
 
     /**
-     * @return The parsed filter type.
+     * Checks whether the filter may contain the wildcard search string.
+     * The caller is responsible for determining whether `value` should be treated as a wildcard
+     * query.
+     * @param value
+     * @return true if the filter may contain `value`; false if it definitely does not.
      */
+    [[nodiscard]] auto possibly_contains_wildcard(std::string_view value) const -> bool;
+
     [[nodiscard]] auto get_type() const -> FilterType { return m_type; }
 
     [[nodiscard]] auto get_normalization() const -> FilterNormalization { return m_normalization; }

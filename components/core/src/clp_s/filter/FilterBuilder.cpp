@@ -20,10 +20,12 @@ auto FilterBuilder::create(
         size_t expected_num_elements,
         double false_positive_rate
 ) -> ystdlib::error_handling::Result<FilterBuilder> {
-    if (FilterNormalization::None != normalization
-        && FilterNormalization::Lowercase != normalization)
-    {
-        return ErrorCode{ErrorCodeEnum::UnsupportedFilterNormalization};
+    switch (normalization) {
+        case FilterNormalization::None:
+        case FilterNormalization::Lowercase:
+            break;
+        default:
+            return ErrorCode{ErrorCodeEnum::UnsupportedFilterNormalization};
     }
 
     switch (type) {
@@ -43,11 +45,11 @@ auto FilterBuilder::add(std::string_view value) -> void {
     m_bloom_filter.add(normalized_value);
 }
 
-auto FilterBuilder::write_to_file(clp::WriterInterface& writer) const -> void {
+auto FilterBuilder::write(clp::WriterInterface& writer) const -> void {
     writer.write(cFilterFileMagic.data(), cFilterFileMagic.size());
     writer.write_numeric_value(static_cast<uint8_t>(m_type));
     writer.write_numeric_value(static_cast<uint8_t>(m_normalization));
-    m_bloom_filter.write_to_file(writer);
+    m_bloom_filter.write(writer);
 }
 
 FilterBuilder::FilterBuilder(
