@@ -117,8 +117,8 @@ get_presto_helm_args() {
          "--set" "clpConfig.presto.coordinator.query_max_memory_per_node_gb=1" \
          "--set" "clpConfig.presto.worker.query_memory_gb=4" \
          "--set" "clpConfig.presto.worker.system_memory_gb=8" \
-         "--set-json" "$(cat <<'SPLIT_FILTER'
-clpConfig.presto.split_filter={
+         "--set-json" "clpConfig.presto.split_filter=$(tr -d '[:space:]' <<'SPLIT_FILTER'
+{
   "clp.default.default": [{
     "columnName": "timestamp",
     "customOptions": {
