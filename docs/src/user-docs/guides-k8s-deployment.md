@@ -132,8 +132,11 @@ this section for testing or development.
    require shared local storage between workers. If you use S3 storage, you can skip this section.
    :::
 
-   If storage type is set to `fs`, users must manually provision the persistent volumes and update
-   `accessModes` of PVCs.
+   If storage type is set to `fs`, the shared-data directories (`/var/data/archives`,
+   `/var/data/streams`) must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+   the same path). Users must pre-create PersistentVolumes backed by this shared storage and use
+   `claimRef` to bind them to the chart's PVCs (`<release>-clp-shared-data-archives` and
+   `<release>-clp-shared-data-streams`).
 
 2. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
