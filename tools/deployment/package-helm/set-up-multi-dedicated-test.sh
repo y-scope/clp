@@ -50,6 +50,49 @@ for ((i = NUM_COMPRESSION_NODES; i < total_workers; i++)); do
     kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=query --overwrite
 done
 
+# Pre-create shared-data PVs with hostPath (no node affinity) so PVCs bind to them instead of
+# dynamically provisioned node-local volumes. Without this, the local-path-provisioner pins PVs to
+# whichever node claims them first, which conflicts with nodeSelector when workers are on dedicated
+# node pools.
+# Pre-create shared-data directories under CLP_HOME, which kind's extraMounts expose on every node.
+# Without a shared path, hostPath PVs would only contain data on the node that wrote it.
+shared_data_dir="${CLP_HOME}/data"
+mkdir -p "${shared_data_dir}/archives" "${shared_data_dir}/streams"
+chmod 777 "${shared_data_dir}/archives" "${shared_data_dir}/streams"
+
+echo "Creating shared-data PersistentVolumes..."
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-clp-shared-data-archives
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes: [ReadWriteOnce]
+  storageClassName: ""
+  claimRef:
+    namespace: default
+    name: test-clp-shared-data-archives
+  hostPath:
+    path: ${shared_data_dir}/archives
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: test-clp-shared-data-streams
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes: [ReadWriteOnce]
+  storageClassName: ""
+  claimRef:
+    namespace: default
+    name: test-clp-shared-data-streams
+  hostPath:
+    path: ${shared_data_dir}/streams
+EOF
+
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2

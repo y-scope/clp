@@ -3,12 +3,9 @@ use std::pin::Pin;
 use async_stream::stream;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
-    clp_config::{
-        AwsAuthentication,
-        package::{
-            config::{Config, StorageEngine, StreamOutputStorage},
-            credentials::Credentials,
-        },
+    clp_config::package::{
+        config::{Config, StorageEngine, StreamOutputStorage},
+        credentials::Credentials,
     },
     database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
@@ -374,8 +371,6 @@ impl Client {
             unreachable!();
         };
 
-        let AwsAuthentication::Credentials { credentials } = &s3_config.aws_authentication;
-
         let s3_config = s3_config.clone();
         if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
             return Err(ClientError::Aws {
@@ -384,15 +379,14 @@ impl Client {
             });
         }
 
-        let credentials = credentials.clone();
+        let region_str = s3_config
+            .region_code
+            .as_ref()
+            .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str);
         let s3_client = clp_rust_utils::s3::create_new_client(
-            credentials.access_key_id.as_str(),
-            credentials.secret_access_key.as_str(),
-            s3_config
-                .region_code
-                .as_ref()
-                .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
+            region_str,
             s3_config.endpoint_url.as_ref(),
+            &s3_config.aws_authentication,
         )
         .await;
 
@@ -481,6 +475,52 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
+    }
+
+    /// Retrieves timestamp column names for a given dataset.
+    ///
+    /// # Returns
+    ///
+    /// A vector of timestamp column name strings on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    pub async fn get_timestamp_column_names(
+        &self,
+        dataset_name: &str,
+    ) -> Result<Vec<String>, ClientError> {
+        // Must be kept in sync with `NodeType::Timestamp` in
+        // `components/core/src/clp_s/SchemaTree.hpp`.
+        const TIMESTAMP_NODE_TYPE: i8 = 14;
+        // MySQL error number for "Table doesn't exist".
+        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
+
+        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+            return Err(ClientError::InvalidDatasetName);
+        }
+        let table_name = format!("clp_{dataset_name}_column_metadata");
+        let names: Vec<String> =
+            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
+                .bind(TIMESTAMP_NODE_TYPE)
+                .fetch_all(&self.sql_pool)
+                .await
+                .map_err(|err| {
+                    if let sqlx::Error::Database(db_err) = &err
+                        && let Some(mysql_err) =
+                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                    {
+                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                    }
+                    err.into()
+                })?;
+
+        Ok(names)
     }
 
     /// # Returns
