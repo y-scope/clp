@@ -229,28 +229,29 @@ bool SchemaReader::get_next_message(std::string& message) {
 }
 
 bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
-    while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message)) {
-            m_cur_message++;
-            continue;
-        }
-
-        if (m_should_marshal_records) {
-            if (false == m_serializer_initialized) {
-                initialize_serializer();
-            }
-            message = generate_json_string(m_cur_message);
-
-            if (message.back() != '\n') {
-                message += '\n';
-            }
-        }
-
+    while (m_cur_message < m_num_messages && nullptr != filter
+           && false == filter->filter(m_cur_message))
+    {
         m_cur_message++;
-        return true;
     }
 
-    return false;
+    if (m_cur_message >= m_num_messages) {
+        return false;
+    }
+
+    if (m_should_marshal_records) {
+        if (false == m_serializer_initialized) {
+            initialize_serializer();
+        }
+        message = generate_json_string(m_cur_message);
+
+        if (message.back() != '\n') {
+            message += '\n';
+        }
+    }
+
+    m_cur_message++;
+    return true;
 }
 
 bool SchemaReader::get_next_message_with_metadata(
@@ -261,38 +262,45 @@ bool SchemaReader::get_next_message_with_metadata(
 ) {
     // TODO: If we already get max_num_results messages, we can skip messages
     // with the timestamp less than the smallest timestamp in the priority queue
-    while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message)) {
-            m_cur_message++;
-            continue;
-        }
-
-        if (m_should_marshal_records) {
-            if (false == m_serializer_initialized) {
-                initialize_serializer();
-            }
-            message = generate_json_string(m_cur_message);
-
-            if (message.back() != '\n') {
-                message += '\n';
-            }
-        }
-
-        timestamp = m_get_timestamp();
-        log_event_idx = get_next_log_event_idx();
-
+    while (m_cur_message < m_num_messages && nullptr != filter
+           && false == filter->filter(m_cur_message))
+    {
         m_cur_message++;
-        return true;
     }
 
-    return false;
+    if (m_cur_message >= m_num_messages) {
+        return false;
+    }
+
+    if (m_should_marshal_records) {
+        if (false == m_serializer_initialized) {
+            initialize_serializer();
+        }
+        message = generate_json_string(m_cur_message);
+
+        if (message.back() != '\n') {
+            message += '\n';
+        }
+    }
+
+    timestamp = m_get_timestamp();
+    log_event_idx = get_next_log_event_idx();
+
+    m_cur_message++;
+    return true;
 }
 
 void SchemaReader::initialize_filter(FilterClass* filter) {
+    if (nullptr == filter) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
     filter->init(this, m_columns);
 }
 
 void SchemaReader::initialize_filter_with_column_map(FilterClass* filter) {
+    if (nullptr == filter) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
     filter->init(this, m_column_map);
 }
 
