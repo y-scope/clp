@@ -40,11 +40,12 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 storage and query engines will default to `clp-s`, which is optimized for JSON logs rather than
 unstructured text logs.
 
-To use `clp-text`, the `package` block should be configured as follows:
+To use `clp-text`, the `package` and `webui` blocks should be configured as follows:
 
 ```yaml
 package:
   storage_engine: "clp"
+webui:
   query_engine: "clp"
 ```
 ````
@@ -100,7 +101,7 @@ helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.package.storage_engine=clp \
-  --set clpConfig.package.query_engine=clp \
+  --set clpConfig.webui.query_engine=clp \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \

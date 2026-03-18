@@ -203,6 +203,7 @@ clpConfig:
   # Use clp-text, instead of clp-json (default)
   package:
     storage_engine: "clp"  # Use "clp-s" for clp-json, "clp" for clp-text
+  webui:
     query_engine: "clp"   # Use "clp-s" for clp-json, "clp" for clp-text, "presto" for Presto
 
   # Configure archive output

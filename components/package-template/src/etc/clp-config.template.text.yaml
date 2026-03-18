@@ -2,7 +2,6 @@
 
 package:
   storage_engine: "clp"
-  query_engine: "clp"
 
 # API server config
 api_server: null
@@ -86,7 +85,8 @@ log_ingestor: null
 #query_worker:
 #  logging_level: "INFO"
 #
-#webui:
+webui:
+  query_engine: "clp"
 #  host: "localhost"
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
