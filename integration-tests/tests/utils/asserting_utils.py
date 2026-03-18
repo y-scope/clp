@@ -1,9 +1,7 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-import subprocess
 from pathlib import Path
-from typing import Any
 
 import pytest
 from clp_package_utils.general import EXTRACT_FILE_CMD
@@ -13,25 +11,14 @@ from pydantic import ValidationError
 from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance, PackageTestConfig
 from tests.utils.docker_utils import list_running_services_in_compose_project
-from tests.utils.utils import clear_directory, is_dir_tree_content_equal, load_yaml_to_dict
+from tests.utils.subprocess_utils import run_and_log_subprocess
+from tests.utils.utils import (
+    clear_directory,
+    is_dir_tree_content_equal,
+    load_yaml_to_dict,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def run_and_log_to_file(request: pytest.FixtureRequest, cmd: list[str], **kwargs: Any) -> None:
-    """
-    Runs a command with subprocess.
-
-    :param request: Pytest fixture request.
-    :param cmd: Command and arguments to execute.
-    :param kwargs: Additional keyword arguments passed through to the subprocess.
-    :raise: Propagates `subprocess.run`'s errors.
-    """
-    log_file_path = Path(request.config.getini("log_file_path"))
-    with log_file_path.open("ab") as log_file:
-        log_debug_msg = f"Now running command: {cmd}"
-        logger.debug(log_debug_msg)
-        subprocess.run(cmd, stdout=log_file, stderr=log_file, check=True, **kwargs)
 
 
 def validate_package_instance(package_instance: PackageInstance) -> None:
@@ -42,8 +29,10 @@ def validate_package_instance(package_instance: PackageInstance) -> None:
 
     :param package_instance:
     """
-    mode_name = package_instance.package_test_config.mode_config.mode_name
-    logger.info("Validating that the '%s' package is running correctly...", mode_name)
+    log_msg = (
+        f"Validating the '{package_instance.package_test_config.mode_config.mode_name}' package."
+    )
+    logger.info(log_msg)
 
     # Ensure that all package components are running.
     _validate_package_running(package_instance)
@@ -60,9 +49,6 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
-    mode_name = package_instance.package_test_config.mode_config.mode_name
-    logger.debug("Validating that all components of the '%s' package are running...", mode_name)
-
     # Get list of services currently running in the Compose project.
     instance_id = package_instance.clp_instance_id
     project_name = f"clp-package-{instance_id}"
@@ -73,19 +59,17 @@ def _validate_package_running(package_instance: PackageInstance) -> None:
     if required_components == running_services:
         return
 
-    # Construct error message.
-    err_msg = f"Component validation failed for the {mode_name} package test."
+    fail_msg = "Component mismatch."
 
     missing_components = required_components - running_services
     if missing_components:
-        err_msg += f" Missing components: {missing_components}."
+        fail_msg += f"\nMissing components: {missing_components}."
 
     unexpected_components = running_services - required_components
     if unexpected_components:
-        err_msg += f" Unexpected services: {unexpected_components}."
+        fail_msg += f"\nUnexpected services: {unexpected_components}."
 
-    logger.error(construct_log_err_msg(err_msg))
-    pytest.fail(err_msg)
+    pytest.fail(fail_msg)
 
 
 def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
@@ -99,18 +83,11 @@ def _validate_running_mode_correct(package_instance: PackageInstance) -> None:
     :raise pytest.fail: if the ClpConfig object cannot be validated.
     :raise pytest.fail: if the running ClpConfig does not match the intended ClpConfig.
     """
-    mode_name = package_instance.package_test_config.mode_config.mode_name
-    logger.debug(
-        "Validating that the '%s' package is running in the correct configuration...", mode_name
-    )
-
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = ClpConfig.model_validate(shared_config_dict)
     except ValidationError as err:
-        err_msg = f"The shared config file could not be validated: {err}"
-        logger.error(construct_log_err_msg(err_msg))
-        pytest.fail(err_msg)
+        pytest.fail(f"Shared config failed validation: {err}")
 
     intended_config = package_instance.package_test_config.mode_config.clp_config
 
@@ -131,6 +108,8 @@ def verify_package_compression(
     :param package_test_config:
     """
     mode = package_test_config.mode_config.mode_name
+    log_msg = f"Verifying {mode} package compression."
+    logger.info(log_msg)
 
     if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
@@ -154,7 +133,7 @@ def verify_package_compression(
         ]
 
         # Run decompression command and assert that it succeeds.
-        run_and_assert(decompress_cmd)
+        run_and_log_subprocess(decompress_cmd)
 
         # Verify content equality.
         output_path = decompression_dir / path_to_original_dataset.relative_to(

@@ -1,23 +1,20 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
     PackageCompressionJob,
     PackageTestConfig,
 )
+from tests.utils.subprocess_utils import run_and_log_subprocess
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 
 
-def start_clp_package(
-    request: pytest.FixtureRequest, package_test_config: PackageTestConfig
-) -> None:
+def start_clp_package(package_test_config: PackageTestConfig) -> None:
     """
     Starts an instance of the CLP package.
 
-    :param request: Pytest fixture request.
     :param package_test_config:
-    :raise: Propagates `run_and_log_to_file`'s errors.
+    :raise: Propagates `run_and_log_subprocess`'s errors.
     """
     path_config = package_test_config.path_config
     start_script_path = path_config.start_script_path
@@ -29,25 +26,15 @@ def start_clp_package(
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-
-    try:
-        run_and_log_to_file(request, start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
-    except (SubprocessError, OSError):
-        mode_name = package_test_config.mode_config.mode_name
-        err_msg = f"The '{mode_name}' package failed to start."
-        logger.error(construct_log_err_msg(err_msg))
-        pytest.fail(err_msg)
+    run_and_log_subprocess(start_cmd)
 
 
-def stop_clp_package(
-    request: pytest.FixtureRequest, package_test_config: PackageTestConfig
-) -> None:
+def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     """
     Stops the running instance of the CLP package.
 
-    :param request: Pytest fixture request.
     :param package_test_config:
-    :raise: Propagates `run_and_log_to_file`'s errors.
+    :raise: Propagates `run_and_log_subprocess`'s errors.
     """
     path_config = package_test_config.path_config
     stop_script_path = path_config.stop_script_path
@@ -59,7 +46,7 @@ def stop_clp_package(
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_assert(stop_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
+    run_and_log_subprocess(stop_cmd)
 
 
 def run_package_compression_script(
@@ -91,4 +78,4 @@ def run_package_compression_script(
     compress_cmd.append(str(compression_job.path_to_original_dataset))
 
     # Run compression command for this job and assert that it succeeds.
-    run_and_assert(compress_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
+    run_and_log_subprocess(compress_cmd)

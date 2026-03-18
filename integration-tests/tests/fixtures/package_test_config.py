@@ -6,7 +6,6 @@ from collections.abc import Iterator
 import pytest
 
 from tests.utils.config import PackageModeConfig, PackagePathConfig, PackageTestConfig
-from tests.utils.logging_utils import construct_log_err_msg
 from tests.utils.port_utils import assign_ports_from_base
 
 logger = logging.getLogger(__name__)
@@ -26,23 +25,24 @@ def fixt_package_test_config(
     :raise ValueError: if the CLP base port's value is invalid.
     """
     mode_config: PackageModeConfig = request.param
-    mode_name = mode_config.mode_name
     clp_config_obj = mode_config.clp_config
 
-    logger.info("Setting up the '%s' package...", mode_name)
-
     # Assign ports based on the clp base port CLI option.
-    logger.debug("Assigning ports to the components in the '%s' package...", mode_name)
+    log_msg = f"Assigning ports to the '{mode_config.mode_name}' package."
+    logger.info(log_msg)
     base_port_string = request.config.getoption("--base-port")
     try:
         base_port = int(base_port_string)
     except ValueError as err:
         err_msg = f"Invalid value '{base_port_string}' for '--base-port'; expected an integer."
-        logger.error(construct_log_err_msg(err_msg))
         raise ValueError(err_msg) from err
     assign_ports_from_base(base_port, clp_config_obj)
 
     # Construct PackageTestConfig.
+    log_msg = (
+        f"Constructing the PackageTestConfig object for the '{mode_config.mode_name}' package."
+    )
+    logger.info(log_msg)
     package_test_config = PackageTestConfig(
         path_config=fixt_package_path_config,
         mode_config=mode_config,
@@ -52,5 +52,4 @@ def fixt_package_test_config(
     try:
         yield package_test_config
     finally:
-        logger.info("Cleaning up the '%s' package...", mode_name)
         package_test_config.temp_config_file_path.unlink(missing_ok=True)
