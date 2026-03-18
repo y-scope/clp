@@ -66,10 +66,6 @@ spec:
               ) | quote }}
               mountPath: "/var/data/archives"
               readOnly: true
-            {{- else if eq .Values.clpConfig.archive_output.storage.type "s3" }}
-            - name: "host-ca-certs"
-              mountPath: "/etc/ssl/certs"
-              readOnly: true
             {{- end }}
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
@@ -103,10 +99,5 @@ spec:
             "component_category" "shared-data"
             "name" "archives"
           ) | nindent 10 }}
-        {{- else if eq .Values.clpConfig.archive_output.storage.type "s3" }}
-        - name: "host-ca-certs"
-          hostPath:
-            path: "/etc/ssl/certs"
-            type: "Directory"
         {{- end }}
 {{- end }}
