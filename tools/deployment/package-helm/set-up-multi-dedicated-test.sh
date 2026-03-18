@@ -79,6 +79,7 @@ done
 # Without a shared path, hostPath PVs would only contain data on the node that wrote it.
 shared_data_dir="${CLP_HOME}/data"
 mkdir -p "${shared_data_dir}/archives" "${shared_data_dir}/streams"
+chmod 777 "${shared_data_dir}/archives" "${shared_data_dir}/streams"
 
 echo "Creating shared-data PersistentVolumes..."
 kubectl apply -f - <<EOF
