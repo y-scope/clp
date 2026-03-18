@@ -753,6 +753,8 @@ set(SOURCE_FILES_unitTest
         )
 
 if(CLP_ENABLE_TESTS)
+    add_subdirectory(tests/regression_files)
+
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}
