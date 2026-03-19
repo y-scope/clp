@@ -24,7 +24,8 @@ services:
       retries: 30
 
   presto-worker:
-    image: "ghcr.io/y-scope/presto/prestissimo-worker:${CLP_PRESTO_WORKER_IMAGE_TAG:-clp-v0.10.0-fix.1}"
+    image: >-
+      ghcr.io/y-scope/presto/prestissimo-worker:${CLP_PRESTO_WORKER_IMAGE_TAG:-clp-v0.10.0-fix.1}
     depends_on:
       presto-coordinator:
         condition: "service_healthy"
