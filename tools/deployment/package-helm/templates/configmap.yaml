@@ -226,8 +226,8 @@ data:
     {{- end }}
     {{- if .Values.clpConfig.presto }}
     presto:
-      host: "{{ include "clp.fullname" . }}-presto-coordinator"
-      port: 8889
+      host: "{{ include "clp.prestoHost" . }}"
+      port: {{ include "clp.prestoPort" . | int }}
     {{- else }}
     presto: null
     {{- end }}
@@ -326,14 +326,15 @@ data:
       "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
       {{- if .Values.clpConfig.presto }}
-      "PrestoHost": "{{ include "clp.fullname" . }}-presto-coordinator",
-      "PrestoPort": 8889
+      "PrestoHost": "{{ include "clp.prestoHost" . }}",
+      "PrestoPort": {{ include "clp.prestoPort" . | int }}
       {{- else }}
       "PrestoHost": null,
       "PrestoPort": null
       {{- end }}
     }
 
+{{- if and .Values.clpConfig.presto (has "presto" .Values.clpConfig.bundled) }}
 {{- with .Values.clpConfig.presto }}
   presto-coordinator-catalog-clp.properties: |
     connector.name=clp
@@ -435,3 +436,4 @@ data:
     echo "node.internal-address=$(hostname -i)" >> "${PRESTO_CONFIG_DIR}/node.properties"
     echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
 {{- end }}{{/* with .Values.clpConfig.presto */}}
+{{- end }}{{/* if has "presto" .Values.clpConfig.bundled */}}

@@ -1,4 +1,4 @@
-{{- if .Values.clpConfig.presto }}
+{{- if and .Values.clpConfig.presto (has "presto" .Values.clpConfig.bundled) }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:

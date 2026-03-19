@@ -103,6 +103,7 @@ clpConfig:
     - "queue"
     - "redis"
     - "results_cache"
+    - "presto"
 
   package:
     storage_engine: "clp-s"
@@ -193,9 +194,10 @@ clpConfig:
   #   port: 30800
   #   logging_level: "INFO"
 
-  # Presto query engine config. Uncomment to enable Presto deployments. If you want the Web UI to
-  # expose Presto SQL, also set `webui.query_engine: "presto"`.
+  # Presto query engine config. When "presto" is in `bundled`, the chart deploys Presto coordinator
+  # and worker pods. When not in `bundled`, set `host` and `port` to an external Presto instance.
   presto: null
+  #   host: "localhost"
   #   port: 30889
   #   coordinator:
   #     logging_level: "INFO"
