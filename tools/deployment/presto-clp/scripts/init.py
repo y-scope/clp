@@ -312,8 +312,8 @@ def _resolve_s3_endpoint_url(
         return endpoint_url.rstrip("/")
 
     if region_code is None:
-        return f"https://{bucket_name}.s3.{AWS_S3_DOMAIN}"
-    return f"https://{bucket_name}.s3.{region_code}.{AWS_S3_DOMAIN}"
+        return f"https://s3.{AWS_S3_DOMAIN}"
+    return f"https://s3.{region_code}.{AWS_S3_DOMAIN}"
 
 
 def _add_memory_env_vars(env_vars: dict[str, str]) -> bool:
