@@ -297,9 +297,7 @@ def _add_clp_s3_env_vars(
     return True
 
 
-def _resolve_s3_endpoint_url(
-    endpoint_url: str | None, region_code: str | None
-) -> str:
+def _resolve_s3_endpoint_url(endpoint_url: str | None, region_code: str | None) -> str:
     """
     Returns the resolved S3 endpoint URL, or constructs an AWS S3 URL if not provided.
 
