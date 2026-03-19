@@ -16,7 +16,7 @@ image:
   prestoWorker:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
     pullPolicy: "IfNotPresent"
-    tag: "clp-v0.10.0"
+    tag: "clp-v0.10.0-fix.1"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
