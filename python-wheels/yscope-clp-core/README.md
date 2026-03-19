@@ -15,9 +15,9 @@ See the PyPI project page for [release][pypi-release] details.
 
 ## Scope and compatibility
 
-> [!IMPORTANT]
-> The current package only includes the `clp-s` binary. Support for additional CLP core tools will
-> be added in future releases.
+The current package includes:
+* The `clp-s` binary
+* Python APIs `open_archive` and `search_archive` for working with CLP archives.
 
 ## Documentation
 

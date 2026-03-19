@@ -3,17 +3,50 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "LogEvent.hpp"
+
 namespace clp_s {
 // Forward include
 class ArchiveReader;
+class SchemaReader;
 }  // namespace clp_s
 
 namespace clp_s::ffi::sfa {
+/**
+ * Metadata describing a single source file's event-index range within a single-file archive.
+ */
+class FileInfo {
+public:
+    // Constructor
+    FileInfo(std::string_view file_name, int64_t start_index, int64_t end_index)
+            : m_file_name{file_name},
+              m_start_index{start_index},
+              m_end_index{end_index} {}
+
+    // Methods
+    [[nodiscard]] auto get_file_name() const -> std::string const& { return m_file_name; }
+
+    [[nodiscard]] auto get_start_index() const -> int64_t { return m_start_index; }
+
+    [[nodiscard]] auto get_end_index() const -> int64_t { return m_end_index; }
+
+    [[nodiscard]] auto get_event_count() const -> uint64_t {
+        return static_cast<uint64_t>(m_end_index - m_start_index);
+    }
+
+private:
+    // Members
+    std::string m_file_name;
+    int64_t m_start_index{0};
+    int64_t m_end_index{0};
+};
+
 /**
  * A thin wrapper around `clp_s::ArchiveReader` for single file archive FFI entrypoints.
  */
@@ -27,6 +60,8 @@ public:
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
+     * - `SfaErrorCodeEnum::NoMemory` if archive initialization fails due to OOM issues.
+     * - Forwards `ClpArchiveReader::precompute_archive_metadata`'s return values on failure.
      */
     [[nodiscard]] static auto create(std::string_view archive_path)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
@@ -39,6 +74,7 @@ public:
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
+     * - Forwards `ClpArchiveReader::precompute_archive_metadata`'s return values on failure.
      */
     [[nodiscard]] static auto create(std::vector<char>&& archive_data)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
@@ -57,6 +93,30 @@ public:
      * @return The total number of events in the archive.
      */
     [[nodiscard]] auto get_event_count() const -> uint64_t { return m_event_count; }
+
+    /**
+     * @return Source file names in range-index order.
+     */
+    [[nodiscard]] auto get_file_names() const -> std::vector<std::string> { return m_file_names; }
+
+    /**
+     * @return Source file metadata in range index order.
+     */
+    [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> { return m_file_infos; }
+
+    /**
+     * Decodes all log events in global log-event-index order.
+     *
+     * Results are cached after the first successful decode. Subsequent calls return the cached
+     * decoded events.
+     *
+     * @return A result containing decoded log events on success, or an error indicating the
+     * failure:
+     * - `SfaErrorCodeEnum::IoFailure` if decoding fails due to archive read/decode errors.
+     * - `SfaErrorCodeEnum::NoMemory` if decoding fails due to OOM issues.
+     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized.
+     */
+    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<std::vector<LogEvent>>;
 
 private:
     // Constructors
@@ -79,14 +139,24 @@ private:
     auto move_from(ClpArchiveReader& rhs) noexcept -> void;
 
     /**
-     * Precomputes metadata from the archive range index.
+     * Precomputes archive metadata from the range index.
+     *
+     * Assumes range-index entries are ordered and globally contiguous in log-event index space,
+     * i.e., each entry starts at the previous entry's end.
+     *
+     * @return A void result on success, or an error code indicating the failure:
+     * - `SfaErrorCodeEnum::MalformedRangeIndex` if range-index metadata violates the assumption.
      */
-    auto precompute_archive_metadata() -> void;
+    [[nodiscard]] auto precompute_archive_metadata() -> ystdlib::error_handling::Result<void>;
 
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
     std::shared_ptr<std::vector<char>> m_archive_data;
     uint64_t m_event_count{0};
+    std::vector<std::string> m_file_names;
+    std::vector<FileInfo> m_file_infos;
+    std::vector<std::shared_ptr<clp_s::SchemaReader>> m_tables;
+    std::vector<LogEvent> m_log_events;
 };
 }  // namespace clp_s::ffi::sfa
 

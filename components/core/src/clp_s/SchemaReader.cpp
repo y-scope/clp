@@ -230,7 +230,7 @@ bool SchemaReader::get_next_message(std::string& message) {
 
 bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
     while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message)) {
+        if (nullptr != filter && false == filter->filter(m_cur_message)) {
             m_cur_message++;
             continue;
         }
@@ -262,7 +262,7 @@ bool SchemaReader::get_next_message_with_metadata(
     // TODO: If we already get max_num_results messages, we can skip messages
     // with the timestamp less than the smallest timestamp in the priority queue
     while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message)) {
+        if (nullptr != filter && false == filter->filter(m_cur_message)) {
             m_cur_message++;
             continue;
         }
