@@ -203,7 +203,7 @@ public:
     [[nodiscard]] auto generate_json_string(uint64_t message_index) -> std::string;
 
     /**
-     * Gets next message
+     * Gets the next message
      * @param message
      * @return true if there is a next message
      */
@@ -215,7 +215,20 @@ public:
      * @param filter
      * @return true if there is a next message
      */
-    bool get_next_message(std::string& message, FilterClass* filter);
+    bool get_next_message(std::string& message, FilterClass& filter);
+
+    /**
+     * Gets the next message as well as its timestamp and log event index.
+     * @param message
+     * @param timestamp
+     * @param log_event_idx
+     * @return true if there is a next message
+     */
+    bool get_next_message_with_metadata(
+            std::string& message,
+            epochtime_t& timestamp,
+            int64_t& log_event_idx
+    );
 
     /**
      * Gets the next message matching a filter as well as its timestamp and log event index.
@@ -229,21 +242,21 @@ public:
             std::string& message,
             epochtime_t& timestamp,
             int64_t& log_event_idx,
-            FilterClass* filter
+            FilterClass& filter
     );
 
     /**
      * Initializes the filter
      * @param filter
      */
-    void initialize_filter(FilterClass* filter);
+    void initialize_filter(FilterClass& filter);
 
     /**
      * Initializes the filter with a column map.
      * Note: the column map only contains the ordered columns in a schema.
      * @param filter
      */
-    void initialize_filter_with_column_map(FilterClass* filter);
+    void initialize_filter_with_column_map(FilterClass& filter);
 
     /**
      * Initializes all internal data structures required to serialize records.
