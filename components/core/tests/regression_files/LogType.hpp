@@ -17,6 +17,6 @@ enum class VarType : uint8_t {
     Connection // GET,POST,PUT,DELETE
 };
 
-typedef std::vector<std::variant<std::string, VarType>> LogType;
+using LogType = std::vector<std::variant<std::string, VarType>>;
 
 #endif  // TESTS_LOGTYPE_HPP
