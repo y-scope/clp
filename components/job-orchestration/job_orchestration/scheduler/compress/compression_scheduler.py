@@ -295,12 +295,6 @@ def search_and_schedule_new_tasks(
     :param task_manager:
     :param db_context:
     """
-    existing_datasets: set[str] = set()
-    if StorageEngine.CLP_S == clp_config.package.storage_engine:
-        existing_datasets = fetch_existing_datasets(
-            db_context.cursor, clp_metadata_db_connection_config["table_prefix"]
-        )
-
     logger.debug("Search and schedule new tasks")
 
     # Poll for new compression jobs
@@ -313,16 +307,6 @@ def search_and_schedule_new_tasks(
             msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
         input_config = clp_io_config.input
-        table_prefix = clp_metadata_db_connection_config["table_prefix"]
-        dataset = input_config.dataset
-
-        _ensure_dataset_exists(
-            clp_config,
-            db_context,
-            table_prefix,
-            dataset,
-            existing_datasets,
-        )
 
         # Prepare paths buffer
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -406,6 +390,20 @@ def search_and_schedule_new_tasks(
             )
             return
         paths_to_compress_buffer.flush()
+
+        if StorageEngine.CLP_S == clp_config.package.storage_engine:
+            existing_datasets: set[str] = fetch_existing_datasets(
+                db_context.cursor, clp_metadata_db_connection_config["table_prefix"]
+            )
+            table_prefix = clp_metadata_db_connection_config["table_prefix"]
+            dataset = clp_io_config.input.dataset
+            _ensure_dataset_exists(
+                clp_config,
+                db_context,
+                table_prefix,
+                dataset,
+                existing_datasets,
+            )
 
         _batch_and_submit_tasks(
             clp_config,
