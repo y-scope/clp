@@ -51,7 +51,7 @@ BINARIES=(clg clo clp clp-s indexer log-converter reducer-server)
 # Libraries provided by the base system (libc, libstdc++, libgcc).
 # These must NOT be bundled — the target system's versions are used instead.
 # Covers both glibc (ld-linux, libc.so) and musl (ld-musl, libc.musl-*).
-EXCLUDE_PATTERN="linux-vdso|ld-linux|ld-musl|libc\.so|libc\.musl|libm\.so|libpthread|libdl|librt\.so|libresolv|libstdc\+\+|libgcc_s"
+EXCLUDE_PATTERN="linux-vdso|ld-linux|ld-musl|libc\.so|libc\.musl|libm\.so|libmvec|libcrypt|libanl|libutil|libnsl|libpthread|libdl|librt\.so|libresolv|libstdc\+\+|libgcc_s"
 
 # --- Prepare staging directory -----------------------------------------------
 

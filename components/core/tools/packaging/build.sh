@@ -287,30 +287,9 @@ for cur_format in "${format_list[@]}"; do
             -e "HOST_GID=$(id -g)" \
             -e "CFLAGS=-U_FORTIFY_SOURCE" \
             -e "CXXFLAGS=-U_FORTIFY_SOURCE" \
+            -e "FORMAT_DIR=${format_dir##*/}" \
             "${builder_image}" \
-            bash -c '
-                set -o errexit
-                set -o nounset
-                set -o pipefail
-
-                git config --global --add safe.directory "*"
-
-                echo "==> Building dependencies..."
-                CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK="${CORES}" task deps:core
-
-                echo "==> Building core binaries..."
-                CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK="${CORES}" task core
-
-                # BIN_DIR must match the CMake binary output directory (task core
-                # builds into /clp/build/core).
-                echo "==> Packaging..."
-                BIN_DIR=/clp/build/core \
-                OUTPUT_DIR=/clp/build \
-                    /clp/components/core/tools/packaging/'"${format_dir##*/}"'/package.sh
-
-                # Restore host ownership on mounted volume paths
-                chown -R "${HOST_UID}:${HOST_GID}" /clp/build /clp/.task
-            '
+            bash /clp/components/core/tools/packaging/common/build-in-container.sh
 
         # Copy the package to the output directory (only the current format to
         # avoid leaking stale packages of other formats from the build directory)
