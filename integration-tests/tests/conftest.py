@@ -80,7 +80,7 @@ def pytest_itemcollected(item: pytest.Item) -> None:
 
     :param item:
     """
-    item._nodeid = f"{BOLD}{BLUE}{item.name}{RESET}"  # noqa: SLF001
+    item._nodeid = f"{BOLD}{BLUE}{item.nodeid}{RESET}"  # noqa: SLF001
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -113,7 +113,7 @@ def pytest_report_collectionfinish(
     else:
         report = f"{BOLD}The following tests will run:{RESET}\n"
         for item in items:
-            report += f"\t{BOLD}{BLUE}{item.name}{RESET}\n"
+            report += f"\t{BOLD}{BLUE}{item.nodeid}{RESET}\n"
         report += f"\n{BOLD}Running tests now...{RESET}"
     return report
 
