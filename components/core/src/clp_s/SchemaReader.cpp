@@ -262,13 +262,15 @@ bool SchemaReader::get_next_message_with_metadata(
         return false;
     }
 
-    if (false == m_serializer_initialized) {
-        initialize_serializer();
-    }
-    message = generate_json_string(m_cur_message);
+    if (m_should_marshal_records) {
+        if (false == m_serializer_initialized) {
+            initialize_serializer();
+        }
+        message = generate_json_string(m_cur_message);
 
-    if (message.back() != '\n') {
-        message += '\n';
+        if (message.back() != '\n') {
+            message += '\n';
+        }
     }
 
     timestamp = m_get_timestamp();
