@@ -9,12 +9,20 @@
 enum class VarType : uint8_t {
     Int = 0,
     Float,
-    UserAction, // LOGIN, LOGOUT, UPLOAD, DOWNLOAD, DELETE, VIEW
+    UserAction,
     Fields,
     Items,
     Path,
     Ip,
-    Connection // GET,POST,PUT,DELETE
+    Connection,
+    Roles,
+    Severity,
+    Level,
+    Name,
+    Status,
+    Event,
+    Pay,
+    Bool
 };
 
 using LogType = std::vector<std::variant<std::string, VarType>>;
