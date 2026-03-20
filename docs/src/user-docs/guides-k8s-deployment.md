@@ -203,6 +203,7 @@ clpConfig:
   # Use clp-text, instead of clp-json (default)
   package:
     storage_engine: "clp"  # Use "clp-s" for clp-json, "clp" for clp-text
+
   webui:
     query_engine: "clp"   # Use "clp-s" for clp-json, "clp" for clp-text, "presto" for Presto
 
@@ -250,10 +251,21 @@ helm template clp . -f custom-values.yaml
 
 ::::
 
+### Using Presto as the query engine
+
+To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
+instructions, including the Helm values file and installation steps.
+
 ### Worker scheduling
 
 You can control where workers are scheduled using standard Kubernetes scheduling primitives
 (`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+
+:::{note}
+When using Presto as the query engine, use `prestoWorker:` instead of `queryWorker:` and `reducer:`
+to configure Presto worker scheduling. The `prestoWorker:` key supports the same `scheduling:`
+options.
+:::
 
 #### Dedicated node pools
 
@@ -267,6 +279,9 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    # Label query nodes
    kubectl label nodes node3 node4 yscope.io/nodeType=query
+
+   # Label Presto nodes (if using Presto as the query engine)
+   kubectl label nodes node5 node6 yscope.io/nodeType=presto
    ```
 
 2. Configure scheduling:
@@ -280,19 +295,25 @@ To run compression workers, query workers, and reducers in separate node pools:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compression
+         yscope.io/nodeType: "compression"
 
    queryWorker:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
 
    reducer:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
+
+   prestoWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: "presto"
    ```
 
 3. Install:
@@ -322,7 +343,7 @@ To run all worker types in the same node pool:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
        topologySpreadConstraints:
          - maxSkew: 1
            topologyKey: "kubernetes.io/hostname"
@@ -335,13 +356,19 @@ To run all worker types in the same node pool:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
 
    reducer:
      replicas: 2
      scheduling:
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
+
+   prestoWorker:
+     replicas: 2
+     scheduling:
+       nodeSelector:
+         yscope.io/nodeType: "compute"
    ```
 
 3. Install:
@@ -546,6 +573,7 @@ To tear down a `kubeadm` cluster:
 * [External database setup][external-db-guide]: Using external MariaDB and MongoDB
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
+* [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
 
 [admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
@@ -563,6 +591,7 @@ To tear down a `kubeadm` cluster:
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
+[presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3
