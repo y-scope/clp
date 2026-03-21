@@ -603,8 +603,6 @@ static void set_timestamp_info(nlohmann::json const& metadata_json, TimestampInf
 }
 
 TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
-    bool is_four_bytes_encoding;
-
     // Test eight-byte encoding
     vector<int8_t> eight_byte_encoding_vec{
             EightByteEncodingMagicNumber,
@@ -615,9 +613,9 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(eight_byte_encoding_vec.data()),
             eight_byte_encoding_vec.size()
     };
-    REQUIRE(get_encoding_type(eight_byte_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<eight_byte_encoded_variable_t>(is_four_bytes_encoding));
+    auto const eight_byte_encoding_result{get_encoding_type(eight_byte_ir_buffer)};
+    REQUIRE(eight_byte_encoding_result.has_value());
+    REQUIRE(clp::ffi::ir_stream::EncodingType::EightByte == eight_byte_encoding_result.value());
 
     // Test four-byte encoding
     vector<int8_t> four_byte_encoding_vec{
@@ -629,24 +627,32 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size()
     };
-    REQUIRE(get_encoding_type(four_byte_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<four_byte_encoded_variable_t>(is_four_bytes_encoding));
+    auto const four_byte_encoding_result{get_encoding_type(four_byte_ir_buffer)};
+    REQUIRE(four_byte_encoding_result.has_value());
+    REQUIRE(clp::ffi::ir_stream::EncodingType::FourByte == four_byte_encoding_result.value());
 
     // Test error on empty and incomplete ir_buffer
     BufferReader empty_ir_buffer(
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
             0
     );
-    REQUIRE(get_encoding_type(empty_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Incomplete_IR);
+    auto const empty_encoding_result{get_encoding_type(empty_ir_buffer)};
+    REQUIRE(empty_encoding_result.has_error());
+    REQUIRE(clp::ffi::ir_stream::IrDeserializationError{
+                    clp::ffi::ir_stream::IrDeserializationErrorEnum::IncompleteStream
+            }
+            == empty_encoding_result.error());
 
     BufferReader incomplete_buffer{
             size_checked_pointer_cast<char const>(four_byte_encoding_vec.data()),
             four_byte_encoding_vec.size() - 1
     };
-    REQUIRE(get_encoding_type(incomplete_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Incomplete_IR);
+    auto const incomplete_encoding_result{get_encoding_type(incomplete_buffer)};
+    REQUIRE(incomplete_encoding_result.has_error());
+    REQUIRE(clp::ffi::ir_stream::IrDeserializationError{
+                    clp::ffi::ir_stream::IrDeserializationErrorEnum::IncompleteStream
+            }
+            == incomplete_encoding_result.error());
 
     // Test error on invalid encoding
     vector<int8_t> const invalid_ir_vec{0x02, 0x43, 0x24, 0x34};
@@ -654,8 +660,12 @@ TEST_CASE("get_encoding_type", "[ffi][get_encoding_type]") {
             size_checked_pointer_cast<char const>(invalid_ir_vec.data()),
             invalid_ir_vec.size()
     };
-    REQUIRE(get_encoding_type(invalid_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Corrupted_IR);
+    auto const invalid_encoding_result{get_encoding_type(invalid_ir_buffer)};
+    REQUIRE(invalid_encoding_result.has_error());
+    REQUIRE(clp::ffi::ir_stream::IrDeserializationError{
+                    clp::ffi::ir_stream::IrDeserializationErrorEnum::InvalidMagicNumber
+            }
+            == invalid_encoding_result.error());
 }
 
 TEMPLATE_TEST_CASE(
@@ -680,10 +690,12 @@ TEMPLATE_TEST_CASE(
 
     // Check if encoding type is properly read
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
-    bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
+    auto const ir_encoding_result{get_encoding_type(ir_buffer)};
+    REQUIRE(ir_encoding_result.has_value());
+    REQUIRE((std::is_same_v<TestType, four_byte_encoded_variable_t>
+                     ? clp::ffi::ir_stream::EncodingType::FourByte
+                     : clp::ffi::ir_stream::EncodingType::EightByte)
+            == ir_encoding_result.value());
     REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
     // Test if preamble can be decoded correctly
@@ -691,8 +703,9 @@ TEMPLATE_TEST_CASE(
     encoded_tag_t metadata_type{0};
     size_t metadata_pos{0};
     uint16_t metadata_size{0};
-    REQUIRE(deserialize_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size)
-            == IRErrorCode::IRErrorCode_Success);
+    REQUIRE(
+            deserialize_preamble(ir_buffer, metadata_type, metadata_pos, metadata_size).has_value()
+    );
     REQUIRE(encoded_preamble_end_pos == ir_buffer.get_pos());
 
     char* metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data()) + metadata_pos};
@@ -738,13 +751,17 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     incomplete_preamble_buffer.seek_from_begin(MagicNumberLength);
-    REQUIRE(deserialize_preamble(
-                    incomplete_preamble_buffer,
-                    metadata_type,
-                    metadata_pos,
-                    metadata_size
-            )
-            == IRErrorCode::IRErrorCode_Incomplete_IR);
+    auto const incomplete_preamble_result{deserialize_preamble(
+            incomplete_preamble_buffer,
+            metadata_type,
+            metadata_pos,
+            metadata_size
+    )};
+    REQUIRE(incomplete_preamble_result.has_error());
+    REQUIRE(clp::ffi::ir_stream::IrDeserializationError{
+                    clp::ffi::ir_stream::IrDeserializationErrorEnum::IncompleteStream
+            }
+            == incomplete_preamble_result.error());
 
     // Test if corrupted IR can be detected
     ir_buf[MagicNumberLength] = 0x23;
@@ -752,13 +769,17 @@ TEMPLATE_TEST_CASE(
             size_checked_pointer_cast<char const>(ir_buf.data()),
             ir_buf.size()
     };
-    REQUIRE(deserialize_preamble(
-                    corrupted_preamble_buffer,
-                    metadata_type,
-                    metadata_pos,
-                    metadata_size
-            )
-            == IRErrorCode::IRErrorCode_Corrupted_IR);
+    auto const corrupted_preamble_result{deserialize_preamble(
+            corrupted_preamble_buffer,
+            metadata_type,
+            metadata_pos,
+            metadata_size
+    )};
+    REQUIRE(corrupted_preamble_result.has_error());
+    REQUIRE(clp::ffi::ir_stream::IrDeserializationError{
+                    clp::ffi::ir_stream::IrDeserializationErrorEnum::UnsupportedMetadataFormat
+            }
+            == corrupted_preamble_result.error());
 }
 
 TEMPLATE_TEST_CASE(
@@ -1005,10 +1026,12 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
 
-    bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
+    auto const complete_ir_encoding_result{get_encoding_type(complete_ir_buffer)};
+    REQUIRE(complete_ir_encoding_result.has_value());
+    REQUIRE((std::is_same_v<TestType, four_byte_encoded_variable_t>
+                     ? clp::ffi::ir_stream::EncodingType::FourByte
+                     : clp::ffi::ir_stream::EncodingType::EightByte)
+            == complete_ir_encoding_result.value());
 
     // Test if preamble can be properly decoded
     TimestampInfo ts_info;
@@ -1016,7 +1039,7 @@ TEMPLATE_TEST_CASE(
     size_t metadata_pos;
     uint16_t metadata_size;
     REQUIRE(deserialize_preamble(complete_ir_buffer, metadata_type, metadata_pos, metadata_size)
-            == IRErrorCode::IRErrorCode_Success);
+                    .has_value());
     REQUIRE(encoded_preamble_end_pos == complete_ir_buffer.get_pos());
 
     auto* json_metadata_ptr{size_checked_pointer_cast<char>(ir_buf.data() + metadata_pos)};
@@ -1094,10 +1117,12 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
 
-    bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(complete_ir_buffer, is_four_bytes_encoding)
-            == IRErrorCode::IRErrorCode_Success);
-    REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
+    auto const complete_ir_encoding_result{get_encoding_type(complete_ir_buffer)};
+    REQUIRE(complete_ir_encoding_result.has_value());
+    REQUIRE((std::is_same_v<TestType, four_byte_encoded_variable_t>
+                     ? clp::ffi::ir_stream::EncodingType::FourByte
+                     : clp::ffi::ir_stream::EncodingType::EightByte)
+            == complete_ir_encoding_result.value());
 
     auto create_result = LogEventDeserializer<TestType>::create(complete_ir_buffer);
     REQUIRE(false == create_result.has_error());
@@ -1146,15 +1171,12 @@ TEMPLATE_TEST_CASE(
 
     BufferReader buffer_reader{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
 
-    bool is_four_byte_encoding{};
-    REQUIRE(
-            (IRErrorCode::IRErrorCode_Success
-             == get_encoding_type(buffer_reader, is_four_byte_encoding))
-    );
+    auto const encoding_type_result{get_encoding_type(buffer_reader)};
+    REQUIRE(encoding_type_result.has_value());
     if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
-        REQUIRE(is_four_byte_encoding);
+        REQUIRE(clp::ffi::ir_stream::EncodingType::FourByte == encoding_type_result.value());
     } else {
-        REQUIRE((false == is_four_byte_encoding));
+        REQUIRE(clp::ffi::ir_stream::EncodingType::EightByte == encoding_type_result.value());
     }
 
     encoded_tag_t metadata_type{};

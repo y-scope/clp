@@ -215,18 +215,14 @@ static IRErrorCode generic_deserialize_log_event(
 /**
  * Deserializes metadata from the given reader
  * @param reader
- * @param metadata_type Returns the type of the metadata found in the IR
- * @param metadata_pos Returns the starting position of the metadata in reader
- * @param metadata_size Returns the size of the metadata written in the IR
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A result containing a pair with the metadata type and metadata size on success, or an
+ * error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ * - IrDeserializationErrorEnum::UnsupportedMetadataFormat if the metadata format is unsupported
+ * - Forwards `deserialize_int`'s return values on failure.
  */
-static IRErrorCode deserialize_metadata(
-        ReaderInterface& reader,
-        encoded_tag_t& metadata_type,
-        uint16_t& metadata_size
-);
+static auto deserialize_metadata(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, uint16_t>>;
 
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
@@ -416,39 +412,30 @@ static IRErrorCode generic_deserialize_log_event(
     return IRErrorCode_Success;
 }
 
-static IRErrorCode deserialize_metadata(
-        ReaderInterface& reader,
-        encoded_tag_t& metadata_type,
-        uint16_t& metadata_size
-) {
+auto deserialize_metadata(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, uint16_t>> {
+    encoded_tag_t metadata_type{};
     if (ErrorCode_Success != reader.try_read_numeric_value(metadata_type)) {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
 
     // Read metadata length
     encoded_tag_t encoded_tag;
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
     switch (encoded_tag) {
-        case cProtocol::Metadata::LengthUByte:
-            uint8_t ubyte_res;
-            if (false == deserialize_int(reader, ubyte_res)) {
-                return IRErrorCode_Incomplete_IR;
-            }
-            metadata_size = ubyte_res;
-            break;
-        case cProtocol::Metadata::LengthUShort:
-            uint16_t ushort_res;
-            if (false == deserialize_int(reader, ushort_res)) {
-                return IRErrorCode_Incomplete_IR;
-            }
-            metadata_size = ushort_res;
-            break;
+        case cProtocol::Metadata::LengthUByte: {
+            uint8_t ubyte_res{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader))};
+            return std::make_pair(metadata_type, ubyte_res);
+        }
+        case cProtocol::Metadata::LengthUShort: {
+            uint16_t ushort_res{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader))};
+            return std::make_pair(metadata_type, ushort_res);
+        }
         default:
-            return IRErrorCode_Corrupted_IR;
+            return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
-    return IRErrorCode_Success;
 }
 
 template <typename encoded_variable_t>
@@ -568,14 +555,14 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
     );
 }
 
-IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) {
+auto get_encoding_type(ReaderInterface& reader) -> ystdlib::error_handling::Result<EncodingType> {
     char buffer[cProtocol::MagicNumberLength];
     auto error_code = reader.try_read_exact_length(buffer, cProtocol::MagicNumberLength);
     if (error_code != ErrorCode_Success) {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
     if (0 == memcmp(buffer, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
-        is_four_bytes_encoding = true;
+        return EncodingType::FourByte;
     } else if ((0
                 == memcmp(
                         buffer,
@@ -583,11 +570,10 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
                         cProtocol::MagicNumberLength
                 )))
     {
-        is_four_bytes_encoding = false;
+        return EncodingType::EightByte;
     } else {
-        return IRErrorCode_Corrupted_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::InvalidMagicNumber};
     }
-    return IRErrorCode_Success;
 }
 
 IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag) {
@@ -605,35 +591,26 @@ auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result
     return tag;
 }
 
-IRErrorCode deserialize_preamble(
+auto deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
-) {
-    if (auto error_code = deserialize_metadata(reader, metadata_type, metadata_size);
-        error_code != IRErrorCode_Success)
-    {
-        return error_code;
-    }
+) -> ystdlib::error_handling::Result<void> {
+    std::tie(metadata_type, metadata_size)
+            = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_metadata(reader));
     metadata_pos = reader.get_pos();
     if (ErrorCode_Success != reader.try_seek_from_begin(metadata_pos + metadata_size)) {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
-    return IRErrorCode_Success;
+    return ystdlib::error_handling::success();
 }
 
-IRErrorCode deserialize_preamble(
-        ReaderInterface& reader,
-        encoded_tag_t& metadata_type,
-        std::vector<int8_t>& metadata
-) {
-    uint16_t metadata_size{0};
-    if (auto error_code = deserialize_metadata(reader, metadata_type, metadata_size);
-        error_code != IRErrorCode_Success)
-    {
-        return error_code;
-    }
+auto deserialize_preamble(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, std::vector<int8_t>>> {
+    auto const metadata_header{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_metadata(reader))};
+    auto const [metadata_type, metadata_size]{metadata_header};
+    std::vector<int8_t> metadata;
     metadata.resize(metadata_size);
     if (ErrorCode_Success
         != reader.try_read_exact_length(
@@ -641,8 +618,27 @@ IRErrorCode deserialize_preamble(
                 metadata_size
         ))
     {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
+    return std::pair{metadata_type, std::move(metadata)};
+}
+
+IRErrorCode deserialize_preamble(
+        ReaderInterface& reader,
+        encoded_tag_t& metadata_type,
+        std::vector<int8_t>& metadata
+) {
+    auto const preamble_result{deserialize_preamble(reader)};
+    if (preamble_result.has_error()) {
+        if (IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream}
+            == preamble_result.error())
+        {
+            return IRErrorCode_Incomplete_IR;
+        }
+        return IRErrorCode_Corrupted_IR;
+    }
+
+    std::tie(metadata_type, metadata) = std::move(preamble_result.value());
     return IRErrorCode_Success;
 }
 
