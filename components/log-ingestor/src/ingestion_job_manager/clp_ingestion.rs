@@ -888,10 +888,10 @@ impl ClpIngestionState {
             })?;
 
         let mut buffer_entries = Vec::with_capacity(objects.len());
-        for (chunk_id, chunk) in objects.chunks_mut(chunk_size).enumerate() {
+        for (chunk_id, chunk) in objects.chunks(chunk_size).enumerate() {
             for (next_metadata_id, object) in
                 (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..)
-                    .zip(chunk.iter_mut())
+                    .zip(chunk.iter())
             {
                 buffer_entries.push(CompressionBufferEntry {
                     id: next_metadata_id,
