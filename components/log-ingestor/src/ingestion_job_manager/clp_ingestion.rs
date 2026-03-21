@@ -1080,6 +1080,9 @@ impl ClpCompressionState {
 
         let object_metadata_ids: &[S3ObjectMetadataId] = match &io_config.input {
             InputConfig::S3ObjectMetadataInputConfig { config } => &config.s3_object_metadata_ids,
+            InputConfig::S3InputConfig { .. } => {
+                unreachable!("compression submission only supports `S3ObjectMetadataInputConfig`")
+            }
         };
 
         let mut tx = self.db_pool.begin().await?;

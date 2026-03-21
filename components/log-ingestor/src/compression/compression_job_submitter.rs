@@ -37,6 +37,9 @@ impl BufferSubmitter for CompressionJobSubmitter {
             InputConfig::S3ObjectMetadataInputConfig { config } => {
                 config.s3_object_metadata_ids = buffer.to_vec();
             }
+            InputConfig::S3InputConfig { .. } => {
+                unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
+            }
         }
         let state = self.state.clone();
         tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
@@ -163,6 +166,9 @@ async fn submit_clp_compression_job_and_wait_for_completion(
     let ingestion_job_id = state.get_ingestion_job_id();
     let num_objects_submitted = match &io_config.input {
         InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_object_metadata_ids.len(),
+        InputConfig::S3InputConfig { .. } => {
+            unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
+        }
     };
     tracing::info!(ingestion_job_id = ? ingestion_job_id, "Submitting CLP compression job.");
 
