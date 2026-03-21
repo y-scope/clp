@@ -1,5 +1,5 @@
-`#ifndef` CLP_FFI_IR_STREAM_KV_IR_DESERIALIZER_IMPL_HPP
-`#define` CLP_FFI_IR_STREAM_KV_IR_DESERIALIZER_IMPL_HPP
+#ifndef CLP_FFI_IR_STREAM_KV_IR_DESERIALIZER_IMPL_HPP
+#define CLP_FFI_IR_STREAM_KV_IR_DESERIALIZER_IMPL_HPP
 
 #include "DeserializerImpl.hpp"
 
@@ -44,8 +44,8 @@ public:
      * @param utc_offset
      * @return A result containing the deserialized log event on success, or an error code
      * indicating the failure:
-     * - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_kv_pair_log_event`'s return values on
-     *   failure.
+     * - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_kv_pair_log_event`'s return values
+     * on failure.
      */
     [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
             ReaderInterface& reader,
@@ -65,8 +65,8 @@ public:
      *   - Whether the node is for the auto-generated keys schema tree.
      *   - The locator of the inserted schema tree node.
      * - The possible error codes:
-     *   - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_schema_tree_node_insertion`'s return
-     * values on failure.
+     *   - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_schema_tree_node_insertion`'s
+     * return values on failure.
      */
     [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
