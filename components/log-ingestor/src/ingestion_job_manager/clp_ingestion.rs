@@ -864,7 +864,7 @@ impl ClpIngestionState {
     async fn ingest_and_send(
         &self,
         mut tx: sqlx::Transaction<'_, sqlx::MySql>,
-        mut objects: Vec<ObjectMetadata>,
+        objects: Vec<ObjectMetadata>,
     ) -> anyhow::Result<()> {
         let (chunk_size, last_inserted_ids) = self
             .ingest_s3_object_metadata(&mut tx, &objects)
@@ -890,8 +890,7 @@ impl ClpIngestionState {
         let mut buffer_entries = Vec::with_capacity(objects.len());
         for (chunk_id, chunk) in objects.chunks(chunk_size).enumerate() {
             for (next_metadata_id, object) in
-                (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..)
-                    .zip(chunk.iter())
+                (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..).zip(chunk.iter())
             {
                 buffer_entries.push(CompressionBufferEntry {
                     id: next_metadata_id,
