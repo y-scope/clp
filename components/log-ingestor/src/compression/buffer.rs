@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use sqlx::FromRow;
 
-/// One entry of data fed into the compression buffer
+/// Represents an entry of a buffered object metadata.
 #[derive(Debug, Clone, PartialEq, Eq, FromRow)]
 pub struct CompressionBufferEntry {
     pub id: S3ObjectMetadataId,
@@ -25,8 +25,7 @@ pub trait BufferSubmitter {
     async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()>;
 }
 
-/// A buffer that accumulates object metadata IDs and submits when the
-/// size threshold is reached.
+/// A buffer that accumulates object metadata IDs and submits when the size threshold is reached.
 ///
 /// # Type Parameters:
 ///

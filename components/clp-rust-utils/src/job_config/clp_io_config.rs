@@ -17,6 +17,12 @@ pub type IngestionJobId = u64;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "type")]
 pub enum InputConfig {
+    #[serde(rename = "s3")]
+    S3InputConfig {
+        #[serde(flatten)]
+        config: S3InputConfig,
+    },
+
     #[serde(rename = "s3_object_metadata")]
     S3ObjectMetadataInputConfig {
         #[serde(flatten)]
