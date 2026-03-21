@@ -32,12 +32,15 @@ pub struct CompressionJobSubmitter {
 #[async_trait]
 impl BufferSubmitter for CompressionJobSubmitter {
     async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
-        let io_config_template = self.io_config_template.clone();
+        let mut io_config = self.io_config_template.clone();
+        match &mut io_config.input {
+            InputConfig::S3ObjectMetadataInputConfig { config } => {
+                config.s3_object_metadata_ids = buffer.to_vec();
+            }
+        }
         let state = self.state.clone();
         tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
-            state,
-            io_config_template,
-            buffer.to_vec(),
+            state, io_config,
         ));
         Ok(())
     }
@@ -67,7 +70,7 @@ impl CompressionJobSubmitter {
                 aws_authentication,
             },
             ingestion_job_id,
-            s3_object_metadata_ids: None,
+            s3_object_metadata_ids: vec![],
             // NOTE: Workaround for #1735
             dataset: Some(
                 ingestion_job_config
@@ -147,7 +150,7 @@ pub async fn wait_for_compression_job_completion_and_update_metadata(
     }
 }
 
-/// Submits a CLP compression job with the given IO config template and waits for its completion.
+/// Submits a CLP compression job with the given IO config and waits for its completion.
 ///
 /// # NOTE
 ///
@@ -155,17 +158,15 @@ pub async fn wait_for_compression_job_completion_and_update_metadata(
 /// coroutine.
 async fn submit_clp_compression_job_and_wait_for_completion(
     state: ClpCompressionState,
-    io_config_template: ClpIoConfig,
-    object_metadata_ids: Vec<S3ObjectMetadataId>,
+    io_config: ClpIoConfig,
 ) {
     let ingestion_job_id = state.get_ingestion_job_id();
-    let num_objects_submitted = object_metadata_ids.len();
+    let num_objects_submitted = match &io_config.input {
+        InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_object_metadata_ids.len(),
+    };
     tracing::info!(ingestion_job_id = ? ingestion_job_id, "Submitting CLP compression job.");
 
-    let compression_job_id = match state
-        .submit_for_compression(io_config_template, &object_metadata_ids)
-        .await
-    {
+    let compression_job_id = match state.submit_for_compression(io_config).await {
         Ok(id) => id,
         Err(e) => {
             tracing::error!(

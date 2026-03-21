@@ -1068,28 +1068,19 @@ impl ClpCompressionState {
     ///
     /// # Panics
     ///
-    /// Panics if no object metadata is provided for compression.
+    /// Panics if the length of a chunk cannot be converted to `u64`.
     pub async fn submit_for_compression(
         &self,
-        io_config_template: ClpIoConfig,
-        object_metadata_ids: &[S3ObjectMetadataId],
+        io_config: ClpIoConfig,
     ) -> anyhow::Result<CompressionJobId> {
         const COMPRESSION_JOB_SUBMISSION_QUERY: &str = formatcp!(
             r"INSERT INTO {table} (`clp_config`) VALUES (?)",
             table = CLP_COMPRESSION_JOB_TABLE_NAME
         );
 
-        if object_metadata_ids.is_empty() {
-            const ERROR_MSG: &str = "No objects to compress.";
-            tracing::error!(job_id = ? self.ingestion_job_id, ERROR_MSG);
-            panic!("{}", ERROR_MSG);
-        }
-
-        let mut io_config = io_config_template;
-        let s3_object_metadata_input_config = match &mut io_config.input {
-            InputConfig::S3ObjectMetadataInputConfig { config } => config,
+        let object_metadata_ids: &[S3ObjectMetadataId] = match &io_config.input {
+            InputConfig::S3ObjectMetadataInputConfig { config } => &config.s3_object_metadata_ids,
         };
-        s3_object_metadata_input_config.s3_object_metadata_ids = Some(object_metadata_ids.to_vec());
 
         let mut tx = self.db_pool.begin().await?;
 

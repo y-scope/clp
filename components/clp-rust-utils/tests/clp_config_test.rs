@@ -26,7 +26,7 @@ fn test_clp_io_config_serialization() {
             config: S3ObjectMetadataInputConfig {
                 s3_config,
                 ingestion_job_id: 1,
-                s3_object_metadata_ids: None,
+                s3_object_metadata_ids: vec![],
                 dataset: Some(NonEmptyString::from_static_str("test-dataset")),
                 timestamp_key: Some(NonEmptyString::from_static_str("timestamp")),
                 unstructured: false,
@@ -72,7 +72,7 @@ fn test_clp_io_config_serialization() {
           }
         },
         "ingestion_job_id": 1,
-        "s3_object_metadata_ids": null,
+        "s3_object_metadata_ids": [],
         "dataset": "test-dataset",
         "timestamp_key": "timestamp",
         "unstructured": false

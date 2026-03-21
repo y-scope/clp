@@ -2,7 +2,7 @@ mod s3_scanner;
 mod sqs_listener;
 mod state;
 
-pub use clp_rust_utils::job_config::IngestionJobId;
+pub use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
 pub use s3_scanner::*;
 pub use sqs_listener::*;
 pub use state::*;

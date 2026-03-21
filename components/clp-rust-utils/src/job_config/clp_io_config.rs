@@ -1,7 +1,11 @@
 use non_empty_string::NonEmptyString;
 use serde::Serialize;
 
-use crate::{clp_config::S3Config, s3::S3ObjectMetadataId};
+use crate::{
+    clp_config::S3Config,
+    job_config::ingestion::JobId as IngestionJobId,
+    s3::S3ObjectMetadataId,
+};
 
 /// Represents CLP IO config.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -9,9 +13,6 @@ pub struct ClpIoConfig {
     pub input: InputConfig,
     pub output: OutputConfig,
 }
-
-/// Represents the unique identifier for an ingestion job in CLP DB.
-pub type IngestionJobId = u64;
 
 /// An enum representing CLP input config.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -48,7 +49,7 @@ pub struct S3ObjectMetadataInputConfig {
     pub s3_config: S3Config,
 
     pub ingestion_job_id: IngestionJobId,
-    pub s3_object_metadata_ids: Option<Vec<S3ObjectMetadataId>>,
+    pub s3_object_metadata_ids: Vec<S3ObjectMetadataId>,
     pub dataset: Option<NonEmptyString>,
     pub timestamp_key: Option<NonEmptyString>,
     pub unstructured: bool,
