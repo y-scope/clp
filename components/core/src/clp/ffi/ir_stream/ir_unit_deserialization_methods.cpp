@@ -74,13 +74,14 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @param reader
  * @param tag
  * @param val Returns the deserialized value.
- * @return A void result on success, or an error code indicating the failure:
- * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
+ * @return A result containing the deserialized value on success, or an error code indicating the
+ * failure:
  * - IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to an integer
  *   packet.
+ * - Forwards `deserialize_int`'s return values on failure.
  */
-[[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
-        -> ystdlib::error_handling::Result<void>;
+[[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag)
+        -> ystdlib::error_handling::Result<value_int_t>;
 
 /**
  * Deserializes a string packet.
@@ -90,6 +91,7 @@ deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_
  * @return A void result on success, or an error code indicating the failure:
  * - IrDeserializationErrorEnum::IncompleteStream if the stream is truncated.
  * - IrDeserializationErrorEnum::InvalidTag if the given tag doesn't correspond to a string packet.
+ * - Forwards `deserialize_int`'s return values on failure.
  */
 [[nodiscard]] auto
 deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& deserialized_str)
@@ -127,6 +129,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  *   type.
  * - Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return values on
  *   failure.
+ * - Forwards `deserialize_int`'s return values on failure.
  * - Forwards `deserialize_int_val`'s return values on failure.
  * - Forwards `deserialize_string`'s return values on failure.
  */
@@ -225,58 +228,33 @@ auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string&
     );
 }
 
-auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
-        -> ystdlib::error_handling::Result<void> {
-    if (cProtocol::Payload::ValueInt8 == tag) {
-        int8_t deserialized_val{};
-        if (false == deserialize_int(reader, deserialized_val)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
-        val = deserialized_val;
-    } else if (cProtocol::Payload::ValueInt16 == tag) {
-        int16_t deserialized_val{};
-        if (false == deserialize_int(reader, deserialized_val)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
-        val = deserialized_val;
-    } else if (cProtocol::Payload::ValueInt32 == tag) {
-        int32_t deserialized_val{};
-        if (false == deserialize_int(reader, deserialized_val)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
-        val = deserialized_val;
-    } else if (cProtocol::Payload::ValueInt64 == tag) {
-        int64_t deserialized_val{};
-        if (false == deserialize_int(reader, deserialized_val)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
-        val = deserialized_val;
-    } else {
-        return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
+auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag)
+        -> ystdlib::error_handling::Result<value_int_t> {
+    switch (tag) {
+        case cProtocol::Payload::ValueInt8:
+            return YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int8_t>(reader));
+        case cProtocol::Payload::ValueInt16:
+            return YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int16_t>(reader));
+        case cProtocol::Payload::ValueInt32:
+            return YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int32_t>(reader));
+        case cProtocol::Payload::ValueInt64:
+            return YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int64_t>(reader));
+        default:
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
-    return ystdlib::error_handling::success();
 }
 
 auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& deserialized_str)
         -> ystdlib::error_handling::Result<void> {
     size_t str_length{};
     if (cProtocol::Payload::StrLenUByte == tag) {
-        uint8_t length{};
-        if (false == deserialize_int(reader, length)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
+        uint8_t length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader))};
         str_length = static_cast<size_t>(length);
     } else if (cProtocol::Payload::StrLenUShort == tag) {
-        uint16_t length{};
-        if (false == deserialize_int(reader, length)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
+        uint16_t length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader))};
         str_length = static_cast<size_t>(length);
     } else if (cProtocol::Payload::StrLenUInt == tag) {
-        uint32_t length{};
-        if (false == deserialize_int(reader, length)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
+        uint32_t length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint32_t>(reader))};
         str_length = static_cast<size_t>(length);
     } else {
         return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
@@ -363,17 +341,13 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
         case cProtocol::Payload::ValueInt16:
         case cProtocol::Payload::ValueInt32:
         case cProtocol::Payload::ValueInt64: {
-            value_int_t value_int{};
-            YSTDLIB_ERROR_HANDLING_TRYV(deserialize_int_val(reader, tag, value_int));
+            value_int_t value_int{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int_val(reader, tag))};
             node_id_value_pairs.emplace(node_id, Value{value_int});
             break;
         }
         case cProtocol::Payload::ValueFloat: {
-            uint64_t val{};
-            if (false == deserialize_int(reader, val)) {
-                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-            }
-            node_id_value_pairs.emplace(node_id, Value{bit_cast<value_float_t>(val)});
+            auto const raw_bits{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint64_t>(reader))};
+            node_id_value_pairs.emplace(node_id, Value{bit_cast<value_float_t>(raw_bits)});
             break;
         }
         case cProtocol::Payload::ValueTrue:

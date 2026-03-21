@@ -15,6 +15,7 @@ enum class IrDeserializationErrorEnum : uint8_t {
     EndOfStream,
     IncompleteStream,
     InvalidKeyGroupOrdering,
+    InvalidMagicNumber,
     InvalidTag,
     UnsupportedMetadataFormat,
     UnsupportedVersion,

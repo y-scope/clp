@@ -31,6 +31,11 @@ enum class IRProtocolErrorCode : uint8_t {
     Invalid,
 };
 
+enum class EncodingType : uint8_t {
+    FourByte,
+    EightByte,
+};
+
 class DecodingException : public TraceableException {
 public:
     // Constructors
@@ -53,12 +58,13 @@ private:
 /**
  * Deserializes the IR stream's encoding type
  * @param reader
- * @param is_four_bytes_encoding Returns the encoding type
- * @return ErrorCode_Success on success
- * @return ErrorCode_Corrupted_IR if reader contains invalid IR
- * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
+ * @return A result containing the encoding type on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to decode
+ * - IrDeserializationErrorEnum::InvalidMagicNumber if the magic number is invalid
  */
-IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
+[[nodiscard]] auto get_encoding_type(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<EncodingType>;
 
 /**
  * Deserializes the tag for the next packet.
@@ -186,16 +192,17 @@ void generic_decode_message(
  * @param metadata_type Returns the type of the metadata deserialized from the IR
  * @param metadata_pos Returns the starting position of the metadata in reader
  * @param metadata_size Returns the size of the metadata deserialized from the IR
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_metadata`'s return values on failure.
  */
-IRErrorCode deserialize_preamble(
+[[nodiscard]] auto deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
-);
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes the preamble for an IR stream.
@@ -211,6 +218,18 @@ IRErrorCode deserialize_preamble(
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
 );
+
+/**
+ * Deserializes the preamble for an IR stream.
+ * @param reader
+ * @return A result containing a pair with the metadata type and metadata size on success, or an
+ * error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize
+ * - Forwards `deserialize_metadata`'s return values on failure.
+ */
+auto deserialize_preamble(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, std::vector<int8_t>>>;
 
 /**
  * Deserializes a UTC offset change packet.
