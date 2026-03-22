@@ -66,7 +66,7 @@ STAGING_DIR="${staging}" \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 
-# --- Build .apk via abuild -------------------------------------------------
+# --- Build .apk via abuild ----------------------------------------------------
 
 abuild_dir="/tmp/clp-abuild"
 rm -rf "${abuild_dir}"
