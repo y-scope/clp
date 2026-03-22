@@ -53,7 +53,7 @@ STAGING_DIR="${staging}" \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 
-# --- Build .rpm via rpmbuild ------------------------------------------------
+# --- Build .rpm via rpmbuild --------------------------------------------------
 
 rpmbuild_dir="/tmp/clp-rpmbuild"
 rm -rf "${rpmbuild_dir}"
