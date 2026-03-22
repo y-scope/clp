@@ -734,12 +734,8 @@ impl ClpIngestionState {
     ///
     /// # Returns
     ///
-    /// A tuple on success, containing:
-    ///
-    /// * The chunk size used for batched metadata insertion.
-    /// * A vector of IDs for the newly ingested S3 object metadata. Each ID denotes the first
-    ///   record inserted in its respective batch. IDs within a single batch are guaranteed to form
-    ///   a consecutive sequence.
+    /// A vector of [`CompressionBufferEntry`] on success where each entry corresponds to an
+    /// inserted S3 object metadata row.
     ///
     /// # Errors
     ///
@@ -755,8 +751,8 @@ impl ClpIngestionState {
     async fn ingest_s3_object_metadata(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
-        objects: &[ObjectMetadata],
-    ) -> anyhow::Result<(usize, Vec<S3ObjectMetadataId>)> {
+        objects: Vec<ObjectMetadata>,
+    ) -> anyhow::Result<Vec<CompressionBufferEntry>> {
         const BASE_INGESTION_QUERY: &str = formatcp!(
             r"INSERT INTO `{table}` (`bucket`, `key`, `size`, `ingestion_job_id`) VALUES ",
             table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
@@ -769,7 +765,7 @@ impl ClpIngestionState {
             "Cannot build S3 object metadata ingestion query with empty objects"
         );
 
-        let mut last_inserted_ids: Vec<S3ObjectMetadataId> = Vec::new();
+        let mut buffer_entries = Vec::with_capacity(objects.len());
 
         // Ingest object metadata
         // NOTE: MySQL has a maximum placeholder limit of 65535. We need to batch the ingestion to
@@ -793,10 +789,17 @@ impl ClpIngestionState {
                     .bind(self.job_id);
             }
 
-            last_inserted_ids.push(query.execute(&mut **tx).await?.last_insert_id());
+            let first_metadata_id: S3ObjectMetadataId =
+                query.execute(&mut **tx).await?.last_insert_id();
+            for (next_metadata_id, object) in (first_metadata_id..).zip(chunk.iter()) {
+                buffer_entries.push(CompressionBufferEntry {
+                    id: next_metadata_id,
+                    size: object.size,
+                });
+            }
         }
 
-        Ok((CHUNK_SIZE, last_inserted_ids))
+        Ok(buffer_entries)
     }
 
     /// Commits the transaction if the underlying job is valid and in
@@ -853,21 +856,13 @@ impl ClpIngestionState {
     /// * Forwards [`Self::ingest_s3_object_metadata`]'s return values on failure.
     /// * Forwards [`Self::check_job_status_and_commit`]'s return values on failure.
     /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the chunk IDs returned by [`Self::ingest_s3_object_metadata`] cannot be mapped to
-    /// the corresponding entries in the `objects` vector.
-    ///
-    /// This condition indicates a violation of internal invariants and should never occur under
-    /// normal execution unless the code has been corrupted or contains a logic error.
     async fn ingest_and_send(
         &self,
         mut tx: sqlx::Transaction<'_, sqlx::MySql>,
         objects: Vec<ObjectMetadata>,
     ) -> anyhow::Result<()> {
-        let (chunk_size, last_inserted_ids) = self
-            .ingest_s3_object_metadata(&mut tx, &objects)
+        let buffer_entries = self
+            .ingest_s3_object_metadata(&mut tx, objects)
             .await
             .inspect_err(|err| {
                 tracing::error!(
@@ -886,18 +881,6 @@ impl ClpIngestionState {
                     "Failed to commit ingestion."
                 );
             })?;
-
-        let mut buffer_entries = Vec::with_capacity(objects.len());
-        for (chunk_id, chunk) in objects.chunks(chunk_size).enumerate() {
-            for (next_metadata_id, object) in
-                (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..).zip(chunk.iter())
-            {
-                buffer_entries.push(CompressionBufferEntry {
-                    id: next_metadata_id,
-                    size: object.size,
-                });
-            }
-        }
         self.sender.send(buffer_entries).await?;
         Ok(())
     }

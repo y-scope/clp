@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 use crate::compression::{Buffer, BufferSubmitter, CompressionBufferEntry};
 
 /// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits
-/// when full or on timeout.
+/// when a certain size threshold is reached or on timeout.
 ///
 /// # Type Parameters
 /// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
@@ -23,8 +23,10 @@ struct ListenerTask<Submitter: BufferSubmitter> {
 
 impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     /// Runs the listener task to buffer and submit [`CompressionBufferEntry`] values. Submission
-    /// can be triggered in three ways:
+    /// can be triggered if:
+    ///
     /// * Receiving a cancellation signal via the provided [`cancel_token`].
+    /// * All senders are closed.
     /// * The buffer's size threshold is reached after receiving new entries.
     /// * A timeout occurs without receiving new entries.
     ///

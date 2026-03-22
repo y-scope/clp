@@ -56,13 +56,10 @@ async fn send_to_listener(
 /// # Returns
 ///
 /// A vector of [`CompressionBufferEntry`] for testing.
-fn create_test_buffer_entries(
-    id_start: S3ObjectMetadataId,
-    count: usize,
-) -> Vec<CompressionBufferEntry> {
-    (id_start..id_start + count as S3ObjectMetadataId)
+fn create_test_buffer_entries(ids: &[S3ObjectMetadataId]) -> Vec<CompressionBufferEntry> {
+    ids.iter()
         .map(|id| CompressionBufferEntry {
-            id,
+            id: *id,
             size: TEST_OBJECT_SIZE,
         })
         .collect()
@@ -82,23 +79,18 @@ async fn test_compression_listener() -> Result<()> {
         DEFAULT_LISTENER_CAPACITY,
     );
 
-    let entries1 = create_test_buffer_entries(1, 100);
-    let entries2 = create_test_buffer_entries(101, 100);
-    let entries3 = create_test_buffer_entries(201, 100);
-
-    // Spawn three tasks that send into the listener concurrently
-    let sender1 = listener.get_new_sender();
-    let sender2 = listener.get_new_sender();
-    let sender3 = listener.get_new_sender();
-
-    let h1 = tokio::spawn(async move { send_to_listener(entries1, sender1).await });
-    let h2 = tokio::spawn(async move { send_to_listener(entries2, sender2).await });
-    let h3 = tokio::spawn(async move { send_to_listener(entries3, sender3).await });
-
+    let expected_ids: Vec<S3ObjectMetadataId> = (1..=300).collect();
+    let mut handlers = Vec::new();
+    for ids in expected_ids.chunks(100) {
+        let entries = create_test_buffer_entries(ids);
+        let sender = listener.get_new_sender();
+        let h = tokio::spawn(async move { send_to_listener(entries, sender).await });
+        handlers.push(h);
+    }
     // Wait for all sender tasks to finish
-    h1.await.unwrap();
-    h2.await.unwrap();
-    h3.await.unwrap();
+    for handler in handlers {
+        handler.await.expect("sender task panicked");
+    }
 
     // Sleep to trigger timeout-based submission
     tokio::time::sleep(Duration::from_secs(DEFAULT_TIMEOUT_SECONDS + 1)).await;
