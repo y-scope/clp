@@ -60,7 +60,7 @@ else
     apk_version="${PKG_VERSION}"
 fi
 
-# --- Bundle binaries and libraries ------------------------------------------
+# --- Bundle binaries and libraries --------------------------------------------
 
 STAGING_DIR="${staging}" \
 BIN_DIR="${BIN_DIR}" \
