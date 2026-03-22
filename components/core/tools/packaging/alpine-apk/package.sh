@@ -110,7 +110,7 @@ abuild -F -d -P "/tmp/clp-apk-out"
 
 # Copy the built package to the output directory
 if ! find /tmp/clp-apk-out -name "*.apk" | grep --quiet .; then
-    echo "ERROR: abuild produced no .apk files" >&2
+    echo >&2 "ERROR: abuild produced no .apk files"
     exit 1
 fi
 find /tmp/clp-apk-out -name "*.apk" -exec cp {} "${output_dir}/" \;
