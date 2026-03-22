@@ -75,7 +75,7 @@ mkdir -p "${abuild_dir}"
 # abuild requires a signing key; add it to trusted keys so the post-build
 # repository index step succeeds.
 if ! abuild-keygen -an 2>&1; then
-    echo "WARN: abuild-keygen failed (key may already exist)" >&2
+    echo >&2 "WARN: abuild-keygen failed (key may already exist)"
 fi
 cp /root/.abuild/*.rsa.pub /etc/apk/keys/
 
