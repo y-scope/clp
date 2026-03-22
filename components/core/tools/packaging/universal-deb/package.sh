@@ -54,7 +54,7 @@ STAGING_DIR="${staging}" \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 
-# --- Create DEBIAN/control --------------------------------------------------
+# --- Create DEBIAN/control ----------------------------------------------------
 
 mkdir -p "${staging}/DEBIAN"
 cat > "${staging}/DEBIAN/control" <<CTRL
