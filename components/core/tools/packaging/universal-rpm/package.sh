@@ -47,7 +47,7 @@ staging="/tmp/clp-rpm-staging"
 # E.g., "0.9.1-20260214.5f1d7ca" -> "0.9.1~20260214.5f1d7ca"
 rpm_version="${PKG_VERSION/-/\~}"
 
-# --- Bundle binaries and libraries ------------------------------------------
+# --- Bundle binaries and libraries --------------------------------------------
 
 STAGING_DIR="${staging}" \
 BIN_DIR="${BIN_DIR}" \
