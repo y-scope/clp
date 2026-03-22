@@ -23,20 +23,20 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-# --- Validate inputs --------------------------------------------------------
+# --- Validate inputs ----------------------------------------------------------
 
 if [[ -z "${PKG_VERSION:-}" ]]; then
-    echo "ERROR: PKG_VERSION is required" >&2
+    echo >&2 "ERROR: PKG_VERSION is required"
     exit 1
 fi
 
 if [[ -z "${PKG_ARCH:-}" ]]; then
-    echo "ERROR: PKG_ARCH is required" >&2
+    echo >&2 "ERROR: PKG_ARCH is required"
     exit 1
 fi
 
 if [[ -z "${BIN_DIR:-}" ]]; then
-    echo "ERROR: BIN_DIR is required" >&2
+    echo >&2 "ERROR: BIN_DIR is required"
     exit 1
 fi
 
