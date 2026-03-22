@@ -71,7 +71,7 @@ Description: CLP core universal binaries for log compression and search
  Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
 CTRL
 
-# --- Build .deb --------------------------------------------------------------
+# --- Build .deb ---------------------------------------------------------------
 
 echo "==> Building deb package..."
 dpkg-deb --build "${staging}" "${output_dir}/"
