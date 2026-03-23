@@ -1,1 +1,1 @@
-"""Top-level package for CLP binary integration tests."""
+"""Top-level package for CLP package integration tests."""

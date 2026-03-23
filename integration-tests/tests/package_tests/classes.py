@@ -1,9 +1,8 @@
 """Classes used in CLP package integration tests."""
 
-import argparse
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -12,7 +11,7 @@ from clp_py_utils.clp_config import (
 )
 from pydantic import ValidationError
 
-from tests.utils.classes import IntegrationTestExternalAction, IntegrationTestPathConfig
+from tests.utils.classes import IntegrationTestPathConfig, static_path
 from tests.utils.utils import (
     load_yaml_to_dict,
     validate_dir_exists,
@@ -28,76 +27,62 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
     #: Default CLP package directory.
     clp_package_dir: Path
 
-    #: Directory to store temporary package config files.
-    temp_config_dir: Path = field(init=False)
-
-    #: Directory to store temporary decompressed files.
-    package_decompression_dir: Path = field(init=False)
-
     def __post_init__(self) -> None:
-        """Validate directories."""
+        """Create and validate directories."""
         super().__post_init__()
 
-        # Ensure that the CLP package directory exists and that it is structured correctly.
-        clp_package_dir = self.clp_package_dir
-        validate_dir_exists(clp_package_dir)
-        required_dirs = ["etc", "sbin"]
-        missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
-        if len(missing_dirs) > 0:
-            err_msg = f"The CLP package has missing directories: {', '.join(missing_dirs)}"
-            pytest.fail(err_msg)
+        # Validate that init directory exists.
+        validate_dir_exists(self.clp_package_dir)
 
-        # Create and set `temp_config_dir` within `test_cache_dir`.
-        object.__setattr__(self, "temp_config_dir", self.test_cache_dir / "temp_configs")
+        # Create `temp_config_dir`.
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create and set `temp_config_dir` within `test_cache_dir`.
-        object.__setattr__(
-            self,
-            "package_decompression_dir",
-            self.test_cache_dir / "package_decompression",
-        )
+        # Create `package_decompression_dir`.
         self.package_decompression_dir.mkdir(parents=True, exist_ok=True)
 
+        # Validate all static path properties.
+        self.validate_static_paths()
+
     @property
+    @static_path
     def archive_manager_path(self) -> Path:
         """:return: The absolute path to the package archive-manager script."""
         return self.clp_package_dir / "sbin" / "admin-tools" / "archive-manager.sh"
 
     @property
+    @static_path
     def compress_from_s3_path(self) -> Path:
         """:return: The absolute path to the package compress-from-s3 script."""
         return self.clp_package_dir / "sbin" / "compress-from-s3.sh"
 
     @property
+    @static_path
     def compress_path(self) -> Path:
         """:return: The absolute path to the package compress script."""
         return self.clp_package_dir / "sbin" / "compress.sh"
 
     @property
+    @static_path
     def dataset_manager_path(self) -> Path:
         """:return: The absolute path to the package dataset-manager script."""
         return self.clp_package_dir / "sbin" / "admin-tools" / "dataset-manager.sh"
 
     @property
+    @static_path
     def decompress_path(self) -> Path:
         """:return: The absolute path to the package decompress script."""
         return self.clp_package_dir / "sbin" / "decompress.sh"
 
     @property
-    def search_path(self) -> Path:
-        """:return: The absolute path to the package search script."""
-        return self.clp_package_dir / "sbin" / "search.sh"
+    def package_archives_path(self) -> Path:
+        """:return: The absolute path to the package archives."""
+        return self.clp_package_dir / "var" / "data" / "archives"
 
     @property
-    def start_clp_path(self) -> Path:
-        """:return: The absolute path to the package start-clp script."""
-        return self.clp_package_dir / "sbin" / "start-clp.sh"
-
-    @property
-    def stop_clp_path(self) -> Path:
-        """:return: The absolute path to the package stop-clp script."""
-        return self.clp_package_dir / "sbin" / "stop-clp.sh"
+    @static_path
+    def package_decompression_dir(self) -> Path:
+        """:return: The absolute path to the directory storing temporary decompressed files."""
+        return self.test_cache_dir / "package_decompression"
 
     @property
     def package_logs_path(self) -> Path:
@@ -105,9 +90,28 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
         return self.clp_package_dir / "var" / "log"
 
     @property
-    def package_archives_path(self) -> Path:
-        """:return: The absolute path to the package archives."""
-        return self.clp_package_dir / "var" / "data" / "archives"
+    @static_path
+    def search_path(self) -> Path:
+        """:return: The absolute path to the package search script."""
+        return self.clp_package_dir / "sbin" / "search.sh"
+
+    @property
+    @static_path
+    def start_clp_path(self) -> Path:
+        """:return: The absolute path to the package start-clp script."""
+        return self.clp_package_dir / "sbin" / "start-clp.sh"
+
+    @property
+    @static_path
+    def stop_clp_path(self) -> Path:
+        """:return: The absolute path to the package stop-clp script."""
+        return self.clp_package_dir / "sbin" / "stop-clp.sh"
+
+    @property
+    @static_path
+    def temp_config_dir(self) -> Path:
+        """:return: The absolute path to the directory storing temporary package config files."""
+        return self.test_cache_dir / "temp_configs"
 
 
 @dataclass
@@ -204,18 +208,3 @@ class ClpPackage:
             pytest.fail(fail_msg)
 
         return running_config
-
-
-@dataclass
-class ClpPackageExternalAction(IntegrationTestExternalAction):
-    """Metadata for an external action executed during a CLP package integration test."""
-
-    #: Parser to define semantics for the content of `cmd`.
-    args_parser: argparse.ArgumentParser
-
-    #: Namespace to hold information from `cmd`.
-    parsed_args: argparse.Namespace = field(init=False)
-
-    def __post_init__(self) -> None:
-        """Parse command arguments."""
-        self.parsed_args = self.args_parser.parse_args(self.cmd[1:])
