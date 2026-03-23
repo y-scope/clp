@@ -1,24 +1,26 @@
 #include "LogGenerator.hpp"
 
+#include <array>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <vector>
 
 #include "LogType.hpp"
 
+using std::array;
 using std::string;
+using std::uniform_int_distribution;
 using std::vector;
 
-LogGenerator::LogGenerator(uint32_t const seed) : m_seed(seed) {
+LogGenerator::LogGenerator(uint32_t const seed) : m_rng(seed) {
     m_log_types.emplace_back(LogType{"The process took ", VarType::Int, " ms to complete."});
     m_log_types.emplace_back(
             LogType{"User ", VarType::Int, " did ", VarType::UserAction, " unexpectedly."}
     );
     m_log_types.emplace_back(LogType{"Oops! error ", VarType::Int, " occured for ", VarType::Int});
-    m_log_types.emplace_back(LogType{"Order ", VarType::Int, " contains items: ", VarType::Items});
-    m_log_types.emplace_back(
-            LogType{"User ", VarType::Int, " has extra fields: ", VarType::Fields}
-    );
+    m_log_types.emplace_back(LogType{"Order ", VarType::Int, " contains items: ", VarType::List});
+    m_log_types.emplace_back(LogType{"User ", VarType::Int, " has extra fields: ", VarType::List});
     m_log_types.emplace_back(LogType{"Session ", VarType::Int, " lasted ", VarType::Int, " mins."});
     m_log_types.emplace_back(
             LogType{"User ", VarType::Int, " clicked ", VarType::Path, VarType::Int, " times."}
@@ -47,29 +49,30 @@ LogGenerator::LogGenerator(uint32_t const seed) : m_seed(seed) {
             LogType{"Service ", VarType::Name, " responded in ", VarType::Int, "ms."}
     );
     m_log_types.emplace_back(
-            LogType{"Order ", VarType::Int, " is ", VarType::Status, "; ", VarType::Items, "."}
+            LogType{"Order ", VarType::Int, " is ", VarType::Status, "; ", VarType::List, "."}
     );
     m_log_types.emplace_back(
             LogType{"Module ", VarType::Name, " generated event ", VarType::Event, "."}
     );
     m_log_types.emplace_back(
-            LogType{"Payment by ", VarType::Int, " via ", VarType::Pay, " success=.", VarType::Bool}
+            LogType{"Payment by ", VarType::Int, " via ", VarType::Pay, " success=", VarType::Bool}
     );
     m_log_types.emplace_back(
             LogType{"Backup ", VarType::Int, " took ", VarType::Int, " ms; ", VarType::Float, "GB."}
     );
     m_log_types.emplace_back(LogType{"user_id=", VarType::Int, ", action=", VarType::UserAction});
     m_log_types.emplace_back(LogType{"error_code=", VarType::Int, " The user disconnected."});
-    m_log_types.emplace_back(LogType{"orer_id=", VarType::Int, ", items= ", VarType::Items});
+    m_log_types.emplace_back(LogType{"orer_id=", VarType::Int, ", items= ", VarType::List});
     m_log_types.emplace_back(
-            LogType{"The user_id=", VarType::Int, " has optional_fields=", VarType::Fields}
+            LogType{"The user_id=", VarType::Int, " has optional_fields=", VarType::List}
     );
 }
 
 auto LogGenerator::generate_logs(size_t const count) -> vector<string> {
     vector<string> logs;
     for (uint32_t i{0}; i < count; i++) {
-        auto log_type_id{i % m_log_types.size()};
+        uniform_int_distribution<size_t> dist(0, m_log_types.size() - 1);
+        auto const log_type_id{dist(m_rng)};
         logs.emplace_back();
         auto& log{logs.back()};
         for (auto const& token : m_log_types[log_type_id]) {
@@ -85,52 +88,142 @@ auto LogGenerator::generate_logs(size_t const count) -> vector<string> {
 
 auto LogGenerator::generate_value(VarType const type) -> std::string {
     if (VarType::Int == type) {
-        return std::to_string(1);
+        uniform_int_distribution<size_t> encodable_dist(0, 1);
+        if (1 == encodable_dist(m_rng)) {
+            uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
+            return std::to_string(dist(m_rng));
+        }
+        uniform_int_distribution<size_t> len_dist(21, 40);
+        uniform_int_distribution<int> digit_dist(0, 9);
+        string result;
+        auto length{len_dist(m_rng)};
+        for (size_t i{0}; i < length; ++i) {
+            result += static_cast<char>('0' + digit_dist(m_rng));
+        }
+        return result;
     }
     if (VarType::Float == type) {
-        return std::to_string(0.1 * 1);
+        uniform_int_distribution<size_t> encodable_dist(0, 1);
+        uniform_int_distribution<int> digit_dist(0, 9);
+        size_t length;
+        if (1 == encodable_dist(m_rng)) {
+            uniform_int_distribution<size_t> len_dist(2, 17);
+            length = len_dist(m_rng);
+        } else {
+            uniform_int_distribution<size_t> len_dist(18, 40);
+            length = len_dist(m_rng);
+        }
+        uniform_int_distribution<size_t> decimal_dist(1, length - 1);
+        auto decimal_place{decimal_dist(m_rng)};
+        string result;
+        for (size_t i{0}; i < length + 1; ++i) {
+            if (decimal_place == i) {
+                result += '.';
+                continue;
+            }
+            result += static_cast<char>('0' + digit_dist(m_rng));
+        }
+        return result;
     }
     if (VarType::UserAction == type) {
-        return "LOGIN"; // LOGIN, LOGOUT, UPLOAD, DOWNLOAD, DELETE, VIEW
+        static const array<string, 6> cValues{
+                "LOGIN", "LOGOUT", "UPLOAD", "DOWNLOAD", "DELETE", "VIEW"
+        };
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
-    if (VarType::Fields == type) {
-        return "{abc, def, ghi}";
-    }
-    if (VarType::Items == type) {
-        return "{abc, def, ghi}";
+    if (VarType::List == type) {
+        uniform_int_distribution<size_t> num_fields_dist(1, 10);
+        auto num_fields{num_fields_dist(m_rng)};
+        string result{"{"};
+        for (size_t i{0}; i < num_fields; ++i) {
+            result += generate_string();
+            if (i < num_fields - 1) {
+                result += ", ";
+            }
+        }
+        result += "}";
+        return result;
     }
     if (VarType::Path == type) {
-        return "abc/def/ghi";
+        uniform_int_distribution<size_t> num_paths_dist(1, 5);
+        auto num_paths{num_paths_dist(m_rng)};
+        string result;
+        for (size_t i{0}; i < num_paths; ++i) {
+            result += generate_string();
+            if (i < num_paths - 1) {
+                result += "/";
+            }
+        }
+        return result;
     }
     if (VarType::Ip == type) {
-        return "111.111.1.1";
+        uniform_int_distribution<size_t> octet_dist(1, 254);
+        auto result{std::to_string(octet_dist(m_rng))};
+        result += "." + std::to_string(octet_dist(m_rng));
+        result += "." + std::to_string(octet_dist(m_rng));
+        result += "." + std::to_string(octet_dist(m_rng));
+        return result;
     }
     if (VarType::Connection == type) {
-        return "GET"; // GET,POST,PUT,DELETE
+        static const array<string, 4> cValues{"GET", "POST", "PUT", "DELETE"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Roles == type) {
-        return "User"; //
+        static const array<string, 6> cValues{
+                "User", "Admin", "Moderator", "Guest", "SuperUser", "Service"
+        };
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Severity == type) {
-        return "CRITICAL"; // CRITICAL, WARNING, INFO
+        static const array<string, 3> cValues{"CRITICAL", "WARNING", "INFO"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Level == type) {
-        return "HIGH"; // HIGH, MEDIUM, LOW
+        static const array<string, 3> cValues{"HIGH", "MEDIUM", "LOW"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Name == type) {
-        return "Name"; // any string
+        return generate_string();
     }
     if (VarType::Status == type) {
-        return "PENDING"; // PENDING, SHIPPED, CANCELLED
+        static const array<string, 3> cValues{"PENDING", "SHIPPED", "CANCELLED"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Event == type) {
-        return "START"; // START, STOP, ERROR, INFO
+        static const array<string, 4> cValues{"START", "STOP", "ERROR", "INFO"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Pay == type) {
-        return "CASH"; // CASH, CARD, PAYPAL
+        static const array<string, 3> cValues{"CASH", "CARD", "PAYPAL"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     if (VarType::Bool == type) {
-        return "TRUE"; // TRUE, FALSE
+        static const array<string, 2> cValues{"TRUE", "FALSE"};
+        uniform_int_distribution<size_t> dist(0, cValues.size() - 1);
+        return cValues[dist(m_rng)];
     }
     return "unknown";
+}
+
+auto LogGenerator::generate_string() -> std::string {
+    static const string cChars{"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"};
+    uniform_int_distribution<size_t> len_dist(1, 20);
+    auto length{len_dist(m_rng)};
+
+    uniform_int_distribution<size_t> value_dist(0, cChars.size() - 1);
+
+    string result;
+    result.reserve(length);
+    for (size_t i{0}; i < length; ++i) {
+        result += cChars[value_dist(m_rng)];
+    }
+    return result;
 }

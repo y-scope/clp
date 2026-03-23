@@ -2,6 +2,7 @@
 #define TESTS_LOGGENERATOR_HPP
 
 #include <cstdint>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -16,7 +17,9 @@ public:
 private:
     auto generate_value(VarType type) -> std::string;
 
-    uint32_t m_seed;
+    auto generate_string() -> std::string;
+
+    std::mt19937 m_rng;
     std::vector<LogType> m_log_types;
 };
 
