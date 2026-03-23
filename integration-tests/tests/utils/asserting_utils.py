@@ -1,10 +1,7 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-import shlex
-import subprocess
 from pathlib import Path
-from typing import Any
 
 import pytest
 from clp_package_utils.general import EXTRACT_FILE_CMD
@@ -14,29 +11,14 @@ from pydantic import ValidationError
 from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance, PackageTestConfig
 from tests.utils.docker_utils import list_running_services_in_compose_project
-from tests.utils.utils import clear_directory, is_dir_tree_content_equal, load_yaml_to_dict
+from tests.utils.subprocess_utils import run_and_log_subprocess
+from tests.utils.utils import (
+    clear_directory,
+    is_dir_tree_content_equal,
+    load_yaml_to_dict,
+)
 
 logger = logging.getLogger(__name__)
-
-
-def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
-    """
-    Runs a command with subprocess and asserts that it succeeds with pytest.
-
-    :param cmd: Command and arguments to execute.
-    :param kwargs: Additional keyword arguments passed through to the subprocess.
-    :return: The completed process object, for inspection or further handling.
-    :raise: pytest.fail if the command exits with a non-zero return code.
-    """
-    logger.info("Running command: %s", shlex.join(cmd))
-
-    try:
-        proc = subprocess.run(cmd, check=True, **kwargs)
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
-    except subprocess.TimeoutExpired as e:
-        pytest.fail(f"Command timed out: {' '.join(cmd)}: {e}")
-    return proc
 
 
 def validate_package_instance(package_instance: PackageInstance) -> None:
@@ -47,6 +29,11 @@ def validate_package_instance(package_instance: PackageInstance) -> None:
 
     :param package_instance:
     """
+    log_msg = (
+        f"Validating the '{package_instance.package_test_config.mode_config.mode_name}' package."
+    )
+    logger.info(log_msg)
+
     # Ensure that all package components are running.
     _validate_package_running(package_instance)
 
@@ -121,6 +108,8 @@ def verify_package_compression(
     :param package_test_config:
     """
     mode = package_test_config.mode_config.mode_name
+    log_msg = f"Verifying {mode} package compression."
+    logger.info(log_msg)
 
     if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
@@ -144,7 +133,7 @@ def verify_package_compression(
         ]
 
         # Run decompression command and assert that it succeeds.
-        run_and_assert(decompress_cmd)
+        run_and_log_subprocess(decompress_cmd)
 
         # Verify content equality.
         output_path = decompression_dir / path_to_original_dataset.relative_to(

@@ -97,7 +97,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     REQUIRE(cNumEntries == schema_reader->get_num_messages());
 
     SimpleFilterClass simple_filter_class;
-    schema_reader->initialize_filter(&simple_filter_class);
+    schema_reader->initialize_filter(simple_filter_class);
     clp_s::BaseColumnReader* log_event_idx_reader{nullptr};
     for (auto* column_reader : simple_filter_class.get_column_readers()) {
         if (log_event_idx_node_id == column_reader->get_id()) {

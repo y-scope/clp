@@ -1,0 +1,199 @@
+#include "BloomFilter.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <numbers>
+#include <string_view>
+#include <utility>
+
+#include <ystdlib/containers/Array.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp/ErrorCode.hpp>
+#include <clp/ReaderInterface.hpp>
+#include <clp/type_utils.hpp>
+#include <clp/WriterInterface.hpp>
+
+#include "ErrorCode.hpp"
+#include "HashAlgorithm.hpp"
+
+namespace clp_s::filter {
+namespace {
+constexpr size_t cDefaultBitArraySize{64};
+constexpr uint32_t cDefaultNumHashFunctions{1};
+constexpr uint32_t cMinNumHashFunctions{1};
+constexpr uint32_t cMaxNumHashFunctions{20};
+constexpr double cMinFalsePositiveRate{1e-6};
+constexpr HashAlgorithm cDefaultHashAlgorithm{HashAlgorithm::Xxh364};
+constexpr uint64_t cPrimaryHashSeed{0};
+constexpr uint64_t cSecondaryHashSeed{0x9e37'79b9'7f4a'7c15ULL};
+constexpr size_t cNumBitsInByte{8};
+
+[[nodiscard]] auto min_bytes_containing_bits(size_t num_bits) -> size_t {
+    return (num_bits / cNumBitsInByte) + ((0 != (num_bits % cNumBitsInByte)) ? 1 : 0);
+}
+}  // namespace
+
+auto BloomFilter::create(size_t expected_num_elements, double false_positive_rate)
+        -> ystdlib::error_handling::Result<BloomFilter> {
+    auto const [bit_array_size, num_hash_functions] = YSTDLIB_ERROR_HANDLING_TRYX(
+            compute_optimal_parameters(expected_num_elements, false_positive_rate)
+    );
+
+    size_t const num_bytes{min_bytes_containing_bits(bit_array_size)};
+    return BloomFilter{
+            bit_array_size,
+            num_hash_functions,
+            cDefaultHashAlgorithm,
+            ystdlib::containers::Array<uint8_t>(num_bytes)
+    };
+}
+
+auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<BloomFilter> {
+    uint8_t hash_algorithm_u8{};
+    if (clp::ErrorCode_Success != reader.try_read_numeric_value(hash_algorithm_u8)) {
+        return ErrorCode{ErrorCodeEnum::ReadFailure};
+    }
+    auto const optional_hash_algorithm{try_parse_hash_algorithm(hash_algorithm_u8)};
+    if (false == optional_hash_algorithm.has_value()) {
+        return ErrorCode{ErrorCodeEnum::UnsupportedHashAlgorithm};
+    }
+    auto const hash_algorithm{optional_hash_algorithm.value()};
+
+    uint32_t num_hash_functions{};
+    if (clp::ErrorCode_Success != reader.try_read_numeric_value(num_hash_functions)) {
+        return ErrorCode{ErrorCodeEnum::ReadFailure};
+    }
+    if (num_hash_functions < cMinNumHashFunctions || num_hash_functions > cMaxNumHashFunctions) {
+        return ErrorCode{ErrorCodeEnum::CorruptFilterPayload};
+    }
+
+    uint64_t bit_array_size_u64{};
+    if (clp::ErrorCode_Success != reader.try_read_numeric_value(bit_array_size_u64)) {
+        return ErrorCode{ErrorCodeEnum::ReadFailure};
+    }
+    if (0 == bit_array_size_u64 || bit_array_size_u64 > std::numeric_limits<size_t>::max()) {
+        return ErrorCode{ErrorCodeEnum::CorruptFilterPayload};
+    }
+    size_t const bit_array_size{static_cast<size_t>(bit_array_size_u64)};
+
+    uint64_t bit_array_bytes{};
+    if (clp::ErrorCode_Success != reader.try_read_numeric_value(bit_array_bytes)) {
+        return ErrorCode{ErrorCodeEnum::ReadFailure};
+    }
+    if (bit_array_bytes > std::numeric_limits<size_t>::max()) {
+        return ErrorCode{ErrorCodeEnum::CorruptFilterPayload};
+    }
+    size_t const expected_bit_array_bytes{min_bytes_containing_bits(bit_array_size)};
+    if (bit_array_bytes != expected_bit_array_bytes) {
+        return ErrorCode{ErrorCodeEnum::CorruptFilterPayload};
+    }
+
+    ystdlib::containers::Array<uint8_t> bit_array(static_cast<size_t>(bit_array_bytes));
+    if (false == bit_array.empty()) {
+        if (clp::ErrorCode_Success
+            != reader.try_read_exact_length(
+                    clp::size_checked_pointer_cast<char>(bit_array.data()),
+                    static_cast<size_t>(bit_array_bytes)
+            ))
+        {
+            return ErrorCode{ErrorCodeEnum::ReadFailure};
+        }
+    }
+    return BloomFilter{bit_array_size, num_hash_functions, hash_algorithm, std::move(bit_array)};
+}
+
+auto BloomFilter::add(std::string_view value) -> void {
+    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
+    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
+    for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
+        set_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size));
+    }
+}
+
+auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
+    uint64_t const h1{hash64(m_hash_algorithm, value, cPrimaryHashSeed)};
+    auto const h2{std::max<uint64_t>(hash64(m_hash_algorithm, value, cSecondaryHashSeed), 1ULL)};
+    for (uint32_t i = 0; i < m_num_hash_functions; ++i) {
+        if (false == test_bit(static_cast<size_t>((h1 + i * h2) % m_bit_array_size))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
+    writer.write_numeric_value(static_cast<uint8_t>(m_hash_algorithm));
+    writer.write_numeric_value<uint32_t>(m_num_hash_functions);
+    writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
+    writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array.size()));
+    if (false == m_bit_array.empty()) {
+        writer.write(
+                clp::size_checked_pointer_cast<char const>(m_bit_array.data()),
+                m_bit_array.size()
+        );
+    }
+}
+
+auto
+BloomFilter::compute_optimal_parameters(size_t expected_num_elements, double false_positive_rate)
+        -> ystdlib::error_handling::Result<std::pair<size_t, uint32_t>> {
+    if (false_positive_rate < cMinFalsePositiveRate || false_positive_rate >= 1.0) {
+        return ErrorCode{ErrorCodeEnum::InvalidFalsePositiveRate};
+    }
+    if (0 == expected_num_elements) {
+        return std::make_pair(cDefaultBitArraySize, cDefaultNumHashFunctions);
+    }
+
+    double const ln2{std::numbers::ln2_v<double>};
+    double const ln2_squared{ln2 * ln2};
+    auto const ideal_bit_array_size
+            = (-static_cast<double>(expected_num_elements) * std::log(false_positive_rate)
+               / ln2_squared);
+    if (false == std::isfinite(ideal_bit_array_size)
+        || ideal_bit_array_size > static_cast<double>(std::numeric_limits<size_t>::max()))
+    {
+        return ErrorCode{ErrorCodeEnum::ParameterComputationOutOfRange};
+    }
+    auto const bit_array_size
+            = std::max<size_t>(1, static_cast<size_t>(std::ceil(ideal_bit_array_size)));
+
+    auto const num_hash_functions = static_cast<uint32_t>(
+            static_cast<double>(bit_array_size) / static_cast<double>(expected_num_elements) * ln2
+    );
+
+    uint32_t const capped_num_hash_functions{
+            std::clamp(num_hash_functions, cMinNumHashFunctions, cMaxNumHashFunctions)
+    };
+
+    return std::make_pair(bit_array_size, capped_num_hash_functions);
+}
+
+BloomFilter::BloomFilter(
+        size_t bit_array_size,
+        uint32_t num_hash_functions,
+        HashAlgorithm hash_algorithm,
+        ystdlib::containers::Array<uint8_t> bit_array
+)
+        : m_bit_array_size{bit_array_size},
+          m_num_hash_functions{num_hash_functions},
+          m_hash_algorithm{hash_algorithm},
+          m_bit_array{std::move(bit_array)} {}
+
+auto BloomFilter::set_bit(size_t bit_index) -> void {
+    size_t const byte_index{bit_index / cNumBitsInByte};
+    size_t const bit_offset{bit_index % cNumBitsInByte};
+    m_bit_array.at(byte_index) |= static_cast<uint8_t>(1U << bit_offset);
+}
+
+auto BloomFilter::test_bit(size_t bit_index) const -> bool {
+    size_t const byte_index{bit_index / cNumBitsInByte};
+    size_t const bit_offset{bit_index % cNumBitsInByte};
+    return (m_bit_array.at(byte_index) & static_cast<uint8_t>(1U << bit_offset)) != 0;
+}
+}  // namespace clp_s::filter
