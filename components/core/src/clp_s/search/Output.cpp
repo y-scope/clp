@@ -100,7 +100,7 @@ bool Output::filter() {
                 m_output_handler->should_output_metadata(),
                 m_should_marshal_records
         );
-        reader.initialize_filter(&m_query_runner);
+        reader.initialize_filter(m_query_runner);
 
         if (m_output_handler->should_output_metadata()) {
             epochtime_t timestamp{};
@@ -109,13 +109,13 @@ bool Output::filter() {
                     message,
                     timestamp,
                     log_event_idx,
-                    &m_query_runner
+                    m_query_runner
             ))
             {
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
-            while (reader.get_next_message(message, &m_query_runner)) {
+            while (reader.get_next_message(message, m_query_runner)) {
                 m_output_handler->write(message);
             }
         }
