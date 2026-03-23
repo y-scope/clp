@@ -163,12 +163,12 @@ class ClpPackage:
 
     @property
     def clp_instance_id_file_path(self) -> Path:
-        """:return: The absolute path to the temporary configuration file for the package."""
+        """:return: The absolute path to the package instance-id file."""
         return self.path_config.package_logs_path / "instance-id"
 
     @property
     def shared_config_file_path(self) -> Path:
-        """:return: The absolute path to the temporary configuration file for the package."""
+        """:return: The absolute path to the package shared config file."""
         return self.path_config.package_logs_path / ".clp-config.yaml"
 
     def get_clp_instance_id(self) -> str:
