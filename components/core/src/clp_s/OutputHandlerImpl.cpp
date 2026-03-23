@@ -44,7 +44,7 @@ NetworkOutputHandler::NetworkOutputHandler(
     m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
 }
 
@@ -61,7 +61,7 @@ void NetworkOutputHandler::write(
     msgpack::pack(m, src);
 
     if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
 }
 

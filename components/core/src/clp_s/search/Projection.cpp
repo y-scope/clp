@@ -8,10 +8,10 @@
 namespace clp_s::search {
 void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
     if (column->is_unresolved_descriptor()) {
-        throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
-        throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
     if (false == m_allow_duplicate_columns
         && m_selected_columns.end()
@@ -22,7 +22,7 @@ void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
                    ))
     {
         // no duplicate columns in projection
-        throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     m_selected_columns.push_back(column);
 }
