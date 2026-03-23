@@ -17,8 +17,6 @@ auto SfaErrorCategory::message(SfaErrorCodeEnum error_enum) const -> std::string
     switch (error_enum) {
         case SfaErrorCodeEnum::IoFailure:
             return "an I/O operation failed";
-        case SfaErrorCodeEnum::MalformedRangeIndex:
-            return "the archive range index is malformed";
         case SfaErrorCodeEnum::NoMemory:
             return "insufficient memory";
         case SfaErrorCodeEnum::NotInit:

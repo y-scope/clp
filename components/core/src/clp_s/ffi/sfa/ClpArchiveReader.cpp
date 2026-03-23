@@ -130,27 +130,18 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
     m_file_names.reserve(range_index.size());
     m_file_infos.reserve(range_index.size());
 
-    uint64_t prev_end_idx{0};
     for (auto const& range : range_index) {
         auto const start_idx{static_cast<uint64_t>(range.start_index)};
         auto const end_idx{static_cast<uint64_t>(range.end_index)};
-        if (start_idx >= end_idx || start_idx != prev_end_idx) {
-            return SfaErrorCode{SfaErrorCodeEnum::MalformedRangeIndex};
-        }
         m_event_count += end_idx - start_idx;
 
         auto const filename_it{
                 range.fields.find(std::string{clp_s::constants::range_index::cFilename})
         };
-        if (range.fields.end() == filename_it || false == filename_it->is_string()) {
-            return SfaErrorCode{SfaErrorCodeEnum::MalformedRangeIndex};
-        }
         auto const filename{filename_it->get<std::string>()};
 
         m_file_names.push_back(filename);
         m_file_infos.emplace_back(filename, start_idx, end_idx);
-
-        prev_end_idx = end_idx;
     }
 
     return ystdlib::error_handling::success();

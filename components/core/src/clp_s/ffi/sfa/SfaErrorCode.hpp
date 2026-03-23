@@ -11,7 +11,6 @@ namespace clp_s::ffi::sfa {
  */
 enum class SfaErrorCodeEnum : uint8_t {
     IoFailure,
-    MalformedRangeIndex,
     NoMemory,
     NotInit,
 };

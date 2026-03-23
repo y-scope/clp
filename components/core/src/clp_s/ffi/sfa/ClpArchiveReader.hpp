@@ -122,11 +122,10 @@ private:
     /**
      * Precomputes archive metadata from the range index.
      *
-     * Assumes range-index entries are ordered and globally contiguous in log-event index space,
-     * i.e., each entry starts at the previous entry's end.
+     * This function skips range index validation as they are already validated inside
+     * `clp_s::ArchiveReaderAdaptor`.
      *
-     * @return A void result on success, or an error code indicating the failure:
-     * - `SfaErrorCodeEnum::MalformedRangeIndex` if range-index metadata violates the assumption.
+     * @return A void result on success.
      */
     [[nodiscard]] auto precompute_archive_metadata() -> ystdlib::error_handling::Result<void>;
 
