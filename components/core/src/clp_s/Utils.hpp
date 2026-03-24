@@ -141,7 +141,7 @@ inline T2 bit_cast(T1 t1) {
     static_assert(std::is_standard_layout<T2>::value, "Need to be standard layout");
 
     T2 t2;
-    stdstd::memcpy(std::addressof(t2), std::addressof(t1), sizeof(T1));
+    std::memcpy(std::addressof(t2), std::addressof(t1), sizeof(T1));
     return t2;
 }
 
