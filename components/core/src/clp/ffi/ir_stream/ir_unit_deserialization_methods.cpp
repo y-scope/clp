@@ -341,13 +341,17 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
         case cProtocol::Payload::ValueInt16:
         case cProtocol::Payload::ValueInt32:
         case cProtocol::Payload::ValueInt64: {
-            value_int_t value_int{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int_val(reader, tag))};
+            auto const value_int{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int_val(reader, tag))};
             node_id_value_pairs.emplace(node_id, Value{value_int});
             break;
         }
         case cProtocol::Payload::ValueFloat: {
-            auto const raw_bits{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint64_t>(reader))};
-            node_id_value_pairs.emplace(node_id, Value{bit_cast<value_float_t>(raw_bits)});
+            node_id_value_pairs.emplace(
+                    node_id,
+                    Value{bit_cast<value_float_t>(
+                            YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint64_t>(reader))
+                    )}
+            );
             break;
         }
         case cProtocol::Payload::ValueTrue:
