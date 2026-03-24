@@ -18,6 +18,7 @@
 #include "../reducer/Record.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
+#include "TraceableException.hpp"
 
 using std::string;
 using std::string_view;

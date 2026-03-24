@@ -11,6 +11,7 @@
 #include "ArchiveReaderAdaptor.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderUtils.hpp"
+#include "TraceableException.hpp"
 
 namespace clp_s {
 auto PackedStreamReader::read_metadata(ZstdDecompressor& decompressor)

@@ -11,6 +11,8 @@
 
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
 
+#include "TraceableException.hpp"
+
 namespace clp_s {
 void TimestampDictionaryWriter::write(std::stringstream& stream) {
     write_numeric_value<uint64_t>(stream, m_column_id_to_range.size());
