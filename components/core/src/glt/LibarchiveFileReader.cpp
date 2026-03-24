@@ -141,7 +141,8 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter(
             char const* data = reinterpret_cast<char const*>(m_data_block) + m_pos_in_data_block;
             size_t data_length = m_data_block_length - m_pos_in_data_block;
 
-            char const* delim_ptr = reinterpret_cast<char const*>(std::memchr(data, delim, data_length));
+            char const* delim_ptr
+                    = reinterpret_cast<char const*>(std::memchr(data, delim, data_length));
             if (nullptr == delim_ptr) {
                 // Add the remaining data to the string
                 str.append(data, data_length);

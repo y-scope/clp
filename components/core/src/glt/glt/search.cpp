@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 
@@ -12,7 +13,6 @@
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "CommandLineArguments.hpp"
-#include <cstring>
 
 using glt::combined_table_id_t;
 using glt::epochtime_t;

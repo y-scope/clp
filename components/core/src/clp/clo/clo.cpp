@@ -1,3 +1,4 @@
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -21,7 +22,6 @@
 #include "CommandLineArguments.hpp"
 #include "constants.hpp"
 #include "OutputHandler.hpp"
-#include <cstring>
 
 using clp::clo::CommandLineArguments;
 using clp::clo::CountByTimeOutputHandler;

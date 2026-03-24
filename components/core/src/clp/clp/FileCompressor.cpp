@@ -1,6 +1,7 @@
 #include "FileCompressor.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <set>
@@ -21,7 +22,6 @@
 #include "../streaming_archive/writer/utils.hpp"
 #include "../utf8_utils.hpp"
 #include "utils.hpp"
-#include <cstring>
 
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;

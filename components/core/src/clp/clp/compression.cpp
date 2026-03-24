@@ -1,5 +1,6 @@
 #include "compression.hpp"
 
+#include <cstring>
 #include <iostream>
 #include <memory>
 
@@ -14,7 +15,6 @@
 #include "../Utils.hpp"
 #include "FileCompressor.hpp"
 #include "utils.hpp"
-#include <cstring>
 
 using clp::streaming_archive::writer::split_archive;
 using std::cerr;
@@ -68,7 +68,11 @@ bool compress(
     // Create output directory in case it doesn't exist
     auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
     if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), std::strerror(errno));
+        SPDLOG_ERROR(
+                "Failed to create {} - {}",
+                output_dir.parent_path().c_str(),
+                std::strerror(errno)
+        );
         return false;
     }
 

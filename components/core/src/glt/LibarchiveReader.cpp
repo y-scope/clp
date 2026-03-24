@@ -1,10 +1,11 @@
 #include "LibarchiveReader.hpp"
 
+#include <cstring>
+
 #include <archive_entry.h>
 
 #include "Defs.h"
 #include "spdlog_with_specializations.hpp"
-#include <cstring>
 
 namespace glt {
 ErrorCode

@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <set>
@@ -17,7 +18,6 @@
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
-#include <cstring>
 
 using clp::clg::CommandLineArguments;
 using clp::CommandLineArgumentsBase;

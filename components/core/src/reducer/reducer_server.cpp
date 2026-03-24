@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <utility>
@@ -14,7 +15,6 @@
 #include "RecordReceiverContext.hpp"
 #include "ServerContext.hpp"
 #include "types.hpp"
-#include <cstring>
 
 using boost::asio::ip::tcp;
 

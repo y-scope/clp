@@ -2,11 +2,11 @@
 #define CLP_S_BUFFER_VIEW_READER_HPP
 
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 #include "TraceableException.hpp"
 #include "Utils.hpp"
-#include <cstring>
 
 namespace clp_s {
 /**

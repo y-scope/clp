@@ -1,6 +1,7 @@
 #ifndef CLP_S_SCHEMATREE_HPP
 #define CLP_S_SCHEMATREE_HPP
 
+#include <cstring>
 #include <functional>
 #include <map>
 #include <memory>
@@ -14,7 +15,6 @@
 
 #include "archive_constants.hpp"
 #include "search/ast/Literal.hpp"
-#include <cstring>
 
 namespace clp_s {
 /**

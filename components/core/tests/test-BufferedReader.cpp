@@ -1,4 +1,5 @@
 #include <array>
+#include <cstring>
 #include <random>
 
 #include <boost/filesystem.hpp>
@@ -9,7 +10,6 @@
 #include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/FileWriter.hpp"
-#include <cstring>
 
 using clp::BufferedReader;
 using clp::ErrorCode;

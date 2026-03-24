@@ -1,9 +1,10 @@
 #include "RecordReceiverContext.hpp"
 
+#include <cstring>
+
 #include "../clp/spdlog_with_specializations.hpp"
 #include "DeserializedRecordGroup.hpp"
 #include "types.hpp"
-#include <cstring>
 
 namespace reducer {
 bool RecordReceiverContext::read_connection_init_packet() {

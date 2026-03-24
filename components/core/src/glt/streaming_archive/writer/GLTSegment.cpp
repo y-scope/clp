@@ -1,9 +1,9 @@
 #include "GLTSegment.hpp"
 
+#include <cstring>
 #include <iostream>
 
 #include "../LogtypeSizeTracker.hpp"
-#include <cstring>
 
 using glt::streaming_archive::LogtypeSizeTracker;
 
