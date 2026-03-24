@@ -15,6 +15,7 @@
 #include "IrDeserializationError.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
+#include <cstring>
 
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
@@ -574,10 +575,10 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     if (error_code != ErrorCode_Success) {
         return IRErrorCode_Incomplete_IR;
     }
-    if (0 == memcmp(buffer, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
+    if (0 == std::memcmp(buffer, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
         is_four_bytes_encoding = true;
     } else if ((0
-                == memcmp(
+                == std::memcmp(
                         buffer,
                         cProtocol::EightByteEncodingMagicNumber,
                         cProtocol::MagicNumberLength

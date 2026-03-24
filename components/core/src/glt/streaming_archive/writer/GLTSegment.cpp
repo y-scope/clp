@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "../LogtypeSizeTracker.hpp"
+#include <cstring>
 
 using glt::streaming_archive::LogtypeSizeTracker;
 
@@ -52,7 +53,7 @@ void GLTSegment::compress_logtype_tables_to_disk() {
     // Create output directory in case it doesn't exist
     auto error_code = create_directory(segment_var_directory, 0700, true);
     if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to create {} - {}", segment_var_directory, strerror(errno));
+        SPDLOG_ERROR("Failed to create {} - {}", segment_var_directory, std::strerror(errno));
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 

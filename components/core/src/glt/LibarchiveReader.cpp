@@ -4,6 +4,7 @@
 
 #include "Defs.h"
 #include "spdlog_with_specializations.hpp"
+#include <cstring>
 
 namespace glt {
 ErrorCode
@@ -156,7 +157,7 @@ la_ssize_t LibarchiveReader::libarchive_read_callback(
                 archive_set_error(archive, ENOMEM, "Unknown error.");
                 return -1;
             case ErrorCode_errno:
-                archive_set_error(archive, errno, "%s", strerror(errno));
+                archive_set_error(archive, errno, "%s", std::strerror(errno));
                 return -1;
             case ErrorCode_EndOfFile:
                 return 0;

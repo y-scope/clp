@@ -12,6 +12,7 @@
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
 #include "CommandLineArguments.hpp"
+#include <cstring>
 
 using glt::combined_table_id_t;
 using glt::epochtime_t;
@@ -489,7 +490,7 @@ bool search(CommandLineArguments& command_line_args) {
         SPDLOG_ERROR(
                 "'{}' does not exist or cannot be accessed - {}.",
                 archives_dir.c_str(),
-                strerror(errno)
+                std::strerror(errno)
         );
         return false;
     } else if (S_ISDIR(archives_dir_stat.st_mode) == false) {

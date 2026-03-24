@@ -141,7 +141,7 @@ inline T2 bit_cast(T1 t1) {
     static_assert(std::is_standard_layout<T2>::value, "Need to be standard layout");
 
     T2 t2;
-    std::memcpy(std::addressof(t2), std::addressof(t1), sizeof(T1));
+    stdstd::memcpy(std::addressof(t2), std::addressof(t1), sizeof(T1));
     return t2;
 }
 
@@ -165,7 +165,7 @@ void write_numeric_value(std::stringstream& stream, ValueType value) {
  *
  * In C++ creating a pointer to objects of type T that is not correctly aligned for type T is
  * undefined behaviour, as is dereferencing such a pointer. This class avoids this undefined
- * behaviour by using memcpy (which any modern compiler should be able to optimize away).
+ * behaviour by using std::memcpy (which any modern compiler should be able to optimize away).
  *
  * For any modern x86 platform the performance difference between using std::span and
  * UnalignedMemSpan should be fairly minimal.
@@ -183,7 +183,7 @@ public:
 
     T operator[](size_t i) const {
         T tmp;
-        memcpy(&tmp, m_begin + i * sizeof(T), sizeof(T));
+        std::memcpy(&tmp, m_begin + i * sizeof(T), sizeof(T));
         return tmp;
     }
 

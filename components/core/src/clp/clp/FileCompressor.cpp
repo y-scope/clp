@@ -21,6 +21,7 @@
 #include "../streaming_archive/writer/utils.hpp"
 #include "../utf8_utils.hpp"
 #include "utils.hpp"
+#include <cstring>
 
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
@@ -405,7 +406,7 @@ bool FileCompressor::try_compressing_as_archive(
             // Remove .clp suffix if found
             static constexpr char cIrStreamExtension[] = ".clp";
             if (boost::iends_with(file_path, cIrStreamExtension)) {
-                file_path.resize(file_path.length() - strlen(cIrStreamExtension));
+                file_path.resize(file_path.length() - std::strlen(cIrStreamExtension));
             }
             auto boost_path_for_compression = parent_boost_path / file_path;
 

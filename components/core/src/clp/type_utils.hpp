@@ -40,7 +40,7 @@ std::enable_if_t<
 >
 bit_cast(Source const& src) {
     Destination dst;
-    std::memcpy(&dst, &src, sizeof(Destination));
+    stdstd::memcpy(&dst, &src, sizeof(Destination));
     return dst;
 }
 

@@ -14,6 +14,7 @@
 
 #include "archive_constants.hpp"
 #include "search/ast/Literal.hpp"
+#include <cstring>
 
 namespace clp_s {
 /**
@@ -80,7 +81,7 @@ public:
               m_type(type),
               m_count(0),
               m_depth(depth) {
-        memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
+        std::memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
     }
 
     /**

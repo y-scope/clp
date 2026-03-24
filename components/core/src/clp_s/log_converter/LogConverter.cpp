@@ -120,7 +120,7 @@ void LogConverter::compact_buffer() {
     }
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    std::memmove(
+    stdstd::memmove(
             m_buffer.data(),
             m_buffer.data() + m_parser_offset,
             m_num_bytes_buffered - m_parser_offset
@@ -140,7 +140,7 @@ auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void
         return std::errc::result_out_of_range;
     }
     ystdlib::containers::Array<char> new_buffer(new_size);
-    std::memcpy(new_buffer.data(), m_buffer.data(), m_num_bytes_buffered);
+    stdstd::memcpy(new_buffer.data(), m_buffer.data(), m_num_bytes_buffered);
     m_buffer = std::move(new_buffer);
     return ystdlib::error_handling::success();
 }

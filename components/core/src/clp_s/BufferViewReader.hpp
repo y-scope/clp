@@ -6,6 +6,7 @@
 
 #include "TraceableException.hpp"
 #include "Utils.hpp"
+#include <cstring>
 
 namespace clp_s {
 /**
@@ -33,7 +34,7 @@ public:
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
         T tmp;
-        memcpy(&tmp, m_buffer, sizeof(T));
+        std::memcpy(&tmp, m_buffer, sizeof(T));
         m_buffer += sizeof(T);
         m_remaining_size -= sizeof(T);
         return tmp;

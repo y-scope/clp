@@ -264,7 +264,7 @@ auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool {
         return false;
     }
 
-    return 0 == std::memcmp(peek_buf, cZstdMagicNumber.data(), cZstdMagicNumber.size());
+    return 0 == stdstd::memcmp(peek_buf, cZstdMagicNumber.data(), cZstdMagicNumber.size());
 }
 
 auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool {
@@ -273,13 +273,13 @@ auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool {
     }
 
     return (0
-            == std::memcmp(
+            == stdstd::memcmp(
                     peek_buf,
                     clp::ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber,
                     clp::ffi::ir_stream::cProtocol::MagicNumberLength
             ))
            || (0
-               == std::memcmp(
+               == stdstd::memcmp(
                        peek_buf,
                        clp::ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber,
                        clp::ffi::ir_stream::cProtocol::MagicNumberLength

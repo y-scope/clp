@@ -9,6 +9,7 @@
 #include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/FileWriter.hpp"
+#include <cstring>
 
 using clp::BufferedReader;
 using clp::ErrorCode;
@@ -56,7 +57,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(num_bytes_to_read == num_bytes_read);
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data(), buf_pos));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data(), buf_pos));
 
         // Read a large chunk of data, so BufferedReader will refill the
         // internal buffer
@@ -66,7 +67,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(num_bytes_to_read == num_bytes_read);
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data(), buf_pos));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data(), buf_pos));
 
         // Read remaining data
         num_bytes_to_read = test_data_size - buf_pos;
@@ -75,7 +76,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(num_bytes_to_read == num_bytes_read);
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data(), buf_pos));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data(), buf_pos));
 
         // Ensure the file reaches EOF
         num_bytes_to_read = 1;
@@ -98,7 +99,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(num_bytes_to_read == num_bytes_read);
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + seek_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + seek_pos, num_bytes_to_read));
 
         // Seek forwards to another random position
         seek_pos = 345'212;
@@ -112,7 +113,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(num_bytes_to_read == num_bytes_read);
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + seek_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + seek_pos, num_bytes_to_read));
 
         // Ensure we can't seek backwards when there's no checkpoint
         REQUIRE(ErrorCode_Unsupported == reader.try_seek_from_begin(seek_pos));
@@ -124,7 +125,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -135,7 +136,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -151,7 +152,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -171,7 +172,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -194,7 +195,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -207,7 +208,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
     }
@@ -226,7 +227,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -240,7 +241,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
 
@@ -255,7 +256,7 @@ TEST_CASE("Test reading data", "[BufferedReader]") {
         REQUIRE(ErrorCode_Success
                 == reader.try_read(read_buf.data(), num_bytes_to_read, num_bytes_read));
         REQUIRE(num_bytes_to_read == num_bytes_read);
-        REQUIRE(0 == memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
+        REQUIRE(0 == std::memcmp(read_buf.data(), test_data.data() + buf_pos, num_bytes_to_read));
         buf_pos += num_bytes_read;
         REQUIRE(reader.get_pos() == buf_pos);
     }

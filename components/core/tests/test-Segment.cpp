@@ -6,6 +6,7 @@
 #include "../src/clp/streaming_archive/reader/Segment.hpp"
 #include "../src/clp/streaming_archive/writer/Segment.hpp"
 #include "../src/clp/Utils.hpp"
+#include <cstring>
 
 using clp::ErrorCode_Success;
 using std::string;
@@ -48,7 +49,7 @@ TEST_CASE("Test writing and reading a segment", "[Segment]") {
     // Read out
     error_code = reader_segment.try_read(0, decompressed_data, uncompressed_data_size);
     REQUIRE(ErrorCode_Success == error_code);
-    REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
+    REQUIRE(std::memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
 
     reader_segment.close();
 

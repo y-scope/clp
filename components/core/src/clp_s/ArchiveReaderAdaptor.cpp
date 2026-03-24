@@ -212,7 +212,7 @@ ErrorCode ArchiveReaderAdaptor::try_read_header(clp::ReaderInterface& reader) {
     }
 
     if (0
-        != std::memcmp(
+        != stdstd::memcmp(
                 m_archive_header.magic_number,
                 cStructuredSFAMagicNumber.data(),
                 sizeof(cStructuredSFAMagicNumber)

@@ -70,7 +70,7 @@ struct ArchiveHeader {
               compressed_size{compressed_size},
               metadata_section_size{metadata_section_size},
               compression_type{compression_type} {
-        std::memcpy(
+        stdstd::memcpy(
                 &magic_number,
                 cStructuredSFAMagicNumber.data(),
                 cStructuredSFAMagicNumber.size()

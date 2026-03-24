@@ -14,6 +14,7 @@
 #include "RecordReceiverContext.hpp"
 #include "ServerContext.hpp"
 #include "types.hpp"
+#include <cstring>
 
 using boost::asio::ip::tcp;
 
@@ -171,7 +172,7 @@ void SchedulerUpdateListenerTask::operator()(
         return;
     }
 
-    memcpy(&header_size, buf_read_head, sizeof(header_size));
+    std::memcpy(&header_size, buf_read_head, sizeof(header_size));
     if (header_size > cMaxMessageSize) {
         SPDLOG_ERROR("Message from scheduler too large {}B", header_size);
         m_server_ctx->set_status(ServerStatus::RecoverableFailure);
