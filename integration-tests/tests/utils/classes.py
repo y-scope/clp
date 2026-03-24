@@ -47,12 +47,13 @@ class IntegrationTestPathConfig:
         self.test_log_dir.mkdir(parents=True, exist_ok=True)
 
         # Validate all static path properties.
-        self.validate_static_paths()
+        if type(self) is IntegrationTestPathConfig:
+            self.validate_static_paths()
 
     def validate_static_paths(self) -> None:
         """
         Iterates over all properties in this class that are tagged with `@static_path` and asserts
-        that each path exists.
+        that each path exists. Check extends to subclasses.
 
         :raise pytest.fail: If any static path does not exist.
         """
@@ -67,7 +68,6 @@ class IntegrationTestPathConfig:
                 pytest.fail(f"Expected path does not exist: '{path}'")
 
     @property
-    @static_path
     def test_cache_dir(self) -> Path:
         """:return: The absolute path to the integration test cache directory."""
         return self.clp_build_dir / "integration_tests"
@@ -79,7 +79,6 @@ class IntegrationTestPathConfig:
         return self.integration_tests_project_root / "tests" / "data"
 
     @property
-    @static_path
     def test_log_dir(self) -> Path:
         """:return: The absolute path to the integration test log directory."""
         return self.test_cache_dir / "test_logs"

@@ -1,6 +1,5 @@
 """Classes used in CLP binary integration tests."""
 
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,8 +7,6 @@ from tests.utils.classes import IntegrationTestPathConfig, static_path
 from tests.utils.utils import (
     validate_dir_exists,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass

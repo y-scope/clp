@@ -79,7 +79,6 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
         return self.clp_package_dir / "var" / "data" / "archives"
 
     @property
-    @static_path
     def package_decompression_dir(self) -> Path:
         """:return: The absolute path to the directory storing temporary decompressed files."""
         return self.test_cache_dir / "package_decompression"
@@ -108,7 +107,6 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
     @property
-    @static_path
     def temp_config_dir(self) -> Path:
         """:return: The absolute path to the directory storing temporary package config files."""
         return self.test_cache_dir / "temp_configs"
