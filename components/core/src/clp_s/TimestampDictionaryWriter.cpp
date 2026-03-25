@@ -10,8 +10,7 @@
 #include <spdlog/spdlog.h>
 
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
-
-#include "TraceableException.hpp"
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 void TimestampDictionaryWriter::write(std::stringstream& stream) {

@@ -3,8 +3,8 @@
 #include <algorithm>
 
 #include "../SchemaTree.hpp"
+#include "../TraceableException.hpp"
 #include "ast/ColumnDescriptor.hpp"
-#include "TraceableException.hpp"
 
 namespace clp_s::search {
 void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
