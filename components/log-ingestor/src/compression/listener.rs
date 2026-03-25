@@ -55,9 +55,10 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                     match optional_object_metadata {
                         None => {
                             self.buffer.submit().await?;
-                            return Err(
-                                anyhow::anyhow!("Listener channel has been closed unexpectedly")
+                            tracing::info!(
+                                "All senders have been dropped. The channel will be closed."
                             );
+                            return Ok(());
                         }
                         Some(object_metadata_to_ingest) => {
                             self.buffer.add(object_metadata_to_ingest).await?;

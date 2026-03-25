@@ -1,0 +1,93 @@
+#ifndef CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP
+#define CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP
+
+#include <cstdint>
+#include <memory>
+#include <string_view>
+#include <vector>
+
+#include <ystdlib/error_handling/Result.hpp>
+
+namespace clp_s {
+// Forward include
+class ArchiveReader;
+}  // namespace clp_s
+
+namespace clp_s::ffi::sfa {
+/**
+ * A thin wrapper around `clp_s::ArchiveReader` for single file archive FFI entrypoints.
+ */
+class ClpArchiveReader {
+public:
+    // Factory functions
+    /**
+     * Creates an SFA reader from a filesystem archive path.
+     *
+     * @param archive_path Path to the single-file archive.
+     * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
+     * error code indicating the failure:
+     * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
+     */
+    [[nodiscard]] static auto create(std::string_view archive_path)
+            -> ystdlib::error_handling::Result<ClpArchiveReader>;
+
+    /**
+     * Creates an SFA reader from in memory archive bytes, taking ownership of the buffer.
+     *
+     * @param archive_data Bytes of a single-file archive.
+     * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
+     * error code indicating the failure:
+     * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
+     * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
+     */
+    [[nodiscard]] static auto create(std::vector<char>&& archive_data)
+            -> ystdlib::error_handling::Result<ClpArchiveReader>;
+
+    // Destructor
+    ~ClpArchiveReader() noexcept;
+
+    // Delete copy constructor and assignment operator
+    ClpArchiveReader(ClpArchiveReader const&) = delete;
+    auto operator=(ClpArchiveReader const&) -> ClpArchiveReader& = delete;
+
+    ClpArchiveReader(ClpArchiveReader&&) noexcept;
+    [[nodiscard]] auto operator=(ClpArchiveReader&&) noexcept -> ClpArchiveReader&;
+
+    /**
+     * @return The total number of events in the archive.
+     */
+    [[nodiscard]] auto get_event_count() const -> uint64_t { return m_event_count; }
+
+private:
+    // Constructors
+    explicit ClpArchiveReader(
+            std::unique_ptr<clp_s::ArchiveReader> reader,
+            std::shared_ptr<std::vector<char>> archive_data
+    );
+
+    // Methods
+    /**
+     * Cleans up underlying resources.
+     */
+    auto close() noexcept -> void;
+
+    /**
+     * Moves owned state from rhs into this object and resets moved-from state.
+     *
+     * @param rhs Source reader to move from.
+     */
+    auto move_from(ClpArchiveReader& rhs) noexcept -> void;
+
+    /**
+     * Precomputes metadata from the archive range index.
+     */
+    auto precompute_archive_metadata() -> void;
+
+    // Members
+    std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
+    std::shared_ptr<std::vector<char>> m_archive_data;
+    uint64_t m_event_count{0};
+};
+}  // namespace clp_s::ffi::sfa
+
+#endif  // CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP

@@ -17,6 +17,11 @@ from job_orchestration.scheduler.constants import (
     QueryTaskStatus,
     SchedulerType,
 )
+from job_orchestration.scheduler.job_config import InputType
+
+
+def is_s3_based_input(input_type: InputType) -> bool:
+    return InputType.S3 == input_type or InputType.S3_OBJECT_METADATA == input_type
 
 
 def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> list[int] | None:
