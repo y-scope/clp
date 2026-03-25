@@ -289,8 +289,8 @@ private:
      * @param log_msg_id The LogMessage node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
-     * - ClpsErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
-     * - ClpsErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
+     * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
+     * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
      */
     auto generate_log_message_template(int32_t log_msg_id)
             -> ystdlib::error_handling::Result<size_t>;
@@ -300,8 +300,8 @@ private:
      * @param var_id The CompositeVar node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
-     * - ClpsErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
-     * - ClpsErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
+     * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
+     * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
      */
     auto generate_composite_var_template(int32_t var_id) -> ystdlib::error_handling::Result<size_t>;
 

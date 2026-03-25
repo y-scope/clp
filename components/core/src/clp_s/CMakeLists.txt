@@ -74,16 +74,14 @@ set(
         ../clp/GrepCore.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
-        ../clp/SchemaSearcher.cpp
-        ../clp/SchemaSearcher.hpp
+        # ../clp/SchemaSearcher.cpp
+        # ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/NetworkReader.cpp
@@ -136,12 +134,13 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 PUBLIC
                 clp::string_utils
                 log_mechanic
-                log_surgeon::log_surgeon
+                # log_surgeon::log_surgeon
                 ystdlib::containers
                 ystdlib::error_handling
                 zstd::libzstd_static
                 PRIVATE
                 Boost::regex
+                clpp::core
                 ${CURL_LIBRARIES}
                 fmt::fmt
                 msgpack-cxx
@@ -197,7 +196,6 @@ set(
         CLP_S_IO_SOURCES
         Compressor.hpp
         Decompressor.hpp
-        ErrorCode.cpp
         ErrorCode.hpp
         FileReader.cpp
         FileReader.hpp
@@ -238,11 +236,8 @@ endif()
 set(
         CLP_S_ARCHIVE_WRITER_SOURCES
         archive_constants.hpp
-        ArchiveStats.cpp
-        ArchiveStats.hpp
         ArchiveWriter.cpp
         ArchiveWriter.hpp
-        Array.hpp
         ColumnWriter.cpp
         ColumnWriter.hpp
         Defs.hpp
@@ -250,7 +245,6 @@ set(
         DictionaryEntry.hpp
         DictionaryWriter.cpp
         DictionaryWriter.hpp
-        ErrorCode.cpp
         ErrorCode.hpp
         FloatFormatEncoding.cpp
         FloatFormatEncoding.hpp
@@ -322,7 +316,6 @@ set(
         DictionaryEntry.cpp
         DictionaryEntry.hpp
         DictionaryReader.hpp
-        ErrorCode.cpp
         ErrorCode.hpp
         FloatFormatEncoding.cpp
         FloatFormatEncoding.hpp
@@ -376,7 +369,6 @@ endif()
 
 set(
         CLP_S_JSON_CONSTRUCTOR_SOURCES
-        ErrorCode.cpp
         ErrorCode.hpp
         JsonConstructor.cpp
         JsonConstructor.hpp
@@ -406,7 +398,6 @@ endif()
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
         Defs.hpp
-        ErrorCode.cpp
         ErrorCode.hpp
         TimestampPattern.cpp
         TimestampPattern.hpp
@@ -436,7 +427,6 @@ set(
         CLP_S_EXE_SOURCES
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        ErrorCode.cpp
         ErrorCode.hpp
         kv_ir_search.cpp
         kv_ir_search.hpp

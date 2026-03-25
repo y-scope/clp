@@ -12,7 +12,6 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReaderAdaptor.hpp>
-#include <clp_s/ArchiveStats.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/DictionaryReader.hpp>
 #include <clp_s/InputConfig.hpp>
@@ -22,6 +21,7 @@
 #include <clp_s/search/Projection.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
+#include <clpp/LogTypeStat.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -95,9 +95,9 @@ public:
     }
 
     /**
-     * Reads the experimental statistics from the archive.
+     * Reads the experimental log type statistics from the archive.
      */
-    auto read_experimental_stats() -> ystdlib::error_handling::Result<void>;
+    auto read_logtype_stats() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Reads the metadata from the archive.
@@ -130,6 +130,10 @@ public:
     std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary() { return m_log_dict; }
 
     std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
+
+    std::shared_ptr<VariableDictionaryReader> get_typed_log_type_dictionary() {
+        return m_typed_log_dict;
+    }
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_archive_reader_adaptor->get_timestamp_dictionary();
@@ -181,8 +185,8 @@ public:
         return get_header().has_deprecated_timestamp_format();
     }
 
-    auto get_experimental_stats() const -> std::optional<ExperimentalStats> const& {
-        return m_experimental_stats;
+    auto get_logtype_stats() const -> std::optional<clpp::LogTypeStatArray> const& {
+        return m_logtype_stats;
     }
 
     /**
@@ -196,7 +200,7 @@ public:
      */
     static auto decode_logtype_with_variable_types(
             LogTypeDictionaryEntry const& logtype_dict_entry,
-            LogTypeStats const& logtype_stats
+            clpp::LogTypeStatArray const& logtype_stats
     ) -> ystdlib::error_handling::Result<std::string>;
 
 private:
@@ -272,7 +276,8 @@ private:
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
 
-    std::optional<ExperimentalStats> m_experimental_stats;
+    std::optional<clpp::LogTypeStatArray> m_logtype_stats;
+    std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
 };
 }  // namespace clp_s
 

@@ -1,5 +1,6 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -11,11 +12,7 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
-#include <log_surgeon/BufferParser.hpp>
-#include <log_surgeon/finite_automata/Capture.hpp>
-#include <log_surgeon/log_mechanic.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/Token.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -58,20 +55,6 @@ public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
-    };
-
-    struct ParserHandle {
-        ParserHandle(log_mechanic::Schema* schema) : m_schema(schema), m_parser(m_schema) {}
-
-        ~ParserHandle() { logmech_schema_drop(m_schema); }
-
-        ParserHandle(ParserHandle const&) = delete;
-        auto operator=(ParserHandle const&) -> ParserHandle& = delete;
-        ParserHandle(ParserHandle&&) noexcept = default;
-        auto operator=(ParserHandle&&) noexcept -> ParserHandle& = default;
-
-        log_mechanic::Schema* m_schema;
-        log_mechanic::ParserHandle m_parser;
     };
 
     explicit JsonParser(JsonParserOption const& option);
@@ -245,7 +228,7 @@ private:
      * @param parent_node_id The parent clp-s node ID.
      * @param log_msg The unstructured log message to parse.
      * @return A result containing an error code indicating the failure:
-     * - ClpsErrorCodeEnum::Failure if parsing fails.
+     * - ClppErrorCodeEnum::Failure if parsing fails.
      * - Forwards `store_capture_groups`'s return values on failure.
      * - Forwards `m_archive_writer->update_logtype_stats`'s return values on failure.
      * - Forwards `m_archive_writer->update_var_stats`'s return values on failure.
@@ -279,7 +262,8 @@ private:
 
     std::vector<ArchiveStats> m_archive_stats;
 
-    std::unique_ptr<ParserHandle> m_log_surgeon_parser;
+    std::unique_ptr<log_surgeon::ParserHandle> m_log_surgeon_parser;
+    std::chrono::microseconds m_parse_duration{0};
 };
 }  // namespace clp_s
 

@@ -3,6 +3,10 @@
 #include <string>
 #include <string_view>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <spdlog/spdlog.h>
+
 #include "archive_constants.hpp"
 
 namespace clp_s {
@@ -19,6 +23,7 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
+    SPDLOG_INFO("schema tree num node: {}", num_nodes);
 
     std::string key;
     for (size_t i = 0; i < num_nodes; i++) {
@@ -40,6 +45,7 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
+        SPDLOG_INFO("schema node {}: {}", i, key);
 
         error_code = schema_tree_decompressor.try_read_numeric_value(node_type);
         if (ErrorCodeSuccess != error_code) {
@@ -92,6 +98,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
+    SPDLOG_INFO("schema size: {}", schema_size);
 
     // TODO: consider decompressing all schemas into the same buffer and providing access to them
     // via const spans.
@@ -113,6 +120,12 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
+        SPDLOG_INFO(
+                "schema {} total nodes: {}, ordered nodes: {}",
+                i,
+                schema_node_size,
+                num_ordered_nodes
+        );
 
         auto& schema = schemas[schema_id];
         if (0 == schema_node_size) {
@@ -127,6 +140,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
         schema.set_num_ordered(num_ordered_nodes);
+        SPDLOG_INFO("schema {} contents: {}", i, fmt::join(schema.cbegin(), schema.cend(), ","));
     }
 
     schema_id_decompressor.close();

@@ -1,6 +1,7 @@
 #include "SchemaTree.hpp"
 
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
 
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
@@ -105,6 +106,7 @@ size_t SchemaTree::store(std::string const& archives_dir, int compression_level)
     schema_tree_compressor.open(schema_tree_writer, compression_level);
 
     schema_tree_compressor.write_numeric_value(m_nodes.size());
+    SPDLOG_INFO("schema node count: {}", m_nodes.size());
     for (auto const& node : m_nodes) {
         schema_tree_compressor.write_numeric_value(node.get_parent_id());
 

@@ -24,8 +24,9 @@ constexpr char cArchiveArrayDictFile[] = "/array.dict";
 constexpr char cArchiveLogDictFile[] = "/log.dict";
 constexpr char cArchiveVarDictFile[] = "/var.dict";
 
-// Experimental stats
-constexpr std::string_view cArchiveStatsFile{"/stats"};
+// clpp
+constexpr std::string_view cArchiveLogTypeMetadataFile{"/logtype_metadata"};
+constexpr std::string_view cArchiveLogTypeStatsFile{"/logtype_stats"};
 
 // Schema tree constants
 constexpr char cRootNodeName[] = "";
@@ -39,7 +40,6 @@ constexpr std::string_view cReservedNamespace1{"!"};
 constexpr std::string_view cReservedNamespace2{"#"};
 constexpr std::string_view cObjectSubtreeType{"object"};
 constexpr std::string_view cMetadataSubtreeType{"metadata"};
-constexpr std::string_view cFullMatchNodeName{"full_match"};
 constexpr std::string_view cLogTypeNodeName{"log_type"};
 
 // Metadata constants

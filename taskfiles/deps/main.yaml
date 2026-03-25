@@ -363,26 +363,25 @@ tasks:
       LIB_NAME: "log_mechanic"
       INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
       INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
-      INSTALL_HEADER_DIR: "{{.INSTALL_INCLUDE_DIR}}/log_surgeon"
       OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
       SRC_DIR: "{{.OUTPUT_DIR}}/rust"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "4a0f2ec45f39e5b55c1cedd375c8cc8f1c84f30c2c0cc99fc9b849ad2f1cde76"
+          FILE_SHA256: "291bb272e25d9bb7769c98ccb6cef8535448fcfd780f0a8be0fca4d81b0ec4fd"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/log-surgeon/archive/db9e9af.tar.gz"
+          URL: "https://github.com/y-scope/log-surgeon/archive/fdac500.tar.gz"
       - |-
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release
-        mkdir -p "{{.INSTALL_HEADER_DIR}}"
-        rsync -az "{{.SRC_DIR}}/target/release/liblog_mechanic.a" "{{.INSTALL_DIR}}"
-        rsync -az "{{.SRC_DIR}}/include/" "{{.INSTALL_HEADER_DIR}}"
+        mkdir -p "{{.INSTALL_INCLUDE_DIR}}"
+        rsync -az "{{.SRC_DIR}}/target/release/liblog_surgeon.a" "{{.INSTALL_DIR}}"
+        rsync -az "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
         cat << EOF > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
         add_library({{.LIB_NAME}} STATIC IMPORTED)
         set_target_properties({{.LIB_NAME}} PROPERTIES
-            IMPORTED_LOCATION "{{.INSTALL_DIR}}/liblog_mechanic.a"
+            IMPORTED_LOCATION "{{.INSTALL_DIR}}/liblog_surgeon.a"
             INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
         )
         EOF

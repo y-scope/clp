@@ -8,7 +8,6 @@
 #include <utility>
 #include <variant>
 
-#include <clp_s/ArchiveStats.hpp>
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryReader.hpp>
@@ -236,19 +235,19 @@ public:
             int32_t id,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
-            NodeType type,
-            LogTypeStats const* logtype_stats
+            bool is_array = false
     )
             : BaseColumnReader(id),
               m_var_dict(std::move(var_dict)),
               m_log_dict(std::move(log_dict)),
-              m_type(type),
-              m_logtype_stats(logtype_stats) {}
+              m_is_array(is_array) /*, encoded_vars_index_(0)*/ {}
 
     // Methods inherited from BaseColumnReader
     auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    auto get_type() -> NodeType override { return m_type; }
+    auto get_type() -> NodeType override {
+        return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
+    }
 
     auto extract_value(uint64_t cur_message)
             -> std::variant<int64_t, double, std::string, uint8_t> override;
@@ -280,8 +279,7 @@ private:
     UnalignedMemSpan<uint64_t> m_logtypes;
     UnalignedMemSpan<int64_t> m_encoded_vars;
 
-    NodeType m_type;
-    LogTypeStats const* m_logtype_stats;
+    bool m_is_array;
 };
 
 class VariableStringColumnReader : public BaseColumnReader {

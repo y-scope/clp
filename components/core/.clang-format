@@ -11,7 +11,7 @@ IncludeCategories:
     Priority: 3
 
   # Project library headers
-  - Regex: "^<(clp|clp_s|glt|reducer)"
+  - Regex: "^<(clp|clpp|clp_s|glt|reducer)"
     Priority: 4
 
   # C system headers

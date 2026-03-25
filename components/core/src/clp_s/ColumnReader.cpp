@@ -14,8 +14,6 @@
 #include <clp/ir/types.hpp>
 #include <clp/LogTypeDictionaryEntryReq.hpp>
 #include <clp/type_utils.hpp>
-#include <clp_s/ArchiveReader.hpp>
-#include <clp_s/ArchiveStats.hpp>
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/ColumnWriter.hpp>
 #include <clp_s/Defs.hpp>
@@ -163,24 +161,19 @@ ClpStringColumnReader::extract_string_value_into_buffer(uint64_t cur_message, st
     auto const encoded_vars_offset{ClpStringColumnWriter::get_encoded_offset(value)};
     auto encoded_vars{m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables())};
 
-    if (NodeType::LogType == m_type) {
-        buffer.append(entry.get_value());
-    } else {
-        // TODO this doesn't work with new log surgeon
-        clp::EncodedVariableInterpreter::decode_variables_into_message(
-                entry,
-                *m_var_dict,
-                encoded_vars,
-                buffer
-        );
-    }
+    clp::EncodedVariableInterpreter::decode_variables_into_message(
+            entry,
+            *m_var_dict,
+            encoded_vars,
+            buffer
+    );
 }
 
 auto ClpStringColumnReader::extract_escaped_string_value_into_buffer(
         uint64_t cur_message,
         std::string& buffer
 ) -> void {
-    if (NodeType::UnstructuredArray != m_type) {
+    if (false == m_is_array) {
         // TODO: escape while decoding instead of after.
         std::string tmp;
         extract_string_value_into_buffer(cur_message, tmp);

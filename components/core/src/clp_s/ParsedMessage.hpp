@@ -1,6 +1,7 @@
 #ifndef CLP_S_PARSEDMESSAGE_HPP
 #define CLP_S_PARSEDMESSAGE_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -19,14 +20,6 @@ namespace clp_s {
 class ParsedMessage {
 public:
     // Types
-    /**
-     * Tracks building up a ClpString node during parsing a log event.
-     */
-    struct ClpString {
-        clp_s::LogTypeDictionaryEntry m_logtype;
-        std::vector<clp::encoded_variable_t> m_encoded_vars;
-    };
-
     using variable_t = std::
             variant<int64_t,
                     double,
@@ -35,8 +28,7 @@ public:
                     clp::ffi::FourByteEncodedTextAst,
                     bool,
                     std::pair<epochtime_t, uint64_t>,
-                    std::pair<double, float_format_t>,
-                    ClpString>;
+                    std::pair<double, float_format_t>>;
 
     // Methods
     auto set_id(int32_t schema_id) -> void { m_schema_id = schema_id; }

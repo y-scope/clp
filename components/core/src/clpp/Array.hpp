@@ -1,19 +1,19 @@
-#ifndef CLP_S_ARRAY_HPP
-#define CLP_S_ARRAY_HPP
+#ifndef CLPP_ARRAY_HPP
+#define CLPP_ARRAY_HPP
 
 #include <cstddef>
 #include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clp_s/ErrorCode.hpp>
 #include <clp_s/ZstdCompressor.hpp>
 #include <clp_s/ZstdDecompressor.hpp>
+#include <clpp/ErrorCode.hpp>
 
-namespace clp_s {
+namespace clpp {
 /**
- * An array that can be compressed and decompressed with Zstd. Useful for writing separate data to
- * files when a dictionary is unnecessary.
+ * An array that can be compressed and decompressed with Zstd. Useful for writing index-based data
+ * to files.
  */
 template <typename Element, typename Index = size_t>
 class Array {
@@ -34,9 +34,9 @@ public:
         return m_array.emplace_back(std::forward<Args>(args)...);
     }
 
-    auto compress(ZstdCompressor& compressor) -> ystdlib::error_handling::Result<void>;
+    auto compress(clp_s::ZstdCompressor& compressor) -> ystdlib::error_handling::Result<void>;
 
-    auto decompress(ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void>;
+    auto decompress(clp_s::ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void>;
 
     [[nodiscard]] auto size() const -> size_t { return m_array.size(); }
 
@@ -46,21 +46,21 @@ private:
 };
 
 template <typename Element, typename Index>
-auto Array<Element, Index>::compress(ZstdCompressor& compressor)
+auto Array<Element, Index>::compress(clp_s::ZstdCompressor& compressor)
         -> ystdlib::error_handling::Result<void> {
     compressor.write_numeric_value(m_array.size());
-    for (auto const& stat : m_array) {
-        YSTDLIB_ERROR_HANDLING_TRYV(stat.compress(compressor));
+    for (auto const& element : m_array) {
+        YSTDLIB_ERROR_HANDLING_TRYV(element.compress(compressor));
     }
     return ystdlib::error_handling::success();
 }
 
 template <typename Element, typename Index>
-auto Array<Element, Index>::decompress(ZstdDecompressor& decompressor)
+auto Array<Element, Index>::decompress(clp_s::ZstdDecompressor& decompressor)
         -> ystdlib::error_handling::Result<void> {
     size_t size{};
-    if (ErrorCodeSuccess != decompressor.try_read_numeric_value(size)) {
-        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    if (clp_s::ErrorCodeSuccess != decompressor.try_read_numeric_value(size)) {
+        return ClppErrorCode{ClppErrorCodeEnum::Failure};
     }
     m_array.reserve(size);
     for (size_t i{0}; i < size; ++i) {
@@ -77,5 +77,5 @@ auto Array<Element, Index>::at_or_create(Index id, Element e) -> Element& {
     }
     return m_array.at(id);
 }
-}  // namespace clp_s
-#endif  // CLP_S_ARRAY_HPP
+}  // namespace clpp
+#endif  // CLPP_ARRAY_HPP

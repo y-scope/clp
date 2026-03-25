@@ -15,6 +15,7 @@
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/OutputHandlerImpl.hpp>
 #include <clp_s/search/OutputHandler.hpp>
+#include <clpp/ErrorCode.hpp>
 #include <reducer/network_utils.hpp>
 
 #include "../clp/cli_utils.hpp"
@@ -978,11 +979,8 @@ auto CommandLineArguments::validate_experimental() const -> void {
     if (m_log_surgeon_schema_path.has_value()) {
         throw std::invalid_argument("Set --experimental to parse text with log-surgeon.");
     }
-    if (ExperimentalQueries::cLogTypeStatsQuery == m_query) {
+    if (cLogTypeStatsQuery == m_query) {
         throw std::invalid_argument("Set --experimental to access the logtype stats.");
-    }
-    if (ExperimentalQueries::cVariableStatsQuery == m_query) {
-        throw std::invalid_argument("Set --experimental to access the variable stats.");
     }
 }
 
@@ -1012,7 +1010,7 @@ auto CommandLineArguments::create_output_handler() const
                     );
                     if (-1 == reducer_socket_fd) {
                         SPDLOG_ERROR("Failed to connect to reducer.");
-                        return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+                        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
                     }
                 }
 
@@ -1025,7 +1023,7 @@ auto CommandLineArguments::create_output_handler() const
                     );
                 } else {
                     SPDLOG_ERROR("Unhandled aggregation type.");
-                    return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+                    return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
                 }
                 break;
             }
@@ -1044,12 +1042,12 @@ auto CommandLineArguments::create_output_handler() const
             }
             default: {
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
             }
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("Failed to create output handler - {}", e.what());
-        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     return output_handler;
 }

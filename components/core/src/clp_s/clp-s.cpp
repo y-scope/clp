@@ -260,9 +260,7 @@ bool search_archive(
 
 auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     auto const& query = cli_args.get_query();
-    if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery != query
-        && CommandLineArguments::ExperimentalQueries::cVariableStatsQuery != query)
-    {
+    if (CommandLineArguments::cLogTypeStatsQuery != query) {
         return -1;
     }
     auto output_handler{cli_args.create_output_handler()};
@@ -285,35 +283,19 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             return 2;
         }
         archive_reader->read_dictionaries_and_metadata();
-        auto const stats{archive_reader->get_experimental_stats()};
-        if (false == stats.has_value()) {
-            SPDLOG_ERROR("Failed to get experimental stats");
+        auto const logtype_stats{archive_reader->get_logtype_stats()};
+        if (false == logtype_stats.has_value()) {
+            SPDLOG_ERROR("Failed to get experimental log type statistics");
             return 3;
         }
-        if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery == query) {
-            auto logtype_dict{archive_reader->get_log_type_dictionary()};
-            for (clp::logtype_dictionary_id_t i{0}; i < stats->m_logtype_stats.size(); ++i) {
+        if (CommandLineArguments::cLogTypeStatsQuery == query) {
+            auto logtype_dict{archive_reader->get_typed_log_type_dictionary()};
+            for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats->size(); ++i) {
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"log_type\":\"{}\"}}\n",
                         i,
-                        stats->m_logtype_stats.at(i).get_count(),
+                        logtype_stats->at(i).get_count(),
                         logtype_dict->get_entry(i).get_value()
-                )};
-                output_handler.value()->write(message);
-            }
-        } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery == query) {
-            auto var_dict{archive_reader->get_variable_dictionary()};
-            for (clp::variable_dictionary_id_t i{0}; i < stats->m_var_stats.size(); ++i) {
-                auto var_stat{stats->m_var_stats.at(i)};
-                if (0 == var_stat.get_count()) {
-                    continue;
-                }
-                auto message{fmt::format(
-                        "{{\"id\":{},\"count\":{},\"type\":\"{}\",\"variable\":\"{}\"}}\n",
-                        i,
-                        var_stat.get_count(),
-                        var_stat.get_type(),
-                        var_dict->get_value(i)
                 )};
                 output_handler.value()->write(message);
             }

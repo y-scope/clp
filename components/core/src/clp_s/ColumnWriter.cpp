@@ -140,14 +140,6 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
                                 fmt::format("{}: {}", error.category().name(), error.message())
                         );
                     }
-                } else if constexpr (std::is_same_v<T, ParsedMessage::ClpString>) {
-                    m_logtype_entry.clear();
-                    m_logtype_entry = v.m_logtype;
-                    m_encoded_vars.insert(
-                            m_encoded_vars.end(),
-                            v.m_encoded_vars.begin(),
-                            v.m_encoded_vars.end()
-                    );
                 } else {
                     throw TraceableException(ErrorCodeBadParam, __FILENAME__, __LINE__);
                 }

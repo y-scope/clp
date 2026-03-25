@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
+// #include <log_surgeon/Lexer.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
@@ -20,7 +20,7 @@
 #include <clp/LogTypeDictionaryReaderReq.hpp>
 #include <clp/Query.hpp>
 #include <clp/QueryToken.hpp>
-#include <clp/SchemaSearcher.hpp>
+// #include <clp/SchemaSearcher.hpp>
 #include <clp/VariableDictionaryReaderReq.hpp>
 
 namespace clp {
@@ -56,7 +56,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            log_surgeon::lexers::ByteLexer& lexer,
+            // log_surgeon::lexers::ByteLexer& lexer,
             bool use_heuristic
     );
 
@@ -143,13 +143,13 @@ std::optional<Query> GrepCore::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::lexers::ByteLexer& lexer,
+        // log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
     std::vector<SubQuery> sub_queries;
     if (false == use_heuristic) {
-        sub_queries
-                = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
+        // sub_queries
+        //         = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
     } else {
         // Split search_string into tokens with wildcards
         std::vector<QueryToken> query_tokens;

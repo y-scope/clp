@@ -13,11 +13,13 @@
 #include <clp/type_utils.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
-#include <clp_s/ArchiveStats.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ReaderUtils.hpp>
+#include <clpp/ErrorCode.hpp>
+
+#include "clpp/LogTypeStat.hpp"
 
 namespace clp_s {
 void ArchiveReader::open(Path const& archive_path, Options const& options) {
@@ -43,11 +45,17 @@ void ArchiveReader::open(Path const& archive_path, Options const& options) {
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
-    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
+    if (options.m_experimental) {
+        // TODO clpp: inlined get_variable_dictionary_reader
+        m_typed_log_dict = std::make_shared<VariableDictionaryReader>(*m_archive_reader_adaptor);
+        m_typed_log_dict->open(constants::cArchiveLogDictFile);
+    } else {
+        m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
+    }
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
 
     if (options.m_experimental) {
-        m_experimental_stats = ExperimentalStats();
+        m_logtype_stats = clpp::LogTypeStatArray();
     }
 }
 
@@ -127,6 +135,12 @@ void ArchiveReader::read_metadata() {
             }
             prev_metadata.uncompressed_size = uncompressed_size;
             m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
+            SPDLOG_INFO(
+                    "schema {} num msgs: {} size: {}",
+                    prev_schema_id,
+                    prev_metadata.num_messages,
+                    prev_metadata.uncompressed_size
+            );
         } else {
             prev_metadata_initialized = true;
         }
@@ -138,6 +152,12 @@ void ArchiveReader::read_metadata() {
             = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
               - prev_metadata.stream_offset;
     m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
+    SPDLOG_INFO(
+            "schema {} num msgs: {} size: {}",
+            prev_schema_id,
+            prev_metadata.num_messages,
+            prev_metadata.uncompressed_size
+    );
     m_table_metadata_decompressor.close();
 
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
@@ -146,9 +166,17 @@ void ArchiveReader::read_metadata() {
 void ArchiveReader::read_dictionaries_and_metadata() {
     read_metadata();
     m_var_dict->read_entries();
-    m_log_dict->read_entries();
+    SPDLOG_INFO("Var dict entries size: {}", m_var_dict->get_entries().size());
+    if (m_logtype_stats.has_value()) {
+        m_typed_log_dict->read_entries();
+        SPDLOG_INFO("Log dict entries size: {}", m_typed_log_dict->get_entries().size());
+    } else {
+        m_log_dict->read_entries();
+        SPDLOG_INFO("Log dict entries size: {}", m_log_dict->get_entries().size());
+    }
     m_array_dict->read_entries();
-    std::ignore = read_experimental_stats();
+    SPDLOG_INFO("Array dict entries size: {}", m_array_dict->get_entries().size());
+    std::ignore = read_logtype_stats();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -216,15 +244,7 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
             break;
         case NodeType::ClpString:
-        case NodeType::LogType:
-            column_reader = new ClpStringColumnReader(
-                    column_id,
-                    m_var_dict,
-                    m_log_dict,
-                    node.get_type(),
-                    m_experimental_stats.has_value() ? &m_experimental_stats->m_logtype_stats
-                                                     : nullptr
-            );
+            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;
         case NodeType::VarString:
             column_reader = new VariableStringColumnReader(column_id, m_var_dict);
@@ -233,13 +253,7 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new BooleanColumnReader(column_id);
             break;
         case NodeType::UnstructuredArray:
-            column_reader = new ClpStringColumnReader(
-                    column_id,
-                    m_var_dict,
-                    m_array_dict,
-                    node.get_type(),
-                    nullptr
-            );
+            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
             break;
         case NodeType::DeprecatedDateString:
             column_reader
@@ -247,6 +261,9 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             break;
         case NodeType::Timestamp:
             column_reader = new TimestampColumnReader(column_id, get_timestamp_dictionary());
+            break;
+        case NodeType::LogType:
+            column_reader = new VariableStringColumnReader(column_id, m_typed_log_dict);
             break;
         // No need to push columns without associated object readers into the SchemaReader.
         case NodeType::Metadata:
@@ -310,15 +327,7 @@ void ArchiveReader::append_unordered_reader_columns(
                 column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
                 break;
             case NodeType::ClpString:
-            case NodeType::LogType:
-                column_reader = new ClpStringColumnReader(
-                        column_id,
-                        m_var_dict,
-                        m_log_dict,
-                        node.get_type(),
-                        m_experimental_stats.has_value() ? &m_experimental_stats->m_logtype_stats
-                                                         : nullptr
-                );
+                column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
                 break;
             case NodeType::VarString:
                 column_reader = new VariableStringColumnReader(column_id, m_var_dict);
@@ -331,6 +340,9 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::UnstructuredArray:
             case NodeType::DeprecatedDateString:
             case NodeType::Timestamp:
+            case NodeType::LogType:
+                column_reader = new VariableStringColumnReader(column_id, m_typed_log_dict);
+                break;
             // No need to push columns without associated object readers into the SchemaReader.
             case NodeType::StructuredArray:
             case NodeType::Object:
@@ -431,12 +443,13 @@ void ArchiveReader::close() {
     m_is_open = false;
 
     m_var_dict->close();
-    m_log_dict->close();
-    m_array_dict->close();
-    if (m_experimental_stats) {
-        m_experimental_stats->m_logtype_stats.clear();
-        m_experimental_stats->m_var_stats.clear();
+    if (m_logtype_stats.has_value()) {
+        m_typed_log_dict->close();
+        m_logtype_stats->clear();
+    } else {
+        m_log_dict->close();
     }
+    m_array_dict->close();
 
     m_stream_reader.close();
     m_archive_reader_adaptor.reset();
@@ -464,38 +477,37 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     return m_stream_buffer;
 }
 
-auto ArchiveReader::read_experimental_stats() -> ystdlib::error_handling::Result<void> {
-    if (false == m_experimental_stats.has_value()) {
-        return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+auto ArchiveReader::read_logtype_stats() -> ystdlib::error_handling::Result<void> {
+    if (false == m_logtype_stats.has_value()) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
     constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
-    auto reader{
-            m_archive_reader_adaptor->checkout_reader_for_section(constants::cArchiveStatsFile)
-    };
+    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
+            constants::cArchiveLogTypeStatsFile
+    )};
     ZstdDecompressor decompressor{};
     decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
 
-    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_logtype_stats.decompress(decompressor));
-    YSTDLIB_ERROR_HANDLING_TRYX(m_experimental_stats->m_var_stats.decompress(decompressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats->decompress(decompressor));
 
     decompressor.close();
-    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveStatsFile);
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogTypeStatsFile);
     return ystdlib::error_handling::success();
 }
 
 // TODO change to decoding typed logtype with variable values
 auto ArchiveReader::decode_logtype_with_variable_types(
         LogTypeDictionaryEntry const& logtype_dict_entry,
-        LogTypeStats const& logtype_stats
+        clpp::LogTypeStatArray const& logtype_stats
 ) -> ystdlib::error_handling::Result<std::string> {
     std::string logtype;
     // auto const& logtype_value{logtype_dict_entry.get_value()};
-    // auto const& var_type_names{logtype_stats.at(logtype_dict_entry.get_id()).get_var_type_names()};
-    // if (var_type_names.size() != logtype_dict_entry.get_num_variables()) {
+    // auto const&
+    // var_type_names{logtype_stats.at(logtype_dict_entry.get_id()).get_var_type_names()}; if
+    // (var_type_names.size() != logtype_dict_entry.get_num_variables()) {
     //     SPDLOG_ERROR(
-    //             "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} type names "
-    //             "were given for decoding.",
-    //             logtype_value.c_str(),
+    //             "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} type
+    //             names " "were given for decoding.", logtype_value.c_str(),
     //             logtype_dict_entry.get_num_variables(),
     //             var_type_names.size()
     //     );

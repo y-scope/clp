@@ -10,6 +10,7 @@
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/Schema.hpp>
+#include <clpp/ErrorCode.hpp>
 
 namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
@@ -740,7 +741,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
         -> ystdlib::error_handling::Result<size_t> {
     auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_id)};
     if (m_global_id_to_unordered_object.end() == log_msg_it) {
-        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
 
     m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
@@ -752,7 +753,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
         auto const global_column_id{schema[schema_idx]};
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             if (Schema::get_unordered_object_type(global_column_id) != NodeType::CompositeVar) {
-                return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
             }
 
             auto length{Schema::get_unordered_object_length(global_column_id)};
@@ -828,7 +829,7 @@ auto SchemaReader::generate_composite_var_template(int32_t var_id)
         -> ystdlib::error_handling::Result<size_t> {
     auto var_it{m_global_id_to_unordered_object.find(var_id)};
     if (m_global_id_to_unordered_object.end() == var_it) {
-        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
 
     m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
@@ -839,7 +840,7 @@ auto SchemaReader::generate_composite_var_template(int32_t var_id)
     for (size_t schema_idx{0}; schema_idx < schema.size(); schema_idx++) {
         auto const global_column_id{schema[schema_idx]};
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
-            return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
         }
         auto const& node{m_global_schema_tree->get_node(global_column_id)};
         switch (node.get_type()) {
@@ -887,7 +888,7 @@ auto SchemaReader::generate_composite_var_template(int32_t var_id)
             case NodeType::Metadata:
             case NodeType::Timestamp:
             case NodeType::Unknown: {
-                return ClpsErrorCode{ClpsErrorCodeEnum::Unsupported};
+                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
                 break;
             }
         }

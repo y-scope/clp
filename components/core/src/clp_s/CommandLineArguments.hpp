@@ -42,11 +42,6 @@ public:
         Stdout,
     };
 
-    struct ExperimentalQueries {
-        static constexpr std::string_view cLogTypeStatsQuery{"stats.logtypes"};
-        static constexpr std::string_view cVariableStatsQuery{"stats.variables"};
-    };
-
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
@@ -144,6 +139,9 @@ public:
      */
     [[nodiscard]] auto create_output_handler() const
             -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>>;
+
+    // Data members
+    static constexpr std::string_view cLogTypeStatsQuery{"stats.logtypes"};
 
 private:
     // Methods
