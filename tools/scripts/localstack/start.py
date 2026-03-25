@@ -52,7 +52,7 @@ def main() -> int:
         return 1
 
     logger.info("Starting LocalStack container '%s' on port %d", args.name, args.port)
-    logger.info("Pulling LocalStack image .")
+    logger.info("Pulling LocalStack image.")
     result = subprocess.run(
         [docker_executable, "pull", _LOCALSTACK_IMAGE], capture_output=True, text=True, check=False
     )
