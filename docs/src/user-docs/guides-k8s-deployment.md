@@ -125,7 +125,43 @@ helm repo update clp
 The following configurations are optional but recommended for production deployments. You can skip
 this section for testing or development.
 
-1. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
+1. **Storage class** (required for clusters without a default StorageClass):
+
+   The Helm chart dynamically provisions PersistentVolumeClaims for the database, results cache,
+   and shared-data directories. By default, the cluster's default StorageClass is used. If your
+   cluster does not have a default StorageClass (common on EKS Auto Mode), you can either create
+   one or specify a custom StorageClass in `values.yaml`.
+
+   To create a `gp3` default StorageClass on **EKS Auto Mode**:
+
+   ```bash
+   cat <<'EOF' | kubectl apply -f -
+   apiVersion: storage.k8s.io/v1
+   kind: StorageClass
+   metadata:
+     name: auto-ebs-sc
+     annotations:
+       storageclass.kubernetes.io/is-default-class: "true"
+   provisioner: ebs.csi.eks.amazonaws.com
+   volumeBindingMode: WaitForFirstConsumer
+   reclaimPolicy: Delete
+   parameters:
+     type: gp3
+     encrypted: "true"
+   EOF
+   ```
+
+   Alternatively, to use a non-default StorageClass without changing the cluster default, set
+   `storageClassName` in `values.yaml`:
+
+   ```yaml
+   storageClassName: "gp3"
+   ```
+
+   This propagates to all PVCs created by the chart (database, results cache, shared-data archives,
+   shared-data streams).
+
+2. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
 
    :::{tip}
    [S3 storage][s3-storage] is **strongly recommended** for multi-node clusters as it does not
@@ -138,7 +174,7 @@ this section for testing or development.
    `claimRef` to bind them to the chart's PVCs (`<release>-clp-shared-data-archives` and
    `<release>-clp-shared-data-streams`).
 
-2. **External databases** (recommended for production):
+3. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
      MariaDB/MySQL and MongoDB databases
 
@@ -187,6 +223,9 @@ For highly customized deployments, create a values file instead of using many `-
 
 ```{code-block} yaml
 :caption: custom-values.yaml
+
+# Use a non-default StorageClass for all PVCs (omit to use the cluster default)
+# storageClassName: "gp3"
 
 # Use a custom image. For local images, import to each node's container runtime first.
 image:
