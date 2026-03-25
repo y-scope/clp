@@ -51,14 +51,14 @@ def main() -> int:
         return 1
 
     logger.info("Starting LocalStack container '%s' on port %d", args.name, args.port)
-    logger.info("Pulling latest LocalStack image.")
+    logger.info("Pulling LocalStack image version 4.14.")
     result = subprocess.run(
         [docker_executable, "pull", _LOCALSTACK_IMAGE], capture_output=True, text=True, check=False
     )
     if result.returncode != 0:
-        logger.error("Failed to pull the latest LocalStack image:\n%s", result.stderr)
+        logger.error("Failed to pull LocalStack image:\n%s", result.stderr)
         return result.returncode
-    logger.info("Successfully pulled latest LocalStack image.")
+    logger.info("Successfully pulled LocalStack image.")
 
     localstack_start_cmd = [
         "docker",
