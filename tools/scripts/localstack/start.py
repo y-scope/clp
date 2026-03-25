@@ -9,7 +9,7 @@ import logging
 import subprocess
 import sys
 
-_LOCALSTACK_IMAGE: str = "localstack/localstack:latest"
+_LOCALSTACK_IMAGE: str = "localstack/localstack:4.14"
 
 logging.basicConfig(
     level=logging.INFO,
