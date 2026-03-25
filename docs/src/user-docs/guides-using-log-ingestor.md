@@ -51,12 +51,26 @@ will be routed through CLP's [API server](./guides-using-the-api-server.md) in a
 
 ### Fault tolerance
 
-:::{warning}
-**The current version of `log-ingestor` does not provide fault tolerance.**
+`log-ingestor` is designed to tolerate unexpected crashes or restarts without losing information
+about ingestion jobs or the files that have been submitted for compression. Note that this does not
+include fault tolerance of the components external to `log-ingestor`. Specifically, `log-ingestor`
+guarantees the following, even in the presence of crashes or restarts of `log-ingestor`:
 
-If `log-ingestor` crashes or is restarted, all in-progress ingestion jobs and their associated state
-will be lost, and must be restored manually. Robust fault tolerance for the ingestion pipeline is
-planned for a future release.
+* Any ingestion job successfully submitted to `log-ingestor` will run continuously.
+* Within an ingestion job, any files that have been found on S3 or received as messages from SQS
+  queue will eventually be submitted for compression.
+
+:::{note}
+`log-ingestor` **DOES NOT** guarantee the following after a crash or restart:
+
+* Any file submitted for compression (that can be compressed successfully) will eventually be
+  compressed successfully.
+  * This is because failures of the compression cluster are external to `log-ingestor`. Future
+    versions of CLP will address this limitation.
+* Any file submitted for compression will *only* be compressed once.
+  * This is because for [SQS listener](#sqs-listener) ingestion jobs, the processes for deleting
+    messages from the SQS queue and recording the files for ingestion are not synchronized. As a
+    result, a failure during this process may cause the same file to be ingested multiple times.
 :::
 
 ---
