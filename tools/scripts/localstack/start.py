@@ -9,6 +9,7 @@ import logging
 import subprocess
 import sys
 
+# Lock `localstack` image version to 4.14 as a workaround for #2118.
 _LOCALSTACK_IMAGE: str = "localstack/localstack:4.14"
 
 logging.basicConfig(
@@ -51,7 +52,7 @@ def main() -> int:
         return 1
 
     logger.info("Starting LocalStack container '%s' on port %d", args.name, args.port)
-    logger.info("Pulling LocalStack image version 4.14.")
+    logger.info("Pulling LocalStack image .")
     result = subprocess.run(
         [docker_executable, "pull", _LOCALSTACK_IMAGE], capture_output=True, text=True, check=False
     )
