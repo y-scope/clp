@@ -244,13 +244,13 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
     [[maybe_unused]] auto const encoding_type{
             YSTDLIB_ERROR_HANDLING_TRYX(get_encoding_type(reader))
     };
-    auto const metadata_pair{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_preamble(reader))};
+    auto const [metadata_type, metadata]{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_preamble(reader))};
 
-    if (cProtocol::Metadata::EncodingJson != metadata_pair.first) {
+    if (cProtocol::Metadata::EncodingJson != metadata_type) {
         return std::errc::protocol_not_supported;
     }
 
-    auto metadata_json = nlohmann::json::parse(metadata_pair.second, nullptr, false);
+    auto metadata_json = nlohmann::json::parse(metadata, nullptr, false);
     if (metadata_json.is_discarded()) {
         return std::errc::protocol_error;
     }

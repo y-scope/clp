@@ -162,6 +162,8 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
         value_big_endian = bswap_32(value);
     } else if constexpr (sizeof(value) == 8) {
         value_big_endian = bswap_64(value);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     std::span<int8_t> const data_view{reinterpret_cast<int8_t*>(&value_big_endian), sizeof(value)};
@@ -184,6 +186,8 @@ auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
         value = bswap_32(value_little_endian);
     } else if constexpr (cReadSize == 8) {
         value = bswap_64(value_little_endian);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
     return true;
 }
@@ -205,7 +209,7 @@ auto deserialize_int(ReaderInterface& reader) -> ystdlib::error_handling::Result
     } else if constexpr (cReadSize == 8) {
         return bswap_64(value_little_endian);
     } else {
-        static_assert(false, "unsupported integer size");
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
 }
 

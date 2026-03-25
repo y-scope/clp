@@ -248,14 +248,17 @@ auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string&
         -> ystdlib::error_handling::Result<void> {
     size_t str_length{};
     if (cProtocol::Payload::StrLenUByte == tag) {
-        uint8_t length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader))};
-        str_length = static_cast<size_t>(length);
+        str_length = static_cast<size_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader))
+        );
     } else if (cProtocol::Payload::StrLenUShort == tag) {
-        uint16_t length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader))};
-        str_length = static_cast<size_t>(length);
+        str_length = static_cast<size_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader))
+        );
     } else if (cProtocol::Payload::StrLenUInt == tag) {
-        uint32_t length{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint32_t>(reader))};
-        str_length = static_cast<size_t>(length);
+        str_length = static_cast<size_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint32_t>(reader))
+        );
     } else {
         return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }

@@ -10,7 +10,7 @@ namespace clp::ffi::ir_stream {
  * Error code enum for IR stream deserialization.
  */
 enum class IrDeserializationErrorEnum : uint8_t {
-    DuplicateKey,
+    DuplicateKey = 1,
     EncodedTextAstDeserializationFailure,
     EndOfStream,
     IncompleteStream,
