@@ -1,6 +1,7 @@
 #include "ColumnWriter.hpp"
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -154,12 +155,12 @@ auto ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_
     return sizeof(int64_t) + (sizeof(int64_t) * (m_encoded_vars.size() - offset));
 }
 
-void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
-    size_t logtypes_size = m_logtypes.size() * sizeof(int64_t);
+auto ClpStringColumnWriter::store(ZstdCompressor& compressor) -> void {
+    size_t logtypes_size{m_logtypes.size() * sizeof(int64_t)};
     compressor.write(reinterpret_cast<char const*>(m_logtypes.data()), logtypes_size);
-    size_t encoded_vars_size = m_encoded_vars.size() * sizeof(int64_t);
-    size_t num_encoded_vars = m_encoded_vars.size();
-    compressor.write_numeric_value(num_encoded_vars);
+    size_t encoded_vars_size{m_encoded_vars.size() * sizeof(int64_t)};
+    size_t num_encoded_vars{m_encoded_vars.size()};
+    compressor.write_numeric_value(static_cast<uint64_t>(num_encoded_vars));
     compressor.write(reinterpret_cast<char const*>(m_encoded_vars.data()), encoded_vars_size);
 }
 

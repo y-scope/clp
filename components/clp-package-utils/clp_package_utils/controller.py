@@ -191,17 +191,22 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
         }
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
+            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
+
         if BundledService.DATABASE not in self._clp_config.bundled:
             env_vars |= {
-                "CLP_DB_PORT": str(self._clp_config.database.port),
+                "CLP_DB_CONNECT_PORT": str(self._clp_config.database.port),
                 "CLP_EXTRA_HOST_DATABASE_NAME": DB_COMPONENT_NAME,
                 "CLP_EXTRA_HOST_DATABASE_ADDR": _resolve_external_host(
                     self._clp_config.database.host
                 ),
             }
-
-        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
-            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
+        else:
+            env_vars |= {
+                "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
+                "CLP_DB_PORT": str(self._clp_config.database.port),
+            }
 
         # Credentials
         credentials = self._clp_config.database.credentials
@@ -271,9 +276,14 @@ class BaseController(ABC):
         # Connection config
         if BundledService.QUEUE not in self._clp_config.bundled:
             env_vars |= {
-                "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
+                "CLP_QUEUE_CONNECT_PORT": str(self._clp_config.queue.port),
                 "CLP_EXTRA_HOST_QUEUE_NAME": QUEUE_COMPONENT_NAME,
                 "CLP_EXTRA_HOST_QUEUE_ADDR": _resolve_external_host(self._clp_config.queue.host),
+            }
+        else:
+            env_vars |= {
+                "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
+                "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
             }
 
         # Credentials
@@ -355,9 +365,14 @@ class BaseController(ABC):
         # Connection config
         if BundledService.REDIS not in self._clp_config.bundled:
             env_vars |= {
-                "CLP_REDIS_PORT": str(self._clp_config.redis.port),
+                "CLP_REDIS_CONNECT_PORT": str(self._clp_config.redis.port),
                 "CLP_EXTRA_HOST_REDIS_NAME": REDIS_COMPONENT_NAME,
                 "CLP_EXTRA_HOST_REDIS_ADDR": _resolve_external_host(self._clp_config.redis.host),
+            }
+        else:
+            env_vars |= {
+                "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
+                "CLP_REDIS_PORT": str(self._clp_config.redis.port),
             }
 
         # Credentials
@@ -457,11 +472,18 @@ class BaseController(ABC):
         }
         if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
             env_vars |= {
-                "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+                "CLP_RESULTS_CACHE_CONNECT_PORT": str(self._clp_config.results_cache.port),
                 "CLP_EXTRA_HOST_RESULTS_CACHE_NAME": RESULTS_CACHE_COMPONENT_NAME,
                 "CLP_EXTRA_HOST_RESULTS_CACHE_ADDR": _resolve_external_host(
                     self._clp_config.results_cache.host
                 ),
+            }
+        else:
+            env_vars |= {
+                "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(
+                    self._clp_config.results_cache.host
+                ),
+                "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
             }
 
         return env_vars
@@ -701,6 +723,7 @@ class BaseController(ABC):
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
+            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),

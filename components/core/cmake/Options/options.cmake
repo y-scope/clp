@@ -95,6 +95,18 @@ option(
     ON
 )
 
+option(
+    CLP_BUILD_CLP_S_ENABLE_CURL
+    "Include libcurl support for clp-s."
+    ON
+)
+
+option(
+    CLP_BUILD_CLP_S_FILTER
+    "Build clp_s::filter."
+    ON
+)
+
 # Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
 #
 # @param {string} TARGET_CLP_BUILD_OPTION
@@ -140,7 +152,6 @@ function(set_clp_binaries_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_BOOST
-        CLP_NEED_CURL
         CLP_NEED_DATE
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
@@ -149,7 +160,6 @@ function(set_clp_binaries_dependencies)
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
-        CLP_NEED_OPENSSL
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
@@ -163,6 +173,8 @@ function(validate_clp_tests_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_TESTING
         CLP_BUILD_CLP_REGEX_UTILS
         CLP_BUILD_CLP_STRING_UTILS
+        CLP_BUILD_CLP_S_ENABLE_CURL
+        CLP_BUILD_CLP_S_FILTER
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
@@ -184,7 +196,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
-        CLP_NEED_OPENSSL
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
@@ -217,7 +228,6 @@ function(set_clp_s_archivereader_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_BOOST
-        CLP_NEED_CURL
         CLP_NEED_FMT
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
@@ -239,7 +249,6 @@ function(set_clp_s_archivewriter_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_BOOST
-        CLP_NEED_CURL
         CLP_NEED_FMT
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
@@ -258,15 +267,26 @@ endfunction()
 function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
-        CLP_NEED_CURL
         CLP_NEED_FMT
         CLP_NEED_LOG_SURGEON
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
-        CLP_NEED_OPENSSL
         CLP_NEED_SPDLOG
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD
+    )
+endfunction()
+
+function(validate_clp_s_filter_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_FILTER
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+    )
+endfunction()
+
+function(set_clp_s_filter_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_XXHASH
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -392,6 +412,13 @@ function(set_clp_s_timestamppattern_dependencies)
     )
 endfunction()
 
+function(set_clp_s_enable_curl_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_CURL
+        CLP_NEED_OPENSSL
+    )
+endfunction()
+
 # Validates that for each target whose `CLP_BUILD_` option is `ON`, the `CLP_BUILD_` options for
 # the target's dependencies are also `ON`; Sets the required `CLP_NEED_` flags for any target that
 # will be built.
@@ -426,6 +453,11 @@ function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         validate_clp_s_clp_dependencies_dependencies()
         set_clp_s_clp_dependencies_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_FILTER)
+        validate_clp_s_filter_dependencies()
+        set_clp_s_filter_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_IO)
@@ -471,6 +503,10 @@ function(validate_and_setup_all_clp_dependency_flags)
         validate_clp_s_timestamppattern_dependencies()
         set_clp_s_timestamppattern_dependencies()
     endif()
+
+    if (CLP_BUILD_CLP_S_ENABLE_CURL)
+        set_clp_s_enable_curl_dependencies()
+    endif()
 endfunction()
 
 function (convert_clp_dependency_properties_to_variables)
@@ -493,6 +529,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
+        CLP_NEED_XXHASH
         CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD

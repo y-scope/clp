@@ -37,7 +37,16 @@ bool Output::filter() {
     bool has_array = false;
     bool has_array_search = false;
 
-    m_archive_reader->read_metadata();
+    if (auto const result{m_archive_reader->read_metadata()}; result.has_error()) {
+        auto const error{result.error()};
+        SPDLOG_ERROR(
+                "Failed to read archive metadata: {} - {}",
+                error.category().name(),
+                error.message()
+        );
+        return false;
+    }
+
     for (auto schema_id : m_archive_reader->get_schema_ids()) {
         if (m_match->schema_matched(schema_id)) {
             matched_schemas.push_back(schema_id);
@@ -93,7 +102,7 @@ bool Output::filter() {
                 m_output_handler->should_output_metadata(),
                 m_should_marshal_records
         );
-        reader.initialize_filter(&m_query_runner);
+        reader.initialize_filter(m_query_runner);
 
         if (m_output_handler->should_output_metadata()) {
             epochtime_t timestamp{};
@@ -102,13 +111,13 @@ bool Output::filter() {
                     message,
                     timestamp,
                     log_event_idx,
-                    &m_query_runner
+                    m_query_runner
             ))
             {
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
-            while (reader.get_next_message(message, &m_query_runner)) {
+            while (reader.get_next_message(message, m_query_runner)) {
                 m_output_handler->write(message);
             }
         }

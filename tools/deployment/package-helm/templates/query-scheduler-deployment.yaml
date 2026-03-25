@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.query_scheduler }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -17,7 +18,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "query-scheduler"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       hostname: {{ include "clp.fullname" . }}-query-scheduler
       subdomain: {{ include "clp.fullname" . }}-query-scheduler
       terminationGracePeriodSeconds: 10
@@ -89,3 +90,4 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+{{- end }}

@@ -1,11 +1,14 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
+import logging
 from collections.abc import Iterator
 
 import pytest
 
 from tests.utils.config import PackageModeConfig, PackagePathConfig, PackageTestConfig
 from tests.utils.port_utils import assign_ports_from_base
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -25,6 +28,8 @@ def fixt_package_test_config(
     clp_config_obj = mode_config.clp_config
 
     # Assign ports based on the clp base port CLI option.
+    log_msg = f"Assigning ports to the '{mode_config.mode_name}' package."
+    logger.info(log_msg)
     base_port_string = request.config.getoption("--base-port")
     try:
         base_port = int(base_port_string)
@@ -34,6 +39,10 @@ def fixt_package_test_config(
     assign_ports_from_base(base_port, clp_config_obj)
 
     # Construct PackageTestConfig.
+    log_msg = (
+        f"Constructing the PackageTestConfig object for the '{mode_config.mode_name}' package."
+    )
+    logger.info(log_msg)
     package_test_config = PackageTestConfig(
         path_config=fixt_package_path_config,
         mode_config=mode_config,
