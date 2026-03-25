@@ -1,13 +1,16 @@
 #ifndef CLP_S_ARCHIVEREADER_HPP
 #define CLP_S_ARCHIVEREADER_HPP
 
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include <nlohmann/json_fwd.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReaderAdaptor.hpp>
@@ -53,6 +56,7 @@ public:
 
     /**
      * Reads the dictionaries and metadata.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
     void read_dictionaries_and_metadata();
 
@@ -93,8 +97,14 @@ public:
 
     /**
      * Reads the metadata from the archive.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `ArchiveReader::read_single_schema_metadata`'s return values on failure.
+     * - Forwards `PackedStreamReader::read_metadata`'s return values on failure.
+     * @throws OperationFailed if archive metadata is empty or corrupt.
+     * @throws OperationFailed if archive metadata stream offset is not strictly incremental.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
-    void read_metadata();
+    [[nodiscard]] auto read_metadata() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Reads a table from the archive.
@@ -151,8 +161,8 @@ public:
     void close();
 
     /**
-     * @return The schema ids in the archive. It also defines the order that tables should be read
-     * in to avoid seeking backwards.
+     * @return The schema ids in the archive. It also defines the order that tables should be
+     * read in to avoid seeking backwards.
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
 
@@ -173,11 +183,34 @@ public:
         return get_header().has_deprecated_timestamp_format();
     }
 
+    /**
+     * @param log_event_idx
+     * @return The file-level metadata associated with the record at `log_event_idx`.
+     * @throws ArchiveReaderAdaptor::OperationFailed when `log_event_idx` cannot be mapped to
+     * any metadata.
+     */
+    [[nodiscard]] auto get_metadata_for_log_event(int64_t log_event_idx) -> nlohmann::json const& {
+        return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
+    }
+
 private:
     /**
      * Reads archive metadata and prepares the archive reader for subsequent archive reads.
      */
     auto initialize_archive_reader() -> void;
+
+    /**
+     * Reads a single schema table entry from the table metadata stream.
+     * @return A result containing a pair:
+     * - The schema ID.
+     * - The schema metadata with `uncompressed_size` not yet computed.
+     * on success, or an error code indicating the failure:
+     * - std::errc::io_error if reading from the metadata stream fails.
+     * - std::errc::illegal_byte_sequence if the stream offset exceeds the stream size.
+     * - Forwards `ReaderUtils::try_uint64_to_size_t`'s return values on failure.
+     */
+    [[nodiscard]] auto read_single_schema_metadata()
+            -> ystdlib::error_handling::Result<std::pair<int32_t, SchemaReader::SchemaMetadata>>;
 
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
@@ -217,13 +250,14 @@ private:
     );
 
     /**
-     * Reads a table with given ID from the packed stream reader. If read_stream is called multiple
-     * times in a row for the same stream_id a cached buffer is returned. This function allows the
-     * caller to ask for the same buffer to be reused to read multiple different tables: this can
-     * save memory allocations, but can only be used when tables are read one at a time.
+     * Reads a table with given ID from the packed stream reader. If read_stream is called
+     * multiple times in a row for the same stream_id a cached buffer is returned. This function
+     * allows the caller to ask for the same buffer to be reused to read multiple different
+     * tables: this can save memory allocations, but can only be used when tables are read one
+     * at a time.
      * @param stream_id
-     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
-     * returned previous calls to read_stream
+     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting
+     * data returned previous calls to read_stream
      * @return a buffer containing the decompressed stream identified by stream_id
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);

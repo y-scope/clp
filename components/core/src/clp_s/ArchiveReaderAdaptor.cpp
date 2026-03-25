@@ -1,5 +1,6 @@
 #include "ArchiveReaderAdaptor.hpp"
 
+#include <cstddef>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -20,6 +21,7 @@
 #include "ErrorCode.hpp"
 #include "InputConfig.hpp"
 #include "RangeIndexWriter.hpp"
+#include "ReaderUtils.hpp"
 #include "SingleFileArchiveDefs.hpp"
 
 namespace clp_s {
@@ -166,6 +168,9 @@ auto ArchiveReaderAdaptor::try_read_range_index(ZstdDecompressor& decompressor, 
                 end_index,
                 std::move(range_index_entry.at(RangeIndexWriter::cMetadataFieldsName))
         );
+        if (start_index != end_index) {
+            m_non_empty_range_metadata_map.emplace(end_index, m_range_index.back().fields);
+        }
     }
     return ErrorCodeSuccess;
 }
@@ -321,7 +326,15 @@ std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_
 
     size_t file_offset = m_files_section_offset + it->o;
     ++it;
-    size_t next_file_offset{m_archive_header.compressed_size};
+
+    auto const next_file_offset_result{
+            ReaderUtils::try_uint64_to_size_t(m_archive_header.compressed_size)
+    };
+    if (next_file_offset_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    size_t next_file_offset{next_file_offset_result.value()};
+
     if (m_archive_file_info.files.end() != it) {
         next_file_offset = m_files_section_offset + it->o;
     }
@@ -351,5 +364,14 @@ void ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
     }
 
     m_current_reader_holder.reset();
+}
+
+auto ArchiveReaderAdaptor::get_metadata_for_log_event(int64_t log_event_idx)
+        -> nlohmann::json const& {
+    auto const it{m_non_empty_range_metadata_map.upper_bound(log_event_idx)};
+    if (m_non_empty_range_metadata_map.end() == it || log_event_idx < 0) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    return it->second;
 }
 }  // namespace clp_s

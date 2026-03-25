@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.query_worker }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -21,6 +22,7 @@ spec:
         "root" .
         "component" "queryWorker"
       ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       containers:
         - name: "query-worker"
@@ -119,3 +121,4 @@ spec:
           ) | quote }}
           emptyDir: {}
         {{- end }}
+{{- end }}
