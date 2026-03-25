@@ -50,9 +50,6 @@ async fn send_to_listener(
         .expect("Failed to send buffer entries to listener");
 }
 
-/// Creates [`CompressionBufferEntry`] values for testing. IDs start at `id_start`.
-/// [`TEST_OBJECT_SIZE`].
-///
 /// # Returns
 ///
 /// A vector of [`CompressionBufferEntry`] for testing.
@@ -106,7 +103,6 @@ async fn test_compression_listener() -> Result<()> {
         submitted_buffers.iter().flatten().copied().collect();
     actual_ids.sort_unstable();
 
-    let expected_ids: Vec<S3ObjectMetadataId> = (1..=300).collect();
     assert_eq!(expected_ids, actual_ids);
 
     submitted_buffers.clear();
