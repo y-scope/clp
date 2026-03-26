@@ -689,7 +689,7 @@ auto deserialize_preamble(ReaderInterface& reader)
     {
         return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
-    return std::pair<encoded_tag_t, std::vector<int8_t>>{metadata_type, std::move(metadata)};
+    return std::pair{metadata_type, std::move(metadata)};
 }
 
 auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolErrorCode {

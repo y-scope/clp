@@ -286,7 +286,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         return std::errc::operation_not_permitted;
     }
 
-    encoded_tag_t tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
+    auto const tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
     if (false == optional_ir_unit_type.has_value()) {
         return std::errc::protocol_not_supported;

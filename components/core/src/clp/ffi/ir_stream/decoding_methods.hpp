@@ -237,13 +237,12 @@ IRErrorCode deserialize_preamble(
  *   - The payload of the deserialized metadata.
  * - The possible error codes:
  *   - IrDeserializationErrorEnum::UnsupportedMetadataFormat if the metadata format is not
- *supported.
+ *     supported.
  *   - IrDeserializationErrorEnum::IncompleteStream if `reader` doesn't contain enough data to
  *     deserialize.
  *   - Forwards `deserialize_int`'s return values on failure.
  *   - Forwards `deserialize_metadata`'s return values on failure.
  *   - Forwards `deserialize_tag`'s return values on failure.
-
  */
 [[nodiscard]] auto deserialize_preamble(ReaderInterface& reader)
         -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, std::vector<int8_t>>>;
