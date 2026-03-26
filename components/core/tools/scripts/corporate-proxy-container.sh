@@ -34,13 +34,21 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ca_cert="${script_dir}/ca-certificates.crt"
 
 if [[ ! -s "$ca_cert" ]]; then
-    # No corporate proxy — create the stable bundle from the system certs so
-    # that env vars (PIP_CERT, CURL_CA_BUNDLE, etc.) pointing to it are valid.
-    echo "corporate-proxy-container: no corporate CA bundle provided; using system certs."
-    mkdir -p /opt/corp-ca
-    cp /etc/ssl/certs/ca-certificates.crt /opt/corp-ca/ca-bundle.crt 2>/dev/null \
-        || cp /etc/pki/tls/certs/ca-bundle.crt /opt/corp-ca/ca-bundle.crt 2>/dev/null \
-        || touch /opt/corp-ca/ca-bundle.crt
+    # No corporate proxy — copy the system certs to the stable path so that env
+    # vars (PIP_CERT, CURL_CA_BUNDLE, etc.) pointing to it are valid. If no
+    # system certs exist yet (e.g., bare ubuntu:jammy), skip entirely — tools
+    # will fall back to their built-in defaults when the path doesn't exist.
+    if [[ -f /etc/ssl/certs/ca-certificates.crt ]]; then
+        echo "corporate-proxy-container: no corporate CA; copying system certs to /opt/corp-ca/."
+        mkdir -p /opt/corp-ca
+        cp /etc/ssl/certs/ca-certificates.crt /opt/corp-ca/ca-bundle.crt
+    elif [[ -f /etc/pki/tls/certs/ca-bundle.crt ]]; then
+        echo "corporate-proxy-container: no corporate CA; copying system certs to /opt/corp-ca/."
+        mkdir -p /opt/corp-ca
+        cp /etc/pki/tls/certs/ca-bundle.crt /opt/corp-ca/ca-bundle.crt
+    else
+        echo "corporate-proxy-container: no corporate CA and no system certs yet; skipping."
+    fi
     exit 0
 fi
 
