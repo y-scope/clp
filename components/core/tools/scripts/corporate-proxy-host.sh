@@ -45,6 +45,10 @@ detect_ca_bundle() {
 # (redundant but harmless). On a corporate machine, the bundle includes the organization's CA —
 # which the container needs. Creates an empty file if no bundle is found (so COPY always succeeds
 # and the in-container setup script is a no-op).
+#
+# NOTE: An empty ca-certificates.crt placeholder is committed to the repo so that CI builds
+# (which run `docker build` directly without this script) can COPY the file successfully.
+# This function overwrites that placeholder with the real host CA bundle when running locally.
 # Arguments:
 #   $1 - component_root (path to components/core/)
 prepare_ca_cert_for_build() {
