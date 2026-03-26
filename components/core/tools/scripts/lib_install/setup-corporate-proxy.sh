@@ -25,20 +25,22 @@ fi
 
 echo "setup-corporate-proxy: installing corporate CA certificates..."
 
-if command -v update-ca-trust &>/dev/null; then
-    # DNF-based distros (RHEL, CentOS, manylinux_2_28)
-    cp "$ca_cert" /etc/pki/ca-trust/source/anchors/corporate-ca-bundle.crt
-    update-ca-trust extract
-    echo "setup-corporate-proxy: updated trust store via update-ca-trust."
-elif command -v update-ca-certificates &>/dev/null; then
-    # APK/APT-based distros (Alpine, Ubuntu)
-    cp "$ca_cert" /usr/local/share/ca-certificates/corporate-ca-bundle.crt
-    update-ca-certificates
-    echo "setup-corporate-proxy: updated trust store via update-ca-certificates."
+# Detect the system certificate bundle path.
+if [[ -d /etc/pki/tls/certs ]]; then
+    # RHEL/CentOS/manylinux
+    system_cert="/etc/pki/tls/certs/ca-bundle.crt"
+elif [[ -d /etc/ssl/certs ]]; then
+    # Debian/Ubuntu/Alpine
+    system_cert="/etc/ssl/certs/ca-certificates.crt"
 else
-    echo "setup-corporate-proxy: WARNING: no recognized CA trust update tool found." >&2
-    exit 1
+    mkdir -p /etc/ssl/certs
+    system_cert="/etc/ssl/certs/ca-certificates.crt"
 fi
+
+# The source bundle from the host is already a combined trust store.
+# Copy it directly — no update-ca-trust or update-ca-certificates needed.
+cp "$ca_cert" "$system_cert"
+echo "setup-corporate-proxy: installed CA bundle to ${system_cert}."
 
 # Remove the staging file — it's no longer needed after installation into the
 # trust store.
