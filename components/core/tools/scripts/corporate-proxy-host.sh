@@ -65,15 +65,17 @@ prepare_ca_cert_for_build() {
     fi
 }
 
-# Removes the temporary CA certificate file from the build context.
+# Restores the CA certificate placeholder in the build context to its committed empty state.
+# This undoes the overwrite from prepare_ca_cert_for_build() so the git working tree stays clean.
 # Arguments:
 #   $1 - component_root (path to components/core/)
 cleanup_ca_cert() {
     local component_root="$1"
     local cert_file="${component_root}/tools/scripts/ca-certificates.crt"
 
+    # Truncate to empty rather than deleting — the file is committed as an empty placeholder.
     if [[ -f "$cert_file" ]]; then
-        rm "$cert_file"
+        : > "$cert_file"
     fi
 }
 
@@ -91,9 +93,8 @@ finalize_build() {
     add_proxy_build_args "$1"
 
     if [[ -n "$mirror_var" ]] && [[ -n "${!mirror_var:-}" ]]; then
-        local _mirror_val
-        printf -v _mirror_val '%q' "${!mirror_var}"
-        eval "${_cmd_var}+=(--build-arg ${mirror_var}=${_mirror_val})"
+        local _mirror_val="${!mirror_var}"
+        eval "${_cmd_var}+=(--build-arg \"${mirror_var}=${_mirror_val}\")"
     fi
 
     if [[ "${DOCKER_PULL:-true}" != "false" ]]; then
@@ -105,15 +106,11 @@ finalize_build() {
     then
         local revision
         revision="$(git -C "$script_dir" rev-parse HEAD 2>/dev/null)"
-        local _escaped_revision
-        printf -v _escaped_revision '%q' "org.opencontainers.image.revision=${revision}"
-        eval "${_cmd_var}+=(--label ${_escaped_revision})"
+        eval "${_cmd_var}+=(--label \"org.opencontainers.image.revision=${revision}\")"
 
         local remote_url
         if remote_url="$(git -C "$script_dir" remote get-url origin 2>/dev/null)"; then
-            local _escaped_source
-            printf -v _escaped_source '%q' "org.opencontainers.image.source=${remote_url}"
-            eval "${_cmd_var}+=(--label ${_escaped_source})"
+            eval "${_cmd_var}+=(--label \"org.opencontainers.image.source=${remote_url}\")"
         fi
     fi
 
@@ -147,9 +144,7 @@ add_proxy_build_args() {
     for var in "${proxy_vars[@]}"; do
         if [[ -n "${!var:-}" ]]; then
             local _val="${!var}"
-            local _escaped_val
-            printf -v _escaped_val '%q' "${var}=${_val}"
-            eval "${_cmd_var}+=(--build-arg ${_escaped_val})"
+            eval "${_cmd_var}+=(--build-arg \"${var}=${_val}\")"
             if [[ "${_val}" =~ (://localhost[:/]|://127\.0\.0\.1[:/]|://\[::1\][:/]) ]]; then
                 has_localhost_proxy=true
             fi
@@ -158,16 +153,12 @@ add_proxy_build_args() {
     for var in "${no_proxy_vars[@]}"; do
         if [[ -n "${!var:-}" ]]; then
             local _val="${!var}"
-            local _escaped_val
-            printf -v _escaped_val '%q' "${var}=${_val}"
-            eval "${_cmd_var}+=(--build-arg ${_escaped_val})"
+            eval "${_cmd_var}+=(--build-arg \"${var}=${_val}\")"
         fi
     done
 
     if [[ -n "${DOCKER_NETWORK:-}" ]]; then
-        local _escaped_network
-        printf -v _escaped_network '%q' "${DOCKER_NETWORK}"
-        eval "${_cmd_var}+=(--network ${_escaped_network})"
+        eval "${_cmd_var}+=(--network \"${DOCKER_NETWORK}\")"
     elif [[ "$has_localhost_proxy" == "true" ]]; then
         eval "${_cmd_var}+=(--network host)"
     fi

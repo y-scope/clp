@@ -22,8 +22,8 @@
 #     Dockerfile ENV vars (PIP_CERT, CURL_CA_BUNDLE, etc.) point to this path, and pip hard-errors
 #     on a missing file but works fine with an empty one.
 #
-# If the staged ca-certificates.crt file is empty, no corporate proxy is in use and this script
-# is a no-op.
+# If the staged ca-certificates.crt file is empty, no corporate proxy is in use — the script
+# copies system certs to /opt/corp-ca/ca-bundle.crt (or creates an empty file on bare images).
 #
 # Supports:
 #   - DNF-based (manylinux_2_28, centos-stream-9)
@@ -44,26 +44,25 @@ set -o pipefail
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ca_cert="${script_dir}/ca-certificates.crt"
 
+corp_ca_dir="/opt/corp-ca"
+corp_ca_bundle="${corp_ca_dir}/ca-bundle.crt"
+mkdir -p "${corp_ca_dir}"
+
 if [[ ! -s "$ca_cert" ]]; then
     # No corporate proxy — copy the system certs to the stable path so that env
-    # vars (PIP_CERT, CURL_CA_BUNDLE, etc.) pointing to it are valid. If no
-    # system certs exist yet (e.g., bare ubuntu:jammy), skip entirely — tools
-    # will fall back to their built-in defaults when the path doesn't exist.
+    # vars (PIP_CERT, CURL_CA_BUNDLE, etc.) pointing to it are valid.
     if [[ -f /etc/ssl/certs/ca-certificates.crt ]]; then
-        echo "corporate-proxy-container: no corporate CA; copying system certs to /opt/corp-ca/."
-        mkdir -p /opt/corp-ca
-        cp /etc/ssl/certs/ca-certificates.crt /opt/corp-ca/ca-bundle.crt
+        echo "corporate-proxy-container: no corporate CA; copying system certs to ${corp_ca_dir}/."
+        cp /etc/ssl/certs/ca-certificates.crt "${corp_ca_bundle}"
     elif [[ -f /etc/pki/tls/certs/ca-bundle.crt ]]; then
-        echo "corporate-proxy-container: no corporate CA; copying system certs to /opt/corp-ca/."
-        mkdir -p /opt/corp-ca
-        cp /etc/pki/tls/certs/ca-bundle.crt /opt/corp-ca/ca-bundle.crt
+        echo "corporate-proxy-container: no corporate CA; copying system certs to ${corp_ca_dir}/."
+        cp /etc/pki/tls/certs/ca-bundle.crt "${corp_ca_bundle}"
     else
         # No system certs yet (e.g., bare ubuntu:jammy before ca-certificates is installed).
         # Create an empty bundle so Dockerfile ENV vars (PIP_CERT, CURL_CA_BUNDLE, etc.)
         # point to a valid file. pip hard-errors on a missing path but works with an empty file.
         echo "corporate-proxy-container: no corporate CA and no system certs yet; creating empty bundle."
-        mkdir -p /opt/corp-ca
-        touch /opt/corp-ca/ca-bundle.crt
+        touch "${corp_ca_bundle}"
     fi
     exit 0
 fi
@@ -73,8 +72,7 @@ echo "corporate-proxy-container: installing corporate CA certificates..."
 # Save to a stable path outside the system package manager's control.
 # Tools are pointed here via env vars (SSL_CERT_FILE, PIP_CERT, etc.) so the
 # cert survives later reinstalls of ca-certificates/ca-trust packages.
-mkdir -p /opt/corp-ca
-cp "$ca_cert" /opt/corp-ca/ca-bundle.crt
+cp "$ca_cert" "${corp_ca_bundle}"
 
 if [[ -d /etc/pki/tls/certs ]]; then
     # RHEL/CentOS/manylinux: also copy to the system bundle for tools that
