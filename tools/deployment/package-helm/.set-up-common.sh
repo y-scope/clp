@@ -73,11 +73,12 @@ get_image_helm_args() {
 }
 
 # Parses common arguments shared across set-up scripts.
-# Sets CLP_PACKAGE_IMAGE global variable.
+# Sets CLP_PACKAGE_IMAGE and ENABLE_PRESTO global variables.
 #
 # @param {string[]} args Script arguments
 parse_common_args() {
     CLP_PACKAGE_IMAGE=""
+    ENABLE_PRESTO="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --clp-package-image)
@@ -88,12 +89,54 @@ parse_common_args() {
                 CLP_PACKAGE_IMAGE="$2"
                 shift 2
                 ;;
+            --presto)
+                ENABLE_PRESTO="true"
+                shift
+                ;;
             *)
                 echo "Unknown argument: $1" >&2
                 exit 1
                 ;;
         esac
     done
+}
+
+# Returns helm --set flags to enable Presto with a minimal config.
+# Only prints flags when ENABLE_PRESTO is "true"; otherwise prints nothing.
+#
+# @return Prints helm --set flags to stdout
+get_presto_helm_args() {
+    if [[ "${ENABLE_PRESTO}" != "true" ]]; then
+        return
+    fi
+
+    echo "--set" "clpConfig.webui.query_engine=presto" \
+         "--set" "clpConfig.presto.port=30889" \
+         "--set" "clpConfig.presto.coordinator.logging_level=INFO" \
+         "--set" "clpConfig.presto.coordinator.query_max_memory_gb=1" \
+         "--set" "clpConfig.presto.coordinator.query_max_memory_per_node_gb=1" \
+         "--set" "clpConfig.presto.worker.query_memory_gb=4" \
+         "--set" "clpConfig.presto.worker.system_memory_gb=8" \
+         "--set-json" "clpConfig.presto.split_filter=$(tr -d '[:space:]' <<'SPLIT_FILTER'
+{
+  "clp.default.default": [{
+    "columnName": "timestamp",
+    "customOptions": {
+      "rangeMapping": {
+        "lowerBound": "begin_timestamp",
+        "upperBound": "end_timestamp"
+      }
+    },
+    "required": false
+  }]
+}
+SPLIT_FILTER
+)" \
+         "--set" "clpConfig.api_server=null" \
+         "--set" "clpConfig.query_scheduler=null" \
+         "--set" "clpConfig.query_worker=null" \
+         "--set" "clpConfig.reducer=null" \
+         "--set" "clpConfig.results_cache.retention_period=null"
 }
 
 # Generates kind cluster configuration YAML
@@ -130,6 +173,9 @@ nodes:
     protocol: TCP
   - containerPort: 30800
     hostPort: 30800
+    protocol: TCP
+  - containerPort: 30889
+    hostPort: 30889
     protocol: TCP
 EOF
 
