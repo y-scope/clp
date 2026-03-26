@@ -15,15 +15,12 @@
 #     Then this script installs the real CA bundle into /opt/corp-ca/ca-bundle.crt.
 #
 #   CI / NON-PROXY BUILD:
-#     docker build runs directly without corporate-proxy-host.sh. The committed empty
-#     ca-certificates.crt placeholder is COPYed in. This script detects the empty file and
-#     creates /opt/corp-ca/ca-bundle.crt from system certs (or as an empty file on bare images
-#     like ubuntu:jammy where system certs aren't installed yet). The empty file is needed because
-#     Dockerfile ENV vars (PIP_CERT, CURL_CA_BUNDLE, etc.) point to this path, and pip hard-errors
-#     on a missing file but works fine with an empty one.
+#     The CI workflow copies the runner's system CA bundle into the build context
+#     as ca-certificates.crt before running docker build. This script then installs
+#     it into /opt/corp-ca/ca-bundle.crt just like the corporate proxy case.
 #
-# If the staged ca-certificates.crt file is empty, no corporate proxy is in use — the script
-# copies system certs to /opt/corp-ca/ca-bundle.crt (or creates an empty file on bare images).
+# In both paths, ca-certificates.crt must be non-empty. An empty or missing file
+# is an error — it means the build was invoked without proper CA setup.
 #
 # Supports:
 #   - DNF-based (manylinux_2_28, centos-stream-9)
@@ -49,23 +46,10 @@ corp_ca_bundle="${corp_ca_dir}/ca-bundle.crt"
 mkdir -p "${corp_ca_dir}"
 
 if [[ ! -s "$ca_cert" ]]; then
-    # No corporate proxy — copy the system certs to the stable path so that env
-    # vars (PIP_CERT, CURL_CA_BUNDLE, etc.) pointing to it are valid.
-    if [[ -f /etc/ssl/certs/ca-certificates.crt ]]; then
-        echo "corporate-proxy-container: no corporate CA; copying system certs to ${corp_ca_dir}/."
-        cp /etc/ssl/certs/ca-certificates.crt "${corp_ca_bundle}"
-    elif [[ -f /etc/pki/tls/certs/ca-bundle.crt ]]; then
-        echo "corporate-proxy-container: no corporate CA; copying system certs to ${corp_ca_dir}/."
-        cp /etc/pki/tls/certs/ca-bundle.crt "${corp_ca_bundle}"
-    else
-        # No system certs yet (e.g., bare ubuntu:jammy before ca-certificates is installed).
-        # Create an empty bundle so Dockerfile ENV vars (PIP_CERT, CURL_CA_BUNDLE, etc.)
-        # point to a valid file. pip hard-errors on a missing path but works with an empty file.
-        echo "corporate-proxy-container: no corporate CA and no system certs yet;" \
-            "creating empty bundle."
-        touch "${corp_ca_bundle}"
-    fi
-    exit 0
+    echo "ERROR: ca-certificates.crt is empty or missing." >&2
+    echo "  Local builds: run build.sh (sources corporate-proxy-host.sh)." >&2
+    echo "  CI builds: ensure the workflow stages a CA bundle." >&2
+    exit 1
 fi
 
 echo "corporate-proxy-container: installing corporate CA certificates..."

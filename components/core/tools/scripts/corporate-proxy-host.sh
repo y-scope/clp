@@ -16,8 +16,8 @@
 # CA. Tools inside Docker containers reject these certificates because the corporate CA isn't in the
 # container's trust store.
 #
-# When no CA bundle is found on the host, an empty file is staged so that the Dockerfile's COPY
-# succeeds; the container-side script detects the empty file and skips trust-store installation.
+# If no CA bundle is found on the host, the build fails with an error — every supported
+# platform (Linux, macOS) should have a system CA bundle.
 
 # Detects the host's CA certificate bundle.
 # Returns the path via stdout, or returns 1 if not found.
@@ -46,9 +46,9 @@ detect_ca_bundle() {
 # which the container needs. Creates an empty file if no bundle is found (so COPY always succeeds
 # and the in-container setup script is a no-op).
 #
-# NOTE: An empty ca-certificates.crt placeholder is committed to the repo so that CI builds
-# (which run `docker build` directly without this script) can COPY the file successfully.
-# This function overwrites that placeholder with the real host CA bundle when running locally.
+# NOTE: ca-certificates.crt is gitignored and generated at build time. CI workflows
+# must stage the runner's system CA bundle before docker build. See the
+# clp-core-build-containers action for the CI equivalent of this function.
 # Arguments:
 #   $1 - component_root (path to components/core/)
 prepare_ca_cert_for_build() {
@@ -60,22 +60,24 @@ prepare_ca_cert_for_build() {
         echo "Corporate proxy support: copying CA bundle from ${ca_bundle}"
         cp "$ca_bundle" "$dest"
     else
-        echo "Corporate proxy support: no CA bundle found on host (no-op)"
-        touch "$dest"
+        echo "ERROR: No CA certificate bundle found on host." >&2
+        echo "  Expected one of:" >&2
+        echo "    /etc/ssl/certs/ca-certificates.crt (Debian/Ubuntu/Alpine)" >&2
+        echo "    /etc/pki/tls/certs/ca-bundle.crt   (RHEL/CentOS)" >&2
+        echo "    /etc/ssl/cert.pem                   (macOS)" >&2
+        exit 1
     fi
 }
 
-# Restores the CA certificate placeholder in the build context to its committed empty state.
-# This undoes the overwrite from prepare_ca_cert_for_build() so the git working tree stays clean.
+# Removes the generated CA certificate file from the build context.
 # Arguments:
 #   $1 - component_root (path to components/core/)
 cleanup_ca_cert() {
     local component_root="$1"
     local cert_file="${component_root}/tools/scripts/ca-certificates.crt"
 
-    # Truncate to empty rather than deleting — the file is committed as an empty placeholder.
     if [[ -f "$cert_file" ]]; then
-        : > "$cert_file"
+        rm "$cert_file"
     fi
 }
 

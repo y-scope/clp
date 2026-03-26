@@ -5,4 +5,5 @@ __pycache__/
 .rustfmt.toml
 .task/
 build/
+components/core/tools/scripts/ca-certificates.crt
 dist/
