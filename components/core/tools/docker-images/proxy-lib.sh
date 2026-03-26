@@ -76,18 +76,19 @@ cleanup_ca_cert() {
 #   $2 - script_dir (used for git label metadata)
 #   $3 - (optional) name of the mirror override env var (e.g., DNF_MIRROR_BASE_URL)
 finalize_build() {
-    local -n _build_cmd=$1
+    local _cmd_var="$1"
     local script_dir="$2"
     local mirror_var="${3:-}"
 
     add_proxy_build_args "$1"
 
     if [[ -n "$mirror_var" ]] && [[ -n "${!mirror_var:-}" ]]; then
-        _build_cmd+=(--build-arg "${mirror_var}=${!mirror_var}")
+        local _mirror_val="${!mirror_var}"
+        eval "${_cmd_var}+=(--build-arg \"${mirror_var}=${_mirror_val}\")"
     fi
 
     if [[ "${DOCKER_PULL:-true}" != "false" ]]; then
-        _build_cmd+=(--pull)
+        eval "${_cmd_var}+=(--pull)"
     fi
 
     if command -v git >/dev/null \
@@ -95,14 +96,16 @@ finalize_build() {
     then
         local revision
         revision="$(git -C "$script_dir" rev-parse HEAD 2>/dev/null)"
-        _build_cmd+=(--label "org.opencontainers.image.revision=${revision}")
+        eval "${_cmd_var}+=(--label \"org.opencontainers.image.revision=${revision}\")"
 
         local remote_url
         if remote_url="$(git -C "$script_dir" remote get-url origin 2>/dev/null)"; then
-            _build_cmd+=(--label "org.opencontainers.image.source=${remote_url}")
+            eval "${_cmd_var}+=(--label \"org.opencontainers.image.source=${remote_url}\")"
         fi
     fi
 
+    local -a _build_cmd
+    eval "_build_cmd=(\"\${${_cmd_var}[@]}\")"
     echo "Running: ${_build_cmd[*]}"
     "${_build_cmd[@]}"
 }
@@ -116,7 +119,7 @@ finalize_build() {
 # Arguments:
 #   $1 - name of the bash array variable holding the build command
 add_proxy_build_args() {
-    local -n _build_cmd=$1
+    local _cmd_var="$1"
 
     local proxy_vars=(
         HTTP_PROXY http_proxy
@@ -130,21 +133,23 @@ add_proxy_build_args() {
     local has_localhost_proxy=false
     for var in "${proxy_vars[@]}"; do
         if [[ -n "${!var:-}" ]]; then
-            _build_cmd+=(--build-arg "${var}=${!var}")
-            if [[ "${!var}" =~ (://localhost[:/]|://127\.0\.0\.1[:/]|://\[::1\][:/]) ]]; then
+            local _val="${!var}"
+            eval "${_cmd_var}+=(--build-arg \"${var}=${_val}\")"
+            if [[ "${_val}" =~ (://localhost[:/]|://127\.0\.0\.1[:/]|://\[::1\][:/]) ]]; then
                 has_localhost_proxy=true
             fi
         fi
     done
     for var in "${no_proxy_vars[@]}"; do
         if [[ -n "${!var:-}" ]]; then
-            _build_cmd+=(--build-arg "${var}=${!var}")
+            local _val="${!var}"
+            eval "${_cmd_var}+=(--build-arg \"${var}=${_val}\")"
         fi
     done
 
     if [[ -n "${DOCKER_NETWORK:-}" ]]; then
-        _build_cmd+=(--network "${DOCKER_NETWORK}")
+        eval "${_cmd_var}+=(--network \"${DOCKER_NETWORK}\")"
     elif [[ "$has_localhost_proxy" == "true" ]]; then
-        _build_cmd+=(--network host)
+        eval "${_cmd_var}+=(--network host)"
     fi
 }
