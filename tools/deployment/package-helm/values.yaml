@@ -297,9 +297,5 @@ serviceAccount:
 gateway:
   enabled: false
   className: ""  # GatewayClass name (e.g., "nginx", "eg", "istio", "traefik")
-  host: ""  # Optional hostname filter for the Gateway listener
+  hostname: ""  # Optional hostname filter for the Gateway listener
   annotations: {}
-  tls: []
-  #   - secretName: clp-tls
-  #     hosts:
-  #       - clp.example.com

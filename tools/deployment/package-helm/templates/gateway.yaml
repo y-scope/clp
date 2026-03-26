@@ -15,8 +15,8 @@ spec:
     - name: "http"
       port: 80
       protocol: "HTTP"
-      {{- if .Values.gateway.host }}
-      hostname: {{ .Values.gateway.host | quote }}
+      {{- if .Values.gateway.hostname }}
+      hostname: {{ .Values.gateway.hostname | quote }}
       {{- end }}
       allowedRoutes:
         namespaces:

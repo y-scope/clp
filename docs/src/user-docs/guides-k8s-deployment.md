@@ -377,63 +377,7 @@ To run all worker types in the same node pool:
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
-### Service types and Ingress
-
-By default, externally-accessible services (Web UI, API server, log ingestor, MCP server) use
-`NodePort` with fixed port numbers. You can change the service type to `ClusterIP` or
-`LoadBalancer` using the `serviceType` key for each service, and optionally add an [Ingress]
-resource for production deployments behind a load balancer.
-
-#### Using ClusterIP with Ingress
-
-For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), the standard pattern is `ClusterIP`
-services behind an Ingress controller:
-
-```{code-block} yaml
-:caption: clusterip-ingress.yaml
-
-clpConfig:
-  # Switch external services to ClusterIP
-  webui:
-    serviceType: "ClusterIP"
-  api_server:
-    serviceType: "ClusterIP"
-
-# Enable Ingress
-ingress:
-  enabled: true
-  className: "alb"  # "alb" for AWS, "nginx" for nginx-ingress, etc.
-  host: "clp.example.com"
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-  tls:
-    - secretName: clp-tls
-      hosts:
-        - clp.example.com
-```
-
-Install:
-
-```bash
-helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f clusterip-ingress.yaml
-```
-
-#### Custom NodePort numbers
-
-To use `NodePort` with different port numbers:
-
-```{code-block} yaml
-:caption: custom-nodeports.yaml
-
-clpConfig:
-  webui:
-    port: 31000
-  api_server:
-    port: 31001
-```
-
-### Service types and Gateway
+### Service types and Gateway API
 
 By default, externally-accessible services (Web UI, API server, log ingestor, MCP server) use
 `NodePort` with fixed port numbers. You can change the service type to `ClusterIP` or
@@ -460,7 +404,7 @@ clpConfig:
 gateway:
   enabled: true
   className: "nginx"  # GatewayClass name from your controller
-  host: "clp.example.com"
+  hostname: "clp.example.com"
 ```
 
 Install:
@@ -702,7 +646,6 @@ To tear down a `kubeadm` cluster:
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [gke]: https://cloud.google.com/kubernetes-engine
 [Helm]: https://helm.sh/
-[Ingress]: https://kubernetes.io/docs/concepts/services-networking/ingress/
 [k3s]: https://k3s.io/
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
