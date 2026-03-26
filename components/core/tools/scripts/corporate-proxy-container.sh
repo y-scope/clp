@@ -17,6 +17,14 @@
 # Supports:
 #   - DNF-based (manylinux_2_28, centos-stream-9)
 #   - APK/APT-based (musllinux_1_2, ubuntu-jammy)
+#
+# CA bundle path used by tools (via env vars in the Dockerfile):
+#   /opt/corp-ca/ca-bundle.crt
+#
+# This path is outside the system package manager's control, so it survives
+# reinstalls of ca-certificates/ca-trust packages that regenerate the system
+# bundle. The Dockerfile points SSL_CERT_FILE, CURL_CA_BUNDLE, REQUESTS_CA_BUNDLE,
+# and PIP_CERT at this path.
 
 set -o errexit
 set -o nounset
@@ -26,29 +34,34 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ca_cert="${script_dir}/ca-certificates.crt"
 
 if [[ ! -s "$ca_cert" ]]; then
-    echo "corporate-proxy-container: no CA bundle provided, skipping."
+    # No corporate proxy — create the stable bundle from the system certs so
+    # that env vars (PIP_CERT, CURL_CA_BUNDLE, etc.) pointing to it are valid.
+    echo "corporate-proxy-container: no corporate CA bundle provided; using system certs."
+    mkdir -p /opt/corp-ca
+    cp /etc/ssl/certs/ca-certificates.crt /opt/corp-ca/ca-bundle.crt 2>/dev/null \
+        || cp /etc/pki/tls/certs/ca-bundle.crt /opt/corp-ca/ca-bundle.crt 2>/dev/null \
+        || touch /opt/corp-ca/ca-bundle.crt
     exit 0
 fi
 
 echo "corporate-proxy-container: installing corporate CA certificates..."
 
+# Save to a stable path outside the system package manager's control.
+# Tools are pointed here via env vars (SSL_CERT_FILE, PIP_CERT, etc.) so the
+# cert survives later reinstalls of ca-certificates/ca-trust packages.
+mkdir -p /opt/corp-ca
+cp "$ca_cert" /opt/corp-ca/ca-bundle.crt
+
 if [[ -d /etc/pki/tls/certs ]]; then
-    # RHEL/CentOS/manylinux: direct copy for immediate effect; also register in
-    # the trust anchors dir so update-ca-trust (called by rpm post-install
-    # scripts) re-includes the cert on package reinstalls.
+    # RHEL/CentOS/manylinux: also copy to the system bundle for tools that
+    # don't use env vars.
     cp "$ca_cert" /etc/pki/tls/certs/ca-bundle.crt
-    mkdir -p /etc/pki/ca-trust/source/anchors
-    cp "$ca_cert" /etc/pki/ca-trust/source/anchors/corporate-proxy.crt
     echo "corporate-proxy-container: installed CA bundle (RHEL/manylinux)."
 else
-    # Debian/Ubuntu/Alpine: direct copy for immediate effect; also register in
-    # /usr/local/share/ca-certificates/ so update-ca-certificates (called by
-    # apt post-install scripts) re-includes the cert on package reinstalls.
-    # We deliberately do NOT call update-ca-certificates ourselves to avoid
-    # a bootstrap dependency on that tool being installed.
-    mkdir -p /etc/ssl/certs /usr/local/share/ca-certificates
+    # Debian/Ubuntu/Alpine: also copy to the system bundle for tools that
+    # don't use env vars.
+    mkdir -p /etc/ssl/certs
     cp "$ca_cert" /etc/ssl/certs/ca-certificates.crt
-    cp "$ca_cert" /usr/local/share/ca-certificates/corporate-proxy.crt
     echo "corporate-proxy-container: installed CA bundle (Debian/Alpine)."
 fi
 

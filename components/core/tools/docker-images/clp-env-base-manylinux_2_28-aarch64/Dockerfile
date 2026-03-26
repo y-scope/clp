@@ -7,6 +7,7 @@ WORKDIR /root
 RUN mkdir -p ./tools/scripts/lib_install
 COPY --link ./tools/scripts/lib_install ./tools/scripts/lib_install
 COPY --link ./tools/scripts/corporate-proxy-container.sh ./tools/scripts/corporate-proxy-container.sh
+COPY --link ./tools/scripts/ca-certificates.crt ./tools/scripts/ca-certificates.crt
 # Corporate proxy support: install host CA certificates into the container's
 # trust store so tools like curl and dnf can verify TLS through intercepting
 # proxies (e.g., Zscaler, Fortinet, Palo Alto). No-op when not behind a

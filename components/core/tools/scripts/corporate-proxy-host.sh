@@ -49,7 +49,7 @@ detect_ca_bundle() {
 #   $1 - component_root (path to components/core/)
 prepare_ca_cert_for_build() {
     local component_root="$1"
-    local dest="${component_root}/tools/scripts/lib_install/ca-certificates.crt"
+    local dest="${component_root}/tools/scripts/ca-certificates.crt"
 
     local ca_bundle
     if ca_bundle="$(detect_ca_bundle)"; then
@@ -66,7 +66,7 @@ prepare_ca_cert_for_build() {
 #   $1 - component_root (path to components/core/)
 cleanup_ca_cert() {
     local component_root="$1"
-    local cert_file="${component_root}/tools/scripts/lib_install/ca-certificates.crt"
+    local cert_file="${component_root}/tools/scripts/ca-certificates.crt"
 
     if [[ -f "$cert_file" ]]; then
         rm "$cert_file"
