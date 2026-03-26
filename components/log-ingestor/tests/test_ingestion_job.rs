@@ -1,7 +1,7 @@
 mod aws_config;
 
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc},
     time::Duration,
 };
 
@@ -31,6 +31,7 @@ use log_ingestor::{
     },
 };
 use non_empty_string::NonEmptyString;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
@@ -40,7 +41,7 @@ const NUM_NOISE_OBJECTS: usize = 100;
 
 #[derive(Clone, Default)]
 struct SqsListenerTestState {
-    ingested_objects: Arc<Mutex<Vec<ObjectMetadata>>>,
+    shared_ingested_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
 }
 
 impl SqsListenerTestState {
@@ -48,33 +49,18 @@ impl SqsListenerTestState {
         Self::default()
     }
 
-    fn shared_buffer(&self) -> Arc<Mutex<Vec<ObjectMetadata>>> {
-        Arc::clone(&self.ingested_objects)
-    }
-}
-
-#[derive(Clone, Default)]
-struct S3ScannerTestState {
-    ingested_objects: Arc<Mutex<Vec<ObjectMetadata>>>,
-}
-
-impl S3ScannerTestState {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn shared_buffer(&self) -> Arc<Mutex<Vec<ObjectMetadata>>> {
-        Arc::clone(&self.ingested_objects)
+    fn get_shared_buffer(&self) -> Arc<Mutex<Vec<ObjectMetadata>>> {
+        self.shared_ingested_buffer.clone()
     }
 }
 
 #[async_trait]
 impl IngestionJobState for SqsListenerTestState {
-    async fn start(&self) -> anyhow::Result<()> {
+    async fn start(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn end(&self) -> anyhow::Result<()> {
+    async fn end(&self) -> Result<()> {
         Ok(())
     }
 
@@ -83,22 +69,38 @@ impl IngestionJobState for SqsListenerTestState {
 
 #[async_trait]
 impl SqsListenerState for SqsListenerTestState {
-    async fn ingest(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<()> {
-        self.ingested_objects
+    async fn ingest(&self, objects: Vec<ObjectMetadata>) -> Result<()> {
+        self.shared_ingested_buffer
             .lock()
-            .expect("poisoned mutex")
+            .await
             .extend(objects);
         Ok(())
     }
 }
 
+#[derive(Clone, Default)]
+struct S3ScannerTestState {
+    shared_ingested_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
+}
+
+impl S3ScannerTestState {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn get_shared_buffer(&self) -> Arc<Mutex<Vec<ObjectMetadata>>> {
+        self.shared_ingested_buffer.clone()
+    }
+}
+
+
 #[async_trait]
 impl IngestionJobState for S3ScannerTestState {
-    async fn start(&self) -> anyhow::Result<()> {
+    async fn start(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn end(&self) -> anyhow::Result<()> {
+    async fn end(&self) -> Result<()> {
         Ok(())
     }
 
@@ -112,9 +114,9 @@ impl S3ScannerState for S3ScannerTestState {
         objects: Vec<ObjectMetadata>,
         _last_ingested_key: &str,
     ) -> anyhow::Result<()> {
-        self.ingested_objects
+        self.shared_ingested_buffer
             .lock()
-            .expect("poisoned mutex")
+            .await
             .extend(objects);
         Ok(())
     }
@@ -164,12 +166,11 @@ async fn wait_for_ingested_objects(
         Duration::from_secs(WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC),
         async {
             loop {
-                {
-                    let ingested_objects = shared_buffer.lock().expect("poisoned mutex");
-                    if ingested_objects.len() >= min_num_objects {
-                        return ingested_objects.clone();
-                    }
+                let ingested_objects = shared_buffer.lock().await;
+                if ingested_objects.len() >= min_num_objects {
+                    return ingested_objects.clone();
                 }
+                drop(ingested_objects);
                 tokio::time::sleep(Duration::from_millis(INGESTED_OBJECT_POLL_INTERVAL_MS)).await;
             }
         },
@@ -247,7 +248,7 @@ async fn run_sqs_listener_test(
     .await;
 
     let state = SqsListenerTestState::new();
-    let shared_buffer = state.shared_buffer();
+    let shared_buffer = state.get_shared_buffer();
 
     let sqs_listener = SqsListener::spawn(
         job_id,
@@ -264,7 +265,7 @@ async fn run_sqs_listener_test(
     )
     .await;
 
-    let test_upload_handle = tokio::spawn(upload_test_objects(
+    let upload_handle = tokio::spawn(upload_test_objects(
         s3_client.clone(),
         aws_config.bucket_name.clone(),
         prefix.clone(),
@@ -279,7 +280,7 @@ async fn run_sqs_listener_test(
     noise_upload_handle
         .await
         .context("Error while awaiting noise upload")?;
-    let mut created_objects = test_upload_handle
+    let mut created_objects = upload_handle
         .await
         .context("Error while awaiting test object upload")??;
     let mut received_objects =
@@ -382,7 +383,7 @@ async fn test_s3_scanner() -> Result<()> {
     };
 
     let state = S3ScannerTestState::new();
-    let shared_buffer = state.shared_buffer();
+    let shared_buffer = state.get_shared_buffer();
 
     let s3_scanner = S3Scanner::spawn(
         job_id,
