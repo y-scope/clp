@@ -8,7 +8,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 component_root="${script_dir}/../../../"
 
 # Corporate proxy support — see proxy-lib.sh for details.
-source "${script_dir}/../proxy-lib.sh"
+source "${script_dir}/../../scripts/proxy-lib.sh"
 prepare_ca_cert_for_build "$component_root"
 trap 'cleanup_ca_cert "$component_root"' EXIT
 
