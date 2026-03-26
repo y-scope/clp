@@ -1595,8 +1595,8 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_
     m_current_schema.insert_unordered(m_archive_writer->add_node(
             parent_node_id,
             NodeType::LogType,
-            constants::cLogTypeNodeName
-            // log_type
+            // constants::cLogTypeNodeName
+            log_type
     ));
     auto [logtype_id, new_logtype]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
