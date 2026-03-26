@@ -32,22 +32,25 @@ fi
 
 echo "corporate-proxy-container: installing corporate CA certificates..."
 
-# Detect the system certificate bundle path.
 if [[ -d /etc/pki/tls/certs ]]; then
-    # RHEL/CentOS/manylinux
-    system_cert="/etc/pki/tls/certs/ca-bundle.crt"
-elif [[ -d /etc/ssl/certs ]]; then
-    # Debian/Ubuntu/Alpine
-    system_cert="/etc/ssl/certs/ca-certificates.crt"
+    # RHEL/CentOS/manylinux: direct copy for immediate effect; also register in
+    # the trust anchors dir so update-ca-trust (called by rpm post-install
+    # scripts) re-includes the cert on package reinstalls.
+    cp "$ca_cert" /etc/pki/tls/certs/ca-bundle.crt
+    mkdir -p /etc/pki/ca-trust/source/anchors
+    cp "$ca_cert" /etc/pki/ca-trust/source/anchors/corporate-proxy.crt
+    echo "corporate-proxy-container: installed CA bundle (RHEL/manylinux)."
 else
-    mkdir -p /etc/ssl/certs
-    system_cert="/etc/ssl/certs/ca-certificates.crt"
+    # Debian/Ubuntu/Alpine: direct copy for immediate effect; also register in
+    # /usr/local/share/ca-certificates/ so update-ca-certificates (called by
+    # apt post-install scripts) re-includes the cert on package reinstalls.
+    # We deliberately do NOT call update-ca-certificates ourselves to avoid
+    # a bootstrap dependency on that tool being installed.
+    mkdir -p /etc/ssl/certs /usr/local/share/ca-certificates
+    cp "$ca_cert" /etc/ssl/certs/ca-certificates.crt
+    cp "$ca_cert" /usr/local/share/ca-certificates/corporate-proxy.crt
+    echo "corporate-proxy-container: installed CA bundle (Debian/Alpine)."
 fi
-
-# The source bundle from the host is already a combined trust store.
-# Copy it directly — no update-ca-trust or update-ca-certificates needed.
-cp "$ca_cert" "$system_cert"
-echo "corporate-proxy-container: installed CA bundle to ${system_cert}."
 
 # Remove the staging file — it's no longer needed after installation into the
 # trust store.
