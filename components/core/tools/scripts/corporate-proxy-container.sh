@@ -8,7 +8,7 @@
 #   LOCAL BUILD (behind corporate proxy):
 #     build.sh sources corporate-proxy-host.sh, which:
 #       1. Detects the host's real CA bundle (with corporate certs from Zscaler/Fortinet/etc.)
-#       2. Copies it into the Docker build context, overwriting the placeholder ca-certificates.crt
+#       2. Copies it into the Docker build context as ca-certificates.crt
 #       3. Forwards proxy env vars (HTTP_PROXY, HTTPS_PROXY) as --build-arg
 #       4. Auto-switches to --network host if the proxy is on localhost
 #       5. Passes mirror URL overrides (APT_MIRROR_URL/DNF_MIRROR_BASE_URL)
@@ -52,7 +52,7 @@ if [[ ! -s "$ca_cert" ]]; then
     exit 1
 fi
 
-echo "corporate-proxy-container: installing corporate CA certificates..."
+echo "corporate-proxy-container: installing CA certificates..."
 
 # Save to a stable path outside the system package manager's control.
 # Tools are pointed here via env vars (SSL_CERT_FILE, PIP_CERT, etc.) so the

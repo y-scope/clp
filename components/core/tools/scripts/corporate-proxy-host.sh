@@ -43,8 +43,7 @@ detect_ca_bundle() {
 # Copies the host's CA bundle into the build context so the Dockerfile can install it into the
 # container's trust store. On a normal workstation this copies the standard public CA bundle
 # (redundant but harmless). On a corporate machine, the bundle includes the organization's CA —
-# which the container needs. Creates an empty file if no bundle is found (so COPY always succeeds
-# and the in-container setup script is a no-op).
+# which the container needs. Errors if no bundle is found on the host.
 #
 # NOTE: ca-certificates.crt is gitignored and generated at build time. CI workflows
 # must stage the runner's system CA bundle before docker build. See the
