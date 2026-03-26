@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # HOST-SIDE half of the two-part corporate proxy support system for Docker image builds.
-# Counterpart: tools/scripts/lib_install/corporate-proxy-container.sh (runs inside the container).
+# Counterpart: tools/scripts/corporate-proxy-container.sh (runs inside the container).
 #
 # Two-part flow:
 #   1. (Host)      This library is sourced by each docker-images/*/build.sh. It detects the host's
