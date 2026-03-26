@@ -11,18 +11,17 @@ COPY --link ./tools/scripts/ca-certificates.crt ./tools/scripts/ca-certificates.
 # Corporate proxy support: install host CA certificates into the container's
 # trust store so tools like curl and dnf can verify TLS through intercepting
 # proxies (e.g., Zscaler, Fortinet, Palo Alto). No-op when not behind a
-# corporate proxy. See proxy-lib.sh for details.
+# corporate proxy. See corporate-proxy-host.sh for details.
 RUN ./tools/scripts/corporate-proxy-container.sh
 
-# Point pip/pipx and curl at the system trust store. By default, Python's
-# "certifi" package bundles its own CA store and ignores system certificates,
-# which means pip/pipx would still fail behind a corporate proxy even after
-# updating the system trust store above. These env vars override that behavior.
-# Without corporate certs, these paths are the normal system bundles — harmless.
-ENV SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt \
-    CURL_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt \
-    REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt \
-    PIP_CERT=/etc/pki/tls/certs/ca-bundle.crt
+# Point pip/pipx and curl at the corporate CA bundle path set by corporate-proxy-container.sh.
+# This path is outside the system package manager's control, so it survives reinstalls of
+# ca-certificates (which regenerates the system bundle). When no corporate proxy is in use,
+# this path won't exist; tools fall back to their built-in defaults which work fine without a proxy.
+ENV SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt \
+    CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    PIP_CERT=/opt/corp-ca/ca-bundle.crt
 
 # Optional: override AlmaLinux mirrors (e.g., organization-internal or regional).
 # Usage: DNF_MIRROR_BASE_URL=<url> ./build.sh
