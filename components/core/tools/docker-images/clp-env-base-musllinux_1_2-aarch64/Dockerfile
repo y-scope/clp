@@ -10,7 +10,7 @@ COPY --link ./tools/scripts/lib_install ./tools/scripts/lib_install
 # trust store so tools like curl and apk can verify TLS through intercepting
 # proxies (e.g., Zscaler, Fortinet, Palo Alto). No-op when not behind a
 # corporate proxy. See proxy-lib.sh for details.
-RUN ./tools/scripts/lib_install/setup-corporate-proxy.sh
+RUN ./tools/scripts/lib_install/corporate-proxy-container.sh
 
 # Point pip/pipx and curl at the system trust store. By default, Python's
 # "certifi" package bundles its own CA store and ignores system certificates,

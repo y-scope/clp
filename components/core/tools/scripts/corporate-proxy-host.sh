@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 
-# Shared library for corporate proxy support in Docker image builds. Source this file from build.sh
-# scripts.
+# HOST-SIDE half of the two-part corporate proxy support system for Docker image builds.
+# Counterpart: tools/scripts/lib_install/corporate-proxy-container.sh (runs inside the container).
+#
+# Two-part flow:
+#   1. (Host)      This library is sourced by each docker-images/*/build.sh. It detects the host's
+#                  CA bundle, stages it into the build context, and injects proxy env vars as
+#                  Docker --build-arg flags before invoking `docker build`.
+#   2. (Container) corporate-proxy-container.sh runs as a Dockerfile RUN step. It installs the
+#                  staged CA bundle into the container's system trust store so that tools like curl,
+#                  dnf, and pip can reach the internet through a TLS-intercepting proxy.
 #
 # Problem: In corporate environments, TLS-intercepting proxies (e.g., Zscaler, Fortinet, Palo Alto,
 # Symantec/Blue Coat) replace upstream SSL certificates with ones signed by the organization's own
-# CA. Tools inside Docker containers (curl, dnf, pip, etc.) reject these certificates because the
-# corporate CA isn't in the container's trust store.
-#
-# Solution: This library detects the host's CA bundle, copies it into the Docker build context, and
-# forwards proxy environment variables as build args. A companion script (setup-corporate-proxy.sh)
-# runs inside the container to install the CA bundle into the system trust store.
+# CA. Tools inside Docker containers reject these certificates because the corporate CA isn't in the
+# container's trust store.
 #
 # When no CA bundle is found on the host, an empty file is staged so that the Dockerfile's COPY
-# succeeds; the in-container setup script detects the empty file and skips trust-store installation.
+# succeeds; the container-side script detects the empty file and skips trust-store installation.
 
 # Detects the host's CA certificate bundle.
 # Returns the path via stdout, or returns 1 if not found.
