@@ -79,6 +79,7 @@ type CompressionJob = Static<typeof CompressionJobSchema>;
 enum CompressionJobInputType {
     FS = "fs",
     S3 = "s3",
+    S3_OBJECT_METADATA = "s3_object_metadata",
 }
 
 /**
@@ -111,6 +112,18 @@ const ClpIoS3InputConfigSchema = Type.Object({
 });
 
 /**
+ * Matching `S3ObjectMetadataInputConfig` in `job_orchestration.scheduler.job_config`.
+ */
+const ClpIoS3ObjectMetadataInputConfigSchema = Type.Object({
+    dataset: Type.Union([Type.String(),
+        Type.Null()]),
+    timestamp_key: Type.Union([Type.String(),
+        Type.Null()]),
+    type: Type.Literal(CompressionJobInputType.S3_OBJECT_METADATA),
+    unstructured: Type.Boolean(),
+});
+
+/**
  * Matching `OutputConfig` in `job_orchestration.scheduler.job_config`.
  */
 const ClpIoOutputConfigSchema = Type.Object({
@@ -129,6 +142,7 @@ const ClpIoConfigSchema =
         input: Type.Union([
             ClpIoFsInputConfigSchema,
             ClpIoS3InputConfigSchema,
+            ClpIoS3ObjectMetadataInputConfigSchema,
         ]),
         output: ClpIoOutputConfigSchema,
     });
@@ -140,7 +154,8 @@ const ClpIoConfigSchema =
 const ClpIoPartialConfigSchema =
     Type.Object({
         input: Type.Union([Type.Partial(ClpIoFsInputConfigSchema),
-            Type.Partial(ClpIoS3InputConfigSchema)]),
+            Type.Partial(ClpIoS3InputConfigSchema),
+            Type.Partial(ClpIoS3ObjectMetadataInputConfigSchema)]),
         output: Type.Partial(ClpIoOutputConfigSchema),
     });
 
