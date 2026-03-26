@@ -60,6 +60,12 @@ RUN ./tools/scripts/lib_install/centos-stream-9/install-all.sh || { \
 RUN dnf clean all \
     && rm -rf /tmp/* /var/tmp/*
 
-# Flatten the image
+# Flatten the image (ENV vars don't carry across FROM, so re-declare them).
 FROM scratch
 COPY --link --from=base / /
+ENV SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt \
+    CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    PIP_CERT=/opt/corp-ca/ca-bundle.crt
+ENV PIPX_BIN_DIR=/usr/local/bin
+ENV PIPX_HOME=/opt/pipx
