@@ -61,7 +61,8 @@ if [[ ! -s "$ca_cert" ]]; then
         # No system certs yet (e.g., bare ubuntu:jammy before ca-certificates is installed).
         # Create an empty bundle so Dockerfile ENV vars (PIP_CERT, CURL_CA_BUNDLE, etc.)
         # point to a valid file. pip hard-errors on a missing path but works with an empty file.
-        echo "corporate-proxy-container: no corporate CA and no system certs yet; creating empty bundle."
+        echo "corporate-proxy-container: no corporate CA and no system certs yet;" \
+            "creating empty bundle."
         touch "${corp_ca_bundle}"
     fi
     exit 0
