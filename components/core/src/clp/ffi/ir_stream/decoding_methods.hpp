@@ -31,6 +31,11 @@ enum class IRProtocolErrorCode : uint8_t {
     Invalid,
 };
 
+enum class EncodingType : uint8_t {
+    FourByte,
+    EightByte,
+};
+
 class DecodingException : public TraceableException {
 public:
     // Constructors
@@ -60,6 +65,17 @@ private:
  */
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
+/**
+ * Reads the IR stream's encoding type from the magic number.
+ * @param reader
+ * @return A result containing the encoding type on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if `reader` doesn't contain enough data to decode
+ *   the magic number.
+ * - IrDeserializationErrorEnum::InvalidMagicNumber if the magic number is invalid.
+ */
+[[nodiscard]] auto get_encoding_type(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<EncodingType>;
 /**
  * Deserializes the tag for the next packet.
  * @param reader
@@ -211,6 +227,25 @@ IRErrorCode deserialize_preamble(
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
 );
+
+/**
+ * Deserializes the preamble for an IR stream.
+ * @param reader
+ * @return A result containing a pair on success, or an error code indicating the failure:
+ * - The pair:
+ *   - The tag indicating the type of the deserialized metadata.
+ *   - The payload of the deserialized metadata.
+ * - The possible error codes:
+ *   - IrDeserializationErrorEnum::UnsupportedMetadataFormat if the metadata format is not
+ *     supported.
+ *   - IrDeserializationErrorEnum::IncompleteStream if `reader` doesn't contain enough data to
+ *     deserialize.
+ *   - Forwards `deserialize_int`'s return values on failure.
+ *   - Forwards `deserialize_metadata`'s return values on failure.
+ *   - Forwards `deserialize_tag`'s return values on failure.
+ */
+[[nodiscard]] auto deserialize_preamble(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, std::vector<int8_t>>>;
 
 /**
  * Deserializes a UTC offset change packet.
