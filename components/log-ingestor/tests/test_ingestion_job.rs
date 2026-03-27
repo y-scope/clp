@@ -1,9 +1,6 @@
 mod aws_config;
 
-use std::{
-    sync::{Arc},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -70,10 +67,7 @@ impl IngestionJobState for SqsListenerTestState {
 #[async_trait]
 impl SqsListenerState for SqsListenerTestState {
     async fn ingest(&self, objects: Vec<ObjectMetadata>) -> Result<()> {
-        self.shared_ingested_buffer
-            .lock()
-            .await
-            .extend(objects);
+        self.shared_ingested_buffer.lock().await.extend(objects);
         Ok(())
     }
 }
@@ -92,7 +86,6 @@ impl S3ScannerTestState {
         self.shared_ingested_buffer.clone()
     }
 }
-
 
 #[async_trait]
 impl IngestionJobState for S3ScannerTestState {
@@ -114,10 +107,7 @@ impl S3ScannerState for S3ScannerTestState {
         objects: Vec<ObjectMetadata>,
         _last_ingested_key: &str,
     ) -> anyhow::Result<()> {
-        self.shared_ingested_buffer
-            .lock()
-            .await
-            .extend(objects);
+        self.shared_ingested_buffer.lock().await.extend(objects);
         Ok(())
     }
 }
