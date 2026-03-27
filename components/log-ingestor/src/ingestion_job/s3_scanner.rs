@@ -129,7 +129,6 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
                 key: NonEmptyString::new(key.clone())
                     .map_err(|_| anyhow::anyhow!("An empty key is received."))?,
                 size: size.try_into()?,
-                id: None,
             };
             object_metadata_to_ingest.push(object_metadata);
         }
