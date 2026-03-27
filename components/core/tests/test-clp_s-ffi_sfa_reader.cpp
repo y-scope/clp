@@ -88,7 +88,7 @@ auto assert_reader_matches_expected(
     REQUIRE(expected_file_name == file_name);
     REQUIRE(expected_file_name == file_info.get_file_name());
     REQUIRE(0 == file_info.get_start_index());
-    REQUIRE(expected_event_count == file_info.get_end_index());
+    REQUIRE(static_cast<int64_t>(expected_event_count) == file_info.get_end_index());
     REQUIRE(expected_event_count == file_info.get_event_count());
 }
 

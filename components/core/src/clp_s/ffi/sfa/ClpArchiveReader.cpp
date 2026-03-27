@@ -131,9 +131,9 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
     m_file_infos.reserve(range_index.size());
 
     for (auto const& range : range_index) {
-        auto const start_idx{static_cast<uint64_t>(range.start_index)};
-        auto const end_idx{static_cast<uint64_t>(range.end_index)};
-        m_event_count += end_idx - start_idx;
+        auto const start_idx{static_cast<int64_t>(range.start_index)};
+        auto const end_idx{static_cast<int64_t>(range.end_index)};
+        m_event_count += static_cast<uint64_t>(end_idx - start_idx);
 
         auto const filename_it{
                 range.fields.find(std::string{clp_s::constants::range_index::cFilename})
