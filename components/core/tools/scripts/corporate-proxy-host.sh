@@ -59,11 +59,11 @@ prepare_ca_cert_for_build() {
         echo "Corporate proxy support: copying CA bundle from ${ca_bundle}"
         cp "$ca_bundle" "$dest"
     else
-        echo "ERROR: No CA certificate bundle found on host." >&2
-        echo "  Expected one of:" >&2
-        echo "    /etc/ssl/certs/ca-certificates.crt (Debian/Ubuntu/Alpine)" >&2
-        echo "    /etc/pki/tls/certs/ca-bundle.crt   (RHEL/CentOS)" >&2
-        echo "    /etc/ssl/cert.pem                   (macOS)" >&2
+        echo >&2 "ERROR: No CA certificate bundle found on host."
+        echo >&2 "  Expected one of:"
+        echo >&2 "    /etc/ssl/certs/ca-certificates.crt (Debian/Ubuntu/Alpine)"
+        echo >&2 "    /etc/pki/tls/certs/ca-bundle.crt   (RHEL/CentOS)"
+        echo >&2 "    /etc/ssl/cert.pem                   (macOS)"
         exit 1
     fi
 }
