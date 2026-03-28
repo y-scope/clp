@@ -11,6 +11,7 @@
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"
 #include "decompression.hpp"
+#include "SchemaAnalyzer.hpp"
 #include "utils.hpp"
 
 using std::string;
@@ -61,6 +62,22 @@ int run(int argc, char const* argv[]) {
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
             reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
+
+            vector<uint32_t> delimiters;
+            for (uint32_t i{0}; i < log_surgeon::cSizeOfByte; ++i) {
+                if (reader_parser->get_log_parser().m_lexer.is_delimiter(i)) {
+                    delimiters.push_back(i);
+                }
+            }
+            SchemaAnalyzer schema_analyzer;
+            schema_analyzer.set_delimiters(std::move(delimiters));
+            schema_analyzer.add_encoded_var("int", R"(-?\d+)");
+            schema_analyzer.add_encoded_var("float", R"(-?\d+\.\d+)");
+            schema_analyzer.generate();
+
+            auto schema_ast{log_surgeon::SchemaParser::try_schema_file(schema_file_path)};
+            schema_analyzer.identify_encoded_vars_in_schema(std::move(schema_ast));
+
             // Capture groups are temporarily disabled, until NFA intersection support for search.
             auto const& lexer{reader_parser->get_log_parser().m_lexer};
             for (auto const& [rule_id, rule_name] : lexer.m_id_symbol) {

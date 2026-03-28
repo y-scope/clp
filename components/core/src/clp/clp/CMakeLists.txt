@@ -175,6 +175,8 @@ set(
         FileDecompressor.hpp
         run.cpp
         run.hpp
+        SchemaAnalyzer.cpp
+        SchemaAnalyzer.hpp
         utils.cpp
         utils.hpp
 )
