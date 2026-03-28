@@ -590,6 +590,22 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     return IRErrorCode_Success;
 }
 
+auto get_encoding_type(ReaderInterface& reader) -> ystdlib::error_handling::Result<EncodingType> {
+    std::array<char, cProtocol::MagicNumberLength> buffer{};
+    if (ErrorCode_Success != reader.try_read_exact_length(buffer.data(), buffer.size())) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    auto comparator = [](char lhs, int8_t rhs) -> bool { return static_cast<int8_t>(lhs) == rhs; };
+    if (std::ranges::equal(buffer, std::span{cProtocol::FourByteEncodingMagicNumber}, comparator)) {
+        return EncodingType::FourByte;
+    }
+    if (std::ranges::equal(buffer, std::span{cProtocol::EightByteEncodingMagicNumber}, comparator))
+    {
+        return EncodingType::EightByte;
+    }
+    return IrDeserializationError{IrDeserializationErrorEnum::InvalidMagicNumber};
+}
+
 IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag) {
     if (ErrorCode_Success != reader.try_read_numeric_value(tag)) {
         return IRErrorCode_Incomplete_IR;
@@ -644,6 +660,36 @@ IRErrorCode deserialize_preamble(
         return IRErrorCode_Incomplete_IR;
     }
     return IRErrorCode_Success;
+}
+
+auto deserialize_preamble(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, std::vector<int8_t>>> {
+    auto const metadata_type{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
+    auto const encoded_tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
+    size_t metadata_size{};
+    switch (encoded_tag) {
+        case cProtocol::Metadata::LengthUByte: {
+            metadata_size = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint8_t>(reader));
+            break;
+        }
+        case cProtocol::Metadata::LengthUShort: {
+            metadata_size = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<uint16_t>(reader));
+            break;
+        }
+        default:
+            return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
+    }
+
+    std::vector<int8_t> metadata(metadata_size, 0);
+    if (ErrorCode_Success
+        != reader.try_read_exact_length(
+                size_checked_pointer_cast<char>(metadata.data()),
+                metadata_size
+        ))
+    {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    return std::pair{metadata_type, std::move(metadata)};
 }
 
 auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolErrorCode {
