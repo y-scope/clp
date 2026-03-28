@@ -236,6 +236,8 @@ TEST_CASE("schema_analyzer_order_invariance", "[schema_analyzer]") {
     schema.add_variable(R"(another_int:\d+)", -1);
     schema.add_variable(R"(v3:(?<c1>\d+))", -1);
     schema.add_variable(R"(v3:(?<c1>abc))", -1);
+    schema.add_variable(R"(v3:(?<c1>\d+\.\d+))", -1);
+    schema.add_variable(R"(v4:(?<c2>\d+\.\d+))", -1);
     schema.add_variable(R"(v4:(?<c2>abc))", -1);
     schema.add_variable(R"(v4:(?<c2>\d+))", -1);
 
@@ -244,5 +246,5 @@ TEST_CASE("schema_analyzer_order_invariance", "[schema_analyzer]") {
 
     auto map{analyzer.get_map()};
     REQUIRE(unordered_set<string>{"an_int", "another_int", "v3", "v4", "c1", "c2"} == map["int"]);
-    REQUIRE(map["float"].empty());
+    REQUIRE(unordered_set<string>{"v3", "v4", "c1", "c2"} == map["float"]);
 }
