@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use clp_rust_utils::{
     clp_config::{
         AwsAuthentication,
-        AwsCredentials,
         package::{
             config::{ArchiveOutput, Config as ClpConfig, LogsInput},
             credentials::Credentials as ClpCredentials,
@@ -31,6 +30,7 @@ use crate::{
     compression::{
         Buffer,
         CLP_COMPRESSION_JOB_TABLE_NAME,
+        CompressionBufferEntry,
         CompressionJobSubmitter,
         Listener,
         wait_for_compression_job_completion_and_update_metadata,
@@ -116,7 +116,7 @@ impl ClpIngestionJobContext {
     ///
     /// A new sender for buffer ingestion.
     #[must_use]
-    pub fn get_ingestion_buffer_sender(&self) -> mpsc::Sender<Vec<ObjectMetadata>> {
+    pub fn get_ingestion_buffer_sender(&self) -> mpsc::Sender<Vec<CompressionBufferEntry>> {
         self.listener.get_new_sender()
     }
 
@@ -157,7 +157,7 @@ impl ClpIngestionJobContext {
 pub struct ClpDbIngestionConnector {
     db_pool: MySqlPool,
     channel_capacity: usize,
-    aws_credentials: AwsCredentials,
+    aws_authentication: AwsAuthentication,
     archive_output_config: ArchiveOutput,
     buffer_flush_timeout: Duration,
     buffer_flush_threshold: u64,
@@ -197,10 +197,8 @@ impl ClpDbIngestionConnector {
             .as_ref()
             .expect("log_ingestor configuration is missing");
 
-        let aws_credentials = match clp_config.logs_input {
-            LogsInput::S3 { config } => match config.aws_authentication {
-                AwsAuthentication::Credentials { credentials } => credentials,
-            },
+        let aws_authentication = match clp_config.logs_input {
+            LogsInput::S3 { config } => config.aws_authentication,
             LogsInput::Fs { .. } => {
                 panic!(
                     "Invalid CLP config: Unsupported logs input type. The current implementation \
@@ -221,7 +219,7 @@ impl ClpDbIngestionConnector {
         let connector = Self {
             db_pool: mysql_pool,
             channel_capacity: log_ingestor_config.channel_capacity,
-            aws_credentials,
+            aws_authentication,
             archive_output_config: clp_config.archive_output.clone(),
             buffer_flush_timeout: Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
             buffer_flush_threshold: log_ingestor_config.buffer_flush_threshold,
@@ -430,7 +428,7 @@ impl ClpDbIngestionConnector {
 
         let submitter = CompressionJobSubmitter::new(
             compression_state.clone(),
-            self.aws_credentials.clone(),
+            self.aws_authentication.clone(),
             &self.archive_output_config,
             config.as_base_config(),
         );
@@ -668,7 +666,7 @@ impl ClpDbIngestionConnector {
 pub struct ClpIngestionState {
     job_id: IngestionJobId,
     db_pool: MySqlPool,
-    sender: mpsc::Sender<Vec<ObjectMetadata>>,
+    sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
 }
 
 impl ClpIngestionState {
@@ -702,62 +700,42 @@ impl ClpIngestionState {
         Ok(status)
     }
 
-    /// Gets all buffered S3 object metadata ingested for the underlying ingestion job from CLP DB.
+    /// Gets all buffered S3 object metadata for the underlying ingestion job from CLP DB as
+    /// [`CompressionBufferEntry`] values.
     ///
     /// # Returns
     ///
-    /// A vector of [`ObjectMetadata`] representing all ingested S3 object metadata in
+    /// A vector of [`CompressionBufferEntry`] where each entry represents a row in
     /// [`IngestedS3ObjectMetadataStatus::Buffered`] for the underlying ingestion job on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if any fetched bucket name or key is an empty string.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
-    pub async fn get_buffered_object_metadata(&self) -> anyhow::Result<Vec<ObjectMetadata>> {
+    pub async fn get_buffered_object_metadata(
+        &self,
+    ) -> anyhow::Result<Vec<CompressionBufferEntry>> {
         const QUERY: &str = formatcp!(
-            "SELECT `id`, `bucket`, `key`, `size` FROM `{table}` WHERE `ingestion_job_id` = ? AND \
-             `status` = ?;",
+            "SELECT `id`, `size` FROM `{table}` WHERE `ingestion_job_id` = ? AND `status` = ?;",
             table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
         );
 
-        let metadata_records =
-            sqlx::query_as::<_, (S3ObjectMetadataId, String, String, u64)>(QUERY)
-                .bind(self.job_id)
-                .bind(IngestedS3ObjectMetadataStatus::Buffered)
-                .fetch_all(&self.db_pool)
-                .await?;
+        let rows = sqlx::query_as::<_, CompressionBufferEntry>(QUERY)
+            .bind(self.job_id)
+            .bind(IngestedS3ObjectMetadataStatus::Buffered)
+            .fetch_all(&self.db_pool)
+            .await?;
 
-        let mut object_metadata_vec = Vec::with_capacity(metadata_records.len());
-        for (id, bucket, key, size) in metadata_records {
-            let bucket = NonEmptyString::new(bucket).map_err(|_| {
-                anyhow::anyhow!("Invalid bucket name stored in CLP DB: empty string")
-            })?;
-            let key = NonEmptyString::new(key).map_err(|_| {
-                anyhow::anyhow!("Invalid object key stored in CLP DB: empty string")
-            })?;
-            object_metadata_vec.push(ObjectMetadata {
-                id: Some(id),
-                bucket,
-                key,
-                size,
-            });
-        }
-
-        Ok(object_metadata_vec)
+        Ok(rows)
     }
 
     /// Ingests the given S3 object metadata into CLP DB.
     ///
     /// # Returns
     ///
-    /// A tuple on success, containing:
-    ///
-    /// * The chunk size used for batched metadata insertion.
-    /// * A vector of IDs for the newly ingested S3 object metadata. Each ID denotes the first
-    ///   record inserted in its respective batch. IDs within a single batch are guaranteed to form
-    ///   a consecutive sequence.
+    /// A vector of [`CompressionBufferEntry`] on success where each entry corresponds to an
+    /// inserted S3 object metadata row.
     ///
     /// # Errors
     ///
@@ -773,8 +751,8 @@ impl ClpIngestionState {
     async fn ingest_s3_object_metadata(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
-        objects: &[ObjectMetadata],
-    ) -> anyhow::Result<(usize, Vec<S3ObjectMetadataId>)> {
+        objects: Vec<ObjectMetadata>,
+    ) -> anyhow::Result<Vec<CompressionBufferEntry>> {
         const BASE_INGESTION_QUERY: &str = formatcp!(
             r"INSERT INTO `{table}` (`bucket`, `key`, `size`, `ingestion_job_id`) VALUES ",
             table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
@@ -787,7 +765,7 @@ impl ClpIngestionState {
             "Cannot build S3 object metadata ingestion query with empty objects"
         );
 
-        let mut last_inserted_ids: Vec<S3ObjectMetadataId> = Vec::new();
+        let mut buffer_entries = Vec::with_capacity(objects.len());
 
         // Ingest object metadata
         // NOTE: MySQL has a maximum placeholder limit of 65535. We need to batch the ingestion to
@@ -811,10 +789,17 @@ impl ClpIngestionState {
                     .bind(self.job_id);
             }
 
-            last_inserted_ids.push(query.execute(&mut **tx).await?.last_insert_id());
+            let first_metadata_id: S3ObjectMetadataId =
+                query.execute(&mut **tx).await?.last_insert_id();
+            for (next_metadata_id, object) in (first_metadata_id..).zip(chunk.iter()) {
+                buffer_entries.push(CompressionBufferEntry {
+                    id: next_metadata_id,
+                    size: object.size,
+                });
+            }
         }
 
-        Ok((CHUNK_SIZE, last_inserted_ids))
+        Ok(buffer_entries)
     }
 
     /// Commits the transaction if the underlying job is valid and in
@@ -871,21 +856,13 @@ impl ClpIngestionState {
     /// * Forwards [`Self::ingest_s3_object_metadata`]'s return values on failure.
     /// * Forwards [`Self::check_job_status_and_commit`]'s return values on failure.
     /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the chunk IDs returned by [`Self::ingest_s3_object_metadata`] cannot be mapped to
-    /// the corresponding entries in the `objects` vector.
-    ///
-    /// This condition indicates a violation of internal invariants and should never occur under
-    /// normal execution unless the code has been corrupted or contains a logic error.
     async fn ingest_and_send(
         &self,
         mut tx: sqlx::Transaction<'_, sqlx::MySql>,
-        mut objects: Vec<ObjectMetadata>,
+        objects: Vec<ObjectMetadata>,
     ) -> anyhow::Result<()> {
-        let (chunk_size, last_inserted_ids) = self
-            .ingest_s3_object_metadata(&mut tx, &objects)
+        let buffer_entries = self
+            .ingest_s3_object_metadata(&mut tx, objects)
             .await
             .inspect_err(|err| {
                 tracing::error!(
@@ -904,16 +881,7 @@ impl ClpIngestionState {
                     "Failed to commit ingestion."
                 );
             })?;
-
-        for (chunk_id, chunk) in objects.chunks_mut(chunk_size).enumerate() {
-            for (next_metadata_id, object) in
-                (*last_inserted_ids.get(chunk_id).expect("invalid chunk ID")..)
-                    .zip(chunk.iter_mut())
-            {
-                object.id = Some(next_metadata_id);
-            }
-        }
-        self.sender.send(objects).await?;
+        self.sender.send(buffer_entries).await?;
         Ok(())
     }
 }
@@ -1082,35 +1050,22 @@ impl ClpCompressionState {
     ///
     /// # Panics
     ///
-    /// Panics if no object metadata is provided for compression.
+    /// Panics if the length of a chunk cannot be converted to `u64`.
     pub async fn submit_for_compression(
         &self,
-        io_config_template: ClpIoConfig,
-        id_and_key_pairs: Vec<(S3ObjectMetadataId, NonEmptyString)>,
+        io_config: ClpIoConfig,
     ) -> anyhow::Result<CompressionJobId> {
-        // TODO: As tracked in #2018, once we support submitting compression jobs using IDs, there
-        // is no need for passing keys into this method.
         const COMPRESSION_JOB_SUBMISSION_QUERY: &str = formatcp!(
             r"INSERT INTO {table} (`clp_config`) VALUES (?)",
             table = CLP_COMPRESSION_JOB_TABLE_NAME
         );
 
-        if id_and_key_pairs.is_empty() {
-            const ERROR_MSG: &str = "No objects to compress.";
-            tracing::error!(job_id = ? self.ingestion_job_id, ERROR_MSG);
-            panic!("{}", ERROR_MSG);
-        }
-
-        let mut io_config = io_config_template;
-        let s3_input_config = match &mut io_config.input {
-            InputConfig::S3InputConfig { config } => config,
+        let object_metadata_ids: &[S3ObjectMetadataId] = match &io_config.input {
+            InputConfig::S3ObjectMetadataInputConfig { config } => &config.s3_object_metadata_ids,
+            InputConfig::S3InputConfig { .. } => {
+                unreachable!("compression submission only supports `S3ObjectMetadataInputConfig`")
+            }
         };
-        s3_input_config.keys = Some(
-            id_and_key_pairs
-                .iter()
-                .map(|(_, key)| key.clone())
-                .collect(),
-        );
 
         let mut tx = self.db_pool.begin().await?;
 
@@ -1129,7 +1084,7 @@ impl ClpCompressionState {
         // batch size is chosen to be 10000, which is conservative enough to avoid hitting the limit
         // while also minimizing the number of batches for typical use cases. If the number of
         // placeholders per update changes, we may need to adjust the batch size accordingly.
-        for chunk in id_and_key_pairs.chunks(10000) {
+        for chunk in object_metadata_ids.chunks(10000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 r"UPDATE `{table}` ",
                 table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
@@ -1142,7 +1097,7 @@ impl ClpCompressionState {
                 .push_bind(IngestedS3ObjectMetadataStatus::Submitted);
             query_builder.push(" WHERE `id` IN (");
             let mut separated_ids = query_builder.separated(", ");
-            for (id, _) in chunk {
+            for id in chunk {
                 separated_ids.push_bind(id);
             }
             query_builder.push(")");

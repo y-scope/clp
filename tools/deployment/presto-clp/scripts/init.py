@@ -286,7 +286,7 @@ def _add_clp_s3_env_vars(
 
     s3_endpoint_url = _get_config_value(clp_config, f"{s3_config_key}.endpoint_url")
     s3_region_code = _get_config_value(clp_config, f"{s3_config_key}.region_code")
-    s3_end_point = _resolve_s3_endpoint_url(s3_endpoint_url, s3_region_code, s3_bucket)
+    s3_end_point = _resolve_s3_endpoint_url(s3_endpoint_url, s3_region_code)
 
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
@@ -297,23 +297,20 @@ def _add_clp_s3_env_vars(
     return True
 
 
-def _resolve_s3_endpoint_url(
-    endpoint_url: str | None, region_code: str | None, bucket_name: str
-) -> str:
+def _resolve_s3_endpoint_url(endpoint_url: str | None, region_code: str | None) -> str:
     """
     Returns the resolved S3 endpoint URL, or constructs an AWS S3 URL if not provided.
 
     :param endpoint_url: Custom S3 endpoint URL.
     :param region_code: AWS region code.
-    :param bucket_name:
     :return: The S3 endpoint URL.
     """
     if endpoint_url is not None:
         return endpoint_url.rstrip("/")
 
     if region_code is None:
-        return f"https://{bucket_name}.s3.{AWS_S3_DOMAIN}"
-    return f"https://{bucket_name}.s3.{region_code}.{AWS_S3_DOMAIN}"
+        return f"https://s3.{AWS_S3_DOMAIN}"
+    return f"https://s3.{region_code}.{AWS_S3_DOMAIN}"
 
 
 def _add_memory_env_vars(env_vars: dict[str, str]) -> bool:

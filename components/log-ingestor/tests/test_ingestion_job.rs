@@ -5,6 +5,7 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use aws_config::AwsConfig;
 use clp_rust_utils::{
+    clp_config::{AwsAuthentication, AwsCredentials},
     job_config::ingestion::s3::{
         BaseConfig,
         S3ScannerConfig,
@@ -103,7 +104,6 @@ async fn upload_and_receive(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
-            id: None,
         })
         .collect();
 
@@ -139,7 +139,6 @@ async fn upload_noise_objects(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
-            id: None,
         })
         .collect();
 
@@ -155,11 +154,16 @@ async fn run_sqs_listener_test(
     aws_config: AwsConfig,
     sqs_listener_config: SqsListenerConfig,
 ) -> Result<()> {
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.clone(),
+            secret_access_key: aws_config.secret_access_key.clone(),
+        },
+    };
     let sqs_client = clp_rust_utils::sqs::create_new_client(
-        aws_config.access_key_id.as_str(),
-        aws_config.secret_access_key.as_str(),
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
+        &aws_auth,
     )
     .await;
 
@@ -174,10 +178,9 @@ async fn run_sqs_listener_test(
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.access_key_id.as_str(),
-        aws_config.secret_access_key.as_str(),
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
+        &aws_auth,
     )
     .await;
 
@@ -270,11 +273,16 @@ async fn test_s3_scanner() -> Result<()> {
 
     let aws_config = AwsConfig::from_env()?;
 
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.clone(),
+            secret_access_key: aws_config.secret_access_key.clone(),
+        },
+    };
     let s3_client = clp_rust_utils::s3::create_new_client(
-        aws_config.access_key_id.as_str(),
-        aws_config.secret_access_key.as_str(),
         aws_config.region.as_str(),
         Some(&aws_config.endpoint),
+        &aws_auth,
     )
     .await;
 
