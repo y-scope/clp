@@ -46,9 +46,9 @@ corp_ca_bundle="${corp_ca_dir}/ca-bundle.crt"
 mkdir -p "${corp_ca_dir}"
 
 if [[ ! -s "$ca_cert" ]]; then
-    echo "ERROR: ca-certificates.crt is empty or missing." >&2
-    echo "  Local builds: run build.sh (sources corporate-proxy-host.sh)." >&2
-    echo "  CI builds: ensure the workflow stages a CA bundle." >&2
+    echo >&2 "ERROR: ca-certificates.crt is empty or missing."
+    echo >&2 "  Local builds: run build.sh (sources corporate-proxy-host.sh)."
+    echo >&2 "  CI builds: ensure the workflow stages a CA bundle."
     exit 1
 fi
 
