@@ -17,69 +17,69 @@ using std::vector;
 constexpr string_view cDelimiters{R"( \t\r\n)"};
 
 namespace {
-    /**
-     * @param delimiters_string String of delimiters.
-     * @return Vector of delimiters.
-     */
-    auto delimiter_string_to_vector(string_view delimiters_string) -> vector<uint32_t>;
+/**
+ * @param delimiters_string String of delimiters.
+ * @return Vector of delimiters.
+ */
+auto delimiter_string_to_vector(string_view delimiters_string) -> vector<uint32_t>;
 
-    /**
-     * Initializes a schema analyzer with the following encoded variables:
-     *   - int: -{0,1}\d+
-     *   - float: -{0,1}\d+\.\d+
-     *
-     * @return The initalized `SchemaAnalyzer`.
-     */
-    auto initalize_analyzer() -> clp::clp::SchemaAnalyzer;
+/**
+ * Initializes a schema analyzer with the following encoded variables:
+ *   - int: -{0,1}\d+
+ *   - float: -{0,1}\d+\.\d+
+ *
+ * @return The initalized `SchemaAnalyzer`.
+ */
+auto initalize_analyzer() -> clp::clp::SchemaAnalyzer;
 
-    auto delimiter_string_to_vector(string_view const delimiters_string) -> vector<uint32_t> {
-        vector<uint32_t> delimiters_vector;
-        bool is_escaped{false};
-        for (size_t i{0}; i < delimiters_string.size(); ++i) {
-            auto const curr_char{delimiters_string[i]};
-            if (is_escaped) {
-                switch (curr_char) {
-                    case 't': {
-                        delimiters_vector.push_back('\t');
-                        break;
-                    }
-                    case 'r': {
-                        delimiters_vector.push_back('\r');
-                        break;
-                    }
-                    case 'v': {
-                        delimiters_vector.push_back('\v');
-                        break;
-                    }
-                    case 'n': {
-                        delimiters_vector.push_back('\n');
-                        break;
-                    }
-                    default: {
-                        delimiters_vector.push_back(curr_char);
-                        break;
-                    }
+auto delimiter_string_to_vector(string_view const delimiters_string) -> vector<uint32_t> {
+    vector<uint32_t> delimiters_vector;
+    bool is_escaped{false};
+    for (size_t i{0}; i < delimiters_string.size(); ++i) {
+        auto const curr_char{delimiters_string[i]};
+        if (is_escaped) {
+            switch (curr_char) {
+                case 't': {
+                    delimiters_vector.push_back('\t');
+                    break;
                 }
-                is_escaped = false;
-                continue;
+                case 'r': {
+                    delimiters_vector.push_back('\r');
+                    break;
+                }
+                case 'v': {
+                    delimiters_vector.push_back('\v');
+                    break;
+                }
+                case 'n': {
+                    delimiters_vector.push_back('\n');
+                    break;
+                }
+                default: {
+                    delimiters_vector.push_back(curr_char);
+                    break;
+                }
             }
-            if ('\\' == curr_char) {
-                is_escaped = true;
-                continue;
-            }
-            delimiters_vector.push_back(curr_char);
+            is_escaped = false;
+            continue;
         }
-        return delimiters_vector;
+        if ('\\' == curr_char) {
+            is_escaped = true;
+            continue;
+        }
+        delimiters_vector.push_back(curr_char);
     }
+    return delimiters_vector;
+}
 
-    auto initalize_analyzer() -> clp::clp::SchemaAnalyzer {
-        clp::clp::SchemaAnalyzer analyzer;
-        analyzer.set_delimiters(delimiter_string_to_vector(cDelimiters));
-        analyzer.add_encoding_type("int", R"(-{0,1}\d+)");
-        analyzer.add_encoding_type("float", R"(-{0,1}\d+\.\d+)");
-        analyzer.generate();
-        return analyzer;
-    }
+auto initalize_analyzer() -> clp::clp::SchemaAnalyzer {
+    clp::clp::SchemaAnalyzer analyzer;
+    analyzer.set_delimiters(delimiter_string_to_vector(cDelimiters));
+    analyzer.add_encoding_type("int", R"(-{0,1}\d+)");
+    analyzer.add_encoding_type("float", R"(-{0,1}\d+\.\d+)");
+    analyzer.generate();
+    return analyzer;
+}
 }  // namspace
 
 TEST_CASE("schema_analyzer_with_no_matches", "[schema_analyzer]") {
@@ -170,17 +170,17 @@ TEST_CASE("schema_analyzer_with_capture_matches", "[schema_analyzer]") {
 
     auto map{analyzer.get_map()};
     unordered_set<string> const expected_int_matches{
-        "an_int",
-        "an_int_child",
-        "another_int_child",
-        "v3",
-        "v5",
-        "c1",
-        "c2",
-        "c3",
-        "c4",
-        "c5",
-        "c7"
+            "an_int",
+            "an_int_child",
+            "another_int_child",
+            "v3",
+            "v5",
+            "c1",
+            "c2",
+            "c3",
+            "c4",
+            "c5",
+            "c7"
     };
     REQUIRE(expected_int_matches == map["int"]);
     unordered_set<string> const expected_float_matches{"v3", "c1", "c2", "c3", "c4", "c5", "c7"};
