@@ -75,8 +75,8 @@ namespace {
     auto initalize_analyzer() -> clp::clp::SchemaAnalyzer {
         clp::clp::SchemaAnalyzer analyzer;
         analyzer.set_delimiters(delimiter_string_to_vector(cDelimiters));
-        analyzer.add_encoded_type("int", R"(\d+)");
-        analyzer.add_encoded_type("float", R"(\d+\.\d+)");
+        analyzer.add_encoding_type("int", R"(\d+)");
+        analyzer.add_encoding_type("float", R"(\d+\.\d+)");
         analyzer.generate();
         return analyzer;
     }

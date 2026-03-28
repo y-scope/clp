@@ -25,7 +25,7 @@ namespace clp::clp {
  *
  * The following is how it is used:
  * - Set the delimiters to match those used in the schema using `set_delimiters`.
- * - Add each encoded variable using a regex pattern using `add_encoded_type`.
+ * - Add each encoding type using `add_encoding_type`.
  * - Generate the analyzer using `generate`.
  * - Generate the map of mathes using `identify_encoded_vars_in_schema`.
  * - Get the map of matches using `get_map`.
@@ -55,7 +55,7 @@ public:
      * @param var_name The name of the encoded type.
      * @param var_regex The regex of the encoded type.
      */
-    auto add_encoded_type(std::string const& var_name, std::string const& var_regex) -> void;
+    auto add_encoding_type(std::string const& var_name, std::string const& var_regex) -> void;
 
     /**
      * Build the schema analyzer using the specified encoded types.
