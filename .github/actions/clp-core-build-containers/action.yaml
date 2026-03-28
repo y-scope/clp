@@ -76,7 +76,7 @@ runs:
           fi
         done
         if [[ ! -f "$ca_dest" ]]; then
-          echo "ERROR: No system CA bundle found on runner" >&2
+          echo >&2 "ERROR: No system CA bundle found on runner"
           exit 1
         fi
 
