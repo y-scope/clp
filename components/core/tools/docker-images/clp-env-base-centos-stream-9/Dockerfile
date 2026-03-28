@@ -60,7 +60,7 @@ RUN ./tools/scripts/lib_install/centos-stream-9/install-all.sh || { \
 RUN dnf clean all \
     && rm -rf /tmp/* /var/tmp/*
 
-# Flatten the image (ENV vars don't carry across FROM, so re-declare them).
+# Flatten the image
 FROM scratch
 COPY --link --from=base / /
 ENV SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt \
