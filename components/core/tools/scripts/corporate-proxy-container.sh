@@ -62,7 +62,7 @@ cp "$ca_cert" "${corp_ca_bundle}"
 if [[ -d /etc/pki/tls/certs ]]; then
     # RHEL/CentOS/manylinux: also copy to the system bundle for tools that
     # don't use env vars.
-    cp "$ca_cert" /etc/pki/tls/certs/ca-bundle.crt
+    cp "$ca_cert" "/etc/pki/tls/certs/ca-bundle.crt"
     echo "corporate-proxy-container: installed CA bundle (RHEL/manylinux)."
 else
     # Debian/Ubuntu/Alpine: also copy to the system bundle for tools that
