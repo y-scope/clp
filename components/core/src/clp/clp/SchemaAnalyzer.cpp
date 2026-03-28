@@ -60,11 +60,13 @@ auto SchemaAnalyzer::identify_encoded_vars_in_schema(std::unique_ptr<SchemaAST> 
             m_encoded_type_to_schema_vars[encoded_name].insert(variable->m_name);
         }
     }
-    for (auto& [capture_name, capture_regex] : capture_map) {
-        auto encoded_types{get_encoded_types(std::move(capture_regex))};
-        for (auto const encoded_type : encoded_types) {
-            auto const& encoded_name{m_names.at(encoded_type)};
-            m_encoded_type_to_schema_vars[encoded_name].insert(capture_name);
+    for (auto& [capture_name, capture_regexes] : capture_map) {
+        for (auto& capture_regex : capture_regexes) {
+            auto encoded_types{get_encoded_types(std::move(capture_regex))};
+            for (auto const encoded_type : encoded_types) {
+                auto const& encoded_name{m_names.at(encoded_type)};
+                m_encoded_type_to_schema_vars[encoded_name].insert(capture_name);
+            }
         }
     }
 }
@@ -101,7 +103,7 @@ auto SchemaAnalyzer::recurse_captures(RegexAST const* ast, CaptureMap& capture_m
     }
     if (auto const* cap{dynamic_cast<RegexASTCapture const*>(ast)}) {
         recurse_captures(cap->get_capture_regex_ast().get(), capture_map);
-        capture_map.emplace(cap->get_capture_name(), cap->clone());
+        capture_map[string(cap->get_capture_name())].emplace_back(cap->clone());
     }
 }
 }  // namespace clp::clp

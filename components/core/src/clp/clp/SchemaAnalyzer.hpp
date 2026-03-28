@@ -40,7 +40,7 @@ public:
     using RegexAST = log_surgeon::finite_automata::RegexAST<ByteNfaState>;
     // CaptureMap should use a `Capture const*` key, but its inaccessible in `CaptureAST` currently.
     // This means if any capture with the name is encodable, all are treated as encodable.
-    using CaptureMap = std::unordered_map<std::string, std::unique_ptr<RegexAST>>;
+    using CaptureMap = std::unordered_map<std::string, std::vector<std::unique_ptr<RegexAST>>>;
 
     /**
      * Sets the delimiters to be used when replacing wildcards.

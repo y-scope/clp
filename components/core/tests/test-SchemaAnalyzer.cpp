@@ -226,3 +226,23 @@ TEST_CASE("schema_analyzer_complex", "[schema_analyzer]") {
     REQUIRE(unordered_set<string>{"an_int", "overlapping_var", "c1"} == map["int"]);
     REQUIRE(unordered_set<string>{"a_float", "overlapping_var", "c3"} == map["float"]);
 }
+
+TEST_CASE("schema_analyzer_order_invariance", "[schema_analyzer]") {
+    log_surgeon::Schema schema;
+    schema.add_delimiters(string("delimiters:") + string(cDelimiters));
+    schema.add_variable(R"(an_int:\d+)", -1);
+    schema.add_variable(R"(an_int:abc)", -1);
+    schema.add_variable(R"(another_int:abc)", -1);
+    schema.add_variable(R"(another_int:\d+)", -1);
+    schema.add_variable(R"(v3:(?<c1>\d+))", -1);
+    schema.add_variable(R"(v3:(?<c1>abc))", -1);
+    schema.add_variable(R"(v4:(?<c2>abc))", -1);
+    schema.add_variable(R"(v4:(?<c2>\d+))", -1);
+
+    auto analyzer{initalize_analyzer()};
+    analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
+
+    auto map{analyzer.get_map()};
+    REQUIRE(unordered_set<string>{"an_int", "another_int", "v3", "v4", "c1", "c2"} == map["int"]);
+    REQUIRE(map["float"].empty());
+}
