@@ -67,7 +67,7 @@ if [[ -d /etc/pki/tls/certs ]]; then
 else
     # Debian/Ubuntu/Alpine: also copy to the system bundle for tools that
     # don't use env vars.
-    mkdir -p /etc/ssl/certs
+    mkdir -p "/etc/ssl/certs"
     cp "$ca_cert" /etc/ssl/certs/ca-certificates.crt
     echo "corporate-proxy-container: installed CA bundle (Debian/Alpine)."
 fi
