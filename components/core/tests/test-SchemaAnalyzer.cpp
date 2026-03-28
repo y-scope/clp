@@ -25,8 +25,8 @@ auto delimiter_string_to_vector(string_view delimiters_string) -> vector<uint32_
 
 /**
  * Initializes a schema analyzer with the following encoded variables:
- *   - int: -{0,1}\d+
- *   - float: -{0,1}\d+\.\d+
+ *   - int: -?\d+
+ *   - float: -?\d+\.\d+
  *
  * @return The initalized `SchemaAnalyzer`.
  */
@@ -75,8 +75,8 @@ auto delimiter_string_to_vector(string_view const delimiters_string) -> vector<u
 auto initalize_analyzer() -> clp::clp::SchemaAnalyzer {
     clp::clp::SchemaAnalyzer analyzer;
     analyzer.set_delimiters(delimiter_string_to_vector(cDelimiters));
-    analyzer.add_encoding_type("int", R"(-{0,1}\d+)");
-    analyzer.add_encoding_type("float", R"(-{0,1}\d+\.\d+)");
+    analyzer.add_encoding_type("int", R"(-?\d+)");
+    analyzer.add_encoding_type("float", R"(-?\d+\.\d+)");
     analyzer.generate();
     return analyzer;
 }
@@ -143,9 +143,9 @@ TEST_CASE("schema_analyzer_with_non_overlapping_matches", "[schema_analyzer]") {
 TEST_CASE("schema_analyzer_with_overlapping_matches", "[schema_analyzer]") {
     log_surgeon::Schema schema;
     schema.add_delimiters(string("delimiters:") + string(cDelimiters));
-    schema.add_variable(R"(a_var:\d+(\.){0,1}\d+)", -1);
-    schema.add_variable(R"(another_var:123(\.){0,1}123)", -1);
-    schema.add_variable(R"(third_var:123(\.){0,1}(123|abc))", -1);
+    schema.add_variable(R"(a_var:\d+(\.)?\d+)", -1);
+    schema.add_variable(R"(another_var:123(\.)?123)", -1);
+    schema.add_variable(R"(third_var:123(\.)?(123|abc))", -1);
 
     auto analyzer{initalize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
@@ -160,9 +160,9 @@ TEST_CASE("schema_analyzer_with_capture_matches", "[schema_analyzer]") {
     schema.add_delimiters(string("delimiters:") + string(cDelimiters));
     schema.add_variable(R"(an_int:(?<an_int_child>\d+))", -1);
     schema.add_variable(R"(another_int:abc(?<another_int_child>123)abc)", -1);
-    schema.add_variable(R"(v3:(?<c1>(?<c2>(?<c3>123(\.){0,1}123))))", -1);
-    schema.add_variable(R"(v4:(?<c4>(?<c5>123(\.){0,1}123|abc))abc(?<c6>abc))", -1);
-    schema.add_variable(R"(v5:(?<c7>123(\.){0,1}123)abc(?<c7>abc))", -1);
+    schema.add_variable(R"(v3:(?<c1>(?<c2>(?<c3>123(\.)?123))))", -1);
+    schema.add_variable(R"(v4:(?<c4>(?<c5>123(\.)?123|abc))abc(?<c6>abc))", -1);
+    schema.add_variable(R"(v5:(?<c7>123(\.)?123)abc(?<c7>abc))", -1);
     schema.add_variable(R"(v5:456)", -1);
 
     auto analyzer{initalize_analyzer()};
@@ -213,7 +213,7 @@ TEST_CASE("schema_analyzer_complex", "[schema_analyzer]") {
     schema.add_delimiters(string("delimiters:") + string(cDelimiters));
     schema.add_variable(R"(an_int:\d+)", -1);
     schema.add_variable(R"(a_float:\d+\.\d+)", -1);
-    schema.add_variable(R"(overlapping_var:\d+(\.){0,1}\d+)", -1);
+    schema.add_variable(R"(overlapping_var:\d+(\.)?\d+)", -1);
     schema.add_variable(R"(overlapping_var:abc)", -1);
     schema.add_variable(R"(capture_var:abc(?<c1>123)abc(?<c2>abc)abc(?<c3>123\.123))", -1);
     schema.add_variable(R"(a_var:abc123abc)", -1);
