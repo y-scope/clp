@@ -80,7 +80,7 @@ auto initalize_analyzer() -> clp::clp::SchemaAnalyzer {
     analyzer.generate();
     return analyzer;
 }
-}  //  namspace
+}  // namespace
 
 TEST_CASE("schema_analyzer_with_no_matches", "[schema_analyzer]") {
     log_surgeon::Schema schema;
