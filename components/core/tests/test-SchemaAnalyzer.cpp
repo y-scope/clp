@@ -187,7 +187,7 @@ TEST_CASE("schema_analyzer_with_capture_matches", "[schema_analyzer]") {
     REQUIRE(expected_float_matches == map["float"]);
 }
 
-TEST_CASE("schema_analyzer_with_mutliple_variable_definitions", "[schema_analyzer]") {
+TEST_CASE("schema_analyzer_with_multiple_variable_definitions", "[schema_analyzer]") {
     log_surgeon::Schema schema;
     schema.add_delimiters(string("delimiters:") + string(cDelimiters));
     schema.add_variable(R"(an_int:\d+)", -1);
