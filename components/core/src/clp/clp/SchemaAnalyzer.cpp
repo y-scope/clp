@@ -30,7 +30,7 @@ auto SchemaAnalyzer::set_delimiters(vector<uint32_t> delimiters) -> void {
     m_delimiters = std::move(delimiters);
 }
 
-auto SchemaAnalyzer::add_encoded_var(string const& var_name, string const& var_regex) -> void {
+auto SchemaAnalyzer::add_encoded_type(string const& var_name, string const& var_regex) -> void {
     if (false == m_symbols.contains(var_name)) {
         m_symbols.emplace(var_name, m_symbols.size());
         m_names.emplace(m_names.size(), var_name);

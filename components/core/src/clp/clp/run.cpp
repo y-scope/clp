@@ -71,8 +71,8 @@ int run(int argc, char const* argv[]) {
             }
             SchemaAnalyzer schema_analyzer;
             schema_analyzer.set_delimiters(std::move(delimiters));
-            schema_analyzer.add_encoded_var("int", R"(-?\d+)");
-            schema_analyzer.add_encoded_var("float", R"(-?\d+\.\d+)");
+            schema_analyzer.add_encoded_type("int", R"(-?\d+)");
+            schema_analyzer.add_encoded_type("float", R"(-?\d+\.\d+)");
             schema_analyzer.generate();
 
             auto schema_ast{log_surgeon::SchemaParser::try_schema_file(schema_file_path)};
