@@ -92,8 +92,8 @@ TEST_CASE("schema_analyzer_with_no_matches", "[schema_analyzer]") {
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
-    REQUIRE(map["int"].empty());
-    REQUIRE(map["float"].empty());
+    REQUIRE(false == map.contains("int"));
+    REQUIRE(false == map.contains("float"));
 }
 
 TEST_CASE("schema_analyzer_with_int_match", "[schema_analyzer]") {
@@ -106,7 +106,7 @@ TEST_CASE("schema_analyzer_with_int_match", "[schema_analyzer]") {
 
     auto map{analyzer.get_map()};
     REQUIRE(unordered_set<string>{"my_var"} == map["int"]);
-    REQUIRE(map["float"].empty());
+    REQUIRE(false == map.contains("float"));
 }
 
 TEST_CASE("schema_analyzer_with_float_match", "[schema_analyzer]") {
@@ -118,7 +118,7 @@ TEST_CASE("schema_analyzer_with_float_match", "[schema_analyzer]") {
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
-    REQUIRE(map["int"].empty());
+    REQUIRE(false == map.contains("int"));
     REQUIRE(unordered_set<string>{"my_var"} == map["float"]);
 }
 
