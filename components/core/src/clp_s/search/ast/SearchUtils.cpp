@@ -7,7 +7,13 @@
 
 #include <simdjson.h>
 
-#include "../../archive_constants.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ErrorCode.hpp>
+
+#include "ConvertToExists.hpp"
+#include "EmptyExpr.hpp"
+#include "NarrowTypes.hpp"
+#include "OrOfAndForm.hpp"
 
 namespace clp_s::search::ast {
 namespace {
@@ -151,6 +157,26 @@ auto has_unescaped_wildcards(std::string_view str) -> bool {
         }
     }
     return false;
+}
+
+auto preprocess_query(std::shared_ptr<Expression> query) -> std::shared_ptr<Expression> {
+    if (nullptr == query) {
+        return query;
+    }
+
+    if (nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
+    if (query = OrOfAndForm{}.run(query); nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
+    if (query = NarrowTypes{}.run(query); nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
+    return ConvertToExists{}.run(query);
 }
 
 namespace {

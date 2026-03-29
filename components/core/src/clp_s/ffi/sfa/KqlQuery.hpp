@@ -17,14 +17,14 @@ public:
     /**
      * Parses a KQL expression for later archive filtering.
      *
-     * @param query_expression KQL query string.
+     * @param query_str KQL query string.
      * @param ignore_case Whether string matching should ignore case.
      * @return A result containing the parsed `KqlQuery` on success, or an error code indicating
      * the failure:
      * - `SfaErrorCodeEnum::Failure` if parsing fails or the query is logically false.
      * - `SfaErrorCodeEnum::NoMemory` if allocating query state fails.
      */
-    [[nodiscard]] static auto create(std::string_view query_expression, bool ignore_case = false)
+    [[nodiscard]] static auto create(std::string_view query_str, bool ignore_case = false)
             -> ystdlib::error_handling::Result<KqlQuery>;
 
     /**
