@@ -15,7 +15,6 @@
 #include "NarrowTypes.hpp"
 #include "OrOfAndForm.hpp"
 
-namespace clp_s::search::ast {
 namespace {
 /**
  * Converts a four byte hex sequence to UTF-8.
@@ -36,150 +35,7 @@ convert_four_byte_hex_to_utf8(std::string_view const hex, std::string& destinati
  */
 [[nodiscard]] auto
 unescape_kql_internal(std::string const& value, std::string& unescaped, bool is_value) -> bool;
-}  // namespace
 
-void splice_into(
-        std::shared_ptr<Expression> const& parent,
-        std::shared_ptr<Expression> const& child,
-        OpList::iterator location
-) {
-    for (auto it = child->op_begin(); it != child->op_end(); it++) {
-        auto sub_expr = std::static_pointer_cast<Expression>(*it);
-        sub_expr->set_parent(parent.get());
-    }
-    parent->get_op_list().splice(location, child->get_op_list());
-}
-
-bool double_as_int(double in, FilterOperation op, int64_t& out) {
-    switch (op) {
-        case FilterOperation::EQ:
-            out = static_cast<int64_t>(in);
-            return in == static_cast<double>(out);
-        case FilterOperation::LT:
-        case FilterOperation::GTE:
-            out = std::ceil(in);
-            break;
-        case FilterOperation::GT:
-        case FilterOperation::LTE:
-            out = std::floor(in);
-            break;
-        default:
-            out = static_cast<int64_t>(in);
-            break;
-    }
-    return true;
-}
-
-auto tokenize_column_descriptor(
-        std::string const& descriptor,
-        std::vector<std::string>& tokens,
-        std::string& descriptor_namespace
-) -> bool {
-    std::string cur_tok;
-    bool escaped{false};
-    descriptor_namespace.clear();
-    size_t start_index = 0;
-    if (descriptor.size() > 0) {
-        switch (descriptor.at(0)) {
-            case constants::cAutogenNamespace.at(0):
-            case constants::cRangeIndexNamespace.at(0):
-            case constants::cReservedNamespace1.at(0):
-            case constants::cReservedNamespace2.at(0):
-                descriptor_namespace = descriptor.at(0);
-                start_index += 1;
-                break;
-            default:
-                break;
-        }
-    }
-
-    for (size_t i = start_index; i < descriptor.size(); ++i) {
-        if (false == escaped) {
-            if ('\\' == descriptor[i]) {
-                escaped = true;
-            } else if ('.' == descriptor[i]) {
-                if (cur_tok.empty()) {
-                    return false;
-                }
-                std::string unescaped_token;
-                if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
-                    tokens.push_back(unescaped_token);
-                    cur_tok.clear();
-                } else {
-                    return false;
-                }
-            } else {
-                cur_tok.push_back(descriptor[i]);
-            }
-            continue;
-        }
-
-        escaped = false;
-        switch (descriptor[i]) {
-            case '.':
-                cur_tok.push_back('.');
-                break;
-            default:
-                cur_tok.push_back('\\');
-                cur_tok.push_back(descriptor[i]);
-                break;
-        }
-    }
-
-    if (escaped) {
-        return false;
-    }
-
-    if (cur_tok.empty()) {
-        return false;
-    }
-
-    std::string unescaped_token;
-    if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
-        tokens.push_back(unescaped_token);
-    } else {
-        return false;
-    }
-    return true;
-}
-
-auto unescape_kql_value(std::string const& value, std::string& unescaped) -> bool {
-    return unescape_kql_internal(value, unescaped, true);
-}
-
-auto has_unescaped_wildcards(std::string_view str) -> bool {
-    for (size_t i = 0; i < str.size(); ++i) {
-        if ('*' == str[i] || '?' == str[i]) {
-            return true;
-        }
-        if ('\\' == str[i]) {
-            ++i;
-        }
-    }
-    return false;
-}
-
-auto preprocess_query(std::shared_ptr<Expression> query) -> std::shared_ptr<Expression> {
-    if (nullptr == query) {
-        return query;
-    }
-
-    if (nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
-        return query;
-    }
-
-    if (query = OrOfAndForm{}.run(query); nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
-        return query;
-    }
-
-    if (query = NarrowTypes{}.run(query); nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
-        return query;
-    }
-
-    return ConvertToExists{}.run(query);
-}
-
-namespace {
 auto convert_four_byte_hex_to_utf8(std::string_view const hex, std::string& destination) -> bool {
     /**
      * We perform the conversion in this cumbersome way because c++20 deprecates most of the much
@@ -321,4 +177,146 @@ auto unescape_kql_internal(std::string const& value, std::string& unescaped, boo
     return true;
 }
 }  // namespace
+
+namespace clp_s::search::ast {
+void splice_into(
+        std::shared_ptr<Expression> const& parent,
+        std::shared_ptr<Expression> const& child,
+        OpList::iterator location
+) {
+    for (auto it = child->op_begin(); it != child->op_end(); it++) {
+        auto sub_expr = std::static_pointer_cast<Expression>(*it);
+        sub_expr->set_parent(parent.get());
+    }
+    parent->get_op_list().splice(location, child->get_op_list());
+}
+
+bool double_as_int(double in, FilterOperation op, int64_t& out) {
+    switch (op) {
+        case FilterOperation::EQ:
+            out = static_cast<int64_t>(in);
+            return in == static_cast<double>(out);
+        case FilterOperation::LT:
+        case FilterOperation::GTE:
+            out = std::ceil(in);
+            break;
+        case FilterOperation::GT:
+        case FilterOperation::LTE:
+            out = std::floor(in);
+            break;
+        default:
+            out = static_cast<int64_t>(in);
+            break;
+    }
+    return true;
+}
+
+auto tokenize_column_descriptor(
+        std::string const& descriptor,
+        std::vector<std::string>& tokens,
+        std::string& descriptor_namespace
+) -> bool {
+    std::string cur_tok;
+    bool escaped{false};
+    descriptor_namespace.clear();
+    size_t start_index = 0;
+    if (descriptor.size() > 0) {
+        switch (descriptor.at(0)) {
+            case constants::cAutogenNamespace.at(0):
+            case constants::cRangeIndexNamespace.at(0):
+            case constants::cReservedNamespace1.at(0):
+            case constants::cReservedNamespace2.at(0):
+                descriptor_namespace = descriptor.at(0);
+                start_index += 1;
+                break;
+            default:
+                break;
+        }
+    }
+
+    for (size_t i = start_index; i < descriptor.size(); ++i) {
+        if (false == escaped) {
+            if ('\\' == descriptor[i]) {
+                escaped = true;
+            } else if ('.' == descriptor[i]) {
+                if (cur_tok.empty()) {
+                    return false;
+                }
+                std::string unescaped_token;
+                if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
+                    tokens.push_back(unescaped_token);
+                    cur_tok.clear();
+                } else {
+                    return false;
+                }
+            } else {
+                cur_tok.push_back(descriptor[i]);
+            }
+            continue;
+        }
+
+        escaped = false;
+        switch (descriptor[i]) {
+            case '.':
+                cur_tok.push_back('.');
+                break;
+            default:
+                cur_tok.push_back('\\');
+                cur_tok.push_back(descriptor[i]);
+                break;
+        }
+    }
+
+    if (escaped) {
+        return false;
+    }
+
+    if (cur_tok.empty()) {
+        return false;
+    }
+
+    std::string unescaped_token;
+    if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
+        tokens.push_back(unescaped_token);
+    } else {
+        return false;
+    }
+    return true;
+}
+
+auto unescape_kql_value(std::string const& value, std::string& unescaped) -> bool {
+    return unescape_kql_internal(value, unescaped, true);
+}
+
+auto has_unescaped_wildcards(std::string_view str) -> bool {
+    for (size_t i = 0; i < str.size(); ++i) {
+        if ('*' == str[i] || '?' == str[i]) {
+            return true;
+        }
+        if ('\\' == str[i]) {
+            ++i;
+        }
+    }
+    return false;
+}
+
+auto preprocess_query(std::shared_ptr<Expression> query) -> std::shared_ptr<Expression> {
+    if (nullptr == query) {
+        return query;
+    }
+
+    if (nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
+    if (query = OrOfAndForm{}.run(query); nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
+    if (query = NarrowTypes{}.run(query); nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
+    return ConvertToExists{}.run(query);
+}
 }  // namespace clp_s::search::ast
