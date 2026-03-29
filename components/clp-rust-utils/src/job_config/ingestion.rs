@@ -176,3 +176,6 @@ pub mod s3 {
         20
     }
 }
+
+/// Represents the unique identifier for an ingestion job in CLP DB.
+pub type JobId = u64;
