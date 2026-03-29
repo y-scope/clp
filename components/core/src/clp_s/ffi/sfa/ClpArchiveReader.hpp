@@ -14,7 +14,14 @@ namespace clp_s {
 class ArchiveReader;
 }  // namespace clp_s
 
+namespace clp_s::search {
+class SchemaMatch;
+}  // namespace clp_s::search
+
 namespace clp_s::ffi::sfa {
+class ClpArchiveDecoder;
+class KqlQuery;
+
 /**
  * Metadata describing a single source file's event-index range within a single-file archive.
  */
@@ -101,10 +108,34 @@ public:
      */
     [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> { return m_file_infos; }
 
+    /**
+     * Decodes all log events in global log-event-index order.
+     *
+     * Results are cached after the first successful decode. Subsequent calls return the cached
+     * decoded events.
+     *
+     * @return A result containing the newly constructed `ClpArchiveDecoder` on success, or an
+     * error code indicating the failure:
+     * - Forwards `ClpArchiveDecoder::create`'s return values on failure.
+     */
+    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
+
+    /**
+     * Searches the archive with a parsed KQL query and returns a decoder over the filtered
+     * results.
+     *
+     * @param query Parsed KQL query.
+     * @return A result containing the newly constructed `ClpArchiveDecoder` on success, or an
+     * error code indicating the failure:
+     * - Forwards `ClpArchiveDecoder::create`'s return values on failure.
+     */
+    [[nodiscard]] auto search(KqlQuery const& query)
+            -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
+
 private:
     // Constructors
     explicit ClpArchiveReader(
-            std::unique_ptr<clp_s::ArchiveReader> reader,
+            std::shared_ptr<clp_s::ArchiveReader> reader,
             std::shared_ptr<std::vector<char>> archive_data
     );
 
@@ -132,8 +163,9 @@ private:
     [[nodiscard]] auto precompute_archive_metadata() -> ystdlib::error_handling::Result<void>;
 
     // Members
-    std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
+    std::shared_ptr<clp_s::ArchiveReader> m_archive_reader;
     std::shared_ptr<std::vector<char>> m_archive_data;
+    std::shared_ptr<clp_s::search::SchemaMatch> m_schema_match;
     uint64_t m_event_count{0};
     std::vector<std::string> m_file_names;
     std::vector<FileInfo> m_file_infos;

@@ -12,12 +12,14 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
+#include "../src/clp_s/ffi/sfa/ClpArchiveDecoder.hpp"
 #include "../src/clp_s/ffi/sfa/ClpArchiveReader.hpp"
 #include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 namespace {
 using clp::ReadOnlyMemoryMappedFile;
+using clp_s::ffi::sfa::ClpArchiveDecoder;
 using clp_s::ffi::sfa::ClpArchiveReader;
 using ystdlib::error_handling::Result;
 using ystdlib::error_handling::success;
@@ -26,6 +28,7 @@ constexpr std::string_view cSfaReaderLogsDirectory{"test_log_files"};
 constexpr std::string_view cSfaReaderArchiveOutputDirectory{"test-clp_s-ffi_sfa-reader-archive"};
 constexpr std::string_view cInputNoFloats{"test_no_floats_sorted.jsonl"};
 constexpr std::string_view cInputFloatTimestamp{"test_search_float_timestamp.jsonl"};
+constexpr std::string_view cInputDistinctSchemaEachRow{"test_distinct_schema_each_row.jsonl"};
 
 auto get_tests_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
@@ -38,6 +41,10 @@ auto get_log_local_path(std::string_view const log_name) -> std::filesystem::pat
 
 auto get_archive_output_root_dir() -> std::filesystem::path {
     return get_tests_dir() / cSfaReaderArchiveOutputDirectory;
+}
+
+auto get_decoder_output_path() -> std::filesystem::path {
+    return get_tests_dir().parent_path() / "build" / "decoder_test.txt";
 }
 
 auto generate_single_file_archive(std::filesystem::path const& log_path) -> std::filesystem::path {
@@ -138,4 +145,39 @@ TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
             run_single_log_file_test(archive_path, log_path.string(), expected_event_count)
     };
     REQUIRE(false == test_result.has_error());
+}
+
+TEST_CASE("clp_s_ffi_sfa_decoder_writes_decoded_lines", "[clp-s][ffi][sfa][decoder][tmp]") {
+    TestOutputCleaner const test_cleanup{{get_archive_output_root_dir().string()}};
+
+    auto const log_path{get_log_local_path(cInputDistinctSchemaEachRow)};
+    REQUIRE(std::filesystem::exists(log_path));
+
+    auto const archive_path{generate_single_file_archive(log_path)};
+    REQUIRE(std::filesystem::exists(archive_path));
+
+    auto reader_result{create_reader_from_path(archive_path)};
+    REQUIRE(false == reader_result.has_error());
+    auto reader{std::move(reader_result).value()};
+
+    auto decoder_result{reader.decode_all()};
+    REQUIRE(false == decoder_result.has_error());
+    auto decoder{std::move(decoder_result).value()};
+
+    auto decode_result{decoder.decode_all()};
+    REQUIRE(false == decode_result.has_error());
+
+    auto const& log_events{decoder.get_log_events()};
+    REQUIRE(get_num_lines(log_path) == log_events.size());
+
+    auto const output_path{get_decoder_output_path()};
+    std::filesystem::create_directories(output_path.parent_path());
+    std::ofstream output_file{output_path, std::ios::trunc};
+    REQUIRE(output_file.is_open());
+
+    for (auto const& log_event : log_events) {
+        output_file << log_event.get_message();
+    }
+    output_file.close();
+    REQUIRE(std::filesystem::exists(output_path));
 }

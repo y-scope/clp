@@ -17,17 +17,21 @@
 #include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ffi/sfa/SfaErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
+#include <clp_s/search/SchemaMatch.hpp>
+
+#include "ClpArchiveDecoder.hpp"
+#include "KqlQuery.hpp"
 
 namespace clp_s::ffi::sfa {
 template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
 
 auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiveReader> {
-    std::unique_ptr<clp_s::ArchiveReader> reader;
+    std::shared_ptr<clp_s::ArchiveReader> reader;
 
     try {
         auto path{get_path_object_for_raw_path(archive_path)};
-        reader = std::make_unique<clp_s::ArchiveReader>();
+        reader = std::make_shared<clp_s::ArchiveReader>();
         reader->open(path, NetworkAuthOption{});
         auto clp_archive_reader{ClpArchiveReader{std::move(reader), nullptr}};
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
@@ -49,7 +53,7 @@ auto ClpArchiveReader::create(std::vector<char>&& archive_data) -> Result<ClpArc
     // uses it. Provide a dummy value solely to satisfy the constructor.
     constexpr std::string_view cDefaultArchiveId{"default"};
 
-    std::unique_ptr<clp_s::ArchiveReader> archive_reader;
+    std::shared_ptr<clp_s::ArchiveReader> archive_reader;
     std::shared_ptr<std::vector<char>> archive_data_owner;
 
     try {
@@ -59,7 +63,7 @@ auto ClpArchiveReader::create(std::vector<char>&& archive_data) -> Result<ClpArc
                 archive_data_owner->size()
         )};
 
-        archive_reader = std::make_unique<clp_s::ArchiveReader>();
+        archive_reader = std::make_shared<clp_s::ArchiveReader>();
         archive_reader->open(reader, cDefaultArchiveId);
         auto clp_archive_reader{
                 ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)}
@@ -76,7 +80,7 @@ auto ClpArchiveReader::create(std::vector<char>&& archive_data) -> Result<ClpArc
 }
 
 ClpArchiveReader::ClpArchiveReader(
-        std::unique_ptr<clp_s::ArchiveReader> reader,
+        std::shared_ptr<clp_s::ArchiveReader> reader,
         std::shared_ptr<std::vector<char>> archive_data
 )
         : m_archive_reader{std::move(reader)},
@@ -113,6 +117,7 @@ auto ClpArchiveReader::close() noexcept -> void {
         m_archive_reader.reset();
     }
     m_event_count = 0;
+    m_schema_match.reset();
     m_file_names.clear();
     m_file_infos.clear();
 }
@@ -120,6 +125,7 @@ auto ClpArchiveReader::close() noexcept -> void {
 auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_archive_reader = std::move(rhs.m_archive_reader);
     m_archive_data = std::move(rhs.m_archive_data);
+    m_schema_match = std::move(rhs.m_schema_match);
     m_event_count = std::exchange(rhs.m_event_count, 0);
     m_file_names = std::move(rhs.m_file_names);
     m_file_infos = std::move(rhs.m_file_infos);
@@ -144,6 +150,21 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
         m_file_infos.emplace_back(filename, start_idx, end_idx);
     }
 
+    m_archive_reader->read_dictionaries_and_metadata();
+    m_archive_reader->open_packed_streams();
+    m_schema_match = std::make_shared<clp_s::search::SchemaMatch>(
+            m_archive_reader->get_schema_tree(),
+            m_archive_reader->get_schema_map()
+    );
+
     return ystdlib::error_handling::success();
+}
+
+auto ClpArchiveReader::decode_all() -> Result<ClpArchiveDecoder> {
+    return ClpArchiveDecoder::create(*m_archive_reader);
+}
+
+auto ClpArchiveReader::search(KqlQuery const& query) -> Result<ClpArchiveDecoder> {
+    return ClpArchiveDecoder::create(*m_archive_reader, m_schema_match, query);
 }
 }  // namespace clp_s::ffi::sfa
