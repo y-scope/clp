@@ -14,6 +14,7 @@
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
 #include "../src/clp_s/ffi/sfa/ClpArchiveDecoder.hpp"
 #include "../src/clp_s/ffi/sfa/ClpArchiveReader.hpp"
+#include "../src/clp_s/ffi/sfa/KqlQuery.hpp"
 #include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
@@ -21,6 +22,7 @@ namespace {
 using clp::ReadOnlyMemoryMappedFile;
 using clp_s::ffi::sfa::ClpArchiveDecoder;
 using clp_s::ffi::sfa::ClpArchiveReader;
+using clp_s::ffi::sfa::KqlQuery;
 using ystdlib::error_handling::Result;
 using ystdlib::error_handling::success;
 
@@ -178,6 +180,39 @@ TEST_CASE("clp_s_ffi_sfa_decoder_writes_decoded_lines", "[clp-s][ffi][sfa][decod
     for (auto const& log_event : log_events) {
         output_file << log_event.get_message();
     }
+
+    std::vector<std::string> const queries{
+            "service:api",
+            "service:api or service:worker",
+            "message:alpha or message:beta",
+            // TODO: Re-enable once SchemaMatch handles this OR case over fully distinct schemas.
+            // "message:alpha or message:beta or message:gamma",
+            "service:api or error:timeout",
+            "service:api or source:test",
+            "sequence:9 or status:200",
+            "retry_count:3 or level:INFO"
+    };
+
+    for (auto const& query_string : queries) {
+        INFO("query_string=" << query_string);
+        output_file << "---- query: " << query_string << "\n";
+
+        auto query_result{KqlQuery::create(query_string)};
+        REQUIRE(false == query_result.has_error());
+        auto query{std::move(query_result).value()};
+
+        auto search_result{reader.search(query)};
+        REQUIRE(false == search_result.has_error());
+        auto search_decoder{std::move(search_result).value()};
+
+        auto search_decode_result{search_decoder.decode_all()};
+        REQUIRE(false == search_decode_result.has_error());
+
+        for (auto const& log_event : search_decoder.get_log_events()) {
+            output_file << log_event.get_message();
+        }
+    }
+
     output_file.close();
     REQUIRE(std::filesystem::exists(output_path));
 }
