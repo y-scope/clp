@@ -26,11 +26,8 @@
 #include "kv_ir_search.hpp"
 #include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
-#include "search/ast/ConvertToExists.hpp"
 #include "search/ast/EmptyExpr.hpp"
 #include "search/ast/Expression.hpp"
-#include "search/ast/NarrowTypes.hpp"
-#include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
 #include "search/ast/SetTimestampLiteralPrecision.hpp"
 #include "search/ast/TimestampLiteral.hpp"
@@ -151,20 +148,9 @@ bool search_archive(
         return false;
     }
 
-    ast::OrOfAndForm standardize_pass;
-    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
-        return false;
-    }
-
-    ast::NarrowTypes narrow_pass;
-    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
-        return false;
-    }
-
-    ast::ConvertToExists convert_pass;
-    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+    if (expr = clp_s::search::ast::preprocess_query(expr);
+        std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
+    {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }

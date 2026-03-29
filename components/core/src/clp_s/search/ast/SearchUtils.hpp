@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_SEARCHUTILS_HPP
 #define CLP_S_SEARCH_SEARCHUTILS_HPP
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -65,6 +66,15 @@ bool double_as_int(double in, FilterOperation op, int64_t& out);
  * @return true if the string has unescaped wildcards, false otherwise
  */
 [[nodiscard]] auto has_unescaped_wildcards(std::string_view str) -> bool;
+
+/**
+ * Applies AST normalization passes to prepare a query for search consumers.
+ *
+ * @param query Query to transform.
+ * @return The transformed query, or an empty expression if the query is logically false.
+ */
+[[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
+        -> std::shared_ptr<Expression>;
 }  // namespace clp_s::search::ast
 
 #endif  // CLP_S_SEARCH_SEARCHUTILS_HPP
