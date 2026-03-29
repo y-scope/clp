@@ -34,13 +34,14 @@ auto ClpArchiveDecoder::create(clp_s::ArchiveReader& reader)
     }
 }
 
-auto ClpArchiveDecoder::create(
-        clp_s::ArchiveReader& reader,
-        std::shared_ptr<clp_s::search::SchemaMatch> schema_match,
-        KqlQuery const& query
-) -> ystdlib::error_handling::Result<ClpArchiveDecoder> {
+auto ClpArchiveDecoder::create(clp_s::ArchiveReader& reader, KqlQuery const& query)
+        -> ystdlib::error_handling::Result<ClpArchiveDecoder> {
     try {
         auto expression{query.copy_expression()};
+        auto schema_match = std::make_shared<clp_s::search::SchemaMatch>(
+                reader.get_schema_tree(),
+                reader.get_schema_map()
+        );
         auto matched_expression{schema_match->run(expression)};
 
         if (std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(matched_expression)) {
@@ -61,7 +62,13 @@ auto ClpArchiveDecoder::create(
         filtered_tables.reserve(all_tables.size());
 
         for (auto const& table : all_tables) {
-            if (clp_s::EvaluatedValue::False == query_runner->schema_init(table->get_schema_id())) {
+            auto const schema_id{table->get_schema_id()};
+            if (false == schema_match->schema_matched(schema_id)) {
+                continue;
+            }
+
+            auto const schema_result{query_runner->schema_init(schema_id)};
+            if (clp_s::EvaluatedValue::False == schema_result) {
                 continue;
             }
             filtered_tables.push_back(table);

@@ -16,7 +16,6 @@ class SchemaReader;
 
 namespace clp_s::search {
 class QueryRunner;
-class SchemaMatch;
 }  // namespace clp_s::search
 
 namespace clp_s::ffi::sfa {
@@ -51,11 +50,8 @@ public:
      * - `SfaErrorCodeEnum::Failure` if query preparation or table loading fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating decoder state fails.
      */
-    [[nodiscard]] static auto create(
-            clp_s::ArchiveReader& reader,
-            std::shared_ptr<clp_s::search::SchemaMatch> schema_match,
-            KqlQuery const& query
-    ) -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
+    [[nodiscard]] static auto create(clp_s::ArchiveReader& reader, KqlQuery const& query)
+            -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
 
     // Destructor
     ~ClpArchiveDecoder();

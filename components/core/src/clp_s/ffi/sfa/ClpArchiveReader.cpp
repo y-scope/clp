@@ -17,7 +17,6 @@
 #include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ffi/sfa/SfaErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
-#include <clp_s/search/SchemaMatch.hpp>
 
 #include "ClpArchiveDecoder.hpp"
 #include "KqlQuery.hpp"
@@ -117,7 +116,6 @@ auto ClpArchiveReader::close() noexcept -> void {
         m_archive_reader.reset();
     }
     m_event_count = 0;
-    m_schema_match.reset();
     m_file_names.clear();
     m_file_infos.clear();
 }
@@ -125,7 +123,6 @@ auto ClpArchiveReader::close() noexcept -> void {
 auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_archive_reader = std::move(rhs.m_archive_reader);
     m_archive_data = std::move(rhs.m_archive_data);
-    m_schema_match = std::move(rhs.m_schema_match);
     m_event_count = std::exchange(rhs.m_event_count, 0);
     m_file_names = std::move(rhs.m_file_names);
     m_file_infos = std::move(rhs.m_file_infos);
@@ -152,10 +149,6 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
 
     m_archive_reader->read_dictionaries_and_metadata();
     m_archive_reader->open_packed_streams();
-    m_schema_match = std::make_shared<clp_s::search::SchemaMatch>(
-            m_archive_reader->get_schema_tree(),
-            m_archive_reader->get_schema_map()
-    );
 
     return ystdlib::error_handling::success();
 }
@@ -165,6 +158,6 @@ auto ClpArchiveReader::decode_all() -> Result<ClpArchiveDecoder> {
 }
 
 auto ClpArchiveReader::search(KqlQuery const& query) -> Result<ClpArchiveDecoder> {
-    return ClpArchiveDecoder::create(*m_archive_reader, m_schema_match, query);
+    return ClpArchiveDecoder::create(*m_archive_reader, query);
 }
 }  // namespace clp_s::ffi::sfa

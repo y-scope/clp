@@ -14,10 +14,6 @@ namespace clp_s {
 class ArchiveReader;
 }  // namespace clp_s
 
-namespace clp_s::search {
-class SchemaMatch;
-}  // namespace clp_s::search
-
 namespace clp_s::ffi::sfa {
 class ClpArchiveDecoder;
 class KqlQuery;
@@ -165,7 +161,6 @@ private:
     // Members
     std::shared_ptr<clp_s::ArchiveReader> m_archive_reader;
     std::shared_ptr<std::vector<char>> m_archive_data;
-    std::shared_ptr<clp_s::search::SchemaMatch> m_schema_match;
     uint64_t m_event_count{0};
     std::vector<std::string> m_file_names;
     std::vector<FileInfo> m_file_infos;
