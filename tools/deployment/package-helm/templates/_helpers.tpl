@@ -111,9 +111,31 @@ Used for:
 {{- end }}
 
 {{/*
+Creates the spec fields for a PersistentVolumeClaim.
+
+Used by both `clp.createPvc` (standalone PVCs) and StatefulSet `volumeClaimTemplates` to avoid
+duplicating the storageClassName and resource-request logic.
+
+@param {object} root Root template context
+@param {string} capacity Storage capacity
+@param {string[]} accessModes Access modes
+@return {string} YAML-formatted PVC spec fields (accessModes, storageClassName, resources)
+*/}}
+{{- define "clp.createPvcSpec" -}}
+accessModes: {{ .accessModes }}
+{{- with .root.Values.storageClassName }}
+storageClassName: {{ . | quote }}
+{{- end }}
+resources:
+  requests:
+    storage: {{ .capacity }}
+{{- end }}
+
+{{/*
 Creates a PersistentVolumeClaim for the given component.
 
-Uses the cluster's default StorageClass for dynamic provisioning.
+Uses the cluster's default StorageClass for dynamic provisioning unless `storageClassName` is set in
+values.yaml.
 
 @param {object} root Root template context
 @param {string} component_category (e.g., "database", "shared-data")
@@ -131,10 +153,7 @@ metadata:
     {{- include "clp.labels" .root | nindent 4 }}
     app.kubernetes.io/component: {{ .component_category | quote }}
 spec:
-  accessModes: {{ .accessModes }}
-  resources:
-    requests:
-      storage: {{ .capacity }}
+  {{- include "clp.createPvcSpec" . | nindent 2 }}
 {{- end }}
 
 {{/*
