@@ -450,12 +450,18 @@ bool FileCompressor::compress_ir_stream(
         streaming_archive::writer::Archive& archive_writer,
         ReaderInterface& reader
 ) {
-    bool uses_four_byte_encoding{false};
-    auto ir_error_code = ffi::ir_stream::get_encoding_type(reader, uses_four_byte_encoding);
-    if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
-        SPDLOG_ERROR("Cannot compress {}, IR error={}", path, static_cast<int>(ir_error_code));
+    auto const encoding_type_result{ffi::ir_stream::get_encoding_type(reader)};
+    if (encoding_type_result.has_error()) {
+        SPDLOG_ERROR(
+                "Cannot compress {}, IR error={}",
+                path,
+                encoding_type_result.error().message()
+        );
         return false;
     }
+    bool const uses_four_byte_encoding{
+            ffi::ir_stream::EncodingType::FourByte == encoding_type_result.value()
+    };
 
     try {
         std::error_code error_code{};
