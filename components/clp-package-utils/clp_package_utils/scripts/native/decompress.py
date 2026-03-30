@@ -240,7 +240,6 @@ def _handle_clp_s_file_extraction(
     parsed_args: argparse.Namespace,
     clp_home: pathlib.Path,
 ) -> int:
-    """Docstring."""
     target_dataset = (
         CLP_DEFAULT_DATASET_NAME if parsed_args.dataset is None else parsed_args.dataset
     )
@@ -283,7 +282,6 @@ def _handle_clp_file_extraction(
     parsed_args: argparse.Namespace,
     clp_home: pathlib.Path,
 ) -> int:
-    """Docstring."""
     paths = parsed_args.paths
     list_path = parsed_args.files_from
 
