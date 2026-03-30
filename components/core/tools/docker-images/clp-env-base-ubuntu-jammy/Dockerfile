@@ -14,10 +14,9 @@ COPY --link ./tools/scripts/ca-certificates.crt ./tools/scripts/ca-certificates.
 # for details.
 RUN ./tools/scripts/corporate-proxy-container.sh
 
-# Point pip/pipx and curl at the corporate CA bundle path set by corporate-proxy-container.sh.
+# Point pip/pipx and curl at the CA bundle installed by corporate-proxy-container.sh.
 # This path is outside the system package manager's control, so it survives reinstalls of
-# ca-certificates (which regenerates the system bundle). When no corporate proxy is in use,
-# this path won't exist; tools fall back to their built-in defaults which work fine without a proxy.
+# ca-certificates (which regenerates the system bundle).
 ENV CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
     PIP_CERT=/opt/corp-ca/ca-bundle.crt \
     REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
