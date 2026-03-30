@@ -1,7 +1,9 @@
 use std::pin::Pin;
+use std::sync::Arc;
 
 use async_stream::stream;
 use clp_rust_utils::{
+    archive_metadata::{self, DEFAULT_S3_FETCH_CONCURRENCY},
     aws::AWS_DEFAULT_REGION,
     clp_config::package::{
         config::{Config, StorageEngine, StreamOutputStorage},
@@ -10,13 +12,14 @@ use clp_rust_utils::{
     database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
 };
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, stream as futures_stream};
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
+use crate::query_dedup::QueryDedupCache;
 
 /// Defines the request configuration for submitting a search query.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -73,11 +76,16 @@ pub struct Client {
     mongodb_client: mongodb::Client,
     sql_pool: sqlx::Pool<sqlx::MySql>,
     config: Config,
+    /// Reusable S3 client, created once at connect time when stream output is S3.
+    s3_client: Option<aws_sdk_s3::Client>,
+    /// Query deduplication cache to avoid redundant jobs for identical queries.
+    dedup_cache: Arc<QueryDedupCache>,
 }
 
 impl Client {
     /// Factory method to create a new client with active connections to both `MySQL` and `MongoDB`
-    /// databases.
+    /// databases. If the stream output storage is S3, an S3 client is also created and reused
+    /// across all subsequent requests.
     ///
     /// # Returns
     ///
@@ -104,14 +112,44 @@ impl Client {
         );
         let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
 
+        // Create a reusable S3 client if stream output is S3-backed.
+        let s3_client = match &config.stream_output.storage {
+            StreamOutputStorage::S3 { s3_config, .. } => {
+                let region_str = s3_config
+                    .region_code
+                    .as_ref()
+                    .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str);
+                Some(
+                    clp_rust_utils::s3::create_new_client(
+                        region_str,
+                        s3_config.endpoint_url.as_ref(),
+                        &s3_config.aws_authentication,
+                    )
+                    .await,
+                )
+            }
+            StreamOutputStorage::Fs { .. } => None,
+        };
+
+        // Ensure the archive_time_metadata table exists.
+        if let Err(e) = archive_metadata::create_archive_metadata_table(&sql_pool).await {
+            tracing::warn!("Failed to create archive_time_metadata table: {e}");
+        }
+
         Ok(Self {
             config: config.clone(),
             mongodb_client: mongo_client,
             sql_pool,
+            s3_client,
+            dedup_cache: Arc::new(QueryDedupCache::new()),
         })
     }
 
     /// Submits a search or aggregation query as a job.
+    ///
+    /// When time range filters are provided, the archive metadata index is consulted to prune
+    /// archives whose time ranges do not overlap with the query window. The pruned set of
+    /// archive IDs is attached to the job config so that workers only scan relevant archives.
     ///
     /// # Returns
     ///
@@ -124,7 +162,30 @@ impl Client {
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let mut search_job_config: SearchJobConfig = query_config.into();
+        // Check the dedup cache first: if an identical query was recently submitted,
+        // return the existing job ID to avoid redundant archive scans.
+        let fingerprint = QueryDedupCache::fingerprint(&query_config);
+        if let Some(cached_job_id) = self.dedup_cache.get(&fingerprint) {
+            // Verify the cached job hasn't failed/been cancelled.
+            match self.get_status(cached_job_id).await {
+                Ok(
+                    QueryJobStatus::Pending
+                    | QueryJobStatus::Running
+                    | QueryJobStatus::Succeeded,
+                ) => {
+                    tracing::info!(
+                        "Dedup cache hit: reusing job {} for identical query",
+                        cached_job_id
+                    );
+                    return Ok(cached_job_id);
+                }
+                _ => {
+                    // Job failed/cancelled/not found — fall through to create a new one.
+                }
+            }
+        }
+
+        let mut search_job_config: SearchJobConfig = query_config.clone().into();
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
@@ -134,6 +195,49 @@ impl Client {
         if search_job_config.max_num_results == 0 {
             search_job_config.max_num_results =
                 self.get_api_server_config().default_max_num_query_results;
+        }
+
+        // Time-range pruning: query the archive metadata index to find only the archives
+        // whose time ranges overlap with the search window.
+        if query_config.time_range_begin_millisecs.is_some()
+            || query_config.time_range_end_millisecs.is_some()
+        {
+            let datasets = search_job_config
+                .datasets
+                .clone()
+                .unwrap_or_else(|| vec!["default".to_owned()]);
+
+            match archive_metadata::query_overlapping_archives(
+                &self.sql_pool,
+                &datasets,
+                query_config.time_range_begin_millisecs,
+                query_config.time_range_end_millisecs,
+            )
+            .await
+            {
+                Ok(archive_ids) => {
+                    if archive_ids.is_empty() {
+                        tracing::info!(
+                            "No archives overlap with the requested time range; \
+                             submitting job anyway for backward compatibility"
+                        );
+                    } else {
+                        tracing::info!(
+                            "Time-range pruning: {} archives match the query window \
+                             (out of potentially many more)",
+                            archive_ids.len()
+                        );
+                        search_job_config.archive_ids_filter = Some(archive_ids);
+                    }
+                }
+                Err(e) => {
+                    // Non-fatal: if the metadata table doesn't exist or the query fails,
+                    // fall back to scanning all archives.
+                    tracing::warn!(
+                        "Archive metadata pruning failed, falling back to full scan: {e}"
+                    );
+                }
+            }
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -146,6 +250,49 @@ impl Client {
         .await?;
 
         let search_job_id = query_result.last_insert_id();
+
+        // Cache the query fingerprint → job ID mapping for deduplication.
+        self.dedup_cache.insert(fingerprint, search_job_id);
+
+        // Eagerly create MongoDB indexes on the result collection so that workers insert into
+        // an indexed collection from the start, and the scheduler's found_max_num_latest_results
+        // check can use the timestamp index instead of doing a collection scan.
+        if !search_job_config.write_to_file {
+            let collection_name = search_job_id.to_string();
+            let db = self
+                .mongodb_client
+                .database(&self.config.results_cache.db_name);
+            let collection = db.collection::<mongodb::bson::Document>(&collection_name);
+            let ts_asc = mongodb::IndexModel::builder()
+                .keys(mongodb::bson::doc! { "timestamp": 1, "_id": 1 })
+                .options(
+                    mongodb::options::IndexOptions::builder()
+                        .name("timestamp-ascending".to_owned())
+                        .build(),
+                )
+                .build();
+            let ts_desc = mongodb::IndexModel::builder()
+                .keys(mongodb::bson::doc! { "timestamp": -1, "_id": -1 })
+                .options(
+                    mongodb::options::IndexOptions::builder()
+                        .name("timestamp-descending".to_owned())
+                        .build(),
+                )
+                .build();
+            if let Err(e) = collection.create_indexes(vec![ts_asc, ts_desc]).await {
+                tracing::warn!(
+                    "Failed to eagerly create MongoDB indexes for job {}: {}",
+                    search_job_id,
+                    e
+                );
+            } else {
+                tracing::info!(
+                    "Created MongoDB timestamp indexes for job {}",
+                    search_job_id
+                );
+            }
+        }
+
         Ok(search_job_id)
     }
 
@@ -158,6 +305,7 @@ impl Client {
     ///
     /// * [`SearchResultStream::File`] if the job's results are stored in files.
     /// * [`SearchResultStream::Mongo`] if the job's results are stored in `MongoDB`.
+    /// * [`SearchResultStream::S3`] if the job's results are stored in S3.
     ///
     /// # Errors
     ///
@@ -285,26 +433,6 @@ impl Client {
     }
 
     /// Asynchronously fetches results of a completed search job from files.
-    ///
-    /// # Returns
-    ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
-    ///
-    /// ## Returns
-    ///
-    /// The log message in string representation on success.
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`std::fs::File::open`]'s return values on failure.
-    /// * Forwards [`tokio::fs::read_dir`]'s return values on failure.
-    /// * Forwards [`tokio::fs::ReadDir::next_entry`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the stream output storage is not file system.
     fn fetch_results_from_file(
         &self,
         search_job_id: u64,
@@ -330,48 +458,17 @@ impl Client {
         stream
     }
 
-    /// Asynchronously fetches results of a completed search job from S3.
-    ///
-    /// # Returns
-    ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
-    ///
-    /// ## Returns
-    ///
-    /// The log message in string representation on success.
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards the pagination stream's error returned from S3 list-object-v2 operation's
-    ///   paginator (i.e., from
-    ///   [`aws_smithy_async::future::pagination_stream::PaginationStream::next`]).
-    /// * Forwards S3 get-object operation's return values on failure (i.e., from
-    ///   [`aws_sdk_s3::operation::get_object::builders::GetObjectFluentBuilder::send`]).
-    /// * Forwards [`aws_smithy_types::byte_stream::ByteStream::collect`]'s return values on
-    ///   failure.
-    ///
-    /// # Errors
-    ///
-    /// Return an error if:
-    ///
-    /// * [`ClientError::Aws`] if a region code is not provided when using the default AWS S3
-    ///   endpoint.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the stream output storage is not S3.
+    /// Asynchronously fetches results of a completed search job from S3 using the reusable
+    /// S3 client and concurrent object fetches via `buffer_unordered`.
     async fn fetch_results_from_s3(
         &self,
         search_job_id: u64,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
-        tracing::info!("Streaming results from S3");
+        tracing::info!("Streaming results from S3 (concurrent fetch)");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
             unreachable!();
         };
 
-        let s3_config = s3_config.clone();
         if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
             return Err(ClientError::Aws {
                 description: "a region code must be given when using the default AWS S3 endpoint"
@@ -379,80 +476,84 @@ impl Client {
             });
         }
 
-        let region_str = s3_config
-            .region_code
-            .as_ref()
-            .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str);
-        let s3_client = clp_rust_utils::s3::create_new_client(
-            region_str,
-            s3_config.endpoint_url.as_ref(),
-            &s3_config.aws_authentication,
-        )
-        .await;
+        // Use the reusable S3 client created at connect time.
+        let s3_client = self.s3_client.clone().expect(
+            "S3 client must be initialized when stream output storage is S3",
+        );
 
+        let bucket = s3_config.bucket.to_string();
         let key_prefix = format!("{}{}/", s3_config.key_prefix, search_job_id);
         tracing::info!("Streaming results from S3 prefix: {}", key_prefix);
+
+        // Phase 1: Collect all object keys from the S3 listing.
+        let mut all_keys: Vec<String> = Vec::new();
         let mut object_pages = s3_client
             .list_objects_v2()
-            .bucket(s3_config.bucket.as_str())
-            .prefix(key_prefix)
+            .bucket(&bucket)
+            .prefix(&key_prefix)
             .into_paginator()
             .send();
 
-        Ok(stream! {
-            while let Some(object_page) = object_pages.next().await {
-                tracing::debug!("Received S3 object page: {:?}", object_page);
-                for object in object_page?.contents() {
-                    let Some(key) = object.key() else {
-                        tracing::info!("S3 object {:?} doesn't have a key", object);
-                        continue;
-                    };
-                    if key.ends_with('/') {
-                        tracing::info!("Skipping S3 object with key {} as it is a directory", key);
-                        continue;
-                    }
-                    tracing::info!("Streaming results from S3 object with key: {}", key);
-                    let obj = s3_client
-                        .get_object()
-                        .bucket(s3_config.bucket.as_str())
-                        .key(key)
-                        .send()
-                        .await?;
-                    let bytes = obj.body.collect().await?.into_bytes();
-                    let mut deserializer = rmp_serde::Deserializer::from_read_ref(bytes.as_ref());
-                    while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
-                        let event: (i64, String, String, String, i64) = event;
-                        yield Ok(event.1);
+        while let Some(object_page) = object_pages.next().await {
+            for object in object_page?.contents() {
+                if let Some(key) = object.key() {
+                    if !key.ends_with('/') {
+                        all_keys.push(key.to_owned());
                     }
                 }
             }
-        })
+        }
+
+        tracing::info!(
+            "Found {} result objects for job {}; fetching concurrently",
+            all_keys.len(),
+            search_job_id
+        );
+
+        // Phase 2: Fetch objects concurrently using buffer_unordered.
+        let bucket_clone = bucket.clone();
+        let result_stream = futures_stream::iter(all_keys)
+            .map(move |key| {
+                let client = s3_client.clone();
+                let b = bucket_clone.clone();
+                async move {
+                    let obj = client
+                        .get_object()
+                        .bucket(&b)
+                        .key(&key)
+                        .send()
+                        .await
+                        .map_err(|e| ClientError::Aws {
+                            description: e.to_string(),
+                        })?;
+                    let bytes = obj.body.collect().await.map_err(|e| ClientError::Aws {
+                        description: e.to_string(),
+                    })?;
+                    Ok::<_, ClientError>(bytes.into_bytes())
+                }
+            })
+            .buffer_unordered(DEFAULT_S3_FETCH_CONCURRENCY);
+
+        // Phase 3: Deserialize each fetched object's bytes into log events.
+        let event_stream = result_stream.flat_map(|result| {
+            futures_stream::iter(match result {
+                Err(e) => vec![Err(e)],
+                Ok(bytes) => {
+                    let mut events = Vec::new();
+                    let mut de = rmp_serde::Deserializer::from_read_ref(bytes.as_ref());
+                    while let Ok(event) = Deserialize::deserialize(&mut de) {
+                        let event: (i64, String, String, String, i64) = event;
+                        events.push(Ok(event.1));
+                    }
+                    events
+                }
+            })
+        });
+
+        Ok(event_stream)
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
-    ///
-    /// # Returns
-    ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
-    ///
-    /// ## Returns
-    ///
-    /// A parsed JSON value representing a search result on success.
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
-    ///   or if the "message" field is not a BSON string.
-    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
-    /// * Forwards [`serde_json::from_str`]'s return values on failure.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
     async fn fetch_results_from_mongo(
         &self,
         search_job_id: u64,
@@ -478,26 +579,11 @@ impl Client {
     }
 
     /// Retrieves timestamp column names for a given dataset.
-    ///
-    /// # Returns
-    ///
-    /// A vector of timestamp column name strings on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
-    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_timestamp_column_names(
         &self,
         dataset_name: &str,
     ) -> Result<Vec<String>, ClientError> {
-        // Must be kept in sync with `NodeType::Timestamp` in
-        // `components/core/src/clp_s/SchemaTree.hpp`.
         const TIMESTAMP_NODE_TYPE: i8 = 14;
-        // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
         if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
@@ -523,13 +609,6 @@ impl Client {
         Ok(names)
     }
 
-    /// # Returns
-    ///
-    /// A reference to the API server configuration.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self.config.api_server` is `None`.
     const fn get_api_server_config(
         &self,
     ) -> &clp_rust_utils::clp_config::package::config::ApiServer {
@@ -542,12 +621,6 @@ impl Client {
 
 pin_project! {
     /// Enum for search result streams from different storage backends.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `FileStream`: Streaming from file system storage.
-    /// * `MongoStream`: Streaming from MongoDB storage.
-    /// * `S3Stream`: Streaming from S3 storage.
     #[project = SearchResultStreamProj]
     pub enum SearchResultStream<FileStream, MongoStream, S3Stream>
     where

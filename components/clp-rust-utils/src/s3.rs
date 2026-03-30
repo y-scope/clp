@@ -1,4 +1,5 @@
 mod client;
+pub mod time_partition;
 
 pub use client::create_new_client;
 use non_empty_string::NonEmptyString;
