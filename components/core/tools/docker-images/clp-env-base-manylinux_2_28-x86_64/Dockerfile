@@ -18,10 +18,10 @@ RUN ./tools/scripts/corporate-proxy-container.sh
 # This path is outside the system package manager's control, so it survives reinstalls of
 # ca-certificates (which regenerates the system bundle). When no corporate proxy is in use,
 # this path won't exist; tools fall back to their built-in defaults which work fine without a proxy.
-ENV SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt \
-    CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+ENV CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    PIP_CERT=/opt/corp-ca/ca-bundle.crt \
     REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
-    PIP_CERT=/opt/corp-ca/ca-bundle.crt
+    SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt
 
 # Optional: override AlmaLinux mirrors (e.g., organization-internal or regional).
 # Usage: DNF_MIRROR_BASE_URL=<url> ./build.sh

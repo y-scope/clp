@@ -63,9 +63,6 @@ RUN dnf clean all \
 # Flatten the image
 FROM scratch
 COPY --link --from=base / /
-ENV SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt \
-    CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
-    REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
 ENV CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
     PIP_CERT=/opt/corp-ca/ca-bundle.crt \
     REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
