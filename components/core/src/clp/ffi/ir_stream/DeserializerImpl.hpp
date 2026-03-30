@@ -31,6 +31,7 @@ public:
      * - The pair:
      *   - The type of the deserialized IR unit.
      *   - The tag of the deserialized IR unit.
+     * - Derived classes define the possible error codes.
      */
     [[nodiscard]] virtual auto get_next_ir_unit_type(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<std::pair<IrUnitType, encoded_tag_t>>
@@ -44,7 +45,7 @@ public:
      * @param user_gen_keys_schema_tree
      * @param utc_offset
      * @return A result containing the deserialized KV pair log event on success, or an error code
-     * indicating the failure.
+     * indicating the failure defined by derived classes.
      */
     [[nodiscard]] virtual auto deserialize_ir_unit_kv_pair_log_event(
             ReaderInterface& reader,
@@ -59,11 +60,12 @@ public:
      * Deserializes a schema tree node insertion from the given reader.
      * @param reader
      * @param tag
-     * @param out_key_name
+     * @param out_key_name Returns the inserted node's key name.
      * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
      *   - Whether the node is for auto-generated keys schema tree.
      *   - The locator of the inserted schema tree node.
+     * - Derived classes define the possible error codes.
      */
     [[nodiscard]] virtual auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
@@ -72,7 +74,7 @@ public:
     ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>>
             = 0;
 
-     * @param out_key_name Returns the inserted node's key name.
+    /**
      * Deserializes a UTC offset change packet.
      * @param reader
      * @return A result containing the deserialized UTC offset on success, or an error code
