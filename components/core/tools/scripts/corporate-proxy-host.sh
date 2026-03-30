@@ -27,7 +27,6 @@ detect_ca_bundle() {
         /etc/ssl/certs/ca-certificates.crt  # Debian/Ubuntu/Alpine
         /etc/pki/tls/certs/ca-bundle.crt    # RHEL/CentOS/Fedora
         /etc/ssl/cert.pem                   # macOS
-        /etc/ssl/ca-bundle.pem              # openSUSE
     )
 
     for path in "${ca_paths[@]}"; do
