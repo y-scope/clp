@@ -129,6 +129,8 @@ public:
             -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
 
 private:
+    friend class ClpArchiveDecoder;
+
     // Constructors
     explicit ClpArchiveReader(
             std::shared_ptr<clp_s::ArchiveReader> reader,

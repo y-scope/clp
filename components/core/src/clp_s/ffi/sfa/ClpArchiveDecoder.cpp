@@ -17,14 +17,15 @@
 #include <clp_s/search/QueryRunner.hpp>
 #include <clp_s/search/SchemaMatch.hpp>
 
+#include "ClpArchiveReader.hpp"
 #include "KqlQuery.hpp"
 #include "SfaErrorCode.hpp"
 
 namespace clp_s::ffi::sfa {
-auto ClpArchiveDecoder::create(clp_s::ArchiveReader& reader)
+auto ClpArchiveDecoder::create(ClpArchiveReader& reader)
         -> ystdlib::error_handling::Result<ClpArchiveDecoder> {
     try {
-        return ClpArchiveDecoder{reader.read_all_tables()};
+        return ClpArchiveDecoder{reader.m_archive_reader->read_all_tables()};
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR("Failed to create ClpArchiveDecoder: out of memory.");
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};
@@ -34,13 +35,13 @@ auto ClpArchiveDecoder::create(clp_s::ArchiveReader& reader)
     }
 }
 
-auto ClpArchiveDecoder::create(clp_s::ArchiveReader& reader, KqlQuery const& query)
+auto ClpArchiveDecoder::create(ClpArchiveReader& reader, KqlQuery const& query)
         -> ystdlib::error_handling::Result<ClpArchiveDecoder> {
     try {
         auto expression{query.copy_expression()};
         auto schema_match = std::make_shared<clp_s::search::SchemaMatch>(
-                reader.get_schema_tree(),
-                reader.get_schema_map()
+                reader.m_archive_reader->get_schema_tree(),
+                reader.m_archive_reader->get_schema_map()
         );
         auto matched_expression{schema_match->run(expression)};
 
@@ -52,12 +53,12 @@ auto ClpArchiveDecoder::create(clp_s::ArchiveReader& reader, KqlQuery const& que
         auto query_runner = std::make_unique<clp_s::search::QueryRunner>(
                 schema_match,
                 matched_expression,
-                std::shared_ptr<clp_s::ArchiveReader>{&reader, [](clp_s::ArchiveReader*) {}},
+                reader.m_archive_reader,
                 query.ignore_case()
         );
 
         query_runner->global_init();
-        auto all_tables{reader.read_all_tables()};
+        auto all_tables{reader.m_archive_reader->read_all_tables()};
         std::vector<std::shared_ptr<clp_s::SchemaReader>> filtered_tables;
         filtered_tables.reserve(all_tables.size());
 

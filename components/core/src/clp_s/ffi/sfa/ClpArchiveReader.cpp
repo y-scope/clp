@@ -154,10 +154,10 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
 }
 
 auto ClpArchiveReader::decode_all() -> Result<ClpArchiveDecoder> {
-    return ClpArchiveDecoder::create(*m_archive_reader);
+    return ClpArchiveDecoder::create(*this);
 }
 
 auto ClpArchiveReader::search(KqlQuery const& query) -> Result<ClpArchiveDecoder> {
-    return ClpArchiveDecoder::create(*m_archive_reader, query);
+    return ClpArchiveDecoder::create(*this, query);
 }
 }  // namespace clp_s::ffi::sfa

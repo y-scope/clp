@@ -19,6 +19,7 @@ class QueryRunner;
 }  // namespace clp_s::search
 
 namespace clp_s::ffi::sfa {
+class ClpArchiveReader;
 class KqlQuery;
 
 /**
@@ -31,26 +32,26 @@ public:
     /**
      * Creates an archive decoder and preloads all schema tables from the archive reader.
      *
-     * @param reader Already initialized archive reader.
+     * @param reader Already initialized archive wrapper.
      * @return A result containing the newly constructed `ClpArchiveDecoder` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::Failure` if table loading fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating decoder state fails.
      */
-    [[nodiscard]] static auto create(clp_s::ArchiveReader& reader)
+    [[nodiscard]] static auto create(ClpArchiveReader& reader)
             -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
 
     /**
      * Creates a filtered archive decoder and preloads all schema tables from the archive reader.
      *
-     * @param reader Already initialized archive reader.
+     * @param reader Already initialized archive wrapper.
      * @param query Parsed KQL query used for archive filtering.
      * @return A result containing the newly constructed `ClpArchiveDecoder` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::Failure` if query preparation or table loading fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating decoder state fails.
      */
-    [[nodiscard]] static auto create(clp_s::ArchiveReader& reader, KqlQuery const& query)
+    [[nodiscard]] static auto create(ClpArchiveReader& reader, KqlQuery const& query)
             -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
 
     // Destructor
