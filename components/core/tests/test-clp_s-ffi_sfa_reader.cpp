@@ -20,9 +20,13 @@
 
 namespace {
 using clp::ReadOnlyMemoryMappedFile;
+<<<<<<< HEAD
 using clp_s::ffi::sfa::ClpArchiveDecoder;
 using clp_s::ffi::sfa::ClpArchiveReader;
 using clp_s::ffi::sfa::KqlQuery;
+=======
+using clp_s::ffi::sfa::ClpArchiveReader;
+>>>>>>> main
 using ystdlib::error_handling::Result;
 using ystdlib::error_handling::success;
 

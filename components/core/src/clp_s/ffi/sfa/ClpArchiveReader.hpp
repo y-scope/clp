@@ -48,6 +48,35 @@ private:
 };
 
 /**
+ * Metadata describing a single source file's event-index range within a single-file archive.
+ */
+class FileInfo {
+public:
+    // Constructor
+    FileInfo(std::string_view file_name, int64_t start_index, int64_t end_index)
+            : m_file_name{file_name},
+              m_start_index{start_index},
+              m_end_index{end_index} {}
+
+    // Methods
+    [[nodiscard]] auto get_file_name() const -> std::string const& { return m_file_name; }
+
+    [[nodiscard]] auto get_start_index() const -> int64_t { return m_start_index; }
+
+    [[nodiscard]] auto get_end_index() const -> int64_t { return m_end_index; }
+
+    [[nodiscard]] auto get_event_count() const -> uint64_t {
+        return static_cast<uint64_t>(m_end_index - m_start_index);
+    }
+
+private:
+    // Members
+    std::string m_file_name;
+    int64_t m_start_index{0};
+    int64_t m_end_index{0};
+};
+
+/**
  * A thin wrapper around `clp_s::ArchiveReader` for single file archive FFI entrypoints.
  */
 class ClpArchiveReader {
