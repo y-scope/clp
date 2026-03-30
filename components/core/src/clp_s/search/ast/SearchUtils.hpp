@@ -71,7 +71,13 @@ bool double_as_int(double in, FilterOperation op, int64_t& out);
  * Applies AST normalization passes to prepare a query for search consumers.
  *
  * @param query Query to transform.
- * @return The transformed query, or an empty expression if the query is logically false.
+ * @return The transformed query on success, or the following failure cases:
+ * - An empty expression if the query is logically false.
+ * - A `nullptr` if the input query is null.
+ * @throws Propagates exceptions thrown by:
+ * - `ConvertToExists::run`
+ * - `NarrowTypes::run`
+ * - `OrOfAndForm::run`
  */
 [[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
         -> std::shared_ptr<Expression>;

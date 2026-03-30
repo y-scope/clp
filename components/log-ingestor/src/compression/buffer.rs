@@ -1,6 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::s3::S3ObjectMetadataId;
+use sqlx::FromRow;
+
+/// Represents an entry of a buffered object metadata.
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct CompressionBufferEntry {
+    pub id: S3ObjectMetadataId,
+    pub size: u64,
+}
 
 #[async_trait]
 /// A trait for submitting buffered object metadata for processing.
@@ -14,10 +22,10 @@ pub trait BufferSubmitter {
     /// # Errors:
     ///
     /// Returns an [`anyhow::Error`] on failure.
-    async fn submit(&self, buffer: &[ObjectMetadata]) -> Result<()>;
+    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()>;
 }
 
-/// A buffer that accumulates object metadata and submits it when a size threshold is reached.
+/// A buffer that accumulates object metadata IDs and submits when the size threshold is reached.
 ///
 /// # Type Parameters:
 ///
@@ -25,7 +33,7 @@ pub trait BufferSubmitter {
 ///   data.
 pub struct Buffer<Submitter: BufferSubmitter> {
     submitter: Submitter,
-    buf: Vec<ObjectMetadata>,
+    buf: Vec<S3ObjectMetadataId>,
     total_size: u64,
     size_threshold: u64,
 }
@@ -45,7 +53,8 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         }
     }
 
-    /// Adds object metadata to the buffer and submits if the size threshold is reached.
+    /// Adds [`CompressionBufferEntry`] values to the buffer and submits if the size threshold is
+    /// reached.
     ///
     /// # Returns
     ///
@@ -56,10 +65,13 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::submit`]'s return values on failure.
-    pub async fn add(&mut self, object_metadata_to_ingest: Vec<ObjectMetadata>) -> Result<()> {
-        for object_metadata in object_metadata_to_ingest {
-            self.total_size += object_metadata.size;
-            self.buf.push(object_metadata);
+    pub async fn add(
+        &mut self,
+        object_metadata_to_ingest: Vec<CompressionBufferEntry>,
+    ) -> Result<()> {
+        for entry in object_metadata_to_ingest {
+            self.total_size += entry.size;
+            self.buf.push(entry.id);
 
             if self.total_size >= self.size_threshold {
                 self.submit().await?;
