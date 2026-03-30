@@ -5,7 +5,7 @@ set -o nounset
 set -o pipefail
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-component_root=${script_dir}/../../../
+component_root="${script_dir}/../../../"
 
 # Corporate proxy support — see corporate-proxy-host.sh for details.
 source "${script_dir}/../../scripts/corporate-proxy-host.sh"
