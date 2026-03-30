@@ -10,8 +10,8 @@ COPY --link ./tools/scripts/corporate-proxy-container.sh ./tools/scripts/corpora
 COPY --link ./tools/scripts/ca-certificates.crt ./tools/scripts/ca-certificates.crt
 # Corporate proxy support: install host CA certificates into the container's
 # trust store so tools like curl and apk can verify TLS through intercepting
-# proxies (e.g., Zscaler, Fortinet, Palo Alto). No-op when not behind a
-# corporate proxy. See corporate-proxy-host.sh for details.
+# proxies (e.g., Zscaler, Fortinet, Palo Alto). See corporate-proxy-host.sh
+# for details.
 RUN ./tools/scripts/corporate-proxy-container.sh
 
 # Point pip/pipx and curl at the corporate CA bundle path set by corporate-proxy-container.sh.
