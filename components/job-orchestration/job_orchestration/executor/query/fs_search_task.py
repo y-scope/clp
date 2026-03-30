@@ -192,9 +192,9 @@ def _make_command_and_env_vars(
 def upload_results_to_s3(
     task_results: QueryTaskResult, s3_config: Any, src_file: Path, dest_path: str
 ):
-    if src_file.stat().st_size == 0:
+    if not src_file.exists() or src_file.stat().st_size == 0:
         logger.info(f"Skipping upload for empty query results file {dest_path} to S3.")
-        src_file.unlink()
+        src_file.unlink(missing_ok=True)
         return
     logger.info(f"Uploading query results {dest_path} to S3...")
     try:
