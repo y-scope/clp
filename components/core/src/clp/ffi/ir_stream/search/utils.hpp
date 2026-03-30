@@ -41,7 +41,7 @@ namespace clp::ffi::ir_stream::search {
  *   - LiteralType::UnknownT
  *   - Any other unrecognized literal type enum
  * - ErrorCodeEnum::LiteralTypeUnsupported if `literal_type` is one of the following:
- *   - LiteralType::EpochDateT since the current IR format doesn't support this type.
+ *   - LiteralType::TimestampT since the current IR format doesn't support this type.
  *   - LiteralType::ArrayT since array search hasn't been implemented.
  * - Forwards `evaluate_clp_string_filter_op`'s return values.
  */

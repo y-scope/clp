@@ -12,7 +12,10 @@ from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLP_DEFAULT_DATASET_NAME,
     ClpConfig,
+    ClpDbNameType,
+    ClpDbUserType,
     Database,
     StorageEngine,
 )
@@ -35,7 +38,7 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
-    validate_dataset_exists,
+    validate_datasets_exist,
     wait_for_query_job,
 )
 
@@ -143,11 +146,9 @@ def handle_extract_stream_cmd(
         )
     elif EXTRACT_JSON_CMD == command:
         dataset = parsed_args.dataset
-        if dataset is None:
-            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
-            return -1
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
         try:
-            validate_dataset_exists(clp_config.database, dataset)
+            validate_datasets_exist(clp_config.database, [dataset])
         except Exception as e:
             logger.error(e)
             return -1
@@ -189,7 +190,7 @@ def validate_and_load_config_file(
     :return: clp_config on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(config_file_path)
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
@@ -246,14 +247,15 @@ def handle_clp_extract_file_cmd(
         "--db-type", clp_db_connection_params["type"],
         "--db-host", clp_db_connection_params["host"],
         "--db-port", str(clp_db_connection_params["port"]),
-        "--db-name", clp_db_connection_params["name"],
+        "--db-name", clp_db_connection_params["names"][ClpDbNameType.CLP],
         "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
+    credentials = Database.model_validate(clp_db_connection_params).credentials
     extract_env = {
         **os.environ,
-        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
-        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
     }
 
     files_to_extract_list_path = None

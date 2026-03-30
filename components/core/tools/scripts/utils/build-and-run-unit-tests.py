@@ -1,9 +1,13 @@
+#!/usr/bin/env python3
+"""Builds the CLP-core's binaries and runs its unit tests."""
+
+from __future__ import annotations
+
 import argparse
 import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -21,7 +25,7 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool):
+def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> None:
     cmd = [
         "cmake",
         "-S",
@@ -34,12 +38,11 @@ def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool)
     subprocess.run(cmd, check=True)
 
 
-def _build_project(build_dir: Path, num_jobs: Optional[int]):
+def _build_project(build_dir: Path, num_jobs: int | None) -> None:
     """
     :param build_dir:
     :param num_jobs: Max number of jobs to run when building.
     """
-
     cmd = [
         "cmake",
         "--build",
@@ -51,12 +54,11 @@ def _build_project(build_dir: Path, num_jobs: Optional[int]):
     subprocess.run(cmd, check=True)
 
 
-def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
+def _run_unit_tests(build_dir: Path, test_spec: str | None) -> None:
     """
     :param build_dir:
     :param test_spec: Catch2 test specification.
     """
-
     cmd = [
         "./unitTest",
     ]
@@ -65,7 +67,8 @@ def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
     subprocess.run(cmd, cwd=build_dir, check=True)
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
+    """Builds the CLP-core's binaries and runs its unit tests."""
     args_parser = argparse.ArgumentParser(
         description="Builds the CLP-core's binaries and runs its unit tests."
     )
@@ -87,8 +90,8 @@ def main(argv: List[str]) -> int:
     src_dir: Path = Path(parsed_args.source_dir)
     build_dir: Path = Path(parsed_args.build_dir)
     use_shared_libs: bool = parsed_args.use_shared_libs
-    num_jobs: Optional[int] = parsed_args.num_jobs
-    test_spec: Optional[str] = parsed_args.test_spec
+    num_jobs: int | None = parsed_args.num_jobs
+    test_spec: str | None = parsed_args.test_spec
 
     _config_cmake_project(src_dir, build_dir, use_shared_libs)
     _build_project(build_dir, num_jobs)

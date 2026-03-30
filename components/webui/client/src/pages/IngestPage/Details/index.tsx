@@ -1,10 +1,8 @@
 import {useQuery} from "@tanstack/react-query";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import dayjs from "dayjs";
 
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
 import Files from "./Files";
 import styles from "./index.module.css";

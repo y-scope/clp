@@ -1,7 +1,6 @@
 use std::{pin::Pin, time::Duration};
 
 use anyhow::Result;
-use clp_rust_utils::s3::ObjectMetadata;
 use tokio::{
     select,
     sync::mpsc,
@@ -9,24 +8,27 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::compression::{Buffer, BufferSubmitter};
+use crate::compression::{Buffer, BufferSubmitter, CompressionBufferEntry};
 
-/// Represents a listener task that buffers and submits S3 object metadata.
+/// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits
+/// when a certain size threshold is reached or on timeout.
 ///
 /// # Type Parameters
 /// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
 struct ListenerTask<Submitter: BufferSubmitter> {
     buffer: Buffer<Submitter>,
     timeout: Duration,
-    receiver: mpsc::Receiver<ObjectMetadata>,
+    receiver: mpsc::Receiver<Vec<CompressionBufferEntry>>,
 }
 
 impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
-    /// Runs the listener task to buffer and submit S3 object metadata. Submission can be triggered
-    /// in three ways:
+    /// Runs the listener task to buffer and submit [`CompressionBufferEntry`] values. Submission
+    /// can be triggered if:
+    ///
     /// * Receiving a cancellation signal via the provided [`cancel_token`].
-    /// * The buffer capacity is reached after receiving a new object metadata.
-    /// * A timeout occurs without receiving new object metadata.
+    /// * All senders are closed.
+    /// * The buffer's size threshold is reached after receiving new entries.
+    /// * A timeout occurs without receiving new entries.
     ///
     /// # Returns
     ///
@@ -50,17 +52,18 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                     return Ok(());
                 }
 
-                // New object metadata received.
-                optional_object_metadata = self.receiver.recv() => {
-                    match optional_object_metadata {
+                // New object metadata entries received.
+                optional_entries = self.receiver.recv() => {
+                    match optional_entries {
                         None => {
                             self.buffer.submit().await?;
-                            return Err(
-                                anyhow::anyhow!("Listener channel has been closed unexpectedly")
+                            tracing::info!(
+                                "All senders have been dropped. The channel will be closed."
                             );
+                            return Ok(());
                         }
-                        Some(object_metadata) => {
-                            self.buffer.add(object_metadata).await?;
+                        Some(entries) => {
+                            self.buffer.add(entries).await?;
                         }
                     }
                 }
@@ -76,10 +79,10 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     }
 }
 
-/// Represents a listener that accepts S3 object metadata from multiple senders and buffers them
-/// for submission.
+/// Represents a listener that accepts [`CompressionBufferEntry`] values from multiple senders and
+/// buffers them for submission.
 pub struct Listener {
-    sender: mpsc::Sender<ObjectMetadata>,
+    sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
     cancel_token: CancellationToken,
     handle: tokio::task::JoinHandle<Result<()>>,
 }
@@ -88,8 +91,8 @@ impl Listener {
     /// Creates and spawns a new [`Listener`] backed by a [`ListenerTask`].
     ///
     /// This function spawns a [`ListenerTask`]. The spawned task will buffer incoming
-    /// [`ObjectMetadata`] values and call the supplied `Submitter` when either the buffer's
-    /// threshold is reached or the configured `timeout` fires.
+    /// [`CompressionBufferEntry`] values and call the supplied `Submitter` when either the
+    /// buffer's threshold is reached or the configured `timeout` fires.
     ///
     /// # Type parameters
     ///
@@ -112,7 +115,11 @@ impl Listener {
         };
         let cancel_token = CancellationToken::new();
         let child_cancel_token = cancel_token.clone();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move {
+            task.run(child_cancel_token).await.inspect_err(|err| {
+                tracing::error!(error = ? err, "Listener task execution failed.");
+            })
+        });
 
         Self {
             sender,
@@ -122,30 +129,32 @@ impl Listener {
     }
 
     /// Shuts down the listener and waits for the underlying task to complete.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards the underlying task's return values on failure ([`ListenerTask::run`]).
-    pub async fn shutdown_and_join(self) -> Result<()> {
+    pub async fn shutdown_and_join(self) {
         self.cancel_token.cancel();
-        self.handle.await?
+        match self.handle.await {
+            Ok(Ok(())) => {
+                tracing::info!("Listener shutdown successfully.");
+            }
+            Ok(Err(_)) => {
+                // We don't need to log the error here because the underlying coroutine will log it.
+                tracing::warn!("Listener shutdown with an error.");
+            }
+            Err(err) => {
+                tracing::warn!(error = ? err, "Listener panicked.");
+            }
+        }
     }
 
     /// # Returns
-    /// A new `mpsc::Sender<ObjectMetadata>` that can be used to send metadata to this listener.
+    /// A new `mpsc::Sender<Vec<CompressionBufferEntry>>` that can be used to send
+    /// [`CompressionBufferEntry`] values to this listener.
     ///
     /// The returned sender is a cheap clone of the listener's internal channel sender. It can be
     /// freely cloned and moved to other tasks; multiple senders may concurrently send to the same
     /// listener. Messages sent by a single sender preserve order; messages from different senders
     /// are interleaved in the order they are received by the runtime.
     #[must_use]
-    pub fn get_new_sender(&self) -> mpsc::Sender<ObjectMetadata> {
+    pub fn get_new_sender(&self) -> mpsc::Sender<Vec<CompressionBufferEntry>> {
         self.sender.clone()
     }
 }

@@ -176,6 +176,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(glt PRIVATE cxx_std_20)
         target_include_directories(glt
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(glt
@@ -192,7 +193,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 yaml-cpp
                 ystdlib::error_handling
-                ${zstd_TARGET}
+                zstd::libzstd_static
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

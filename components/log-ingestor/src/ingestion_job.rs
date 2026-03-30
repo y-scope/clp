@@ -1,5 +1,56 @@
 mod s3_scanner;
 mod sqs_listener;
+mod state;
 
+pub use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
 pub use s3_scanner::*;
 pub use sqs_listener::*;
+pub use state::*;
+
+/// Enum for different types of ingestion jobs.
+///
+/// # Type Parameters:
+///
+/// * [`State`]: A type that implements all required ingestion job state traits for state
+///   management.
+pub enum IngestionJob<State: IngestionJobState + S3ScannerState + SqsListenerState> {
+    S3Scanner(S3Scanner<State>),
+    SqsListener(SqsListener<State>),
+}
+
+impl<State: IngestionJobState + S3ScannerState + SqsListenerState> IngestionJob<State> {
+    /// Shuts down and waits for the job to complete.
+    pub async fn shutdown_and_join(self) {
+        match self {
+            Self::S3Scanner(s3_scanner) => s3_scanner.shutdown_and_join().await,
+            Self::SqsListener(sqs_listener) => sqs_listener.shutdown_and_join().await,
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The ID of the job.
+    #[must_use]
+    pub const fn get_id(&self) -> IngestionJobId {
+        match self {
+            Self::S3Scanner(scanner) => scanner.get_id(),
+            Self::SqsListener(listener) => listener.get_id(),
+        }
+    }
+}
+
+impl<State: IngestionJobState + S3ScannerState + SqsListenerState> From<S3Scanner<State>>
+    for IngestionJob<State>
+{
+    fn from(scanner: S3Scanner<State>) -> Self {
+        Self::S3Scanner(scanner)
+    }
+}
+
+impl<State: IngestionJobState + S3ScannerState + SqsListenerState> From<SqsListener<State>>
+    for IngestionJob<State>
+{
+    fn from(listener: SqsListener<State>) -> Self {
+        Self::SqsListener(listener)
+    }
+}

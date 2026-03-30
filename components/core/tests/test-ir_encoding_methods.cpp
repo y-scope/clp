@@ -408,11 +408,17 @@ auto unpack_and_assert_serialization_failure(
     auto const msgpack_empty_map_obj_handle{create_msgpack_empty_map_obj_handle()};
     auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
 
-    if (serializer.serialize_msgpack_map(msgpack_obj.via.map, msgpack_empty_map_obj.via.map)) {
+    if (false
+        == serializer.serialize_msgpack_map(msgpack_obj.via.map, msgpack_empty_map_obj.via.map)
+                   .has_error())
+    {
         // Serialization should fail
         return false;
     }
-    if (serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map)) {
+    if (false
+        == serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map)
+                   .has_error())
+    {
         // Serialization should fail
         return false;
     }
@@ -1256,14 +1262,12 @@ TEMPLATE_TEST_CASE(
     basic_array.emplace_back(empty_array);
     for (auto const& element : basic_array) {
         // Non-map objects should not be serializable
-        REQUIRE(
-                (false
-                 == unpack_and_serialize_msgpack_bytes(
-                         nlohmann::json::to_msgpack(empty_obj),
-                         nlohmann::json::to_msgpack(element),
-                         serializer
-                 ))
-        );
+        REQUIRE(unpack_and_serialize_msgpack_bytes(
+                        nlohmann::json::to_msgpack(empty_obj),
+                        nlohmann::json::to_msgpack(element),
+                        serializer
+        )
+                        .has_error());
     }
     basic_array.emplace_back(empty_obj);
 
@@ -1283,11 +1287,12 @@ TEMPLATE_TEST_CASE(
     for (auto const& [auto_gen_json_obj, user_gen_json_obj] :
          expected_auto_gen_and_user_gen_object_pairs)
     {
-        REQUIRE(unpack_and_serialize_msgpack_bytes(
-                nlohmann::json::to_msgpack(auto_gen_json_obj),
-                nlohmann::json::to_msgpack(user_gen_json_obj),
-                serializer
-        ));
+        REQUIRE_FALSE(unpack_and_serialize_msgpack_bytes(
+                              nlohmann::json::to_msgpack(auto_gen_json_obj),
+                              nlohmann::json::to_msgpack(user_gen_json_obj),
+                              serializer
+        )
+                              .has_error());
     }
     flush_and_clear_serializer_buffer(serializer, ir_buf);
     ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
@@ -1415,7 +1420,7 @@ TEMPLATE_TEST_CASE(
 
     for (auto const node_id : valid_node_ids_to_test) {
         output_buf.clear();
-        REQUIRE(cSerializationMethodToTest(node_id, output_buf));
+        REQUIRE_FALSE(cSerializationMethodToTest(node_id, output_buf).has_error());
 
         BufferReader reader{size_checked_pointer_cast<char>(output_buf.data()), output_buf.size()};
         encoded_tag_t tag{};
@@ -1428,10 +1433,11 @@ TEMPLATE_TEST_CASE(
     }
 
     // Test against the first invalid node ID
-    REQUIRE_FALSE(cSerializationMethodToTest(
-            static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX) + 1,
-            output_buf
-    ));
+    REQUIRE(cSerializationMethodToTest(
+                    static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX) + 1,
+                    output_buf
+    )
+                    .has_error());
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -1507,5 +1513,9 @@ TEMPLATE_TEST_CASE(
     );
     auto const serializer_result{Serializer<TestType>::create(invalid_user_defined_metadata)};
     REQUIRE(serializer_result.has_error());
-    REQUIRE((std::errc::protocol_not_supported == serializer_result.error()));
+
+    using clp::ffi::ir_stream::IrSerializationError;
+    using clp::ffi::ir_stream::IrSerializationErrorEnum;
+    REQUIRE(IrSerializationError{IrSerializationErrorEnum::UnsupportedUserDefinedMetadata}
+            == serializer_result.error());
 }

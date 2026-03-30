@@ -131,7 +131,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::open(
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
 
     open_dictionary_for_reading(
             dictionary_path,

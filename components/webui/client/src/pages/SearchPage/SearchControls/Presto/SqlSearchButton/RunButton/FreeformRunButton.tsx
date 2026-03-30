@@ -8,7 +8,7 @@ import {
 
 import useSearchStore from "../../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
-import {handlePrestoQuerySubmit} from "../../presto-search-requests";
+import {handlePrestoQuerySubmit} from "../../Freeform/presto-search-requests";
 import styles from "./index.module.css";
 
 

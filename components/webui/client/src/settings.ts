@@ -4,6 +4,9 @@ import axios from "axios";
 type Settings = {
     ClpStorageEngine: string;
     ClpQueryEngine: string;
+    LogsInputType: string;
+    LogsInputRootDir: string | null;
+    MaxDatasetsPerQuery: number | null;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
     SqlDbClpDatasetsTableName: string;

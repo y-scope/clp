@@ -41,5 +41,6 @@ COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_schedul
 COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_worker bin/
 COPY --link --chown=${UID} ./build/nodejs-22/bin/node bin/node-22
 COPY --link --chown=${UID} ./build/python-libs/ lib/python3/site-packages/
-COPY --link --chown=${UID} ./build/rust/release/api_server bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/api_server bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/log-ingestor bin/
 COPY --link --chown=${UID} ./build/webui/ var/www/webui/

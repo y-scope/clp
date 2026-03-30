@@ -1,9 +1,7 @@
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {Typography} from "antd";
 
-import {
-    CLP_QUERY_ENGINES,
-    SETTINGS_QUERY_ENGINE,
-} from "../../../../config";
+import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
 import usePrestoSearchState from "../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";

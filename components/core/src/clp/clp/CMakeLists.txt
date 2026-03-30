@@ -28,6 +28,10 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/IrDeserializationError.cpp
+        ../ffi/ir_stream/IrDeserializationError.hpp
+        ../ffi/ir_stream/IrSerializationError.cpp
+        ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
         ../ffi/StringBlob.hpp
@@ -180,6 +184,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(clp PRIVATE cxx_std_20)
         target_include_directories(clp
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(clp
@@ -199,7 +204,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 ystdlib::containers
                 ystdlib::error_handling
-                ${zstd_TARGET}
+                zstd::libzstd_static
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

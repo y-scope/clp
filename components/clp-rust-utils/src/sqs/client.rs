@@ -3,9 +3,16 @@ use aws_sdk_sqs::{
     Client,
     config::{Builder, Credentials, Region},
 };
-use secrecy::{ExposeSecret, SecretString};
+use non_empty_string::NonEmptyString;
+
+use crate::clp_config::AwsAuthentication;
 
 /// Creates a new SQS client.
+///
+/// When `aws_authentication` is [`AwsAuthentication::Credentials`], the client uses the given
+/// access key pair. When [`AwsAuthentication::Default`], the client uses the default AWS SDK
+/// credential provider chain.
+///
 /// The client is configured using the latest AWS SDK behavior version.
 ///
 /// # Returns
@@ -13,24 +20,23 @@ use secrecy::{ExposeSecret, SecretString};
 /// A newly created SQS client.
 #[must_use]
 pub async fn create_new_client(
-    endpoint: &str,
     region_id: &str,
-    access_key_id: &str,
-    secret_access_key: &SecretString,
+    endpoint: Option<&NonEmptyString>,
+    aws_authentication: &AwsAuthentication,
 ) -> Client {
-    let credential = Credentials::new(
-        access_key_id,
-        secret_access_key.expose_secret(),
-        None,
-        None,
-        "clp-credential-provider",
-    );
-    let region = Region::new(region_id.to_owned());
-    let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-    let config = Builder::from(&base_config)
-        .endpoint_url(endpoint)
-        .credentials_provider(credential)
-        .region(region)
-        .build();
-    Client::from_conf(config)
+    let mut config_defaults =
+        aws_config::defaults(BehaviorVersion::latest()).region(Region::new(region_id.to_string()));
+    if let AwsAuthentication::Credentials { credentials } = aws_authentication {
+        config_defaults = config_defaults.credentials_provider(Credentials::new(
+            credentials.access_key_id.as_str(),
+            credentials.secret_access_key.as_str(),
+            None,
+            None,
+            "clp-credentials-provider",
+        ));
+    }
+    let base_config = config_defaults.load().await;
+    let mut config_builder = Builder::from(&base_config);
+    config_builder.set_endpoint_url(endpoint.map(std::string::ToString::to_string));
+    Client::from_conf(config_builder.build())
 }

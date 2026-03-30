@@ -13,9 +13,10 @@ const {Text} = Typography;
  *
  * @param props
  * @param props.children The label text to display.
+ * @param props.width Optional width for the label.
  * @return
  */
-const InputLabel = ({children}: {children: React.ReactNode}) => {
+const InputLabel = ({children, width}: {children: React.ReactNode; width?: string | number}) => {
     const {token} = theme.useToken();
 
     return (
@@ -26,6 +27,7 @@ const InputLabel = ({children}: {children: React.ReactNode}) => {
                 borderBottomLeftRadius: `${token.borderRadius}px`,
                 borderTopLeftRadius: `${token.borderRadius}px`,
                 fontSize: token.fontSize,
+                minWidth: width,
             }}
         >
             {children}

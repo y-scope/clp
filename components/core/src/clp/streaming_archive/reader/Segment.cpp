@@ -3,16 +3,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <cerrno>
 #include <climits>
+#include <utility>
 
-#include <boost/filesystem.hpp>
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../FileReader.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../TraceableException.hpp"
 
 using std::make_unique;
 using std::string;
@@ -48,23 +45,19 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     }
 
     // Create read-only memory mapped file
-    try {
-        m_memory_mapped_segment_file.emplace(segment_path);
-    } catch (TraceableException const& ex) {
-        auto const error_code{ex.get_error_code()};
-        auto const formatted_error{
-                ErrorCode_errno == error_code
-                        ? fmt::format("errno={}", errno)
-                        : fmt::format("error_code={}, message={}", error_code, ex.what())
-        };
+    auto result{ReadOnlyMemoryMappedFile::create(segment_path)};
+    if (result.has_error()) {
+        auto const error{result.error()};
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
-                "segment with path: {}. Error: {}",
+                "segment with path: {}. Error: {} - {}",
                 segment_path.c_str(),
-                formatted_error
+                error.category().name(),
+                error.message()
         );
         return ErrorCode_Failure;
     }
+    m_memory_mapped_segment_file.emplace(std::move(result.value()));
 
     auto const view{m_memory_mapped_segment_file.value().get_view()};
     m_decompressor.open(view.data(), view.size());

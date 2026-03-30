@@ -134,6 +134,13 @@ if(PROJECT_IS_TOP_LEVEL)
             cmake_policy(SET "CMP0144" "NEW")
         endif()
     endif()
+
+    # If previously undefined, `BUILD_TESTING` will be set to ON.
+    include(CTest)
+endif()
+
+if(BUILD_TESTING AND CLP_BUILD_TESTING)
+    set(CLP_ENABLE_TESTS ON)
 endif()
 
 if(CLP_NEED_ABSL)
@@ -301,11 +308,6 @@ if(CLP_NEED_ZSTD)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.
     find_package(zstd 1.4.8 REQUIRED)
     message(STATUS "Found zstd ${zstd_VERSION}")
-    if(CLP_USE_STATIC_LIBS)
-        set(zstd_TARGET zstd::libzstd_static)
-    else()
-        set(zstd_TARGET zstd::libzstd_shared)
-    endif()
 endif()
 
 if(CLP_NEED_LIBLZMA)
@@ -325,6 +327,13 @@ if(CLP_NEED_SQLITE)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
     include(cmake/Modules/FindLibraryDependencies.cmake)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+endif()
+
+if(CLP_NEED_XXHASH)
+    find_package(xxHash 0.8.3 CONFIG REQUIRED)
+    if(xxHash_FOUND)
+        message(STATUS "Found xxHash ${xxHash_VERSION}")
+    endif()
 endif()
 
 add_subdirectory(src/clp/regex_utils)
@@ -357,8 +366,14 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/filter/tests/test-clp_s-bloom_filter.cpp
+    src/clp_s/filter/tests/test-clp_s-xxhash.cpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
+    src/clp_s/ffi/sfa/ClpArchiveReader.cpp
+    src/clp_s/ffi/sfa/ClpArchiveReader.hpp
+    src/clp_s/ffi/sfa/SfaErrorCode.cpp
+    src/clp_s/ffi/sfa/SfaErrorCode.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -400,6 +415,7 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/QueryRunner.hpp
     src/clp_s/search/SchemaMatch.cpp
     src/clp_s/search/SchemaMatch.hpp
+    src/clp_s/test/test_InputConfig.cpp
     src/clp_s/TimestampDictionaryReader.cpp
     src/clp_s/TimestampDictionaryReader.hpp
     src/clp_s/TimestampDictionaryWriter.cpp
@@ -442,6 +458,7 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/aws/test/test_AwsAuthenticationSigner.cpp
         src/clp/BoundedReader.cpp
         src/clp/BoundedReader.hpp
         src/clp/BufferedReader.cpp
@@ -496,8 +513,10 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
-        src/clp/ffi/ir_stream/IrErrorCode.cpp
-        src/clp/ffi/ir_stream/IrErrorCode.hpp
+        src/clp/ffi/ir_stream/IrDeserializationError.cpp
+        src/clp/ffi/ir_stream/IrDeserializationError.hpp
+        src/clp/ffi/ir_stream/IrSerializationError.cpp
+        src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
@@ -567,6 +586,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
+        src/clp/SchemaSearcher.cpp
+        src/clp/SchemaSearcher.hpp
         src/clp/ir/constants.hpp
         src/clp/ir/EncodedTextAst.cpp
         src/clp/ir/EncodedTextAst.hpp
@@ -696,11 +717,17 @@ set(SOURCE_FILES_unitTest
         tests/clp_s_test_utils.cpp
         tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
+        tests/MockLogTypeDictionary.hpp
+        tests/MockVariableDictionary.hpp
+        tests/SchemaSearcherTest.hpp
+        tests/search_test_utils.cpp
+        tests/search_test_utils.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-ffi_sfa_reader.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
@@ -723,6 +750,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
+        tests/test-SchemaSearcher.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
@@ -734,7 +762,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 
-if(CLP_BUILD_TESTING)
+if(CLP_ENABLE_TESTS)
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}
@@ -759,6 +787,7 @@ if(CLP_BUILD_TESTING)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            clp_s::filter
             date::date
             fmt::fmt
             log_surgeon::log_surgeon
@@ -777,9 +806,12 @@ if(CLP_BUILD_TESTING)
             clp::string_utils
             ystdlib::containers
             ystdlib::error_handling
-            ${zstd_TARGET}
+            zstd::libzstd_static
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20
+            )
+    target_compile_definitions(unitTest
+            PRIVATE CLP_ENABLE_TESTS
             )
 endif()

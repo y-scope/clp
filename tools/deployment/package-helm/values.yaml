@@ -1,0 +1,287 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# Whether to allow scripts in `sbin` access to services on the host.
+allowHostAccessForSbinScripts: true
+
+image:
+  clpPackage:
+    repository: "ghcr.io/y-scope/clp/clp-package"
+    pullPolicy: "Always"
+    tag: "main"
+  prestoCoordinator:
+    repository: "ghcr.io/y-scope/presto/coordinator"
+    pullPolicy: "IfNotPresent"
+    tag: "clp-v0.10.0"
+  prestoWorker:
+    repository: "ghcr.io/y-scope/presto/prestissimo-worker"
+    pullPolicy: "IfNotPresent"
+    tag: "clp-v0.10.0-fix.1"
+
+# - If false: Single-node deployment.
+#   - Pods automatically tolerate control-plane taints.
+#   - Each worker deployment supports only 1 replica.
+# - If true: Multi-node deployment.
+#   - When using filesystem storage (`archive_output.storage.type: "fs"`), the PVC-backed
+#     directories must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+#     the same path).
+distributedDeployment: false
+
+# Number of concurrent processes per worker pod.
+workerConcurrency: 8
+
+compressionWorker:
+  replicas: 1
+  # Controls which nodes run compression workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: "compression"
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "compression"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+queryWorker:
+  replicas: 1
+  # Controls which nodes run query workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: "query"
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "query"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+reducer:
+  replicas: 1
+  # Controls which nodes run reducers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: "query"
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "reducer"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+prestoWorker:
+  replicas: 1
+  # Controls which nodes run Presto workers
+  # scheduling:
+  #   nodeSelector:
+  #     yscope.io/nodeType: "presto"
+  #   tolerations:
+  #     - key: "yscope.io/dedicated"
+  #       operator: "Equal"
+  #       value: "presto"
+  #       effect: "NoSchedule"
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: "kubernetes.io/hostname"
+  #       whenUnsatisfiable: "DoNotSchedule"
+
+clpConfig:
+  # List of third-party services bundled (deployed) as part of the chart.
+  # Remove a service from this list to use an external instance instead, and configure its host/port
+  # accordingly in the service-specific sections below.
+  bundled:
+    - "database"
+    - "queue"
+    - "redis"
+    - "results_cache"
+    - "presto"
+
+  package:
+    storage_engine: "clp-s"
+
+  # API server config
+  api_server:
+    port: 30301
+    default_max_num_query_results: 1000
+    query_job_polling:
+      initial_backoff_ms: 100
+      max_backoff_ms: 5000
+
+  # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
+  # workers.
+  logs_input:
+    type: "fs"
+
+    # NOTE: This directory will be exposed inside the container, so symbolic links to files outside
+    # this directory will be ignored.
+    directory: "/"
+
+  database:
+    type: "mariadb"  # "mariadb" or "mysql"
+    # Host and port for the database service. When "database" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
+    port: 30306
+    names:
+      clp: "clp-db"
+      spider: "spider-db"
+
+  compression_scheduler:
+    jobs_poll_delay: 0.1  # seconds
+    logging_level: "INFO"
+    max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+
+  query_scheduler:
+    jobs_poll_delay: 0.1  # seconds
+    num_archives_to_search_per_sub_job: 16
+    logging_level: "INFO"
+
+  queue:
+    # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 5672
+
+  redis:
+    # Host and port for the Redis service. When "redis" is in `bundled`, the host is automatically
+    # set to the bundled service name (ignored). When external, set these to the external service's
+    # address.
+    host: "localhost"
+    port: 6379
+    query_backend_database: 0
+    compression_backend_database: 1
+
+  results_cache:
+    # Host and port for the results cache service. When "results_cache" is in `bundled`, the host is
+    # automatically set to the bundled service name (ignored). When external, set these to the
+    # external service's address.
+    host: "localhost"
+    port: 30017
+    db_name: "clp-query-results"
+    stream_collection_name: "stream-files"
+
+    # Retention period for search results, in minutes. Set to null to disable automatic deletion.
+    retention_period: 60
+
+  compression_worker:
+    logging_level: "INFO"
+
+  query_worker:
+    logging_level: "INFO"
+
+  reducer:
+    logging_level: "INFO"
+    upsert_interval: 100  # milliseconds
+
+  webui:
+    query_engine: "clp-s"
+    port: 30000
+    results_metadata_collection_name: "results-metadata"
+    rate_limit: 1000
+
+  mcp_server: null
+  #   port: 30800
+  #   logging_level: "INFO"
+
+  # Presto query engine config. When "presto" is in `bundled`, the chart deploys Presto coordinator
+  # and worker pods. When not in `bundled`, set `host` and `port` to an external Presto instance.
+  presto: null
+  #   host: "localhost"
+  #   port: 30889
+  #   coordinator:
+  #     logging_level: "INFO"
+  #     query_max_memory_gb: 1
+  #     query_max_memory_per_node_gb: 1
+  #   worker:
+  #     query_memory_gb: 4
+  #     system_memory_gb: 8
+  #   # Split filter config for Presto CLP connector.
+  #   # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+  #   split_filter: {}
+
+  # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+  log_ingestor:
+    port: 30302
+    # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
+    # arrives.
+    buffer_flush_timeout: 300
+    # The log buffer size (in bytes) that triggers a flush for compression.
+    buffer_flush_threshold: 4294967296  # 4 GiB
+    # The capacity of the internal channel used for communication between an ingestion job and the
+    # log buffer.
+    channel_capacity: 10
+    logging_level: "INFO"
+
+  # Where archives should be output to
+  archive_output:
+    storage:
+      type: "fs"
+
+    # Retention period for archives, in minutes. Set to null to disable automatic deletion.
+    retention_period: null
+
+    # How much data CLP should try to compress into each archive
+    target_archive_size: 268435456  # 256 MB
+
+    # How large the dictionaries should be allowed to get before the archive is
+    # closed and a new one is created
+    target_dictionaries_size: 33554432  # 32 MB
+
+    # How large each encoded file should be before being split into a new encoded
+    # file
+    target_encoded_file_size: 268435456  # 256 MB
+
+    # How much data CLP should try to fit into each segment within an archive
+    target_segment_size: 268435456  # 256 MB
+
+    # How much archives should be compressed: 1 (fast/low compression) to 19 (slow/high compression)
+    compression_level: 3
+
+  # Where CLP stream files (e.g., IR streams) should be output
+  stream_output:
+    storage:
+      type: "fs"
+
+    # How large each stream file should be before being split into a new stream file
+    target_uncompressed_size: 134217728  # 128 MB
+
+  garbage_collector:
+    logging_level: "INFO"
+
+    # Interval (in minutes) at which garbage collector jobs run
+    sweep_interval:
+      archive: 60
+      search_result: 30
+
+  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
+  aws_config_directory: null
+
+credentials:
+  database:
+    username: "clp-user"
+    password: "pass"
+    root_username: "root"
+    root_password: "root-pass"
+
+  queue:
+    username: "clp-user"
+    password: "pass"
+
+  redis:
+    password: "pass"
+
+serviceAccount:
+  annotations:
+  # For IRSA on EKS, set:
+  #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"

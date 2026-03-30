@@ -25,6 +25,14 @@ def integration_test_path_config() -> IntegrationTestPathConfig:
 
 
 @pytest.fixture(scope="session")
-def package_path_config() -> PackagePathConfig:
+def fixt_package_path_config(
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> PackagePathConfig:
     """Provides paths for the clp-package directory and its contents."""
-    return PackagePathConfig(clp_package_dir=resolve_path_env_var("CLP_PACKAGE_DIR"))
+    return PackagePathConfig(
+        clp_package_dir=resolve_path_env_var("CLP_PACKAGE_DIR"),
+        package_test_scripts_dir=(
+            resolve_path_env_var("INTEGRATION_TESTS_PROJECT_ROOT") / "tests" / "package_tests"
+        ),
+        test_root_dir=integration_test_path_config.test_root_dir,
+    )

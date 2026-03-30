@@ -1,0 +1,381 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "log-ingestor",
+    "description": "log-ingestor for CLP",
+    "contact": {
+      "name": "YScope"
+    },
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/job/{job_id}/terminate": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Terminates the ingestion job instance identified by the given job ID.\n\nThis operation only terminates the job instance; the job record, including its status and statistics, is preserved and can still be accessible using the same job ID.\n\nThis operation is idempotent.",
+        "operationId": "terminate_ingestion_job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "description": "The ID of the job to terminate.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/u64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerminateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The specified job ID does not correspond to an ingestion job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/s3_scanner": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Creates an ingestion job and starts a job instance that periodically scans the specified S3 bucket and key prefix for new objects to ingest.\n\nTo ensure correct and efficient ingestion, the scanner relies on the following assumptions:\n\n1. Lexicographical Order: New objects are added in lexicographical order to the bucket based on their keys. For example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater than the last ingested key.\n\n2. Immutability: Objects under the specified prefix are immutable. Once an object is created, it is not modified or overwritten.",
+        "operationId": "create_s3_scanner_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/S3ScannerConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The ID of the created job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A region code is not provided when using the default AWS S3 endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sqs_listener": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Creates an ingestion job and starts a job instance that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
+        "operationId": "create_sqs_listener_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqsListenerConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The ID of the created job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Custom endpoint URLs are not supported for SQS listener jobs, or the specified number of concurrent listener tasks is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BaseConfig": {
+        "type": "object",
+        "description": "Base configuration for ingesting logs from S3.",
+        "required": [
+          "bucket_name",
+          "key_prefix"
+        ],
+        "properties": {
+          "bucket_name": {
+            "type": "string",
+            "description": "The S3 bucket to ingest from.",
+            "minLength": 1
+          },
+          "dataset": {
+            "type": "string",
+            "description": "The dataset to ingest into. Defaults to `None` (which uses the default dataset).",
+            "minLength": 1
+          },
+          "endpoint_url": {
+            "type": "string",
+            "description": "The endpoint URL for custom S3-compatible object stores (e.g., `MinIO`, `LocalStack`).\nUse the default AWS S3 endpoint if not provided.",
+            "minLength": 1
+          },
+          "key_prefix": {
+            "type": "string",
+            "description": "The S3 key prefix to ingest from.",
+            "minLength": 1
+          },
+          "region": {
+            "type": "string",
+            "description": "AWS service region. Must be provided if using the default AWS S3 endpoint.",
+            "minLength": 1
+          },
+          "timestamp_key": {
+            "type": "string",
+            "description": "The optional key for extracting timestamps from object metadata. Defaults to `None`.",
+            "minLength": 1
+          },
+          "unstructured": {
+            "type": "boolean",
+            "description": "Whether to treat the ingested objects as unstructured logs. Defaults to `false`."
+          }
+        }
+      },
+      "CreationResponse": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/u64",
+            "description": "The ID of the created ingestion job."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "The error message."
+          }
+        }
+      },
+      "S3ScannerConfig": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseConfig"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scanning_interval_sec": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The scan interval in seconds. Defaults to 30 seconds.",
+                "minimum": 0
+              },
+              "start_after": {
+                "type": "string",
+                "description": "The key to ingest after. If specified, only objects with keys lexicographically greater\nthan this value will be ingested. Defaults to `None`.",
+                "minLength": 1
+              }
+            }
+          }
+        ],
+        "description": "Configuration for a S3 scanner job."
+      },
+      "SqsListenerConfig": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseConfig"
+          },
+          {
+            "type": "object",
+            "required": [
+              "queue_url"
+            ],
+            "properties": {
+              "num_concurrent_listener_tasks": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The number of concurrent listener tasks to run.\n\nEach listener task is an asynchronous coroutine that continuously polls the configured\nSQS queue and processes incoming S3 event notifications.\n\nDefaults to `1`.",
+                "maximum": 32,
+                "minimum": 1
+              },
+              "queue_url": {
+                "type": "string",
+                "description": "The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated\nto this ingestion job.",
+                "minLength": 1
+              },
+              "wait_time_sec": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The long polling wait time, in seconds, for receiving messages from the SQS queue.\n\nThis value controls how long an SQS `ReceiveMessage` call will wait for a message to\narrive before returning a response. Enabling long polling can reduce empty responses\nand lower overall request costs.\n\nAWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than\n20 seconds will be considered invalid.\n\nDefaults to `20`.",
+                "maximum": 20,
+                "minimum": 0
+              }
+            }
+          }
+        ],
+        "description": "Configuration for a SQS listener job."
+      },
+      "TerminalStatus": {
+        "type": "string",
+        "description": "Status of a terminated ingestion job.",
+        "enum": [
+          "finished",
+          "failed"
+        ]
+      },
+      "TerminateResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "terminal_status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/u64",
+            "description": "The ID of the job whose instance is terminated."
+          },
+          "terminal_status": {
+            "$ref": "#/components/schemas/TerminalStatus",
+            "description": "Terminal status of the job."
+          }
+        }
+      },
+      "u64": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check endpoint"
+    },
+    {
+      "name": "IngestionJob",
+      "description": "Ingestion job orchestration endpoints"
+    }
+  ]
+}

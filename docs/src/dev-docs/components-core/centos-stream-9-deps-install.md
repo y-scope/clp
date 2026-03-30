@@ -21,4 +21,4 @@ without using a packager. So if you ever need to uninstall them, you will need t
 components/core/tools/scripts/lib_install/centos-stream-9/install-all.sh
 ```
 
-[src-install-script]: https://github.com/y-scope/clp/blob/main/components/core/tools/scripts/lib_install/centos-stream-9/install-packages-from-source.sh
+[src-install-script]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/core/tools/scripts/lib_install/centos-stream-9/install-packages-from-source.sh
