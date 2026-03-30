@@ -72,7 +72,7 @@ public:
     ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>>
             = 0;
 
-    /**
+     * @param out_key_name Returns the inserted node's key name.
      * Deserializes a UTC offset change packet.
      * @param reader
      * @return A result containing the deserialized UTC offset on success, or an error code

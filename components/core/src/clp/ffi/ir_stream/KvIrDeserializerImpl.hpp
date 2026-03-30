@@ -19,7 +19,8 @@ public:
     // Define default move constructor and assignment operator
     KvIrDeserializerImpl(KvIrDeserializerImpl&&) = default;
     auto operator=(KvIrDeserializerImpl&&) -> KvIrDeserializerImpl& = default;
-
+    KvIrDeserializerImpl(KvIrDeserializerImpl&&) noexcept = default;
+    auto operator=(KvIrDeserializerImpl&&) noexcept -> KvIrDeserializerImpl& = default;
     // Methods
     /**
      * Deserializes the next IR unit type from the given reader.
@@ -76,4 +77,4 @@ public:
 };
 }  // namespace clp::ffi::ir_stream
 
-#endif  // CLP_FFI_KV_IR_DESERIALIZER_IMPL_HPP
+#endif  // CLP_FFI_IR_STREAM_KV_IR_DESERIALIZER_IMPL_HPP
