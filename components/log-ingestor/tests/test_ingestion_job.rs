@@ -61,7 +61,9 @@ impl IngestionJobState for SqsListenerTestState {
         Ok(())
     }
 
-    async fn fail(&self, _msg: String) {}
+    async fn fail(&self, msg: String) {
+        unreachable!("SqsListenerTestState::fail should be unreachable: {msg}");
+    }
 }
 
 #[async_trait]
@@ -97,7 +99,9 @@ impl IngestionJobState for S3ScannerTestState {
         Ok(())
     }
 
-    async fn fail(&self, _msg: String) {}
+    async fn fail(&self, msg: String) {
+        unreachable!("S3ScannerTestState::fail should be unreachable: {msg}");
+    }
 }
 
 #[async_trait]
