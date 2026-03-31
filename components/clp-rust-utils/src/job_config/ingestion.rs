@@ -166,6 +166,7 @@ pub mod s3 {
 
     /// Configuration for buffer behavior.
     #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    #[serde(default)]
     pub struct BufferConfig {
         /// Size-based flush threshold in bytes.
         ///
@@ -224,3 +225,34 @@ pub mod s3 {
 
 /// Represents the unique identifier for an ingestion job in CLP DB.
 pub type JobId = u64;
+
+#[cfg(test)]
+mod tests {
+    use super::s3::BufferConfig;
+
+    #[test]
+    fn test_buffer_config_partial_override() -> Result<(), serde_json::Error> {
+        let config: BufferConfig = serde_json::from_str(r#"{"timeout_sec": 60}"#)?;
+        let default_config = BufferConfig::default();
+        assert_eq!(config.timeout_sec, 60);
+        assert_eq!(
+            config.flush_threshold_bytes,
+            default_config.flush_threshold_bytes
+        );
+        assert_eq!(config.channel_capacity, default_config.channel_capacity);
+        Ok(())
+    }
+
+    #[test]
+    fn test_buffer_config_empty_object_uses_defaults() -> Result<(), serde_json::Error> {
+        let config: BufferConfig = serde_json::from_str("{}")?;
+        let default_config = BufferConfig::default();
+        assert_eq!(
+            config.flush_threshold_bytes,
+            default_config.flush_threshold_bytes
+        );
+        assert_eq!(config.timeout_sec, default_config.timeout_sec);
+        assert_eq!(config.channel_capacity, default_config.channel_capacity);
+        Ok(())
+    }
+}
