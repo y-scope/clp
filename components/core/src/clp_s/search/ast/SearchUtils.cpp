@@ -15,6 +15,7 @@
 #include "NarrowTypes.hpp"
 #include "OrOfAndForm.hpp"
 
+namespace clp_s::search::ast {
 namespace {
 /**
  * Converts a four byte hex sequence to UTF-8.
@@ -177,8 +178,6 @@ auto unescape_kql_internal(std::string const& value, std::string& unescaped, boo
     return true;
 }
 }  // namespace
-
-namespace clp_s::search::ast {
 void splice_into(
         std::shared_ptr<Expression> const& parent,
         std::shared_ptr<Expression> const& child,
