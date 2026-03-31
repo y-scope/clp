@@ -806,6 +806,15 @@ def handle_pending_query_jobs(
 
             if job.start_time is None:
                 job.start_time = datetime.datetime.now()
+                set_job_or_task_status(
+                    db_conn,
+                    QUERY_JOBS_TABLE_NAME,
+                    job_id,
+                    QueryJobStatus.RUNNING,
+                    QueryJobStatus.PENDING,
+                    start_time=job.start_time,
+                    num_tasks=job.num_archives_to_search,
+                )
 
             futures.append(
                 (
