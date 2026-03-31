@@ -24,6 +24,7 @@
 #include <clp_s/search/Projection.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
+#include <clpp/LogTypeMetadata.hpp>
 #include <clpp/LogTypeStat.hpp>
 
 namespace clp_s {
@@ -91,11 +92,13 @@ public:
     /**
      * Reads the log type dictionary from the archive.
      * @param lazy
-     * @return the log type dictionary reader
      */
-    std::shared_ptr<LogTypeDictionaryReader> read_log_type_dictionary(bool lazy = false) {
-        m_log_dict->read_entries(lazy);
-        return m_log_dict;
+    auto read_log_type_dictionary(bool lazy = false) -> void {
+        if (nullptr != m_typed_log_dict) {
+            m_typed_log_dict->read_entries(lazy);
+        } else {
+            m_log_dict->read_entries(lazy);
+        }
     }
 
     /**
@@ -107,6 +110,11 @@ public:
         m_array_dict->read_entries(lazy);
         return m_array_dict;
     }
+
+    /**
+     * Reads the experimental log type metadata from the archive.
+     */
+    auto read_logtype_metadata() -> ystdlib::error_handling::Result<clpp::LogTypeMetadataArray>;
 
     /**
      * Reads the experimental log type statistics from the archive.
@@ -171,6 +179,14 @@ public:
         return m_archive_reader_adaptor->get_header();
     }
 
+    auto get_logtype_metadata() const -> clpp::LogTypeMetadataArray const& {
+        return m_logtype_metadata.value();
+    }
+
+    auto get_logtype_stats() const -> clpp::LogTypeStatArray const& {
+        return m_logtype_stats.value();
+    }
+
     /**
      * Writes decoded messages to a file.
      * @param writer
@@ -204,24 +220,6 @@ public:
     [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
         return get_header().has_deprecated_timestamp_format();
     }
-
-    auto get_logtype_stats() const -> std::optional<clpp::LogTypeStatArray> const& {
-        return m_logtype_stats;
-    }
-
-    /**
-     * Decodes variable placeholders from `logtype_dict_entry` replacing them with their type names.
-     * @param logtype_dict_entry Only supports clp-s entry due to the requirement of experimental
-     * features for the type names.
-     * @param logtype_stats Contains the type names for all logtypes.
-     * @return A result containing a logtype string with variable type names, or an error code
-     * indicating the failure:
-     * - `std::errc::bad_message` if the logtype information is malformed.
-     */
-    static auto decode_logtype_with_variable_types(
-            LogTypeDictionaryEntry const& logtype_dict_entry,
-            clpp::LogTypeStatArray const& logtype_stats
-    ) -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * @param log_event_idx
@@ -327,6 +325,7 @@ private:
     int32_t m_log_event_idx_column_id{-1};
 
     std::optional<clpp::LogTypeStatArray> m_logtype_stats;
+    std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
     std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
 };
 }  // namespace clp_s

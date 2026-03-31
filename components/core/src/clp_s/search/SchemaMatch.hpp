@@ -12,12 +12,13 @@
 #include "ast/FilterExpr.hpp"
 #include "ast/Literal.hpp"
 #include "ast/Transformation.hpp"
+#include "clp_s/ArchiveReader.hpp"
 
 namespace clp_s::search {
 class SchemaMatch : public ast::Transformation {
 public:
     // Constructor
-    SchemaMatch(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ReaderUtils::SchemaMap> schemas);
+    SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader);
 
     /**
      * Runs the transformation on an expression
@@ -85,6 +86,8 @@ private:
     std::unordered_map<int32_t, std::set<int32_t>> m_schema_to_searched_columns;
     std::shared_ptr<SchemaTree> m_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
+    // TODO clpp: refactor m_tree and m_schemas
+    std::shared_ptr<ArchiveReader> m_archive_reader;
 
     /**
      * Populates the column mapping for a given column

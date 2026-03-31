@@ -201,10 +201,7 @@ bool search_archive(
     }
 
     // Narrow against schemas
-    auto match_pass = std::make_shared<SchemaMatch>(
-            archive_reader->get_schema_tree(),
-            archive_reader->get_schema_map()
-    );
+    auto match_pass = std::make_shared<SchemaMatch>(archive_reader);
     if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
@@ -330,17 +327,13 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         }
         archive_reader->read_dictionaries_and_metadata();
         auto const logtype_stats{archive_reader->get_logtype_stats()};
-        if (false == logtype_stats.has_value()) {
-            SPDLOG_ERROR("Failed to get experimental log type statistics");
-            return 3;
-        }
         if (CommandLineArguments::cLogTypeStatsQuery == query) {
             auto logtype_dict{archive_reader->get_typed_log_type_dictionary()};
-            for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats->size(); ++i) {
+            for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats.size(); ++i) {
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"log_type\":\"{}\"}}\n",
                         i,
-                        logtype_stats->at(i).get_count(),
+                        logtype_stats.at(i).get_count(),
                         logtype_dict->get_entry(i).get_value()
                 )};
                 output_handler.value()->write(message);
@@ -348,7 +341,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         }
         if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
             SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
-            return 4;
+            return 3;
         }
         archive_reader->close();
     }
@@ -399,6 +392,7 @@ int main(int argc, char const* argv[]) {
         option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
         option.print_ordered_chunk_stats = command_line_arguments.print_ordered_chunk_stats();
         option.network_auth = command_line_arguments.get_network_auth();
+        option.m_experimental = command_line_arguments.experimental();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),

@@ -5,20 +5,21 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <istream>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <unordered_map>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
+#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
@@ -433,7 +434,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                                 NodeType::LogMessage,
                                 cur_key
                         );
-                        if (auto const result{parse_log_message(node_id, value)};
+                        if (auto const result{parse_log_message(value, node_id)};
                             result.has_error())
                         {
                             throw(std::runtime_error(
@@ -554,7 +555,7 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                     if (m_archive_options.experimental) {
                         node_id = m_archive_writer
                                           ->add_node(parent_node_id, NodeType::LogMessage, "");
-                        if (auto const result{parse_log_message(node_id, value)};
+                        if (auto const result{parse_log_message(value, node_id)};
                             result.has_error())
                         {
                             throw(std::runtime_error(
@@ -592,17 +593,17 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
 
 void JsonParser::parse_line(
         simdjson::ondemand::value line,
-        int32_t parent_node_id,
-        std::string const& key
+        SchemaNode::id_t parent_node_id,
+        std::string const& parent_key
 ) {
-    int32_t node_id;
+    SchemaNode::id_t node_id{};
     std::stack<simdjson::ondemand::object> object_stack;
     std::stack<int32_t> node_id_stack;
     std::stack<simdjson::ondemand::object_iterator> object_it_stack;
 
     simdjson::ondemand::field cur_field;
 
-    std::string_view cur_key = key;
+    std::string_view cur_key = parent_key;
     node_id_stack.push(parent_node_id);
 
     do {
@@ -761,7 +762,7 @@ void JsonParser::parse_line(
                                 NodeType::LogMessage,
                                 cur_key
                         );
-                        if (auto const result{parse_log_message(node_id, value)};
+                        if (auto const result{parse_log_message(value, node_id)};
                             result.has_error())
                         {
                             throw(std::runtime_error(
@@ -898,7 +899,7 @@ auto JsonParser::ingest_json(
     size_t bytes_consumed_up_to_prev_record{0ULL};
 
     size_t file_split_number{0ULL};
-    int32_t log_event_idx_node_id{};
+    SchemaNode::id_t log_event_idx_node_id{};
     auto initialize_fields_for_archive = [&]() -> bool {
         if (false == m_record_log_order) {
             return true;
@@ -1220,7 +1221,20 @@ auto JsonParser::ingest_kvir(
     return true;
 }
 
-int32_t JsonParser::add_metadata_field(std::string_view const field_name, NodeType type) {
+auto JsonParser::add_log_type_id_node(logtype_id_t id) -> SchemaNode::id_t {
+    return m_archive_writer->add_node(
+            m_archive_writer->add_node(
+                    constants::cRootNodeId,
+                    NodeType::LogType,
+                    constants::cLogTypeNodeName
+            ),
+            NodeType::LogTypeID,
+            fmt::format("{}", id)
+    );
+}
+
+auto JsonParser::add_metadata_field(std::string_view const field_name, NodeType type)
+        -> SchemaNode::id_t {
     auto metadata_subtree_id = m_archive_writer->add_node(
             constants::cRootNodeId,
             NodeType::Metadata,
@@ -1549,7 +1563,7 @@ void JsonParser::split_archive() {
     m_archive_writer->open(m_archive_options);
 }
 
-auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_msg)
+auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
         -> ystdlib::error_handling::Result<void> {
     auto const start{std::chrono::steady_clock::now()};
     size_t parser_pos{0};
@@ -1564,7 +1578,29 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_
     // SPDLOG_INFO("####");
     // SPDLOG_INFO("[clpsls] log msg: '{}'", log_msg);
 
-    auto msg_start{m_current_schema.start_unordered_object(NodeType::LogMessage)};
+    auto get_cap_name{[](log_surgeon::CCapture const& cap) -> std::string {
+        if (0 == cap.capture_id) {
+            return std::string{cap.variable_name.as_cpp_view()};
+        }
+        return std::string{cap.capture_name.as_cpp_view()};
+    }};
+
+    auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
+
+    absl::flat_hash_map<uint32_t, log_surgeon::CCapture const> rules;
+    absl::flat_hash_map<std::tuple<uint32_t, uint32_t>, log_surgeon::CCapture const>
+            parent_captures;
+    for (size_t i{0};; ++i) {
+        auto const cap{event.get_non_leaf_capture(i)};
+        if (false == cap.has_value()) {
+            break;
+        }
+        if (0 == cap->capture_id) {
+            rules.emplace(cap->rule_id, cap.value());
+        } else {
+            parent_captures.emplace(std::tuple{cap->rule_id, cap->capture_id}, cap.value());
+        }
+    }
 
     // This log type isn't escaped yet be careful
     std::string log_type{};
@@ -1575,32 +1611,52 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_
         if (false == cap.has_value()) {
             break;
         }
+
+        // if (0 != cap->capture_id) {
+        // walk to top parent
+        // rule_map.at(cap->rule_id)
+
+        // while () {
+        //     cap->parent_id;
+        // }
+        // create ParentVarType schema node under log_msg_node_id
+        // start unordered parent match object
+        //     auto
+        //     parent_obj{m_current_schema.start_unordered_object(NodeType::ParentTypeMatch)};
+        // record started parent ID(s)
+        // }
+
+        auto name{get_cap_name(*cap)};
+        auto parent_node_id{log_msg_node_id};
+        if (0 != cap->capture_id) {
+            parent_node_id
+                    = get_parent_schema_node(cap.value(), log_msg_node_id, rules, parent_captures);
+        }
+        SPDLOG_ERROR(
+                "[node] adding leaf {}: {} {} {}",
+                name,
+                cap->rule_id,
+                cap->capture_id,
+                cap->parent_id
+        );
+        m_current_schema.insert_unordered(
+                m_archive_writer->add_node(parent_node_id, NodeType::VarString, name)
+        );
         m_current_parsed_message.add_unordered_value(cap->lexeme.as_cpp_view());
-        m_current_schema.insert_unordered(m_archive_writer->add_node(
-                parent_node_id,
-                NodeType::VarString,
-                cap->capture_id == 0 ? cap->variable_name.as_cpp_view()
-                                     : cap->capture_name.as_cpp_view()
-        ));
 
         log_type.append(log_msg.substr(log_msg_pos, cap->start - log_msg_pos));
-        log_type.append(fmt::format("%{}.{}.{}%", cap->rule_id, cap->capture_id, cap->parent_id));
+        log_type.append(fmt::format("%{}%", name));
         log_msg_pos = cap->end;
     }
     log_type.append(log_msg.substr(log_msg_pos));
 
     // SPDLOG_INFO("[clpsls] log type: '{}'", log_type);
 
-    m_current_parsed_message.add_unordered_value(log_type);
-    m_current_schema.insert_unordered(m_archive_writer->add_node(
-            parent_node_id,
-            NodeType::LogType,
-            // constants::cLogTypeNodeName
-            log_type
-    ));
-    auto [logtype_id, new_logtype]{
+    auto [log_type_id, new_logtype]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
     };
+    m_current_schema.insert_unordered(add_log_type_id_node(log_type_id));
+
     if (new_logtype) {
         clpp::LogTypeMetadata metadata;
         std::vector<std::tuple<size_t, size_t>> og_parent_match_pos;
@@ -1609,13 +1665,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_
             if (false == cap.has_value()) {
                 break;
             }
-            metadata.emplace_parent_match(
-                    cap->rule_id,
-                    cap->capture_id,
-                    cap->parent_id,
-                    cap->start,
-                    cap->end - cap->start
-            );
+            metadata.emplace_parent_match(get_cap_name(*cap), cap->start, cap->end - cap->start);
             og_parent_match_pos.emplace_back(cap->start, cap->end);
         }
         for (size_t i{0};; ++i) {
@@ -1624,13 +1674,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_
                 break;
             }
             auto const old_size{leaf_cap->end - leaf_cap->start};
-            auto const new_size{fmt::format(
-                                        "%{}.{}.{}%",
-                                        leaf_cap->rule_id,
-                                        leaf_cap->capture_id,
-                                        leaf_cap->parent_id
-            )
-                                        .size()};
+            auto const new_size{get_cap_name(*leaf_cap).size()};
             auto const diff{static_cast<ssize_t>(old_size) - static_cast<ssize_t>(new_size)};
             for (size_t j{0};; ++j) {
                 auto const cap{event.get_non_leaf_capture(j)};
@@ -1680,11 +1724,65 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view log_
         //     }
         // }
         YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_logtype_metadata(logtype_id, metadata)
+                m_archive_writer->update_logtype_metadata(log_type_id, metadata)
         );
     }
 
-    m_current_schema.end_unordered_object(msg_start);
+    m_current_schema.end_unordered_object(msg_obj);
     return ystdlib::error_handling::success();
+}
+
+auto JsonParser::get_parent_schema_node(
+        log_surgeon::CCapture const cap,
+        SchemaNode::id_t root_node_id,
+        absl::flat_hash_map<uint32_t, log_surgeon::CCapture const> const& rules,
+        absl::flat_hash_map<std::tuple<uint32_t, uint32_t>, log_surgeon::CCapture const> const&
+                parent_captures
+) -> SchemaNode::id_t {
+    if (0 == cap.capture_id) {
+        throw(std::runtime_error(
+                fmt::format("get parent called from root {}'", cap.variable_name.as_cpp_view())
+        ));
+    }
+
+    if (0 == cap.parent_id) {
+        auto node_id{m_archive_writer->add_node(
+                root_node_id,
+                NodeType::ParentVarType,
+                rules.at(cap.rule_id).variable_name.as_cpp_view()
+        )};
+        m_current_schema.insert_unordered(node_id);
+        // SPDLOG_ERROR(
+        //         "[node] adding parent rule {}: {} {} {} for {}: {} {} {}",
+        //         rules.at(cap.rule_id).variable_name.as_cpp_view(),
+        //         rules.at(cap.rule_id).rule_id,
+        //         rules.at(cap.rule_id).capture_id,
+        //         rules.at(cap.rule_id).parent_id,
+        //         cap.capture_name.as_cpp_view(),
+        //         cap.rule_id,
+        //         cap.capture_id,
+        //         cap.parent_id
+        // );
+        return node_id;
+    }
+    log_surgeon::CCapture const parent{parent_captures.at({cap.rule_id, cap.parent_id})};
+    auto node_id{m_archive_writer->add_node(
+            get_parent_schema_node(parent, root_node_id, rules, parent_captures),
+            NodeType::ParentVarType,
+            parent.capture_name.as_cpp_view()
+    )};
+    m_current_schema.insert_unordered(node_id);
+    // SPDLOG_ERROR(
+    //         "[node] adding parent capture {}: {} {} {} for {}: {} {} {}",
+    //         parent.capture_name.as_cpp_view(),
+    //         parent.rule_id,
+    //         parent.capture_id,
+    //         parent.parent_id,
+    //         cap.capture_name.as_cpp_view(),
+    //         cap.rule_id,
+    //         cap.capture_id,
+    //         cap.parent_id
+    // );
+    return node_id;
 }
 }  // namespace clp_s

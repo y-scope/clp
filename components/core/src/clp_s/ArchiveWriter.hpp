@@ -28,9 +28,8 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
+#include <clpp/LogTypeMetadata.hpp>
 #include <clpp/LogTypeStat.hpp>
-
-#include "clpp/LogTypeMetadata.hpp"
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -181,7 +180,16 @@ public:
      * @param key
      * @return the node id
      */
-    int32_t add_node(int parent_node_id, NodeType type, std::string_view key);
+    auto add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key)
+            -> SchemaNode::id_t;
+
+    /**
+     * @return The root node ID of the LogType sub-tree.
+     * @return -1 if the sub-tree does not exist.
+     */
+    auto get_logtype_node() -> SchemaNode::id_t {
+        return m_schema_tree.get_subtree_node_id(constants::cDefaultNamespace, NodeType::LogType);
+    }
 
     /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.
@@ -408,7 +416,7 @@ private:
 
     std::optional<clpp::LogTypeStatArray> m_logtype_stats;
     std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
-    std::shared_ptr<VariableDictionaryWriter> m_typed_log_type_dict;
+    std::shared_ptr<VariableDictionaryWriter> m_typed_log_dict;
 };
 }  // namespace clp_s
 

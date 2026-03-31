@@ -12,6 +12,7 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
+#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <ystdlib/error_handling/Result.hpp>
@@ -105,13 +106,17 @@ private:
     ) -> bool;
 
     /**
-     * Parses a JSON line
-     * @param line the JSON line
-     * @param parent_node_id the parent node id
-     * @param key the key of the node
+     * Parses a JSON line.
+     * @param line
+     * @param parent_node_id
+     * @param parent_key
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
+    void parse_line(
+            simdjson::ondemand::value line,
+            SchemaNode::id_t parent_node_id,
+            std::string const& parent_key
+    );
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -209,26 +214,38 @@ private:
     void split_archive();
 
     /**
+     * Adds a log type ID node to the MPT and get its ID.
+     */
+    auto add_log_type_id_node(logtype_id_t id) -> SchemaNode::id_t;
+
+    /**
      * Adds an internal field to the MPT and get its Id.
      *
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    int32_t add_metadata_field(std::string_view const field_name, NodeType type);
+    auto add_metadata_field(std::string_view const field_name, NodeType type) -> SchemaNode::id_t;
 
     /**
      * Parse an unstructured log message using log surgeon and store its components in the current
      * parsed message, clp-s schema, and dictionaries.
-     * @param parent_node_id The parent clp-s node ID.
      * @param log_msg The unstructured log message to parse.
+     * @param parent_node_id The parent clp-s node ID.
      * @return A result containing an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if parsing fails.
      * - Forwards `store_capture_groups`'s return values on failure.
      * - Forwards `m_archive_writer->update_logtype_stats`'s return values on failure.
      * - Forwards `m_archive_writer->update_var_stats`'s return values on failure.
      */
-    auto parse_log_message(int32_t parent_node_id, std::string_view log_msg)
+    auto parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
             -> ystdlib::error_handling::Result<void>;
+
+    auto get_parent_schema_node(
+            log_surgeon::CCapture cap,
+            SchemaNode::id_t parent_node_id,
+            absl::flat_hash_map<uint32_t, log_surgeon::CCapture const> const& rules,
+            absl::flat_hash_map<std::tuple<uint32_t, uint32_t>, log_surgeon::CCapture const> const&
+    ) -> SchemaNode::id_t;
 
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};

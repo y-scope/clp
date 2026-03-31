@@ -3,8 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <spdlog/spdlog.h>
-
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
 #include "search/ast/Literal.hpp"
@@ -23,8 +21,9 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::ClpString:
-        case NodeType::LogType:
             return clp_s::search::ast::LiteralType::ClpStringT;
+        case NodeType::LogMessage:
+        case NodeType::ParentVarType:
         case NodeType::VarString:
             return clp_s::search::ast::LiteralType::VarStringT;
         case NodeType::Boolean:
@@ -37,6 +36,8 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::Timestamp:
             return clp_s::search::ast::LiteralType::TimestampT;
         case NodeType::Metadata:
+        case NodeType::LogType:
+        case NodeType::LogTypeID:
         case NodeType::Unknown:
         default:
             return clp_s::search::ast::LiteralType::UnknownT;
@@ -108,7 +109,6 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
     schema_tree_compressor.open(schema_tree_writer, compression_level);
 
     schema_tree_compressor.write_numeric_value(static_cast<uint64_t>(m_nodes.size()));
-    SPDLOG_INFO("schema node count: {}", m_nodes.size());
     for (auto const& node : m_nodes) {
         schema_tree_compressor.write_numeric_value(node.get_parent_id());
 

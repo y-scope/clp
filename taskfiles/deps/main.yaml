@@ -353,9 +353,9 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "291bb272e25d9bb7769c98ccb6cef8535448fcfd780f0a8be0fca4d81b0ec4fd"
+          FILE_SHA256: "72e3b687ccd7fcfbc86fb99276e2a3d89c99df5180208a401fa6ddcbe8eedb7f"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/log-surgeon/archive/fdac500.tar.gz"
+          URL: "https://github.com/y-scope/log-surgeon/archive/f28c06f.tar.gz"
       - |-
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release

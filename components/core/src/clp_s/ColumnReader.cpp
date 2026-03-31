@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <system_error>
 #include <variant>
 
 #include <fmt/format.h>

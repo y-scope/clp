@@ -1,10 +1,13 @@
 #include "SchemaMatch.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <queue>
 #include <string_view>
 #include <tuple>
 #include <utility>
+
+#include <spdlog/spdlog.h>
 
 #include "../archive_constants.hpp"
 #include "../SchemaTree.hpp"
@@ -18,6 +21,8 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/OrOfAndForm.hpp"
+#include "clp_s/ArchiveReader.hpp"
+#include "clp_s/Defs.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;
@@ -53,12 +58,11 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
 
 // TODO: write proper iterators on the AST to make this code less awful.
 // In particular schema intersection needs AST iterators and a proper refactor
-SchemaMatch::SchemaMatch(
-        std::shared_ptr<SchemaTree> tree,
-        std::shared_ptr<ReaderUtils::SchemaMap> schemas
-)
-        : m_tree(std::move(tree)),
-          m_schemas(std::move(schemas)) {}
+SchemaMatch::SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader)
+
+        : m_tree(archive_reader->get_schema_tree()),
+          m_schemas(archive_reader->get_schema_map()),
+          m_archive_reader(std::move(archive_reader)) {}
 
 std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) {
     ConstantProp propagate_empty;
@@ -264,6 +268,15 @@ bool SchemaMatch::populate_column_mapping(
         bool wildcard_descriptor = false == at_descriptor_list_end && cur_it->wildcard();
         bool accepted = false;
 
+        SPDLOG_INFO(
+                "comparing {} {} ({} {}) to {}",
+                cur_node.get_key_name(),
+                column->type_to_string(node_to_literal_type(cur_node.get_type())),
+                (int)cur_node.get_type(),
+                (int)node_to_literal_type(cur_node.get_type()),
+                cur_it->get_token()
+        );
+
         if (wildcard_descriptor) {
             accepted = true;
         } else if (is_key_name_empty) {
@@ -278,6 +291,12 @@ bool SchemaMatch::populate_column_mapping(
         if (false == accepted) {
             continue;
         }
+
+        SPDLOG_INFO(
+                "\t\taccepted: {}, type matches: {}",
+                accepted,
+                column->matches_type(node_to_literal_type(cur_node.get_type()))
+        );
 
         // Currently we only allow fully resolved descriptors for precise array search
         if (NodeType::UnstructuredArray == cur_node.get_type()
@@ -318,6 +337,7 @@ bool SchemaMatch::populate_column_mapping(
 
         // Push nodes to the work list
         for (int32_t child_node_id : cur_node.get_children_ids()) {
+            SPDLOG_INFO("adding {} {}", cur_node.get_key_name(), (int)cur_node.get_type());
             if (is_key_name_empty) {
                 // Don't advance the iterator when accepting an empty key
                 work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));

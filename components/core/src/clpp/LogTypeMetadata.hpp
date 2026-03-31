@@ -20,10 +20,11 @@ class LogTypeMetadata {
 public:
     // Types
     struct ParentMatchView {
-        uint16_t m_rule_id;
+        // uint16_t m_rule_id;
         // Zero when it is an implicit capture of the entire variable pattern.
-        uint32_t m_capture_id;
-        uint32_t m_parent_id;
+        // uint32_t m_capture_id;
+        // uint32_t m_parent_id;
+        std::string m_name;
         size_t m_start;
         size_t m_size;
     };
@@ -41,6 +42,10 @@ public:
     }
 
     auto parent_match(size_t i) -> ParentMatchView& { return m_parent_matches.at(i); }
+
+    [[nodiscard]] auto get_parent_matches() const -> std::vector<ParentMatchView> const& {
+        return m_parent_matches;
+    }
 
 private:
     // Data members

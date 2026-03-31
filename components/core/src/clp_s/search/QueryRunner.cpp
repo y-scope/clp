@@ -75,9 +75,7 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
         if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
-            nullptr != clp_reader
-            && (NodeType::ClpString == clp_reader->get_type()
-                || NodeType::LogType == clp_reader->get_type()))
+            nullptr != clp_reader && NodeType::ClpString == clp_reader->get_type())
         {
             m_clp_string_readers[column_id].push_back(clp_reader);
         } else if (auto* const var_reader
@@ -303,12 +301,15 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
         case LiteralType::FloatT:
             return evaluate_float_filter(expr->get_operation(), column_id, literal);
         case LiteralType::ClpStringT:
-            q = m_expr_clp_query.at(expr);
-            return evaluate_clp_string_filter(
-                    expr->get_operation(),
-                    q,
-                    m_clp_string_readers[column_id]
-            );
+            if (nullptr != m_archive_reader->get_log_type_dictionary()) {
+                q = m_expr_clp_query.at(expr);
+                return evaluate_clp_string_filter(
+                        expr->get_operation(),
+                        q,
+                        m_clp_string_readers[column_id]
+                );
+            }
+            return evaluate_clpp_string_filter(expr, schema);
         case LiteralType::VarStringT:
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
@@ -485,6 +486,31 @@ bool QueryRunner::evaluate_clp_string_filter(
             return true;
         }
     }
+    return false;
+}
+
+bool QueryRunner::evaluate_clpp_string_filter(ast::FilterExpr* expr, int32_t schema_id) {
+    auto* column{expr->get_column().get()};
+    int32_t column_id{column->get_column_id()};
+    auto op{expr->get_operation()};
+    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+        return true;
+    }
+
+    if (op != FilterOperation::EQ && op != FilterOperation::NEQ) {
+        return false;
+    }
+
+    auto* q{m_expr_clp_query.at(expr)};
+    if (nullptr == q) {
+        return op == FilterOperation::NEQ;
+    }
+
+    if (q->search_string_matches_all()) {
+        return op == FilterOperation::EQ;
+    }
+
+    bool matched = false;
     return false;
 }
 
@@ -888,8 +914,8 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
             }
 
             // search on log type dictionary
-            clp::epochtime_t placeholder_timestamp{};
             // TODO clpp: swap to new log surgeon?
+            // clp::epochtime_t placeholder_timestamp{};
             // log_surgeon::lexers::ByteLexer placeholder_lexer;
             // m_string_query_map.emplace(
             //         query_string,

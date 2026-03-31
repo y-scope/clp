@@ -31,18 +31,16 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    using id_t = int32_t;
-
     // Methods
     /**
      * Inserts a node into the ordered region of the schema.
      */
-    auto insert_ordered(id_t mst_node_id) -> void;
+    auto insert_ordered(int32_t mst_node_id) -> void;
 
     /**
      * Inserts a node into the unordered region of the schema.
      */
-    auto insert_unordered(id_t mst_node_id) -> void;
+    auto insert_unordered(int32_t mst_node_id) -> void;
 
     /**
      * Inserts another schema into the unordered region of the schema, maintaining that Schema's
@@ -108,13 +106,13 @@ public:
     /**
      * @return the nth value in the underlying schema
      */
-    auto operator[](size_t i) const -> id_t { return m_schema[i]; }
+    auto operator[](size_t i) const -> int32_t { return m_schema[i]; }
 
     /**
      * @return a view into the ordered region of the underlying schema
      */
-    [[nodiscard]] auto get_ordered_schema_view() -> std::span<id_t> {
-        return std::span<id_t>{m_schema.data(), m_num_ordered};
+    [[nodiscard]] auto get_ordered_schema_view() -> std::span<int32_t> {
+        return std::span<int32_t>{m_schema.data(), m_num_ordered};
     }
 
     /**
@@ -122,11 +120,11 @@ public:
      * @param size
      * @return a view into the requested region of the schema
      */
-    [[nodiscard]] auto get_view(size_t i, size_t size) -> std::span<id_t> {
+    [[nodiscard]] auto get_view(size_t i, size_t size) -> std::span<int32_t> {
         if (i > m_schema.size() || size > m_schema.size() - i) {
             throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
         }
-        return std::span<id_t>{m_schema}.subspan(i, size);
+        return std::span<int32_t>{m_schema}.subspan(i, size);
     }
 
     /**
@@ -177,7 +175,7 @@ public:
      * @param start_position
      */
     auto end_unordered_object(size_t start_position) -> void {
-        m_schema[start_position - 1] |= static_cast<id_t>(m_schema.size() - start_position);
+        m_schema[start_position - 1] |= static_cast<int32_t>(m_schema.size() - start_position);
     }
 
     /**
@@ -185,8 +183,8 @@ public:
      * @param node_type
      * @return The NodeType encoded as a schema entry
      */
-    static auto encode_node_type_as_schema_entry(NodeType node_type) -> id_t {
-        return static_cast<id_t>(node_type) << cEncodedTypeOffset;
+    static auto encode_node_type_as_schema_entry(NodeType node_type) -> int32_t {
+        return static_cast<int32_t>(node_type) << cEncodedTypeOffset;
     }
 
     /**
@@ -194,7 +192,7 @@ public:
      * @param schema_entry
      * @return true if the schema_entry is the delimiter for an unordered object, false otherwise
      */
-    static auto schema_entry_is_unordered_object(id_t schema_entry) -> bool {
+    static auto schema_entry_is_unordered_object(int32_t schema_entry) -> bool {
         return 0 != (schema_entry & cEncodedTypeBitmask);
     }
 
@@ -203,7 +201,7 @@ public:
      * @param schema_entry
      * @return The extracted NodeType
      */
-    static auto get_unordered_object_type(id_t schema_entry) -> NodeType {
+    static auto get_unordered_object_type(int32_t schema_entry) -> NodeType {
         return static_cast<NodeType>(static_cast<uint32_t>(schema_entry) >> cEncodedTypeOffset);
     }
 
@@ -212,17 +210,17 @@ public:
      * @param schema_entry
      * @return The extracted object length
      */
-    static auto get_unordered_object_length(id_t schema_entry) -> id_t {
+    static auto get_unordered_object_length(int32_t schema_entry) -> int32_t {
         return schema_entry & cEncodedTypeLengthBitmask;
     }
 
 private:
     // Data members
-    static constexpr size_t cEncodedTypeOffset{(sizeof(id_t) - 1) * 8};
+    static constexpr size_t cEncodedTypeOffset{(sizeof(int32_t) - 1) * 8};
     static constexpr uint32_t cEncodedTypeBitmask{0xFF00'0000};
     static constexpr int32_t cEncodedTypeLengthBitmask{~cEncodedTypeBitmask};
 
-    std::vector<id_t> m_schema;
+    std::vector<int32_t> m_schema;
     size_t m_num_ordered{0};
 };
 }  // namespace clp_s

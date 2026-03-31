@@ -350,16 +350,6 @@ private:
             -> ystdlib::error_handling::Result<size_t>;
 
     /**
-     * Generates a JSON template for a CompositeVar.
-     * @param var_id The CompositeVar node ID.
-     * @return A result containing the index of the next reader in m_columns after those consumed by
-     * this object, or an error code indicating the failure:
-     * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
-     * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
-     */
-    auto generate_composite_var_template(int32_t var_id) -> ystdlib::error_handling::Result<size_t>;
-
-    /**
      * Finds the common root of the subtree containing cur_root and next_root, and adds brackets
      * and keys to m_json_serializer as necessary so that the json object is correct between the
      * previous field which is a child of cur_root, and the next field which is a child of

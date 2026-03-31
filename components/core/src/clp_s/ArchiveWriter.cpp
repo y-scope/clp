@@ -70,8 +70,8 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 
     std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
     if (option.experimental) {
-        m_typed_log_type_dict = std::make_shared<VariableDictionaryWriter>();
-        m_typed_log_type_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
+        m_typed_log_dict = std::make_shared<VariableDictionaryWriter>();
+        m_typed_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
         m_logtype_stats = clpp::LogTypeStatArray();
         m_logtype_metadata = clpp::LogTypeMetadataArray();
     } else {
@@ -93,9 +93,9 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     auto var_dict_compressed_size = m_var_dict->close();
     SPDLOG_INFO("Var count: {}", m_var_dict->get_next_id());
     size_t log_dict_compressed_size{};
-    if (nullptr != m_typed_log_type_dict) {
-        log_dict_compressed_size = m_typed_log_type_dict->close();
-        SPDLOG_INFO("Log type count: {}", m_typed_log_type_dict->get_next_id());
+    if (nullptr != m_typed_log_dict) {
+        log_dict_compressed_size = m_typed_log_dict->close();
+        SPDLOG_INFO("Log type count: {}", m_typed_log_dict->get_next_id());
     } else {
         log_dict_compressed_size = m_log_dict->close();
         SPDLOG_INFO("Log type count: {}", m_log_dict->get_next_id());
@@ -319,7 +319,7 @@ ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMes
     ++m_next_log_event_id;
 }
 
-int32_t ArchiveWriter::add_node(int parent_node_id, NodeType type, std::string_view key) {
+SchemaNode::id_t ArchiveWriter::add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key) {
     auto const node_id{m_schema_tree.add_node(parent_node_id, type, key)};
     if (NodeType::Object == type && m_matched_timestamp_prefix_node_id == parent_node_id) {
         if (false == m_authoritative_timestamp.empty() && constants::cRootNodeId == parent_node_id)
@@ -350,8 +350,8 @@ bool ArchiveWriter::matches_timestamp(int parent_node_id, std::string_view key) 
 
 size_t ArchiveWriter::get_data_size() {
     size_t log_dict_size{};
-    if (nullptr != m_typed_log_type_dict) {
-        log_dict_size = m_typed_log_type_dict->get_data_size();
+    if (nullptr != m_typed_log_dict) {
+        log_dict_size = m_typed_log_dict->get_data_size();
     } else {
         log_dict_size = m_log_dict->get_data_size();
     }
@@ -400,18 +400,15 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::Timestamp:
                 writer->append_column(std::make_unique<TimestampColumnWriter>());
                 break;
-            case NodeType::LogType:
-                writer->append_column(
-                        std::make_unique<VariableStringColumnWriter>(m_typed_log_type_dict)
-                );
-                break;
             case NodeType::DeprecatedDateString:
             case NodeType::Metadata:
             case NodeType::NullValue:
             case NodeType::Object:
             case NodeType::StructuredArray:
             case NodeType::LogMessage:
-            case NodeType::CompositeVar:
+            case NodeType::LogType:
+            case NodeType::LogTypeID:
+            case NodeType::ParentVarType:
             case NodeType::Unknown:
                 break;
         }
@@ -538,7 +535,7 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
 
 auto ArchiveWriter::update_logtype_metadata(logtype_id_t id, clpp::LogTypeMetadata& metadata)
         -> ystdlib::error_handling::Result<void> {
-    if (nullptr == m_typed_log_type_dict || false == m_logtype_metadata.has_value()) {
+    if (false == m_logtype_metadata.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
@@ -548,12 +545,12 @@ auto ArchiveWriter::update_logtype_metadata(logtype_id_t id, clpp::LogTypeMetada
 
 auto ArchiveWriter::update_logtype_dict(std::string_view logtype)
         -> ystdlib::error_handling::Result<std::tuple<logtype_id_t, bool>> {
-    if (nullptr == m_typed_log_type_dict || false == m_logtype_stats.has_value()) {
+    if (nullptr == m_typed_log_dict || false == m_logtype_stats.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
     logtype_id_t id{};
-    bool new_entry{m_typed_log_type_dict->add_entry(logtype, id)};
+    bool new_entry{m_typed_log_dict->add_entry(logtype, id)};
     m_logtype_stats->at_or_create(id).increment_count();
     return {id, new_entry};
 }
