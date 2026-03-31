@@ -240,6 +240,7 @@ impl ClpDbIngestionConnector {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     /// * Forwards [`serde_json::to_string`]'s return values on failure.
+    /// * Forwards [`Self::create_clp_ingestion_context`]'s return values on failure.
     pub async fn create_ingestion_job(
         &self,
         config: S3IngestionJobConfig,
@@ -269,7 +270,7 @@ impl ClpDbIngestionConnector {
 
         tx.commit().await?;
 
-        Ok(self.create_clp_ingestion_context(job_id, config))
+        self.create_clp_ingestion_context(job_id, config)
     }
 
     /// Gets the status of an ingestion job with the given ID from CLP DB.
@@ -405,11 +406,17 @@ impl ClpDbIngestionConnector {
     ///
     /// A [`ClpIngestionJobContext`] instance, with a newly created listener for receiving ingested
     /// object metadata for compression job submission.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Listener::spawn`]'s return values on failure.
     fn create_clp_ingestion_context(
         &self,
         job_id: IngestionJobId,
         config: S3IngestionJobConfig,
-    ) -> ClpIngestionJobContext {
+    ) -> anyhow::Result<ClpIngestionJobContext> {
         let compression_state = ClpCompressionState {
             ingestion_job_id: job_id,
             db_pool: self.db_pool.clone(),
@@ -427,19 +434,19 @@ impl ClpDbIngestionConnector {
             Buffer::new(submitter, base_config.buffer_config.flush_threshold_bytes),
             Duration::from_secs(base_config.buffer_config.timeout_sec),
             base_config.buffer_config.channel_capacity,
-        );
+        )?;
         let ingestion_state = ClpIngestionState {
             job_id,
             db_pool: self.db_pool.clone(),
             sender: listener.get_new_sender(),
         };
 
-        ClpIngestionJobContext {
+        Ok(ClpIngestionJobContext {
             config,
             ingestion_state,
             compression_state,
             listener,
-        }
+        })
     }
 
     /// Loads ingestion contexts for all ingestion jobs from CLP DB.
@@ -490,7 +497,7 @@ impl ClpDbIngestionConnector {
                 );
                 continue;
             };
-            recoverable_ingestion_jobs.push(self.create_clp_ingestion_context(job_id, config));
+            self.try_add_ingestion_job_context(job_id, config, &mut recoverable_ingestion_jobs);
         }
 
         let running_jod_id_and_config: Vec<(IngestionJobId, String)> = sqlx::query_as(formatcp!(
@@ -532,7 +539,7 @@ impl ClpDbIngestionConnector {
                 }
                 other @ S3IngestionJobConfig::SqsListener(_) => other,
             };
-            recoverable_ingestion_jobs.push(self.create_clp_ingestion_context(job_id, config));
+            self.try_add_ingestion_job_context(job_id, config, &mut recoverable_ingestion_jobs);
         }
 
         // Load inactive ingestion jobs.
@@ -561,7 +568,7 @@ impl ClpDbIngestionConnector {
                 );
                 continue;
             };
-            inactive_ingestion_jobs.push(self.create_clp_ingestion_context(job_id, config));
+            self.try_add_ingestion_job_context(job_id, config, &mut inactive_ingestion_jobs);
         }
 
         Ok((recoverable_ingestion_jobs, inactive_ingestion_jobs))
@@ -647,6 +654,30 @@ impl ClpDbIngestionConnector {
             })?);
         }
         Ok(config)
+    }
+
+    /// Attempts to create a CLP ingestion context for an ingestion job with the given ID and
+    /// config, and adds the context to the provided buffer.
+    ///
+    /// # NOTE
+    ///
+    /// This method logs errors instead of returning them to the caller to allow best-effort loading
+    /// of ingestion jobs during service start.
+    fn try_add_ingestion_job_context(
+        &self,
+        job_id: IngestionJobId,
+        config: S3IngestionJobConfig,
+        ingestion_job_buffer: &mut Vec<ClpIngestionJobContext>,
+    ) {
+        match self.create_clp_ingestion_context(job_id, config) {
+            Ok(context) => ingestion_job_buffer.push(context),
+            Err(e) => tracing::error!(
+                job_id = ? job_id,
+                error = ? e,
+                "Failed to create CLP ingestion context for an ingestion job during service start. \
+                    The job will be skipped."
+            ),
+        }
     }
 }
 

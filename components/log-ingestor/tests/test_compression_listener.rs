@@ -97,7 +97,8 @@ async fn test_compression_listener() -> Result<()> {
     let shared = submitter.shared_store();
 
     let buffer: Buffer<TestBufferSubmitter> = Buffer::new(submitter, 120 * TEST_OBJECT_SIZE);
-    let listener = Listener::spawn(buffer, DEFAULT_TIMEOUT, DEFAULT_LISTENER_CAPACITY);
+    let listener = Listener::spawn(buffer, DEFAULT_TIMEOUT, DEFAULT_LISTENER_CAPACITY)
+        .expect("failed to spawn listener");
 
     let expected_ids: Vec<S3ObjectMetadataId> = (1..=300).collect();
     let mut handlers = Vec::new();
@@ -149,7 +150,8 @@ async fn test_listener_hard_timeout() -> Result<()> {
     let shared = submitter.shared_store();
 
     let buffer: Buffer<TestBufferSubmitter> = Buffer::new(submitter, SIZE_THRESHOLD);
-    let listener = Listener::spawn(buffer, TIMEOUT, DEFAULT_LISTENER_CAPACITY);
+    let listener = Listener::spawn(buffer, TIMEOUT, DEFAULT_LISTENER_CAPACITY)
+        .expect("failed to spawn listener");
     let sender = listener.get_new_sender();
 
     {

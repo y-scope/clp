@@ -121,11 +121,21 @@ impl Listener {
     /// # Returns
     ///
     /// A newly created instance of [`Listener`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`anyhow::Error`] if `channel_capacity` is 0, since [`mpsc::channel`] requires a positive
+    ///   capacity.
     pub fn spawn<Submitter: BufferSubmitter + Send + 'static>(
         buffer: Buffer<Submitter>,
         timeout: Duration,
         channel_capacity: usize,
-    ) -> Self {
+    ) -> Result<Self> {
+        if channel_capacity == 0 {
+            anyhow::bail!("channel capacity must be greater than 0");
+        }
         let (sender, receiver) = mpsc::channel(channel_capacity);
         let task = ListenerTask {
             buffer,
@@ -140,11 +150,11 @@ impl Listener {
             })
         });
 
-        Self {
+        Ok(Self {
             sender,
             cancel_token,
             handle,
-        }
+        })
     }
 
     /// Shuts down the listener and waits for the underlying task to complete.

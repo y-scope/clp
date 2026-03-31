@@ -192,7 +192,9 @@ pub mod s3 {
         /// buffer. Increasing this value may improve throughput at the cost of higher memory
         /// usage.
         ///
-        /// Defaults to 16.
+        /// Defaults to 16. Must be a positive integer. The behavior for values less than 1 is
+        /// undefined.
+        #[schema(minimum = 1)]
         pub channel_capacity: usize,
     }
 
