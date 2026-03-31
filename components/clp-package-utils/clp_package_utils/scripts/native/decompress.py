@@ -240,6 +240,14 @@ def _handle_clp_s_file_extraction(
     parsed_args: argparse.Namespace,
     clp_home: pathlib.Path,
 ) -> int:
+    """
+    Handles the file extraction command for the clp-s storage engine.
+    :param clp_config:
+    :param extraction_dir:
+    :param parsed_args:
+    :param clp_home:
+    :return: 0 on success, -1 otherwise.
+    """
     target_dataset = (
         CLP_DEFAULT_DATASET_NAME if parsed_args.dataset is None else parsed_args.dataset
     )
@@ -282,6 +290,14 @@ def _handle_clp_file_extraction(
     parsed_args: argparse.Namespace,
     clp_home: pathlib.Path,
 ) -> int:
+    """
+    Handles the file extraction command for the clp storage engine.
+    :param clp_config:
+    :param extraction_dir:
+    :param parsed_args:
+    :param clp_home:
+    :return: 0 on success, -1 otherwise.
+    """
     paths = parsed_args.paths
     list_path = parsed_args.files_from
 
