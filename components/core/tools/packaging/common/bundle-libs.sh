@@ -81,7 +81,7 @@ for bin in "${BINARIES[@]}"; do
         [[ -n "${lib_path}" && "${lib_path}" == /* ]] || continue
 
         lib_name=$(basename "${lib_path}")
-        echo "${lib_name}" | grep --quiet --extended-regexp "${EXCLUDE_PATTERN}" && continue
+        echo "${lib_name}" | grep -qE "${EXCLUDE_PATTERN}" && continue
 
         if [[ ! -f "${STAGING_DIR}${lib_install_dir}/${lib_name}" ]]; then
             cp --dereference "${lib_path}" "${STAGING_DIR}${lib_install_dir}/${lib_name}"
