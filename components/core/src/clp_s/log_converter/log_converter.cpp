@@ -50,6 +50,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
         auto [nested_readers, file_type] = clp_s::try_deduce_reader_type(reader);
         switch (file_type) {
             case clp_s::FileType::LogText:
+            case clp_s::FileType::EmptyFile:
                 break;
             case clp_s::FileType::Json:
             case clp_s::FileType::KeyValueIr:
