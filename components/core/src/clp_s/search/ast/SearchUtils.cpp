@@ -178,6 +178,7 @@ auto unescape_kql_internal(std::string const& value, std::string& unescaped, boo
     return true;
 }
 }  // namespace
+
 void splice_into(
         std::shared_ptr<Expression> const& parent,
         std::shared_ptr<Expression> const& child,
