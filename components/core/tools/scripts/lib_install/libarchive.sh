@@ -54,7 +54,9 @@ extracted_dir=${temp_dir}/${package_name}-${version}
 if [ ! -e ${extracted_dir} ] ; then
   tar_filename=${package_name}-${version}.tar.gz
   if [ ! -e ${tar_filename} ] ; then
-    curl -fsSL https://www.libarchive.org/downloads/${tar_filename} -o ${tar_filename}
+    curl -fsSL \
+      "https://github.com/libarchive/libarchive/releases/download/v${version}/${tar_filename}" \
+      -o "${tar_filename}"
   fi
 
   tar -xf ${tar_filename}
