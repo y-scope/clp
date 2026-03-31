@@ -1,10 +1,10 @@
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 use anyhow::Result;
 use tokio::{
     select,
     sync::mpsc,
-    time::{Instant, Sleep, sleep_until},
+    time::{Instant, sleep_until},
 };
 use tokio_util::sync::CancellationToken;
 
@@ -28,7 +28,9 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     /// * Receiving a cancellation signal via the provided [`cancel_token`].
     /// * All senders are closed.
     /// * The buffer's size threshold is reached after receiving new entries.
-    /// * A timeout occurs without receiving new entries.
+    /// * The oldest buffered entry has remained in the buffer for at least the configured timeout
+    ///   duration. The timer starts when entries are first added to an empty buffer and is not
+    ///   reset by subsequent entries.
     ///
     /// # Returns
     ///
@@ -41,13 +43,18 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     /// * Forwards [`Buffer::add`]'s return values on failure.
     /// * Forwards [`Buffer::submit`]'s return values on failure.
     pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
-        let mut timer: Pin<Box<Sleep>> = Box::pin(sleep_until(Instant::now() + self.timeout));
+        // To avoid reallocating the timer on every reset, we preallocate and pin it. A boolean flag
+        // is used to track whether the timer is active, which defaults to false since the buffer is
+        // initially empty.
+        let timer = sleep_until(Instant::now() + self.timeout);
+        tokio::pin!(timer);
+        let mut timer_active = false;
 
         loop {
             select! {
                 // Cancellation requested.
                 () = cancel_token.cancelled() => {
-                    // TODO: Log the cancellation event when the logger has been integrated.
+                    tracing::info!("Listener task cancelled.");
                     self.buffer.submit().await?;
                     return Ok(());
                 }
@@ -63,18 +70,30 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                             return Ok(());
                         }
                         Some(entries) => {
-                            self.buffer.add(entries).await?;
+                            let was_empty = self.buffer.is_empty();
+                            let flushed = self.buffer.add(entries).await?;
+                            let is_empty = self.buffer.is_empty();
+
+                            if is_empty {
+                                timer_active = false;
+                            } else if was_empty || flushed {
+                                // Enable the timer if new objects are added to an empty buffer, or
+                                // a flush is triggered but the buffer is not empty after flushing.
+                                // In both cases, the timer should be reset.
+                                timer.as_mut().reset(Instant::now() + self.timeout);
+                                timer_active = true;
+                            }
                         }
                     }
                 }
 
                 // Timer fired.
-                () = &mut timer => {
+                () = &mut timer, if timer_active => {
                     self.buffer.submit().await?;
+                    // The timer will be re-enabled when new entries are received.
+                    timer_active = false;
                 }
             }
-
-            timer.as_mut().reset(Instant::now() + self.timeout);
         }
     }
 }

@@ -156,11 +156,8 @@ impl ClpIngestionJobContext {
 /// Connector for managing ingestion jobs in CLP DB.
 pub struct ClpDbIngestionConnector {
     db_pool: MySqlPool,
-    channel_capacity: usize,
     aws_authentication: AwsAuthentication,
     archive_output_config: ArchiveOutput,
-    buffer_flush_timeout: Duration,
-    buffer_flush_threshold: u64,
 }
 
 impl ClpDbIngestionConnector {
@@ -192,11 +189,6 @@ impl ClpDbIngestionConnector {
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<(Self, LogIngestorRecoveryContext)> {
-        let log_ingestor_config = clp_config
-            .log_ingestor
-            .as_ref()
-            .expect("log_ingestor configuration is missing");
-
         let aws_authentication = match clp_config.logs_input {
             LogsInput::S3 { config } => config.aws_authentication,
             LogsInput::Fs { .. } => {
@@ -218,11 +210,8 @@ impl ClpDbIngestionConnector {
 
         let connector = Self {
             db_pool: mysql_pool,
-            channel_capacity: log_ingestor_config.channel_capacity,
             aws_authentication,
             archive_output_config: clp_config.archive_output.clone(),
-            buffer_flush_timeout: Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
-            buffer_flush_threshold: log_ingestor_config.buffer_flush_threshold,
         };
 
         let unfinished_compression_jobs = connector.get_unfinished_compression_jobs().await?;
@@ -425,18 +414,19 @@ impl ClpDbIngestionConnector {
             ingestion_job_id: job_id,
             db_pool: self.db_pool.clone(),
         };
+        let base_config = config.as_base_config();
 
         let submitter = CompressionJobSubmitter::new(
             compression_state.clone(),
             self.aws_authentication.clone(),
             &self.archive_output_config,
-            config.as_base_config(),
+            base_config,
         );
 
         let listener = Listener::spawn(
-            Buffer::new(submitter, self.buffer_flush_threshold),
-            self.buffer_flush_timeout,
-            self.channel_capacity,
+            Buffer::new(submitter, base_config.buffer_config.flush_threshold_bytes),
+            Duration::from_secs(base_config.buffer_config.timeout_sec),
+            base_config.buffer_config.channel_capacity,
         );
         let ingestion_state = ClpIngestionState {
             job_id,
