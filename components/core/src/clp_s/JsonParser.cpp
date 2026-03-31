@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
 #include <log_surgeon/generated_bindings.hpp>
@@ -1632,17 +1633,70 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             parent_node_id
                     = get_parent_schema_node(cap.value(), log_msg_node_id, rules, parent_captures);
         }
-        SPDLOG_ERROR(
-                "[node] adding leaf {}: {} {} {}",
-                name,
-                cap->rule_id,
-                cap->capture_id,
-                cap->parent_id
-        );
-        m_current_schema.insert_unordered(
-                m_archive_writer->add_node(parent_node_id, NodeType::VarString, name)
-        );
-        m_current_parsed_message.add_unordered_value(cap->lexeme.as_cpp_view());
+        // SPDLOG_ERROR(
+        //         "[node] adding leaf {}: {} {} {}",
+        //         name,
+        //         cap->rule_id,
+        //         cap->capture_id,
+        //         cap->parent_id
+        // );
+
+        static auto const cIntSet{absl::flat_hash_set<std::string>{
+                // heuristic
+                "INT",
+                // hive
+                "used_memory_size",
+                "launcher_number",
+                "line_number",
+                "memory_size",
+                "num_vcores",
+                "size",
+                "port",
+                "fetcherID",
+                "reduceID",
+                "processTreeID",
+                // "durationSuffix", // regex needs better capture to use
+                // hadoop
+                "blockID",
+                "serverCallId",
+                "blockInfoVal",
+                "bracketedVal",
+                "clientBytes",
+                "clientOffset",
+                "exitStatus",
+                "exitStatus_2",
+                "kvReduce",
+                "kvDownstreams",
+                "kvSeqno",
+                "javaLineNum",
+                "masterKeyId",
+                "keyId",
+                // openstack has nothing??
+                // mongodb
+                "time_int",
+                "gen_int",
+                "metric_value",
+                "size_value",
+        }};
+        static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT"}};
+        // TODO clpp: handle floats too
+        if (encoded_variable_t var{0};
+            cIntSet.contains(name)
+            && clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                    cap->lexeme.as_cpp_view(),
+                    var
+            ))
+        {
+            m_current_schema.insert_unordered(
+                    m_archive_writer->add_node(parent_node_id, NodeType::Integer, name)
+            );
+            m_current_parsed_message.add_unordered_value(var);
+        } else {
+            m_current_schema.insert_unordered(
+                    m_archive_writer->add_node(parent_node_id, NodeType::VarString, name)
+            );
+            m_current_parsed_message.add_unordered_value(cap->lexeme.as_cpp_view());
+        }
 
         log_type.append(log_msg.substr(log_msg_pos, cap->start - log_msg_pos));
         log_type.append(fmt::format("%{}%", name));
