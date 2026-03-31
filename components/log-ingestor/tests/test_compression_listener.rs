@@ -90,17 +90,14 @@ async fn assert_submission_count_at(
 
 #[tokio::test]
 async fn test_compression_listener() -> Result<()> {
-    const DEFAULT_TIMEOUT_SECONDS: u64 = 3;
+    const DEFAULT_TIMEOUT: Duration = Duration::from_millis(100);
+    const SLACK: Duration = Duration::from_millis(2);
 
     let submitter = TestBufferSubmitter::new();
     let shared = submitter.shared_store();
 
     let buffer: Buffer<TestBufferSubmitter> = Buffer::new(submitter, 120 * TEST_OBJECT_SIZE);
-    let listener = Listener::spawn(
-        buffer,
-        Duration::from_secs(DEFAULT_TIMEOUT_SECONDS),
-        DEFAULT_LISTENER_CAPACITY,
-    );
+    let listener = Listener::spawn(buffer, DEFAULT_TIMEOUT, DEFAULT_LISTENER_CAPACITY);
 
     let expected_ids: Vec<S3ObjectMetadataId> = (1..=300).collect();
     let mut handlers = Vec::new();
@@ -116,7 +113,7 @@ async fn test_compression_listener() -> Result<()> {
     }
 
     // Sleep to trigger timeout-based submission
-    tokio::time::sleep(Duration::from_secs(DEFAULT_TIMEOUT_SECONDS)).await;
+    tokio::time::sleep(DEFAULT_TIMEOUT + SLACK).await;
 
     // Inspect submitted results and verify total count
     let mut submitted_buffers = shared.lock().await;
