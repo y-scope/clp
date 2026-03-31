@@ -241,7 +241,7 @@ async fn test_listener_hard_timeout() -> Result<()> {
             t_5 + TIMEOUT,
             &shared,
             4,
-            "step 12: timer should not have fired at t_10 + timeout",
+            "timer should not have fired at t_5 + timeout",
         )
         .await;
 
@@ -250,7 +250,7 @@ async fn test_listener_hard_timeout() -> Result<()> {
             t_7 + TIMEOUT + SLACK,
             &shared,
             5,
-            "step 13: timeout flush of [124] expected",
+            "timeout flush of [124] expected",
         )
         .await;
     }
