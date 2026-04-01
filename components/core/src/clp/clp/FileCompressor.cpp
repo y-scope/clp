@@ -247,7 +247,7 @@ void FileCompressor::parse_and_encode_with_library(
             throw(std::runtime_error("Parsing Failed"));
         }
         LogEventView const& log_view = m_reader_parser->get_log_parser().get_log_event_view();
-        archive_writer.write_msg_using_schema(log_view);
+        archive_writer.write_msg_using_schema(log_view, m_encoding_to_schema_vars);
     }
     close_file_and_append_to_segment(archive_writer);
     // archive_writer_config needs to persist between files

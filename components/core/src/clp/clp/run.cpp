@@ -59,6 +59,7 @@ int run(int argc, char const* argv[]) {
     if (CommandLineArguments::Command::Compress == command) {
         /// TODO: make this not a unique_ptr and test performance difference
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
+        SchemaAnalyzer schema_analyzer;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
             reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
@@ -69,7 +70,6 @@ int run(int argc, char const* argv[]) {
                     delimiters.push_back(i);
                 }
             }
-            SchemaAnalyzer schema_analyzer;
             schema_analyzer.set_delimiters(std::move(delimiters));
             schema_analyzer.add_encoding_type("int", R"(-?\d+)");
             schema_analyzer.add_encoding_type("float", R"(-?\d+\.\d+)");
@@ -147,6 +147,7 @@ int run(int argc, char const* argv[]) {
                     grouped_files_to_compress,
                     command_line_args.get_target_encoded_file_size(),
                     std::move(reader_parser),
+                    schema_analyzer.get_map(),
                     command_line_args.get_use_heuristic()
             );
         } catch (TraceableException& e) {

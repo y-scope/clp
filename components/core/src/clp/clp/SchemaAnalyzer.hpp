@@ -41,6 +41,7 @@ public:
     // CaptureMap should use a `Capture const*` key, but its inaccessible in `CaptureAST` currently.
     // This means if any capture with the name is encodable, all are treated as encodable.
     using CaptureMap = std::unordered_map<std::string, std::vector<std::unique_ptr<RegexAST>>>;
+    using EncodingMap = std::unordered_map<std::string, std::unordered_set<std::string>>;
 
     /**
      * Sets the delimiters to be used when replacing wildcards.
@@ -70,7 +71,7 @@ public:
      */
     auto identify_encoded_vars_in_schema(std::unique_ptr<log_surgeon::SchemaAST> schema) -> void;
 
-    auto get_map() -> std::unordered_map<std::string, std::unordered_set<std::string>> const& {
+    auto get_map() -> EncodingMap const& {
         return m_encoded_type_to_schema_vars;
     }
 
@@ -105,7 +106,7 @@ private:
     std::unordered_map<std::string, uint32_t> m_symbols;
     std::vector<log_surgeon::LexicalRule<ByteNfaState>> m_rules;
     std::unique_ptr<ByteDfa> m_encoded_dfa;
-    std::unordered_map<std::string, std::unordered_set<std::string>> m_encoded_type_to_schema_vars;
+    EncodingMap m_encoded_type_to_schema_vars;
 };
 }  // namespace clp::clp
 
