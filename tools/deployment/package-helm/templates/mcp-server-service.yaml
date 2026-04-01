@@ -13,6 +13,6 @@ spec:
     app.kubernetes.io/component: "mcp-server"
   ports:
     - port: 8000
-      targetPort: "mcp"
+      targetPort: "mcp-server"
       nodePort: {{ .Values.clpConfig.mcp_server.port }}
 {{- end }}

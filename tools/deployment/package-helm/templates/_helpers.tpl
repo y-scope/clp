@@ -88,7 +88,7 @@ Creates timings for liveness probes.
 @return {string} YAML-formatted liveness probe timing configuration
 */}}
 {{- define "clp.livenessProbeTimings" -}}
-initialDelaySeconds: 60
+initialDelaySeconds: 180
 periodSeconds: 30
 timeoutSeconds: 4
 failureThreshold: 3
@@ -150,19 +150,6 @@ name: {{ include "clp.volumeName" . | quote }}
 persistentVolumeClaim:
   claimName: {{ include "clp.fullname" .root }}-{{ include "clp.volumeName" . }}
 {{- end }}
-
-{{/*
-Checks if a given service is in the bundled list.
-
-@param {object} root Root template context
-@param {string} service The service name to check (e.g., "database", "queue", "redis",
-  "results_cache")
-@return {string} "true" if bundled, empty string otherwise
-*/}}
-{{- define "clp.isBundled" -}}
-{{- if has .service .root.Values.clpConfig.bundled -}}true{{- end -}}
-{{- end }}
-
 
 {{/*
 Gets the host for the database service.
@@ -273,6 +260,34 @@ Gets the port for the results cache service.
 27017
 {{- else -}}
 {{- .Values.clpConfig.results_cache.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the host for the Presto service.
+
+@param {object} . Root template context
+@return {string} The Presto host
+*/}}
+{{- define "clp.prestoHost" -}}
+{{- if has "presto" .Values.clpConfig.bundled -}}
+{{- printf "%s-presto-coordinator" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.presto.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the Presto service.
+
+@param {object} . Root template context
+@return {string} The Presto port
+*/}}
+{{- define "clp.prestoPort" -}}
+{{- if has "presto" .Values.clpConfig.bundled -}}
+8889
+{{- else -}}
+{{- .Values.clpConfig.presto.port -}}
 {{- end -}}
 {{- end }}
 

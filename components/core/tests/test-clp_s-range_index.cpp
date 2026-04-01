@@ -20,6 +20,7 @@
 #include "../src/clp/type_utils.hpp"
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
+#include "../src/clp_s/ArchiveReaderAdaptor.hpp"
 #include "../src/clp_s/ArchiveWriter.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/RangeIndexWriter.hpp"
@@ -33,6 +34,7 @@ constexpr std::string_view cTestRangeIndexInputFile{"test_no_floats_sorted.jsonl
 constexpr std::string_view cTestRangeIndexIRInputFile{"test_no_floats_sorted.ir"};
 constexpr std::string_view cTestRangeIndexIRMetadataKey{"test_key"};
 constexpr std::string_view cTestRangeIndexIRMetadataValue{"test_value"};
+constexpr size_t cNumRecordsInInputFile{4};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path;
@@ -138,6 +140,17 @@ void read_and_check_archive_metadata(bool from_ir) {
         REQUIRE_NOTHROW(archive_reader.open(archive_path, clp_s::NetworkAuthOption{}));
         auto const& range_index = archive_reader.get_range_index();
         check_archive_range_index(range_index, from_ir);
+        for (size_t i{}; i < cNumRecordsInInputFile; ++i) {
+            REQUIRE(archive_reader.get_metadata_for_log_event(i) == range_index.at(0).fields);
+        }
+        REQUIRE_THROWS_AS(
+                archive_reader.get_metadata_for_log_event(-1),
+                clp_s::ArchiveReaderAdaptor::OperationFailed
+        );
+        REQUIRE_THROWS_AS(
+                archive_reader.get_metadata_for_log_event(cNumRecordsInInputFile),
+                clp_s::ArchiveReaderAdaptor::OperationFailed
+        );
         REQUIRE_NOTHROW(archive_reader.close());
     }
 }
