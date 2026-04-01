@@ -50,6 +50,8 @@ auto SchemaAnalyzer::generate() -> void {
 }
 
 auto SchemaAnalyzer::identify_encoded_vars_in_schema(std::unique_ptr<SchemaAST> schema) -> void {
+    m_encoded_type_to_schema_vars.clear();
+
     // The following can be simplified if `m_rules` in the lexer was accessible
     auto capture_map{get_captures(schema)};
     for (auto const& parser_ast : schema->m_schema_vars) {
