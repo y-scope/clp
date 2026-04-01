@@ -778,9 +778,6 @@ class ApiServer(BaseModel):
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
-    buffer_flush_timeout: PositiveInt = 300  # seconds
-    buffer_flush_threshold: PositiveInt = 4096 * 1024 * 1024  # 4 GiB
-    channel_capacity: PositiveInt = 10
     logging_level: LoggingLevelRust = "INFO"
 
 
