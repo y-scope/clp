@@ -14,6 +14,7 @@
 #include <clp/ir/types.hpp>
 #include <clp/type_utils.hpp>
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/ReaderUtils.hpp>
 #include <clp_s/ZstdCompressor.hpp>
 #include <clp_s/ZstdDecompressor.hpp>
 
@@ -133,15 +134,22 @@ auto LogTypeDictionaryEntry::try_read_from_file(
     clear();
 
     m_id = id;
-    ErrorCode error_code{};
-    uint64_t escaped_value_length{};
-    error_code = decompressor.try_read_numeric_value(escaped_value_length);
+    ErrorCode error_code{ErrorCodeSuccess};
+    uint64_t escaped_value_length_u64{0};
+    error_code = decompressor.try_read_numeric_value(escaped_value_length_u64);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
 
+    auto const escaped_value_length_result{
+            ReaderUtils::try_uint64_to_size_t(escaped_value_length_u64)
+    };
+    if (escaped_value_length_result.has_error()) {
+        return ErrorCodeOutOfBounds;
+    }
+
     string escaped_value;
-    error_code = decompressor.try_read_string(escaped_value_length, escaped_value);
+    error_code = decompressor.try_read_string(escaped_value_length_result.value(), escaped_value);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
@@ -223,13 +231,19 @@ auto VariableDictionaryEntry::try_read_from_file(
 ) -> ErrorCode {
     m_id = id;
 
-    ErrorCode error_code{};
-    uint64_t value_length{};
-    error_code = decompressor.try_read_numeric_value(value_length);
+    ErrorCode error_code{ErrorCodeSuccess};
+    uint64_t value_length_u64{0};
+    error_code = decompressor.try_read_numeric_value(value_length_u64);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
-    error_code = decompressor.try_read_string(value_length, m_value);
+
+    auto const value_length_result{ReaderUtils::try_uint64_to_size_t(value_length_u64)};
+    if (value_length_result.has_error()) {
+        return ErrorCodeOutOfBounds;
+    }
+
+    error_code = decompressor.try_read_string(value_length_result.value(), m_value);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }

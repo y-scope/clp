@@ -65,6 +65,10 @@ pub mod s3 {
         /// Whether to treat the ingested objects as unstructured logs. Defaults to `false`.
         #[serde(default = "default_unstructured")]
         pub unstructured: bool,
+
+        /// Per-job ingestion buffer config.
+        #[serde(default)]
+        pub buffer_config: BufferConfig,
     }
 
     /// Configuration for a SQS listener job.
@@ -160,6 +164,50 @@ pub mod s3 {
         pub start_after: Option<NonEmptyString>,
     }
 
+    /// Configuration for buffer behavior.
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    #[serde(default)]
+    pub struct BufferConfig {
+        /// Size-based flush threshold in bytes.
+        ///
+        /// The buffer is flushed to create a compression job once the total size of buffered
+        /// objects exceeds this threshold.
+        ///
+        /// Defaults to 4 GiB.
+        pub flush_threshold_bytes: u64,
+
+        /// Time-based flush threshold in seconds.
+        ///
+        /// This is a hard timeout. The buffer is flushed to create a compression job when the
+        /// oldest buffered object has remained in the buffer for at least this duration,
+        /// regardless of the total buffered size. The timer is not reset by newly ingested
+        /// objects.
+        ///
+        /// Defaults to 300 seconds (5 minutes).
+        pub timeout_sec: u64,
+
+        /// Capacity of the internal buffer channel.
+        ///
+        /// Defines the maximum number of objects that can be queued before being processed by the
+        /// buffer. Increasing this value may improve throughput at the cost of higher memory
+        /// usage.
+        ///
+        /// Defaults to 16. Must be a positive integer. The behavior for values less than 1 is
+        /// undefined.
+        #[schema(minimum = 1)]
+        pub channel_capacity: usize,
+    }
+
+    impl Default for BufferConfig {
+        fn default() -> Self {
+            Self {
+                flush_threshold_bytes: 4 * 1024 * 1024 * 1024,
+                timeout_sec: 300,
+                channel_capacity: 16,
+            }
+        }
+    }
+
     const fn default_unstructured() -> bool {
         false
     }
@@ -174,5 +222,39 @@ pub mod s3 {
 
     const fn default_sqs_wait_time_sec() -> u16 {
         20
+    }
+}
+
+/// Represents the unique identifier for an ingestion job in CLP DB.
+pub type JobId = u64;
+
+#[cfg(test)]
+mod tests {
+    use super::s3::BufferConfig;
+
+    #[test]
+    fn test_buffer_config_partial_override() -> Result<(), serde_json::Error> {
+        let config: BufferConfig = serde_json::from_str(r#"{"timeout_sec": 60}"#)?;
+        let default_config = BufferConfig::default();
+        assert_eq!(config.timeout_sec, 60);
+        assert_eq!(
+            config.flush_threshold_bytes,
+            default_config.flush_threshold_bytes
+        );
+        assert_eq!(config.channel_capacity, default_config.channel_capacity);
+        Ok(())
+    }
+
+    #[test]
+    fn test_buffer_config_empty_object_uses_defaults() -> Result<(), serde_json::Error> {
+        let config: BufferConfig = serde_json::from_str("{}")?;
+        let default_config = BufferConfig::default();
+        assert_eq!(
+            config.flush_threshold_bytes,
+            default_config.flush_threshold_bytes
+        );
+        assert_eq!(config.timeout_sec, default_config.timeout_sec);
+        assert_eq!(config.channel_capacity, default_config.channel_capacity);
+        Ok(())
     }
 }

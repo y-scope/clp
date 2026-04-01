@@ -101,7 +101,6 @@ public:
      *
      * NOTE: If the deserialized IR unit is `IrUnitType::LogEvent` and the query handler is not
      * `search::EmptyQueryHandler`, `handle_log_event` will only be invoked if the query handler
-
      * returns `search::AstEvaluationResult::True`.
      *
      * @param reader
@@ -136,6 +135,7 @@ public:
      *   on unit handling failure.
      * @return IrUnitType::EndOfStream if an end-of-stream IR unit is deserialized, or an error code
      * indicating the failure:
+     * - Forwards `deserialize_tag`'s return values on failure.
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
      */
@@ -181,6 +181,8 @@ private:
      *   - the IR stream contains an unsupported metadata format;
      *   - the IR stream's version is unsupported;
      *   - or the IR stream's user-defined metadata is not a JSON object.
+     * - Forwards `deserialize_preamble`'s return values on failure.
+     * - Forwards `get_encoding_type`'s return values on failure.
      */
     [[nodiscard]] static auto create_generic(
             ReaderInterface& reader,
@@ -239,20 +241,10 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
         IrUnitHandlerType ir_unit_handler,
         QueryHandlerType query_handler
 ) -> ystdlib::error_handling::Result<Deserializer> {
-    bool is_four_byte_encoded{};
-    if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
-    }
-
-    std::vector<int8_t> metadata;
-    encoded_tag_t metadata_type{};
-    if (auto const err{deserialize_preamble(reader, metadata_type, metadata)};
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
-    }
+    [[maybe_unused]] auto const encoding_type{
+            YSTDLIB_ERROR_HANDLING_TRYX(get_encoding_type(reader))
+    };
+    auto const [metadata_type, metadata]{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_preamble(reader))};
 
     if (cProtocol::Metadata::EncodingJson != metadata_type) {
         return std::errc::protocol_not_supported;
@@ -294,11 +286,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         return std::errc::operation_not_permitted;
     }
 
-    encoded_tag_t tag{};
-    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
-        return ir_error_code_to_errc(err);
-    }
-
+    auto const tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
     if (false == optional_ir_unit_type.has_value()) {
         return std::errc::protocol_not_supported;
@@ -375,7 +363,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
         case IrUnitType::UtcOffsetChange: {
             auto const new_utc_offset{
-                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_ir_unit_utc_offset_change(reader))
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_utc_offset_change(reader))
             };
             if (auto const err{
                         m_ir_unit_handler.handle_utc_offset_change(m_utc_offset, new_utc_offset)

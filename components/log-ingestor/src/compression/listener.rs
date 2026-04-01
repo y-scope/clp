@@ -1,32 +1,36 @@
-use std::{pin::Pin, time::Duration};
+use std::time::Duration;
 
 use anyhow::Result;
-use clp_rust_utils::s3::ObjectMetadata;
 use tokio::{
     select,
     sync::mpsc,
-    time::{Instant, Sleep, sleep_until},
+    time::{Instant, sleep_until},
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::compression::{Buffer, BufferSubmitter};
+use crate::compression::{Buffer, BufferSubmitter, CompressionBufferEntry};
 
-/// Represents a listener task that buffers and submits S3 object metadata.
+/// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits
+/// when a certain size threshold is reached or on timeout.
 ///
 /// # Type Parameters
 /// * `Submitter`: A type that implements the [`BufferSubmitter`] trait.
 struct ListenerTask<Submitter: BufferSubmitter> {
     buffer: Buffer<Submitter>,
     timeout: Duration,
-    receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
+    receiver: mpsc::Receiver<Vec<CompressionBufferEntry>>,
 }
 
 impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
-    /// Runs the listener task to buffer and submit S3 object metadata. Submission can be triggered
-    /// in three ways:
+    /// Runs the listener task to buffer and submit [`CompressionBufferEntry`] values. Submission
+    /// can be triggered if:
+    ///
     /// * Receiving a cancellation signal via the provided [`cancel_token`].
-    /// * The buffer capacity is reached after receiving a new object metadata.
-    /// * A timeout occurs without receiving new object metadata.
+    /// * All senders are closed.
+    /// * The buffer's size threshold is reached after receiving new entries.
+    /// * The oldest buffered entry has remained in the buffer for at least the configured timeout
+    ///   duration. The timer starts when entries are first added to an empty buffer and is not
+    ///   reset by subsequent entries.
     ///
     /// # Returns
     ///
@@ -39,47 +43,65 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
     /// * Forwards [`Buffer::add`]'s return values on failure.
     /// * Forwards [`Buffer::submit`]'s return values on failure.
     pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
-        let mut timer: Pin<Box<Sleep>> = Box::pin(sleep_until(Instant::now() + self.timeout));
+        // To avoid reallocating the timer on every reset, we preallocate and pin it. A boolean flag
+        // is used to track whether the timer is active, which defaults to false since the buffer is
+        // initially empty.
+        let timer = sleep_until(Instant::now() + self.timeout);
+        tokio::pin!(timer);
+        let mut timer_active = false;
 
         loop {
             select! {
                 // Cancellation requested.
                 () = cancel_token.cancelled() => {
-                    // TODO: Log the cancellation event when the logger has been integrated.
+                    tracing::info!("Listener task cancelled.");
                     self.buffer.submit().await?;
                     return Ok(());
                 }
 
-                // New object metadata received.
-                optional_object_metadata = self.receiver.recv() => {
-                    match optional_object_metadata {
+                // New object metadata entries received.
+                optional_entries = self.receiver.recv() => {
+                    match optional_entries {
                         None => {
                             self.buffer.submit().await?;
-                            return Err(
-                                anyhow::anyhow!("Listener channel has been closed unexpectedly")
+                            tracing::info!(
+                                "All senders have been dropped. The channel will be closed."
                             );
+                            return Ok(());
                         }
-                        Some(object_metadata_to_ingest) => {
-                            self.buffer.add(object_metadata_to_ingest).await?;
+                        Some(entries) => {
+                            let was_empty = self.buffer.is_empty();
+                            let flushed = self.buffer.add(entries).await?;
+                            let is_empty = self.buffer.is_empty();
+
+                            if is_empty {
+                                timer_active = false;
+                            } else if was_empty || flushed {
+                                // Enable the timer if new objects are added to an empty buffer, or
+                                // a flush is triggered but the buffer is not empty after flushing.
+                                // In both cases, the timer should be reset.
+                                timer.as_mut().reset(Instant::now() + self.timeout);
+                                timer_active = true;
+                            }
                         }
                     }
                 }
 
                 // Timer fired.
-                () = &mut timer => {
+                () = &mut timer, if timer_active => {
                     self.buffer.submit().await?;
+                    // The timer will be re-enabled when new entries are received.
+                    timer_active = false;
                 }
             }
-
-            timer.as_mut().reset(Instant::now() + self.timeout);
         }
     }
 }
 
-/// Represents a listener that accepts S3 object metadata from multiple senders and buffers them
-/// for submission.
+/// Represents a listener that accepts [`CompressionBufferEntry`] values from multiple senders and
+/// buffers them for submission.
 pub struct Listener {
-    sender: mpsc::Sender<Vec<ObjectMetadata>>,
+    sender: mpsc::Sender<Vec<CompressionBufferEntry>>,
     cancel_token: CancellationToken,
     handle: tokio::task::JoinHandle<Result<()>>,
 }
@@ -88,8 +110,8 @@ impl Listener {
     /// Creates and spawns a new [`Listener`] backed by a [`ListenerTask`].
     ///
     /// This function spawns a [`ListenerTask`]. The spawned task will buffer incoming
-    /// [`ObjectMetadata`] values and call the supplied `Submitter` when either the buffer's
-    /// threshold is reached or the configured `timeout` fires.
+    /// [`CompressionBufferEntry`] values and call the supplied `Submitter` when either the
+    /// buffer's threshold is reached or the configured `timeout` fires.
     ///
     /// # Type parameters
     ///
@@ -99,11 +121,21 @@ impl Listener {
     /// # Returns
     ///
     /// A newly created instance of [`Listener`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`anyhow::Error`] if `channel_capacity` is 0, since [`mpsc::channel`] requires a positive
+    ///   capacity.
     pub fn spawn<Submitter: BufferSubmitter + Send + 'static>(
         buffer: Buffer<Submitter>,
         timeout: Duration,
         channel_capacity: usize,
-    ) -> Self {
+    ) -> Result<Self> {
+        if channel_capacity == 0 {
+            anyhow::bail!("channel capacity must be greater than 0");
+        }
         let (sender, receiver) = mpsc::channel(channel_capacity);
         let task = ListenerTask {
             buffer,
@@ -118,11 +150,11 @@ impl Listener {
             })
         });
 
-        Self {
+        Ok(Self {
             sender,
             cancel_token,
             handle,
-        }
+        })
     }
 
     /// Shuts down the listener and waits for the underlying task to complete.
@@ -143,15 +175,15 @@ impl Listener {
     }
 
     /// # Returns
-    /// A new `mpsc::Sender<Vec<ObjectMetadata>>` that can be used to send metadata to this
-    /// listener.
+    /// A new `mpsc::Sender<Vec<CompressionBufferEntry>>` that can be used to send
+    /// [`CompressionBufferEntry`] values to this listener.
     ///
     /// The returned sender is a cheap clone of the listener's internal channel sender. It can be
     /// freely cloned and moved to other tasks; multiple senders may concurrently send to the same
     /// listener. Messages sent by a single sender preserve order; messages from different senders
     /// are interleaved in the order they are received by the runtime.
     #[must_use]
-    pub fn get_new_sender(&self) -> mpsc::Sender<Vec<ObjectMetadata>> {
+    pub fn get_new_sender(&self) -> mpsc::Sender<Vec<CompressionBufferEntry>> {
         self.sender.clone()
     }
 }
