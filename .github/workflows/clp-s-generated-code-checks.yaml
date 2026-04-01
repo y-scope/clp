@@ -44,11 +44,18 @@ jobs:
 
       - name: "Check if the generated parsers are the latest"
         shell: "bash"
-        run:
-          |
-          git status --porcelain \
-            components/core/src/clp_s/search/kql/generated \
-            components/core/src/clp_s/search/sql/generated \
-            | grep . > /dev/null \
-              && exit 1 \
-              || exit 0
+        run: |-
+          generated_paths=(
+            components/core/src/clp_s/search/kql/generated
+            components/core/src/clp_s/search/sql/generated
+          )
+          stale_files="$(git status --porcelain "${generated_paths[@]}")"
+          if [[ -n "${stale_files}" ]]; then
+            echo >&2 "ERROR: The following generated files are out of date:"
+            echo >&2 "${stale_files}"
+            echo >&2 ""
+            echo >&2 "Please run 'task codegen:clp-s-generate-parsers' locally and commit the" \
+              "updated files."
+            git diff >&2 "${generated_paths[@]}"
+            exit 1
+          fi
