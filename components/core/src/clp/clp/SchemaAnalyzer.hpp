@@ -80,7 +80,7 @@ private:
      * Compares a single variable/capture against the encoded DFA using an
      * intersection and returns the types the variable/capture is encodable as.
      *
-     * @param regex_ast
+     * @param regex_ast The AST representing the variable/capture to get the encoded types for.
      * @return
      */
     [[nodiscard]] auto get_encoded_types(std::unique_ptr<RegexAST> regex_ast) -> std::set<uint32_t>;
