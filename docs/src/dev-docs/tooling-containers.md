@@ -191,7 +191,7 @@ The container image sets the following environment variables and configurations,
 
 ## Corporate proxy and mirror support
 
-All base image `build.sh` scripts source `proxy-lib.sh`, which provides transparent support for
+All base image `build.sh` scripts source `corporate-proxy-host.sh`, which provides transparent support for
 building behind corporate proxies and with custom package mirrors. When no proxy or mirror
 environment variables are set, builds work identically to before.
 
