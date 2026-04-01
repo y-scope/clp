@@ -26,6 +26,7 @@ enum class FileType : uint8_t {
     KeyValueIr,
     LogText,
     Zstd,
+    EmptyFile,
     Unknown
 };
 

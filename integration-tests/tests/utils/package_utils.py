@@ -1,12 +1,10 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
     PackageCompressionJob,
     PackageTestConfig,
 )
-
-DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
+from tests.utils.subprocess_utils import run_and_log_subprocess
 
 
 def start_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -14,7 +12,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
     Starts an instance of the CLP package.
 
     :param package_test_config:
-    :raise: Propagates `run_and_assert`'s errors.
+    :raise: Propagates `run_and_log_subprocess`'s errors.
     """
     path_config = package_test_config.path_config
     start_script_path = path_config.start_script_path
@@ -26,7 +24,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_assert(start_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
+    run_and_log_subprocess(start_cmd)
 
 
 def stop_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -34,7 +32,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     Stops the running instance of the CLP package.
 
     :param package_test_config:
-    :raise: Propagates `run_and_assert`'s errors.
+    :raise: Propagates `run_and_log_subprocess`'s errors.
     """
     path_config = package_test_config.path_config
     stop_script_path = path_config.stop_script_path
@@ -46,7 +44,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_assert(stop_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
+    run_and_log_subprocess(stop_cmd)
 
 
 def run_package_compression_script(
@@ -78,4 +76,4 @@ def run_package_compression_script(
     compress_cmd.append(str(compression_job.path_to_original_dataset))
 
     # Run compression command for this job and assert that it succeeds.
-    run_and_assert(compress_cmd, timeout=DEFAULT_CMD_TIMEOUT_SECONDS)
+    run_and_log_subprocess(compress_cmd)
