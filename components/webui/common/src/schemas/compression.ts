@@ -53,16 +53,53 @@ const AbsolutePathSchema = Type.String({
 });
 
 /**
- * Schema for request to create a new compression job.
+ * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
  */
-const CompressionJobCreationSchema = Type.Object({
-    paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
+enum CompressionJobInputType {
+    FS = "fs",
+    S3 = "s3",
+    S3_OBJECT_METADATA = "s3_object_metadata",
+}
+
+/**
+ * Schema for request to create a new FS compression job.
+ */
+const FsCompressionJobCreationSchema = Type.Object({
     dataset: Type.Optional(DatasetNameSchema),
+    inputType: Type.Literal(CompressionJobInputType.FS),
+    paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
     timestampKey: Type.Optional(Type.String()),
     unstructured: Type.Optional(Type.Boolean()),
 });
 
+/**
+ * Schema for request to create a new S3 compression job.
+ */
+const S3CompressionJobCreationSchema = Type.Object({
+    bucket: Type.String({minLength: 1}),
+    dataset: Type.Optional(DatasetNameSchema),
+    endpointUrl: Type.Optional(Type.String()),
+    inputType: Type.Literal(CompressionJobInputType.S3),
+    keyPrefix: Type.Optional(Type.String()),
+    keys: Type.Optional(Type.Array(Type.String({minLength: 1}), {minItems: 1})),
+    regionCode: Type.Optional(Type.String()),
+    timestampKey: Type.Optional(Type.String()),
+    unstructured: Type.Optional(Type.Boolean()),
+});
+
+/**
+ * Schema for request to create a new compression job (FS or S3).
+ */
+const CompressionJobCreationSchema = Type.Union([
+    FsCompressionJobCreationSchema,
+    S3CompressionJobCreationSchema,
+]);
+
 type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;
+
+type FsCompressionJobCreation = Static<typeof FsCompressionJobCreationSchema>;
+
+type S3CompressionJobCreation = Static<typeof S3CompressionJobCreationSchema>;
 
 /**
  * Schema for compression job response.
@@ -72,15 +109,6 @@ const CompressionJobSchema = Type.Object({
 });
 
 type CompressionJob = Static<typeof CompressionJobSchema>;
-
-/**
- * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
- */
-enum CompressionJobInputType {
-    FS = "fs",
-    S3 = "s3",
-    S3_OBJECT_METADATA = "s3_object_metadata",
-}
 
 /**
  * Matching `FsInputConfig` in `job_orchestration.scheduler.job_config`.
@@ -98,12 +126,43 @@ const ClpIoFsInputConfigSchema = Type.Object({
 });
 
 /**
+ * Matching `S3Credentials` in `clp_py_utils.clp_config`.
+ */
+const S3CredentialsSchema = Type.Object({
+    access_key_id: Type.String(),
+    secret_access_key: Type.String(),
+    session_token: Type.Union([Type.String(),
+        Type.Null()]),
+});
+
+/**
+ * Matching `AwsAuthentication` in `clp_py_utils.clp_config`.
+ */
+const AwsAuthenticationSchema = Type.Object({
+    type: Type.String(),
+    profile: Type.Union([Type.String(),
+        Type.Null()]),
+    credentials: Type.Union([S3CredentialsSchema,
+        Type.Null()]),
+});
+
+type AwsAuthentication = Static<typeof AwsAuthenticationSchema>;
+
+/**
  * Matching `S3InputConfig` in `job_orchestration.scheduler.job_config`.
+ * Includes fields inherited from `S3Config` in `clp_py_utils.clp_config`.
  */
 const ClpIoS3InputConfigSchema = Type.Object({
+    aws_authentication: AwsAuthenticationSchema,
+    bucket: Type.String(),
     dataset: Type.Union([Type.String(),
         Type.Null()]),
+    endpoint_url: Type.Union([Type.String(),
+        Type.Null()]),
+    key_prefix: Type.String(),
     keys: Type.Union([Type.Array(Type.String()),
+        Type.Null()]),
+    region_code: Type.Union([Type.String(),
         Type.Null()]),
     timestamp_key: Type.Union([Type.String(),
         Type.Null()]),
@@ -176,9 +235,12 @@ export {
     DatasetNameSchema,
 };
 export type {
+    AwsAuthentication,
     ClpIoConfig,
     ClpIoFsInputConfig,
     ClpIoS3InputConfig,
     CompressionJob,
     CompressionJobCreation,
+    FsCompressionJobCreation,
+    S3CompressionJobCreation,
 };

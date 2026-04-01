@@ -797,9 +797,13 @@ class BaseController(ABC):
         if StorageType.FS == self._clp_config.logs_input.type:
             client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
             server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LogsInputS3AwsAuthentication"] = None
         else:
             client_settings_json_updates["LogsInputRootDir"] = None
             server_settings_json_updates["LogsInputRootDir"] = None
+            server_settings_json_updates["LogsInputS3AwsAuthentication"] = (
+                self._clp_config.logs_input.aws_authentication.model_dump()
+            )
 
         resolved_client_settings_json_path = resolve_host_path_in_container(
             client_settings_json_path
@@ -939,7 +943,7 @@ class BaseController(ABC):
                     f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
                 )
                 raise ValueError(error_msg)
-            if isinstance(value, dict):
+            if isinstance(value, dict) and isinstance(settings[key], dict):
                 self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
             else:
                 settings[key] = value
