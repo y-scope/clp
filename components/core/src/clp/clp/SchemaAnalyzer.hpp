@@ -20,14 +20,14 @@
 
 namespace clp::clp {
 /**
- * Used to analzye a schema and determine which variables/captures are encodable. A variable is
+ * Used to analyze a schema and determine which variables/captures are encodable. A variable is
  * encodable if there exists any string it can match that also matches an encoded type.
  *
  * The following is how it is used:
  * - Set the delimiters to match those used in the schema using `set_delimiters`.
  * - Add each encoding type using `add_encoding_type`.
  * - Generate the analyzer using `generate`.
- * - Generate the map of mathes using `identify_encoded_vars_in_schema`.
+ * - Generate the map of matches using `identify_encoded_vars_in_schema`.
  * - Get the map of matches using `get_map`.
  */
 class SchemaAnalyzer {
