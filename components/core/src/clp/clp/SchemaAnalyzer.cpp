@@ -93,13 +93,16 @@ auto SchemaAnalyzer::recurse_captures(RegexAST const* ast, CaptureMap& capture_m
     if (auto const* alt{dynamic_cast<RegexASTOr const*>(ast)}) {
         recurse_captures(alt->get_left(), capture_map);
         recurse_captures(alt->get_right(), capture_map);
+        return;
     }
     if (auto const* cat{dynamic_cast<RegexASTCat const*>(ast)}) {
         recurse_captures(cat->get_left(), capture_map);
         recurse_captures(cat->get_right(), capture_map);
+        return;
     }
     if (auto const* multi{dynamic_cast<RegexASTMultiplication const*>(ast)}) {
         recurse_captures(multi->get_operand().get(), capture_map);
+        return;
     }
     if (auto const* cap{dynamic_cast<RegexASTCapture const*>(ast)}) {
         recurse_captures(cap->get_capture_regex_ast().get(), capture_map);
