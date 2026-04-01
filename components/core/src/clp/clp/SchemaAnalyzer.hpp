@@ -71,9 +71,7 @@ public:
      */
     auto identify_encoded_vars_in_schema(std::unique_ptr<log_surgeon::SchemaAST> schema) -> void;
 
-    auto get_map() -> EncodingMap const& {
-        return m_encoded_type_to_schema_vars;
-    }
+    auto get_map() -> EncodingMap const& { return m_encoded_type_to_schema_vars; }
 
 private:
     /**
