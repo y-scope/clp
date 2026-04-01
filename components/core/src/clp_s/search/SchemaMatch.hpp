@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <log_surgeon/log_surgeon.hpp>
+
 #include "../ReaderUtils.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
@@ -18,7 +20,10 @@ namespace clp_s::search {
 class SchemaMatch : public ast::Transformation {
 public:
     // Constructor
-    SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader);
+    SchemaMatch(
+            std::shared_ptr<ArchiveReader> archive_reader,
+            std::shared_ptr<clp::ReaderInterface> ls_schema_reader
+    );
 
     /**
      * Runs the transformation on an expression
@@ -88,6 +93,10 @@ private:
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
     // TODO clpp: refactor m_tree and m_schemas
     std::shared_ptr<ArchiveReader> m_archive_reader;
+    bool m_clpp_decomposed_query{false};
+    std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
+    log_surgeon::Schema* m_ls_schema;
+    std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
 
     /**
      * Populates the column mapping for a given column
@@ -95,15 +104,21 @@ private:
      * @param node_id
      * @return true if matching is successful, false otherwise
      */
-    bool
-    populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column, int32_t node_id);
+    bool populate_column_mapping(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            int32_t node_id,
+            std::shared_ptr<ast::Expression> const& expr
+    );
 
     /**
      * Populates the column mapping for a given column
      * @param column
      * @return
      */
-    bool populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column);
+    bool populate_column_mapping(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            std::shared_ptr<ast::Expression> const& expr
+    );
 
     /**
      * Populates the column mapping for a given expression

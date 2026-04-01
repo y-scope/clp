@@ -8,6 +8,8 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 LogTypeMetadata.hpp
                 LogTypeStat.cpp
                 LogTypeStat.hpp
+                DecomposedQuery.cpp
+                DecomposedQuery.hpp
         )
         add_library(clpp::core ALIAS clpp_core)
         target_compile_features(clpp_core PRIVATE cxx_std_20)
@@ -15,9 +17,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         target_link_libraries(
                 clpp_core
                 PUBLIC
-                # clp::string_utils
-                # log_surgeon
-                # ystdlib::containers
+                log_mechanic
                 ystdlib::error_handling
                 zstd::libzstd_static
                 PRIVATE

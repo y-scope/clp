@@ -63,11 +63,11 @@ private:
 
     // Constructor
     explicit StringLiteral(std::string v) : m_v(std::move(v)), m_string_type(0) {
-        if (m_v.find(' ') != std::string::npos) {
-            m_string_type = LiteralType::ClpStringT;
-        } else {
-            m_string_type = LiteralType::VarStringT;
-        }
+        // if (m_v.find(' ') != std::string::npos) {
+        m_string_type = LiteralType::ClpStringT;
+        // } else {
+        //     m_string_type = LiteralType::VarStringT;
+        // }
 
         if (has_unescaped_wildcards(m_v)) {
             m_string_type |= LiteralType::ClpStringT;

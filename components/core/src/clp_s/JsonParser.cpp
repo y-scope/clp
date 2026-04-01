@@ -50,6 +50,7 @@
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/Utils.hpp>
+#include <clpp/DecomposedQuery.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/LogTypeMetadata.hpp>
 
@@ -86,12 +87,6 @@ auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
  */
 auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
         -> bool;
-
-/**
- * @return A log surgeon parser created from the provided schema.
- */
-auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const& network_auth)
-        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::ParserHandle>>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -156,96 +151,6 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
     auto const restore_result{restore_encoded_float(value, format)};
     return false == restore_result.has_error() && float_str == restore_result.value();
 }
-
-/*
- * Log surgeon currently does not expose a way to create a parser using a Reader. To support any
- * Reader and not directly take the file path we read the entire schema file into a string and
- * create the parser from it.
- */
-auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const& network_auth)
-        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::ParserHandle>> {
-    auto schema_reader{try_create_reader(schema_path, network_auth)};
-    if (nullptr == schema_reader) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-    std::string schema_contents{};
-    constexpr size_t cBufSize{4096};
-    std::array<char, cBufSize> buf{};
-    size_t bytes_read{};
-    while (true) {
-        auto code{schema_reader->try_read(buf.data(), buf.size(), bytes_read)};
-        if (clp::ErrorCode_EndOfFile == code) {
-            break;
-        }
-        if (clp::ErrorCode_Success != code) {
-            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
-        }
-        schema_contents.append(buf.data(), bytes_read);
-    }
-    if (schema_contents.empty()) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-
-    auto* schema_builder{log_surgeon::log_surgeon_schema_builder_new()};
-    std::istringstream stream(schema_contents);
-    std::string line;
-    while (std::getline(stream, line)) {
-        if (line.empty() || line.starts_with("//")) {
-            continue;
-        }
-
-        auto const colon_pos{line.find(':')};
-        if (colon_pos != std::string::npos) {
-            auto const name{line.substr(0, colon_pos)};
-            auto const escaped_pattern{line.substr(colon_pos + 1)};
-            std::string pattern{};
-            for (size_t i{0}; i < escaped_pattern.size(); ++i) {
-                auto const c{escaped_pattern[i]};
-                if ('\\' != c) {
-                    pattern += c;
-                    continue;
-                }
-                auto const escaped_c{escaped_pattern[i + 1]};
-                switch (escaped_c) {
-                    case 'n':
-                        pattern += '\n';
-                        break;
-                    case 'r':
-                        pattern += '\r';
-                        break;
-                    case 't':
-                        pattern += '\t';
-                        break;
-                    default:
-                        pattern += c;
-                        pattern += escaped_c;
-                        break;
-                }
-                ++i;
-            }
-            if ("delimiters" == name) {
-                log_surgeon::log_surgeon_schema_builder_set_delimiters(
-                        schema_builder,
-                        log_surgeon::CCharArray::from_string_view(pattern)
-                );
-            } else {
-                if (nullptr
-                    != log_surgeon::log_surgeon_schema_builder_add_rule_with_priority(
-                            schema_builder,
-                            0,
-                            log_surgeon::CCharArray::from_string_view(name),
-                            log_surgeon::CCharArray::from_string_view(pattern)
-                    ))
-                {
-                    throw(std::runtime_error(fmt::format("failed to add {}: '{}'", name, pattern)));
-                }
-            }
-        }
-    }
-    return std::make_unique<log_surgeon::ParserHandle>(
-            log_surgeon::log_surgeon_schema_builder_build(schema_builder)
-    );
-}
 }  // namespace
 
 JsonParser::JsonParser(JsonParserOption const& option)
@@ -258,17 +163,19 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
     if (option.log_surgeon_schema_path.has_value()) {
-        auto const schema_path{option.log_surgeon_schema_path.value()};
-        auto result{create_log_surgeon_parser(schema_path, m_network_auth)};
-        if (result.has_error()) {
+        auto schema_reader{
+                try_create_reader(option.log_surgeon_schema_path.value(), option.network_auth)
+        };
+        auto schema{clpp::DecomposedQuery::create_log_surgeon_schema(schema_reader)};
+        if (schema.has_error()) {
             SPDLOG_ERROR(
                     "Failed to create log surgeon parser from: \"{}\" due to: \"{}\"",
-                    schema_path.path,
-                    result.error().message()
+                    option.log_surgeon_schema_path.value().path,
+                    schema.error().message()
             );
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
-        m_log_surgeon_parser = std::move(result.value());
+        m_log_surgeon_parser = std::make_unique<log_surgeon::ParserHandle>(schema.value());
     }
     if (false == m_timestamp_key.empty()) {
         if (false

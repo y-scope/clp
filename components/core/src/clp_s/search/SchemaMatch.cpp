@@ -9,6 +9,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <clpp/DecomposedQuery.hpp>
+
 #include "../archive_constants.hpp"
 #include "../SchemaTree.hpp"
 #include "ast/AndExpr.hpp"
@@ -58,11 +60,14 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
 
 // TODO: write proper iterators on the AST to make this code less awful.
 // In particular schema intersection needs AST iterators and a proper refactor
-SchemaMatch::SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader)
-
+SchemaMatch::SchemaMatch(
+        std::shared_ptr<ArchiveReader> archive_reader,
+        std::shared_ptr<clp::ReaderInterface> ls_schema_reader
+)
         : m_tree(archive_reader->get_schema_tree()),
           m_schemas(archive_reader->get_schema_map()),
-          m_archive_reader(std::move(archive_reader)) {}
+          m_archive_reader(std::move(archive_reader)),
+          m_ls_schema_reader(std::move(ls_schema_reader)) {}
 
 std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) {
     ConstantProp propagate_empty;
@@ -74,7 +79,7 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
 
     // if we had ambiguous column descriptors containing regex which were
     // resolved we need to restandardize the expression
-    if (false == m_unresolved_descriptor_to_descriptor.empty()) {
+    if (false == m_unresolved_descriptor_to_descriptor.empty() || m_clpp_decomposed_query) {
         m_column_to_descriptor.clear();
         m_unresolved_descriptor_to_descriptor.clear();
 
@@ -110,10 +115,17 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
         } else if (auto const column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(*it)};
                    nullptr != column)
         {
-            if (false == populate_column_mapping(column)) {
+            if (false == populate_column_mapping(column, cur)) {
                 // no matching columns -- replace this expression with empty;
                 return EmptyExpr::create();
-            } else if (column->is_unresolved_descriptor() && false == column->is_pure_wildcard()) {
+            }
+
+            // TODO clpp: decompose here and split into AndExpr?
+            // need SchemaNode IDs from populate_column_mapping to do it here
+            // if (NodeType::LogMessage == ) {
+            // }
+
+            if (column->is_unresolved_descriptor() && false == column->is_pure_wildcard()) {
                 auto possibilities = OrExpr::create();
 
                 // TODO: will have to decide how we wan't to handle multi-column expressions
@@ -164,7 +176,10 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
     return cur;
 }
 
-bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column) {
+bool SchemaMatch::populate_column_mapping(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        std::shared_ptr<ast::Expression> const& expr
+) {
     bool matched = false;
     // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
     // namespaces.
@@ -186,7 +201,7 @@ bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor>
 
     auto resolve_against_subtree = [&](SchemaNode const& root_node) -> void {
         for (int32_t child_node_id : root_node.get_children_ids()) {
-            matched |= populate_column_mapping(column, child_node_id);
+            matched |= populate_column_mapping(column, child_node_id, expr);
         }
     };
 
@@ -212,12 +227,22 @@ bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor>
             }
         }
     }
+    SPDLOG_INFO("matches:");
+    for (auto const& kv : m_column_to_descriptor) {
+        SPDLOG_INFO(
+                "\t\tnode: {} id: {} type: {}",
+                m_tree->get_node(kv.first).get_key_name(),
+                kv.first,
+                (uint8_t)m_tree->get_node(kv.first).get_type()
+        );
+    }
     return matched;
 }
 
 bool SchemaMatch::populate_column_mapping(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
-        int32_t node_id
+        int32_t node_id,
+        std::shared_ptr<ast::Expression> const& expr
 ) {
     /**
      * This function is the core of Column Resolution. The general idea is to walk down different
@@ -321,6 +346,61 @@ bool SchemaMatch::populate_column_mapping(
             if (false == column->is_unresolved_descriptor()) {
                 auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
                 descriptors_it->second.emplace(column);
+
+                if (NodeType::LogMessage == cur_node.get_type()
+                    || NodeType::ParentVarType == cur_node.get_type())
+                {
+                    if (nullptr == m_ls_schema) {
+                        auto schema{
+                                clpp::DecomposedQuery::create_log_surgeon_schema(m_ls_schema_reader)
+                        };
+                        if (schema.has_error()) {
+                            throw(std::runtime_error("failed to build ls schema"));
+                        }
+                        m_ls_schema = schema.value();
+                    }
+
+                    auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
+                    std::string query;
+                    filter->get_operand()->as_clp_string(query, filter->get_operation());
+
+                    if (NodeType::LogMessage == cur_node.get_type()) {
+                        if (nullptr == m_ls_parser) {
+                            m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+                        }
+                        auto decomposed_query{clpp::DecomposedQuery::process_query(
+                                *m_ls_parser,
+                                std::nullopt,
+                                query
+                        )};
+                        // TODO clpp: take the leaves from decomposed_query and create new AndExpr
+                    } else if (NodeType::ParentVarType == cur_node.get_type()) {
+                        // TODO clpp: need a way to walk back up the descriptors and stop at the
+                        // LogMessage
+                        auto col{filter->get_column()};
+                        std::string type_name;
+                        auto log_msg{col->descriptor_begin()};
+                        while ("message" != log_msg->get_token()) {
+                            ++log_msg;
+                        }
+                        for (auto it{log_msg + 1}; col->descriptor_end() != it; ++it) {
+                            if ("msg" != log_msg->get_token()) {
+                                continue;
+                            }
+                            type_name.append(it->get_token());
+                            if (col->descriptor_end() != it + 1) {
+                                type_name.append(".");
+                            }
+                        }
+                        auto decomposed_query{
+                                clpp::DecomposedQuery::process_query(m_ls_schema, type_name, query)
+                        };
+                        // TODO clpp: take the leaves from decomposed_query and create new AndExpr
+                    }
+                    m_clpp_decomposed_query = true;
+                }
+
+                SPDLOG_INFO("\tmatched.");
             } else {
                 auto [node_ids_it, _]
                         = m_unresolved_descriptor_to_descriptor.try_emplace(column.get());
@@ -337,7 +417,6 @@ bool SchemaMatch::populate_column_mapping(
 
         // Push nodes to the work list
         for (int32_t child_node_id : cur_node.get_children_ids()) {
-            SPDLOG_INFO("adding {} {}", cur_node.get_key_name(), (int)cur_node.get_type());
             if (is_key_name_empty) {
                 // Don't advance the iterator when accepting an empty key
                 work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
@@ -357,22 +436,44 @@ void SchemaMatch::populate_schema_mapping() {
     // TODO: consider refactoring this to take advantage of the ordered region of the schema
     for (auto& it : *m_schemas) {
         int32_t schema_id = it.first;
+        std::string_view log_type_id;
         for (int32_t column_id : it.second) {
             if (Schema::schema_entry_is_unordered_object(column_id)) {
                 continue;
             }
+            if (NodeType::LogTypeID == m_tree->get_node(column_id).get_type()) {
+                log_type_id = m_tree->get_node(column_id).get_key_name();
+            }
+            // SPDLOG_INFO(
+            //         "schema id: {} column id: {} type: {} name: {} match: {}",
+            //         schema_id,
+            //         column_id,
+            //         (uint8_t)m_tree->get_node(column_id).get_type(),
+            //         m_tree->get_node(column_id).get_key_name(),
+            //         m_column_to_descriptor.contains(column_id)
+            // );
             if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                 m_array_schema_ids.insert(schema_id);
             }
-            if (false == m_column_to_descriptor.count(column_id)) {
+            if (false == m_column_to_descriptor.contains(column_id)) {
                 continue;
             }
             for (auto const& descriptor : m_column_to_descriptor.at(column_id)) {
-                if (false == descriptor->is_pure_wildcard()) {
-                    auto [schema_to_column_id_it, _]
-                            = m_descriptor_to_schema.try_emplace(descriptor.get());
-                    schema_to_column_id_it->second.emplace(schema_id, column_id);
+                if (descriptor->is_pure_wildcard()) {
+                    continue;
                 }
+
+                // if (descriptor->
+
+                auto [schema_to_column_id_it, _]
+                        = m_descriptor_to_schema.try_emplace(descriptor.get());
+                schema_to_column_id_it->second.emplace(schema_id, column_id);
+                SPDLOG_INFO(
+                        "adding schema id: {} to column id: {} type: {}",
+                        schema_id,
+                        column_id,
+                        (uint8_t)m_tree->get_node(column_id).get_type()
+                );
             }
         }
     }
@@ -399,7 +500,7 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
 
             literal_type_bitmask_t types = 0;
             for (int32_t schema : common_schema) {
-                if (m_descriptor_to_schema[column].count(schema)) {
+                if (m_descriptor_to_schema[column].contains(schema)) {
                     types |= node_to_literal_type(
                             m_tree->get_node(m_descriptor_to_schema[column][schema]).get_type()
                     );

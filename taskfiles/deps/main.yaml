@@ -357,10 +357,11 @@ tasks:
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           URL: "https://github.com/y-scope/log-surgeon/archive/f28c06f.tar.gz"
       - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}"
-        rsync -az "{{.SRC_DIR}}/target/release/liblog_surgeon.a" "{{.INSTALL_DIR}}"
+        rsync -az "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_DIR}}"
         rsync -az "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
         cat << EOF > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
         add_library({{.LIB_NAME}} STATIC IMPORTED)

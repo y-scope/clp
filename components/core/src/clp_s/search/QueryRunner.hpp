@@ -14,7 +14,11 @@
 #include <utility>
 #include <vector>
 
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
+
+#include <clp/ReaderInterface.hpp>
+#include <clpp/DecomposedQuery.hpp>
 
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
@@ -157,6 +161,9 @@ private:
     bool m_maybe_string{false};
     bool m_maybe_number{false};
 
+    std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
+    log_surgeon::Schema* m_ls_schema;
+
     /**
      * Initializes the variables. Init is called once for each schema after which filter is called
      * once for every message in the schema
@@ -248,10 +255,7 @@ private:
             std::vector<ClpStringColumnReader*> const& readers
     ) const -> bool;
 
-    auto evaluate_clpp_string_filter(
-            ast::FilterExpr* expr,
-            int32_t schema_id
-    ) -> bool;
+    auto evaluate_clpp_string_filter(ast::FilterExpr* expr, int32_t schema_id) -> bool;
 
     /**
      * Evaluates a var string filter expression
