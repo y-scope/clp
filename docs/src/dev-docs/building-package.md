@@ -84,8 +84,8 @@ values for the fields in angle brackets.
 To persist custom config or credentials across rebuilds, place overrides in
 `components/package-template/src/etc/`:
 
-* `clp-config.yaml`: overrides the template-generated config.
-* `credentials.yaml`: overrides the auto-generated credentials.
+* `clp-config.yaml` overrides the template-generated config.
+* `credentials.yaml` overrides the auto-generated credentials.
 
 These files are git-ignored.
 
