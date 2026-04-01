@@ -76,7 +76,7 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -107,7 +107,7 @@ spec:
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}
