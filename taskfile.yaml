@@ -134,10 +134,13 @@ tasks:
         rsync --archive
         "components/package-template/src/"
         "{{.OUTPUT_DIR}}"
-      - >-
-        rsync --archive
-        "{{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml"
-        "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
+      # Use the default template as clp-config.yaml unless a local dev override already exists.
+      - |-
+        if [ ! -f "components/package-template/src/etc/clp-config.yaml" ] ; then
+          rsync --archive \
+            "{{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml" \
+            "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
+        fi
       - >-
         rsync --archive --mkpath
         "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/"
