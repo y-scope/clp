@@ -2,6 +2,8 @@
 #define CLP_S_FFI_SFA_CLPARCHIVEDECODER_HPP
 
 #include <memory>
+#include <optional>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -10,7 +12,7 @@
 #include "LogEvent.hpp"
 
 namespace clp_s {
-// Forward include
+// Forward declaration
 class SchemaReader;
 }  // namespace clp_s
 
@@ -46,27 +48,35 @@ public:
     auto operator=(ClpArchiveDecoder&&) noexcept -> ClpArchiveDecoder&;
 
     /**
-     * Decodes all log events from the preloaded schema tables and caches them in memory.
+     * Gets the next decoded log event.
+     *
+     * @return A result containing the next log event on success, or `std::nullopt` if all log
+     * events have been consumed.
+     */
+    [[nodiscard]] auto get_next_log_event()
+            -> ystdlib::error_handling::Result<std::optional<LogEvent>>;
+
+    /**
+     * Decodes all log events and caches them in memory.
      *
      * Repeated calls are no-ops once all log events have been decoded.
      *
-     * @return A void result on success, or an error code indicating the failure:
+     * @return A result containing all decoded log events on success, or an error code indicating
+     * the failure:
      * - `SfaErrorCodeEnum::Failure` if decoding fails.
-     * - `SfaErrorCodeEnum::NoMemory` if allocating decoded event storage fails.
+     * - `SfaErrorCodeEnum::NoMemory` if memory allocation during decoding fails.
      */
-    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<void>;
-
-    /**
-     * @return The decoded log events.
-     */
-    [[nodiscard]] auto get_log_events() const -> std::vector<LogEvent> const& {
-        return m_log_events;
-    }
+    [[nodiscard]] auto collect_log_events()
+            -> ystdlib::error_handling::Result<std::span<LogEvent const>>;
 
 private:
     // Constructor
-    explicit ClpArchiveDecoder(std::vector<std::shared_ptr<clp_s::SchemaReader>>&& tables)
-            : m_tables{std::move(tables)} {}
+    ClpArchiveDecoder(
+            std::vector<std::shared_ptr<clp_s::SchemaReader>>&& tables,
+            bool has_log_order
+    )
+            : m_tables{std::move(tables)},
+              m_has_log_order{has_log_order} {}
 
     // Methods
     /**
@@ -81,10 +91,14 @@ private:
      */
     auto move_from(ClpArchiveDecoder& rhs) noexcept -> void;
 
+    [[nodiscard]] auto append_next_log_event(clp_s::SchemaReader& table) -> bool;
+    [[nodiscard]] auto decode_next_log_event() -> bool;
+    [[nodiscard]] auto decode_next_log_event_in_order() -> bool;
+
     // Members
     std::vector<std::shared_ptr<clp_s::SchemaReader>> m_tables;
+    bool m_has_log_order{false};
     std::vector<LogEvent> m_log_events;
-    bool m_decode_completed{false};
 };
 }  // namespace clp_s::ffi::sfa
 

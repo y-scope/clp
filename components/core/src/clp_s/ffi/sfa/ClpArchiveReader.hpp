@@ -12,7 +12,7 @@
 #include "ClpArchiveDecoder.hpp"
 
 namespace clp_s {
-// Forward include
+// Forward declaration
 class ArchiveReader;
 }  // namespace clp_s
 

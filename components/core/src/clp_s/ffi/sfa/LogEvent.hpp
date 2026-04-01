@@ -8,21 +8,21 @@
 namespace clp_s::ffi::sfa {
 class LogEvent {
 public:
-    LogEvent(int64_t log_event_idx, int64_t timestamp, std::string message)
-            : m_log_event_idx{log_event_idx},
+    LogEvent(std::string message, int64_t timestamp, int64_t log_event_idx)
+            : m_message{std::move(message)},
               m_timestamp{timestamp},
-              m_message{std::move(message)} {}
-
-    [[nodiscard]] auto get_log_event_idx() const -> int64_t { return m_log_event_idx; }
-
-    [[nodiscard]] auto get_timestamp() const -> int64_t { return m_timestamp; }
+              m_log_event_idx{log_event_idx} {}
 
     [[nodiscard]] auto get_message() const -> std::string const& { return m_message; }
 
+    [[nodiscard]] auto get_timestamp() const -> int64_t { return m_timestamp; }
+
+    [[nodiscard]] auto get_log_event_idx() const -> int64_t { return m_log_event_idx; }
+
 private:
-    int64_t m_log_event_idx{0};
-    int64_t m_timestamp{0};
     std::string m_message;
+    int64_t m_timestamp{0};
+    int64_t m_log_event_idx{0};
 };
 }  // namespace clp_s::ffi::sfa
 
