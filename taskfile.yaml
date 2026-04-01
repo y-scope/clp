@@ -450,12 +450,13 @@ tasks:
       # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
       - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
 
-      # Apply the config template for the selected FLAVOUR
+      # Apply the config template for the selected FLAVOUR and remove any overrides
       - >-
         mv
         "{{.OUTPUT_DIR}}/etc/clp-config.template.{{.FLAVOUR}}.yaml"
         "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
       - "rm {{.OUTPUT_DIR}}/etc/clp-config.template.*.yaml"
+      - "rm -f '{{.OUTPUT_DIR}}/etc/credentials.yaml'"
 
       - >-
         tar czf '{{.OUTPUT_FILE}}'
