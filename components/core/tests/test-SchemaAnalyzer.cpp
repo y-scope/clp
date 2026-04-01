@@ -28,9 +28,9 @@ auto delimiter_string_to_vector(string_view delimiters_string) -> vector<uint32_
  *   - int: -?\d+
  *   - float: -?\d+\.\d+
  *
- * @return The initalized `SchemaAnalyzer`.
+ * @return The initialized `SchemaAnalyzer`.
  */
-auto initalize_analyzer() -> clp::clp::SchemaAnalyzer;
+auto initialize_analyzer() -> clp::clp::SchemaAnalyzer;
 
 auto delimiter_string_to_vector(string_view const delimiters_string) -> vector<uint32_t> {
     vector<uint32_t> delimiters_vector;
@@ -72,7 +72,7 @@ auto delimiter_string_to_vector(string_view const delimiters_string) -> vector<u
     return delimiters_vector;
 }
 
-auto initalize_analyzer() -> clp::clp::SchemaAnalyzer {
+auto initialize_analyzer() -> clp::clp::SchemaAnalyzer {
     clp::clp::SchemaAnalyzer analyzer;
     analyzer.set_delimiters(delimiter_string_to_vector(cDelimiters));
     analyzer.add_encoding_type("int", R"(-?\d+)");
@@ -88,7 +88,7 @@ TEST_CASE("schema_analyzer_with_no_matches", "[schema_analyzer]") {
     schema.add_variable(R"(my_var:abc\d+)", -1);
     schema.add_variable(R"(my_var:abc\d+\.\d+)", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -101,7 +101,7 @@ TEST_CASE("schema_analyzer_with_int_match", "[schema_analyzer]") {
     schema.add_delimiters(string("delimiters:") + string(cDelimiters));
     schema.add_variable(R"(my_var:\d+)", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -114,7 +114,7 @@ TEST_CASE("schema_analyzer_with_float_match", "[schema_analyzer]") {
     schema.add_delimiters(string("delimiters:") + string(cDelimiters));
     schema.add_variable(R"(my_var:\d+\.\d+)", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -132,7 +132,7 @@ TEST_CASE("schema_analyzer_with_non_overlapping_matches", "[schema_analyzer]") {
     schema.add_variable(R"(another_float:123\.123)", -1);
     schema.add_variable(R"(third_float:\d*(\.123|abc))", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -147,7 +147,7 @@ TEST_CASE("schema_analyzer_with_overlapping_matches", "[schema_analyzer]") {
     schema.add_variable(R"(another_var:123(\.)?123)", -1);
     schema.add_variable(R"(third_var:123(\.)?(123|abc))", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -165,7 +165,7 @@ TEST_CASE("schema_analyzer_with_capture_matches", "[schema_analyzer]") {
     schema.add_variable(R"(v5:(?<c7>123(\.)?123)abc(?<c7>abc))", -1);
     schema.add_variable(R"(v5:456)", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -200,7 +200,7 @@ TEST_CASE("schema_analyzer_with_multiple_variable_definitions", "[schema_analyze
     schema.add_variable(R"(a_var:\d+\.\d+)", -1);
     schema.add_variable(R"(a_var:abc)", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -219,7 +219,7 @@ TEST_CASE("schema_analyzer_complex", "[schema_analyzer]") {
     schema.add_variable(R"(a_var:abc123abc)", -1);
     schema.add_variable(R"(another_var:abc123\.123abc)", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
@@ -241,7 +241,7 @@ TEST_CASE("schema_analyzer_order_invariance", "[schema_analyzer]") {
     schema.add_variable(R"(v4:(?<c2>abc))", -1);
     schema.add_variable(R"(v4:(?<c2>\d+))", -1);
 
-    auto analyzer{initalize_analyzer()};
+    auto analyzer{initialize_analyzer()};
     analyzer.identify_encoded_vars_in_schema(schema.release_schema_ast_ptr());
 
     auto map{analyzer.get_map()};
