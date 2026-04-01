@@ -81,7 +81,7 @@ private:
      * intersection and returns the types the variable/capture is encodable as.
      *
      * @param regex_ast The AST representing the variable/capture to get the encoded types for.
-     * @return
+     * @return The set of matching encoding types.
      */
     [[nodiscard]] auto get_encoded_types(std::unique_ptr<RegexAST> regex_ast) -> std::set<uint32_t>;
 
