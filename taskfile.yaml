@@ -350,7 +350,7 @@ tasks:
   webui-log-viewer-node-modules-checksum:
     internal: true
     vars:
-      LOG_VIEWER_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules"
+      OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules"
     deps:
       - "deps:log-viewer"
     generates:
@@ -359,7 +359,7 @@ tasks:
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   # NOTE: The webui has two different node_modules directories, and we generate a checksum file for
   # each one. The directories are:
