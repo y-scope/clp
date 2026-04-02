@@ -121,14 +121,14 @@ sleep 2
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
-    --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
-    --set "compressionWorker.scheduling.nodeSelector.yscope\.io/nodeType=compression" \
-    --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "queryWorker.scheduling.nodeSelector.yscope\.io/nodeType=query" \
-    --set "reducer.replicas=${REDUCER_REPLICAS}" \
-    --set "reducer.scheduling.nodeSelector.yscope\.io/nodeType=query" \
-    --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
-    --set "prestoWorker.scheduling.nodeSelector.yscope\.io/nodeType=presto" \
+    --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
+    --set "scheduling.compressionWorker.nodeSelector.yscope\.io/nodeType=compression" \
+    --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
+    --set "scheduling.queryWorker.nodeSelector.yscope\.io/nodeType=query" \
+    --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
+    --set "scheduling.reducer.nodeSelector.yscope\.io/nodeType=query" \
+    --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    --set "scheduling.prestoWorker.nodeSelector.yscope\.io/nodeType=presto" \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
 
