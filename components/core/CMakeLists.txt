@@ -352,6 +352,16 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/filter/tests/test-clp_s-xxhash.cpp
     src/clp_s/test/test_InputConfig.cpp
     src/clp_s/timestamp_parser/test/test_TimestampParser.cpp
+    src/clp_s/tests/clp_s_test_utils.cpp
+    src/clp_s/tests/clp_s_test_utils.hpp
+    src/clp_s/tests/test-clp_s-delta-encode-log-order.cpp
+    src/clp_s/tests/test-clp_s-end_to_end.cpp
+    src/clp_s/tests/test-clp_s-ffi_sfa_reader.cpp
+    src/clp_s/tests/test-clp_s-range_index.cpp
+    src/clp_s/tests/test-clp_s-search.cpp
+    src/clp_s/tests/test-FloatFormatEncoding.cpp
+    src/clp_s/tests/test-kql.cpp
+    src/clp_s/tests/test-sql.cpp
     )
 
 set(SOURCE_FILES_reducer_unitTest
@@ -637,8 +647,6 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        tests/clp_s_test_utils.cpp
-        tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
         tests/MockLogTypeDictionary.hpp
         tests/MockVariableDictionary.hpp
@@ -648,25 +656,18 @@ set(SOURCE_FILES_unitTest
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedReader.cpp
-        tests/test-clp_s-delta-encode-log-order.cpp
-        tests/test-clp_s-end_to_end.cpp
-        tests/test-clp_s-ffi_sfa_reader.cpp
-        tests/test-clp_s-range_index.cpp
-        tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-ffi_IrUnitHandlerReq.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-FloatFormatEncoding.cpp
         tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
-        tests/test-kql.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -679,7 +680,6 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
-        tests/test-sql.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
@@ -714,6 +714,7 @@ if(CLP_ENABLE_TESTS)
     target_include_directories(unitTest
             PRIVATE
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
             )
     target_link_libraries(unitTest
             PRIVATE
