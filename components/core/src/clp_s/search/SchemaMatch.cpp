@@ -380,15 +380,15 @@ auto SchemaMatch::populate_column_mapping(
                 {
                     m_clpp_decomposed_query = true;
 
-                    if (nullptr == m_ls_schema) {
-                        auto schema{
-                                clpp::DecomposedQuery::create_log_surgeon_schema(m_ls_schema_reader)
-                        };
-                        if (schema.has_error()) {
-                            throw(std::runtime_error("failed to build ls schema"));
-                        }
-                        m_ls_schema = schema.value();
+                    // TODO clpp: schema always consumed even for parent search??
+                    m_ls_schema_reader->seek_from_begin(0);
+                    auto schema{
+                            clpp::DecomposedQuery::create_log_surgeon_schema(m_ls_schema_reader)
+                    };
+                    if (schema.has_error()) {
+                        throw(std::runtime_error("failed to build ls schema"));
                     }
+                    m_ls_schema = schema.value();
 
                     auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
                     std::string query;
@@ -397,7 +397,6 @@ auto SchemaMatch::populate_column_mapping(
                     if (NodeType::LogMessage == cur_node.get_type()) {
                         if (nullptr == m_ls_parser) {
                             m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
-                            m_ls_schema = nullptr;
                         }
                         auto decomposed_query{clpp::DecomposedQuery::process_query(
                                 *m_ls_parser,
@@ -465,7 +464,6 @@ auto SchemaMatch::populate_column_mapping(
 
                         if (1 == num_variable_descriptors && nullptr == m_ls_parser) {
                             m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
-                            m_ls_schema = nullptr;
                         }
 
                         ystdlib::error_handling::Result<clpp::DecomposedQuery> decomposed_query{
