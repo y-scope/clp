@@ -347,23 +347,6 @@ add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
-set(SOURCE_FILES_clp_s_unitTest
-    src/clp_s/filter/tests/test-clp_s-bloom_filter.cpp
-    src/clp_s/filter/tests/test-clp_s-xxhash.cpp
-    src/clp_s/test/test_InputConfig.cpp
-    src/clp_s/timestamp_parser/test/test_TimestampParser.cpp
-    src/clp_s/tests/clp_s_test_utils.cpp
-    src/clp_s/tests/clp_s_test_utils.hpp
-    src/clp_s/tests/test-clp_s-delta-encode-log-order.cpp
-    src/clp_s/tests/test-clp_s-end_to_end.cpp
-    src/clp_s/tests/test-clp_s-ffi_sfa_reader.cpp
-    src/clp_s/tests/test-clp_s-range_index.cpp
-    src/clp_s/tests/test-clp_s-search.cpp
-    src/clp_s/tests/test-FloatFormatEncoding.cpp
-    src/clp_s/tests/test-kql.cpp
-    src/clp_s/tests/test-sql.cpp
-    )
-
 set(SOURCE_FILES_reducer_unitTest
     src/reducer/BufferedSocketWriter.cpp
     src/reducer/BufferedSocketWriter.hpp
@@ -708,7 +691,6 @@ if(CLP_ENABLE_TESTS)
 
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
-            ${SOURCE_FILES_clp_s_unitTest}
             ${SOURCE_FILES_reducer_unitTest}
             )
     target_include_directories(unitTest
@@ -725,6 +707,7 @@ if(CLP_ENABLE_TESTS)
             Boost::regex
             Boost::url
             Catch2::Catch2WithMain
+            clp_s::unit_test_sources
             clp_unittest_runtime
             ${CURL_LIBRARIES}
             date::date

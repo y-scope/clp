@@ -508,3 +508,26 @@ if(CLP_BUILD_EXECUTABLES)
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
         )
 endif()
+
+if(CLP_BUILD_TESTING)
+        add_library(clp_s_unit_test_sources INTERFACE)
+        add_library(clp_s::unit_test_sources ALIAS clp_s_unit_test_sources)
+        target_sources(
+                clp_s_unit_test_sources
+                INTERFACE
+                filter/tests/test-clp_s-bloom_filter.cpp
+                filter/tests/test-clp_s-xxhash.cpp
+                tests/test_InputConfig.cpp
+                tests/clp_s_test_utils.cpp
+                tests/clp_s_test_utils.hpp
+                tests/test-clp_s-delta-encode-log-order.cpp
+                tests/test-clp_s-end_to_end.cpp
+                tests/test-clp_s-ffi_sfa_reader.cpp
+                tests/test-clp_s-range_index.cpp
+                tests/test-clp_s-search.cpp
+                tests/test-FloatFormatEncoding.cpp
+                tests/test-kql.cpp
+                tests/test-sql.cpp
+                timestamp_parser/test/test_TimestampParser.cpp
+        )
+endif()
