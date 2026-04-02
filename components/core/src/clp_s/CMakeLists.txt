@@ -462,6 +462,24 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        # Runtime dependencies built by clp-s for the executable. Keep in sync with
+        # `CLP_BUILD_CLP_S_*` flags required by `CLP_BUILD_EXECUTABLES` inside options.cmake.
+        add_library(clp_s_binary_runtime INTERFACE)
+        target_link_libraries(
+                clp_s_binary_runtime
+                INTERFACE
+                clp_s::archive_reader
+                clp_s::archive_writer
+                clp_s::clp_dependencies
+                clp_s::io
+                clp_s::json_constructor
+                clp_s::reducer_dependencies
+                clp_s::search
+                clp_s::search::ast
+                clp_s::search::kql
+                clp_s::search::timestamp_parser
+        )
+
         add_executable(
                 clp-s
                 clp-s.cpp
@@ -478,15 +496,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp-s
                 PRIVATE
                 Boost::program_options
-                clp_s::archive_reader
-                clp_s::archive_writer
-                clp_s::clp_dependencies
-                clp_s::io
-                clp_s::json_constructor
-                clp_s::reducer_dependencies
-                clp_s::search
-                clp_s::search::ast
-                clp_s::search::kql
+                clp_s_binary_runtime
                 ${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
