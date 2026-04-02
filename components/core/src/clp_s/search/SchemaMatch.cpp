@@ -397,6 +397,7 @@ auto SchemaMatch::populate_column_mapping(
                     if (NodeType::LogMessage == cur_node.get_type()) {
                         if (nullptr == m_ls_parser) {
                             m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+                            m_ls_schema = nullptr;
                         }
                         auto decomposed_query{clpp::DecomposedQuery::process_query(
                                 *m_ls_parser,
@@ -464,6 +465,7 @@ auto SchemaMatch::populate_column_mapping(
 
                         if (1 == num_variable_descriptors && nullptr == m_ls_parser) {
                             m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+                            m_ls_schema = nullptr;
                         }
 
                         ystdlib::error_handling::Result<clpp::DecomposedQuery> decomposed_query{
@@ -499,13 +501,15 @@ auto SchemaMatch::populate_column_mapping(
                             };
                             for (auto const& parent_match : metadata.get_parent_matches()) {
                                 // SPDLOG_INFO(
-                                //         "checking log type parent name: {} cur token: {} | query: "
+                                //         "checking log type parent name: {} cur token: {} | query:
+                                //         "
                                 //         "{} metadata: {}",
                                 //         parent_match.m_name,
                                 //         cur_it->get_token(),
                                 //         decomposed_query.value().get_log_type(),
                                 //         log_type.get_value()
-                                //                 .substr(parent_match.m_start, parent_match.m_size)
+                                //                 .substr(parent_match.m_start,
+                                //                 parent_match.m_size)
                                 // );
                                 // TODO clpp: bug in the metadata?? or log type??
                                 // if (parent_match.m_name == cur_it->get_token()
