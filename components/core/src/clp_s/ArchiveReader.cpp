@@ -80,6 +80,7 @@ auto ArchiveReader::initialize_archive_reader(Options const& options) -> void {
     }
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
 
+    // TODO clpp: go back to reading metadata and stats on demand
     if (options.m_experimental) {
         auto metadata{read_logtype_metadata()};
         if (metadata.has_error()) {

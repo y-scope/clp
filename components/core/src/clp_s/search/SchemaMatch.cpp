@@ -2,13 +2,17 @@
 
 #include <algorithm>
 #include <charconv>
+#include <memory>
 #include <queue>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
 
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp_s/search/ast/StringLiteral.hpp>
 #include <clpp/DecomposedQuery.hpp>
 
 #include "../archive_constants.hpp"
@@ -42,11 +46,53 @@ using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
 namespace {
+auto build_leaves_expr(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        clpp::DecomposedQuery const& decomposed_query
+) -> std::shared_ptr<ast::Expression>;
+
 /**
  * Gets the `NodeType` corresponding to a given subtree type.
  * @param subtree_type
  * @return the corresponding `NodeType` or `NodeType::Unknown` if the subtree type is unknown.
  */
+auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
+
+auto build_leaves_expr(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        clpp::DecomposedQuery const& decomposed_query
+) -> std::shared_ptr<ast::Expression> {
+    auto leaves_expr{ast::AndExpr::create()};
+    for (auto const& leaf : decomposed_query.get_leaves()) {
+        auto new_col{column->copy()};
+        new_col->set_matching_types(
+                LiteralType::VarStringT | LiteralType::ClpStringT | LiteralType::IntegerT
+        );
+        auto& new_col_descriptors{new_col->get_descriptor_list()};
+
+        auto start{leaf.m_type_names.rbegin()};
+        if (new_col_descriptors.back().get_token() == *start) {
+            ++start;
+        }
+        for (auto it{start}; leaf.m_type_names.rend() != it; ++it) {
+            new_col_descriptors.emplace_back(
+                    DescriptorToken::create_descriptor_from_literal_token(*it)
+            );
+        }
+        auto leaf_literal{ast::StringLiteral::create(leaf.m_match)};
+        leaves_expr->add_operand(
+                FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
+        );
+        {
+            std::string full_name;
+            for (auto const& desc : new_col_descriptors) {
+                full_name.append(desc.get_token());
+            }
+        }
+    }
+    return leaves_expr;
+}
+
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
         return NodeType::Metadata;
@@ -115,15 +161,15 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
         } else if (auto const column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(*it)};
                    nullptr != column)
         {
-            if (false == populate_column_mapping(column, cur)) {
+            auto [mapped_succesfully, new_and_expr]{populate_column_mapping(column, cur)};
+            if (false == mapped_succesfully) {
                 // no matching columns -- replace this expression with empty;
                 return EmptyExpr::create();
             }
 
-            // TODO clpp: decompose here and split into AndExpr?
-            // need SchemaNode IDs from populate_column_mapping to do it here
-            // if (NodeType::LogMessage == ) {
-            // }
+            if (nullptr != new_and_expr) {
+                return new_and_expr;
+            }
 
             if (column->is_unresolved_descriptor() && false == column->is_pure_wildcard()) {
                 auto possibilities = OrExpr::create();
@@ -176,10 +222,10 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
     return cur;
 }
 
-bool SchemaMatch::populate_column_mapping(
+auto SchemaMatch::populate_column_mapping(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         std::shared_ptr<ast::Expression> const& expr
-) {
+) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
     bool matched = false;
     // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
     // namespaces.
@@ -196,13 +242,20 @@ bool SchemaMatch::populate_column_mapping(
             }
         }
 
-        return matched;
+        return {matched, expr};
     }
 
-    auto resolve_against_subtree = [&](SchemaNode const& root_node) -> void {
-        for (int32_t child_node_id : root_node.get_children_ids()) {
-            matched |= populate_column_mapping(column, child_node_id, expr);
+    auto resolve_against_subtree =
+            [&](SchemaNode const& root_node) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
+        for (auto const child_node_id : root_node.get_children_ids()) {
+            // TODO clpp: ???
+            // matched |= populate_column_mapping(column, child_node_id, expr);
+            auto [matched, new_expr]{populate_column_mapping(column, child_node_id, expr)};
+            if (matched) {
+                return {matched, new_expr};
+            }
         }
+        return {matched, expr};
     };
 
     if (auto const& subtree_type{column->get_subtree_type()}; subtree_type.has_value()) {
@@ -213,7 +266,8 @@ bool SchemaMatch::populate_column_mapping(
             -1 != subtree_root_node_id)
         {
             auto const& root_node = m_tree->get_node(subtree_root_node_id);
-            resolve_against_subtree(root_node);
+            // TODO clpp: ???
+            return resolve_against_subtree(root_node);
         }
     } else {
         // Resolve against every subtree that has matching namespaces except for the
@@ -223,27 +277,19 @@ bool SchemaMatch::populate_column_mapping(
                 && namespace_type_pair.first == column->get_namespace())
             {
                 auto const& root_node = m_tree->get_node(subtree_root_node_id);
-                resolve_against_subtree(root_node);
+                // TODO clpp: ???
+                return resolve_against_subtree(root_node);
             }
         }
     }
-    SPDLOG_INFO("matches:");
-    for (auto const& kv : m_column_to_descriptor) {
-        SPDLOG_INFO(
-                "\t\tnode: {} id: {} type: {}",
-                m_tree->get_node(kv.first).get_key_name(),
-                kv.first,
-                (uint8_t)m_tree->get_node(kv.first).get_type()
-        );
-    }
-    return matched;
+    return {matched, expr};
 }
 
-bool SchemaMatch::populate_column_mapping(
+auto SchemaMatch::populate_column_mapping(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         int32_t node_id,
         std::shared_ptr<ast::Expression> const& expr
-) {
+) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
     /**
      * This function is the core of Column Resolution. The general idea is to walk down different
      * branches of the mst while advancing an iterator over the column descriptor in step.
@@ -293,15 +339,6 @@ bool SchemaMatch::populate_column_mapping(
         bool wildcard_descriptor = false == at_descriptor_list_end && cur_it->wildcard();
         bool accepted = false;
 
-        SPDLOG_INFO(
-                "comparing {} {} ({} {}) to {}",
-                cur_node.get_key_name(),
-                column->type_to_string(node_to_literal_type(cur_node.get_type())),
-                (int)cur_node.get_type(),
-                (int)node_to_literal_type(cur_node.get_type()),
-                cur_it->get_token()
-        );
-
         if (wildcard_descriptor) {
             accepted = true;
         } else if (is_key_name_empty) {
@@ -316,12 +353,6 @@ bool SchemaMatch::populate_column_mapping(
         if (false == accepted) {
             continue;
         }
-
-        SPDLOG_INFO(
-                "\t\taccepted: {}, type matches: {}",
-                accepted,
-                column->matches_type(node_to_literal_type(cur_node.get_type()))
-        );
 
         // Currently we only allow fully resolved descriptors for precise array search
         if (NodeType::UnstructuredArray == cur_node.get_type()
@@ -344,12 +375,11 @@ bool SchemaMatch::populate_column_mapping(
                     && column->matches_type(node_to_literal_type(cur_node.get_type()))))
         {
             if (false == column->is_unresolved_descriptor()) {
-                auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
-                descriptors_it->second.emplace(column);
-
                 if (NodeType::LogMessage == cur_node.get_type()
                     || NodeType::ParentVarType == cur_node.get_type())
                 {
+                    m_clpp_decomposed_query = true;
+
                     if (nullptr == m_ls_schema) {
                         auto schema{
                                 clpp::DecomposedQuery::create_log_surgeon_schema(m_ls_schema_reader)
@@ -373,34 +403,154 @@ bool SchemaMatch::populate_column_mapping(
                                 std::nullopt,
                                 query
                         )};
-                        // TODO clpp: take the leaves from decomposed_query and create new AndExpr
-                    } else if (NodeType::ParentVarType == cur_node.get_type()) {
-                        // TODO clpp: need a way to walk back up the descriptors and stop at the
-                        // LogMessage
-                        auto col{filter->get_column()};
-                        std::string type_name;
-                        auto log_msg{col->descriptor_begin()};
-                        while ("message" != log_msg->get_token()) {
-                            ++log_msg;
+                        if (decomposed_query.has_error()) {
+                            continue;
                         }
-                        for (auto it{log_msg + 1}; col->descriptor_end() != it; ++it) {
-                            if ("msg" != log_msg->get_token()) {
-                                continue;
-                            }
-                            type_name.append(it->get_token());
-                            if (col->descriptor_end() != it + 1) {
-                                type_name.append(".");
-                            }
-                        }
-                        auto decomposed_query{
-                                clpp::DecomposedQuery::process_query(m_ls_schema, type_name, query)
-                        };
-                        // TODO clpp: take the leaves from decomposed_query and create new AndExpr
-                    }
-                    m_clpp_decomposed_query = true;
-                }
 
-                SPDLOG_INFO("\tmatched.");
+                        if (m_archive_reader->get_typed_log_type_dictionary()
+                                    ->get_entries()
+                                    .empty())
+                        {
+                            m_archive_reader->get_typed_log_type_dictionary()->read_entries();
+                        }
+
+                        std::vector<clp_s::logtype_id_t> matched_ids;
+                        for (auto const& log_type :
+                             m_archive_reader->get_typed_log_type_dictionary()->get_entries())
+                        {
+                            if (decomposed_query.value().get_log_type() == log_type.get_value()) {
+                                matched_ids.emplace_back(log_type.get_id());
+                            }
+                        }
+                        // TODO clpp: we could exit early once we know no log types match?
+
+                        auto log_type_expr{ast::OrExpr::create()};
+                        for (auto const id : matched_ids) {
+                            auto id_str{fmt::format("{}", id)};
+                            auto new_col{column->copy()};
+                            new_col->set_matching_types(LiteralType::ClpStringT);
+                            new_col->set_namespace(constants::cLogTypeNodeName);
+                            auto& new_col_descriptors{new_col->get_descriptor_list()};
+                            new_col_descriptors.clear();
+                            new_col_descriptors.emplace_back(
+                                    DescriptorToken::create_descriptor_from_literal_token(id_str)
+                            );
+                            log_type_expr->add_operand(
+                                    FilterExpr::create(new_col, ast::FilterOperation::EXISTS)
+                            );
+                            {
+                                std::string full_name;
+                                for (auto const& desc : new_col_descriptors) {
+                                    full_name.append(desc.get_token());
+                                }
+                            }
+                        }
+
+                        auto full_expr{ast::AndExpr::create()};
+                        full_expr->add_operand(log_type_expr);
+                        full_expr->add_operand(build_leaves_expr(column, decomposed_query.value()));
+                        return {true, full_expr};
+                    }
+                    if (NodeType::ParentVarType == cur_node.get_type()) {
+                        std::string type_name{cur_node.get_key_name()};
+                        auto const* parent_node{&m_tree->get_node(cur_node.get_parent_id())};
+                        size_t num_variable_descriptors{1};
+                        while (NodeType::LogMessage != parent_node->get_type()) {
+                            type_name.insert(0, parent_node->get_key_name());
+                            type_name.append(".");
+                            parent_node = &m_tree->get_node(parent_node->get_parent_id());
+                            ++num_variable_descriptors;
+                        }
+
+                        if (1 == num_variable_descriptors && nullptr == m_ls_parser) {
+                            m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+                        }
+
+                        ystdlib::error_handling::Result<clpp::DecomposedQuery> decomposed_query{
+                                (1 == num_variable_descriptors)
+                                        ? clpp::DecomposedQuery::process_query(
+                                                  *m_ls_parser,
+                                                  type_name,
+                                                  query
+                                          )
+                                        : clpp::DecomposedQuery::process_query(
+                                                  m_ls_schema,
+                                                  type_name,
+                                                  query
+                                          )
+                        };
+                        if (decomposed_query.has_error()) {
+                            continue;
+                        }
+
+                        if (m_archive_reader->get_typed_log_type_dictionary()
+                                    ->get_entries()
+                                    .empty())
+                        {
+                            m_archive_reader->get_typed_log_type_dictionary()->read_entries();
+                        }
+
+                        std::vector<clp_s::logtype_id_t> matched_ids;
+                        for (auto const& log_type :
+                             m_archive_reader->get_typed_log_type_dictionary()->get_entries())
+                        {
+                            auto metadata{
+                                    m_archive_reader->get_logtype_metadata().at(log_type.get_id())
+                            };
+                            for (auto const& parent_match : metadata.get_parent_matches()) {
+                                // SPDLOG_INFO(
+                                //         "checking log type parent name: {} cur token: {} | query: "
+                                //         "{} metadata: {}",
+                                //         parent_match.m_name,
+                                //         cur_it->get_token(),
+                                //         decomposed_query.value().get_log_type(),
+                                //         log_type.get_value()
+                                //                 .substr(parent_match.m_start, parent_match.m_size)
+                                // );
+                                // TODO clpp: bug in the metadata?? or log type??
+                                // if (parent_match.m_name == cur_it->get_token()
+                                //     && decomposed_query.value().get_log_type()
+                                //                == log_type.get_value().substr(
+                                //                        parent_match.m_start,
+                                //                        parent_match.m_size
+                                //                ))
+                                if (parent_match.m_name == cur_it->get_token()) {
+                                    matched_ids.emplace_back(log_type.get_id());
+                                }
+                            }
+                        }
+                        // TODO clpp: we could exit early once we know no log types match?
+
+                        auto log_type_expr{ast::OrExpr::create()};
+                        for (auto const id : matched_ids) {
+                            auto id_str{fmt::format("{}", id)};
+                            auto new_col{column->copy()};
+                            new_col->set_matching_types(LiteralType::ClpStringT);
+                            new_col->set_namespace(constants::cLogTypeNodeName);
+                            auto& new_col_descriptors{new_col->get_descriptor_list()};
+                            new_col_descriptors.clear();
+                            new_col_descriptors.emplace_back(
+                                    DescriptorToken::create_descriptor_from_literal_token(id_str)
+                            );
+                            log_type_expr->add_operand(
+                                    FilterExpr::create(new_col, ast::FilterOperation::EXISTS)
+                            );
+                            {
+                                std::string full_name;
+                                for (auto const& desc : new_col_descriptors) {
+                                    full_name.append(desc.get_token());
+                                }
+                            }
+                        }
+
+                        auto full_expr{ast::AndExpr::create()};
+                        full_expr->add_operand(log_type_expr);
+                        full_expr->add_operand(build_leaves_expr(column, decomposed_query.value()));
+                        return {true, full_expr};
+                    }
+                }
+                auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
+                descriptors_it->second.emplace(column);
             } else {
                 auto [node_ids_it, _]
                         = m_unresolved_descriptor_to_descriptor.try_emplace(column.get());
@@ -429,7 +579,7 @@ bool SchemaMatch::populate_column_mapping(
             }
         }
     }
-    return matched;
+    return {matched, expr};
 }
 
 void SchemaMatch::populate_schema_mapping() {
@@ -444,14 +594,6 @@ void SchemaMatch::populate_schema_mapping() {
             if (NodeType::LogTypeID == m_tree->get_node(column_id).get_type()) {
                 log_type_id = m_tree->get_node(column_id).get_key_name();
             }
-            // SPDLOG_INFO(
-            //         "schema id: {} column id: {} type: {} name: {} match: {}",
-            //         schema_id,
-            //         column_id,
-            //         (uint8_t)m_tree->get_node(column_id).get_type(),
-            //         m_tree->get_node(column_id).get_key_name(),
-            //         m_column_to_descriptor.contains(column_id)
-            // );
             if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                 m_array_schema_ids.insert(schema_id);
             }
@@ -463,17 +605,9 @@ void SchemaMatch::populate_schema_mapping() {
                     continue;
                 }
 
-                // if (descriptor->
-
                 auto [schema_to_column_id_it, _]
                         = m_descriptor_to_schema.try_emplace(descriptor.get());
                 schema_to_column_id_it->second.emplace(schema_id, column_id);
-                SPDLOG_INFO(
-                        "adding schema id: {} to column id: {} type: {}",
-                        schema_id,
-                        column_id,
-                        (uint8_t)m_tree->get_node(column_id).get_type()
-                );
             }
         }
     }

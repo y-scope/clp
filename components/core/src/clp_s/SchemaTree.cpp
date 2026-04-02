@@ -22,6 +22,7 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
             return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::LogMessage:
         case NodeType::ParentVarType:
+        case NodeType::LogTypeID:
         case NodeType::ClpString:
             return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:
@@ -37,7 +38,6 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
             return clp_s::search::ast::LiteralType::TimestampT;
         case NodeType::Metadata:
         case NodeType::LogType:
-        case NodeType::LogTypeID:
         case NodeType::Unknown:
         default:
             return clp_s::search::ast::LiteralType::UnknownT;

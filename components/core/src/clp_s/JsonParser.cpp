@@ -1520,20 +1520,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             break;
         }
 
-        // if (0 != cap->capture_id) {
-        // walk to top parent
-        // rule_map.at(cap->rule_id)
-
-        // while () {
-        //     cap->parent_id;
-        // }
-        // create ParentVarType schema node under log_msg_node_id
-        // start unordered parent match object
-        //     auto
-        //     parent_obj{m_current_schema.start_unordered_object(NodeType::ParentTypeMatch)};
-        // record started parent ID(s)
-        // }
-
         auto name{get_cap_name(*cap)};
         auto parent_node_id{log_msg_node_id};
         if (0 != cap->capture_id) {
@@ -1616,6 +1602,13 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     auto [log_type_id, new_logtype]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
     };
+    // TODO clpp: swap to this
+    // m_current_schema.insert_unordered(m_archive_writer->add_node(
+    //         m_archive_writer
+    //                 ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogTypeNodeName),
+    //         NodeType::LogTypeID,
+    //         fmt::format("{}", log_type_id)
+    // ));
     m_current_schema.insert_unordered(add_log_type_id_node(log_type_id));
 
     if (new_logtype) {

@@ -64,14 +64,14 @@ private:
     // Constructor
     explicit StringLiteral(std::string v) : m_v(std::move(v)), m_string_type(0) {
         // if (m_v.find(' ') != std::string::npos) {
-        m_string_type = LiteralType::ClpStringT;
+        m_string_type = LiteralType::ClpStringT | LiteralType::VarStringT;
         // } else {
         //     m_string_type = LiteralType::VarStringT;
         // }
 
-        if (has_unescaped_wildcards(m_v)) {
-            m_string_type |= LiteralType::ClpStringT;
-        }
+        //if (has_unescaped_wildcards(m_v)) {
+        //    m_string_type |= LiteralType::ClpStringT;
+        //}
     }
 };
 }  // namespace clp_s::search::ast

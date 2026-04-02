@@ -21,6 +21,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 ystdlib::error_handling
                 zstd::libzstd_static
                 PRIVATE
+                absl::flat_hash_map
                 fmt::fmt
                 spdlog::spdlog
         )

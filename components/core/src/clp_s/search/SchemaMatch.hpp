@@ -2,6 +2,7 @@
 #define CLP_S_SEARCH_SCHEMAMATCH_HPP
 
 #include <map>
+#include <memory>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -15,6 +16,8 @@
 #include "ast/Literal.hpp"
 #include "ast/Transformation.hpp"
 #include "clp_s/ArchiveReader.hpp"
+#include "clp_s/search/ast/StringLiteral.hpp"
+#include "clpp/DecomposedQuery.hpp"
 
 namespace clp_s::search {
 class SchemaMatch : public ast::Transformation {
@@ -75,6 +78,7 @@ public:
     bool has_array_search(int32_t schema_id);
 
 private:
+    // Data members
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;
     // TODO: The value in the map can be a set of k:v pairs with a hash & comparison
@@ -97,6 +101,7 @@ private:
     std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
     log_surgeon::Schema* m_ls_schema;
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
+    std::vector<std::shared_ptr<ast::Literal>> m_leaf_literals;
 
     /**
      * Populates the column mapping for a given column
@@ -104,21 +109,21 @@ private:
      * @param node_id
      * @return true if matching is successful, false otherwise
      */
-    bool populate_column_mapping(
+    auto populate_column_mapping(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             int32_t node_id,
             std::shared_ptr<ast::Expression> const& expr
-    );
+    ) -> std::tuple<bool, std::shared_ptr<ast::Expression>>;
 
     /**
      * Populates the column mapping for a given column
      * @param column
      * @return
      */
-    bool populate_column_mapping(
+    auto populate_column_mapping(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             std::shared_ptr<ast::Expression> const& expr
-    );
+    ) -> std::tuple<bool, std::shared_ptr<ast::Expression>>;
 
     /**
      * Populates the column mapping for a given expression
