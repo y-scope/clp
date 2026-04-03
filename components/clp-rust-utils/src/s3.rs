@@ -11,5 +11,4 @@ pub struct ObjectMetadata {
     pub bucket: NonEmptyString,
     pub key: NonEmptyString,
     pub size: u64,
-    pub id: Option<S3ObjectMetadataId>,
 }

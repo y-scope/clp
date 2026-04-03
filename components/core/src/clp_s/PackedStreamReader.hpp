@@ -10,6 +10,7 @@
 
 #include "../clp/ReaderInterface.hpp"
 #include "ArchiveReaderAdaptor.hpp"
+#include "TraceableException.hpp"
 #include "ZstdDecompressor.hpp"
 
 namespace clp_s {
