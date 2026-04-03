@@ -34,8 +34,8 @@ tasks:
     sources:
       - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
-      - "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/package.json"
       - "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/package-lock.json"
+      - "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/package.json"
       - "{{.TASKFILE}}"
     dir: "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}"
     generates:
@@ -53,10 +53,10 @@ tasks:
 
   source:
     internal: true
-    generates:
-      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
     sources:
       - "{{.TASKFILE}}"
+    generates:
+      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
     deps: [":utils:init"]
     cmds:
       - task: ":yscope-dev-utils:remote:download-and-extract-tar"
