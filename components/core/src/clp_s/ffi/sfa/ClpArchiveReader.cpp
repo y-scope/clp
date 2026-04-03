@@ -30,10 +30,8 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
         auto path{get_path_object_for_raw_path(archive_path)};
         reader = std::make_unique<clp_s::ArchiveReader>();
         reader->open(path, NetworkAuthOption{});
-
         auto clp_archive_reader{ClpArchiveReader{std::move(reader), nullptr}};
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
-
         return clp_archive_reader;
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR(
@@ -64,12 +62,10 @@ auto ClpArchiveReader::create(std::vector<char>&& archive_data) -> Result<ClpArc
 
         archive_reader = std::make_unique<clp_s::ArchiveReader>();
         archive_reader->open(reader, cDefaultArchiveId);
-
         auto clp_archive_reader{
                 ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)}
         };
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
-
         return clp_archive_reader;
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR("Failed to create ClpArchiveReader: out of memory.");
@@ -173,13 +169,7 @@ auto ClpArchiveReader::decode_all() -> Result<std::vector<LogEvent>> {
                 break;
             }
 
-            if (next_table->get_next_message_with_metadata(
-                        message,
-                        timestamp,
-                        log_event_idx,
-                        nullptr
-                ))
-            {
+            if (next_table->get_next_message_with_metadata(message, timestamp, log_event_idx)) {
                 m_log_events.emplace_back(log_event_idx, timestamp, std::move(message));
             }
         }
@@ -198,27 +188,18 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
     m_file_names.reserve(range_index.size());
     m_file_infos.reserve(range_index.size());
 
-    int64_t prev_end_idx{0};
     for (auto const& range : range_index) {
         auto const start_idx{static_cast<int64_t>(range.start_index)};
         auto const end_idx{static_cast<int64_t>(range.end_index)};
-        if (start_idx >= end_idx || start_idx != prev_end_idx) {
-            return SfaErrorCode{SfaErrorCodeEnum::MalformedRangeIndex};
-        }
         m_event_count += static_cast<uint64_t>(end_idx - start_idx);
 
         auto const filename_it{
                 range.fields.find(std::string{clp_s::constants::range_index::cFilename})
         };
-        if (range.fields.end() == filename_it || false == filename_it->is_string()) {
-            return SfaErrorCode{SfaErrorCodeEnum::MalformedRangeIndex};
-        }
         auto const filename{filename_it->get<std::string>()};
 
         m_file_names.push_back(filename);
         m_file_infos.emplace_back(filename, start_idx, end_idx);
-
-        prev_end_idx = end_idx;
     }
 
     m_archive_reader->read_dictionaries_and_metadata();
