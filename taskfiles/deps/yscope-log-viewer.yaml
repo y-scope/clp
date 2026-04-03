@@ -14,8 +14,6 @@ tasks:
     internal: true
     vars:
       OUTPUT_DIR: "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/node_modules"
-    generates:
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
       - "source"
     cmds:
