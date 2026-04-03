@@ -98,11 +98,8 @@ tasks:
 
   clean-webui:
     cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
+      - task: "clean-webui-package-node-modules"
+      - task: "deps:yscope-log-viewer:clean"
 
   clean-webui-package-node-modules:
     internal: true
