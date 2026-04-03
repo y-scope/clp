@@ -1,0 +1,65 @@
+version: "3"
+
+vars:
+  G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps/log-viewer.md5"
+  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
+    "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
+  G_WEBUI_LOG_VIEWER_SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
+
+tasks:
+  default:
+    deps: ["node-modules"]
+
+  node-modules-checksum:
+    internal: true
+    vars:
+      OUTPUT_DIR: "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/node_modules"
+    generates:
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+    deps:
+      - "source"
+    cmds:
+      - task: ":yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  node-modules:
+    internal: true
+    vars:
+      OUTPUT_DIR: "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/node_modules"
+    sources:
+      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/package.json"
+      - "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/package-lock.json"
+      - "{{.TASKFILE}}"
+    dir: "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}"
+    generates:
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+    deps:
+      - "node-modules-checksum"
+      - "::toolchains:nodejs-22"
+    cmds:
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
+      # This command must be last
+      - task: ":yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  source:
+    internal: true
+    generates:
+      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+    sources:
+      - "{{.TASKFILE}}"
+    deps: [":utils:init"]
+    cmds:
+      - task: ":yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
+          OUTPUT_DIR: "{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}"
+          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"

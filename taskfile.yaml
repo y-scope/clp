@@ -26,8 +26,6 @@ vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
-  G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
-  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
@@ -51,8 +49,6 @@ vars:
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
   G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
-  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
-    "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
   G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
 
 tasks:
@@ -107,6 +103,14 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
+
+  clean-webui-package-node-modules:
+    internal: true
+    cmds:
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
 
   package:
     vars:
@@ -260,7 +264,6 @@ tasks:
       CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/*"
@@ -301,98 +304,32 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  nodejs-22:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
-    run: "once"
-    cmds:
-      - task: "nodejs"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v22.20.0"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-
-  download-and-extract-tar:
-    internal: true
-    label: "{{.TASK}}-{{.TAR_NAME}}"
-    vars:
-      OUTPUT_TMP_DIR: "{{.OUTPUT_DIR}}-tmp"
-      EXTRACTED_DIR: "{{.OUTPUT_TMP_DIR}}/{{.EXTRACTED_DIR_NAME}}"
-      TAR_PATH: "{{.OUTPUT_TMP_DIR}}/{{.TAR_NAME}}"
-    requires:
-      vars: ["CHECKSUM_FILE", "EXTRACTED_DIR_NAME", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
-    sources: ["{{.TASKFILE}}"]
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_TMP_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
-      - >-
-        curl --fail --location --show-error
-        "{{trimSuffix "/" .URL_PREFIX}}/{{.TAR_NAME}}"
-        --output "{{.TAR_PATH}}"
-      - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_TMP_DIR}}'"
-      - "mv '{{.EXTRACTED_DIR}}' '{{.OUTPUT_DIR}}'"
-      - "rm -rf '{{.OUTPUT_TMP_DIR}}'"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  webui-log-viewer-node-modules-checksum:
-    internal: true
-    vars:
-      OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules"
-    deps:
-      - "deps:log-viewer"
-    generates:
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-    cmds:
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  # NOTE: The webui has two different node_modules directories, and we generate a checksum file for
-  # each one. The directories are:
-  # * log-viewer submodule
-  # * the top-level one we call "package"
+  # NOTE: The webui build depends on two different node_modules directories:
+  # * log-viewer submodule, handled by `deps:yscope-log-viewer:node-modules`
+  # * the top-level one we call "package", handled here
   webui-node-modules:
     internal: true
     vars:
-      LOG_VIEWER_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
     sources:
-      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
+      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
-      - "**/{,client,common,server,yscope-log-viewer}/package.json"
-      - "**/{,yscope-log-viewer}/package-lock.json"
+      - "**/{,client,common,server}/package.json"
+      - "package-lock.json"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
-      - "webui-log-viewer-node-modules-checksum"
-      - "nodejs-22"
+      - "deps:yscope-log-viewer:node-modules"
+      - "toolchains:nodejs-22"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
     cmds:
-      - task: "clean-webui"
+      - task: "clean-webui-package-node-modules"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
-      - |-
-        cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
 
       # Verify that npm fully hoisted all workspace packages to the root node_modules. If this
       # fails, a peer dependency conflict is forcing npm to create a per-workspace node_modules, and
@@ -400,40 +337,11 @@ tasks:
       - for: ["client", "common", "server"]
         cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
 
-      # These commands must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
+      # This command must be last
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-
-  nodejs:
-    internal: true
-    vars:
-      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
-      NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
-      NODEJS_FILE_BASE_NAME:
-        sh: >-
-          curl --header "Cache-Control: no-cache, no-store" --silent "{{.NODEJS_VERSION_BASE_URL}}"
-          | grep
-          --only-matching
-          --max-count 1
-          "node-v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+-{{OS}}-{{.NODEJS_ARCH}}"
-          | head --lines 1
-    requires:
-      vars: ["CHECKSUM_FILE", "NODEJS_VERSION", "OUTPUT_DIR"]
-    deps: ["init"]
-    cmds:
-      - task: "download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
-          EXTRACTED_DIR_NAME: "{{.NODEJS_FILE_BASE_NAME}}"
-          URL_PREFIX: "{{.NODEJS_VERSION_BASE_URL}}"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   package-tar:
     internal: true
