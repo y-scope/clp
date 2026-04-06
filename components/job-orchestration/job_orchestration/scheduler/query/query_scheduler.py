@@ -598,7 +598,7 @@ def get_task_group_for_job(
 
 def dispatch_job_and_update_db_for_executor(
     job_config: dict[str, any], job_type: QueryJobType, job_id: str, archives: list[dict]
-) -> tuple[str, str]:
+) -> tuple[str, int, str]:
     global executor_db_conn_pool
     global executor_results_cache_uri
     global executor_clp_metadata_db_conn_params
@@ -722,7 +722,7 @@ def dispatch_job_and_update_db(
     )
 
 
-async def handle_pending_query_jobs(
+def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
@@ -787,7 +787,7 @@ async def handle_pending_query_jobs(
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
                 continue
 
-        remaining_dispatch_tasks = []
+        futures = []
         for job in pending_search_jobs:
             job_id = job.id
             if (
@@ -816,32 +816,26 @@ async def handle_pending_query_jobs(
                     num_tasks=job.num_archives_to_search,
                 )
 
-            remaining_dispatch_tasks.append(
-                asyncio.wrap_future(
-                    process_pool.submit(
-                        dispatch_job_and_update_db_for_executor,
-                        job.get_config().model_dump(),
-                        job.get_type(),
-                        job_id,
-                        archives_for_search,
-                    )
+            futures.append(
+                process_pool.submit(
+                    dispatch_job_and_update_db_for_executor,
+                    job.get_config().model_dump(),
+                    job.get_type(),
+                    job_id,
+                    archives_for_search,
                 )
             )
 
-        while len(remaining_dispatch_tasks) > 0:
-            dispatched_tasks, remaining_dispatch_tasks = await asyncio.wait(
-                remaining_dispatch_tasks, return_when=asyncio.FIRST_COMPLETED
+        for future in concurrent.futures.as_completed(futures):
+            job_id, num_archives_for_search, group_result_id = future.result()
+            job = active_jobs[job_id]
+            job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
+                group_result_id, app=app
             )
-            for dispatched_task in dispatched_tasks:
-                job_id, num_archives_for_search, group_result_id = dispatched_task.result()
-                job = active_jobs[job_id]
-                job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
-                    group_result_id, app=app
-                )
-                job.state = InternalJobState.RUNNING
-                logger.info(
-                    "Dispatched job %s with %d archives to search.", job_id, num_archives_for_search
-                )
+            job.state = InternalJobState.RUNNING
+            logger.info(
+                "Dispatched job %s with %d archives to search.", job_id, num_archives_for_search
+            )
 
     return reducer_acquisition_tasks
 
@@ -1109,7 +1103,7 @@ async def handle_jobs(
         tasks = [handle_updating_task]
         existing_datasets: set[str] = set()
         while True:
-            reducer_acquisition_tasks = await handle_pending_query_jobs(
+            reducer_acquisition_tasks = handle_pending_query_jobs(
                 db_conn_pool,
                 clp_metadata_db_conn_params,
                 results_cache_uri,
