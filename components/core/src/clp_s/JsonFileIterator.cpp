@@ -29,13 +29,13 @@ bool JsonFileIterator::read_new_json() {
             // double buffer size to attempt to capture long json object
             size_t new_buf_size = m_buf_size * 2;
             char* new_buf = new char[new_buf_size + simdjson::SIMDJSON_PADDING];
-            memcpy(new_buf, m_buf, m_buf_size);
+            std::memcpy(new_buf, m_buf, m_buf_size);
             delete[] m_buf;
             m_buf = new_buf;
             m_buf_size = new_buf_size;
         } else if (m_truncated_bytes > 0) {
             // move bytes to start of buffer
-            memmove(m_buf, m_buf + (m_buf_occupied - m_truncated_bytes), m_truncated_bytes);
+            std::memmove(m_buf, m_buf + (m_buf_occupied - m_truncated_bytes), m_truncated_bytes);
             m_buf_occupied = m_truncated_bytes;
         } else {
             m_buf_occupied = 0;

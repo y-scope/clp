@@ -69,6 +69,8 @@ jobs:
             _deps_images_common_paths: &_deps_images_common_paths
               - ".github/actions/**"
               - ".github/workflows/clp-artifact-build.yaml"
+              - "components/core/tools/scripts/corporate-proxy-container.sh"
+              - "components/core/tools/scripts/corporate-proxy-host.sh"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/scripts/lib_install/pipx-packages/**"
             centos_stream_9_image:
