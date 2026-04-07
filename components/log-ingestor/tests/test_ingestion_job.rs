@@ -8,6 +8,7 @@ use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials},
     job_config::ingestion::s3::{
         BaseConfig,
+        BufferConfig,
         S3ScannerConfig,
         SqsListenerConfig,
         ValidatedSqsListenerConfig,
@@ -254,6 +255,7 @@ async fn test_sqs_listener() -> Result<()> {
                     dataset: None,
                     timestamp_key: None,
                     unstructured: false,
+                    buffer_config: BufferConfig::default(),
                 },
             },
         )
@@ -295,6 +297,7 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            buffer_config: BufferConfig::default(),
         },
         scanning_interval_sec: 1,
         start_after: None,
