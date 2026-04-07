@@ -6,12 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from tests.utils.logging_utils import log_subprocess_output_to_file
+from tests.utils.classes import IntegrationTestExternalAction
+from tests.utils.logging_utils import log_action_output_to_file, log_subprocess_output_to_file
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 logger = logging.getLogger(__name__)
 
 
+# TODO: `run_and_log_subprocess` will be phased out in favour of `execute_external_action`.
 def run_and_log_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     """
     Runs a subprocess from `cmd` and logs output.
@@ -34,3 +36,23 @@ def run_and_log_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         pytest.fail(f"Subprocess '{Path(cmd[0]).name}' returned a non-zero exit code.")
 
     return proc
+
+
+def execute_external_action(external_action: IntegrationTestExternalAction) -> None:
+    """Docstring."""
+    external_action.completed_proc = run_subprocess(external_action.cmd)
+    log_action_output_to_file(external_action)
+
+
+def run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Docstring."""
+    log_msg = f"Running '{Path(cmd[0]).name}' subprocess. Command: {cmd}"
+    logger.info(log_msg)
+
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        timeout=DEFAULT_CMD_TIMEOUT_SECONDS,
+        check=False,
+        text=True,
+    )
