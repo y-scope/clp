@@ -99,7 +99,7 @@ tasks:
   clean-webui:
     cmds:
       - task: "clean-webui-package-node-modules"
-      - task: "deps:yscope-log-viewer:clean"
+      - task: "deps:yscope-log-viewer:clean-node-modules"
 
   clean-webui-package-node-modules:
     internal: true
