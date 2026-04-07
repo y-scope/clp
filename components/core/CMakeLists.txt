@@ -677,8 +677,8 @@ if(CLP_ENABLE_TESTS)
             INTERFACE
             clp::regex_utils
             clp::string_utils
-            clp_s::archive_writer
             clp_s::archive_reader
+            clp_s::archive_writer
             clp_s::ffi::sfa
             clp_s::filter
             clp_s::json_constructor
