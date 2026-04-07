@@ -517,7 +517,6 @@ if(CLP_BUILD_TESTING)
                 INTERFACE
                 filter/tests/test-clp_s-bloom_filter.cpp
                 filter/tests/test-clp_s-xxhash.cpp
-                tests/test_InputConfig.cpp
                 tests/clp_s_test_utils.cpp
                 tests/clp_s_test_utils.hpp
                 tests/test-clp_s-delta-encode-log-order.cpp
@@ -528,6 +527,7 @@ if(CLP_BUILD_TESTING)
                 tests/test-FloatFormatEncoding.cpp
                 tests/test-kql.cpp
                 tests/test-sql.cpp
+                tests/test_InputConfig.cpp
                 timestamp_parser/test/test_TimestampParser.cpp
         )
 endif()

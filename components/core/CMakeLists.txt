@@ -671,8 +671,9 @@ set(SOURCE_FILES_unitTest
 if(CLP_ENABLE_TESTS)
     # Runtime dependencies built by clp-core for unit tests. Keep in sync with flags required by
     # `CLP_BUILD_TESTING` in options.cmake.
-    add_library(clp_unittest_runtime INTERFACE)
-    target_link_libraries(clp_unittest_runtime
+    add_library(clp_unit_test_runtime INTERFACE)
+    add_library(clp::unit_test_runtime ALIAS clp_unit_test_runtime)
+    target_link_libraries(clp_unit_test_runtime
             INTERFACE
             clp::regex_utils
             clp::string_utils
@@ -707,8 +708,8 @@ if(CLP_ENABLE_TESTS)
             Boost::regex
             Boost::url
             Catch2::Catch2WithMain
+            clp::unit_test_runtime
             clp_s::unit_test_sources
-            clp_unittest_runtime
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
