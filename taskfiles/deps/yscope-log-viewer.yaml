@@ -49,10 +49,6 @@ tasks:
 
   source:
     internal: true
-    sources:
-      - "{{.TASKFILE}}"
-    generates:
-      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
     deps: [":utils:init"]
     cmds:
       - task: ":yscope-dev-utils:remote:download-and-extract-tar"
