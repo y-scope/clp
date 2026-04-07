@@ -7,7 +7,7 @@ vars:
   G_WEBUI_LOG_VIEWER_SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
 
 tasks:
-  clean:
+  clean-node-modules:
     internal: true
     cmds:
       - "rm -rf '{{.G_WEBUI_LOG_VIEWER_SRC_DIR}}/node_modules'"
@@ -15,7 +15,7 @@ tasks:
   default:
     deps: ["node-modules"]
 
-  node-modules-checksum:
+  node-modules-checksum-validate:
     internal: true
     deps:
       - "source"
@@ -37,7 +37,7 @@ tasks:
     generates:
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
-      - "node-modules-checksum"
+      - "node-modules-checksum-validate"
       - "::toolchains:nodejs-22"
     cmds:
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
