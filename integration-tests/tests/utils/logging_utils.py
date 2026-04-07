@@ -69,7 +69,14 @@ def log_subprocess_output_to_file(
 def format_action_failure_msg(
     reason: str, *actions: IntegrationTestExternalAction
 ) -> tuple[bool, str]:
-    """Docstring."""
+    """
+    Formats a failure message that indicates where to find the subprocess log(s) relevant to the
+    failure.
+
+    :param reason:
+    :param actions:
+    :return: `False` and the failure message.
+    """
     action_log_paths: list[str] = []
     for action in actions:
         action_log_paths.append(str(action.log_file_path))
@@ -77,7 +84,11 @@ def format_action_failure_msg(
 
 
 def log_action_output_to_file(subprocess: IntegrationTestExternalAction) -> None:
-    """Docstring."""
+    """
+    Logs the output of a subprocess to a unique file.
+
+    :param subprocess:
+    """
     now = datetime.datetime.now()  # noqa: DTZ005
     test_run_id = now.strftime("%Y-%m-%d-%H-%M-%S-%f")[:-3]
     subprocess_output_file_path = (
