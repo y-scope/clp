@@ -1,4 +1,4 @@
-"""Docstring."""
+"""Provides definition of the clp-json operating mode."""
 
 import logging
 

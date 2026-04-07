@@ -1,4 +1,4 @@
-"""Docstring."""
+"""Provides definition of the clp-text operating mode."""
 
 import logging
 
