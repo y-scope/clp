@@ -256,8 +256,13 @@ clpConfig:
       archive: 60
       search_result: 30
 
-  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
-  aws_config_directory: null
+  # AWS config content (e.g., `~/.aws/config`). Provide file contents via `--set-file` to create a
+  # chart-managed Secret that is mounted into pods. Set to null to disable.
+  # Usage:
+  #   helm install <release> <chart> \
+  #     --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
+  #     --set-file clpConfig.aws_config.config=$HOME/.aws/config
+  aws_config: null
 
 credentials:
   database:
