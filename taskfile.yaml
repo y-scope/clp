@@ -304,43 +304,6 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
 
-  webui-node-modules:
-    internal: true
-    vars:
-      PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
-    sources:
-      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
-      - "{{.TASKFILE}}"
-      - "client/package.json"
-      - "common/package.json"
-      - "package-lock.json"
-      - "package.json"
-      - "server/package.json"
-    dir: "{{.G_WEBUI_SRC_DIR}}"
-    generates:
-      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-    deps:
-      - "toolchains:nodejs-22"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-    cmds:
-      - task: "clean-webui-package-node-modules"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
-
-      # Verify that npm fully hoisted all workspace packages to the root node_modules. If this
-      # fails, a peer dependency conflict is forcing npm to create a per-workspace node_modules, and
-      # you should check the npm install output and resolve any hoisting conflicts.
-      - for: ["client", "common", "server"]
-        cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
-
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-
   package-tar:
     internal: true
     vars:
@@ -495,3 +458,40 @@ tasks:
       - |-
         uv run --no-cache \
           auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
+
+  webui-node-modules:
+    internal: true
+    vars:
+      PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
+    sources:
+      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      - "{{.TASKFILE}}"
+      - "client/package.json"
+      - "common/package.json"
+      - "package-lock.json"
+      - "package.json"
+      - "server/package.json"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
+    generates:
+      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+    deps:
+      - "toolchains:nodejs-22"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
+    cmds:
+      - task: "clean-webui-package-node-modules"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
+
+      # Verify that npm fully hoisted all workspace packages to the root node_modules. If this
+      # fails, a peer dependency conflict is forcing npm to create a per-workspace node_modules, and
+      # you should check the npm install output and resolve any hoisting conflicts.
+      - for: ["client", "common", "server"]
+        cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
+
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
