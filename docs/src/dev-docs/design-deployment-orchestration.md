@@ -251,23 +251,21 @@ Services require persistent storage for logs, data, archives, and streams.
 
 ### Deployment types
 
-CLP supports multiple deployment configurations based on the compression scheduler and query engine.
+CLP supports two deployment types based on the compression scheduler:
 
-| Deployment Type | Compression Scheduler | Query Engine                 |
-|-----------------|-----------------------|------------------------------|
-| Base            | Celery                | [Presto][presto-integration] |
-| Full            | Celery                | Native                       |
-| Spider Base     | Spider                | [Presto][presto-integration] |
-| Spider Full     | Spider                | Native                       |
+| Deployment Type | Compression Scheduler |
+|-----------------|-----------------------|
+| Celery          | Celery                |
+| Spider          | Spider                |
 
 :::{note}
 Spider support is not yet available for Helm.
 :::
 
-Docker Compose selects the appropriate compose file (e.g., `docker-compose.yaml` for Full,
-`docker-compose-spider.yaml` for Spider Full) and uses `deploy.replicas` with environment
-variables (e.g., `CLP_MCP_SERVER_ENABLED`) to toggle optional services. Helm uses conditional
-templating to include/exclude resources.
+Docker Compose selects the appropriate compose file (e.g., `docker-compose.yaml` for Celery,
+`docker-compose-spider.yaml` for Spider) and uses `deploy.replicas` with environment variables
+(e.g., `CLP_MCP_SERVER_ENABLED`, `CLP_QUERY_SCHEDULER_ENABLED`) to toggle optional services. Helm
+uses conditional templating to include/exclude resources.
 
 ## Troubleshooting
 
