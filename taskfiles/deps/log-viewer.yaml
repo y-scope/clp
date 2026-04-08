@@ -24,18 +24,18 @@ tasks:
       - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
     deps:
       - "::toolchains:nodejs-22"
+      - "node-modules"
       - task: ":yscope-dev-utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}"]
-      - "node-modules"
     cmds:
       - "rm -rf '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}'"
       - >-
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build --
         --emptyOutDir --outDir '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}'
       # These commands must be last.
-      # The build may modify the source directory (e.g., node_modules/.vite-temp), so we need to
+      # The build may modify the source directory (e.g., `node_modules/.vite-temp`), so we need to
       # recompute the checksums so that the caches aren't invalidated on the next run.
       - task: ":yscope-dev-utils:checksum:compute"
         vars:
@@ -68,14 +68,13 @@ tasks:
   node-modules:
     internal: true
     sources:
-      - "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}/package-lock.json"
-      - "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}/package.json"
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
+      - "package-lock.json"
+      - "package.json"
     dir: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}"
     generates:
       - "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-    run: "once"
     deps:
       - "::toolchains:nodejs-22"
       - "node-modules-checksum-validate"
@@ -86,9 +85,8 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.G_DEPS_LOG_VIEWER_NODE_MODULES_DIR}}"]
-      # Override the source checksum to reflect the state after node_modules installation, so that
-      # `download-and-extract-tar`'s checksum validation doesn't invalidate the cache on the next
-      # run.
+      # Override the source checksum to include `node_modules`, so that
+      # `download-and-extract-tar`'s checksum validation doesn't invalidate the cache.
       - task: ":yscope-dev-utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
