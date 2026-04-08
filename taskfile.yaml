@@ -99,7 +99,7 @@ tasks:
   clean-webui:
     cmds:
       - task: "clean-webui-package-node-modules"
-      - task: "deps:yscope-log-viewer:clean-node-modules"
+      - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
 
   package:
     vars:
@@ -304,15 +304,11 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
 
-  # NOTE: The webui build depends on two different node_modules directories:
-  # * log-viewer submodule, handled by `deps:yscope-log-viewer:node-modules`
-  # * the top-level one we call "package", handled here
   webui-node-modules:
     internal: true
     vars:
       PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
     sources:
-      - "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/{,client,common,server}/package.json"
@@ -321,7 +317,6 @@ tasks:
     generates:
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
-      - "deps:yscope-log-viewer:node-modules"
       - "toolchains:nodejs-22"
       - task: "utils:checksum:validate"
         vars:
