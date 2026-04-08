@@ -311,8 +311,11 @@ tasks:
     sources:
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
-      - "**/{,client,common,server}/package.json"
+      - "client/package.json"
+      - "common/package.json"
       - "package-lock.json"
+      - "package.json"
+      - "server/package.json"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
