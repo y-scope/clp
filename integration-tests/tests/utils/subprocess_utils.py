@@ -60,6 +60,9 @@ def run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 
     :param cmd:
     """
+    if not cmd:
+        pytest.fail("Cannot run subprocess: `cmd` list is empty.")
+
     log_msg = f"Running '{Path(cmd[0]).name}' subprocess. Command: {cmd}"
     logger.info(log_msg)
 
