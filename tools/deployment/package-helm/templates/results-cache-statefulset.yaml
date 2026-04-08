@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: "results-cache"
-          image: "mongo:7.0.1"
+          image: "mongo:8.0.19"
           imagePullPolicy: "Always"
           ports:
             - name: "results-cache"

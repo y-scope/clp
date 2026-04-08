@@ -54,7 +54,7 @@ x-volume-definitions:
 services:
   database:
     <<: *service_defaults
-    image: "${CLP_DB_CONTAINER_IMAGE_REF:-mariadb:10-jammy}"
+    image: "${CLP_DB_CONTAINER_IMAGE_REF:-mariadb:10.11.16}"
     hostname: "database"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the database.
@@ -118,7 +118,7 @@ services:
 
   queue:
     <<: *service_defaults
-    image: "rabbitmq:3.9.8"
+    image: "rabbitmq:4.2.4"
     hostname: "queue"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the queue.
@@ -145,7 +145,7 @@ services:
 
   redis:
     <<: *service_defaults
-    image: "redis:7.2.4"
+    image: "redis:7.4.8"
     hostname: "redis"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the redis.
@@ -184,7 +184,7 @@ services:
 
   results-cache:
     <<: *service_defaults
-    image: "mongo:7.0.1"
+    image: "mongo:8.0.19"
     hostname: "results_cache"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the results cache.

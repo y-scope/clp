@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: "queue"
-          image: "rabbitmq:3.9.8"
+          image: "rabbitmq:4.2.4"
           imagePullPolicy: "Always"
           env:
             - name: "RABBITMQ_DEFAULT_USER"
