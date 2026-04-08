@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from tests.utils.utils import (
     validate_dir_exists,
+    validate_file_exists,
 )
 
 
@@ -72,7 +73,7 @@ class IntegrationTestDatasetMetadata(BaseModel):
     logs_subdir: str
     file_names: list[str]
     single_match_wildcard_query: str
-    columns_file_name: str
+    columns_file_name: str | None
 
 
 @dataclass
@@ -93,7 +94,7 @@ class IntegrationTestDataset:
         validate_dir_exists(self.path_to_dataset_root)
 
         # Load metadata.
-        validate_dir_exists(self.metadata_file_path)
+        validate_file_exists(self.metadata_file_path)
         raw_metadata = self.metadata_file_path.read_text()
         self.metadata = IntegrationTestDatasetMetadata.model_validate_json(raw_metadata)
 
@@ -101,7 +102,7 @@ class IntegrationTestDataset:
         validate_dir_exists(self.logs_path)
 
         if self.columns_file_path is not None:
-            validate_dir_exists(self.columns_file_path)
+            validate_file_exists(self.columns_file_path)
 
         if self.metadata.dataset_name != self.dataset_name:
             pytest.fail(
@@ -117,11 +118,7 @@ class IntegrationTestDataset:
 
         for file_path in self.metadata.file_names:
             file_path_abs = self.logs_path / file_path
-            if not file_path_abs.is_file():
-                pytest.fail(
-                    "Dataset metadata failure: log file specified in `file_names` does not exist:"
-                    f" '{file_path_abs}'"
-                )
+            validate_file_exists(file_path_abs)
 
     @property
     def metadata_file_path(self) -> Path:
