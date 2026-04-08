@@ -1,7 +1,5 @@
 """Provides utilities related to the user-level configurations of CLP's operating modes."""
 
-import logging
-
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -17,8 +15,6 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
-
-logger = logging.getLogger(__name__)
 
 
 # TODO: This will eventually be replaced by a formalized mapping between component and service.
