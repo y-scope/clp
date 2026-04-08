@@ -10,6 +10,7 @@
 
 #include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
+#include "SchemaAnalyzer.hpp"
 
 namespace clp::clp {
 /**
@@ -20,6 +21,7 @@ namespace clp::clp {
  * @param grouped_files_to_compress
  * @param target_encoded_file_size
  * @param reader_parser
+ * @param encoding_to_schema_vars
  * @param use_heuristic
  * @return true if compression was successful, false otherwise
  */
@@ -30,6 +32,7 @@ bool compress(
         std::vector<FileToCompress>& grouped_files_to_compress,
         size_t target_encoded_file_size,
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
+        SchemaAnalyzer::EncodingMap const& encoding_to_schema_vars,
         bool use_heuristic
 );
 

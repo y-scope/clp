@@ -15,6 +15,7 @@
 #include <log_surgeon/Token.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
+#include "../../clp/SchemaAnalyzer.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../GlobalMetadataDB.hpp"
 #include "../../ir/LogEvent.hpp"
@@ -148,9 +149,13 @@ public:
     /**
      * Encodes and writes a message to the given file using schema file
      * @param event
+     * @param encoding_to_schema_vars
      * @throw FileWriter::OperationFailed if any write fails
      */
-    auto write_msg_using_schema(log_surgeon::LogEventView const& event) -> void;
+    auto write_msg_using_schema(
+            log_surgeon::LogEventView const& event,
+            clp::SchemaAnalyzer::EncodingMap const& encoding_to_schema_vars
+    ) -> void;
 
     /**
      * Writes an IR log event to the current encoded file
@@ -294,9 +299,13 @@ private:
      * Inspect a log surgeon token and add its information to the logtype and variable dictionaries.
      * @param event The log event containing the token.
      * @param token The token to add to the dictionaries.
+     * @param encoding_to_schema_vars A map indicating the set of schema vars matching an encoding.
      */
-    auto add_token_to_dicts(log_surgeon::LogEventView const& event, log_surgeon::Token token)
-            -> void;
+    auto add_token_to_dicts(
+            log_surgeon::LogEventView const& event,
+            log_surgeon::Token token,
+            clp::SchemaAnalyzer::EncodingMap const& encoding_to_schema_vars
+    ) -> void;
 
     // Variables
     boost::uuids::uuid m_id;
