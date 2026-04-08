@@ -281,7 +281,8 @@ tasks:
         cd client
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
         --emptyOutDir --outDir '{{.OUTPUT_DIR}}/client'
-      - "rsync -a '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
+      - |-
+        rsync -a "{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/" "{{.OUTPUT_DIR}}/yscope-log-viewer/"
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
