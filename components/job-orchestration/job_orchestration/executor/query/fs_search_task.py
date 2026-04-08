@@ -31,6 +31,24 @@ from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTas
 # Setup logging
 logger = get_task_logger(__name__)
 
+# Module-level cached SqlAdapter to reuse DB connections across tasks within the same worker
+# process, avoiding the overhead of creating a new connection per task.
+_cached_sql_adapter: SqlAdapter | None = None
+_cached_sql_adapter_params: dict | None = None
+
+
+def _get_or_create_sql_adapter(clp_metadata_db_conn_params: dict) -> SqlAdapter:
+    """
+    Returns a cached SqlAdapter if the connection params haven't changed, otherwise creates a new
+    one. This avoids creating a fresh MySQL connection for every single Celery task.
+    """
+    global _cached_sql_adapter, _cached_sql_adapter_params
+    if _cached_sql_adapter is not None and _cached_sql_adapter_params == clp_metadata_db_conn_params:
+        return _cached_sql_adapter
+    _cached_sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
+    _cached_sql_adapter_params = clp_metadata_db_conn_params
+    return _cached_sql_adapter
+
 
 def _make_core_clp_command_and_env_vars(
     clp_home: Path,
@@ -229,7 +247,7 @@ def search(
     logger.info(f"Started {task_name} task for job {job_id}")
 
     start_time = datetime.datetime.now()
-    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
+    sql_adapter = _get_or_create_sql_adapter(clp_metadata_db_conn_params)
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
