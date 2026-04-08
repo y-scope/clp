@@ -66,9 +66,7 @@ tasks:
     cmds:
       - task: "remote:download-and-extract-tar"
         vars:
-          OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
-          URL: >-
-            https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
+          CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
           FILE_SHA256: >-
             {{- if and (eq OS "linux") (eq .NODEJS_ARCH "x64") -}}
               00bbd05e306ea68b6e13e17360d0e2f680b493ef95f2fea1c4296ff7437530bc
@@ -81,8 +79,10 @@ tasks:
             {{- else -}}
               unsupported
             {{- end }}
-          CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
           NUM_COMPONENTS_TO_STRIP: "1"
+          OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
+          URL: >-
+            https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
 
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.

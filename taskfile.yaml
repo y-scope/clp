@@ -101,14 +101,6 @@ tasks:
       - task: "clean-webui-package-node-modules"
       - task: "deps:yscope-log-viewer:clean-node-modules"
 
-  clean-webui-package-node-modules:
-    internal: true
-    cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
-
   package:
     vars:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
@@ -261,14 +253,17 @@ tasks:
       CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
+      - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/*"
       - exclude: "**/dist/**/*"
       - exclude: "**/node_modules/**/*"
+      - exclude: "yscope-log-viewer/**/*"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
+      - "deps:yscope-log-viewer:build"
       - "init"
       - task: "utils:checksum:validate"
         vars:
@@ -282,11 +277,11 @@ tasks:
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
         rsync -a package.json dist "{{.OUTPUT_DIR}}/common/"
-      - for: ["client", "yscope-log-viewer"]
-        cmd: |-
-          cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
-          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-          --emptyOutDir --outDir '{{.OUTPUT_DIR}}/{{.ITEM}}'
+      - |-
+        cd client
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+        --emptyOutDir --outDir '{{.OUTPUT_DIR}}/client'
+      - "rsync -a '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
@@ -301,6 +296,14 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
+  clean-webui-package-node-modules:
+    internal: true
+    cmds:
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
+
   # NOTE: The webui build depends on two different node_modules directories:
   # * log-viewer submodule, handled by `deps:yscope-log-viewer:node-modules`
   # * the top-level one we call "package", handled here
@@ -309,8 +312,8 @@ tasks:
     vars:
       PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
     sources:
+      - "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/{,client,common,server}/package.json"
       - "package-lock.json"
