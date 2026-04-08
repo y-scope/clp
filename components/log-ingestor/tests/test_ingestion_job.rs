@@ -62,7 +62,7 @@ impl IngestionJobState for SqsListenerTestState {
     }
 
     async fn fail(&self, msg: String) {
-        unreachable!("SqsListenerTestState::fail should be unreachable: {msg}");
+        panic!("SqsListenerTestState::fail should be unreachable: {msg}");
     }
 }
 
