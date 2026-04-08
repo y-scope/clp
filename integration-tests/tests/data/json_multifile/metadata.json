@@ -1,20 +1,17 @@
 {
-    "data": {
-        "type": "json",
-        "unstructured": false
-    },
-    "dataset": "json_multifile",
+    "dataset_name": "json_multifile",
+    "unstructured": false,
     "timestamp_key": "timestamp",
     "begin_ts": 1310138944000,
     "end_ts": 1311208074120,
-    "file_structure": {
-        "logs_subdir": "logs",
-        "file_names": [
-            "sts-135-2011-07-08.jsonl",
-            "sts-135-2011-07-09.jsonl",
-            "sts-135-2011-07-11.jsonl",
-            "sts-135-2011-07-19.jsonl",
-            "sts-135-2011-07-21.jsonl"
-        ]
-    }
+    "logs_subdir": "logs",
+    "file_names": [
+        "sts-135-2011-07-08.jsonl",
+        "sts-135-2011-07-09.jsonl",
+        "sts-135-2011-07-11.jsonl",
+        "sts-135-2011-07-19.jsonl",
+        "sts-135-2011-07-21.jsonl"
+    ],
+    "single_match_wildcard_query": "\"detail\":\"Roll program complete, heads down attitude achieved for ascent\"",
+    "columns_file_name": "columns.json"
 }
