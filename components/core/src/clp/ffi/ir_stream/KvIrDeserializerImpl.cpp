@@ -35,10 +35,6 @@ auto KvIrDeserializerImpl::deserialize_ir_unit_schema_tree_node_insertion(
         encoded_tag_t tag,
         std::string& out_key_name
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    return ir_stream::deserialize_ir_unit_schema_tree_node_insertion(
-            reader,
-            tag,
-            out_key_name
-    );
+    return ir_stream::deserialize_ir_unit_schema_tree_node_insertion(reader, tag, out_key_name);
 }
 }  // namespace clp::ffi::ir_stream

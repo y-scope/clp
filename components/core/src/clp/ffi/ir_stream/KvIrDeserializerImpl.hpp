@@ -45,16 +45,9 @@ public:
             -> ystdlib::error_handling::Result<std::pair<IrUnitType, encoded_tag_t>> override;
 
     /**
-     * Deserializes a key-value pair log event from the given reader.
-     * @param reader
-     * @param tag The already-deserialized tag for the IR unit.
-     * @param auto_gen_keys_schema_tree
-     * @param user_gen_keys_schema_tree
-     * @param utc_offset
-     * @return A result containing the deserialized log event on success, or an error code
-     * indicating the failure:
+     * The possible error codes:
      * - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_kv_pair_log_event`'s return values
-     * on failure.
+     *   on failure.
      */
     [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
             ReaderInterface& reader,
@@ -65,17 +58,9 @@ public:
     ) -> ystdlib::error_handling::Result<KeyValuePairLogEvent> override;
 
     /**
-     * Deserializes a schema tree node insertion from the given reader.
-     * @param reader
-     * @param tag The already-deserialized tag for the IR unit.
-     * @param out_key_name Returns the inserted node's key name.
-     * @return A result containing a pair on success, or an error code indicating the failure:
-     * - The pair:
-     *   - Whether the node is for the auto-generated keys schema tree.
-     *   - The locator of the inserted schema tree node.
-     * - The possible error codes:
-     *   - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_schema_tree_node_insertion`'s
-     * return values on failure.
+     * The possible error codes:
+     * - Forwards `clp::ffi::ir_stream::deserialize_ir_unit_schema_tree_node_insertion`'s return
+     *   values on failure.
      */
     [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,

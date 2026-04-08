@@ -21,6 +21,16 @@ namespace clp::ffi::ir_stream {
  */
 class DeserializerImpl {
 public:
+    DeserializerImpl() = default;
+
+    // Delete copy constructor and assignment
+    DeserializerImpl(DeserializerImpl const&) = delete;
+    auto operator=(DeserializerImpl const&) -> DeserializerImpl& = delete;
+
+    // Define default move constructor and assignment
+    DeserializerImpl(DeserializerImpl&&) = default;
+    auto operator=(DeserializerImpl&&) -> DeserializerImpl& = default;
+
     // Destructor
     virtual ~DeserializerImpl() = default;
 
@@ -82,7 +92,7 @@ public:
      * indicating the failure:
      * - Forwards `deserialize_int`'s return values on failure.
      */
-    [[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
+    [[nodiscard]] static auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<UtcOffset>;
 };
 }  // namespace clp::ffi::ir_stream
