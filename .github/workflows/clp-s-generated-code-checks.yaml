@@ -20,24 +20,15 @@ jobs:
           - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - name: "Set up Java"
-        uses: "actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00"
-        with:
-          distribution: "temurin"
-          java-version: "11"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-java"
 
-      - name: "Install task"
-        uses: "go-task/setup-task@3be4020d41929789a01026e0e427a4321ce0ad44"  # v2.0.0
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
         with:
           version: "3.48.0"
-
-      - if: "matrix.os == 'macos-15'"
-        name: "Install coreutils (for md5sum)"
-        run: "brew install coreutils"
 
       - name: "Generate parsers"
         shell: "bash"

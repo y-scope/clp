@@ -15,12 +15,11 @@ jobs:
     # Runs only on Ubuntu Jammy (22.04) since the Rust components are only built on this platform.
     runs-on: "ubuntu-22.04"
     steps:
-      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - name: "Install task"
-        uses: "go-task/setup-task@3be4020d41929789a01026e0e427a4321ce0ad44"  # v2.0.0
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
         with:
           version: "3.48.0"
 

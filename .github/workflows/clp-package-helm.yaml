@@ -25,7 +25,7 @@ jobs:
   lint:
     runs-on: "ubuntu-24.04"
     steps:
-      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
@@ -33,8 +33,7 @@ jobs:
           # finding the `origin/main` branch.
           fetch-depth: 0
 
-      - name: "Install task"
-        uses: "go-task/setup-task@3be4020d41929789a01026e0e427a4321ce0ad44"  # v2.0.0
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
         with:
           version: "3.48.0"
 
@@ -53,12 +52,11 @@ jobs:
       # To push to the `gh-pages` branch.
       contents: "write"
     steps:
-      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - name: "Install task"
-        uses: "go-task/setup-task@3be4020d41929789a01026e0e427a4321ce0ad44"  # v2.0.0
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
         with:
           version: "3.48.0"
 
@@ -67,7 +65,7 @@ jobs:
         run: "task helm:package"
 
       - name: "Checkout branch `gh-pages`"
-        uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           path: "gh-pages"
           ref: "gh-pages"
