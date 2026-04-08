@@ -91,26 +91,53 @@ active_archive_json_extractions: dict[str, list[str]] = {}
 
 reducer_connection_queue: asyncio.Queue | None = None
 
-# Globals for dispatch executor pool
-executor_db_conn_pool: ConnectionPoolWrapper | None = None
-executor_clp_metadata_db_conn_params: dict[str, any] | None = None
-executor_results_cache_uri: str | None = None
 
+class DispatchExecutor:
+    # Globals for dispatch executor pool
+    _db_conn_pool: ConnectionPoolWrapper | None = None
+    _clp_metadata_db_conn_params: dict[str, any] | None = None
+    _results_cache_uri: str | None = None
 
-def initialize_executor_globals(
-    database_config: Database, clp_metadata_db_conn_params: dict[str, any], results_cache_uri: str
-):
-    global logger
-    global executor_db_conn_pool
-    global executor_clp_metadata_db_conn_params
-    global executor_results_cache_uri
+    @classmethod
+    def initialize(
+        cls,
+        database_config: Database,
+        clp_metadata_db_conn_params: dict[str, any],
+        results_cache_uri: str,
+    ) -> None:
+        cls._clp_metadata_db_conn_params = clp_metadata_db_conn_params
+        sql_adapter = SqlAdapter(database_config)
+        cls._db_conn_pool = sql_adapter.create_connection_pool(
+            logger=logger, pool_size=1, disable_localhost_socket_connection=True
+        )
+        cls._results_cache_uri = results_cache_uri
 
-    executor_clp_metadata_db_conn_params = clp_metadata_db_conn_params
-    sql_adapter = SqlAdapter(database_config)
-    executor_db_conn_pool = sql_adapter.create_connection_pool(
-        logger=logger, pool_size=1, disable_localhost_socket_connection=True
-    )
-    executor_results_cache_uri = results_cache_uri
+    @staticmethod
+    def dispatch_job_and_update_db(
+        job_config: dict[str, any], job_type: QueryJobType, job_id: str, archives: list[dict]
+    ) -> tuple[str, int, str]:
+        if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
+            raise NotImplementedError(f"Unexpected job type: {job_type}")
+
+        archive_ids = [a["archive_id"] for a in archives]
+        with contextlib.closing(DispatchExecutor._db_conn_pool.connect()) as db_conn:
+            task_ids = insert_query_tasks_into_db(db_conn, job_id, archive_ids)
+
+        celery_task_group = celery.group(
+            search.s(
+                job_id=job_id,
+                archive_id=archives[i]["archive_id"],
+                task_id=task_ids[i],
+                job_config=job_config,
+                dataset=archives[i].get("dataset"),
+                clp_metadata_db_conn_params=DispatchExecutor._clp_metadata_db_conn_params,
+                results_cache_uri=DispatchExecutor._results_cache_uri,
+            )
+            for i in range(len(archives))
+        )
+        group_result = celery_task_group.apply_async()
+        group_result.save()
+        return job_id, len(archives), group_result.id
 
 
 class StreamExtractionHandle(ABC):
@@ -596,38 +623,6 @@ def get_task_group_for_job(
     raise NotImplementedError(error_msg)
 
 
-def dispatch_job_and_update_db_for_executor(
-    job_config: dict[str, any], job_type: QueryJobType, job_id: str, archives: list[dict]
-) -> tuple[str, int, str]:
-    global executor_db_conn_pool
-    global executor_results_cache_uri
-    global executor_clp_metadata_db_conn_params
-
-    if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
-        raise NotImplementedError(f"Unexpected job type: {job_type}")
-
-    archive_ids = [a["archive_id"] for a in archives]
-    task_ids = None
-    with contextlib.closing(executor_db_conn_pool.connect()) as db_conn:
-        task_ids = insert_query_tasks_into_db(db_conn, job_id, archive_ids)
-
-    celery_task_group = celery.group(
-        search.s(
-            job_id=job_id,
-            archive_id=archives[i]["archive_id"],
-            task_id=task_ids[i],
-            job_config=job_config,
-            dataset=archives[i].get("dataset"),
-            clp_metadata_db_conn_params=executor_clp_metadata_db_conn_params,
-            results_cache_uri=executor_results_cache_uri,
-        )
-        for i in range(len(archives))
-    )
-    group_result = celery_task_group.apply_async()
-    group_result.save()
-    return job_id, len(archives), group_result.id
-
-
 def dispatch_query_job(
     db_conn,
     job: QueryJob,
@@ -818,7 +813,7 @@ def handle_pending_query_jobs(
 
             futures.append(
                 process_pool.submit(
-                    dispatch_job_and_update_db_for_executor,
+                    DispatchExecutor.dispatch_job_and_update_db,
                     job.get_config().model_dump(),
                     job.get_type(),
                     job_id,
@@ -1093,7 +1088,7 @@ async def handle_jobs(
 ) -> None:
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=16,
-        initializer=initialize_executor_globals,
+        initializer=DispatchExecutor.initialize,
         initargs=(database_config, clp_metadata_db_conn_params, results_cache_uri),
     ) as process_pool:
         handle_updating_task = asyncio.create_task(
