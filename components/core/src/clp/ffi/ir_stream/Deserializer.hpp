@@ -106,7 +106,7 @@ public:
      *
      * @param reader
      * @return Forwards `DeserializerImpl::get_next_ir_unit_type`'s return values if it fails to
-     * determine the next IR unit type.
+     * determine the type of the next IR unit.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in the previous calls.
      * @return IrUnitType::LogEvent if a log event IR unit is deserialized, or an error code

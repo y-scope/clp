@@ -35,17 +35,11 @@ public:
     // Destructor
     ~KvIrDeserializerImpl() override = default;
 
-    // Methods
+    // Methods implementing `DeserializerImpl`
     /**
-     * Deserializes the next IR unit type from the given reader.
-     * @param reader
-     * @return A result containing a pair on success, or an error code indicating the failure:
-     * - The pair:
-     *   - The type of the deserialized IR unit.
-     *   - The tag of the deserialized IR unit.
-     * - The possible error codes:
-     *   - IrDeserializationErrorEnum::InvalidTag if the tag doesn't represent a valid IR unit.
-     *   - Forwards `deserialize_tag`'s return values on failure.
+     * The possible error codes:
+     * - IrDeserializationErrorEnum::InvalidTag if the tag doesn't represent a valid IR unit.
+     * - Forwards `deserialize_tag`'s return values on failure.
      */
     [[nodiscard]] auto get_next_ir_unit_type(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<std::pair<IrUnitType, encoded_tag_t>> override;

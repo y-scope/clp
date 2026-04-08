@@ -21,7 +21,7 @@ auto KvIrDeserializerImpl::deserialize_ir_unit_kv_pair_log_event(
         std::shared_ptr<SchemaTree> const& user_gen_keys_schema_tree,
         UtcOffset utc_offset
 ) -> ystdlib::error_handling::Result<KeyValuePairLogEvent> {
-    return clp::ffi::ir_stream::deserialize_ir_unit_kv_pair_log_event(
+    return ir_stream::deserialize_ir_unit_kv_pair_log_event(
             reader,
             tag,
             auto_gen_keys_schema_tree,
@@ -35,7 +35,7 @@ auto KvIrDeserializerImpl::deserialize_ir_unit_schema_tree_node_insertion(
         encoded_tag_t tag,
         std::string& out_key_name
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    return clp::ffi::ir_stream::deserialize_ir_unit_schema_tree_node_insertion(
+    return ir_stream::deserialize_ir_unit_schema_tree_node_insertion(
             reader,
             tag,
             out_key_name

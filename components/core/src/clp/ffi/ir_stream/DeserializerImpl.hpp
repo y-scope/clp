@@ -16,7 +16,8 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * A base class for implementing deserializers for different IR stream formats.
+ * Virtual base class defining methods for deserializing IR units and log events called by
+ * `Deserializer`.
  */
 class DeserializerImpl {
 public:
@@ -25,27 +26,27 @@ public:
 
     // Methods
     /**
-     * Deserializes the next IR unit type from the given reader.
+     * Deserializes the type of the next IR unit from the given reader.
      * @param reader
      * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
      *   - The type of the deserialized IR unit.
      *   - The tag of the deserialized IR unit.
-     * - Derived classes define the possible error codes.
+     * - Error codes are defined by the derived class.
      */
     [[nodiscard]] virtual auto get_next_ir_unit_type(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<std::pair<IrUnitType, encoded_tag_t>>
             = 0;
 
     /**
-     * Deserializes a KV pair log event from the given reader.
+     * Deserializes a KV pair log event IR unit from the given reader.
      * @param reader
      * @param tag
      * @param auto_gen_keys_schema_tree
      * @param user_gen_keys_schema_tree
      * @param utc_offset
      * @return A result containing the deserialized KV pair log event on success, or an error code
-     * indicating the failure defined by derived classes.
+     * indicating the failure defined by the derived class.
      */
     [[nodiscard]] virtual auto deserialize_ir_unit_kv_pair_log_event(
             ReaderInterface& reader,
@@ -57,7 +58,7 @@ public:
             = 0;
 
     /**
-     * Deserializes a schema tree node insertion from the given reader.
+     * Deserializes a schema tree node insertion IR unit from the given reader.
      * @param reader
      * @param tag
      * @param out_key_name Returns the inserted node's key name.
@@ -65,7 +66,7 @@ public:
      * - The pair:
      *   - Whether the node is for auto-generated keys schema tree.
      *   - The locator of the inserted schema tree node.
-     * - Derived classes define the possible error codes.
+     * - Error codes are defined by the derived class.
      */
     [[nodiscard]] virtual auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
@@ -75,12 +76,11 @@ public:
             = 0;
 
     /**
-     * Deserializes a UTC offset change packet.
+     * Deserializes a UTC offset change IR unit from the given reader.
      * @param reader
      * @return A result containing the deserialized UTC offset on success, or an error code
      * indicating the failure:
-     * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
-     *   deserialize.
+     * - Forwards `deserialize_int`'s return values on failure.
      */
     [[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<UtcOffset>;
