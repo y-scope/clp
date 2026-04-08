@@ -655,6 +655,7 @@ bool JsonParser::ingest() {
         auto const [nested_readers, file_type] = try_deduce_reader_type(reader);
         bool ingestion_successful{};
         switch (file_type) {
+            case FileType::EmptyFile:
             case FileType::Json:
                 ingestion_successful = ingest_json(
                         nested_readers.back(),

@@ -9,6 +9,7 @@ use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials},
     job_config::ingestion::s3::{
         BaseConfig,
+        BufferConfig,
         S3ScannerConfig,
         SqsListenerConfig,
         ValidatedSqsListenerConfig,
@@ -191,7 +192,6 @@ async fn upload_test_objects(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
             size: 16,
-            id: None,
         })
         .collect();
 
@@ -212,7 +212,6 @@ async fn upload_noise_objects(
             bucket: bucket.clone(),
             key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
             size: 16,
-            id: None,
         })
         .collect();
 
@@ -330,6 +329,7 @@ async fn test_sqs_listener() -> Result<()> {
                     dataset: None,
                     timestamp_key: None,
                     unstructured: false,
+                    buffer_config: BufferConfig::default(),
                 },
             },
         )
@@ -371,6 +371,7 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
+            buffer_config: BufferConfig::default(),
         },
         scanning_interval_sec: 1,
         start_after: None,
