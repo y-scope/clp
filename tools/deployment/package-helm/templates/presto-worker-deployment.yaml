@@ -31,7 +31,7 @@ spec:
             "name" "presto-coordinator"
           ) | nindent 10 }}
         - name: "setup-configs"
-          image: "bitnami/kubectl:latest"
+          image: {{ include "clp.kubectl.image.ref" . | quote }}
           command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
           volumeMounts:
             - name: "presto-config"
