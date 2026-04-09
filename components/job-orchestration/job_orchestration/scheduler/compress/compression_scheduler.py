@@ -317,6 +317,7 @@ def search_and_schedule_new_tasks(
             existing_datasets,
         )
 
+
 def _schedule_job(
     clp_config: ClpConfig,
     clp_metadata_db_connection_config: dict[str, Any],
@@ -326,7 +327,7 @@ def _schedule_job(
     existing_datasets: set[str],
 ) -> None:
     """
-    Processes a single pending compression job: deserializes its config, validates input paths,
+    Schedules a single pending compression job: deserializes its config, validates input paths,
     and submits compression tasks.
 
     On failure, the job is marked as FAILED in the database and the function returns early.
@@ -413,9 +414,7 @@ def _schedule_job(
             return
     elif input_type == InputType.S3_OBJECT_METADATA.value:
         try:
-            _process_s3_object_metadata_input(
-                input_config, paths_to_compress_buffer, db_context
-            )
+            _process_s3_object_metadata_input(input_config, paths_to_compress_buffer, db_context)
         except Exception as err:
             logger.exception("Failed to process S3 object metadata input for job %s", job_id)
             update_compression_job_metadata(
@@ -428,7 +427,7 @@ def _schedule_job(
             )
             return
     else:
-        logger.error(f"Unsupported input type {input_type}")
+        logger.error("Unsupported input type %s", input_type)
         update_compression_job_metadata(
             db_context,
             job_id,
@@ -458,9 +457,6 @@ def _schedule_job(
         job_id,
         paths_to_compress_buffer,
     )
-
-
-
 
 
 def poll_running_jobs(
