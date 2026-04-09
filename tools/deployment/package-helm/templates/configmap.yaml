@@ -133,6 +133,7 @@ data:
       logging_level: {{ .logging_level | quote }}
       num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
       port: 7000
+      parallelism: {{ .parallelism | int }}
     {{- end }}
     {{- with .Values.clpConfig.query_worker }}
     query_worker:
