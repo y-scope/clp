@@ -12,8 +12,8 @@ on:
       - "components/log-ingestor/**"
       - "taskfile.yaml"
       - "taskfiles/**"
-      - "tools/yscope-dev-utils"
       - "tools/scripts/localstack/**"
+      - "tools/yscope-dev-utils"
   push:
     paths: *monitored_paths
   schedule:

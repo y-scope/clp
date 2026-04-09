@@ -15,8 +15,8 @@ on:
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "taskfile.yaml"
       - "taskfiles/**"
-      - "tools/yscope-dev-utils"
       - "tools/scripts/deps-download/**"
+      - "tools/yscope-dev-utils"
   push:
     paths: *monitored_paths
   schedule:

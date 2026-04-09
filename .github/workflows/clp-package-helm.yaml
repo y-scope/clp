@@ -6,8 +6,8 @@ on:
       - ".github/workflows/clp-package-helm.yaml"
       - "taskfile.yaml"
       - "taskfiles/**"
-      - "tools/yscope-dev-utils"
       - "tools/deployment/package-helm/**"
+      - "tools/yscope-dev-utils"
   push:
     paths: *monitored_paths
   workflow_dispatch:
