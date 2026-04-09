@@ -34,6 +34,8 @@ jobs:
           version: "3.48.0"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
 
       # This is a necessary dependency for the Python mariadb package which is a transitive
       # dependency of `lint:py-check`.

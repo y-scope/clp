@@ -50,6 +50,8 @@ jobs:
           version: "3.48.0"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
 
       - name: "Validate lock files"
         shell: "bash"
