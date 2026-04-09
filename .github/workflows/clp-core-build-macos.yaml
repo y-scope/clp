@@ -14,7 +14,7 @@ on:
       - "components/core/tools/scripts/lib_install/pipx-packages/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "taskfile.yaml"
-      - "taskfiles/**/*"
+      - "taskfiles/**"
       - "tools/yscope-dev-utils"
       - "tools/scripts/deps-download/**"
   push:
