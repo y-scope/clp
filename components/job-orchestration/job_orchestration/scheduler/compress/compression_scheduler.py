@@ -428,7 +428,7 @@ def _schedule_job(
             )
             return
     else:
-        logger.error(f"Unsupported input type {input_type}")
+        logger.error("Unsupported input type %s", input_type)
         update_compression_job_metadata(
             db_context,
             job_id,
@@ -458,10 +458,16 @@ def _schedule_job(
         job_id,
         paths_to_compress_buffer,
     )
+    _batch_and_submit_tasks(
+        clp_config,
+        task_manager,
+        db_context,
+        job_id,
+        paths_to_compress_buffer,
+    )
 
 
-
-
+def poll_running_jobs(
 
 def poll_running_jobs(
     clp_config: ClpConfig, task_manager: TaskManager, db_context: DbContext
