@@ -52,7 +52,7 @@ auto BloomFilter::create(size_t expected_num_elements, double false_positive_rat
     };
 }
 
-auto BloomFilter::try_read_from_file(clp::ReaderInterface& reader)
+auto BloomFilter::try_read(clp::ReaderInterface& reader)
         -> ystdlib::error_handling::Result<BloomFilter> {
     uint8_t hash_algorithm_u8{};
     if (clp::ErrorCode_Success != reader.try_read_numeric_value(hash_algorithm_u8)) {
@@ -127,7 +127,7 @@ auto BloomFilter::possibly_contains(std::string_view value) const -> bool {
     return true;
 }
 
-auto BloomFilter::write_to_file(clp::WriterInterface& writer) const -> void {
+auto BloomFilter::write(clp::WriterInterface& writer) const -> void {
     writer.write_numeric_value(static_cast<uint8_t>(m_hash_algorithm));
     writer.write_numeric_value<uint32_t>(m_num_hash_functions);
     writer.write_numeric_value<uint64_t>(static_cast<uint64_t>(m_bit_array_size));
