@@ -28,8 +28,6 @@ jobs:
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-python"
-        with:
-          version: "3.11"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
 
