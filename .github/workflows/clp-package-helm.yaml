@@ -2,15 +2,14 @@ name: "clp-package-helm"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".github/workflows/clp-package-helm.yaml"
-      - "taskfiles/helm.yaml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
+      - "tools/yscope-dev-utils"
       - "tools/deployment/package-helm/**"
   push:
-    paths:
-      - ".github/workflows/clp-package-helm.yaml"
-      - "taskfiles/helm.yaml"
-      - "tools/deployment/package-helm/**"
+    paths: *monitored_paths
   workflow_dispatch:
 
 permissions: {}
@@ -34,8 +33,6 @@ jobs:
           fetch-depth: 0
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
-        with:
-          version: "3.48.0"
 
       - name: "Lint Helm charts"
         shell: "bash"
@@ -57,8 +54,6 @@ jobs:
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
-        with:
-          version: "3.48.0"
 
       - name: "Package Helm chart"
         shell: "bash"

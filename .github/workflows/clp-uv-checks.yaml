@@ -4,6 +4,9 @@ on:
   pull_request:
     paths: &monitored_paths
       - ".github/workflows/clp-uv-checks.yaml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
+      - "tools/yscope-dev-utils"
       - "components/clp-mcp-server/pyproject.toml"
       - "components/clp-mcp-server/uv.lock"
       - "components/clp-package-utils/pyproject.toml"
@@ -43,8 +46,6 @@ jobs:
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
-        with:
-          version: "3.48.0"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 

@@ -12,6 +12,7 @@ on:
       - "components/log-ingestor/**"
       - "taskfile.yaml"
       - "taskfiles/**"
+      - "tools/yscope-dev-utils"
       - "tools/scripts/localstack/**"
   push:
     paths: *monitored_paths
@@ -34,8 +35,6 @@ jobs:
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
-        with:
-          version: "3.48.0"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 

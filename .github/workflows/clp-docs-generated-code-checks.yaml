@@ -20,8 +20,6 @@ jobs:
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
-        with:
-          version: "3.48.0"
 
       - name: "Generate OpenAPI docs"
         shell: "bash"
