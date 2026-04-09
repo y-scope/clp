@@ -33,6 +33,8 @@ jobs:
           fetch-depth: 0
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - name: "Lint Helm charts"
         shell: "bash"
@@ -54,6 +56,8 @@ jobs:
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - name: "Package Helm chart"
         shell: "bash"

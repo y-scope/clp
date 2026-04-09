@@ -27,6 +27,8 @@ jobs:
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-java"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - name: "Generate parsers"
         shell: "bash"

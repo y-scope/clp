@@ -30,6 +30,8 @@ jobs:
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-python"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 
