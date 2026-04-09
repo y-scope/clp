@@ -634,6 +634,7 @@ set(SOURCE_FILES_unitTest
         src/clp/Platform.hpp
         src/clp/Profiler.cpp
         src/clp/Profiler.hpp
+        src/clp/ProfilerReporter.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
         src/clp/QueryToken.cpp
@@ -642,6 +643,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
         src/clp/ReadOnlyMemoryMappedFile.hpp
+        src/clp/ScopedProfiler.hpp
         src/clp/spdlog_with_specializations.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp
@@ -748,9 +750,11 @@ set(SOURCE_FILES_unitTest
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
+        tests/test-ProfilerReporter.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
         tests/test-SchemaSearcher.cpp
+        tests/test-ScopedProfiler.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
@@ -763,6 +767,8 @@ set(SOURCE_FILES_unitTest
         )
 
 if(CLP_ENABLE_TESTS)
+    add_subdirectory(tests/regression_files)
+
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}
@@ -812,6 +818,8 @@ if(CLP_ENABLE_TESTS)
             PRIVATE cxx_std_20
             )
     target_compile_definitions(unitTest
-            PRIVATE CLP_ENABLE_TESTS
+            PRIVATE
+            CLP_ENABLE_TESTS
+            PROF_TEST_ENABLED=1
             )
 endif()
