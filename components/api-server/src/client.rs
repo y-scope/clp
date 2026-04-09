@@ -1,6 +1,7 @@
 use std::pin::Pin;
 
 use async_stream::stream;
+use bigdecimal::BigDecimal;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
     clp_config::package::{
@@ -17,6 +18,65 @@ use sqlx::Row;
 use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
+
+/// Maps uppercase status names (matching the Python scheduler's `CompressionJobStatus`
+/// enum) to their integer values stored in the database.
+///
+/// Must be kept in sync with `CompressionJobStatus` in
+/// `components/job-orchestration/job_orchestration/scheduler/constants.py`.
+///
+/// Note: `PENDING` (0) is intentionally omitted because PENDING jobs have no
+/// `start_time` and are therefore excluded by the time-range WHERE clause.
+pub const JOB_STATUS_LOOKUP: &[(&str, i32)] = &[
+    ("RUNNING", 1),
+    ("SUCCEEDED", 2),
+    ("FAILED", 3),
+    ("KILLED", 4),
+];
+
+/// Default job statuses to include when the caller does not specify `job_status`.
+/// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
+pub const DEFAULT_JOB_STATUSES: &[i32] = &[2, 3, 4];
+
+/// Resolves an uppercase status name (e.g. `"SUCCEEDED"`) to its integer DB value.
+/// Returns `None` if the name is not recognized.
+#[must_use]
+pub fn resolve_job_status(name: &str) -> Option<i32> {
+    JOB_STATUS_LOOKUP
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, code)| *code)
+}
+
+/// A single row returned by the compression usage query (one row per job).
+#[derive(Serialize, ToSchema)]
+pub struct CompressionUsageRow {
+    /// Compression job ID.
+    pub id: i32,
+    /// Job status. See `CompressionJobStatus` in
+    /// `components/job-orchestration/job_orchestration/scheduler/constants.py`:
+    /// 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
+    pub status: i32,
+    /// Time the job was created (ISO 8601, UTC).
+    pub creation_time: String,
+    /// Time the job started (ISO 8601, UTC). Always non-null in results because
+    /// the WHERE clause filters on `start_time`.
+    pub start_time: String,
+    /// Wall-clock seconds the job ran for. `None` for non-succeeded jobs
+    /// (FAILED, KILLED, RUNNING) since `duration` is only set on completion.
+    #[schema(value_type = Option<String>)]
+    pub duration: Option<BigDecimal>,
+    /// Total uncompressed size of input files (bytes).
+    pub uncompressed_size: i64,
+    /// Total compressed archive size (bytes).
+    pub compressed_size: i64,
+    /// Number of tasks the job was split into.
+    pub num_tasks: i32,
+    /// Sum of all task durations (CPU-seconds across all parallel workers).
+    /// `None` if all task duration values are NULL in the database.
+    #[schema(value_type = Option<String>)]
+    pub tasks_duration: Option<BigDecimal>,
+}
 
 /// Defines the request configuration for submitting a search query.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -523,6 +583,89 @@ impl Client {
         Ok(names)
     }
 
+    /// Returns compression usage for each job within a time range, optionally
+    /// filtered by job outcome.
+    ///
+    /// # Returns
+    ///
+    /// A vector of [`CompressionUsageRow`] (one per job) on success, ordered by
+    /// `start_time` descending.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    pub async fn get_compression_usage(
+        &self,
+        begin_timestamp: i64,
+        end_timestamp: i64,
+        job_statuses: &[i32],
+    ) -> Result<Vec<CompressionUsageRow>, ClientError> {
+        // Build the job-status WHERE clause dynamically from the number of
+        // requested statuses so the DB sees a static `IN (?, ?, ...)` predicate
+        // and can use an index on `j.status`.
+        let placeholders = job_statuses
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(", ");
+        let job_status_clause = format!(" AND j.status IN ({placeholders})");
+
+        let sql = format!(
+            // Divide by 1000.0 (a DECIMAL literal) rather than 1000 so that
+            // both MySQL and MariaDB perform decimal division, preserving the
+            // millisecond sub-second precision of the epoch-ms timestamps.
+            //
+            // All non-aggregated columns are listed in GROUP BY for
+            // compatibility with ONLY_FULL_GROUP_BY (MySQL 5.7.5+ default)
+            // and MariaDB's strict SQL-standard GROUP BY semantics.
+            //
+            // Task durations are summed regardless of individual task status so
+            // that failed jobs still report the compute resources they consumed.
+            "SELECT \
+                j.id, \
+                j.status, \
+                DATE_FORMAT(j.creation_time, '%Y-%m-%dT%H:%i:%s') AS creation_time, \
+                DATE_FORMAT(j.start_time, '%Y-%m-%dT%H:%i:%s') AS start_time, \
+                CAST(j.duration AS DECIMAL(20, 3)) AS duration, \
+                j.uncompressed_size, \
+                j.compressed_size, \
+                j.num_tasks, \
+                CAST(SUM(t.duration) AS DECIMAL(20, 3)) AS tasks_duration \
+             FROM compression_jobs j \
+             JOIN compression_tasks t ON t.job_id = j.id \
+             WHERE j.start_time >= FROM_UNIXTIME(? / 1000.0) \
+               AND j.start_time <= FROM_UNIXTIME(? / 1000.0){job_status_clause} \
+             GROUP BY j.id, j.status, j.creation_time, j.start_time, j.duration, \
+                      j.uncompressed_size, j.compressed_size, j.num_tasks \
+             ORDER BY j.start_time DESC"
+        );
+
+        let mut query = sqlx::query(&sql).bind(begin_timestamp).bind(end_timestamp);
+        for &status in job_statuses {
+            query = query.bind(status);
+        }
+        let rows = query.fetch_all(&self.sql_pool).await?;
+
+        rows.iter()
+            .map(|r| {
+                Ok(CompressionUsageRow {
+                    id: r.try_get("id")?,
+                    status: r.try_get("status")?,
+                    creation_time: r.try_get("creation_time")?,
+                    start_time: r.try_get("start_time")?,
+                    duration: r.try_get("duration")?,
+                    uncompressed_size: r.try_get("uncompressed_size")?,
+                    compressed_size: r.try_get("compressed_size")?,
+                    num_tasks: r.try_get("num_tasks")?,
+                    tasks_duration: r.try_get("tasks_duration")?,
+                })
+            })
+            .collect()
+    }
+
     /// # Returns
     ///
     /// A reference to the API server configuration.
@@ -583,5 +726,26 @@ where
             tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_job_status_valid() {
+        assert_eq!(resolve_job_status("RUNNING"), Some(1));
+        assert_eq!(resolve_job_status("SUCCEEDED"), Some(2));
+        assert_eq!(resolve_job_status("FAILED"), Some(3));
+        assert_eq!(resolve_job_status("KILLED"), Some(4));
+    }
+
+    #[test]
+    fn resolve_job_status_invalid() {
+        assert_eq!(resolve_job_status("succeeded"), None);
+        assert_eq!(resolve_job_status(""), None);
+        assert_eq!(resolve_job_status("UNKNOWN"), None);
+        assert_eq!(resolve_job_status("PENDING"), None);
     }
 }

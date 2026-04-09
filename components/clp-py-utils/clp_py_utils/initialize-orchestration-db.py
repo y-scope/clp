@@ -78,7 +78,8 @@ def main(argv):
                     `clp_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
-                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
+                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
