@@ -5,7 +5,7 @@ on:
     paths: &monitored_paths
       - ".github/workflows/clp-package-helm.yaml"
       - "taskfile.yaml"
-      - "taskfiles/**"
+      - "taskfiles/**/*"
       - "tools/yscope-dev-utils"
       - "tools/deployment/package-helm/**"
   push:

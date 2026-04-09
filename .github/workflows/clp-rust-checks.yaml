@@ -11,7 +11,7 @@ on:
       - "components/clp-rust-utils/**"
       - "components/log-ingestor/**"
       - "taskfile.yaml"
-      - "taskfiles/**"
+      - "taskfiles/**/*"
       - "tools/yscope-dev-utils"
       - "tools/scripts/localstack/**"
   push:

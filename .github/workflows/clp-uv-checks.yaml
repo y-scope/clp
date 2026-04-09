@@ -5,7 +5,7 @@ on:
     paths: &monitored_paths
       - ".github/workflows/clp-uv-checks.yaml"
       - "taskfile.yaml"
-      - "taskfiles/**"
+      - "taskfiles/**/*"
       - "tools/yscope-dev-utils"
       - "components/clp-mcp-server/pyproject.toml"
       - "components/clp-mcp-server/uv.lock"

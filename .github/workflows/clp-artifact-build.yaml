@@ -99,14 +99,14 @@ jobs:
               - "components/core/tests/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
               - "taskfile.yaml"
-              - "taskfiles/**"
+              - "taskfiles/**/*"
               - "tools/scripts/deps-download/**"
             yscope-clp-core:
               - ".github/actions/**"
               - ".github/workflows/clp-artifact-build.yaml"
               - ".gitmodules"
               - "taskfile.yaml"
-              - "taskfiles/**"
+              - "taskfiles/**/*"
               - "python-wheels/yscope-clp-core/**"
 
   centos-stream-9-deps-image:
