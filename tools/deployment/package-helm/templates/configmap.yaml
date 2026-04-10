@@ -289,7 +289,7 @@ data:
       {{- else }}
       "LogIngestorHost": null,
       "LogIngestorPort": null,
-      {{- end }}
+      {{- end }}{{/* if .Values.clpConfig.log_ingestor */}}
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
       "LogsInputS3AwsAuthType": null,
@@ -302,8 +302,8 @@ data:
       "LogsInputS3AwsProfile": {{ .profile | quote }},
       {{- else }}
       "LogsInputS3AwsProfile": null,
-      {{- end }}
-      {{- end }}
+      {{- end }}{{/* if .profile */}}
+      {{- end }}{{/* with .Values.clpConfig.logs_input.aws_authentication */}}
       {{- end }}
       {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
       "StreamFilesDir": "/var/data/streams",

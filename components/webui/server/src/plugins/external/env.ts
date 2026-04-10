@@ -75,7 +75,7 @@ const schema = {
             minimum: 1,
         },
 
-        // S3 Logs Input
+        // S3
         CLP_LOGS_INPUT_AWS_ACCESS_KEY_ID: {
             type: "string",
             default: "",

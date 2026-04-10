@@ -931,27 +931,34 @@ class BaseController(ABC):
         """
         with open(settings_file_path, "r") as settings_json_file:
             settings_object = json.loads(settings_json_file.read())
-        self._update_settings_object(settings_object, updates)
+        self._update_settings_object("", settings_object, updates)
 
         return settings_object
 
     def _update_settings_object(
         self,
+        parent_key_prefix: str,
         settings: dict[str, Any],
         updates: dict[str, Any],
     ) -> None:
         """
-        Updates the given settings object with the values from `updates`.
+        Recursively updates the given settings object with the values from `updates`.
 
+        :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
         :param settings: The settings to update.
         :param updates: The updates.
         :raise ValueError: If a key in `updates` doesn't exist in `settings`.
         """
         for key, value in updates.items():
             if key not in settings:
-                error_msg = f"{key} is not a valid configuration key for the webui."
+                error_msg = (
+                    f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
+                )
                 raise ValueError(error_msg)
-            settings[key] = value
+            if isinstance(value, dict):
+                self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
+            else:
+                settings[key] = value
 
 
 _DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
