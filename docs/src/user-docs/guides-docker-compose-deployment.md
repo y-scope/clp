@@ -85,6 +85,9 @@ To configure CLP for multi-host deployment, you'll need to:
    * When using local filesystem storage (i.e., not S3), set `logs_input.directory`,
      `archive_output.storage.directory`, and `stream_output.storage.directory` to directories on the
      shared filesystem.
+   * (Optional) set `concurrency` under `query_scheduler` to control
+     the size of the process pool used by the query scheduler. Higher
+     concurrency can help improve performance for larger clusters.
 
 4. Set up the CLP package's environment:
 

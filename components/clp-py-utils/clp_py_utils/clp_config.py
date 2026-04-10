@@ -436,6 +436,7 @@ class QueryScheduler(BaseModel):
     max_datasets_per_query: PositiveInt | None = 10
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
+    concurrency: PositiveInt = 16
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME

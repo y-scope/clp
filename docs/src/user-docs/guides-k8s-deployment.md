@@ -222,6 +222,10 @@ clpConfig:
   results_cache:
     retention_period: 120  # (in minutes) 2 hours
 
+  # Adjust query scheduler concurrency
+  query_scheduler:
+    parallelism: 16
+
 # Override credentials (use secrets in production!)
 credentials:
   database:
