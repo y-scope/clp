@@ -1,15 +1,18 @@
-import {
-    FastifyPluginAsyncTypebox,
-    Type,
-} from "@fastify/type-provider-typebox";
-import {CompressionMetadataDecodedSchema} from "@webui/common/schemas/compress-metadata";
+import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
+import {JobsResponseSchema} from "@webui/common/schemas/compress-metadata";
 import {constants} from "http2";
 
+import settings from "../../../../settings.json" with {type: "json"};
 import {
     CompressionMetadataQueryRow,
     getCompressionMetadataQuery,
+    getIngestionJobsQuery,
+    IngestionJobQueryRow,
 } from "./sql.js";
-import {mapCompressionMetadataRows} from "./utils.js";
+import {
+    mapCompressionMetadataRows,
+    mapIngestionJobRows,
+} from "./utils.js";
 
 
 /**
@@ -23,19 +26,33 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         {
             schema: {
                 response: {
-                    [constants.HTTP_STATUS_OK]: Type.Array(
-                        CompressionMetadataDecodedSchema
-                    ),
+                    [constants.HTTP_STATUS_OK]: JobsResponseSchema,
                 },
                 tags: ["Compression Metadata"],
             },
         },
         async () => {
-            const [rows] = await fastify.mysql.query<CompressionMetadataQueryRow[]>(
-                getCompressionMetadataQuery()
-            );
+            const [compressionRows] =
+                await fastify.mysql.query<CompressionMetadataQueryRow[]>(
+                    getCompressionMetadataQuery()
+                );
 
-            return mapCompressionMetadataRows(rows);
+            const compressionJobs = mapCompressionMetadataRows(compressionRows);
+
+            const hasLogIngestor = null !== (settings.LogIngestorHost as string | null);
+            if (false === hasLogIngestor) {
+                return {compressionJobs: compressionJobs, ingestionJobs: []};
+            }
+
+            const [ingestionRows] =
+                await fastify.mysql.query<IngestionJobQueryRow[]>(
+                    getIngestionJobsQuery()
+                );
+
+            return {
+                compressionJobs: compressionJobs,
+                ingestionJobs: mapIngestionJobRows(ingestionRows),
+            };
         }
     );
 };

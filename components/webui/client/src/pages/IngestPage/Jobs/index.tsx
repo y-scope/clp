@@ -1,6 +1,6 @@
 import {useQuery} from "@tanstack/react-query";
 
-import {fetchCompressionJobs} from "../../../api/compress-metadata";
+import {fetchJobs} from "../../../api/compress-metadata";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
 import styles from "./index.module.css";
@@ -8,11 +8,11 @@ import {
     jobColumns,
     JobData,
 } from "./typings";
-import {mapCompressionJobResponseToTableData} from "./utils";
+import {buildJobTree} from "./utils";
 
 
 /**
- * Renders table with ingestion jobs inside a card.
+ * Renders tree table with ingestion and compression jobs inside a card.
  *
  * @return
  */
@@ -20,8 +20,8 @@ const Jobs = () => {
     const {data: jobs = [], isPending} = useQuery({
         queryKey: ["jobs"],
         queryFn: async () => {
-            const data = await fetchCompressionJobs();
-            return data.map((item): JobData => mapCompressionJobResponseToTableData(item));
+            const {compressionJobs, ingestionJobs} = await fetchJobs();
+            return buildJobTree(compressionJobs, ingestionJobs);
         },
     });
 

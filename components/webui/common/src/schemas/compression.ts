@@ -7,6 +7,7 @@ import {
     CLP_DEFAULT_TABLE_PREFIX,
     SqlTableSuffix,
 } from "../config.js";
+import {AwsAuthenticationSchema} from "./s3.js";
 
 
 /**
@@ -53,14 +54,63 @@ const AbsolutePathSchema = Type.String({
 });
 
 /**
- * Schema for request to create a new compression job.
+ * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
  */
-const CompressionJobCreationSchema = Type.Object({
-    paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
+enum CompressionJobInputType {
+    FS = "fs",
+    S3 = "s3",
+    S3_OBJECT_METADATA = "s3_object_metadata",
+}
+
+/**
+ * Common CLP-S fields shared by all compression job creation schemas.
+ */
+const clpSJobCreationFields = {
     dataset: Type.Optional(DatasetNameSchema),
     timestampKey: Type.Optional(Type.String()),
     unstructured: Type.Optional(Type.Boolean()),
+};
+
+/**
+ * Schema for request to create a new FS compression job.
+ */
+const FsCompressionJobCreationSchema = Type.Object({
+    ...clpSJobCreationFields,
+    inputType: Type.Literal(CompressionJobInputType.FS),
+    paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
 });
+
+type FsCompressionJobCreation = Static<typeof FsCompressionJobCreationSchema>;
+
+/**
+ * Schema for request to create a new S3 compression job.
+ *
+ * When `scanner` is true, the request is forwarded to the log-ingestor as an
+ * S3 scanner ingestion job instead of a one-time compression job.
+ */
+const S3CompressionJobCreationSchema = Type.Object({
+    ...clpSJobCreationFields,
+    bucket: Type.String({minLength: 1}),
+    bufferChannelCapacity: Type.Optional(Type.Number({minimum: 1})),
+    bufferFlushThresholdBytes: Type.Optional(Type.Number({minimum: 1})),
+    bufferTimeoutSec: Type.Optional(Type.Number({minimum: 1})),
+    inputType: Type.Literal(CompressionJobInputType.S3),
+    keyPrefix: Type.Optional(Type.String()),
+    keys: Type.Optional(Type.Array(Type.String({minLength: 1}), {minItems: 1})),
+    regionCode: Type.String({minLength: 1}),
+    scanner: Type.Boolean(),
+    scanningIntervalSec: Type.Optional(Type.Number({minimum: 1})),
+});
+
+type S3CompressionJobCreation = Static<typeof S3CompressionJobCreationSchema>;
+
+/**
+ * Schema for request to create a new compression job (FS or S3).
+ */
+const CompressionJobCreationSchema = Type.Union([
+    FsCompressionJobCreationSchema,
+    S3CompressionJobCreationSchema,
+]);
 
 type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;
 
@@ -74,42 +124,53 @@ const CompressionJobSchema = Type.Object({
 type CompressionJob = Static<typeof CompressionJobSchema>;
 
 /**
- * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
+ * Schema for S3 scanner job creation response.
  */
-enum CompressionJobInputType {
-    FS = "fs",
-    S3 = "s3",
-    S3_OBJECT_METADATA = "s3_object_metadata",
-}
+const ScannerJobResponseSchema = Type.Object({
+    jobIds: Type.Array(Type.Number()),
+});
+
+type ScannerJobResponse = Static<typeof ScannerJobResponseSchema>;
+
+
+const clpSInputConfigFields = {
+    dataset: Type.Union([Type.String(),
+        Type.Null()]),
+    timestamp_key: Type.Union([Type.String(),
+        Type.Null()]),
+    unstructured: Type.Boolean(),
+};
 
 /**
  * Matching `FsInputConfig` in `job_orchestration.scheduler.job_config`.
  */
 const ClpIoFsInputConfigSchema = Type.Object({
-    dataset: Type.Union([Type.String(),
-        Type.Null()]),
+    ...clpSInputConfigFields,
     path_prefix_to_remove: Type.Union([Type.String(),
         Type.Null()]),
     paths_to_compress: Type.Array(Type.String()),
-    timestamp_key: Type.Union([Type.String(),
-        Type.Null()]),
     type: Type.Literal(CompressionJobInputType.FS),
-    unstructured: Type.Boolean(),
 });
+
+type ClpIoFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
 
 /**
  * Matching `S3InputConfig` in `job_orchestration.scheduler.job_config`.
+ * Includes fields inherited from `S3Config` in `clp_py_utils.clp_config`.
  */
 const ClpIoS3InputConfigSchema = Type.Object({
-    dataset: Type.Union([Type.String(),
-        Type.Null()]),
+    ...clpSInputConfigFields,
+    aws_authentication: AwsAuthenticationSchema,
+    bucket: Type.String(),
+    key_prefix: Type.String(),
     keys: Type.Union([Type.Array(Type.String()),
         Type.Null()]),
-    timestamp_key: Type.Union([Type.String(),
+    region_code: Type.Union([Type.String(),
         Type.Null()]),
     type: Type.Literal(CompressionJobInputType.S3),
-    unstructured: Type.Boolean(),
 });
+
+type ClpIoS3InputConfig = Static<typeof ClpIoS3InputConfigSchema>;
 
 /**
  * Matching `S3ObjectMetadataInputConfig` in `job_orchestration.scheduler.job_config`.
@@ -147,6 +208,8 @@ const ClpIoConfigSchema =
         output: ClpIoOutputConfigSchema,
     });
 
+type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
+
 /**
  * Less strict version of `ClpIoConfigSchema` to prevent Fastify validation errors
  * for compression metadata from older CLP releases with missing data.
@@ -159,12 +222,6 @@ const ClpIoPartialConfigSchema =
         output: Type.Partial(ClpIoOutputConfigSchema),
     });
 
-type ClpIoConfig = Static<typeof ClpIoConfigSchema>;
-
-type ClpIoS3InputConfig = Static<typeof ClpIoS3InputConfigSchema>;
-
-type ClpIoFsInputConfig = Static<typeof ClpIoFsInputConfigSchema>;
-
 export {
     ClpIoConfigSchema,
     ClpIoPartialConfigSchema,
@@ -174,6 +231,7 @@ export {
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
     DatasetNameSchema,
+    ScannerJobResponseSchema,
 };
 export type {
     ClpIoConfig,
@@ -181,4 +239,7 @@ export type {
     ClpIoS3InputConfig,
     CompressionJob,
     CompressionJobCreation,
+    FsCompressionJobCreation,
+    S3CompressionJobCreation,
+    ScannerJobResponse,
 };

@@ -1,14 +1,14 @@
-import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import {JobsResponse} from "@webui/common/schemas/compress-metadata";
 import axios from "axios";
 
 
 /**
- * Retrieves recent compression jobs (last 30 days).
+ * Retrieves recent compression and ingestion jobs.
  *
- * @return Recent compression jobs metadata.
+ * @return Jobs response containing compression and ingestion job metadata.
  */
-const fetchCompressionJobs = async (): Promise<CompressionMetadataDecoded[]> => {
-    const {data} = await axios.get<CompressionMetadataDecoded[]>(
+const fetchJobs = async (): Promise<JobsResponse> => {
+    const {data} = await axios.get<JobsResponse>(
         "/api/compress-metadata"
     );
 
@@ -16,4 +16,4 @@ const fetchCompressionJobs = async (): Promise<CompressionMetadataDecoded[]> => 
 };
 
 
-export {fetchCompressionJobs};
+export {fetchJobs};
