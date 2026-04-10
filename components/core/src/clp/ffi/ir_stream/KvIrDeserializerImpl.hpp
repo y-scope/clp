@@ -65,7 +65,7 @@ public:
     [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
             encoded_tag_t tag,
-            std::string& out_key_name
+            std::string& key_name
     ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> override;
 };
 }  // namespace clp::ffi::ir_stream

@@ -33,8 +33,8 @@ auto KvIrDeserializerImpl::deserialize_ir_unit_kv_pair_log_event(
 auto KvIrDeserializerImpl::deserialize_ir_unit_schema_tree_node_insertion(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        std::string& out_key_name
+        std::string& key_name
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    return ir_stream::deserialize_ir_unit_schema_tree_node_insertion(reader, tag, out_key_name);
+    return ir_stream::deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name);
 }
 }  // namespace clp::ffi::ir_stream

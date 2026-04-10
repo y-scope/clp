@@ -129,8 +129,8 @@ public:
      *   tree.
      * @return IrUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
      * error code indicating the failure:
-     * - Forwards `DeserializerImpl::deserialize_utc_offset_change`'s return values if it failed to
-     *   deserialize the UTC offset.
+     * - Forwards `DeserializerImpl::deserialize_ir_unit_utc_offset_change`'s return values if it
+     *   failed to deserialize the UTC offset.
      * - Forwards `handle_utc_offset_change`'s return values from the user-defined IR unit handler
      *   on unit handling failure.
      * @return IrUnitType::EndOfStream if an end-of-stream IR unit is deserialized, or an error code

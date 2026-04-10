@@ -36,6 +36,16 @@ public:
 
     // Methods
     /**
+     * Deserializes a UTC offset change IR unit from the given reader.
+     * @param reader
+     * @return A result containing the deserialized UTC offset on success, or an error code
+     * indicating the failure:
+     * - Forwards `deserialize_int`'s return values on failure.
+     */
+    [[nodiscard]] static auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
+            -> ystdlib::error_handling::Result<UtcOffset>;
+
+    /**
      * Deserializes the type of the next IR unit from the given reader.
      * @param reader
      * @return A result containing a pair on success, or an error code indicating the failure:
@@ -71,7 +81,7 @@ public:
      * Deserializes a schema tree node insertion IR unit from the given reader.
      * @param reader
      * @param tag
-     * @param out_key_name Returns the inserted node's key name.
+     * @param key_name Returns the inserted node's key name.
      * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
      *   - Whether the node is for auto-generated keys schema tree.
@@ -81,19 +91,9 @@ public:
     [[nodiscard]] virtual auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
             encoded_tag_t tag,
-            std::string& out_key_name
+            std::string& key_name
     ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>>
             = 0;
-
-    /**
-     * Deserializes a UTC offset change IR unit from the given reader.
-     * @param reader
-     * @return A result containing the deserialized UTC offset on success, or an error code
-     * indicating the failure:
-     * - Forwards `deserialize_int`'s return values on failure.
-     */
-    [[nodiscard]] static auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
-            -> ystdlib::error_handling::Result<UtcOffset>;
 };
 }  // namespace clp::ffi::ir_stream
 
