@@ -2,11 +2,19 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Generic, TypeVar
 
-from tests.utils.classes import IntegrationTestPathConfig
+from pydantic import BaseModel
+
+from tests.utils.classes import (
+    IntegrationTestExternalAction,
+    IntegrationTestPathConfig,
+)
 from tests.utils.utils import (
     validate_dir_exists,
 )
+
+T = TypeVar("T", bound=BaseModel)
 
 
 @dataclass
@@ -43,3 +51,11 @@ class ClpBinaryTestPathConfig(IntegrationTestPathConfig):
             self.clp_binary_path,
             self.clp_s_binary_path,
         ]
+
+
+@dataclass
+class ClpBinaryExternalAction(IntegrationTestExternalAction, Generic[T]):
+    """Metadata for an external action executed during a CLP binary integration test."""
+
+    #: Pydantic object storing semantic info required to construct `cmd` and verify the Action.
+    args: T

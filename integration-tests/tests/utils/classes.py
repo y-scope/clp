@@ -1,6 +1,7 @@
 """Classes used in CLP integration tests."""
 
-from dataclasses import dataclass
+import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -70,3 +71,17 @@ class IntegrationTestDataset:
 
     #: A dictionary of metadata describing the dataset.
     metadata_dict: dict[str, Any]
+
+
+@dataclass
+class IntegrationTestExternalAction:
+    """Metadata for an external action executed during an integration test."""
+
+    #: Command to pass to `subprocess.run()`.
+    cmd: list[str]
+
+    #: The completed process returned from `subprocess.run()`.
+    completed_proc: subprocess.CompletedProcess[str] = field(init=False)
+
+    #: Path to the file where this action's subprocess output was logged.
+    log_file_path: Path = field(init=False)
