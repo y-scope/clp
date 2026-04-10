@@ -13,6 +13,8 @@ declare module "fastify" {
             PRESTO_CATALOG: string;
             PRESTO_SCHEMA: string;
             RATE_LIMIT: number;
+            CLP_LOGS_INPUT_AWS_ACCESS_KEY_ID: string;
+            CLP_LOGS_INPUT_AWS_SECRET_ACCESS_KEY: string;
         };
     }
 }
@@ -71,6 +73,16 @@ const schema = {
             type: "number",
             default: 1_000,
             minimum: 1,
+        },
+
+        // S3 Logs Input
+        CLP_LOGS_INPUT_AWS_ACCESS_KEY_ID: {
+            type: "string",
+            default: "",
+        },
+        CLP_LOGS_INPUT_AWS_SECRET_ACCESS_KEY: {
+            type: "string",
+            default: "",
         },
     },
 };
