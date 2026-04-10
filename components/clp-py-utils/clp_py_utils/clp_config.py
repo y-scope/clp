@@ -780,6 +780,9 @@ class LogIngestor(BaseModel):
     port: Port = 3002
     logging_level: LoggingLevelRust = "INFO"
 
+    def transform_for_container(self):
+        self.host = LOG_INGESTOR_COMPONENT_NAME
+
 
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
@@ -1091,6 +1094,8 @@ class ClpConfig(BaseModel):
         self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
+        if self.log_ingestor is not None:
+            self.log_ingestor.transform_for_container()
         if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
             self.presto.transform_for_container()
 

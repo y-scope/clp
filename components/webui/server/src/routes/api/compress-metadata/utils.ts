@@ -2,13 +2,19 @@ import {brotliDecompressSync} from "node:zlib";
 
 import {decode} from "@msgpack/msgpack";
 import {Value} from "@sinclair/typebox/value";
-import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import {
+    CompressionMetadataDecoded,
+    IngestionJob,
+} from "@webui/common/schemas/compress-metadata";
 import {
     ClpIoConfig,
     ClpIoPartialConfigSchema,
 } from "@webui/common/schemas/compression";
 
-import {CompressionMetadataQueryRow} from "./sql.js";
+import {
+    CompressionMetadataQueryRow,
+    IngestionJobQueryRow,
+} from "./sql.js";
 
 
 /**
@@ -53,6 +59,9 @@ const mapCompressionMetadataRows = (
             clp_config: clpConfig,
             compressed_size: compressedSize,
             duration,
+            ingestion_job_id: ingestionJobId,
+            s3_bucket: s3Bucket,
+            s3_keys: s3Keys,
             start_time: startTime,
             status,
             status_msg: statusMsg,
@@ -61,7 +70,7 @@ const mapCompressionMetadataRows = (
         }): CompressionMetadataDecoded => {
             const {clp_config: decodedClpConfig} = decodeJobConfig(clpConfig);
 
-            return {
+            const result: CompressionMetadataDecoded = {
                 _id: _id,
                 clp_config: decodedClpConfig,
                 compressed_size: compressedSize,
@@ -72,11 +81,46 @@ const mapCompressionMetadataRows = (
                 uncompressed_size: uncompressedSize,
                 update_time: updateTime,
             };
+
+            if ("undefined" !== typeof ingestionJobId) {
+                result.ingestion_job_id = ingestionJobId;
+            }
+
+            if (s3Bucket && s3Keys) {
+                result.s3_paths = s3Keys.split("|").map((key) => `s3://${s3Bucket}/${key}`);
+            }
+
+            return result;
         }
     );
+};
+
+/**
+ * Maps ingestion job rows from the database to plain objects.
+ *
+ * @param rows
+ * @return
+ */
+const mapIngestionJobRows = (rows: IngestionJobQueryRow[]): IngestionJob[] => {
+    return rows.map(({
+        _id,
+        config,
+        creation_ts: creationTs,
+        last_update_ts: lastUpdateTs,
+        num_files_compressed: numFilesCompressed,
+        status,
+    }): IngestionJob => ({
+        _id: _id,
+        config: config,
+        creation_ts: creationTs,
+        last_update_ts: lastUpdateTs,
+        num_files_compressed: numFilesCompressed,
+        status: status,
+    }));
 };
 
 export {
     decodeJobConfig,
     mapCompressionMetadataRows,
+    mapIngestionJobRows,
 };

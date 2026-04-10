@@ -55,11 +55,20 @@ spec:
               value: "4000"
             - name: "RATE_LIMIT"
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
+            {{- with .Values.clpConfig.logs_input }}
+            {{- if and (eq .type "s3") (eq .aws_authentication.type "credentials") }}
+              - name: "CLP_LOGS_INPUT_AWS_ACCESS_KEY_ID"
+                value: {{ .aws_authentication.credentials.access_key_id | quote }}
+              - name: "CLP_LOGS_INPUT_AWS_SECRET_ACCESS_KEY"
+                value: {{ .aws_authentication.credentials.secret_access_key | quote }}
+            {{- end }}{{/* if and (eq .type "s3")
+                                  (eq .aws_authentication.type "credentials") */}}
+            {{- end }}{{/* with .Values.clpConfig.logs_input */}}
             {{- with .Values.clpConfig.stream_output.storage }}
             {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
-            - name: "AWS_ACCESS_KEY_ID"
+            - name: "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID"
               value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
-            - name: "AWS_SECRET_ACCESS_KEY"
+            - name: "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY"
               value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
             {{- end }}{{/* if and (eq .type "s3")
                                   (eq .s3_config.aws_authentication.type "credentials") */}}
