@@ -9,8 +9,10 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "ClpArchiveDecoder.hpp"
+
 namespace clp_s {
-// Forward include
+// Forward declaration
 class ArchiveReader;
 }  // namespace clp_s
 
@@ -101,7 +103,19 @@ public:
      */
     [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> { return m_file_infos; }
 
+    /**
+     * Decodes all log events from the archive.
+     *
+     * @return A result containing the newly constructed `ClpArchiveDecoder` on success, or an
+     * error code indicating the failure:
+     * - Forwards `ClpArchiveDecoder::create`'s return values on failure.
+     */
+    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<ClpArchiveDecoder>;
+
 private:
+    // Allows `ClpArchiveDecoder` to reuse the native reader.
+    friend class ClpArchiveDecoder;
+
     // Constructors
     explicit ClpArchiveReader(
             std::unique_ptr<clp_s::ArchiveReader> reader,

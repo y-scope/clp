@@ -18,6 +18,8 @@
 #include <clp_s/ffi/sfa/SfaErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 
+#include "ClpArchiveDecoder.hpp"
+
 namespace clp_s::ffi::sfa {
 template <typename ReturnType>
 using Result = ystdlib::error_handling::Result<ReturnType>;
@@ -144,6 +146,13 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
         m_file_infos.emplace_back(filename, start_idx, end_idx);
     }
 
+    m_archive_reader->read_dictionaries_and_metadata();
+    m_archive_reader->open_packed_streams();
+
     return ystdlib::error_handling::success();
+}
+
+auto ClpArchiveReader::decode_all() -> Result<ClpArchiveDecoder> {
+    return ClpArchiveDecoder::create(*this);
 }
 }  // namespace clp_s::ffi::sfa
