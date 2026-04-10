@@ -1,9 +1,9 @@
 import {
     GetObjectCommand,
     S3Client,
-    S3ClientConfig,
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
+import {AwsCredentialIdentity} from "@smithy/types";
 import {Nullable} from "@webui/common/utility-types";
 import fp from "fastify-plugin";
 
@@ -12,18 +12,26 @@ import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
 
 /**
- * Class to manage Simple Storage Service (S3) objects for stream files.
+ * Class to manage Simple Storage Service (S3) objects.
  */
 class S3Manager {
-    #s3Client: Nullable<S3Client> = null;
-
-    readonly #s3ClientConfig: S3ClientConfig;
+    readonly #s3Client;
 
     /**
-     * @param config
+     * @param region
+     * @param [profile]
+     * @param [credentials]
      */
-    constructor (config: S3ClientConfig) {
-        this.#s3ClientConfig = config;
+    constructor (
+        region: string,
+        profile: Nullable<string>,
+        credentials?: AwsCredentialIdentity
+    ) {
+        this.#s3Client = new S3Client({
+            region,
+            ...((null !== profile) && {profile}),
+            ...(credentials && {credentials}),
+        });
     }
 
     /**
@@ -34,10 +42,6 @@ class S3Manager {
      * @throws {Error} If a pre-signed URL couldn't be generated.
      */
     async getPreSignedUrl (s3UriString: string): Promise<string> {
-        if (null === this.#s3Client) {
-            this.#s3Client = new S3Client(this.#s3ClientConfig);
-        }
-
         const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
             Bucket: s3Uri.hostname,
@@ -82,20 +86,16 @@ export default fp(
                 CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: secretAccessKey,
             } = fastify.config;
 
-            const s3ClientConfig: S3ClientConfig = {
-                ...((accessKeyId && secretAccessKey) ?
-                    {credentials: {accessKeyId, secretAccessKey}} :
-                    {}),
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                ...((null !== profile) && {profile}),
-                region,
-            };
-
             fastify.log.info(
                 {region, profile},
                 "Initializing StreamFilesS3Manager"
             );
-            fastify.decorate("StreamFilesS3Manager", new S3Manager(s3ClientConfig));
+            fastify.decorate(
+                "StreamFilesS3Manager",
+                (accessKeyId && secretAccessKey) ?
+                    new S3Manager(region, profile, {accessKeyId, secretAccessKey}) :
+                    new S3Manager(region, profile)
+            );
         }
     },
 );
