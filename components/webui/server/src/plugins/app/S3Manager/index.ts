@@ -1,6 +1,7 @@
 import {
     GetObjectCommand,
     S3Client,
+    S3ClientConfig,
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import {Nullable} from "@webui/common/utility-types";
@@ -11,20 +12,18 @@ import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
 
 /**
- * Class to manage Simple Storage Service (S3) objects.
+ * Class to manage Simple Storage Service (S3) objects for stream files.
  */
 class S3Manager {
-    readonly #s3Client;
+    #s3Client: Nullable<S3Client> = null;
+
+    readonly #s3ClientConfig: S3ClientConfig;
 
     /**
-     * @param region
-     * @param [profile]
+     * @param config
      */
-    constructor (region: string, profile: Nullable<string>) {
-        this.#s3Client = new S3Client({
-            region,
-            ...((null !== profile) && {profile}),
-        });
+    constructor (config: S3ClientConfig) {
+        this.#s3ClientConfig = config;
     }
 
     /**
@@ -35,6 +34,10 @@ class S3Manager {
      * @throws {Error} If a pre-signed URL couldn't be generated.
      */
     async getPreSignedUrl (s3UriString: string): Promise<string> {
+        if (null === this.#s3Client) {
+            this.#s3Client = new S3Client(this.#s3ClientConfig);
+        }
+
         const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
             Bucket: s3Uri.hostname,
@@ -60,7 +63,7 @@ class S3Manager {
 
 declare module "fastify" {
     interface FastifyInstance {
-        S3Manager?: S3Manager;
+        StreamFilesS3Manager?: S3Manager;
     }
 }
 
@@ -74,11 +77,25 @@ export default fp(
         // values are not hardcoded.
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (null !== region && "" !== region) {
+            const {
+                CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: accessKeyId,
+                CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: secretAccessKey,
+            } = fastify.config;
+
+            const s3ClientConfig: S3ClientConfig = {
+                ...((accessKeyId && secretAccessKey) ?
+                    {credentials: {accessKeyId, secretAccessKey}} :
+                    {}),
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                ...((null !== profile) && {profile}),
+                region,
+            };
+
             fastify.log.info(
                 {region, profile},
-                "Initializing S3Manager"
+                "Initializing StreamFilesS3Manager"
             );
-            fastify.decorate("S3Manager", new S3Manager(region, profile));
+            fastify.decorate("StreamFilesS3Manager", new S3Manager(s3ClientConfig));
         }
     },
 );
