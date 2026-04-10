@@ -101,7 +101,7 @@ impl IngestionJobState for S3ScannerTestState {
     }
 
     async fn fail(&self, msg: String) {
-        unreachable!("S3ScannerTestState::fail should be unreachable: {msg}");
+        panic!("S3ScannerTestState::fail should be unreachable: {msg}");
     }
 }
 
