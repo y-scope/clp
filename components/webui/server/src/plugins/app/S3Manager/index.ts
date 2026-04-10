@@ -25,12 +25,12 @@ class S3Manager {
     constructor (
         region: string,
         profile: Nullable<string>,
-        credentials?: AwsCredentialIdentity
+        credentials: Nullable<AwsCredentialIdentity>
     ) {
         this.#s3Client = new S3Client({
             region,
             ...((null !== profile) && {profile}),
-            ...(credentials && {credentials}),
+            ...((null !== credentials) && {credentials}),
         });
     }
 
@@ -90,11 +90,13 @@ export default fp(
                 {region, profile},
                 "Initializing StreamFilesS3Manager"
             );
+            const credentials = (accessKeyId && secretAccessKey) ?
+                {accessKeyId, secretAccessKey} :
+                null;
+
             fastify.decorate(
                 "StreamFilesS3Manager",
-                (accessKeyId && secretAccessKey) ?
-                    new S3Manager(region, profile, {accessKeyId, secretAccessKey}) :
-                    new S3Manager(region, profile)
+                new S3Manager(region, profile, credentials)
             );
         }
     },
