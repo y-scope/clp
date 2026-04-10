@@ -776,12 +776,15 @@ class ApiServer(BaseModel):
 
 
 class LogIngestor(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 3002
+
     host: DomainStr = "localhost"
-    port: Port = 3002
+    port: Port = DEFAULT_PORT
     logging_level: LoggingLevelRust = "INFO"
 
     def transform_for_container(self):
         self.host = LOG_INGESTOR_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class Presto(BaseModel):

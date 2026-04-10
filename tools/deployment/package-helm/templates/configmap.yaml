@@ -283,13 +283,14 @@ data:
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
-      {{- if .Values.clpConfig.log_ingestor }}
+      {{- if and .Values.clpConfig.log_ingestor (eq .Values.clpConfig.logs_input.type "s3") }}
       "LogIngestorHost": "{{ include "clp.fullname" . }}-log-ingestor",
       "LogIngestorPort": 3002,
       {{- else }}
       "LogIngestorHost": null,
       "LogIngestorPort": null,
-      {{- end }}{{/* if .Values.clpConfig.log_ingestor */}}
+      {{- end }}{{/* if and .Values.clpConfig.log_ingestor
+                          (eq .Values.clpConfig.logs_input.type "s3") */}}
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
       "LogsInputS3AwsAuthType": null,

@@ -794,13 +794,12 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
 
-        if self._clp_config.log_ingestor is not None:
-            server_settings_json_updates["LogIngestorHost"] = (
-                container_clp_config.log_ingestor.host
-            )
-            server_settings_json_updates["LogIngestorPort"] = (
-                container_clp_config.log_ingestor.port
-            )
+        if (
+            self._clp_config.log_ingestor is not None
+            and self._clp_config.logs_input.type == StorageType.S3
+        ):
+            server_settings_json_updates["LogIngestorHost"] = container_clp_config.log_ingestor.host
+            server_settings_json_updates["LogIngestorPort"] = container_clp_config.log_ingestor.port
         else:
             server_settings_json_updates["LogIngestorHost"] = None
             server_settings_json_updates["LogIngestorPort"] = None
