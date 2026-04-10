@@ -73,13 +73,10 @@ declare module "fastify" {
 
 export default fp(
     (fastify) => {
-        const region = settings.StreamFilesS3Region;
-        const profile = settings.StreamFilesS3Profile;
+        const region = settings.StreamFilesS3Region as Nullable<string>;
+        const profile = settings.StreamFilesS3Profile as Nullable<string>;
 
         // Only decorate if the region is set (i.e. s3 support is configured in package)
-        // Disable no-unnecessary-condition since linter doesn't understand that settings
-        // values are not hardcoded.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (null !== region && "" !== region) {
             const {
                 CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: accessKeyId,
