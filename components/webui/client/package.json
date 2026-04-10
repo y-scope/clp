@@ -23,7 +23,7 @@
     "@webui/common": "*",
     "antd": "^6.3.5",
     "antlr4": "^4.13.2",
-    "axios": "^1.13.2",
+    "axios": "^1.15.0",
     "chart.js": "^4.5.1",
     "chartjs-adapter-dayjs-4": "^1.0.4",
     "chartjs-plugin-zoom": "^2.2.0",
