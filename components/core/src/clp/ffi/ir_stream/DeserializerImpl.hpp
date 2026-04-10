@@ -23,11 +23,11 @@ class DeserializerImpl {
 public:
     DeserializerImpl() = default;
 
-    // Delete copy constructor and assignment
+    // Delete copy constructor and assignment operator
     DeserializerImpl(DeserializerImpl const&) = delete;
     auto operator=(DeserializerImpl const&) -> DeserializerImpl& = delete;
 
-    // Define default move constructor and assignment
+    // Default move constructor and assignment operator
     DeserializerImpl(DeserializerImpl&&) = default;
     auto operator=(DeserializerImpl&&) -> DeserializerImpl& = default;
 
