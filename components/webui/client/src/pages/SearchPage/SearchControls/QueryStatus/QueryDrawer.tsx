@@ -74,8 +74,8 @@ const QueryDrawer = () => {
                 {searchUiState === SEARCH_UI_STATE.FAILED && (
                     <Alert
                         description={errorMsg}
-                        message={errorName}
                         showIcon={true}
+                        title={errorName}
                         type={"error"}/>
                 )}
             </div>
