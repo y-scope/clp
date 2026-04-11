@@ -1,6 +1,7 @@
 use std::pin::Pin;
 
 use async_stream::stream;
+pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
     clp_config::package::{
@@ -14,9 +15,133 @@ use futures::{Stream, StreamExt};
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 pub use crate::error::ClientError;
+
+/// Default job statuses to include when the caller does not specify `job_status`.
+/// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
+///
+/// Note: `Pending` is intentionally excluded because pending jobs have no
+/// `start_time` and are therefore excluded by the time-range WHERE clause.
+pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
+    CompressionJobStatus::Succeeded,
+    CompressionJobStatus::Failed,
+    CompressionJobStatus::Killed,
+];
+
+/// Query parameters for the compression usage endpoint.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct CompressionUsageParams {
+    /// Start of usage window (epoch milliseconds, inclusive).
+    pub begin_timestamp: i64,
+    /// End of usage window (epoch milliseconds, inclusive).
+    pub end_timestamp: i64,
+    /// Job statuses to include as a comma-separated list (e.g.
+    /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
+    /// `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
+    /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+    #[serde(default)]
+    pub job_status: Option<String>,
+    /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+}
+
+const fn default_limit() -> i64 {
+    1000
+}
+
+/// Validated parameters produced by [`CompressionUsageParams::validate`].
+///
+/// This type is intentionally non-constructable outside of `validate()` so
+/// that callers of [`Client::get_compression_usage`] cannot bypass validation.
+pub struct ValidatedCompressionUsageParams {
+    pub begin_timestamp: i64,
+    pub end_timestamp: i64,
+    pub job_statuses: Vec<CompressionJobStatus>,
+    pub limit: i64,
+}
+
+impl CompressionUsageParams {
+    /// Validates the parameters and resolves the requested job statuses into
+    /// [`CompressionJobStatus`] variants.
+    ///
+    /// We use a `validate()` method rather than the conventional
+    /// `TryFrom<UncheckedX>` pattern because this struct also serves as the
+    /// `OpenAPI` query-parameter schema. Introducing an `Unchecked` wrapper would
+    /// leak an internal implementation detail into the generated API docs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::InvalidInput`] if:
+    /// - `begin_timestamp > end_timestamp`
+    /// - `limit <= 0`
+    /// - `job_status` contains unrecognized or empty values
+    pub fn validate(&self) -> Result<ValidatedCompressionUsageParams, ClientError> {
+        if self.begin_timestamp > self.end_timestamp {
+            return Err(ClientError::InvalidInput(
+                "begin_timestamp must be <= end_timestamp".to_owned(),
+            ));
+        }
+        if self.limit <= 0 {
+            return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
+        }
+        let job_statuses = match &self.job_status {
+            Some(s) => s
+                .split(',')
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .map(|token| {
+                    token.parse().map_err(|_| {
+                        ClientError::InvalidInput(format!("Unknown job_status: {token}"))
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+            None => DEFAULT_JOB_STATUSES.to_vec(),
+        };
+        if job_statuses.is_empty() {
+            return Err(ClientError::InvalidInput(
+                "job_status must contain at least one valid status".to_owned(),
+            ));
+        }
+        Ok(ValidatedCompressionUsageParams {
+            begin_timestamp: self.begin_timestamp,
+            end_timestamp: self.end_timestamp,
+            job_statuses,
+            limit: self.limit,
+        })
+    }
+}
+
+/// A single row returned by the compression usage query (one row per job).
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
+pub struct CompressionUsage {
+    /// Compression job ID.
+    pub id: i32,
+    /// Job status. See `CompressionJobStatus` in
+    /// `components/job-orchestration/job_orchestration/scheduler/constants.py`:
+    /// 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
+    pub status: i32,
+    /// Time the job was created (epoch milliseconds).
+    pub creation_time: i64,
+    /// Time the job started (epoch milliseconds). Always non-null in results
+    /// because the WHERE clause filters on `start_time`.
+    pub start_time: i64,
+    /// Wall-clock seconds the job ran for. `None` for non-succeeded jobs
+    /// (FAILED, KILLED, RUNNING) since `duration` is only set on completion.
+    pub duration: Option<f64>,
+    /// Total uncompressed size of input files (bytes).
+    pub uncompressed_size: i64,
+    /// Total compressed archive size (bytes).
+    pub compressed_size: i64,
+    /// Number of tasks the job was split into.
+    pub num_tasks: i32,
+    /// Sum of all task durations (CPU-seconds across all parallel workers).
+    /// `None` if all task duration values are NULL in the database.
+    pub tasks_duration: Option<f64>,
+}
 
 /// Defines the request configuration for submitting a search query.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -523,6 +648,86 @@ impl Client {
         Ok(names)
     }
 
+    /// Returns compression usage for each job within a time range, optionally
+    /// filtered by job outcome.
+    ///
+    /// # Returns
+    ///
+    /// A vector of [`CompressionUsage`] (one per job) on success, ordered by
+    /// `start_time` descending.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    pub async fn get_compression_usage(
+        &self,
+        params: &ValidatedCompressionUsageParams,
+    ) -> Result<Vec<CompressionUsage>, ClientError> {
+        // Build the optional job-status IN clause dynamically so the DB sees a
+        // static `IN (?, ?, ...)` predicate and can use an index on `j.status`.
+        // When `job_statuses` is empty the clause is omitted entirely, meaning
+        // "return all statuses".
+        let job_status_clause = if params.job_statuses.is_empty() {
+            String::new()
+        } else {
+            let placeholders = params
+                .job_statuses
+                .iter()
+                .map(|_| "?")
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(" AND j.status IN ({placeholders})")
+        };
+
+        #[rustfmt::skip]
+        let sql = format!(
+            // Divide by 1000.0 (a DECIMAL literal) rather than 1000 so that
+            // both MySQL and MariaDB perform decimal division, preserving the
+            // millisecond sub-second precision of the epoch-ms timestamps.
+            //
+            // ANY_VALUE() is used on non-aggregated columns because they are
+            // all functionally dependent on j.id (the primary key). This
+            // avoids a lengthy GROUP BY list while remaining compatible with
+            // ONLY_FULL_GROUP_BY (MySQL 5.7.5+ default).
+            //
+            // Task durations are summed regardless of individual task status so
+            // that failed jobs still report the compute resources they consumed.
+            //
+            // INNER JOIN filters out jobs with zero tasks (e.g. killed before
+            // task creation) since they consumed no compute resources.
+            "SELECT \
+              j.id, \
+              ANY_VALUE(j.status) AS status, \
+              ANY_VALUE(CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED)) AS creation_time, \
+              ANY_VALUE(CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED)) AS start_time, \
+              ANY_VALUE(ROUND(j.duration, 3)) AS duration, \
+              ANY_VALUE(j.uncompressed_size) AS uncompressed_size, \
+              ANY_VALUE(j.compressed_size) AS compressed_size, \
+              ANY_VALUE(j.num_tasks) AS num_tasks, \
+              ROUND(SUM(t.duration), 3) AS tasks_duration \
+            FROM compression_jobs j \
+            JOIN compression_tasks t ON t.job_id = j.id \
+            WHERE j.start_time >= FROM_UNIXTIME(? / 1000.0) \
+              AND j.start_time <= FROM_UNIXTIME(? / 1000.0)\
+              {job_status_clause} \
+            GROUP BY j.id \
+            ORDER BY ANY_VALUE(j.start_time) DESC \
+            LIMIT ?"
+        );
+
+        let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
+            .bind(params.begin_timestamp)
+            .bind(params.end_timestamp);
+        for &status in &params.job_statuses {
+            query = query.bind(i32::from(status));
+        }
+        query = query.bind(params.limit);
+        query.fetch_all(&self.sql_pool).await.map_err(Into::into)
+    }
+
     /// # Returns
     ///
     /// A reference to the API server configuration.
@@ -583,5 +788,51 @@ where
             tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn parse_job_status_valid() {
+        assert_eq!(
+            CompressionJobStatus::from_str("RUNNING"),
+            Ok(CompressionJobStatus::Running)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("SUCCEEDED"),
+            Ok(CompressionJobStatus::Succeeded)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("FAILED"),
+            Ok(CompressionJobStatus::Failed)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("KILLED"),
+            Ok(CompressionJobStatus::Killed)
+        );
+    }
+
+    #[test]
+    fn parse_job_status_invalid() {
+        assert!(CompressionJobStatus::from_str("").is_err());
+        assert!(CompressionJobStatus::from_str("UNKNOWN").is_err());
+        assert!(CompressionJobStatus::from_str("PENDING").is_err());
+    }
+
+    #[test]
+    fn parse_job_status_case_insensitive() {
+        assert_eq!(
+            CompressionJobStatus::from_str("succeeded"),
+            Ok(CompressionJobStatus::Succeeded)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("Failed"),
+            Ok(CompressionJobStatus::Failed)
+        );
     }
 }
