@@ -1,6 +1,7 @@
 use std::pin::Pin;
 
 use async_stream::stream;
+pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
     clp_config::package::{
@@ -18,37 +19,19 @@ use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
 
-/// Maps uppercase status names (matching the Python scheduler's `CompressionJobStatus`
-/// enum) to their integer values stored in the database.
-///
-/// Must be kept in sync with `CompressionJobStatus` in
-/// `components/job-orchestration/job_orchestration/scheduler/constants.py`.
-///
-/// Note: `PENDING` (0) is intentionally omitted because PENDING jobs have no
-/// `start_time` and are therefore excluded by the time-range WHERE clause.
-pub const JOB_STATUS_LOOKUP: &[(&str, i32)] = &[
-    ("RUNNING", 1),
-    ("SUCCEEDED", 2),
-    ("FAILED", 3),
-    ("KILLED", 4),
-];
-
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
-pub const DEFAULT_JOB_STATUSES: &[i32] = &[2, 3, 4];
-
-/// Resolves an uppercase status name (e.g. `"SUCCEEDED"`) to its integer DB value.
-/// Returns `None` if the name is not recognized.
-#[must_use]
-pub fn resolve_job_status(name: &str) -> Option<i32> {
-    JOB_STATUS_LOOKUP
-        .iter()
-        .find(|(n, _)| *n == name)
-        .map(|(_, code)| *code)
-}
+///
+/// Note: `Pending` is intentionally excluded because pending jobs have no
+/// `start_time` and are therefore excluded by the time-range WHERE clause.
+pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
+    CompressionJobStatus::Succeeded,
+    CompressionJobStatus::Failed,
+    CompressionJobStatus::Killed,
+];
 
 /// A single row returned by the compression usage query (one row per job).
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct CompressionUsage {
     /// Compression job ID.
     pub id: i32,
@@ -598,7 +581,7 @@ impl Client {
         &self,
         begin_timestamp: i64,
         end_timestamp: i64,
-        job_statuses: &[i32],
+        job_statuses: &[CompressionJobStatus],
         limit: i64,
     ) -> Result<Vec<CompressionUsage>, ClientError> {
         // Build the job-status WHERE clause dynamically from the number of
@@ -635,28 +618,14 @@ impl Client {
              j.compressed_size, j.num_tasks ORDER BY j.start_time DESC LIMIT ?"
         );
 
-        let mut query = sqlx::query(&sql).bind(begin_timestamp).bind(end_timestamp);
+        let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
+            .bind(begin_timestamp)
+            .bind(end_timestamp);
         for &status in job_statuses {
-            query = query.bind(status);
+            query = query.bind(i32::from(status));
         }
         query = query.bind(limit);
-        let rows = query.fetch_all(&self.sql_pool).await?;
-
-        rows.iter()
-            .map(|r| {
-                Ok(CompressionUsage {
-                    id: r.try_get("id")?,
-                    status: r.try_get("status")?,
-                    creation_time: r.try_get("creation_time")?,
-                    start_time: r.try_get("start_time")?,
-                    duration: r.try_get("duration")?,
-                    uncompressed_size: r.try_get("uncompressed_size")?,
-                    compressed_size: r.try_get("compressed_size")?,
-                    num_tasks: r.try_get("num_tasks")?,
-                    tasks_duration: r.try_get("tasks_duration")?,
-                })
-            })
-            .collect()
+        query.fetch_all(&self.sql_pool).await.map_err(Into::into)
     }
 
     /// # Returns
@@ -724,21 +693,46 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     #[test]
-    fn resolve_job_status_valid() {
-        assert_eq!(resolve_job_status("RUNNING"), Some(1));
-        assert_eq!(resolve_job_status("SUCCEEDED"), Some(2));
-        assert_eq!(resolve_job_status("FAILED"), Some(3));
-        assert_eq!(resolve_job_status("KILLED"), Some(4));
+    fn parse_job_status_valid() {
+        assert_eq!(
+            CompressionJobStatus::from_str("RUNNING"),
+            Ok(CompressionJobStatus::Running)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("SUCCEEDED"),
+            Ok(CompressionJobStatus::Succeeded)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("FAILED"),
+            Ok(CompressionJobStatus::Failed)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("KILLED"),
+            Ok(CompressionJobStatus::Killed)
+        );
     }
 
     #[test]
-    fn resolve_job_status_invalid() {
-        assert_eq!(resolve_job_status("succeeded"), None);
-        assert_eq!(resolve_job_status(""), None);
-        assert_eq!(resolve_job_status("UNKNOWN"), None);
-        assert_eq!(resolve_job_status("PENDING"), None);
+    fn parse_job_status_invalid() {
+        assert!(CompressionJobStatus::from_str("").is_err());
+        assert!(CompressionJobStatus::from_str("UNKNOWN").is_err());
+        assert!(CompressionJobStatus::from_str("PENDING").is_err());
+    }
+
+    #[test]
+    fn parse_job_status_case_insensitive() {
+        assert_eq!(
+            CompressionJobStatus::from_str("succeeded"),
+            Ok(CompressionJobStatus::Succeeded)
+        );
+        assert_eq!(
+            CompressionJobStatus::from_str("Failed"),
+            Ok(CompressionJobStatus::Failed)
+        );
     }
 }

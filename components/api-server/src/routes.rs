@@ -19,10 +19,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::client::{
     Client,
     ClientError,
+    CompressionJobStatus,
     CompressionUsage,
     DEFAULT_JOB_STATUSES,
     QueryConfig,
-    resolve_job_status,
 };
 
 /// Factory method to create an Axum router configured with all API routes.
@@ -267,7 +267,7 @@ struct CompressionUsageParams {
     /// End of usage window (epoch milliseconds, inclusive).
     end_timestamp: i64,
     /// Job statuses to include as a comma-separated list (e.g.
-    /// `job_status=SUCCEEDED,FAILED`). Recognized values:
+    /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
     /// `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
     /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
     #[serde(default)]
@@ -282,10 +282,10 @@ const fn default_limit() -> i64 {
 }
 
 /// Validates compression usage parameters and resolves the requested job
-/// statuses into their integer codes.
+/// statuses into [`CompressionJobStatus`] variants.
 fn validate_compression_usage_params(
     params: &CompressionUsageParams,
-) -> Result<Vec<i32>, HandlerError> {
+) -> Result<Vec<CompressionJobStatus>, HandlerError> {
     if params.begin_timestamp > params.end_timestamp {
         return Err(HandlerError::BadRequest(
             "begin_timestamp must be <= end_timestamp".to_owned(),
@@ -300,8 +300,9 @@ fn validate_compression_usage_params(
             .map(str::trim)
             .filter(|t| !t.is_empty())
             .map(|token| {
-                resolve_job_status(token)
-                    .ok_or_else(|| HandlerError::BadRequest(format!("Unknown job_status: {token}")))
+                token
+                    .parse()
+                    .map_err(|_| HandlerError::BadRequest(format!("Unknown job_status: {token}")))
             })
             .collect::<Result<Vec<_>, _>>()?,
         None => DEFAULT_JOB_STATUSES.to_vec(),
@@ -405,13 +406,14 @@ mod tests {
 
     /// Builds a minimal Axum app that calls [`validate_compression_usage_params`]
     /// (the shared production validation function) and returns the resolved
-    /// status codes on success. No real database is needed.
+    /// status integer codes on success. No real database is needed.
     fn test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",
             get(|Query(params): Query<CompressionUsageParams>| async move {
                 let statuses = validate_compression_usage_params(&params)?;
-                Ok::<_, HandlerError>(axum::Json(statuses))
+                let codes: Vec<i32> = statuses.into_iter().map(i32::from).collect();
+                Ok::<_, HandlerError>(axum::Json(codes))
             }),
         )
     }
@@ -463,7 +465,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reject_lowercase_job_status() {
+    async fn accept_lowercase_job_status() {
         let app = test_app();
         let response = app
             .oneshot(
@@ -477,9 +479,9 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
-        assert!(body.contains("Unknown job_status: succeeded"));
+        assert_eq!(body, "[2]"); // succeeded → 2
     }
 
     #[tokio::test]
