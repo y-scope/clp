@@ -794,12 +794,27 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
 
+        if (
+            self._clp_config.log_ingestor is not None
+            and self._clp_config.logs_input.type == StorageType.S3
+        ):
+            server_settings_json_updates["LogIngestorHost"] = container_clp_config.log_ingestor.host
+            server_settings_json_updates["LogIngestorPort"] = container_clp_config.log_ingestor.port
+        else:
+            server_settings_json_updates["LogIngestorHost"] = None
+            server_settings_json_updates["LogIngestorPort"] = None
+
         if StorageType.FS == self._clp_config.logs_input.type:
             client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
             server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            server_settings_json_updates["LogsInputS3AwsAuthType"] = None
+            server_settings_json_updates["LogsInputS3AwsProfile"] = None
         else:
             client_settings_json_updates["LogsInputRootDir"] = None
             server_settings_json_updates["LogsInputRootDir"] = None
+            s3_auth = self._clp_config.logs_input.aws_authentication
+            server_settings_json_updates["LogsInputS3AwsAuthType"] = s3_auth.type
+            server_settings_json_updates["LogsInputS3AwsProfile"] = s3_auth.profile
 
         resolved_client_settings_json_path = resolve_host_path_in_container(
             client_settings_json_path
@@ -997,6 +1012,18 @@ class DockerComposeController(BaseController):
                     ),
                     "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": (
                         stream_output_aws_auth.credentials.secret_access_key
+                    ),
+                }
+
+        if self._clp_config.logs_input.type == StorageType.S3:
+            logs_input_aws_auth = self._clp_config.logs_input.aws_authentication
+            if logs_input_aws_auth.type == AwsAuthType.credentials:
+                env_vars |= {
+                    "CLP_LOGS_INPUT_AWS_ACCESS_KEY_ID": (
+                        logs_input_aws_auth.credentials.access_key_id
+                    ),
+                    "CLP_LOGS_INPUT_AWS_SECRET_ACCESS_KEY": (
+                        logs_input_aws_auth.credentials.secret_access_key
                     ),
                 }
 

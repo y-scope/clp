@@ -283,10 +283,28 @@ data:
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+      {{- if and .Values.clpConfig.log_ingestor (eq .Values.clpConfig.logs_input.type "s3") }}
+      "LogIngestorHost": "{{ include "clp.fullname" . }}-log-ingestor",
+      "LogIngestorPort": 3002,
+      {{- else }}
+      "LogIngestorHost": null,
+      "LogIngestorPort": null,
+      {{- end }}{{/* if and .Values.clpConfig.log_ingestor
+                          (eq .Values.clpConfig.logs_input.type "s3") */}}
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
       "LogsInputRootDir": "/mnt/logs",
+      "LogsInputS3AwsAuthType": null,
+      "LogsInputS3AwsProfile": null,
       {{- else }}
       "LogsInputRootDir": null,
+      {{- with .Values.clpConfig.logs_input.aws_authentication }}
+      "LogsInputS3AwsAuthType": {{ .type | quote }},
+      {{- if .profile }}
+      "LogsInputS3AwsProfile": {{ .profile | quote }},
+      {{- else }}
+      "LogsInputS3AwsProfile": null,
+      {{- end }}{{/* if .profile */}}
+      {{- end }}{{/* with .Values.clpConfig.logs_input.aws_authentication */}}
       {{- end }}
       {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
       "StreamFilesDir": "/var/data/streams",
