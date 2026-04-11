@@ -317,14 +317,14 @@ async fn compression_usage(
         params.end_timestamp,
         job_statuses,
     );
-    client
-        .get_compression_usage(params.begin_timestamp, params.end_timestamp, &job_statuses)
-        .await
-        .map(Json)
-        .map_err(|err| {
-            tracing::error!("Failed to fetch compression usage: {:?}", err);
-            HandlerError::from(err)
-        })
+    Ok(Json(
+        client
+            .get_compression_usage(params.begin_timestamp, params.end_timestamp, &job_statuses)
+            .await
+            .inspect_err(|err| {
+                tracing::error!("Failed to fetch compression usage: {:?}", err);
+            })?
+    ))
 }
 
 /// Generic errors for request handlers.
