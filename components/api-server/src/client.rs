@@ -674,9 +674,10 @@ impl Client {
             // both MySQL and MariaDB perform decimal division, preserving the
             // millisecond sub-second precision of the epoch-ms timestamps.
             //
-            // All non-aggregated columns are listed in GROUP BY for
-            // compatibility with ONLY_FULL_GROUP_BY (MySQL 5.7.5+ default)
-            // and MariaDB's strict SQL-standard GROUP BY semantics.
+            // ANY_VALUE() is used on non-aggregated columns because they are
+            // all functionally dependent on j.id (the primary key). This
+            // avoids a lengthy GROUP BY list while remaining compatible with
+            // ONLY_FULL_GROUP_BY (MySQL 5.7.5+ default).
             //
             // Task durations are summed regardless of individual task status so
             // that failed jobs still report the compute resources they consumed.
@@ -685,29 +686,21 @@ impl Client {
             // task creation) since they consumed no compute resources.
             "SELECT \
               j.id, \
-              j.status, \
-              CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED) AS creation_time, \
-              CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED) AS start_time, \
-              ROUND(j.duration, 3) AS duration, \
-              j.uncompressed_size, \
-              j.compressed_size, \
-              j.num_tasks, \
+              ANY_VALUE(j.status) AS status, \
+              ANY_VALUE(CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED)) AS creation_time, \
+              ANY_VALUE(CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED)) AS start_time, \
+              ANY_VALUE(ROUND(j.duration, 3)) AS duration, \
+              ANY_VALUE(j.uncompressed_size) AS uncompressed_size, \
+              ANY_VALUE(j.compressed_size) AS compressed_size, \
+              ANY_VALUE(j.num_tasks) AS num_tasks, \
               ROUND(SUM(t.duration), 3) AS tasks_duration \
             FROM compression_jobs j \
             JOIN compression_tasks t ON t.job_id = j.id \
             WHERE j.start_time >= FROM_UNIXTIME(? / 1000.0) \
               AND j.start_time <= FROM_UNIXTIME(? / 1000.0)\
               {job_status_clause} \
-            GROUP BY \
-              j.id, \
-              j.status, \
-              j.creation_time, \
-              j.start_time, \
-              j.duration, \
-              j.uncompressed_size, \
-              j.compressed_size, \
-              j.num_tasks \
-            ORDER BY j.start_time DESC \
+            GROUP BY j.id \
+            ORDER BY ANY_VALUE(j.start_time) DESC \
             LIMIT ?"
         );
 
