@@ -653,15 +653,13 @@ impl Client {
         job_statuses: &[CompressionJobStatus],
         limit: i64,
     ) -> Result<Vec<CompressionUsage>, ClientError> {
-        // Build the job-status WHERE clause dynamically from the number of
-        // requested statuses so the DB sees a static `IN (?, ?, ...)` predicate
-        // and can use an index on `j.status`.
+        // Build the job-status IN clause dynamically so the DB sees a static
+        // `IN (?, ?, ...)` predicate and can use an index on `j.status`.
         let placeholders = job_statuses
             .iter()
             .map(|_| "?")
             .collect::<Vec<_>>()
             .join(", ");
-        let job_status_clause = format!(" AND j.status IN ({placeholders})");
 
         let sql = format!(
             // Divide by 1000.0 (a DECIMAL literal) rather than 1000 so that
@@ -682,9 +680,10 @@ impl Client {
              ROUND(j.duration, 3) AS duration, j.uncompressed_size, j.compressed_size, \
              j.num_tasks, ROUND(SUM(t.duration), 3) AS tasks_duration FROM compression_jobs j \
              JOIN compression_tasks t ON t.job_id = j.id WHERE j.start_time >= FROM_UNIXTIME(? / \
-             1000.0) AND j.start_time <= FROM_UNIXTIME(? / 1000.0){job_status_clause} GROUP BY \
-             j.id, j.status, j.creation_time, j.start_time, j.duration, j.uncompressed_size, \
-             j.compressed_size, j.num_tasks ORDER BY j.start_time DESC LIMIT ?"
+             1000.0) AND j.start_time <= FROM_UNIXTIME(? / 1000.0) AND j.status IN \
+             ({placeholders}) GROUP BY j.id, j.status, j.creation_time, j.start_time, j.duration, \
+             j.uncompressed_size, j.compressed_size, j.num_tasks ORDER BY j.start_time DESC LIMIT \
+             ?"
         );
 
         let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
