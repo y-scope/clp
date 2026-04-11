@@ -137,6 +137,11 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
                 "Type of authentication required for network requests (s3 | none). Authentication"
                 " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
                 " variables, and optionally the AWS_SESSION_TOKEN environment variable."
+        )(
+                    "max-log-event-size",
+                    po::value<size_t>(&m_max_log_event_size)->value_name("LOG_EVENT_SIZE")->
+                        default_value(m_max_log_event_size),
+                    "Maximum allowed size (B) for a single log event before conversion fails."
         );
         // clang-format on
 
@@ -188,6 +193,10 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
         }
 
         validate_network_auth(auth, m_network_auth);
+
+        if (m_max_log_event_size <= 0) {
+            throw std::invalid_argument("Max event size must be greater than zero.");
+        }
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();

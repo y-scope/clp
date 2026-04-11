@@ -17,7 +17,9 @@ namespace clp_s::log_converter {
 class LogConverter {
 public:
     // Constructors
-    LogConverter() : m_buffer(cDefaultBufferSize) {}
+    explicit LogConverter(size_t max_buffer_size)
+            : m_buffer(cDefaultBufferSize),
+              m_max_buffer_size{max_buffer_size} {}
 
     // Methods
     /**
@@ -38,7 +40,6 @@ public:
 private:
     // Constants
     static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
-    static constexpr size_t cMaxBufferSize{64ULL * 1024ULL * 1024ULL};  // 64 MiB
 
     // Methods
     /**
@@ -68,6 +69,7 @@ private:
     ystdlib::containers::Array<char> m_buffer;
     size_t m_num_bytes_buffered{};
     size_t m_parser_offset{};
+    size_t m_max_buffer_size{cDefaultBufferSize};
 };
 }  // namespace clp_s::log_converter
 #endif  // CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
