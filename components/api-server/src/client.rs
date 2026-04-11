@@ -1,7 +1,6 @@
 use std::pin::Pin;
 
 use async_stream::stream;
-use bigdecimal::BigDecimal;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
     clp_config::package::{
@@ -57,15 +56,14 @@ pub struct CompressionUsage {
     /// `components/job-orchestration/job_orchestration/scheduler/constants.py`:
     /// 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
     pub status: i32,
-    /// Time the job was created (ISO 8601, UTC).
-    pub creation_time: String,
-    /// Time the job started (ISO 8601, UTC). Always non-null in results because
-    /// the WHERE clause filters on `start_time`.
-    pub start_time: String,
+    /// Time the job was created (epoch milliseconds).
+    pub creation_time: i64,
+    /// Time the job started (epoch milliseconds). Always non-null in results
+    /// because the WHERE clause filters on `start_time`.
+    pub start_time: i64,
     /// Wall-clock seconds the job ran for. `None` for non-succeeded jobs
     /// (FAILED, KILLED, RUNNING) since `duration` is only set on completion.
-    #[schema(value_type = Option<String>)]
-    pub duration: Option<BigDecimal>,
+    pub duration: Option<f64>,
     /// Total uncompressed size of input files (bytes).
     pub uncompressed_size: i64,
     /// Total compressed archive size (bytes).
@@ -74,8 +72,7 @@ pub struct CompressionUsage {
     pub num_tasks: i32,
     /// Sum of all task durations (CPU-seconds across all parallel workers).
     /// `None` if all task duration values are NULL in the database.
-    #[schema(value_type = Option<String>)]
-    pub tasks_duration: Option<BigDecimal>,
+    pub tasks_duration: Option<f64>,
 }
 
 /// Defines the request configuration for submitting a search query.
@@ -588,7 +585,7 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A vector of [`CompressionUsageRow`] (one per job) on success, ordered by
+    /// A vector of [`CompressionUsage`] (one per job) on success, ordered by
     /// `start_time` descending.
     ///
     /// # Errors
@@ -602,7 +599,8 @@ impl Client {
         begin_timestamp: i64,
         end_timestamp: i64,
         job_statuses: &[i32],
-    ) -> Result<Vec<CompressionUsageRow>, ClientError> {
+        limit: i64,
+    ) -> Result<Vec<CompressionUsage>, ClientError> {
         // Build the job-status WHERE clause dynamically from the number of
         // requested statuses so the DB sees a static `IN (?, ?, ...)` predicate
         // and can use an index on `j.status`.
@@ -624,34 +622,29 @@ impl Client {
             //
             // Task durations are summed regardless of individual task status so
             // that failed jobs still report the compute resources they consumed.
-            "SELECT \
-                j.id, \
-                j.status, \
-                DATE_FORMAT(j.creation_time, '%Y-%m-%dT%H:%i:%s') AS creation_time, \
-                DATE_FORMAT(j.start_time, '%Y-%m-%dT%H:%i:%s') AS start_time, \
-                CAST(j.duration AS DECIMAL(20, 3)) AS duration, \
-                j.uncompressed_size, \
-                j.compressed_size, \
-                j.num_tasks, \
-                CAST(SUM(t.duration) AS DECIMAL(20, 3)) AS tasks_duration \
-             FROM compression_jobs j \
-             JOIN compression_tasks t ON t.job_id = j.id \
-             WHERE j.start_time >= FROM_UNIXTIME(? / 1000.0) \
-               AND j.start_time <= FROM_UNIXTIME(? / 1000.0){job_status_clause} \
-             GROUP BY j.id, j.status, j.creation_time, j.start_time, j.duration, \
-                      j.uncompressed_size, j.compressed_size, j.num_tasks \
-             ORDER BY j.start_time DESC"
+            //
+            // INNER JOIN filters out jobs with zero tasks (e.g. killed before
+            // task creation) since they consumed no compute resources.
+            "SELECT j.id, j.status, CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED) AS \
+             creation_time, CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED) AS start_time, \
+             ROUND(j.duration, 3) AS duration, j.uncompressed_size, j.compressed_size, \
+             j.num_tasks, ROUND(SUM(t.duration), 3) AS tasks_duration FROM compression_jobs j \
+             JOIN compression_tasks t ON t.job_id = j.id WHERE j.start_time >= FROM_UNIXTIME(? / \
+             1000.0) AND j.start_time <= FROM_UNIXTIME(? / 1000.0){job_status_clause} GROUP BY \
+             j.id, j.status, j.creation_time, j.start_time, j.duration, j.uncompressed_size, \
+             j.compressed_size, j.num_tasks ORDER BY j.start_time DESC LIMIT ?"
         );
 
         let mut query = sqlx::query(&sql).bind(begin_timestamp).bind(end_timestamp);
         for &status in job_statuses {
             query = query.bind(status);
         }
+        query = query.bind(limit);
         let rows = query.fetch_all(&self.sql_pool).await?;
 
         rows.iter()
             .map(|r| {
-                Ok(CompressionUsageRow {
+                Ok(CompressionUsage {
                     id: r.try_get("id")?,
                     status: r.try_get("status")?,
                     creation_time: r.try_get("creation_time")?,

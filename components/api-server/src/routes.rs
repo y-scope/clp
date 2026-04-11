@@ -3,7 +3,8 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{
-        IntoResponse, Sse,
+        IntoResponse,
+        Sse,
         sse::{Event, KeepAlive},
     },
     routing::get,
@@ -16,7 +17,12 @@ use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::client::{
-    Client, ClientError, CompressionUsageRow, DEFAULT_JOB_STATUSES, QueryConfig, resolve_job_status,
+    Client,
+    ClientError,
+    CompressionUsage,
+    DEFAULT_JOB_STATUSES,
+    QueryConfig,
+    resolve_job_status,
 };
 
 /// Factory method to create an Axum router configured with all API routes.
@@ -60,8 +66,12 @@ mod api_doc {
     // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
     // documentation. Importing the paths directly prevents this issue.
     use super::{
-        __path_cancel_query, __path_compression_usage, __path_health, __path_query,
-        __path_query_results, CompressionUsageRow,
+        __path_cancel_query,
+        __path_compression_usage,
+        __path_health,
+        __path_query,
+        __path_query_results,
+        CompressionUsage,
     };
 
     #[derive(utoipa::OpenApi)]
@@ -72,7 +82,7 @@ mod api_doc {
             contact(name = "YScope")
         ),
         paths(health, query, query_results, cancel_query, compression_usage),
-        components(schemas(CompressionUsageRow))
+        components(schemas(CompressionUsage))
     )]
     pub struct ApiDoc;
 }
@@ -262,6 +272,13 @@ struct CompressionUsageParams {
     /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
     #[serde(default)]
     job_status: Option<String>,
+    /// Maximum number of jobs to return. Defaults to 1000.
+    #[serde(default = "default_limit")]
+    limit: i64,
+}
+
+const fn default_limit() -> i64 {
+    1000
 }
 
 /// Validates compression usage parameters and resolves the requested job
@@ -273,6 +290,9 @@ fn validate_compression_usage_params(
         return Err(HandlerError::BadRequest(
             "begin_timestamp must be <= end_timestamp".to_owned(),
         ));
+    }
+    if params.limit <= 0 {
+        return Err(HandlerError::BadRequest("limit must be > 0".to_owned()));
     }
     let statuses = match &params.job_status {
         Some(s) => s
@@ -301,15 +321,16 @@ fn validate_compression_usage_params(
         epoch-millisecond time range.",
     params(CompressionUsageParams),
     responses(
-        (status = OK, body = Vec<CompressionUsageRow>),
-        (status = BAD_REQUEST, description = "Invalid query parameters (e.g., begin_timestamp > end_timestamp, missing required fields)"),
+        (status = OK, body = Vec<CompressionUsage>),
+        (status = BAD_REQUEST, description = "Invalid query parameters \
+            (e.g., begin_timestamp > end_timestamp, missing required fields)"),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
 async fn compression_usage(
     State(client): State<Client>,
     Query(params): Query<CompressionUsageParams>,
-) -> Result<Json<Vec<CompressionUsageRow>>, HandlerError> {
+) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
     let job_statuses = validate_compression_usage_params(&params)?;
     tracing::info!(
         "Fetching compression usage: begin={}, end={}, job_statuses={:?}",
@@ -319,11 +340,16 @@ async fn compression_usage(
     );
     Ok(Json(
         client
-            .get_compression_usage(params.begin_timestamp, params.end_timestamp, &job_statuses)
+            .get_compression_usage(
+                params.begin_timestamp,
+                params.end_timestamp,
+                &job_statuses,
+                params.limit,
+            )
             .await
             .inspect_err(|err| {
                 tracing::error!("Failed to fetch compression usage: {:?}", err);
-            })?
+            })?,
     ))
 }
 
@@ -367,9 +393,11 @@ impl IntoResponse for HandlerError {
 
 #[cfg(test)]
 mod tests {
-    use axum::body::Body;
-    use axum::http::{Request, StatusCode};
-    use axum::routing::get;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::get,
+    };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
@@ -440,7 +468,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=succeeded")
+                    .uri(
+                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
+                         job_status=succeeded",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -474,7 +505,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=SUCCEEDED,RUNNING")
+                    .uri(
+                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
+                         job_status=SUCCEEDED,RUNNING",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -491,7 +525,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=SUCCEEDED%2C+FAILED")
+                    .uri(
+                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
+                         job_status=SUCCEEDED%2C+FAILED",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -508,7 +545,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=SUCCEEDED,")
+                    .uri(
+                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
+                         job_status=SUCCEEDED,",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
