@@ -50,7 +50,7 @@ pub fn resolve_job_status(name: &str) -> Option<i32> {
 
 /// A single row returned by the compression usage query (one row per job).
 #[derive(Serialize, ToSchema)]
-pub struct CompressionUsageRow {
+pub struct CompressionUsage {
     /// Compression job ID.
     pub id: i32,
     /// Job status. See `CompressionJobStatus` in
