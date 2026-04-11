@@ -15,7 +15,7 @@ use futures::{Stream, StreamExt};
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 pub use crate::error::ClientError;
 
@@ -29,6 +29,75 @@ pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
     CompressionJobStatus::Failed,
     CompressionJobStatus::Killed,
 ];
+
+/// Query parameters for the compression usage endpoint.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct CompressionUsageParams {
+    /// Start of usage window (epoch milliseconds, inclusive).
+    pub begin_timestamp: i64,
+    /// End of usage window (epoch milliseconds, inclusive).
+    pub end_timestamp: i64,
+    /// Job statuses to include as a comma-separated list (e.g.
+    /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
+    /// `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
+    /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+    #[serde(default)]
+    pub job_status: Option<String>,
+    /// Maximum number of jobs to return. Defaults to 1000.
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+}
+
+const fn default_limit() -> i64 {
+    1000
+}
+
+impl CompressionUsageParams {
+    /// Validates the parameters and resolves the requested job statuses into
+    /// [`CompressionJobStatus`] variants.
+    ///
+    /// We use a `validate()` method rather than the conventional
+    /// `TryFrom<UncheckedX>` pattern because this struct also serves as the
+    /// `OpenAPI` query-parameter schema. Introducing an `Unchecked` wrapper would
+    /// leak an internal implementation detail into the generated API docs.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::InvalidInput`] if:
+    /// - `begin_timestamp > end_timestamp`
+    /// - `limit <= 0`
+    /// - `job_status` contains unrecognized or empty values
+    pub fn validate(&self) -> Result<Vec<CompressionJobStatus>, ClientError> {
+        if self.begin_timestamp > self.end_timestamp {
+            return Err(ClientError::InvalidInput(
+                "begin_timestamp must be <= end_timestamp".to_owned(),
+            ));
+        }
+        if self.limit <= 0 {
+            return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
+        }
+        let statuses = match &self.job_status {
+            Some(s) => s
+                .split(',')
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .map(|token| {
+                    token.parse().map_err(|_| {
+                        ClientError::InvalidInput(format!("Unknown job_status: {token}"))
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+            None => DEFAULT_JOB_STATUSES.to_vec(),
+        };
+        if statuses.is_empty() {
+            return Err(ClientError::InvalidInput(
+                "job_status must contain at least one valid status".to_owned(),
+            ));
+        }
+        Ok(statuses)
+    }
+}
 
 /// A single row returned by the compression usage query (one row per job).
 #[derive(Serialize, sqlx::FromRow, ToSchema)]

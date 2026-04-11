@@ -13,17 +13,10 @@ use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tower_http::cors::{Any, CorsLayer};
-use utoipa::{IntoParams, OpenApi, ToSchema};
+use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::client::{
-    Client,
-    ClientError,
-    CompressionJobStatus,
-    CompressionUsage,
-    DEFAULT_JOB_STATUSES,
-    QueryConfig,
-};
+use crate::client::{Client, ClientError, CompressionUsage, CompressionUsageParams, QueryConfig};
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -259,62 +252,6 @@ async fn get_timestamp_column_names(
     Ok(Json(names))
 }
 
-#[derive(Deserialize, IntoParams)]
-#[into_params(parameter_in = Query)]
-struct CompressionUsageParams {
-    /// Start of usage window (epoch milliseconds, inclusive).
-    begin_timestamp: i64,
-    /// End of usage window (epoch milliseconds, inclusive).
-    end_timestamp: i64,
-    /// Job statuses to include as a comma-separated list (e.g.
-    /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
-    /// `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
-    /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
-    #[serde(default)]
-    job_status: Option<String>,
-    /// Maximum number of jobs to return. Defaults to 1000.
-    #[serde(default = "default_limit")]
-    limit: i64,
-}
-
-const fn default_limit() -> i64 {
-    1000
-}
-
-/// Validates compression usage parameters and resolves the requested job
-/// statuses into [`CompressionJobStatus`] variants.
-fn validate_compression_usage_params(
-    params: &CompressionUsageParams,
-) -> Result<Vec<CompressionJobStatus>, HandlerError> {
-    if params.begin_timestamp > params.end_timestamp {
-        return Err(HandlerError::BadRequest(
-            "begin_timestamp must be <= end_timestamp".to_owned(),
-        ));
-    }
-    if params.limit <= 0 {
-        return Err(HandlerError::BadRequest("limit must be > 0".to_owned()));
-    }
-    let statuses = match &params.job_status {
-        Some(s) => s
-            .split(',')
-            .map(str::trim)
-            .filter(|t| !t.is_empty())
-            .map(|token| {
-                token
-                    .parse()
-                    .map_err(|_| HandlerError::BadRequest(format!("Unknown job_status: {token}")))
-            })
-            .collect::<Result<Vec<_>, _>>()?,
-        None => DEFAULT_JOB_STATUSES.to_vec(),
-    };
-    if statuses.is_empty() {
-        return Err(HandlerError::BadRequest(
-            "job_status must contain at least one valid status".to_owned(),
-        ));
-    }
-    Ok(statuses)
-}
-
 #[utoipa::path(
     get,
     path = "/usage/compression",
@@ -332,7 +269,7 @@ async fn compression_usage(
     State(client): State<Client>,
     Query(params): Query<CompressionUsageParams>,
 ) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
-    let job_statuses = validate_compression_usage_params(&params)?;
+    let job_statuses = params.validate()?;
     tracing::info!(
         "Fetching compression usage: begin={}, end={}, job_statuses={:?}",
         params.begin_timestamp,
@@ -375,7 +312,9 @@ impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
             ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
-            ClientError::InvalidDatasetName => Self::BadRequest(format!("{err}")),
+            ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
+                Self::BadRequest(format!("{err}"))
+            }
             _ => Self::InternalServer,
         }
     }
@@ -404,14 +343,14 @@ mod tests {
 
     use super::*;
 
-    /// Builds a minimal Axum app that calls [`validate_compression_usage_params`]
-    /// (the shared production validation function) and returns the resolved
+    /// Builds a minimal Axum app that calls [`CompressionUsageParams::validate`]
+    /// (the shared production validation method) and returns the resolved
     /// status integer codes on success. No real database is needed.
     fn test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",
             get(|Query(params): Query<CompressionUsageParams>| async move {
-                let statuses = validate_compression_usage_params(&params)?;
+                let statuses = params.validate()?;
                 let codes: Vec<i32> = statuses.into_iter().map(i32::from).collect();
                 Ok::<_, HandlerError>(axum::Json(codes))
             }),

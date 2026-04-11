@@ -31,6 +31,9 @@ pub enum ClientError {
     #[error("Invalid dataset name")]
     InvalidDatasetName,
 
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
 }
