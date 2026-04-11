@@ -668,6 +668,7 @@ impl Client {
             format!(" AND j.status IN ({placeholders})")
         };
 
+        #[rustfmt::skip]
         let sql = format!(
             // Divide by 1000.0 (a DECIMAL literal) rather than 1000 so that
             // both MySQL and MariaDB perform decimal division, preserving the
@@ -682,14 +683,32 @@ impl Client {
             //
             // INNER JOIN filters out jobs with zero tasks (e.g. killed before
             // task creation) since they consumed no compute resources.
-            "SELECT j.id, j.status, CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED) AS \
-             creation_time, CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED) AS start_time, \
-             ROUND(j.duration, 3) AS duration, j.uncompressed_size, j.compressed_size, \
-             j.num_tasks, ROUND(SUM(t.duration), 3) AS tasks_duration FROM compression_jobs j \
-             JOIN compression_tasks t ON t.job_id = j.id WHERE j.start_time >= FROM_UNIXTIME(? / \
-             1000.0) AND j.start_time <= FROM_UNIXTIME(? / 1000.0){job_status_clause} GROUP BY \
-             j.id, j.status, j.creation_time, j.start_time, j.duration, j.uncompressed_size, \
-             j.compressed_size, j.num_tasks ORDER BY j.start_time DESC LIMIT ?"
+            "SELECT \
+              j.id, \
+              j.status, \
+              CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED) AS creation_time, \
+              CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED) AS start_time, \
+              ROUND(j.duration, 3) AS duration, \
+              j.uncompressed_size, \
+              j.compressed_size, \
+              j.num_tasks, \
+              ROUND(SUM(t.duration), 3) AS tasks_duration \
+            FROM compression_jobs j \
+            JOIN compression_tasks t ON t.job_id = j.id \
+            WHERE j.start_time >= FROM_UNIXTIME(? / 1000.0) \
+              AND j.start_time <= FROM_UNIXTIME(? / 1000.0)\
+              {job_status_clause} \
+            GROUP BY \
+              j.id, \
+              j.status, \
+              j.creation_time, \
+              j.start_time, \
+              j.duration, \
+              j.uncompressed_size, \
+              j.compressed_size, \
+              j.num_tasks \
+            ORDER BY j.start_time DESC \
+            LIMIT ?"
         );
 
         let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
