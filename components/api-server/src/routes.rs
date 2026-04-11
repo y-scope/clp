@@ -556,4 +556,44 @@ mod tests {
             "expected error about empty job_status, got: {body}"
         );
     }
+
+    #[tokio::test]
+    async fn reject_zero_limit() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&limit=0")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = get_body(response).await;
+        assert!(
+            body.contains("limit must be > 0"),
+            "expected error about limit, got: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn reject_negative_limit() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&limit=-1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = get_body(response).await;
+        assert!(
+            body.contains("limit must be > 0"),
+            "expected error about limit, got: {body}"
+        );
+    }
 }
