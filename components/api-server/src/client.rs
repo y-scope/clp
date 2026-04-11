@@ -213,7 +213,7 @@ impl Client {
             return Ok(stream);
         }
 
-        self.fetch_results_from_mongo(search_job_id)
+        self.fetch_results_from_mongo(search_job_id, max_num_results)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
     }
@@ -400,7 +400,8 @@ impl Client {
             .send();
 
         Ok(stream! {
-            while let Some(object_page) = object_pages.next().await {
+            let mut num_results: u32 = 0;
+            'outer: while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
                     let Some(key) = object.key() else {
@@ -423,6 +424,12 @@ impl Client {
                     while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
                         let event: (i64, String, String, String, i64) = event;
                         yield Ok(event.1);
+                        if max_num_results > 0 {
+                            num_results += 1;
+                            if num_results >= max_num_results {
+                                break 'outer;
+                            }
+                        }
                     }
                 }
             }
@@ -456,13 +463,25 @@ impl Client {
     async fn fetch_results_from_mongo(
         &self,
         search_job_id: u64,
+        max_num_results: u32,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let database = self
             .mongodb_client
             .database(&self.config.results_cache.db_name);
         let collection: mongodb::Collection<mongodb::bson::Document> =
             database.collection(&search_job_id.to_string());
-        let cursor = collection.find(mongodb::bson::doc! {}).await?;
+        let find_options = if max_num_results > 0 {
+            mongodb::options::FindOptions::builder()
+                .sort(mongodb::bson::doc! { "timestamp": -1 })
+                .limit(i64::from(max_num_results))
+                .build()
+        } else {
+            mongodb::options::FindOptions::default()
+        };
+        let cursor = collection
+            .find(mongodb::bson::doc! {})
+            .with_options(find_options)
+            .await?;
 
         let mapped = cursor.map(|res| {
             let doc = res?;
