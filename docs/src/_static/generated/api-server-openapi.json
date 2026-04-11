@@ -179,7 +179,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Maximum number of jobs to return. Defaults to 1000.",
+            "description": "Maximum number of jobs to return. Must be > 0; defaults to 1000.",
             "required": false,
             "schema": {
               "type": "integer",

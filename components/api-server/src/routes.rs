@@ -269,21 +269,16 @@ async fn compression_usage(
     State(client): State<Client>,
     Query(params): Query<CompressionUsageParams>,
 ) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
-    let job_statuses = params.validate()?;
+    let validated = params.validate()?;
     tracing::info!(
         "Fetching compression usage: begin={}, end={}, job_statuses={:?}",
-        params.begin_timestamp,
-        params.end_timestamp,
-        job_statuses,
+        validated.begin_timestamp,
+        validated.end_timestamp,
+        validated.job_statuses,
     );
     Ok(Json(
         client
-            .get_compression_usage(
-                params.begin_timestamp,
-                params.end_timestamp,
-                &job_statuses,
-                params.limit,
-            )
+            .get_compression_usage(&validated)
             .await
             .inspect_err(|err| {
                 tracing::error!("Failed to fetch compression usage: {:?}", err);
@@ -350,8 +345,8 @@ mod tests {
         axum::Router::new().route(
             "/usage/compression",
             get(|Query(params): Query<CompressionUsageParams>| async move {
-                let statuses = params.validate()?;
-                let codes: Vec<i32> = statuses.into_iter().map(i32::from).collect();
+                let validated = params.validate()?;
+                let codes: Vec<i32> = validated.job_statuses.into_iter().map(i32::from).collect();
                 Ok::<_, HandlerError>(axum::Json(codes))
             }),
         )

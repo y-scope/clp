@@ -44,13 +44,24 @@ pub struct CompressionUsageParams {
     /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
     #[serde(default)]
     pub job_status: Option<String>,
-    /// Maximum number of jobs to return. Defaults to 1000.
+    /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
     #[serde(default = "default_limit")]
     pub limit: i64,
 }
 
 const fn default_limit() -> i64 {
     1000
+}
+
+/// Validated parameters produced by [`CompressionUsageParams::validate`].
+///
+/// This type is intentionally non-constructable outside of `validate()` so
+/// that callers of [`Client::get_compression_usage`] cannot bypass validation.
+pub struct ValidatedCompressionUsageParams {
+    pub begin_timestamp: i64,
+    pub end_timestamp: i64,
+    pub job_statuses: Vec<CompressionJobStatus>,
+    pub limit: i64,
 }
 
 impl CompressionUsageParams {
@@ -68,7 +79,7 @@ impl CompressionUsageParams {
     /// - `begin_timestamp > end_timestamp`
     /// - `limit <= 0`
     /// - `job_status` contains unrecognized or empty values
-    pub fn validate(&self) -> Result<Vec<CompressionJobStatus>, ClientError> {
+    pub fn validate(&self) -> Result<ValidatedCompressionUsageParams, ClientError> {
         if self.begin_timestamp > self.end_timestamp {
             return Err(ClientError::InvalidInput(
                 "begin_timestamp must be <= end_timestamp".to_owned(),
@@ -77,7 +88,7 @@ impl CompressionUsageParams {
         if self.limit <= 0 {
             return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
         }
-        let statuses = match &self.job_status {
+        let job_statuses = match &self.job_status {
             Some(s) => s
                 .split(',')
                 .map(str::trim)
@@ -90,12 +101,17 @@ impl CompressionUsageParams {
                 .collect::<Result<Vec<_>, _>>()?,
             None => DEFAULT_JOB_STATUSES.to_vec(),
         };
-        if statuses.is_empty() {
+        if job_statuses.is_empty() {
             return Err(ClientError::InvalidInput(
                 "job_status must contain at least one valid status".to_owned(),
             ));
         }
-        Ok(statuses)
+        Ok(ValidatedCompressionUsageParams {
+            begin_timestamp: self.begin_timestamp,
+            end_timestamp: self.end_timestamp,
+            job_statuses,
+            limit: self.limit,
+        })
     }
 }
 
@@ -648,19 +664,17 @@ impl Client {
     /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
     pub async fn get_compression_usage(
         &self,
-        begin_timestamp: i64,
-        end_timestamp: i64,
-        job_statuses: &[CompressionJobStatus],
-        limit: i64,
+        params: &ValidatedCompressionUsageParams,
     ) -> Result<Vec<CompressionUsage>, ClientError> {
         // Build the optional job-status IN clause dynamically so the DB sees a
         // static `IN (?, ?, ...)` predicate and can use an index on `j.status`.
         // When `job_statuses` is empty the clause is omitted entirely, meaning
         // "return all statuses".
-        let job_status_clause = if job_statuses.is_empty() {
+        let job_status_clause = if params.job_statuses.is_empty() {
             String::new()
         } else {
-            let placeholders = job_statuses
+            let placeholders = params
+                .job_statuses
                 .iter()
                 .map(|_| "?")
                 .collect::<Vec<_>>()
@@ -705,12 +719,12 @@ impl Client {
         );
 
         let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
-            .bind(begin_timestamp)
-            .bind(end_timestamp);
-        for &status in job_statuses {
+            .bind(params.begin_timestamp)
+            .bind(params.end_timestamp);
+        for &status in &params.job_statuses {
             query = query.bind(i32::from(status));
         }
-        query = query.bind(limit);
+        query = query.bind(params.limit);
         query.fetch_all(&self.sql_pool).await.map_err(Into::into)
     }
 
