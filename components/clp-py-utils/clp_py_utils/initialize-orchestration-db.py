@@ -75,7 +75,7 @@ def main(argv):
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `clp_binary_version` INT NULL DEFAULT NULL,
-                    `clp_config` VARBINARY(60000) NOT NULL,
+                    `clp_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
                     INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
@@ -92,7 +92,7 @@ def main(argv):
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_id` INT NOT NULL,
-                    `clp_paths_to_compress` VARBINARY(60000) NOT NULL,
+                    `clp_paths_to_compress` MEDIUMBLOB NOT NULL,
                     `partition_original_size` BIGINT NOT NULL,
                     `partition_uncompressed_size` BIGINT NULL DEFAULT NULL,
                     `partition_compressed_size` BIGINT NULL DEFAULT NULL,
@@ -118,7 +118,7 @@ def main(argv):
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
-                    `job_config` VARBINARY(60000) NOT NULL,
+                    `job_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
