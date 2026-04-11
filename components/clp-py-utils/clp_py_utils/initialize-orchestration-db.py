@@ -84,6 +84,21 @@ def main(argv):
                 """
             )
 
+            # Add index to existing tables that were created before this index
+            # was added to the CREATE TABLE statement. Ignoring duplicate-key
+            # errors makes this idempotent for databases that already have it.
+            try:
+                scheduling_db_cursor.execute(
+                    f"""
+                    ALTER TABLE `{COMPRESSION_JOBS_TABLE_NAME}`
+                    ADD INDEX `JOB_START_TIME_STATUS`
+                    (`start_time`, `status`) USING BTREE
+                    """
+                )
+            except Exception as err:
+                if "Duplicate key name" not in str(err):
+                    raise
+
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_TASKS_TABLE_NAME}` (
