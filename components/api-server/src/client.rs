@@ -679,17 +679,13 @@ impl Client {
         // static `IN (?, ?, ...)` predicate and can use an index on `j.status`.
         // When `job_statuses` is empty the clause is omitted entirely, meaning
         // "return all statuses".
-        let job_status_clause = if params.job_statuses.is_empty() {
-            String::new()
-        } else {
-            let placeholders = params
-                .job_statuses
-                .iter()
-                .map(|_| "?")
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!(" AND j.status IN ({placeholders})")
-        };
+        let placeholders = params
+            .job_statuses
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(", ");
+        let job_status_clause = format!(" AND j.status IN ({placeholders})");
 
         #[rustfmt::skip]
         let sql = format!(
