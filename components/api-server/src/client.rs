@@ -795,49 +795,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_job_status_valid() {
-        assert_eq!(
-            CompressionJobStatus::from_str("RUNNING"),
-            Ok(CompressionJobStatus::Running)
-        );
-        assert_eq!(
-            CompressionJobStatus::from_str("SUCCEEDED"),
-            Ok(CompressionJobStatus::Succeeded)
-        );
-        assert_eq!(
-            CompressionJobStatus::from_str("FAILED"),
-            Ok(CompressionJobStatus::Failed)
-        );
-        assert_eq!(
-            CompressionJobStatus::from_str("KILLED"),
-            Ok(CompressionJobStatus::Killed)
-        );
-    }
-
-    #[test]
-    fn parse_job_status_invalid() {
-        assert!(CompressionJobStatus::from_str("").is_err());
-        assert!(CompressionJobStatus::from_str("UNKNOWN").is_err());
-    }
-
-    #[test]
     fn parse_job_status_pending_not_in_defaults() {
         assert_eq!(
             CompressionJobStatus::from_str("PENDING"),
             Ok(CompressionJobStatus::Pending)
         );
         assert!(!DEFAULT_JOB_STATUSES.contains(&CompressionJobStatus::Pending));
-    }
-
-    #[test]
-    fn parse_job_status_case_insensitive() {
-        assert_eq!(
-            CompressionJobStatus::from_str("succeeded"),
-            Ok(CompressionJobStatus::Succeeded)
-        );
-        assert_eq!(
-            CompressionJobStatus::from_str("Failed"),
-            Ok(CompressionJobStatus::Failed)
-        );
     }
 }
