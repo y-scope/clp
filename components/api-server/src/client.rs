@@ -77,7 +77,7 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
     /// - `begin_timestamp > end_timestamp`
     /// - `begin_timestamp` or `end_timestamp` is outside the representable range
     /// - `limit <= 0`
-    /// - `job_status` contains unrecognized or empty values
+    /// - `job_status` contains unrecognized, empty, or duplicate values
     fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
         if value.begin_timestamp > value.end_timestamp {
             return Err(ClientError::InvalidInput(
@@ -95,16 +95,28 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
             ));
         };
         let job_statuses = match &value.job_status {
-            Some(s) => s
-                .split(',')
-                .map(str::trim)
-                .filter(|t| !t.is_empty())
-                .map(|token| {
-                    token.parse().map_err(|_| {
-                        ClientError::InvalidInput(format!("Unknown job_status: {token}"))
+            Some(s) => {
+                let parsed: Vec<CompressionJobStatus> = s
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|t| !t.is_empty())
+                    .map(|token| {
+                        token.parse().map_err(|_| {
+                            ClientError::InvalidInput(format!("Unknown job_status: {token}"))
+                        })
                     })
-                })
-                .collect::<Result<Vec<_>, _>>()?,
+                    .collect::<Result<Vec<_>, _>>()?;
+                let mut seen = Vec::new();
+                for &status in &parsed {
+                    if seen.contains(&status) {
+                        return Err(ClientError::InvalidInput(format!(
+                            "Duplicate job_status: {status:?}"
+                        )));
+                    }
+                    seen.push(status);
+                }
+                parsed
+            }
             None => DEFAULT_JOB_STATUSES.to_vec(),
         };
         if job_statuses.is_empty() {
@@ -807,5 +819,17 @@ mod tests {
             Ok(CompressionJobStatus::Pending)
         );
         assert!(!DEFAULT_JOB_STATUSES.contains(&CompressionJobStatus::Pending));
+    }
+
+    #[test]
+    fn reject_duplicate_job_status() {
+        let params = CompressionUsageParams {
+            begin_timestamp: 0,
+            end_timestamp: 1,
+            job_status: Some("succeeded,succeeded".to_owned()),
+            limit: 100,
+        };
+        let result = ValidatedCompressionUsageParams::try_from(params);
+        assert!(result.is_err());
     }
 }
