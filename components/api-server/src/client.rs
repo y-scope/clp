@@ -1,6 +1,7 @@
 use std::pin::Pin;
 
 use async_stream::stream;
+use chrono::{DateTime, TimeZone, Utc};
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
@@ -40,7 +41,7 @@ pub struct CompressionUsageParams {
     pub end_timestamp: i64,
     /// Job statuses to include as a comma-separated list (e.g.
     /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
-    /// `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
+    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
     /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
     #[serde(default)]
     pub job_status: Option<String>,
@@ -58,8 +59,8 @@ const fn default_limit() -> i64 {
 /// This type is intentionally non-constructable outside of the `TryFrom` impl
 /// so that callers of [`Client::get_compression_usage`] cannot bypass validation.
 pub struct ValidatedCompressionUsageParams {
-    pub begin_timestamp: i64,
-    pub end_timestamp: i64,
+    pub begin_timestamp: DateTime<Utc>,
+    pub end_timestamp: DateTime<Utc>,
     pub job_statuses: Vec<CompressionJobStatus>,
     pub limit: i64,
 }
@@ -85,6 +86,13 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
         if value.limit <= 0 {
             return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
         }
+        let begin_timestamp = Utc.timestamp_millis_opt(value.begin_timestamp).earliest();
+        let end_timestamp = Utc.timestamp_millis_opt(value.end_timestamp).earliest();
+        let (Some(begin_timestamp), Some(end_timestamp)) = (begin_timestamp, end_timestamp) else {
+            return Err(ClientError::InvalidInput(
+                "timestamp out of representable range".to_owned(),
+            ));
+        };
         let job_statuses = match &value.job_status {
             Some(s) => s
                 .split(',')
@@ -104,8 +112,8 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
             ));
         }
         Ok(Self {
-            begin_timestamp: value.begin_timestamp,
-            end_timestamp: value.end_timestamp,
+            begin_timestamp,
+            end_timestamp,
             job_statuses,
             limit: value.limit,
         })
@@ -122,10 +130,14 @@ pub struct CompressionUsage {
     /// 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
     pub status: i32,
     /// Time the job was created (epoch milliseconds).
-    pub creation_time: i64,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    #[schema(value_type = i64)]
+    pub creation_time: DateTime<Utc>,
     /// Time the job started (epoch milliseconds). Always non-null in results
     /// because the WHERE clause filters on `start_time`.
-    pub start_time: i64,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    #[schema(value_type = i64)]
+    pub start_time: DateTime<Utc>,
     /// Wall-clock seconds the job ran for. `None` for non-succeeded jobs
     /// (FAILED, KILLED, RUNNING) since `duration` is only set on completion.
     pub duration: Option<f64>,
@@ -681,14 +693,13 @@ impl Client {
 
         #[rustfmt::skip]
         let sql = format!(
-            // Divide by 1000.0 (a DECIMAL literal) rather than 1000 so that
-            // both MySQL and MariaDB perform decimal division, preserving the
-            // millisecond sub-second precision of the epoch-ms timestamps.
-            //
             // MAX() is used on non-aggregated columns because they are all
             // functionally dependent on j.id (the primary key). Since each group
             // contains exactly one row, MAX() simply returns the column's value.
             // This is used instead of MySQL-only ANY_VALUE() for MariaDB compat.
+            //
+            // sqlx binds DateTime<Utc> as a UTC timestamp, so we compare
+            // directly against the DATETIME columns in the database.
             //
             // Task durations are summed regardless of individual task status so
             // that failed jobs still report the compute resources they consumed.
@@ -698,17 +709,17 @@ impl Client {
             "SELECT \
               j.id, \
               MAX(j.status) AS status, \
-              MAX(CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED)) AS creation_time, \
-              MAX(CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED)) AS start_time, \
-              MAX(ROUND(j.duration, 3)) AS duration, \
+              MAX(j.creation_time) AS creation_time, \
+              MAX(j.start_time) AS start_time, \
+              MAX(j.duration) AS duration, \
               MAX(j.uncompressed_size) AS uncompressed_size, \
               MAX(j.compressed_size) AS compressed_size, \
               MAX(j.num_tasks) AS num_tasks, \
-              ROUND(SUM(t.duration), 3) AS tasks_duration \
+              SUM(t.duration) AS tasks_duration \
             FROM compression_jobs j \
             JOIN compression_tasks t ON t.job_id = j.id \
-            WHERE j.start_time >= FROM_UNIXTIME(? / 1000.0) \
-              AND j.start_time <= FROM_UNIXTIME(? / 1000.0)\
+            WHERE j.start_time >= ? \
+              AND j.start_time <= ?\
               {job_status_clause} \
             GROUP BY j.id \
             ORDER BY MAX(j.start_time) DESC \

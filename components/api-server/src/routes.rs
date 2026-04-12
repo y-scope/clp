@@ -275,8 +275,8 @@ async fn compression_usage(
     let validated = ValidatedCompressionUsageParams::try_from(params)?;
     tracing::info!(
         "Fetching compression usage: begin={}, end={}, job_statuses={:?}",
-        validated.begin_timestamp,
-        validated.end_timestamp,
+        validated.begin_timestamp.timestamp_millis(),
+        validated.end_timestamp.timestamp_millis(),
         validated.job_statuses,
     );
     Ok(Json(
