@@ -127,7 +127,7 @@ pub struct CompressionUsage {
     pub id: i32,
     /// Job status. See `CompressionJobStatus` in
     /// `components/job-orchestration/job_orchestration/scheduler/constants.py`:
-    /// 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
+    /// 0 = PENDING, 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
     pub status: i32,
     /// Time the job was created (epoch milliseconds).
     #[serde(with = "chrono::serde::ts_milliseconds")]
@@ -675,10 +675,8 @@ impl Client {
         &self,
         params: &ValidatedCompressionUsageParams,
     ) -> Result<Vec<CompressionUsage>, ClientError> {
-        // Build the optional job-status IN clause dynamically so the DB sees a
+        // Build the job-status IN clause dynamically so the DB sees a
         // static `IN (?, ?, ...)` predicate and can use an index on `j.status`.
-        // When `job_statuses` is empty the clause is omitted entirely, meaning
-        // "return all statuses".
         let placeholders = params
             .job_statuses
             .iter()
