@@ -53,10 +53,10 @@ const fn default_limit() -> i64 {
     1000
 }
 
-/// Validated parameters produced by [`CompressionUsageParams::validate`].
+/// Validated parameters produced by [`TryFrom<CompressionUsageParams>`].
 ///
-/// This type is intentionally non-constructable outside of `validate()` so
-/// that callers of [`Client::get_compression_usage`] cannot bypass validation.
+/// This type is intentionally non-constructable outside of the `TryFrom` impl
+/// so that callers of [`Client::get_compression_usage`] cannot bypass validation.
 pub struct ValidatedCompressionUsageParams {
     pub begin_timestamp: i64,
     pub end_timestamp: i64,
@@ -64,14 +64,11 @@ pub struct ValidatedCompressionUsageParams {
     pub limit: i64,
 }
 
-impl CompressionUsageParams {
+impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
+    type Error = ClientError;
+
     /// Validates the parameters and resolves the requested job statuses into
     /// [`CompressionJobStatus`] variants.
-    ///
-    /// We use a `validate()` method rather than the conventional
-    /// `TryFrom<UncheckedX>` pattern because this struct also serves as the
-    /// `OpenAPI` query-parameter schema. Introducing an `Unchecked` wrapper would
-    /// leak an internal implementation detail into the generated API docs.
     ///
     /// # Errors
     ///
@@ -79,16 +76,16 @@ impl CompressionUsageParams {
     /// - `begin_timestamp > end_timestamp`
     /// - `limit <= 0`
     /// - `job_status` contains unrecognized or empty values
-    pub fn validate(&self) -> Result<ValidatedCompressionUsageParams, ClientError> {
-        if self.begin_timestamp > self.end_timestamp {
+    fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
+        if value.begin_timestamp > value.end_timestamp {
             return Err(ClientError::InvalidInput(
                 "begin_timestamp must be <= end_timestamp".to_owned(),
             ));
         }
-        if self.limit <= 0 {
+        if value.limit <= 0 {
             return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
         }
-        let job_statuses = match &self.job_status {
+        let job_statuses = match &value.job_status {
             Some(s) => s
                 .split(',')
                 .map(str::trim)
@@ -106,11 +103,11 @@ impl CompressionUsageParams {
                 "job_status must contain at least one valid status".to_owned(),
             ));
         }
-        Ok(ValidatedCompressionUsageParams {
-            begin_timestamp: self.begin_timestamp,
-            end_timestamp: self.end_timestamp,
+        Ok(Self {
+            begin_timestamp: value.begin_timestamp,
+            end_timestamp: value.end_timestamp,
             job_statuses,
-            limit: self.limit,
+            limit: value.limit,
         })
     }
 }
@@ -688,10 +685,10 @@ impl Client {
             // both MySQL and MariaDB perform decimal division, preserving the
             // millisecond sub-second precision of the epoch-ms timestamps.
             //
-            // ANY_VALUE() is used on non-aggregated columns because they are
-            // all functionally dependent on j.id (the primary key). This
-            // avoids a lengthy GROUP BY list while remaining compatible with
-            // ONLY_FULL_GROUP_BY (MySQL 5.7.5+ default).
+            // MAX() is used on non-aggregated columns because they are all
+            // functionally dependent on j.id (the primary key). Since each group
+            // contains exactly one row, MAX() simply returns the column's value.
+            // This is used instead of MySQL-only ANY_VALUE() for MariaDB compat.
             //
             // Task durations are summed regardless of individual task status so
             // that failed jobs still report the compute resources they consumed.
@@ -700,13 +697,13 @@ impl Client {
             // task creation) since they consumed no compute resources.
             "SELECT \
               j.id, \
-              ANY_VALUE(j.status) AS status, \
-              ANY_VALUE(CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED)) AS creation_time, \
-              ANY_VALUE(CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED)) AS start_time, \
-              ANY_VALUE(ROUND(j.duration, 3)) AS duration, \
-              ANY_VALUE(j.uncompressed_size) AS uncompressed_size, \
-              ANY_VALUE(j.compressed_size) AS compressed_size, \
-              ANY_VALUE(j.num_tasks) AS num_tasks, \
+              MAX(j.status) AS status, \
+              MAX(CAST(UNIX_TIMESTAMP(j.creation_time) * 1000 AS SIGNED)) AS creation_time, \
+              MAX(CAST(UNIX_TIMESTAMP(j.start_time) * 1000 AS SIGNED)) AS start_time, \
+              MAX(ROUND(j.duration, 3)) AS duration, \
+              MAX(j.uncompressed_size) AS uncompressed_size, \
+              MAX(j.compressed_size) AS compressed_size, \
+              MAX(j.num_tasks) AS num_tasks, \
               ROUND(SUM(t.duration), 3) AS tasks_duration \
             FROM compression_jobs j \
             JOIN compression_tasks t ON t.job_id = j.id \
@@ -714,7 +711,7 @@ impl Client {
               AND j.start_time <= FROM_UNIXTIME(? / 1000.0)\
               {job_status_clause} \
             GROUP BY j.id \
-            ORDER BY ANY_VALUE(j.start_time) DESC \
+            ORDER BY MAX(j.start_time) DESC \
             LIMIT ?"
         );
 

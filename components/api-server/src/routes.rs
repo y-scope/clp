@@ -16,7 +16,10 @@ use tower_http::cors::{Any, CorsLayer};
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::client::{Client, ClientError, CompressionUsage, CompressionUsageParams, QueryConfig};
+use crate::client::{
+    Client, ClientError, CompressionUsage, CompressionUsageParams,
+    ValidatedCompressionUsageParams, QueryConfig,
+};
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -269,7 +272,7 @@ async fn compression_usage(
     State(client): State<Client>,
     Query(params): Query<CompressionUsageParams>,
 ) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
-    let validated = params.validate()?;
+    let validated = ValidatedCompressionUsageParams::try_from(params)?;
     tracing::info!(
         "Fetching compression usage: begin={}, end={}, job_statuses={:?}",
         validated.begin_timestamp,
@@ -338,14 +341,14 @@ mod tests {
 
     use super::*;
 
-    /// Builds a minimal Axum app that calls [`CompressionUsageParams::validate`]
-    /// (the shared production validation method) and returns the resolved
+    /// Builds a minimal Axum app that validates compression usage params via
+    /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
     /// status integer codes on success. No real database is needed.
     fn test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",
             get(|Query(params): Query<CompressionUsageParams>| async move {
-                let validated = params.validate()?;
+                let validated = ValidatedCompressionUsageParams::try_from(params)?;
                 let codes: Vec<i32> = validated.job_statuses.into_iter().map(i32::from).collect();
                 Ok::<_, HandlerError>(axum::Json(codes))
             }),

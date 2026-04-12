@@ -22,6 +22,7 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SqlAdapter
+from mysql.connector.errorcode import ER_DUP_KEYNAME
 
 # Setup logging
 # Create logger
@@ -96,7 +97,7 @@ def main(argv):
                     """
                 )
             except Exception as err:
-                if "Duplicate key name" not in str(err):
+                if not (hasattr(err, "errno") and err.errno == ER_DUP_KEYNAME):
                     raise
 
             scheduling_db_cursor.execute(
