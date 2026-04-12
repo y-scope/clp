@@ -74,10 +74,10 @@ const useUpdateStateWithMetadata = () => {
                         description: errorMsg,
                         duration: 15,
                         key: `search-failed-${resultsMetadata._id}`,
-                        message: errorName,
                         pauseOnHover: true,
                         placement: "bottomRight",
                         showProgress: true,
+                        title: errorName,
                     });
                 }
                 break;
