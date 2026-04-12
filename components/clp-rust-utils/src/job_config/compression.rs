@@ -20,7 +20,6 @@ pub type CompressionJobId = i32;
 #[repr(i32)]
 #[strum(ascii_case_insensitive)]
 pub enum CompressionJobStatus {
-    #[strum(disabled)]
     Pending = 0,
     Running = 1,
     Succeeded = 2,

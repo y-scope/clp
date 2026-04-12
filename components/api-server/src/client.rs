@@ -818,7 +818,15 @@ mod tests {
     fn parse_job_status_invalid() {
         assert!(CompressionJobStatus::from_str("").is_err());
         assert!(CompressionJobStatus::from_str("UNKNOWN").is_err());
-        assert!(CompressionJobStatus::from_str("PENDING").is_err());
+    }
+
+    #[test]
+    fn parse_job_status_pending_not_in_defaults() {
+        assert_eq!(
+            CompressionJobStatus::from_str("PENDING"),
+            Ok(CompressionJobStatus::Pending)
+        );
+        assert!(!DEFAULT_JOB_STATUSES.contains(&CompressionJobStatus::Pending));
     }
 
     #[test]
