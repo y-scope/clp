@@ -75,6 +75,7 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
     ///
     /// Returns [`ClientError::InvalidInput`] if:
     /// - `begin_timestamp > end_timestamp`
+    /// - `begin_timestamp` or `end_timestamp` is outside the representable range
     /// - `limit <= 0`
     /// - `job_status` contains unrecognized or empty values
     fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
