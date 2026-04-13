@@ -22,9 +22,6 @@ pub use crate::error::ClientError;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
-///
-/// Note: `Pending` is intentionally excluded because pending jobs have no
-/// `start_time` and are therefore excluded by the time-range WHERE clause.
 pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
     CompressionJobStatus::Succeeded,
     CompressionJobStatus::Failed,
