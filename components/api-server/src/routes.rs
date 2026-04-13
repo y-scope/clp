@@ -17,8 +17,12 @@ use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::client::{
-    Client, ClientError, CompressionUsage, CompressionUsageParams,
-    ValidatedCompressionUsageParams, QueryConfig,
+    Client,
+    ClientError,
+    CompressionUsage,
+    CompressionUsageParams,
+    QueryConfig,
+    ValidatedCompressionUsageParams,
 };
 
 /// Factory method to create an Axum router configured with all API routes.
