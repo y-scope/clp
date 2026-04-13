@@ -103,7 +103,7 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "api-server"
-version = "0.1.0"
+version = "0.11.1-dev"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -882,7 +882,7 @@ checksum = "c3e64b0cc0439b12df2fa678eae89a1c56a529fd067a9115f7827f1fffd22b32"
 
 [[package]]
 name = "clp-rust-utils"
-version = "0.1.0"
+version = "0.11.1-dev"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
@@ -2154,7 +2154,7 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "log-ingestor"
-version = "0.1.0"
+version = "0.11.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
