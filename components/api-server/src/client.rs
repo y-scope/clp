@@ -133,36 +133,38 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
     }
 }
 
-/// A single row returned by the compression usage query (one row per job).
+/// Resource usage statistics for the compression job with the specified ID.
 #[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct CompressionUsage {
     /// Compression job ID.
     pub id: i32,
-    /// Job status. See `CompressionJobStatus` in
-    /// `components/job-orchestration/job_orchestration/scheduler/constants.py`:
-    /// 0 = PENDING, 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED.
-    pub status: i32,
+    /// Current status of the job.
+    #[sqlx(rename = "status", try_from = "i32")]
+    pub job_status: CompressionJobStatus,
     /// Time the job was created (epoch milliseconds).
     #[serde(with = "chrono::serde::ts_milliseconds")]
     #[schema(value_type = i64)]
-    pub creation_time: DateTime<Utc>,
-    /// Time the job started (epoch milliseconds). Always non-null in results
-    /// because the WHERE clause filters on `start_time`.
+    #[sqlx(rename = "creation_time")]
+    pub time_creation_millisecs: DateTime<Utc>,
+    /// Time the job started executing (epoch milliseconds).
     #[serde(with = "chrono::serde::ts_milliseconds")]
     #[schema(value_type = i64)]
-    pub start_time: DateTime<Utc>,
-    /// Wall-clock seconds the job ran for. `None` for non-succeeded jobs
-    /// (FAILED, KILLED, RUNNING) since `duration` is only set on completion.
-    pub duration: Option<f64>,
-    /// Total uncompressed size of input files (bytes).
-    pub uncompressed_size: i64,
-    /// Total compressed archive size (bytes).
-    pub compressed_size: i64,
+    #[sqlx(rename = "start_time")]
+    pub time_begin_millisecs: DateTime<Utc>,
+    /// Wall-clock duration the job ran, in seconds. Absent if the job did not complete.
+    #[sqlx(rename = "duration")]
+    pub duration_secs: Option<f64>,
+    /// Total uncompressed size of input files, in bytes.
+    #[sqlx(rename = "uncompressed_size")]
+    pub uncompressed_size_bytes: i64,
+    /// Total compressed archive size, in bytes.
+    #[sqlx(rename = "compressed_size")]
+    pub compressed_size_bytes: i64,
     /// Number of tasks the job was split into.
     pub num_tasks: i32,
-    /// Sum of all task durations (CPU-seconds across all parallel workers).
-    /// `None` if all task duration values are NULL in the database.
-    pub tasks_duration: Option<f64>,
+    /// Sum of all task durations, in seconds. Absent if no tasks reported a duration.
+    #[sqlx(rename = "tasks_duration")]
+    pub tasks_duration_secs: Option<f64>,
 }
 
 /// Defines the request configuration for submitting a search query.

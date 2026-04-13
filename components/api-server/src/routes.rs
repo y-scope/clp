@@ -73,6 +73,7 @@ mod api_doc {
         __path_query_results,
         CompressionUsage,
     };
+    use crate::client::CompressionJobStatus;
 
     #[derive(utoipa::OpenApi)]
     #[openapi(
@@ -82,7 +83,7 @@ mod api_doc {
             contact(name = "YScope")
         ),
         paths(health, query, query_results, cancel_query, compression_usage),
-        components(schemas(CompressionUsage))
+        components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
 }

@@ -213,69 +213,78 @@
   },
   "components": {
     "schemas": {
+      "CompressionJobStatus": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Running",
+          "Succeeded",
+          "Failed",
+          "Killed"
+        ]
+      },
       "CompressionUsage": {
         "type": "object",
-        "description": "A single row returned by the compression usage query (one row per job).",
+        "description": "Resource usage statistics for the compression job with the specified ID.",
         "required": [
           "id",
-          "status",
-          "creation_time",
-          "start_time",
-          "uncompressed_size",
-          "compressed_size",
+          "job_status",
+          "time_creation_millisecs",
+          "time_begin_millisecs",
+          "uncompressed_size_bytes",
+          "compressed_size_bytes",
           "num_tasks"
         ],
         "properties": {
-          "compressed_size": {
+          "compressed_size_bytes": {
             "type": "integer",
             "format": "int64",
-            "description": "Total compressed archive size (bytes)."
+            "description": "Total compressed archive size, in bytes."
           },
-          "creation_time": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Time the job was created (epoch milliseconds)."
-          },
-          "duration": {
+          "duration_secs": {
             "type": [
               "number",
               "null"
             ],
             "format": "double",
-            "description": "Wall-clock seconds the job ran for. `None` for non-succeeded jobs\n(FAILED, KILLED, RUNNING) since `duration` is only set on completion."
+            "description": "Wall-clock duration the job ran, in seconds. Absent if the job did not complete."
           },
           "id": {
             "type": "integer",
             "format": "int32",
             "description": "Compression job ID."
           },
+          "job_status": {
+            "$ref": "#/components/schemas/CompressionJobStatus",
+            "description": "Current status of the job."
+          },
           "num_tasks": {
             "type": "integer",
             "format": "int32",
             "description": "Number of tasks the job was split into."
           },
-          "start_time": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Time the job started (epoch milliseconds). Always non-null in results\nbecause the WHERE clause filters on `start_time`."
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Job status. See `CompressionJobStatus` in\n`components/job-orchestration/job_orchestration/scheduler/constants.py`:\n0 = PENDING, 1 = RUNNING, 2 = SUCCEEDED, 3 = FAILED, 4 = KILLED."
-          },
-          "tasks_duration": {
+          "tasks_duration_secs": {
             "type": [
               "number",
               "null"
             ],
             "format": "double",
-            "description": "Sum of all task durations (CPU-seconds across all parallel workers).\n`None` if all task duration values are NULL in the database."
+            "description": "Sum of all task durations, in seconds. Absent if no tasks reported a duration."
           },
-          "uncompressed_size": {
+          "time_begin_millisecs": {
             "type": "integer",
             "format": "int64",
-            "description": "Total uncompressed size of input files (bytes)."
+            "description": "Time the job started executing (epoch milliseconds)."
+          },
+          "time_creation_millisecs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time the job was created (epoch milliseconds)."
+          },
+          "uncompressed_size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total uncompressed size of input files, in bytes."
           }
         }
       },
