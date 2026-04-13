@@ -148,7 +148,7 @@
         "operationId": "compression_usage",
         "parameters": [
           {
-            "name": "begin_timestamp",
+            "name": "time_range_begin_millisecs",
             "in": "query",
             "description": "Start of usage window (epoch milliseconds, inclusive).",
             "required": true,
@@ -158,9 +158,9 @@
             }
           },
           {
-            "name": "end_timestamp",
+            "name": "time_range_end_millisecs",
             "in": "query",
-            "description": "End of usage window (epoch milliseconds, inclusive).",
+            "description": "End of usage window (epoch milliseconds, exclusive).",
             "required": true,
             "schema": {
               "type": "integer",
@@ -202,7 +202,7 @@
             }
           },
           "400": {
-            "description": "Invalid query parameters (e.g., begin_timestamp > end_timestamp, missing required fields)"
+            "description": "Invalid query parameters (e.g., time_range_begin_millisecs > time_range_end_millisecs, missing required fields)"
           },
           "500": {
             "description": ""

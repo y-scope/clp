@@ -33,9 +33,9 @@ pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
 #[into_params(parameter_in = Query)]
 pub struct CompressionUsageParams {
     /// Start of usage window (epoch milliseconds, inclusive).
-    pub begin_timestamp: i64,
-    /// End of usage window (epoch milliseconds, inclusive).
-    pub end_timestamp: i64,
+    pub time_range_begin_millisecs: i64,
+    /// End of usage window (epoch milliseconds, exclusive).
+    pub time_range_end_millisecs: i64,
     /// Job statuses to include as a comma-separated list (e.g.
     /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
     /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
@@ -56,8 +56,8 @@ const fn default_limit() -> i64 {
 /// This type is intentionally non-constructable outside of the `TryFrom` impl
 /// so that callers of [`Client::get_compression_usage`] cannot bypass validation.
 pub struct ValidatedCompressionUsageParams {
-    pub begin_timestamp: DateTime<Utc>,
-    pub end_timestamp: DateTime<Utc>,
+    pub time_range_begin: DateTime<Utc>,
+    pub time_range_end: DateTime<Utc>,
     pub job_statuses: Vec<CompressionJobStatus>,
     pub limit: i64,
 }
@@ -71,22 +71,28 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
     /// # Errors
     ///
     /// Returns [`ClientError::InvalidInput`] if:
-    /// - `begin_timestamp > end_timestamp`
-    /// - `begin_timestamp` or `end_timestamp` is outside the representable range
+    /// - `time_range_begin_millisecs > time_range_end_millisecs`
+    /// - `time_range_begin_millisecs` or `time_range_end_millisecs` is outside the representable
+    ///   range
     /// - `limit <= 0`
     /// - `job_status` contains unrecognized, empty, or duplicate values
     fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
-        if value.begin_timestamp > value.end_timestamp {
+        if value.time_range_begin_millisecs > value.time_range_end_millisecs {
             return Err(ClientError::InvalidInput(
-                "begin_timestamp must be <= end_timestamp".to_owned(),
+                "time_range_begin_millisecs must be <= time_range_end_millisecs".to_owned(),
             ));
         }
         if value.limit <= 0 {
             return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
         }
-        let begin_timestamp = Utc.timestamp_millis_opt(value.begin_timestamp).earliest();
-        let end_timestamp = Utc.timestamp_millis_opt(value.end_timestamp).earliest();
-        let (Some(begin_timestamp), Some(end_timestamp)) = (begin_timestamp, end_timestamp) else {
+        let time_range_begin = Utc
+            .timestamp_millis_opt(value.time_range_begin_millisecs)
+            .earliest();
+        let time_range_end = Utc
+            .timestamp_millis_opt(value.time_range_end_millisecs)
+            .earliest();
+        let (Some(time_range_begin), Some(time_range_end)) = (time_range_begin, time_range_end)
+        else {
             return Err(ClientError::InvalidInput(
                 "timestamp out of representable range".to_owned(),
             ));
@@ -122,8 +128,8 @@ impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
             ));
         }
         Ok(Self {
-            begin_timestamp,
-            end_timestamp,
+            time_range_begin,
+            time_range_end,
             job_statuses,
             limit: value.limit,
         })
@@ -725,7 +731,7 @@ impl Client {
             FROM compression_jobs j \
             JOIN compression_tasks t ON t.job_id = j.id \
             WHERE j.start_time >= ? \
-              AND j.start_time <= ?\
+              AND j.start_time < ?\
               {job_status_clause} \
             GROUP BY j.id \
             ORDER BY MAX(j.start_time) DESC \
@@ -733,8 +739,8 @@ impl Client {
         );
 
         let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
-            .bind(params.begin_timestamp)
-            .bind(params.end_timestamp);
+            .bind(params.time_range_begin)
+            .bind(params.time_range_end);
         for &status in &params.job_statuses {
             query = query.bind(i32::from(status));
         }
@@ -823,8 +829,8 @@ mod tests {
     #[test]
     fn reject_duplicate_job_status() {
         let params = CompressionUsageParams {
-            begin_timestamp: 0,
-            end_timestamp: 1,
+            time_range_begin_millisecs: 0,
+            time_range_end_millisecs: 1,
             job_status: Some("succeeded,succeeded".to_owned()),
             limit: 100,
         };

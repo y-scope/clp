@@ -269,7 +269,8 @@ async fn get_timestamp_column_names(
     responses(
         (status = OK, body = Vec<CompressionUsage>),
         (status = BAD_REQUEST, description = "Invalid query parameters \
-            (e.g., begin_timestamp > end_timestamp, missing required fields)"),
+            (e.g., time_range_begin_millisecs > time_range_end_millisecs, \
+            missing required fields)"),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -280,8 +281,8 @@ async fn compression_usage(
     let validated = ValidatedCompressionUsageParams::try_from(params)?;
     tracing::info!(
         "Fetching compression usage: begin={}, end={}, job_statuses={:?}",
-        validated.begin_timestamp.timestamp_millis(),
-        validated.end_timestamp.timestamp_millis(),
+        validated.time_range_begin.timestamp_millis(),
+        validated.time_range_end.timestamp_millis(),
         validated.job_statuses,
     );
     Ok(Json(
@@ -376,7 +377,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=200&end_timestamp=100")
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=200&\
+                         time_range_end_millisecs=100",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -384,7 +388,7 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
-        assert!(body.contains("begin_timestamp must be <= end_timestamp"));
+        assert!(body.contains("time_range_begin_millisecs must be <= time_range_end_millisecs"));
     }
 
     #[tokio::test]
@@ -394,7 +398,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(
-                        "/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=UNKNOWN",
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=UNKNOWN",
                     )
                     .body(Body::empty())
                     .unwrap(),
@@ -413,8 +418,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(
-                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
-                         job_status=succeeded",
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=succeeded",
                     )
                     .body(Body::empty())
                     .unwrap(),
@@ -432,7 +437,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100")
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -450,8 +458,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(
-                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
-                         job_status=SUCCEEDED,RUNNING",
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=SUCCEEDED,RUNNING",
                     )
                     .body(Body::empty())
                     .unwrap(),
@@ -470,8 +478,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(
-                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
-                         job_status=SUCCEEDED%2C+FAILED",
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=SUCCEEDED%2C+FAILED",
                     )
                     .body(Body::empty())
                     .unwrap(),
@@ -490,8 +498,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(
-                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
-                         job_status=SUCCEEDED,",
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=SUCCEEDED,",
                     )
                     .body(Body::empty())
                     .unwrap(),
@@ -509,7 +517,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=KILLED")
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=KILLED",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -521,12 +532,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reject_missing_begin_timestamp() {
+    async fn reject_missing_time_range_begin_millisecs() {
         let app = test_app();
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?end_timestamp=100")
+                    .uri("/usage/compression?time_range_end_millisecs=100")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -535,8 +546,8 @@ mod tests {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
-            body.contains("begin_timestamp") || body.contains("deserialize"),
-            "expected error about missing begin_timestamp, got: {body}"
+            body.contains("time_range_begin_millisecs") || body.contains("deserialize"),
+            "expected error about missing time_range_begin_millisecs, got: {body}"
         );
     }
 
@@ -546,7 +557,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&job_status=")
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -566,7 +580,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&limit=0")
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&limit=0",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -586,7 +603,10 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/usage/compression?begin_timestamp=0&end_timestamp=100&limit=-1")
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&limit=-1",
+                    )
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -607,8 +627,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri(
-                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
-                         job_status=SUCCEEDED,SUCCEEDED",
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=SUCCEEDED,SUCCEEDED",
                     )
                     .body(Body::empty())
                     .unwrap(),
