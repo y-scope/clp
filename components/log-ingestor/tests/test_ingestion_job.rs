@@ -1,8 +1,9 @@
 mod aws_config;
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
+use async_trait::async_trait;
 use aws_config::AwsConfig;
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials},
@@ -18,16 +19,103 @@ use clp_rust_utils::{
 };
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{IngestionJobId, SqsListener, ZeroFaultToleranceIngestionJobState},
+    ingestion_job::{
+        IngestionJobId,
+        IngestionJobState,
+        S3Scanner,
+        S3ScannerState,
+        SqsListener,
+        SqsListenerState,
+    },
 };
 use non_empty_string::NonEmptyString;
-use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
-const RECEIVER_TIMEOUT_SEC: u64 = 30;
+const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
+const INGESTED_OBJECT_POLL_INTERVAL_MS: u64 = 100;
 const NUM_TEST_OBJECTS: usize = 100;
 const NUM_NOISE_OBJECTS: usize = 100;
-const TEST_CHANNEL_CAPACITY: usize = 10;
+
+#[derive(Clone, Default)]
+struct SqsListenerTestState {
+    shared_ingested_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
+}
+
+impl SqsListenerTestState {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn get_shared_buffer(&self) -> Arc<Mutex<Vec<ObjectMetadata>>> {
+        self.shared_ingested_buffer.clone()
+    }
+}
+
+#[async_trait]
+impl IngestionJobState for SqsListenerTestState {
+    async fn start(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn end(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn fail(&self, msg: String) {
+        panic!("SqsListenerTestState::fail should be unreachable: {msg}");
+    }
+}
+
+#[async_trait]
+impl SqsListenerState for SqsListenerTestState {
+    async fn ingest(&self, objects: Vec<ObjectMetadata>) -> Result<()> {
+        self.shared_ingested_buffer.lock().await.extend(objects);
+        Ok(())
+    }
+}
+
+#[derive(Clone, Default)]
+struct S3ScannerTestState {
+    shared_ingested_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
+}
+
+impl S3ScannerTestState {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn get_shared_buffer(&self) -> Arc<Mutex<Vec<ObjectMetadata>>> {
+        self.shared_ingested_buffer.clone()
+    }
+}
+
+#[async_trait]
+impl IngestionJobState for S3ScannerTestState {
+    async fn start(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn end(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn fail(&self, msg: String) {
+        panic!("S3ScannerTestState::fail should be unreachable: {msg}");
+    }
+}
+
+#[async_trait]
+impl S3ScannerState for S3ScannerTestState {
+    async fn ingest(
+        &self,
+        objects: Vec<ObjectMetadata>,
+        _last_ingested_key: &str,
+    ) -> anyhow::Result<()> {
+        self.shared_ingested_buffer.lock().await.extend(objects);
+        Ok(())
+    }
+}
 
 /// Creates S3 objects in the given bucket based on the provided metadata. The object content is
 /// filled with dummy data.
@@ -60,46 +148,45 @@ async fn create_s3_objects(
     Ok(())
 }
 
-/// Receives up to `max_num_objects` object metadata from the given receiver channel.
+/// Waits until the shared buffer has at least `min_num_objects`.
 ///
 /// # Returns
 ///
-/// A vector of received S3 object metadata on success.
-async fn receive_object_metadata(
-    mut receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
-    max_num_objects: usize,
+/// A vector of ingested S3 object metadata on success.
+async fn wait_for_ingested_objects(
+    shared_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
+    min_num_objects: usize,
 ) -> Vec<ObjectMetadata> {
-    let mut received_objects = Vec::new();
-
-    while let Some(object_metadata_received) = receiver.recv().await {
-        for object_metadata in object_metadata_received {
-            received_objects.push(object_metadata);
-            if received_objects.len() >= max_num_objects {
-                return received_objects;
+    tokio::time::timeout(
+        Duration::from_secs(WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC),
+        async {
+            loop {
+                let ingested_objects = shared_buffer.lock().await;
+                if ingested_objects.len() >= min_num_objects {
+                    return ingested_objects.clone();
+                }
+                drop(ingested_objects);
+                tokio::time::sleep(Duration::from_millis(INGESTED_OBJECT_POLL_INTERVAL_MS)).await;
             }
-        }
-    }
-
-    received_objects
+        },
+    )
+    .await
+    .expect("Timed out while waiting for ingested objects")
 }
 
-/// Uploads S3 objects and receives their metadata via the provided receiver channel.
+/// Uploads test S3 objects.
 ///
 /// Objects are created with keys formatted as `{prefix}/{i}.log` where `i` is the object index.
 ///
 /// # Returns
 ///
-/// A tuple containing:
-///
-/// * A vector of created S3 object metadata.
-/// * A vector of received S3 object metadata.
-async fn upload_and_receive(
+/// A vector of created S3 object metadata.
+async fn upload_test_objects(
     s3_client: aws_sdk_s3::Client,
     bucket: NonEmptyString,
     prefix: NonEmptyString,
     num_objects_to_create: usize,
-    receiver: mpsc::Receiver<Vec<ObjectMetadata>>,
-) -> (Vec<ObjectMetadata>, Vec<ObjectMetadata>) {
+) -> Result<Vec<ObjectMetadata>> {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
         .map(|idx| ObjectMetadata {
             bucket: bucket.clone(),
@@ -108,23 +195,8 @@ async fn upload_and_receive(
         })
         .collect();
 
-    let creation_handler = tokio::spawn(create_s3_objects(
-        s3_client.clone(),
-        objects_to_create.clone(),
-    ));
-
-    let objects_received = tokio::time::timeout(
-        Duration::from_secs(RECEIVER_TIMEOUT_SEC),
-        receive_object_metadata(receiver, objects_to_create.len()),
-    )
-    .await
-    .expect("Timed out while receiving object metadata");
-
-    creation_handler
-        .await
-        .expect("Error while awaiting creation")
-        .expect("Error during S3 object creation");
-    (objects_to_create, objects_received)
+    create_s3_objects(s3_client, objects_to_create.clone()).await?;
+    Ok(objects_to_create)
 }
 
 /// Uploads noise S3 objects that do not match any testing prefix.
@@ -168,14 +240,15 @@ async fn run_sqs_listener_test(
     )
     .await;
 
-    let (sender, receiver) = mpsc::channel::<Vec<ObjectMetadata>>(TEST_CHANNEL_CAPACITY);
+    let state = SqsListenerTestState::new();
+    let shared_buffer = state.get_shared_buffer();
 
     let sqs_listener = SqsListener::spawn(
         job_id,
         &SqsClientWrapper::from(sqs_client),
         &ValidatedSqsListenerConfig::validate_and_create(sqs_listener_config)
             .expect("invalid SQS listener config"),
-        ZeroFaultToleranceIngestionJobState::new(sender),
+        state,
     );
 
     let s3_client = clp_rust_utils::s3::create_new_client(
@@ -185,12 +258,11 @@ async fn run_sqs_listener_test(
     )
     .await;
 
-    let upload_and_receive_handle = tokio::spawn(upload_and_receive(
+    let upload_handle = tokio::spawn(upload_test_objects(
         s3_client.clone(),
         aws_config.bucket_name.clone(),
         prefix.clone(),
         NUM_TEST_OBJECTS,
-        receiver,
     ));
     let noise_upload_handle = tokio::spawn(upload_noise_objects(
         s3_client.clone(),
@@ -201,9 +273,11 @@ async fn run_sqs_listener_test(
     noise_upload_handle
         .await
         .context("Error while awaiting noise upload")?;
-    let (mut created_objects, mut received_objects) = upload_and_receive_handle
+    let mut created_objects = upload_handle
         .await
-        .context("Error while awaiting upload and receive")?;
+        .context("Error while awaiting test object upload")??;
+    let mut received_objects =
+        wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
 
     sqs_listener.shutdown_and_join().await;
 
@@ -303,34 +377,36 @@ async fn test_s3_scanner() -> Result<()> {
         start_after: None,
     };
 
-    let (sender, receiver) = mpsc::channel::<Vec<ObjectMetadata>>(TEST_CHANNEL_CAPACITY);
+    let state = S3ScannerTestState::new();
+    let shared_buffer = state.get_shared_buffer();
 
-    let s3_scanner = log_ingestor::ingestion_job::S3Scanner::spawn(
+    let s3_scanner = S3Scanner::spawn(
         job_id,
         S3ClientWrapper::from(s3_client.clone()),
         s3_scanner_config,
-        ZeroFaultToleranceIngestionJobState::new(sender),
+        state,
     );
 
-    let upload_and_receive_handle = tokio::spawn(upload_and_receive(
+    let test_upload_handle = tokio::spawn(upload_test_objects(
         s3_client.clone(),
         aws_config.bucket_name.clone(),
         prefix.clone(),
         NUM_TEST_OBJECTS,
-        receiver,
     ));
     let noise_upload_handle = tokio::spawn(upload_noise_objects(
         s3_client.clone(),
         aws_config.bucket_name.clone(),
-        NUM_TEST_OBJECTS,
+        NUM_NOISE_OBJECTS,
     ));
 
     noise_upload_handle
         .await
         .context("Error while awaiting noise upload")?;
-    let (mut created_objects, mut received_objects) = upload_and_receive_handle
+    let mut created_objects = test_upload_handle
         .await
-        .context("Error while awaiting upload and receive")?;
+        .context("Error while awaiting test object upload")??;
+    let mut received_objects =
+        wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
     s3_scanner.shutdown_and_join().await;
 
     created_objects.sort();
