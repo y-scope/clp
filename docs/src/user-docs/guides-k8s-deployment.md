@@ -224,7 +224,7 @@ clpConfig:
 
   # Adjust query scheduler concurrency
   query_scheduler:
-    parallelism: 16
+    concurrency: 16
 
 # Override credentials (use secrets in production!)
 credentials:
