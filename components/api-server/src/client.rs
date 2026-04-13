@@ -52,9 +52,6 @@ const fn default_limit() -> i64 {
 }
 
 /// Validated parameters produced by [`TryFrom<CompressionUsageParams>`].
-///
-/// This type is intentionally non-constructable outside of the `TryFrom` impl
-/// so that callers of [`Client::get_compression_usage`] cannot bypass validation.
 pub struct ValidatedCompressionUsageParams {
     pub time_range_begin: DateTime<Utc>,
     pub time_range_end: DateTime<Utc>,
