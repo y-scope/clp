@@ -598,4 +598,27 @@ mod tests {
             "expected error about limit, got: {body}"
         );
     }
+
+    #[tokio::test]
+    async fn reject_duplicate_job_status() {
+        let app = test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(
+                        "/usage/compression?begin_timestamp=0&end_timestamp=100&\
+                         job_status=SUCCEEDED,SUCCEEDED",
+                    )
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = get_body(response).await;
+        assert!(
+            body.contains("Duplicate job_status"),
+            "expected error about duplicate job_status, got: {body}"
+        );
+    }
 }
