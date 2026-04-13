@@ -226,10 +226,6 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
-    #[serde(rename = "buffer_flush_timeout")]
-    pub buffer_flush_timeout_sec: u64,
-    pub buffer_flush_threshold: u64,
-    pub channel_capacity: usize,
     pub logging_level: String,
 }
 
@@ -238,9 +234,6 @@ impl Default for LogIngestor {
         Self {
             host: "localhost".to_owned(),
             port: 3002,
-            buffer_flush_timeout_sec: 300,
-            buffer_flush_threshold: 4096 * 1024 * 1024, // 4 GiB
-            channel_capacity: 10,
             logging_level: "INFO".to_owned(),
         }
     }

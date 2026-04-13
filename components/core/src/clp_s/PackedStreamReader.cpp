@@ -11,6 +11,7 @@
 #include "ArchiveReaderAdaptor.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderUtils.hpp"
+#include "TraceableException.hpp"
 
 namespace clp_s {
 auto PackedStreamReader::read_metadata(ZstdDecompressor& decompressor)
@@ -20,14 +21,14 @@ auto PackedStreamReader::read_metadata(ZstdDecompressor& decompressor)
             m_state = PackedStreamReaderState::MetadataRead;
             break;
         default:
-            throw OperationFailed(ErrorCodeNotReady, __FILE__, __LINE__);
+            throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
 
     uint64_t num_streams_u64{0};
     if (auto const error{decompressor.try_read_numeric_value(num_streams_u64)};
         ErrorCodeSuccess != error)
     {
-        throw OperationFailed(error, __FILE__, __LINE__);
+        throw OperationFailed(error, __FILENAME__, __LINE__);
     }
 
     auto const num_streams{
@@ -42,13 +43,13 @@ auto PackedStreamReader::read_metadata(ZstdDecompressor& decompressor)
         if (auto const error{decompressor.try_read_numeric_value(file_offset_u64)};
             ErrorCodeSuccess != error)
         {
-            throw OperationFailed(error, __FILE__, __LINE__);
+            throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
         if (auto const error{decompressor.try_read_numeric_value(uncompressed_size_u64)};
             ErrorCodeSuccess != error)
         {
-            throw OperationFailed(error, __FILE__, __LINE__);
+            throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
         auto const file_offset{
@@ -69,14 +70,14 @@ void PackedStreamReader::open_packed_streams(std::shared_ptr<ArchiveReaderAdapto
             break;
         case PackedStreamReaderState::Uninitialized:
         default:
-            throw OperationFailed(ErrorCodeNotReady, __FILE__, __LINE__);
+            throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_adaptor = adaptor;
     m_packed_stream_reader = m_adaptor->checkout_reader_for_section(constants::cArchiveTablesFile);
     if (auto rc = m_packed_stream_reader->try_get_pos(m_begin_offset);
         clp::ErrorCode::ErrorCode_Success != rc)
     {
-        throw OperationFailed(static_cast<ErrorCode>(rc), __FILE__, __LINE__);
+        throw OperationFailed(static_cast<ErrorCode>(rc), __FILENAME__, __LINE__);
     }
 }
 
@@ -105,7 +106,7 @@ void
 PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, size_t& buf_size) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     if (stream_id >= m_stream_metadata.size()) {
-        throw OperationFailed(ErrorCodeCorrupt, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
     }
 
     switch (m_state) {
@@ -114,11 +115,11 @@ PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, 
             break;
         case PackedStreamReaderState::ReadingPackedStreams:
             if (m_prev_stream_id >= stream_id) {
-                throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
+                throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
             }
             break;
         default:
-            throw OperationFailed(ErrorCodeNotReady, __FILE__, __LINE__);
+            throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_prev_stream_id = stream_id;
 
@@ -127,7 +128,7 @@ PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, 
     if (auto error = m_packed_stream_reader->try_seek_from_begin(adjusted_file_offset);
         clp::ErrorCode::ErrorCode_Success != error)
     {
-        throw OperationFailed(static_cast<ErrorCode>(error), __FILE__, __LINE__);
+        throw OperationFailed(static_cast<ErrorCode>(error), __FILENAME__, __LINE__);
     }
 
     auto const end_pos_result{
@@ -154,7 +155,7 @@ PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, 
         = m_packed_stream_decompressor.try_read_exact_length(buf.get(), uncompressed_size);
         ErrorCodeSuccess != error)
     {
-        throw OperationFailed(error, __FILE__, __LINE__);
+        throw OperationFailed(error, __FILENAME__, __LINE__);
     }
     m_packed_stream_decompressor.close_for_reuse();
 }

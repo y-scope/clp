@@ -54,6 +54,19 @@ template <IntegerType integer_t>
 [[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
 
 /**
+ * Deserializes an integer from the given reader.
+ * @tparam integer_t The type of the integer to deserialize
+ * @param reader
+ * @return A result containing the deserialized integer on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
+ *   deserialize.
+ */
+template <IntegerType integer_t>
+[[nodiscard]] auto deserialize_int(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<integer_t>;
+
+/**
  * Serializes a string using CLP's encoding for unstructured text.
  * @tparam encoded_variable_t
  * @param str
@@ -149,6 +162,8 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
         value_big_endian = bswap_32(value);
     } else if constexpr (sizeof(value) == 8) {
         value_big_endian = bswap_64(value);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     std::span<int8_t> const data_view{reinterpret_cast<int8_t*>(&value_big_endian), sizeof(value)};
@@ -171,8 +186,31 @@ auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
         value = bswap_32(value_little_endian);
     } else if constexpr (cReadSize == 8) {
         value = bswap_64(value_little_endian);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
     return true;
+}
+
+template <IntegerType integer_t>
+auto deserialize_int(ReaderInterface& reader) -> ystdlib::error_handling::Result<integer_t> {
+    integer_t value_little_endian{};
+    if (reader.try_read_numeric_value(value_little_endian) != clp::ErrorCode_Success) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+
+    constexpr auto cReadSize = sizeof(integer_t);
+    if constexpr (cReadSize == 1) {
+        return value_little_endian;
+    } else if constexpr (cReadSize == 2) {
+        return bswap_16(value_little_endian);
+    } else if constexpr (cReadSize == 4) {
+        return bswap_32(value_little_endian);
+    } else if constexpr (cReadSize == 8) {
+        return bswap_64(value_little_endian);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
+    }
 }
 
 template <typename encoded_variable_t>
