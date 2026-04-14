@@ -9,15 +9,12 @@ import {
 } from "antd";
 
 import {AWS_REGION_CODES} from "./awsRegionCodes";
-import S3KeySelectFormItem from "./S3KeySelectFormItem";
+import S3KeysFormItem from "./S3KeysFormItem";
 
 
 const BUCKET_PLACEHOLDER_TEXT = "my-logs-bucket";
-
 const BUCKET_TOOLTIP_TEXT = "The S3 bucket containing the logs to compress.";
-
 const REGION_PLACEHOLDER_TEXT = "us-east-1";
-
 const REGION_TOOLTIP_TEXT = "The region where the bucket is located.";
 
 
@@ -39,7 +36,6 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
 
     const [confirmedBucket, setConfirmedBucket] = useState<string>();
     const [confirmedRegionCode, setConfirmedRegionCode] = useState<string>();
-    const [s3Error, setS3Error] = useState<string | null>(null);
 
     return (
         <>
@@ -60,7 +56,8 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
                             }}
                             onSelect={(value: string) => {
                                 setConfirmedRegionCode(value);
-                            }}/>
+                            }}
+                        />
                     </Form.Item>
                 </Col>
                 <Col span={19}>
@@ -74,16 +71,16 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
                             placeholder={BUCKET_PLACEHOLDER_TEXT}
                             onBlur={() => {
                                 setConfirmedBucket(bucket);
-                            }}/>
+                            }}
+                        />
                     </Form.Item>
                 </Col>
             </Row>
-            <S3KeySelectFormItem
+            <S3KeysFormItem
                 bucket={confirmedBucket}
                 isScanner={isScanner}
                 regionCode={confirmedRegionCode}
-                s3Error={s3Error}
-                onError={setS3Error}/>
+            />
         </>
     );
 };

@@ -9,6 +9,12 @@ interface S3TreeNode {
     value: string;
 
     /**
+     * Label displayed in the TreeSelect input when this node is selected.
+     * Uses the full S3 key/prefix, with "/" for the bucket root.
+     */
+    label: string;
+
+    /**
      * If true, this is a "Load more..." pagination node, not a real S3 entry.
      */
     isLoadMore?: boolean;
@@ -54,6 +60,7 @@ const ROOT_NODE: S3TreeNode = Object.freeze({
     pId: "",
     title: ROOT_TITLE,
     value: ROOT_PREFIX,
+    label: "/",
 });
 
 export type {S3TreeNode};

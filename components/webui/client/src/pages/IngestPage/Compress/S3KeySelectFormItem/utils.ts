@@ -57,6 +57,7 @@ const toTreeNodes = (entries: S3Entry[], parentPrefix: string): S3TreeNode[] => 
         id: entry.key,
         isLeaf: false === entry.isPrefix,
         isPrefix: entry.isPrefix,
+        label: "/" + entry.key,
         pId: parentId,
         title: getDisplayName(entry.key, parentPrefix),
         value: entry.key,

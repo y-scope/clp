@@ -66,6 +66,7 @@ const createLoadMoreNode = (prefix: string, token: string): S3TreeNode => {
         isLeaf: true,
         isLoadMore: true,
         isPrefix: false,
+        label: "Load more...",
         pId: parentId,
         parentPrefix: prefix,
         title: "Load more...",

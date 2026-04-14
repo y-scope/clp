@@ -49,7 +49,7 @@ type FormValues = {
     ingestMode?: string;
     paths?: string[];
     regionCode?: string;
-    s3Path?: string;
+    s3Paths?: string[];
     scanningIntervalSec?: number;
     timestampKey?: string;
     unstructured?: boolean;
@@ -130,9 +130,7 @@ const submitJob = async (values: FormValues): Promise<SubmitResult> => {
         const payload = buildS3Payload({
             bucket: values.bucket as string,
             regionCode: values.regionCode as string,
-            s3Paths: values.s3Path?.trim() ?
-                [values.s3Path.trim()] :
-                [],
+            s3Paths: values.s3Paths?.filter((p): p is string => "string" === typeof p && 0 < p.trim().length) ?? [],
             scanner: isScanner,
             values: values,
         });
