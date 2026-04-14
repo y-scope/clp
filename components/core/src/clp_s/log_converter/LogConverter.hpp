@@ -18,7 +18,7 @@ class LogConverter {
 public:
     // Constructors
     explicit LogConverter(size_t max_buffer_size)
-            : m_buffer(cDefaultBufferSize),
+            : m_buffer(max_buffer_size < cDefaultBufferSize ? max_buffer_size : cDefaultBufferSize),
               m_max_buffer_size{max_buffer_size} {}
 
     // Methods
