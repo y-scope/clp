@@ -44,7 +44,7 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
     return (
         <>
             <Row gutter={8}>
-                <Col span={8}>
+                <Col span={5}>
                     <Form.Item
                         label={"Region"}
                         name={"regionCode"}
@@ -63,7 +63,7 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
                             }}/>
                     </Form.Item>
                 </Col>
-                <Col span={16}>
+                <Col span={19}>
                     <Form.Item
                         label={"S3 Bucket"}
                         name={"bucket"}

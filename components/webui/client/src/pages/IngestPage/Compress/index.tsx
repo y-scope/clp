@@ -11,8 +11,11 @@ import {
     FsCompressionJobCreation,
 } from "@webui/common/schemas/compression";
 import {
+    Col,
     Form,
+    Input,
     Radio,
+    Row,
     Typography,
 } from "antd";
 
@@ -26,6 +29,7 @@ import {
     SETTINGS_STORAGE_ENGINE,
 } from "../../../config";
 import ClpSFormItems from "./ClpSFormItems";
+import styles from "./index.module.css";
 import {
     applyClpSFields,
     buildS3Payload,
@@ -45,16 +49,64 @@ type FormValues = {
     ingestMode?: string;
     paths?: string[];
     regionCode?: string;
-    s3Paths?: string[];
+    s3Path?: string;
     scanningIntervalSec?: number;
     timestampKey?: string;
     unstructured?: boolean;
 };
 
 const isS3Input = STORAGE_TYPE.S3 === SETTINGS_LOGS_INPUT_TYPE;
-
 const INGEST_MODE_ONE_TIME = "one-time";
 const INGEST_MODE_SCANNER = "scanner";
+const showClpSFields = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
+
+const TIMESTAMP_KEY_HELPER_TEXT = (
+    <>
+        If not provided, events will not have assigned timestamps and can only be searched from
+        the command line without a timestamp filter. Certain characters require escaping. See the
+        {" "}
+        <Typography.Link
+            href={"https://docs.yscope.com/clp/main/user-docs/reference-json-search-syntax.html#characters-that-require-escaping"}
+            rel={"noopener"}
+            target={"_blank"}
+        >
+            JSON search syntax docs
+        </Typography.Link>
+        . This field is ignored when logs type is &quot;Text&quot;.
+    </>
+);
+
+const TIMESTAMP_KEY_PLACEHOLDER_TEXT =
+    "The path (e.g. x.y) for the field containing the log event's timestamp";
+
+const LOGS_TYPE_HELPER_TEXT = (
+    <>
+        {"Select \u201cText\u201d for non-JSON logs." +
+        " Each log event will be parsed and converted to JSON with "}
+        <Typography.Text
+            className={styles["tooltipCode"] || ""}
+            code={true}
+        >
+            timestamp
+        </Typography.Text>
+        {" and "}
+        <Typography.Text
+            className={styles["tooltipCode"] || ""}
+            code={true}
+        >
+            message
+        </Typography.Text>
+        {" fields. See the "}
+        <Typography.Link
+            href={"https://docs.yscope.com/clp/main/user-docs/quick-start/clp-json.html#compressing-unstructured-text-logs"}
+            rel={"noopener"}
+            target={"_blank"}
+        >
+            documentation
+        </Typography.Link>
+        {" for more details."}
+    </>
+);
 
 
 type SubmitResult = {
@@ -78,7 +130,9 @@ const submitJob = async (values: FormValues): Promise<SubmitResult> => {
         const payload = buildS3Payload({
             bucket: values.bucket as string,
             regionCode: values.regionCode as string,
-            s3Paths: values.s3Paths,
+            s3Paths: values.s3Path?.trim() ?
+                [values.s3Path.trim()] :
+                [],
             scanner: isScanner,
             values: values,
         });
@@ -99,7 +153,7 @@ const submitJob = async (values: FormValues): Promise<SubmitResult> => {
         paths: values.paths as string[],
     };
 
-    if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+    if (showClpSFields) {
         applyClpSFields(fsPayload, values);
     }
 
@@ -133,6 +187,7 @@ const getSuccessMessage = (result: SubmitResult): string => {
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
     const ingestMode = Form.useWatch("ingestMode", form);
+    const unstructured = Form.useWatch<boolean>("unstructured", form);
     const isScanner = isS3Input && INGEST_MODE_SCANNER === ingestMode;
 
     const queryClient = useQueryClient();
@@ -161,33 +216,82 @@ const Compress = () => {
                 onFinish={mutate}
             >
                 {isS3Input && (
-                    <Form.Item
-                        initialValue={INGEST_MODE_ONE_TIME}
-                        label={"Ingest Mode"}
-                        name={"ingestMode"}
-                        tooltip={
-                            "Scanner: continuously polls S3 for new objects and compresses them" +
-                            " automatically."
-                        }
-                    >
-                        <Radio.Group>
-                            <Radio.Button value={INGEST_MODE_ONE_TIME}>
-                                One-time
-                            </Radio.Button>
-                            <Radio.Button value={INGEST_MODE_SCANNER}>
-                                Scanner
-                            </Radio.Button>
-                        </Radio.Group>
-                    </Form.Item>
+                    <Row gutter={8}>
+                        <Col span={5}>
+                            <Form.Item
+                                initialValue={INGEST_MODE_ONE_TIME}
+                                label={"Job Type"}
+                                name={"ingestMode"}
+                                tooltip={
+                                    "Scanner: continuously polls S3 for new objects and" +
+                                    " compresses them automatically."
+                                }
+                            >
+                                <Radio.Group
+                                    style={{width: "100%"}}
+                                >
+                                    <Radio.Button
+                                        style={{width: "50%", textAlign: "center"}}
+                                        value={INGEST_MODE_ONE_TIME}
+                                    >
+                                        One-time
+                                    </Radio.Button>
+                                    <Radio.Button
+                                        style={{width: "50%", textAlign: "center"}}
+                                        value={INGEST_MODE_SCANNER}
+                                    >
+                                        Scanner
+                                    </Radio.Button>
+                                </Radio.Group>
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                )}
+                {showClpSFields && (
+                    <Row gutter={8}>
+                        <Col span={5}>
+                            <Form.Item
+                                initialValue={false}
+                                label={"Logs Type"}
+                                name={"unstructured"}
+                                tooltip={LOGS_TYPE_HELPER_TEXT}
+                            >
+                                <Radio.Group style={{width: "100%"}}>
+                                    <Radio.Button
+                                        style={{width: "50%", textAlign: "center"}}
+                                        value={false}
+                                    >
+                                        JSON
+                                    </Radio.Button>
+                                    <Radio.Button
+                                        style={{width: "50%", textAlign: "center"}}
+                                        value={true}
+                                    >
+                                        Text
+                                    </Radio.Button>
+                                </Radio.Group>
+                            </Form.Item>
+                        </Col>
+                        <Col span={19}>
+                            <Form.Item
+                                label={"Timestamp Key"}
+                                name={"timestampKey"}
+                                tooltip={TIMESTAMP_KEY_HELPER_TEXT}
+                            >
+                                <Input
+                                    disabled={unstructured}
+                                    placeholder={TIMESTAMP_KEY_PLACEHOLDER_TEXT}/>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                 )}
                 {isS3Input ?
                     <S3InputFormItems isScanner={isScanner}/> :
                     <PathsSelectFormItem/>}
-                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <ClpSFormItems/>}
+                {showClpSFields && <ClpSFormItems/>}
                 {isScanner && <ScannerAdvancedFormItems/>}
                 <br/>
                 <SubmitFormItem isSubmitting={isSubmitting}/>
-
                 {isSuccess && (
                     <Typography.Text type={"success"}>
                         {getSuccessMessage(data)}
@@ -205,6 +309,5 @@ const Compress = () => {
         </DashboardCard>
     );
 };
-
 
 export default Compress;

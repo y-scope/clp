@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -23,7 +24,7 @@ type LoadDataNode = Parameters<NonNullable<TreeSelectProps["loadData"]>>[0];
 type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0];
 
 /**
- * Form item with TreeSelect for browsing and selecting S3 keys/prefixes.
+ * Form item with TreeSelect for browsing and selecting an S3 key/prefix.
  *
  * @param props
  * @param props.bucket
@@ -47,6 +48,7 @@ const S3KeySelectFormItem = ({
     s3Error: string | null;
 }) => {
     const [listHeight, setListHeight] = useState<number>(getListHeight);
+    const lastValidValue = useRef<string>(undefined);
 
     useEffect(() => {
         const handleResize = () => {
@@ -103,13 +105,23 @@ const S3KeySelectFormItem = ({
 
     return (
         <Form.Item
+            getValueFromEvent={(value: string) => {
+                // Filter out load-more pseudo-values so they never become the
+                // form field value; restore the last valid selection instead.
+                if ("string" === typeof value && value.startsWith(LOAD_MORE_PREFIX)) {
+                    return lastValidValue.current;
+                }
+                lastValidValue.current = value;
+
+                return value;
+            }}
             help={s3Error || ""}
-            name={"s3Paths"}
-            rules={[{required: true, message: "Please select at least one S3 key or prefix"}]}
+            name={"s3Path"}
+            rules={[{required: true, message: "Please select an S3 key or prefix"}]}
             label={isScanner ?
-                "S3 Prefixes" :
-                "S3 Keys"}
-            tooltip={"Select S3 object keys or prefixes to compress." +
+                "S3 Prefix" :
+                "S3 Key"}
+            tooltip={"Select an S3 object key or prefix to compress." +
                 " Selecting a prefix compresses all objects under it."}
             validateStatus={s3Error ?
                 "error" :
@@ -118,19 +130,16 @@ const S3KeySelectFormItem = ({
             <TreeSelect
                 allowClear={true}
                 listHeight={listHeight}
-                multiple={true}
                 notFoundContent={null}
-                showCheckedStrategy={TreeSelect.SHOW_PARENT}
                 showSearch={false}
                 switcherIcon={SwitcherIcon}
-                treeCheckable={true}
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
                 treeNodeLabelProp={"value"}
                 {...(hasBucketAndRegion && {loadData: handleLoadData})}
                 placeholder={hasBucketAndRegion ?
-                    "Browse and select S3 keys or prefixes" :
+                    "Browse and select an S3 key or prefix" :
                     "Enter a bucket name and region first"}
                 treeData={null !== s3Error ?
                     [] :

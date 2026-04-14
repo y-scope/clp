@@ -91,7 +91,7 @@ const applyS3Paths = (
 interface BuildS3PayloadArgs {
     bucket: string;
     regionCode: string;
-    s3Paths: string[] | undefined;
+    s3Paths: string[];
     scanner: boolean;
     values: ClpSFormValues;
 }
