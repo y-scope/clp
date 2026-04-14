@@ -116,7 +116,7 @@ const buildS3Payload = (args: BuildS3PayloadArgs): S3CompressionJobCreation => {
         scanner: scanner,
     };
 
-    if (s3Paths && 0 < s3Paths.length) {
+    if (0 < s3Paths.length) {
         applyS3Paths(payload, s3Paths);
     }
     if (scanner) {
@@ -140,9 +140,50 @@ const buildS3Payload = (args: BuildS3PayloadArgs): S3CompressionJobCreation => {
     return payload;
 };
 
+type SubmitResult = {
+    type: "compression";
+    jobId: number;
+} | {
+    type: "scanner";
+    jobIds: number[];
+};
+
+/**
+ * Formats the success message for a submit result.
+ *
+ * @param result
+ * @return
+ */
+const getSuccessMessage = (result: SubmitResult): string => {
+    if ("scanner" === result.type) {
+        const ids = result.jobIds.join(", ");
+        return 1 === result.jobIds.length ?
+            `Scanner job created with ID: ${ids}` :
+            `Scanner jobs created with IDs: ${ids}`;
+    }
+
+    return `Compression job submitted with ID: ${result.jobId.toString()}`;
+};
+
+/**
+ * Filters S3 paths to valid non-empty strings.
+ *
+ * @param s3Paths
+ * @return
+ */
+const filterValidS3Paths = (s3Paths?: string[]): string[] => {
+    return s3Paths?.filter(
+        (p): p is string => "string" === typeof p && 0 < p.trim().length,
+    ) ?? [];
+};
+
 
 export {
     applyClpSFields,
     applyS3Paths,
     buildS3Payload,
+    filterValidS3Paths,
+    getSuccessMessage,
 };
+
+export type {SubmitResult};

@@ -45,8 +45,7 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
                         <AutoComplete
                             filterOption={true}
                             options={REGION_OPTIONS}
-                            placeholder={REGION_PLACEHOLDER_TEXT}
-                        />
+                            placeholder={REGION_PLACEHOLDER_TEXT}/>
                     </Form.Item>
                 </Col>
                 <Col span={19}>

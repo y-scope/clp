@@ -57,10 +57,10 @@ const ROOT_NODE: S3TreeNode = Object.freeze({
     id: ROOT_ID,
     isLeaf: false,
     isPrefix: true,
+    label: "/",
     pId: "",
     title: ROOT_TITLE,
     value: ROOT_PREFIX,
-    label: "/",
 });
 
 export type {S3TreeNode};

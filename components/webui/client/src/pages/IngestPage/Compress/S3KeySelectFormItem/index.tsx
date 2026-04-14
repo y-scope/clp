@@ -48,7 +48,7 @@ const S3KeySelectFormItem = ({
     s3Error: string | null;
 }) => {
     const [listHeight, setListHeight] = useState<number>(getListHeight);
-    const lastValidValue = useRef<string>(undefined);
+    const lastValidValue = useRef<string | null>(null);
 
     useEffect(() => {
         const handleResize = () => {
@@ -105,6 +105,9 @@ const S3KeySelectFormItem = ({
 
     return (
         <Form.Item
+            help={s3Error || ""}
+            name={"s3Path"}
+            rules={[{required: true, message: "Please select an S3 key or prefix"}]}
             getValueFromEvent={(value: string) => {
                 // Filter out load-more pseudo-values so they never become the
                 // form field value; restore the last valid selection instead.
@@ -115,9 +118,6 @@ const S3KeySelectFormItem = ({
 
                 return value;
             }}
-            help={s3Error || ""}
-            name={"s3Path"}
-            rules={[{required: true, message: "Please select an S3 key or prefix"}]}
             label={isScanner ?
                 "S3 Prefix" :
                 "S3 Key"}

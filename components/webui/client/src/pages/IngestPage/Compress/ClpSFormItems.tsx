@@ -21,6 +21,7 @@ const ClpSFormItems = () => (
     <Form.Item
         label={"Dataset"}
         name={"dataset"}
+        tooltip={DATASET_HELPER_TEXT}
         rules={[
             {
                 // eslint-disable-next-line @typescript-eslint/require-await
@@ -32,7 +33,6 @@ const ClpSFormItems = () => (
                 },
             },
         ]}
-        tooltip={DATASET_HELPER_TEXT}
     >
         <Input placeholder={DATASET_PLACEHOLDER_TEXT}/>
     </Form.Item>
