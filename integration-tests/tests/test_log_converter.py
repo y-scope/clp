@@ -73,7 +73,7 @@ def _convert_and_compress(
         return
 
     output = run_and_log_subprocess([clp_s_bin_path, "s", compression_path, "timestamp > 0"])
-    num_events = 0 if output.stdout is None else len(output.stdout.strip().split("\n"))
+    num_events = 0 if output.stdout is None else len(output.stdout.splitlines())
     if num_events != test_paths.num_log_events:
         pytest.fail(
             f"Expected {test_paths.num_log_events} log events after conversion, "

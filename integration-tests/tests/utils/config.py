@@ -397,6 +397,6 @@ class ConversionTestPathConfig:
         object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
 
     def clear_test_outputs(self) -> None:
-        """Remove any existing output directories created by this compression test."""
+        """Remove any existing output directories created by this conversion test."""
         remove_path(self.conversion_dir)
         remove_path(self.compression_dir)
