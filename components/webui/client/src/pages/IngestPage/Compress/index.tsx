@@ -81,7 +81,7 @@ const TIMESTAMP_KEY_PLACEHOLDER_TEXT =
 
 const LOGS_TYPE_HELPER_TEXT = (
     <>
-        {"Select \u201cText\u201d for non-JSON logs." +
+        {"Select \u201cText\u201d for unstructured logs." +
         " Each log event will be parsed and converted to JSON with "}
         <Typography.Text
             className={styles["tooltipCode"] || ""}
@@ -212,6 +212,7 @@ const Compress = () => {
                 form={form}
                 layout={"vertical"}
                 onFinish={mutate}
+                requiredMark={"optional"}
             >
                 {isS3Input && (
                     <Row gutter={8}>
