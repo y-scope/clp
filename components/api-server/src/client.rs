@@ -728,7 +728,7 @@ impl Client {
             FROM compression_jobs j \
             JOIN compression_tasks t ON t.job_id = j.id \
             WHERE j.start_time >= ? \
-              AND j.start_time < ?\
+              AND j.start_time < ? \
               {job_status_clause} \
             GROUP BY j.id \
             ORDER BY MAX(j.start_time) DESC \
