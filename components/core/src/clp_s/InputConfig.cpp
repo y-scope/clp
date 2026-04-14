@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cctype>
+#include <chrono>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -9,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <simdjson.h>
@@ -466,5 +469,52 @@ void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> con
             decompressor->close();
         }
     }
+}
+
+auto try_create_reader_and_deduce_type_with_retries(
+        Path const& path,
+        NetworkAuthOption const& network_auth,
+        size_t max_retries
+) -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
+    constexpr std::chrono::seconds cInitialBackoff{1};
+
+    for (size_t attempt{0}; attempt <= max_retries; ++attempt) {
+        if (attempt > 0) {
+            auto const backoff{cInitialBackoff * (1U << (attempt - 1))};
+            SPDLOG_WARN(
+                    "Retrying input {} (attempt {}/{}) after {}s backoff.",
+                    path.path,
+                    attempt,
+                    max_retries,
+                    backoff.count()
+            );
+            std::this_thread::sleep_for(backoff);
+        }
+
+        auto reader{try_create_reader(path, network_auth)};
+        if (nullptr == reader) {
+            if (attempt < max_retries) {
+                SPDLOG_WARN("Failed to create reader for {}, will retry.", path.path);
+                continue;
+            }
+            SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
+            return {{}, FileType::Unknown};
+        }
+
+        auto result = try_deduce_reader_type(reader);
+        auto const& [nested_readers, file_type] = result;
+
+        if (FileType::Unknown == file_type
+            && NetworkUtils::is_retryable_curl_error(reader.get())
+            && attempt < max_retries)
+        {
+            NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+            continue;
+        }
+
+        return result;
+    }
+
+    return {{}, FileType::Unknown};
 }
 }  // namespace clp_s
