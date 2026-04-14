@@ -1,5 +1,3 @@
-import {useState} from "react";
-
 import {
     AutoComplete,
     Col,
@@ -34,9 +32,6 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
     const bucket = Form.useWatch<string>("bucket");
     const regionCode = Form.useWatch<string>("regionCode");
 
-    const [confirmedBucket, setConfirmedBucket] = useState<string>();
-    const [confirmedRegionCode, setConfirmedRegionCode] = useState<string>();
-
     return (
         <>
             <Row gutter={8}>
@@ -51,12 +46,6 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
                             filterOption={true}
                             options={REGION_OPTIONS}
                             placeholder={REGION_PLACEHOLDER_TEXT}
-                            onBlur={() => {
-                                setConfirmedRegionCode(regionCode);
-                            }}
-                            onSelect={(value: string) => {
-                                setConfirmedRegionCode(value);
-                            }}
                         />
                     </Form.Item>
                 </Col>
@@ -68,22 +57,16 @@ const S3InputFormItems = ({isScanner = false}: {isScanner?: boolean}) => {
                         tooltip={BUCKET_TOOLTIP_TEXT}
                     >
                         <Input
-                            placeholder={BUCKET_PLACEHOLDER_TEXT}
-                            onBlur={() => {
-                                setConfirmedBucket(bucket);
-                            }}
-                        />
+                            placeholder={BUCKET_PLACEHOLDER_TEXT}/>
                     </Form.Item>
                 </Col>
             </Row>
             <S3KeysFormItem
-                bucket={confirmedBucket}
+                bucket={bucket}
                 isScanner={isScanner}
-                regionCode={confirmedRegionCode}
-            />
+                regionCode={regionCode}/>
         </>
     );
 };
-
 
 export default S3InputFormItems;
