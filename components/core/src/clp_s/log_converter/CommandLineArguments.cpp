@@ -138,10 +138,11 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
                 " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
                 " variables, and optionally the AWS_SESSION_TOKEN environment variable."
         )(
-                    "max-log-event-size",
-                    po::value<size_t>(&m_max_log_event_size)->value_name("LOG_EVENT_SIZE")->
-                        default_value(m_max_log_event_size),
-                    "Maximum allowed size (B) for a single log event before conversion fails."
+                "max-log-event-size",
+                po::value<size_t>(&m_max_log_event_size)
+                    ->value_name("LOG_EVENT_SIZE")
+                    ->default_value(m_max_log_event_size),
+                "Maximum allowed size (B) for a single log event before conversion fails."
         );
         // clang-format on
 
