@@ -221,6 +221,7 @@ const Compress = () => {
                                 initialValue={INGEST_MODE_ONE_TIME}
                                 label={"Job Type"}
                                 name={"ingestMode"}
+                                required={true}
                                 tooltip={
                                     "Scanner: continuously polls S3 for new objects and" +
                                     " compresses them automatically."
@@ -253,6 +254,7 @@ const Compress = () => {
                                 initialValue={false}
                                 label={"Logs Type"}
                                 name={"unstructured"}
+                                required={true}
                                 tooltip={LOGS_TYPE_HELPER_TEXT}
                             >
                                 <Radio.Group style={{width: "100%"}}>

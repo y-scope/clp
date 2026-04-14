@@ -112,6 +112,7 @@ const S3KeysFormItem = ({
             <Form.Item
                 help={s3Error || ""}
                 label={isScanner ? "S3 Prefixes" : "S3 Keys"}
+                required={true}
                 tooltip={"Select S3 object keys or prefixes to compress." +
                     " Selecting a prefix compresses all objects under it."}
                 validateStatus={s3Error ? "error" : ""}
