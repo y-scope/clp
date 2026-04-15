@@ -54,7 +54,7 @@ log_ingestor: null
 #  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
-#  concurrency: 16
+#  scheduler_concurrency: 16
 #
 #queue:
 #  host: "localhost"

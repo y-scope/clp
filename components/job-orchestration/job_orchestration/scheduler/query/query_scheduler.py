@@ -1085,10 +1085,10 @@ async def handle_jobs(
     num_archives_to_search_per_sub_job: int,
     max_datasets_per_query: int | None,
     archive_retention_period: int | None,
-    concurrency: int,
+    scheduler_concurrency: int,
 ) -> None:
     with concurrent.futures.ProcessPoolExecutor(
-        max_workers=concurrency,
+        max_workers=scheduler_concurrency,
         initializer=DispatchExecutor.initialize,
         initargs=(database_config, clp_metadata_db_conn_params, results_cache_uri),
     ) as process_pool:
@@ -1199,7 +1199,7 @@ async def main(argv: list[str]) -> int:
                 num_archives_to_search_per_sub_job=batch_size,
                 max_datasets_per_query=clp_config.query_scheduler.max_datasets_per_query,
                 archive_retention_period=clp_config.archive_output.retention_period,
-                concurrency=clp_config.query_scheduler.concurrency,
+                scheduler_concurrency=clp_config.query_scheduler.scheduler_concurrency,
             )
         )
         reducer_handler = asyncio.create_task(reducer_handler.serve_forever())
