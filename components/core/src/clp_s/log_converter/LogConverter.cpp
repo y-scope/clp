@@ -136,7 +136,7 @@ auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void
     }
 
     size_t const new_size{2 * m_buffer.size()};
-    if (new_size > cMaxBufferSize) {
+    if (new_size > m_max_buffer_size) {
         return std::errc::result_out_of_range;
     }
     ystdlib::containers::Array<char> new_buffer(new_size);
