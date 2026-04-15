@@ -1539,6 +1539,8 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 // heuristic
                 "INT",
                 // hive
+                "blk_id",
+                "blk_gen",
                 "used_memory_size",
                 "launcher_number",
                 "line_number",
