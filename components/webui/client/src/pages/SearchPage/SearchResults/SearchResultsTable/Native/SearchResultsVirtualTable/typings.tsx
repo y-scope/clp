@@ -1,11 +1,20 @@
+import {CopyOutlined} from "@ant-design/icons";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {TableProps} from "antd";
+import {
+    Button,
+    TableProps,
+    Tooltip,
+} from "antd";
 import dayjs from "dayjs";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../../../../config";
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../../../typings/datetime";
 import Message from "../Message";
-import {getStreamId} from "../utils";
+import {
+    getExportEventTimestamp,
+    getStreamId,
+} from "../utils";
+import ActionsHeader from "./ActionsHeader";
 
 
 /**
@@ -24,14 +33,68 @@ interface SearchResult {
 }
 
 /**
- * Columns configuration for the search results table.
+ * Formats a numeric timestamp as a UTC datetime string.
+ *
+ * @param timestamp
+ * @return The formatted datetime string.
  */
+const formatTimestamp = (timestamp: number): string => (
+    dayjs.utc(timestamp).format(DATETIME_FORMAT_TEMPLATE)
+);
+
+/**
+ * Serializes a search result as a JSONL line. If the message field is valid
+ * JSON it is included as a parsed object; otherwise it is kept as a string.
+ *
+ * @param result
+ * @return A single JSON line (without trailing newline).
+ */
+const formatResultAsJsonl = (result: SearchResult): string => {
+    let messageValue: unknown;
+    try {
+        messageValue = JSON.parse(result.message);
+    } catch {
+        messageValue = result.message;
+    }
+
+    return JSON.stringify({
+        timestamp: getExportEventTimestamp(result.timestamp),
+        message: messageValue,
+    });
+};
+
+/**
+ * Cell renderer for the Actions column. Renders a per-row copy button.
+ *
+ * @param _
+ * @param record
+ * @return
+ */
+const renderActionsCell = (_: unknown, record: SearchResult) => {
+    const handleCopyRow = () => {
+        navigator.clipboard.writeText(formatResultAsJsonl(record))
+            .catch((e: unknown) => {
+                console.error("Failed to copy search result to clipboard", e);
+            });
+    };
+
+    return (
+        <Tooltip title={"Copy this event"}>
+            <Button
+                icon={<CopyOutlined/>}
+                size={"small"}
+                type={"text"}
+                onClick={handleCopyRow}/>
+        </Tooltip>
+    );
+};
+
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         dataIndex: "timestamp",
         defaultSortOrder: "descend",
         key: "timestamp",
-        render: (timestamp: number) => dayjs.utc(timestamp).format(DATETIME_FORMAT_TEMPLATE),
+        render: (timestamp: number) => formatTimestamp(timestamp),
         sorter: (a, b) => {
             const timestampDiff = a.timestamp - b.timestamp;
             if (0 !== timestampDiff) {
@@ -48,7 +111,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
             "ascend",
         ],
         title: "Timestamp",
-        width: 15,
+        width: 12,
     },
     {
         dataIndex: "message",
@@ -66,9 +129,20 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
                 }/>
         ),
         title: "Message",
-        width: 85,
+        width: 82,
+    },
+    {
+        align: "right",
+        key: "actions",
+        render: renderActionsCell,
+        title: <ActionsHeader/>,
+        width: 6,
     },
 ];
 
 export type {SearchResult};
-export {searchResultsTableColumns};
+export {
+    formatResultAsJsonl,
+    formatTimestamp,
+    searchResultsTableColumns,
+};

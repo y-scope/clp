@@ -37,6 +37,12 @@ interface SearchState {
     aggregationJobId: string | null;
 
     /**
+     * Triggers a file download of the current search results. The implementation is registered by
+     * the component that owns the cursor subscription via setOnSearchResultsExport.
+     */
+    onSearchResultsExport: () => void;
+
+    /**
      * The number of search results from server metadata.
      */
     numSearchResultsMetadata: number;
@@ -99,6 +105,7 @@ interface SearchState {
      */
     timelineConfig: TimelineConfig;
 
+    setOnSearchResultsExport: (fn: (() => void) | null) => void;
     updateAggregationJobId: (id: string | null) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
@@ -114,48 +121,58 @@ interface SearchState {
     updateTimelineConfig: (config: TimelineConfig) => void;
 }
 
-const useSearchStore = create<SearchState>((set) => ({
-    ...SEARCH_STATE_DEFAULT,
-    updateAggregationJobId: (id) => {
-        set({aggregationJobId: id});
-    },
-    updateNumSearchResultsMetadata: (num) => {
-        set({numSearchResultsMetadata: num});
-    },
-    updateNumSearchResultsTable: (num) => {
-        set({numSearchResultsTable: num});
-    },
-    updateNumSearchResultsTimeline: (num) => {
-        set({numSearchResultsTimeline: num});
-    },
-    updateQueriedDatasets: (datasets) => {
-        set({queriedDatasets: datasets});
-    },
-    updateQueryIsCaseSensitive: (newValue: boolean) => {
-        set({queryIsCaseSensitive: newValue});
-    },
-    updateQueryString: (query) => {
-        set({queryString: query});
-    },
-    updateSearchJobId: (id) => {
-        set({searchJobId: id});
-    },
-    updateSearchUiState: (state) => {
-        set({searchUiState: state});
-    },
-    updateSelectedDatasets: (datasets) => {
-        set({selectedDatasets: datasets});
-    },
-    updateTimeRange: (range) => {
-        set({timeRange: range});
-    },
-    updateTimeRangeOption: (option: TIME_RANGE_OPTION) => {
-        set({timeRangeOption: option});
-    },
-    updateTimelineConfig: (config) => {
-        set({timelineConfig: config});
-    },
-}));
+const useSearchStore = create<SearchState>((set) => {
+    let onSearchResultsExportImpl: (() => void) | null = null;
+
+    return {
+        ...SEARCH_STATE_DEFAULT,
+        onSearchResultsExport: () => {
+            onSearchResultsExportImpl?.();
+        },
+        setOnSearchResultsExport: (fn) => {
+            onSearchResultsExportImpl = fn;
+        },
+        updateAggregationJobId: (id) => {
+            set({aggregationJobId: id});
+        },
+        updateNumSearchResultsMetadata: (num) => {
+            set({numSearchResultsMetadata: num});
+        },
+        updateNumSearchResultsTable: (num) => {
+            set({numSearchResultsTable: num});
+        },
+        updateNumSearchResultsTimeline: (num) => {
+            set({numSearchResultsTimeline: num});
+        },
+        updateQueriedDatasets: (datasets) => {
+            set({queriedDatasets: datasets});
+        },
+        updateQueryIsCaseSensitive: (newValue: boolean) => {
+            set({queryIsCaseSensitive: newValue});
+        },
+        updateQueryString: (query) => {
+            set({queryString: query});
+        },
+        updateSearchJobId: (id) => {
+            set({searchJobId: id});
+        },
+        updateSearchUiState: (state) => {
+            set({searchUiState: state});
+        },
+        updateSelectedDatasets: (datasets) => {
+            set({selectedDatasets: datasets});
+        },
+        updateTimeRange: (range) => {
+            set({timeRange: range});
+        },
+        updateTimeRangeOption: (option: TIME_RANGE_OPTION) => {
+            set({timeRangeOption: option});
+        },
+        updateTimelineConfig: (config) => {
+            set({timelineConfig: config});
+        },
+    };
+});
 
 
 export {SEARCH_STATE_DEFAULT};

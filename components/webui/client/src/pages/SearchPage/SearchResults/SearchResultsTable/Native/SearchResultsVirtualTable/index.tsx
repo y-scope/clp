@@ -3,19 +3,14 @@ import {
     useEffect,
 } from "react";
 
-import {DownloadOutlined} from "@ant-design/icons";
-import {
-    Button,
-    message,
-    Tooltip,
-} from "antd";
-import dayjs from "dayjs";
+import {message} from "antd";
 
 import VirtualTable from "../../../../../../components/VirtualTable";
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../../../typings/datetime";
+import {downloadTextFile} from "../../../../../../utils/download";
 import useSearchStore from "../../../../SearchState/index";
-import styles from "./index.module.css";
+import {getExportFilenameTimestamp} from "../utils";
 import {
+    formatResultAsJsonl,
     SearchResult,
     searchResultsTableColumns,
 } from "./typings";
@@ -27,23 +22,22 @@ interface SearchResultsVirtualTableProps {
 }
 
 /**
- * Formats a search result as a "timestamp message" string.
+ * Renders search results in a virtual table and registers an export handler
+ * with the search store so the table-header export button can trigger a download
+ * without a duplicate cursor subscription.
  *
- * @param result
- * @return The formatted line.
- */
-const formatResultLine = (result: SearchResult): string =>
-    `${dayjs.utc(result.timestamp).format(DATETIME_FORMAT_TEMPLATE)} ${result.message}`;
-
-/**
- * Renders search results in a virtual table with an export button.
+ * NOTE: Export is currently only available for the Native search engine. The
+ * Presto engine's PrestoResultsVirtualTable does not yet support export.
  *
  * @param props
  * @param props.tableHeight
  * @return
  */
 const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps) => {
-    const {updateNumSearchResultsTable} = useSearchStore();
+    const {
+        setOnSearchResultsExport,
+        updateNumSearchResultsTable,
+    } = useSearchStore();
     const searchResults = useSearchResults();
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -59,59 +53,52 @@ const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps
     ]);
 
     /**
-     * Exports all search results as a text file download. Results are written
-     * into a Blob incrementally to avoid building a single large string.
+     * Exports all search results as a JSONL file download.
+     *
+     * NOTE: Results are exported in the original cursor order (i.e., timestamp descending),
+     * which may differ from the user's current table sort.
      */
-    const handleExportAll = useCallback(() => {
+    const handleExport = useCallback(() => {
         if (null === searchResults || 0 === searchResults.length) {
             return;
         }
 
-        const parts: string[] = [];
-        for (const result of searchResults) {
-            parts.push(formatResultLine(result));
-            parts.push("\n");
+        try {
+            downloadTextFile(
+                searchResults.map((r) => `${formatResultAsJsonl(r)}\n`),
+                `clp-search-results-${getExportFilenameTimestamp()}.jsonl`
+            );
+            messageApi.success(`Exported ${searchResults.length} results`);
+        } catch (e) {
+            messageApi.error("Failed to export results");
+            console.error(e);
         }
-
-        const blob = new Blob(parts, {type: "text/plain"});
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = "search-results.txt";
-        anchor.click();
-        URL.revokeObjectURL(url);
-
-        messageApi.success(`Exported ${searchResults.length} results`);
     }, [
-        searchResults,
         messageApi,
+        searchResults,
     ]);
 
-    const hasResults = null !== searchResults && 0 < searchResults.length;
+    useEffect(() => {
+        setOnSearchResultsExport(handleExport);
+
+        return () => {
+            setOnSearchResultsExport(null);
+        };
+    }, [
+        handleExport,
+        setOnSearchResultsExport,
+    ]);
 
     return (
-        <div>
+        <>
             {contextHolder}
-            {hasResults && (
-                <div className={styles["exportButtonContainer"] || ""}>
-                    <Tooltip title={"Export all results as a text file"}>
-                        <Button
-                            icon={<DownloadOutlined/>}
-                            size={"small"}
-                            onClick={handleExportAll}
-                        >
-                            {"Export All"}
-                        </Button>
-                    </Tooltip>
-                </div>
-            )}
             <VirtualTable<SearchResult>
                 columns={searchResultsTableColumns}
                 dataSource={searchResults || []}
                 pagination={false}
                 rowKey={(record) => record._id}
-                scroll={{y: tableHeight, x: "max-content"}}/>
-        </div>
+                scroll={{y: tableHeight}}/>
+        </>
     );
 };
 

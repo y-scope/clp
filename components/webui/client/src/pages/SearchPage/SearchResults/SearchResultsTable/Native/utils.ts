@@ -1,4 +1,5 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import dayjs from "dayjs";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
 import type {SearchResult} from "./SearchResultsVirtualTable/typings";
@@ -16,5 +17,28 @@ const getStreamId = (result: SearchResult): string => {
         result.archive_id;
 };
 
+/**
+ * Formats a numeric timestamp of an event as an ISO 8601 string.
+ *
+ * @param timestamp
+ * @return ISO 8601 string.
+ */
+const getExportEventTimestamp = (timestamp: number): string => (
+    dayjs(timestamp).toISOString()
+);
 
-export {getStreamId};
+/**
+ * Returns a filesystem-safe timestamp string suitable for export filenames.
+ *
+ * @return ISO-8601-like string with colons and dots replaced by dashes.
+ */
+const getExportFilenameTimestamp = (): string => (
+    dayjs().format("YYYY-MM-DDTHH-mm-ss-SSS[Z]")
+);
+
+
+export {
+    getExportEventTimestamp,
+    getExportFilenameTimestamp,
+    getStreamId,
+};
