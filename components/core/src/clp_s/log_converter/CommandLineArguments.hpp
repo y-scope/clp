@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -34,6 +35,8 @@ public:
 
     [[nodiscard]] auto get_output_dir() const -> std::string const& { return m_output_dir; }
 
+    [[nodiscard]] auto get_max_log_event_size() const -> size_t { return m_max_log_event_size; }
+
 private:
     // Methods
     void print_basic_usage() const;
@@ -43,6 +46,7 @@ private:
     std::vector<Path> m_input_paths;
     NetworkAuthOption m_network_auth{};
     std::string m_output_dir{"./"};
+    size_t m_max_log_event_size{512ULL * 1024ULL * 1024ULL};  // 512 MiB
 };
 }  // namespace clp_s::log_converter
 
