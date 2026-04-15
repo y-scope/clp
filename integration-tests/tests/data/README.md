@@ -45,7 +45,7 @@ rules must be observed:
    <dt><code>dataset_name</code></dt>
    <dd>The name of the dataset directory.</dd>
    <dt><code>unstructured</code></dt>
-   <dd>`True` if logs are unstructured, else `False`.</dd>
+   <dd><code>True</code> if logs are unstructured, else <code>False</code>.</dd>
    <dt><code>timestamp_key</code></dt>
    <dd>The authoritative timestamp key, or `null` if there is no such key.</dd>
    <dt><code>begin_ts</code></dt>
