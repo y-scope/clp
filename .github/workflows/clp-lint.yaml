@@ -23,25 +23,19 @@ jobs:
           - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - uses: "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-python"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
         with:
-          python-version: "3.11"
+          version: "3.48.0"
 
-      - name: "Install task"
-        shell: "bash"
-        run: "npm install -g @go-task/cli@3.48.0"
-
-      - name: "Install uv"
-        shell: "bash"
-        run: "curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh"
-
-      - if: "matrix.os == 'macos-15'"
-        name: "Install coreutils (for md5sum)"
-        run: "brew install coreutils"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
 
       # This is a necessary dependency for the Python mariadb package which is a transitive
       # dependency of `lint:py-check`.

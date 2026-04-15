@@ -26,7 +26,7 @@ namespace {
 [[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
-    LogConverter log_converter;
+    LogConverter log_converter{command_line_arguments.get_max_log_event_size()};
 
     std::error_code ec{};
     if (false == std::filesystem::create_directory(command_line_arguments.get_output_dir(), ec)
@@ -50,6 +50,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
         auto [nested_readers, file_type] = clp_s::try_deduce_reader_type(reader);
         switch (file_type) {
             case clp_s::FileType::LogText:
+            case clp_s::FileType::EmptyFile:
                 break;
             case clp_s::FileType::Json:
             case clp_s::FileType::KeyValueIr:

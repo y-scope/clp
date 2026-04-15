@@ -6,21 +6,21 @@ WORKDIR /root
 
 RUN mkdir -p ./tools/scripts/lib_install
 COPY --link ./tools/scripts/lib_install ./tools/scripts/lib_install
+COPY --link ./tools/scripts/corporate-proxy-container.sh ./tools/scripts/corporate-proxy-container.sh
+COPY --link ./tools/scripts/ca-certificates.crt ./tools/scripts/ca-certificates.crt
 # Corporate proxy support: install host CA certificates into the container's
 # trust store so tools like curl and apt can verify TLS through intercepting
-# proxies (e.g., Zscaler, Fortinet, Palo Alto). No-op when not behind a
-# corporate proxy. See proxy-lib.sh for details.
-RUN ./tools/scripts/lib_install/setup-corporate-proxy.sh
+# proxies (e.g., Zscaler, Fortinet, Palo Alto). See corporate-proxy-host.sh
+# for details.
+RUN ./tools/scripts/corporate-proxy-container.sh
 
-# Point pip/pipx and curl at the system trust store. By default, Python's
-# "certifi" package bundles its own CA store and ignores system certificates,
-# which means pip/pipx would still fail behind a corporate proxy even after
-# updating the system trust store above. These env vars override that behavior.
-# Without corporate certs, these paths are the normal system bundles — harmless.
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-    PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+# Point pip/pipx and curl at the CA bundle installed by corporate-proxy-container.sh.
+# This path is outside the system package manager's control, so it survives reinstalls of
+# ca-certificates (which regenerates the system bundle).
+ENV CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    PIP_CERT=/opt/corp-ca/ca-bundle.crt \
+    REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt
 
 # Optional: override Ubuntu mirrors (e.g., organization-internal or regional).
 # Usage: APT_MIRROR_URL=<url> ./build.sh
@@ -62,3 +62,9 @@ RUN apt-get clean \
 # Flatten the image
 FROM scratch
 COPY --link --from=base / /
+ENV CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    PIP_CERT=/opt/corp-ca/ca-bundle.crt \
+    REQUESTS_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
+    SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt
+ENV PIPX_BIN_DIR=/usr/local/bin
+ENV PIPX_HOME=/opt/pipx

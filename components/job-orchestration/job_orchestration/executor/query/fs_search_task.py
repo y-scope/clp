@@ -26,7 +26,7 @@ from job_orchestration.executor.query.utils import (
 )
 from job_orchestration.executor.utils import load_worker_config
 from job_orchestration.scheduler.job_config import SearchJobConfig
-from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
+from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -189,6 +189,25 @@ def _make_command_and_env_vars(
     return command, env_vars
 
 
+def upload_results_to_s3(
+    task_results: QueryTaskResult, s3_config: Any, src_file: Path, dest_path: str
+):
+    if not src_file.exists() or src_file.stat().st_size == 0:
+        logger.info(f"Skipping upload for empty query results file {dest_path} to S3.")
+        src_file.unlink(missing_ok=True)
+        return
+    logger.info(f"Uploading query results {dest_path} to S3...")
+    try:
+        s3_put(s3_config, src_file, dest_path)
+        logger.info(f"Finished uploading query results {dest_path} to S3.")
+    except Exception as err:
+        logger.error(f"Failed to upload query results {dest_path}: {err}")
+        task_results.status = QueryTaskStatus.FAILED
+        task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
+    src_file.unlink()
+    return
+
+
 @app.task(bind=True)
 def search(
     self: Task,
@@ -262,18 +281,8 @@ def search(
         and QueryTaskStatus.SUCCEEDED == task_results.status
     ):
         s3_config = storage_config.s3_config
-        dest_path = f"{job_id}/{archive_id}"
         src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
-
-        logger.info(f"Uploading query results {dest_path} to S3...")
-        try:
-            s3_put(s3_config, src_file, dest_path)
-            logger.info(f"Finished uploading query results {dest_path} to S3.")
-        except Exception as err:
-            logger.error(f"Failed to upload query results {dest_path}: {err}")
-            task_results.status = QueryTaskStatus.FAILED
-            task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
-
-        src_file.unlink()
+        dest_path = f"{job_id}/{archive_id}"
+        upload_results_to_s3(task_results, s3_config, src_file, dest_path)
 
     return task_results.model_dump()
