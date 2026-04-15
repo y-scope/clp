@@ -91,7 +91,8 @@ public:
      */
     auto schema_init(int32_t schema_id) -> EvaluatedValue;
 
-    static uint64_t msg_filter_count;
+    static uint64_t m_int_filter_count;
+    static uint64_t m_str_filter_count;
 
 protected:
     // Methods inherited from FilterClass

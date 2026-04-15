@@ -508,7 +508,8 @@ int main(int argc, char const* argv[]) {
             }
             archive_reader->close();
         }
-        SPDLOG_INFO("[stats] msg_filter_count: {}", clp_s::search::QueryRunner::msg_filter_count);
+        SPDLOG_INFO("[stats] int_filter_count: {}", clp_s::search::QueryRunner::m_int_filter_count);
+        SPDLOG_INFO("[stats] str_filter_count: {}", clp_s::search::QueryRunner::m_str_filter_count);
     }
 
     return 0;
