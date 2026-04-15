@@ -490,10 +490,13 @@ void ArchiveReader::close() {
     }
     m_is_open = false;
 
+    SPDLOG_INFO("[stats] var dict size: {}", m_var_dict->get_entries().size());
     m_var_dict->close();
     if (nullptr != m_typed_log_dict) {
+        SPDLOG_INFO("[stats] log dict size: {}", m_typed_log_dict->get_entries().size());
         m_typed_log_dict->close();
     } else {
+        SPDLOG_INFO("[stats] log dict size: {}", m_log_dict->get_entries().size());
         m_log_dict->close();
     }
     if (m_logtype_metadata.has_value()) {
