@@ -126,6 +126,7 @@ const useSearchStore = create<SearchState>((set) => {
 
     return {
         ...SEARCH_STATE_DEFAULT,
+
         onSearchResultsExport: () => {
             onSearchResultsExportImpl?.();
         },
