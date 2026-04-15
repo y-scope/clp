@@ -21,6 +21,10 @@ pub struct SearchJobConfig {
     pub network_address: Option<(String, u16)>,
     pub aggregation_config: Option<()>,
     pub write_to_file: bool,
+    /// Optional set of archive IDs to restrict the search to. When populated by the API server's
+    /// time-range pruning logic, query workers should only scan these archives instead of all
+    /// archives in the dataset.
+    pub archive_ids_filter: Option<Vec<String>>,
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.

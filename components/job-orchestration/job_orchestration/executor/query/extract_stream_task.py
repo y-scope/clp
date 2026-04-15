@@ -33,6 +33,19 @@ from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 # Setup logging
 logger = get_task_logger(__name__)
 
+# Module-level cached SqlAdapter to reuse DB connections across tasks within the same worker.
+_cached_sql_adapter: SqlAdapter | None = None
+_cached_sql_adapter_params: dict | None = None
+
+
+def _get_or_create_sql_adapter(clp_metadata_db_conn_params: dict) -> SqlAdapter:
+    global _cached_sql_adapter, _cached_sql_adapter_params
+    if _cached_sql_adapter is not None and _cached_sql_adapter_params == clp_metadata_db_conn_params:
+        return _cached_sql_adapter
+    _cached_sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
+    _cached_sql_adapter_params = clp_metadata_db_conn_params
+    return _cached_sql_adapter
+
 
 def _make_clp_command_and_env_vars(
     clp_home: Path,
@@ -203,7 +216,7 @@ def extract_stream(
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus
-    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
+    sql_adapter = _get_or_create_sql_adapter(clp_metadata_db_conn_params)
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))

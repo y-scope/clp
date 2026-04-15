@@ -209,6 +209,15 @@ class JsonExtractionHandle(StreamExtractionHandle):
 
 
 def document_exists(mongodb_uri, collection_name, field, value):
+    """
+    Checks if a document exists in a MongoDB collection.
+
+    NOTE: This function accepts either a URI string or a pymongo.MongoClient instance.
+    When a MongoClient is passed, it is reused without creating a new connection.
+    """
+    if isinstance(mongodb_uri, pymongo.MongoClient):
+        collection = mongodb_uri.get_default_database()[collection_name]
+        return 0 != collection.count_documents({field: value})
     with pymongo.MongoClient(mongodb_uri) as mongo_client:
         collection = mongo_client.get_default_database()[collection_name]
         return 0 != collection.count_documents({field: value})
@@ -384,17 +393,30 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
 
 
 def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[int]:
+    """
+    Inserts query tasks into the DB using batch INSERT for better throughput.
+    Falls back to row-by-row insertion if batch insert fails.
+    """
+    if not archive_ids:
+        return []
+
     task_ids = []
     with contextlib.closing(db_conn.cursor()) as cursor:
-        for archive_id in archive_ids:
-            cursor.execute(
-                f"""
-                INSERT INTO {QUERY_TASKS_TABLE_NAME}
-                (job_id, archive_id)
-                VALUES({job_id}, '{archive_id}')
-                """
+        # Batch insert: build a single INSERT with multiple value tuples.
+        # This reduces round-trips from N to 1 for each sub-job dispatch.
+        BATCH_SIZE = 500
+        for batch_start in range(0, len(archive_ids), BATCH_SIZE):
+            batch = archive_ids[batch_start : batch_start + BATCH_SIZE]
+            placeholders = ", ".join(
+                [f"({job_id}, %s)"] * len(batch)
             )
-            task_ids.append(cursor.lastrowid)
+            cursor.execute(
+                f"INSERT INTO {QUERY_TASKS_TABLE_NAME} (job_id, archive_id) VALUES {placeholders}",
+                batch,
+            )
+            # Retrieve the auto-increment IDs for the batch.
+            first_id = cursor.lastrowid
+            task_ids.extend(range(first_id, first_id + len(batch)))
     db_conn.commit()
     return task_ids
 
@@ -736,12 +758,16 @@ def handle_pending_query_jobs(
                 job.search_config.network_address is None
                 and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
             ):
-                archives_for_search = job.remaining_archives_for_search[
-                    :num_archives_to_search_per_sub_job
+                # Dispatch up to 4 sub-job batches concurrently per job to increase parallelism
+                # across workers, rather than waiting for each batch to complete sequentially.
+                max_concurrent_batches = 4
+                all_archives_for_dispatch = job.remaining_archives_for_search[
+                    : num_archives_to_search_per_sub_job * max_concurrent_batches
                 ]
                 job.remaining_archives_for_search = job.remaining_archives_for_search[
-                    num_archives_to_search_per_sub_job:
+                    num_archives_to_search_per_sub_job * max_concurrent_batches :
                 ]
+                archives_for_search = all_archives_for_dispatch
             else:
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
@@ -770,32 +796,43 @@ def try_getting_task_result(async_task_result):
 
 
 def found_max_num_latest_results(
-    results_cache_uri: str,
+    results_cache_uri,
     job_id: str,
     max_num_results: int,
     max_timestamp_in_remaining_archives: int,
 ) -> bool:
-    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-        results_cache_collection = results_cache_client.get_default_database()[job_id]
-        results_count = results_cache_collection.count_documents({})
-        if results_count < max_num_results:
-            return False
+    """
+    Checks if the top max_num_results results have timestamps newer than remaining archives.
 
-        results = list(
-            results_cache_collection.find(
-                projection=["timestamp"],
-                sort=[("timestamp", pymongo.DESCENDING)],
-                limit=max_num_results,
-            )
-            .sort("timestamp", pymongo.ASCENDING)
-            .limit(1)
+    NOTE: `results_cache_uri` can be either a URI string or a pymongo.MongoClient instance.
+    When a MongoClient is passed, it is reused without creating a new connection.
+    """
+    if isinstance(results_cache_uri, pymongo.MongoClient):
+        results_cache_collection = results_cache_uri.get_default_database()[job_id]
+    else:
+        # Fallback for backward compatibility.
+        client = pymongo.MongoClient(results_cache_uri)
+        results_cache_collection = client.get_default_database()[job_id]
+
+    results_count = results_cache_collection.count_documents({})
+    if results_count < max_num_results:
+        return False
+
+    results = list(
+        results_cache_collection.find(
+            projection=["timestamp"],
+            sort=[("timestamp", pymongo.DESCENDING)],
+            limit=max_num_results,
         )
-        min_timestamp_in_top_results = 0 if len(results) == 0 else results[0]["timestamp"]
-        return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
+        .sort("timestamp", pymongo.ASCENDING)
+        .limit(1)
+    )
+    min_timestamp_in_top_results = 0 if len(results) == 0 else results[0]["timestamp"]
+    return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
 async def handle_finished_search_job(
-    db_conn, job: SearchJob, task_results: Any | None, results_cache_uri: str
+    db_conn, job: SearchJob, task_results: Any | None, results_cache_client
 ) -> None:
     global active_jobs
 
@@ -827,7 +864,7 @@ async def handle_finished_search_job(
         # Check if we've reached max results
         elif False == is_reducer_job and max_num_results > 0:
             if found_max_num_latest_results(
-                results_cache_uri,
+                results_cache_client,
                 job_id,
                 max_num_results,
                 job.remaining_archives_for_search[0]["end_timestamp"],
@@ -949,7 +986,7 @@ async def handle_finished_stream_extraction_job(
     del active_jobs[job_id]
 
 
-async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
+async def check_job_status_and_update_db(db_conn_pool, results_cache_client):
     global active_jobs
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
@@ -984,7 +1021,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 search_job: SearchJob = job
                 await handle_finished_search_job(
-                    db_conn, search_job, returned_results, results_cache_uri
+                    db_conn, search_job, returned_results, results_cache_client
                 )
             elif job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
                 await handle_finished_stream_extraction_job(db_conn, job, returned_results)
@@ -993,14 +1030,19 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
-    while True:
-        interval_start_time = datetime.datetime.now()
-        await handle_cancelling_search_jobs(db_conn_pool)
-        await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
-        interval_end_time = datetime.datetime.now()
-        await asyncio.sleep(
-            jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
-        )
+    # Create a persistent MongoClient to avoid connection churn on every sub-job completion.
+    mongo_client = pymongo.MongoClient(results_cache_uri)
+    try:
+        while True:
+            interval_start_time = datetime.datetime.now()
+            await handle_cancelling_search_jobs(db_conn_pool)
+            await check_job_status_and_update_db(db_conn_pool, mongo_client)
+            interval_end_time = datetime.datetime.now()
+            await asyncio.sleep(
+                jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
+            )
+    finally:
+        mongo_client.close()
 
 
 async def handle_jobs(
@@ -1091,7 +1133,7 @@ async def main(argv: list[str]) -> int:
             clp_config.query_scheduler.port,
         )
         db_conn_pool = sql_adapter.create_connection_pool(
-            logger=logger, pool_size=2, disable_localhost_socket_connection=True
+            logger=logger, pool_size=8, disable_localhost_socket_connection=True
         )
 
         if False == db_conn_pool.alive():

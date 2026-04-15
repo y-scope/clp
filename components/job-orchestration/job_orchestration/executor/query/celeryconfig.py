@@ -21,6 +21,17 @@ result_persistent = True
 # Differentiate between tasks that have started v.s. tasks still in queue
 task_track_started = True
 
+# Allow workers to prefetch up to 4 tasks so the next task is ready to execute immediately
+# when the current one finishes, reducing idle time between tasks.
+worker_prefetch_multiplier = 4
+
+# Acknowledge tasks only after they complete (not when received), so that if a worker crashes
+# mid-task, the task is re-delivered to another worker instead of being lost.
+task_acks_late = True
+
+# Reject tasks back to the queue when a worker is shut down, rather than losing them.
+task_reject_on_worker_lost = True
+
 accept_content = [
     "application/json",  # json
     "application/x-python-serialize",  # pickle

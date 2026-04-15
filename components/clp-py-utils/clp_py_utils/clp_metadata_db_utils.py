@@ -173,6 +173,7 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
 
     _create_archives_table(db_cursor, archives_table_name)
     _create_files_table(db_cursor, table_prefix, dataset)
+    _create_archive_time_metadata_table(db_cursor, table_prefix)
 
 
 def delete_archives_from_metadata_db(
@@ -251,3 +252,31 @@ def get_datasets_table_name(table_prefix: str) -> str:
 
 def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
     return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+
+
+def _create_archive_time_metadata_table(db_cursor, table_prefix: str) -> None:
+    """
+    Creates the archive_time_metadata table used for time-range pruning during search.
+    This table stores per-archive time boundaries so the query scheduler can skip archives
+    whose time ranges don't overlap with the search window.
+
+    :param db_cursor: The database cursor to execute the table creation.
+    :param table_prefix: A string to prepend to the table name.
+    """
+    table_name = f"{table_prefix}archive_time_metadata"
+    db_cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{table_name}` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `archive_id` VARCHAR(64) NOT NULL,
+            `dataset` VARCHAR(255) NOT NULL DEFAULT 'default',
+            `min_timestamp` BIGINT NOT NULL,
+            `max_timestamp` BIGINT NOT NULL,
+            `s3_key` VARCHAR(1024) NOT NULL DEFAULT '',
+            `size_bytes` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uk_archive_id` (`archive_id`),
+            INDEX `idx_dataset_time` (`dataset`, `min_timestamp`, `max_timestamp`)
+        )
+        """
+    )

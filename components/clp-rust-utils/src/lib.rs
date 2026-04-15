@@ -1,3 +1,4 @@
+pub mod archive_metadata;
 pub mod aws;
 pub mod clp_config;
 pub mod database;
