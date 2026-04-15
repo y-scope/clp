@@ -76,10 +76,8 @@ To access a dataset from within the test system, the following rules should be o
        integration_test_path_config: IntegrationTestPathConfig,
    ) -> IntegrationTestDataset:
        """Returns an object corresponding to the `dataset_name` test dataset."""
-       dataset_name = "dataset_name"
        return IntegrationTestDataset(
-           dataset_name=dataset_name,
-           path_to_dataset_root=integration_test_path_config.test_data_path / dataset_name,
+           path_to_dataset_root=integration_test_path_config.test_data_path / "dataset_name",
        )
    ```
 
