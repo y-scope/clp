@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+
 #include "clp_s/SchemaReader.hpp"
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
@@ -507,7 +508,7 @@ int main(int argc, char const* argv[]) {
             }
             archive_reader->close();
         }
-        SPDLOG_INFO("[stats] msg_filter_count: {}", clp_s::SchemaReader::msg_filter_count);
+        SPDLOG_INFO("[stats] msg_filter_count: {}", clp_s::search::QueryRunner::msg_filter_count);
     }
 
     return 0;

@@ -303,8 +303,6 @@ public:
      */
     bool done() const { return m_cur_message >= m_num_messages; }
 
-    static uint64_t msg_filter_count;
-
 private:
     /**
      * Merges the current local schema tree with the section of the global schema tree corresponding

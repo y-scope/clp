@@ -13,8 +13,6 @@
 #include <clpp/ErrorCode.hpp>
 
 namespace clp_s {
-uint64_t SchemaReader::msg_filter_count{0};
-
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
     m_column_map[column_reader->get_id()] = column_reader;
     m_columns.push_back(column_reader);
@@ -237,7 +235,6 @@ bool SchemaReader::get_next_message(std::string& message) {
 
 bool SchemaReader::get_next_message(std::string& message, FilterClass& filter) {
     while (m_cur_message < m_num_messages && false == filter.filter(m_cur_message)) {
-        ++msg_filter_count;
         ++m_cur_message;
     }
 
@@ -256,7 +253,6 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass& filter) {
         }
     }
 
-    ++msg_filter_count;
     ++m_cur_message;
     return true;
 }

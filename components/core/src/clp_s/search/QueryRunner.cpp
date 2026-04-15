@@ -36,6 +36,8 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
+uint64_t QueryRunner::msg_filter_count{0};
+
 void QueryRunner::global_init() {
     populate_internal_columns();
     populate_string_queries(m_expr);
@@ -125,6 +127,7 @@ std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t col
 }
 
 bool QueryRunner::filter(uint64_t cur_message) {
+    ++msg_filter_count;
     m_cur_message = cur_message;
     m_extracted_unstructured_arrays.clear();
     return evaluate(m_expr.get(), m_schema);
