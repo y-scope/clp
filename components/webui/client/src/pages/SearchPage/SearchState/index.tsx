@@ -132,9 +132,6 @@ interface SearchState {
 const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
 
-    onSearchResultsExport: () => {
-        onSearchResultsExportImpl?.();
-    },
     setOnSearchResultsExport: (fn) => {
         onSearchResultsExportImpl = fn;
     },
