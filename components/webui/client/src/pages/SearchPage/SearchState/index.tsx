@@ -12,6 +12,11 @@ import {SEARCH_UI_STATE} from "./typings";
 
 
 /**
+ * Represents the implementation of the export functionality for search results.
+ */
+let onSearchResultsExportImpl: (() => void) | null = null;
+
+/**
  * Default values of the search state.
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
@@ -19,6 +24,9 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
+    onSearchResultsExport: () => {
+        onSearchResultsExportImpl?.();
+    },
     queriedDatasets: [],
     queryIsCaseSensitive: false,
     queryString: "",
@@ -121,7 +129,6 @@ interface SearchState {
     updateTimelineConfig: (config: TimelineConfig) => void;
 }
 
-let onSearchResultsExportImpl: (() => void) | null = null;
 const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
 
