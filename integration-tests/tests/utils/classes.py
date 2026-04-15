@@ -73,21 +73,20 @@ class IntegrationTestDatasetMetadata(BaseModel):
     logs_subdir: str
     file_names: list[str]
     single_match_wildcard_query: str
-    columns_file_name: str | None
 
 
 @dataclass
 class IntegrationTestDataset:
     """Path layout and metadata storage for a sample dataset."""
 
-    #: The name of the dataset (for logging purposes).
-    dataset_name: str
-
     #: Absolute path to the dataset root.
     path_to_dataset_root: Path
 
     #: Pydantic model of metadata describing the dataset.
     metadata: IntegrationTestDatasetMetadata = field(init=False)
+
+    #: The name of the dataset (for logging purposes).
+    dataset_name: str = field(init=False)
 
     def __post_init__(self) -> None:
         """Validate data members and load metadata."""
@@ -98,17 +97,11 @@ class IntegrationTestDataset:
         raw_metadata = self.metadata_file_path.read_text()
         self.metadata = IntegrationTestDatasetMetadata.model_validate_json(raw_metadata)
 
+        # Set dataset name from metadata.
+        self.dataset_name = self.metadata.dataset_name
+
         # Validate metadata properties.
         validate_dir_exists(self.logs_path)
-
-        if self.columns_file_path is not None:
-            validate_file_exists(self.columns_file_path)
-
-        if self.metadata.dataset_name != self.dataset_name:
-            pytest.fail(
-                f"Dataset '{self.dataset_name}' carries the incorrect name in its metadata:"
-                f" '{self.metadata.dataset_name}'"
-            )
 
         if self.metadata.begin_ts > self.metadata.end_ts:
             pytest.fail(
@@ -129,13 +122,3 @@ class IntegrationTestDataset:
     def logs_path(self) -> Path:
         """:return: The absolute path to the subdirectory containing logs."""
         return self.path_to_dataset_root / self.metadata.logs_subdir
-
-    @property
-    def columns_file_path(self) -> Path | None:
-        """
-        :return: The absolute path to the file containing a description of the dataset columns, or
-        `None` if there is no such file.
-        """
-        if self.metadata.columns_file_name is not None:
-            return self.path_to_dataset_root / self.metadata.columns_file_name
-        return None

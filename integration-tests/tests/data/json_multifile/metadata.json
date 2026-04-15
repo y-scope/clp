@@ -12,6 +12,5 @@
         "sts-135-2011-07-19.jsonl",
         "sts-135-2011-07-21.jsonl"
     ],
-    "single_match_wildcard_query": "\"detail\":\"Roll program complete, heads down attitude achieved for ascent\"",
-    "columns_file_name": "columns.json"
+    "single_match_wildcard_query": "\"detail\":\"Roll program complete, heads down attitude achieved for ascent\""
 }
