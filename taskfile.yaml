@@ -23,7 +23,8 @@ vars:
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
   # Build paths
-  G_BUILD_DIR: "{{.ROOT_DIR}}/build"
+  G_BUILD_DIR:
+    sh: 'echo "{{.ROOT_DIR}}/build-$(git rev-parse --abbrev-ref HEAD)"'
   G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
