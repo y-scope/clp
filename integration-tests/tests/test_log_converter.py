@@ -1,6 +1,6 @@
 """
-Integration tests verifying that CLP core compression binaries perform lossless round-trip
-compression and decompression.
+Integration tests verifying that the log-converter to clp-s pipeline is able to parse and compress
+logs as expected.
 """
 
 import pytest
