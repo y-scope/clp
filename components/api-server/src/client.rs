@@ -349,20 +349,23 @@ impl Client {
         }
 
         let job_config = self.get_job_config(search_job_id).await?;
+        let max_num_results = job_config.max_num_results;
 
         if job_config.write_to_file {
             let stream = match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
-                    inner: self.fetch_results_from_file(search_job_id),
+                    inner: self.fetch_results_from_file(search_job_id, max_num_results)?,
                 },
                 StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self.fetch_results_from_s3(search_job_id).await?,
+                    inner: self
+                        .fetch_results_from_s3(search_job_id, max_num_results)
+                        .await?,
                 },
             };
             return Ok(stream);
         }
 
-        self.fetch_results_from_mongo(search_job_id)
+        self.fetch_results_from_mongo(search_job_id, max_num_results)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
     }
@@ -457,7 +460,8 @@ impl Client {
     fn fetch_results_from_file(
         &self,
         search_job_id: u64,
-    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
+        max_num_results: u32,
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
             unreachable!();
         };
@@ -476,7 +480,12 @@ impl Client {
                 }
             }
         };
-        stream
+        let limit: usize = max_num_results.try_into().map_err(|_| {
+            ClientError::InvalidSearchJobConfig(
+                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
+            )
+        })?;
+        Ok(stream.take(limit))
     }
 
     /// Asynchronously fetches results of a completed search job from S3.
@@ -514,6 +523,7 @@ impl Client {
     async fn fetch_results_from_s3(
         &self,
         search_job_id: u64,
+        max_num_results: u32,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
@@ -548,7 +558,7 @@ impl Client {
             .into_paginator()
             .send();
 
-        Ok(stream! {
+        let stream = stream! {
             while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
@@ -575,10 +585,19 @@ impl Client {
                     }
                 }
             }
-        })
+        };
+        let limit: usize = max_num_results.try_into().map_err(|_| {
+            ClientError::InvalidSearchJobConfig(
+                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
+            )
+        })?;
+        Ok(stream.take(limit))
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
+    ///
+    /// When `max_num_results` is greater than 0, the query is limited to at most that many
+    /// documents.
     ///
     /// # Returns
     ///
@@ -605,13 +624,24 @@ impl Client {
     async fn fetch_results_from_mongo(
         &self,
         search_job_id: u64,
+        max_num_results: u32,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let database = self
             .mongodb_client
             .database(&self.config.results_cache.db_name);
         let collection: mongodb::Collection<mongodb::bson::Document> =
             database.collection(&search_job_id.to_string());
-        let cursor = collection.find(mongodb::bson::doc! {}).await?;
+        let find_options = if max_num_results > 0 {
+            mongodb::options::FindOptions::builder()
+                .limit(i64::from(max_num_results))
+                .build()
+        } else {
+            mongodb::options::FindOptions::default()
+        };
+        let cursor = collection
+            .find(mongodb::bson::doc! {})
+            .with_options(find_options)
+            .await?;
 
         let mapped = cursor.map(|res| {
             let doc = res?;
