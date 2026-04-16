@@ -1,16 +1,8 @@
-import {
-    useCallback,
-    useEffect,
-} from "react";
-
-import {message} from "antd";
+import {useEffect} from "react";
 
 import VirtualTable from "../../../../../../components/VirtualTable";
-import {downloadTextFile} from "../../../../../../utils/download";
 import useSearchStore from "../../../../SearchState/index";
-import {getExportFilenameTimestamp} from "../utils";
 import {
-    formatResultAsJsonl,
     SearchResult,
     searchResultsTableColumns,
 } from "./typings";
@@ -22,9 +14,8 @@ interface SearchResultsVirtualTableProps {
 }
 
 /**
- * Renders search results in a virtual table and registers an export handler
- * with the search store so the table-header export button can trigger a download
- * without a duplicate cursor subscription.
+ * Renders search results in a virtual table and syncs results to the search store
+ * so the export action can read them without a duplicate cursor subscription.
  *
  * NOTE: Export is currently only available for the Native search engine. The
  * Presto engine's PrestoResultsVirtualTable does not yet support export.
@@ -35,11 +26,10 @@ interface SearchResultsVirtualTableProps {
  */
 const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps) => {
     const {
-        setOnSearchResultsExport,
         updateNumSearchResultsTable,
+        updateSearchResults,
     } = useSearchStore();
     const searchResults = useSearchResults();
-    const [messageApi, contextHolder] = message.useMessage();
 
     useEffect(() => {
         const num = searchResults ?
@@ -47,58 +37,20 @@ const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps
             0;
 
         updateNumSearchResultsTable(num);
+        updateSearchResults(searchResults);
     }, [
         searchResults,
         updateNumSearchResultsTable,
-    ]);
-
-    /**
-     * Exports all search results as a JSONL file download.
-     *
-     * NOTE: Results are exported in the original cursor order (i.e., timestamp descending),
-     * which may differ from the user's current table sort.
-     */
-    const handleExport = useCallback(() => {
-        if (null === searchResults || 0 === searchResults.length) {
-            return;
-        }
-
-        try {
-            downloadTextFile(
-                searchResults.map((r) => `${formatResultAsJsonl(r)}\n`),
-                `clp-search-results-${getExportFilenameTimestamp()}.jsonl`
-            );
-            messageApi.success(`Exported ${searchResults.length} results`);
-        } catch (e) {
-            messageApi.error("Failed to export results");
-            console.error(e);
-        }
-    }, [
-        messageApi,
-        searchResults,
-    ]);
-
-    useEffect(() => {
-        setOnSearchResultsExport(handleExport);
-
-        return () => {
-            setOnSearchResultsExport(null);
-        };
-    }, [
-        handleExport,
-        setOnSearchResultsExport,
+        updateSearchResults,
     ]);
 
     return (
-        <>
-            {contextHolder}
-            <VirtualTable<SearchResult>
-                columns={searchResultsTableColumns}
-                dataSource={searchResults || []}
-                pagination={false}
-                rowKey={(record) => record._id}
-                scroll={{y: tableHeight}}/>
-        </>
+        <VirtualTable<SearchResult>
+            columns={searchResultsTableColumns}
+            dataSource={searchResults || []}
+            pagination={false}
+            rowKey={(record) => record._id}
+            scroll={{y: tableHeight}}/>
     );
 };
 

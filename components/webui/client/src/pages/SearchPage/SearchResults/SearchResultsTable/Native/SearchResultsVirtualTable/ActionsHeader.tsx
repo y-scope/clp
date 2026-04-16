@@ -14,7 +14,7 @@ import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
  * @return
  */
 const ActionsHeader = () => {
-    const onSearchResultsExport = useSearchStore((state) => state.onSearchResultsExport);
+    const handleSearchResultsExport = useSearchStore((state) => state.handleSearchResultsExport);
     const numResults = useSearchStore((state) => state.numSearchResultsTable);
     const searchUiState = useSearchStore((state) => state.searchUiState);
 
@@ -25,7 +25,7 @@ const ActionsHeader = () => {
                 icon={<DownloadOutlined/>}
                 size={"small"}
                 type={"text"}
-                onClick={onSearchResultsExport}/>
+                onClick={handleSearchResultsExport}/>
         </Tooltip>
     );
 };
