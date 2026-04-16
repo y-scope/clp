@@ -24,7 +24,7 @@ const getStreamId = (result: SearchResult): string => {
  * @return ISO 8601 string.
  */
 const getExportEventTimestamp = (timestamp: number): string => (
-    dayjs(timestamp).toISOString()
+    dayjs.utc(timestamp).toISOString()
 );
 
 /**
