@@ -5,13 +5,12 @@ import {
     TableProps,
     Tooltip,
 } from "antd";
-import dayjs from "dayjs";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../../../../config";
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../../../typings/datetime";
 import Message from "../Message";
 import {
-    getExportEventTimestamp,
+    formatResultAsJsonl,
+    formatTimestamp,
     getStreamId,
 } from "../utils";
 import ActionsHeader from "./ActionsHeader";
@@ -31,37 +30,6 @@ interface SearchResult {
     orig_file_path: string;
     timestamp: number;
 }
-
-/**
- * Formats a numeric timestamp as a UTC datetime string.
- *
- * @param timestamp
- * @return The formatted datetime string.
- */
-const formatTimestamp = (timestamp: number): string => (
-    dayjs.utc(timestamp).format(DATETIME_FORMAT_TEMPLATE)
-);
-
-/**
- * Serializes a search result as a JSONL line. If the message field is valid
- * JSON it is included as a parsed object; otherwise it is kept as a string.
- *
- * @param result
- * @return A single JSON line (without trailing newline).
- */
-const formatResultAsJsonl = (result: SearchResult): string => {
-    let messageValue: unknown;
-    try {
-        messageValue = JSON.parse(result.message);
-    } catch {
-        messageValue = result.message;
-    }
-
-    return JSON.stringify({
-        timestamp: getExportEventTimestamp(result.timestamp),
-        message: messageValue,
-    });
-};
 
 /**
  * Cell renderer for the Actions column. Renders a per-row copy button.

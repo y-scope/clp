@@ -13,7 +13,7 @@ import {
     formatResultAsJsonl,
     SearchResult,
 } from "../SearchResults/SearchResultsTable/Native/SearchResultsVirtualTable/typings";
-import {getExportFilenameTimestamp} from "../SearchResults/SearchResultsTable/Native/utils";
+import {formatExportFilenameTimestamp} from "../SearchResults/SearchResultsTable/Native/utils";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
 import {SEARCH_UI_STATE} from "./typings";
 
@@ -148,7 +148,7 @@ const useSearchStore = create<SearchState>((set, get) => ({
         try {
             downloadTextFile(
                 searchResults.map((r) => `${formatResultAsJsonl(r)}\n`),
-                `clp-search-results-${getExportFilenameTimestamp()}.jsonl`
+                `clp-search-results-${formatExportFilenameTimestamp()}.jsonl`
             );
             message.success(`Exported ${searchResults.length} results`);
         } catch (e) {
