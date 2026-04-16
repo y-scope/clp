@@ -2,6 +2,7 @@ import {CopyOutlined} from "@ant-design/icons";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     Button,
+    message,
     TableProps,
     Tooltip,
 } from "antd";
@@ -42,7 +43,9 @@ const renderActionsCell = (_: unknown, record: SearchResult) => {
     const handleCopyRow = () => {
         navigator.clipboard.writeText(formatResultAsJsonl(record))
             .catch((e: unknown) => {
-                console.error("Failed to copy search result to clipboard", e);
+                const errMsg = "Failed to copy event to clipboard.";
+                message.error(errMsg);
+                console.error(errMsg, e);
             });
     };
 
