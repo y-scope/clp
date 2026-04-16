@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+import msgpack
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
@@ -213,7 +214,7 @@ def search(
     self: Task,
     job_id: str,
     task_id: int,
-    job_config: dict,
+    search_config_blob: bytes,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
@@ -243,7 +244,7 @@ def search(
 
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    search_config = SearchJobConfig.model_validate(job_config)
+    search_config = SearchJobConfig.model_validate(msgpack.unpackb(search_config_blob))
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,

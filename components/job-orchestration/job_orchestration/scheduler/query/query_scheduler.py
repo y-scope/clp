@@ -114,7 +114,7 @@ class DispatchExecutor:
 
     @staticmethod
     def dispatch_job_and_update_db(
-        job_config: dict[str, any], job_type: QueryJobType, job_id: str, archives: list[dict]
+        search_config_blob: bytes, job_type: QueryJobType, job_id: str, archives: list[dict]
     ) -> tuple[str, int, str]:
         if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
             raise NotImplementedError(f"Unexpected job type: {job_type}")
@@ -128,7 +128,7 @@ class DispatchExecutor:
                 job_id=job_id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                job_config=job_config,
+                search_config_blob=search_config_blob,
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=DispatchExecutor._clp_metadata_db_conn_params,
                 results_cache_uri=DispatchExecutor._results_cache_uri,
@@ -590,7 +590,6 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ):
-    job_config = job.get_config().model_dump()
     job_type = job.get_type()
     if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
         return celery.group(
@@ -598,7 +597,7 @@ def get_task_group_for_job(
                 job_id=job.id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                job_config=job_config,
+                search_config_blob=job.get_config_blob(),
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
@@ -606,6 +605,7 @@ def get_task_group_for_job(
             for i in range(len(archives))
         )
     if job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
+        job_config = job.get_config().model_dump()
         return celery.group(
             extract_stream.s(
                 job_id=job.id,
@@ -745,7 +745,7 @@ def handle_pending_query_jobs(
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
             job_type = job["type"]
-            job_config = msgpack.unpackb(job["job_config"])
+            config_blob = job["job_config"]
             job_creation_time = job["creation_time"].timestamp()
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
@@ -755,7 +755,7 @@ def handle_pending_query_jobs(
                     db_conn=db_conn,
                     db_cursor=db_cursor,
                     job_id=job_id,
-                    job_config=job_config,
+                    search_config_blob=config_blob,
                     job_creation_time=job_creation_time,
                     table_prefix=table_prefix,
                     max_datasets_per_query=max_datasets_per_query,
@@ -765,6 +765,7 @@ def handle_pending_query_jobs(
                     reducer_acquisition_tasks=reducer_acquisition_tasks,
                 )
             elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
+                job_config = msgpack.unpackb()
                 _handle_new_extraction_job(
                     db_conn=db_conn,
                     job_id=job_id,
@@ -814,7 +815,7 @@ def handle_pending_query_jobs(
             futures.append(
                 process_pool.submit(
                     DispatchExecutor.dispatch_job_and_update_db,
-                    job.get_config().model_dump(),
+                    job.get_config_blob(),
                     job.get_type(),
                     job_id,
                     archives_for_search,
@@ -1228,7 +1229,7 @@ def _handle_new_search_job(
     db_conn,
     db_cursor,
     job_id: str,
-    job_config: dict,
+    search_config_blob: bytes,
     job_creation_time: float,
     table_prefix: str,
     max_datasets_per_query: int | None,
@@ -1250,7 +1251,7 @@ def _handle_new_search_job(
     :param db_conn:
     :param db_cursor:
     :param job_id:
-    :param job_config:
+    :param search_config_blob:
     :param job_creation_time:
     :param table_prefix:
     :param max_datasets_per_query:
@@ -1265,7 +1266,7 @@ def _handle_new_search_job(
     if job_id in active_jobs:
         return
 
-    search_config = SearchJobConfig.model_validate(job_config)
+    search_config = SearchJobConfig.model_validate(msgpack.unpackb(search_config_blob))
     datasets = search_config.datasets
     if datasets is not None:
         # Deduplicate
@@ -1355,6 +1356,7 @@ def _handle_new_search_job(
     new_search_job = SearchJob(
         id=job_id,
         search_config=search_config,
+        search_config_blob=search_config_blob,
         state=InternalJobState.WAITING_FOR_DISPATCH,
         num_archives_to_search=len(archives_for_search),
         num_archives_searched=0,

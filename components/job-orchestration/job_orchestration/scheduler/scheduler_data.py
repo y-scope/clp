@@ -51,6 +51,9 @@ class QueryJob(BaseModel, ABC):
     @abstractmethod
     def get_config(self) -> QueryJobConfig: ...
 
+    @abstractmethod
+    def get_config_blob(self) -> bytes: ...
+
 
 class ExtractIrJob(QueryJob):
     extract_ir_config: ExtractIrJobConfig
@@ -77,6 +80,7 @@ class SearchJob(QueryJob):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     search_config: SearchJobConfig
+    search_config_blob: bytes
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: list[dict[str, Any]]
@@ -88,6 +92,9 @@ class SearchJob(QueryJob):
 
     def get_config(self) -> QueryJobConfig:
         return self.search_config
+
+    def get_config_blob(self) -> bytes:
+        return self.search_config_blob
 
 
 class QueryTaskResult(BaseModel):
