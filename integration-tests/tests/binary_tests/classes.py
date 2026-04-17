@@ -59,7 +59,7 @@ class ClpBinaryCmdArgs(BaseModel):
         """
         When overriding `to_cmd()` in derived classes, `super().to_cmd()` should be called.
 
-        return: list of command arguments.
+        :return: list of command arguments.
         """
         return [
             str(self.binary_path),
