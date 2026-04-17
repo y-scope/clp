@@ -3,6 +3,8 @@ Integration tests verifying that the log-converter to clp-s pipeline is able to 
 logs as expected.
 """
 
+import json
+
 import pytest
 
 from tests.utils.config import (
@@ -12,6 +14,9 @@ from tests.utils.config import (
     IntegrationTestPathConfig,
 )
 from tests.utils.subprocess_utils import run_and_log_subprocess
+
+# Matching `LogSerializer::cTimestampKey`.
+LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY = "timestamp"
 
 pytestmark = pytest.mark.core
 
@@ -66,7 +71,14 @@ def _convert_and_compress(
     compression_path = str(test_paths.compression_dir)
     run_and_log_subprocess([log_converter_bin_path, src_path, "--output-dir", conversion_path])
     run_and_log_subprocess(
-        [clp_s_bin_path, "c", compression_path, conversion_path, "--timestamp-key", "timestamp"]
+        [
+            clp_s_bin_path,
+            "c",
+            compression_path,
+            conversion_path,
+            "--timestamp-key",
+            LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY,
+        ]
     )
 
     if test_paths.num_log_events is None:
@@ -85,7 +97,4 @@ def _convert_and_compress(
         event = json.loads(line)
         message = event.get("message", "")
         if f"TEST{idx + 1}" not in message:
-            pytest.fail(
-                f"Expected 'TEST{idx + 1}' in message of event {idx + 1}, "
-                f"but got: {event}"
-            )
+            pytest.fail(f"Expected 'TEST{idx + 1}' in message of event {idx + 1}, but got: {event}")
