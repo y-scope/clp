@@ -2,9 +2,8 @@
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Generic, TypeVar
 
 import pytest
 from clp_py_utils.clp_config import (
@@ -22,9 +21,6 @@ from tests.utils.utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-T = TypeVar("T", bound=BaseModel)
 
 
 @dataclass
@@ -219,9 +215,34 @@ class ClpPackage:
         return running_config
 
 
+class ClpPackageCmdArgs(BaseModel):
+    """
+    Base class for all CLP package command argument models. When overriding `to_cmd()` in derived
+    classes, `super().to_cmd()` should be called.
+    """
+
+    script_path: Path
+    config_path: Path
+
+    def to_cmd(self) -> list[str]:
+        """Docstring."""
+        return [
+            str(self.script_path),
+            "--config",
+            str(self.config_path),
+        ]
+
+
 @dataclass
-class ClpPackageExternalAction(IntegrationTestExternalAction, Generic[T]):
+class ClpPackageExternalAction(IntegrationTestExternalAction):
     """Metadata for an external action executed during a CLP package integration test."""
 
     #: Pydantic object storing semantic info required to construct `cmd` and verify the Action.
-    args: T
+    args: ClpPackageCmdArgs
+
+    #: Overridden from `IntegrationTestExternalAction`. Constructed in `__post_init__` using `args`.
+    cmd: list[str] = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Constructs `cmd` using `args`."""
+        self.cmd = self.args.to_cmd()

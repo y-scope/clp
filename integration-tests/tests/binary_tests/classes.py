@@ -1,8 +1,7 @@
 """Classes used in CLP binary integration tests."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -13,8 +12,6 @@ from tests.utils.classes import (
 from tests.utils.utils import (
     validate_dir_exists,
 )
-
-T = TypeVar("T", bound=BaseModel)
 
 
 @dataclass
@@ -53,9 +50,31 @@ class ClpBinaryTestPathConfig(IntegrationTestPathConfig):
         ]
 
 
+class ClpBinaryCmdArgs(BaseModel):
+    """
+    Base class for all CLP binary command argument models. When overriding `to_cmd()` in derived
+    classes, `super().to_cmd()` should be called.
+    """
+
+    binary_path: Path
+
+    def to_cmd(self) -> list[str]:
+        """Construc"""
+        return [
+            str(self.binary_path),
+        ]
+
+
 @dataclass
-class ClpBinaryExternalAction(IntegrationTestExternalAction, Generic[T]):
+class ClpBinaryExternalAction(IntegrationTestExternalAction):
     """Metadata for an external action executed during a CLP binary integration test."""
 
     #: Pydantic object storing semantic info required to construct `cmd` and verify the Action.
-    args: T
+    args: ClpBinaryCmdArgs
+
+    #: Overridden from `IntegrationTestExternalAction`. Constructed in `__post_init__` using `args`.
+    cmd: list[str] = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Constructs `cmd` using `args`."""
+        self.cmd = self.args.to_cmd()
