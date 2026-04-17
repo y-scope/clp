@@ -36,8 +36,8 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-uint64_t QueryRunner::m_int_filter_count{0};
-uint64_t QueryRunner::m_str_filter_count{0};
+uint64_t QueryRunner::m_int_col_checks{0};
+uint64_t QueryRunner::m_str_col_checks{0};
 
 void QueryRunner::global_init() {
     populate_internal_columns();
@@ -128,6 +128,7 @@ std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t col
 }
 
 bool QueryRunner::filter(uint64_t cur_message) {
+    ++clp::GrepCore::m_total_messages_searched;
     m_cur_message = cur_message;
     m_extracted_unstructured_arrays.clear();
     return evaluate(m_expr.get(), m_schema);
@@ -366,7 +367,7 @@ bool QueryRunner::evaluate_int_filter(
     }
 
     for (BaseColumnReader* reader : m_basic_readers[column_id]) {
-        ++m_int_filter_count;
+        ++m_int_col_checks;
         int64_t value = std::get<int64_t>(reader->extract_value(m_cur_message));
         if (evaluate_int_filter_core(op, value, op_value)) {
             return true;
@@ -545,7 +546,7 @@ bool QueryRunner::evaluate_var_string_filter(
     }
 
     for (VariableStringColumnReader* reader : readers) {
-        ++m_str_filter_count;
+        ++m_str_col_checks;
         int64_t id = reader->get_variable_id(m_cur_message);
         bool matched = matching_vars->count(id) > 0;
 

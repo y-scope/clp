@@ -17,6 +17,8 @@
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
+#include <clp/GrepCore.hpp>
+
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
@@ -508,9 +510,10 @@ int main(int argc, char const* argv[]) {
             }
             archive_reader->close();
         }
-        SPDLOG_INFO("[stats] int_filter_count: {}", clp_s::search::QueryRunner::m_int_filter_count);
-        SPDLOG_INFO("[stats] str_filter_count: {}", clp_s::search::QueryRunner::m_str_filter_count);
     }
 
+    SPDLOG_INFO("[stats] total messages searched: {}", clp::GrepCore::m_total_messages_searched);
+    SPDLOG_INFO("[stats] clps int filter check: {}", clp_s::search::QueryRunner::m_int_col_checks);
+    SPDLOG_INFO("[stats] clps str filter check: {}", clp_s::search::QueryRunner::m_str_col_checks);
     return 0;
 }
