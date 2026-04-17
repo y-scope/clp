@@ -49,16 +49,16 @@ def test_log_converter_transform(
         num_log_events=integration_test_logs.num_log_events,
         integration_test_path_config=integration_test_path_config,
     )
-    _convert_and_compress(clp_core_path_config, test_paths)
-
-    test_paths.clear_test_outputs()
+    try:
+        _convert_and_compress(clp_core_path_config, test_paths)
+    finally:
+        test_paths.clear_test_outputs()
 
 
 def _convert_and_compress(
     clp_core_path_config: ClpCorePathConfig,
     test_paths: ConversionTestPathConfig,
 ) -> None:
-    test_paths.clear_test_outputs()
     log_converter_bin_path = str(clp_core_path_config.log_converter_binary_path)
     clp_s_bin_path = str(clp_core_path_config.clp_s_binary_path)
     src_path = str(test_paths.logs_source_dir)
@@ -73,9 +73,19 @@ def _convert_and_compress(
         return
 
     output = run_and_log_subprocess([clp_s_bin_path, "s", compression_path, "timestamp > 0"])
-    num_events = 0 if output.stdout is None else len(output.stdout.splitlines())
-    if num_events != test_paths.num_log_events:
+    lines = output.stdout.splitlines() if output.stdout else []
+    if len(lines) != test_paths.num_log_events:
         pytest.fail(
             f"Expected {test_paths.num_log_events} log events after conversion, "
-            f"but found {num_events}."
+            f"but found {len(lines)}."
         )
+
+    # Verify every event's message field.
+    for idx, line in enumerate(lines):
+        event = json.loads(line)
+        message = event.get("message", "")
+        if f"TEST{idx + 1}" not in message:
+            pytest.fail(
+                f"Expected 'TEST{idx + 1}' in message of event {idx + 1}, "
+                f"but got: {event}"
+            )
