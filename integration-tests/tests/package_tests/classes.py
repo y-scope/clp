@@ -216,16 +216,17 @@ class ClpPackage:
 
 
 class ClpPackageCmdArgs(BaseModel):
-    """
-    Base class for all CLP package command argument models. When overriding `to_cmd()` in derived
-    classes, `super().to_cmd()` should be called.
-    """
+    """Base class for all CLP package command argument models."""
 
     script_path: Path
     config_path: Path
 
     def to_cmd(self) -> list[str]:
-        """Docstring."""
+        """
+        When overriding `to_cmd()` in derived classes, `super().to_cmd()` should be called.
+
+        return: list of command arguments.
+        """
         return [
             str(self.script_path),
             "--config",

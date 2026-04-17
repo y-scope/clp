@@ -59,7 +59,11 @@ class ClpBinaryCmdArgs(BaseModel):
     binary_path: Path
 
     def to_cmd(self) -> list[str]:
-        """Construc"""
+        """
+        When overriding `to_cmd()` in derived classes, `super().to_cmd()` should be called.
+
+        return: list of command arguments.
+        """
         return [
             str(self.binary_path),
         ]
