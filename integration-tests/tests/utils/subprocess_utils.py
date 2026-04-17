@@ -53,10 +53,17 @@ def run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     log_msg = f"Running '{Path(cmd[0]).name}' subprocess. Command: {cmd}"
     logger.info(log_msg)
 
-    return subprocess.run(
-        cmd,
-        capture_output=True,
-        timeout=DEFAULT_CMD_TIMEOUT_SECONDS,
-        check=False,
-        text=True,
-    )
+    try:
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=DEFAULT_CMD_TIMEOUT_SECONDS,
+            check=False,
+            text=True,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail(
+            f"Subprocess '{Path(cmd[0]).name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s."
+        )
+    except OSError as e:
+        pytest.fail(f"Subprocess '{Path(cmd[0]).name}' failed to start: {e}")

@@ -51,10 +51,7 @@ class ClpBinaryTestPathConfig(IntegrationTestPathConfig):
 
 
 class ClpBinaryCmdArgs(BaseModel):
-    """
-    Base class for all CLP binary command argument models. When overriding `to_cmd()` in derived
-    classes, `super().to_cmd()` should be called.
-    """
+    """Base class for all CLP binary command argument models."""
 
     binary_path: Path
 
