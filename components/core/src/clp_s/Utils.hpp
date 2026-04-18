@@ -67,8 +67,7 @@ public:
      * @param reader The open reader which may have experienced a CURL error.
      * @return Whether a retryable CURL error has occurred on the reader.
      */
-    [[nodiscard]] static auto
-    is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool;
+    [[nodiscard]] static auto is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool;
 };
 
 class UriUtils {

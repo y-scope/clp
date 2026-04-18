@@ -504,8 +504,7 @@ auto try_create_reader_and_deduce_type_with_retries(
         auto result = try_deduce_reader_type(reader);
         auto const& [nested_readers, file_type] = result;
 
-        if (FileType::Unknown == file_type
-            && NetworkUtils::is_retryable_curl_error(reader.get())
+        if (FileType::Unknown == file_type && NetworkUtils::is_retryable_curl_error(reader.get())
             && attempt < max_retries)
         {
             NetworkUtils::check_and_log_curl_error(path.path, reader.get());

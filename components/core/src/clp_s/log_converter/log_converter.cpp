@@ -41,11 +41,10 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
     }
 
     for (auto const& path : command_line_arguments.get_input_paths()) {
-        auto [nested_readers, file_type]
-                = clp_s::try_create_reader_and_deduce_type_with_retries(
-                        path,
-                        command_line_arguments.get_network_auth()
-                );
+        auto [nested_readers, file_type] = clp_s::try_create_reader_and_deduce_type_with_retries(
+                path,
+                command_line_arguments.get_network_auth()
+        );
 
         switch (file_type) {
             case clp_s::FileType::LogText:

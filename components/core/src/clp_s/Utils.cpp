@@ -205,9 +205,8 @@ auto NetworkUtils::check_and_log_curl_error(
     return false;
 }
 
-auto NetworkUtils::is_retryable_curl_error(
-        [[maybe_unused]] clp::ReaderInterface const* reader
-) -> bool {
+auto NetworkUtils::is_retryable_curl_error([[maybe_unused]] clp::ReaderInterface const* reader)
+        -> bool {
     return false;
 }
 #endif
