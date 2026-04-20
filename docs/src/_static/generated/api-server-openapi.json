@@ -144,7 +144,7 @@
     "/usage/compression": {
       "get": {
         "tags": [],
-        "description": "Returns one row per compression job within the given epoch-millisecond time range.",
+        "description": "Gets resource usage statistics for compression jobs within the given time range.",
         "operationId": "compression_usage",
         "parameters": [
           {
