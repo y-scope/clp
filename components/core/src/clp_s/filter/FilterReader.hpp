@@ -41,11 +41,10 @@ public:
     [[nodiscard]] auto possibly_contains(std::string_view value) const -> bool;
 
     /**
-     * Checks whether the filter may contain the wildcard search string.
-     * The caller is responsible for determining whether `value` should be treated as a wildcard
-     * query.
+     * Checks whether the filter may contain a wildcard query string.
+     * The caller is responsible for ensuring `value` is a valid wildcard query string.
      * @param value
-     * @return true if the filter may contain `value`; false if it definitely does not.
+     * @return Whether the filter may contain the query string `value`.
      */
     [[nodiscard]] auto possibly_contains_wildcard(std::string_view value) const -> bool;
 

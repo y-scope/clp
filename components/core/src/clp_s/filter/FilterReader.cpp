@@ -85,10 +85,14 @@ auto FilterReader::possibly_contains(std::string_view value) const -> bool {
     return m_bloom_filter.possibly_contains(normalized_value);
 }
 
-auto FilterReader::possibly_contains_wildcard(std::string_view) const -> bool {
+auto FilterReader::possibly_contains_wildcard(std::string_view value) const -> bool {
     switch (m_type) {
         case FilterType::Bloom:
-            return true;
+            if (clp_s::search::ast::has_unescaped_wildcards(value)) {
+                return true;
+            }
+            auto const unescaped_value{clp::string_utils::unescape_string(value)};
+            return possibly_contains(unescaped_value);
     }
 
     return true;
