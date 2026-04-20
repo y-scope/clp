@@ -155,6 +155,21 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  * @param readers
  */
 void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> const& readers);
+
+/**
+ * Creates a reader for the given path and deduces its file type, retrying on transient network
+ * errors with exponential backoff.
+ * @param path
+ * @param network_auth
+ * @param max_retries Maximum number of retry attempts after the initial attempt.
+ * @return A pair of (nested_readers, file_type). On unrecoverable failure, returns an empty vector
+ * and `FileType::Unknown`.
+ */
+[[nodiscard]] auto try_create_reader_and_deduce_type_with_retries(
+        Path const& path,
+        NetworkAuthOption const& network_auth,
+        size_t max_retries = 3
+) -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP
