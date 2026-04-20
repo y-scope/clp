@@ -101,7 +101,11 @@ private:
     std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
     log_surgeon::Schema* m_ls_schema;
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
-    std::vector<std::shared_ptr<ast::Literal>> m_leaf_literals;
+    absl::flat_hash_map<
+            std::pair<std::optional<std::string>, std::string>,
+            std::optional<clpp::DecomposedQuery>
+    >
+            m_decomposed_query_cache;
 
     /**
      * Populates the column mapping for a given column
@@ -186,6 +190,10 @@ private:
      * @return The literal type for a given column descriptor
      */
     ast::LiteralType get_literal_type_for_column(ast::ColumnDescriptor* column, int32_t schema);
+
+    auto
+    decompose_query(std::optional<std::string> type_name, std::string const& query, bool rule_query)
+            -> clpp::DecomposedQuery const*;
 };
 }  // namespace clp_s::search
 

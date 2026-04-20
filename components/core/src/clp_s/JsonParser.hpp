@@ -241,10 +241,10 @@ private:
             -> ystdlib::error_handling::Result<void>;
 
     auto get_parent_schema_node(
-            log_surgeon::CCapture cap,
+            log_surgeon::Capture cap,
             SchemaNode::id_t parent_node_id,
-            absl::flat_hash_map<uint32_t, log_surgeon::CCapture const> const& rules,
-            absl::flat_hash_map<std::tuple<uint32_t, uint32_t>, log_surgeon::CCapture const> const&
+            absl::flat_hash_map<uint32_t, log_surgeon::Capture const> const& rules,
+            absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const> const&
     ) -> SchemaNode::id_t;
 
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;

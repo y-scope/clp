@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -249,7 +250,6 @@ auto SchemaMatch::populate_column_mapping(
             [&](SchemaNode const& root_node) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
         for (auto const child_node_id : root_node.get_children_ids()) {
             // TODO clpp: ???
-            // matched |= populate_column_mapping(column, child_node_id, expr);
             auto [matched, new_expr]{populate_column_mapping(column, child_node_id, expr)};
             if (matched) {
                 return {matched, new_expr};
@@ -380,30 +380,15 @@ auto SchemaMatch::populate_column_mapping(
                 {
                     m_clpp_decomposed_query = true;
 
-                    // TODO clpp: schema always consumed even for parent search??
-                    m_ls_schema_reader->seek_from_begin(0);
-                    auto schema{
-                            clpp::DecomposedQuery::create_log_surgeon_schema(m_ls_schema_reader)
-                    };
-                    if (schema.has_error()) {
-                        throw(std::runtime_error("failed to build ls schema"));
-                    }
-                    m_ls_schema = schema.value();
-
                     auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
                     std::string query;
                     filter->get_operand()->as_clp_string(query, filter->get_operation());
 
                     if (NodeType::LogMessage == cur_node.get_type()) {
-                        if (nullptr == m_ls_parser) {
-                            m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
-                        }
-                        auto decomposed_query{clpp::DecomposedQuery::process_query(
-                                *m_ls_parser,
-                                std::nullopt,
-                                query
-                        )};
-                        if (decomposed_query.has_error()) {
+                        clpp::DecomposedQuery const* decomposed_query{
+                                decompose_query(std::nullopt, query, true)
+                        };
+                        if (nullptr == decomposed_query) {
                             continue;
                         }
 
@@ -418,7 +403,7 @@ auto SchemaMatch::populate_column_mapping(
                         for (auto const& log_type :
                              m_archive_reader->get_typed_log_type_dictionary()->get_entries())
                         {
-                            if (decomposed_query.value().get_log_type() == log_type.get_value()) {
+                            if (decomposed_query->get_log_type() == log_type.get_value()) {
                                 matched_ids.emplace_back(log_type.get_id());
                             }
                         }
@@ -448,7 +433,7 @@ auto SchemaMatch::populate_column_mapping(
 
                         auto full_expr{ast::AndExpr::create()};
                         full_expr->add_operand(log_type_expr);
-                        full_expr->add_operand(build_leaves_expr(column, decomposed_query.value()));
+                        full_expr->add_operand(build_leaves_expr(column, *decomposed_query));
                         return {true, full_expr};
                     }
                     if (NodeType::ParentVarType == cur_node.get_type()) {
@@ -462,24 +447,10 @@ auto SchemaMatch::populate_column_mapping(
                             ++num_variable_descriptors;
                         }
 
-                        if (1 == num_variable_descriptors && nullptr == m_ls_parser) {
-                            m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
-                        }
-
-                        ystdlib::error_handling::Result<clpp::DecomposedQuery> decomposed_query{
-                                (1 == num_variable_descriptors)
-                                        ? clpp::DecomposedQuery::process_query(
-                                                  *m_ls_parser,
-                                                  type_name,
-                                                  query
-                                          )
-                                        : clpp::DecomposedQuery::process_query(
-                                                  m_ls_schema,
-                                                  type_name,
-                                                  query
-                                          )
+                        clpp::DecomposedQuery const* decomposed_query{
+                                decompose_query(type_name, query, 1 == num_variable_descriptors)
                         };
-                        if (decomposed_query.has_error()) {
+                        if (nullptr == decomposed_query) {
                             continue;
                         }
 
@@ -547,7 +518,7 @@ auto SchemaMatch::populate_column_mapping(
 
                         auto full_expr{ast::AndExpr::create()};
                         full_expr->add_operand(log_type_expr);
-                        full_expr->add_operand(build_leaves_expr(column, decomposed_query.value()));
+                        full_expr->add_operand(build_leaves_expr(column, *decomposed_query));
                         return {true, full_expr};
                     }
                 }
@@ -857,5 +828,45 @@ LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, i
 
 std::shared_ptr<Expression> SchemaMatch::get_query_for_schema(int32_t schema) {
     return m_schema_to_query.at(schema);
+}
+
+auto SchemaMatch::decompose_query(
+        std::optional<std::string> type_name,
+        std::string const& query,
+        bool rule_query
+) -> clpp::DecomposedQuery const* {
+    if (auto dq{m_decomposed_query_cache.find({type_name, query})};
+        m_decomposed_query_cache.end() != dq)
+    {
+        return dq->second.has_value() ? &dq->second.value() : nullptr;
+    }
+
+    // TODO clpp: schema always consumed even for parent search??
+    m_ls_schema_reader->seek_from_begin(0);
+    auto schema{clpp::DecomposedQuery::create_log_surgeon_schema(m_ls_schema_reader)};
+    if (schema.has_error()) {
+        throw(std::runtime_error("failed to build ls schema"));
+    }
+    m_ls_schema = schema.value();
+    if (rule_query && nullptr == m_ls_parser) {
+        m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+    }
+
+    ystdlib::error_handling::Result<clpp::DecomposedQuery> result{
+            (rule_query)
+                    ? clpp::DecomposedQuery::process_query(*m_ls_parser, type_name, query)
+                    : clpp::DecomposedQuery::process_query(m_ls_schema, type_name.value(), query)
+    };
+    auto const& entry{m_decomposed_query_cache
+                              .emplace(
+                                      std::pair{type_name, query},
+                                      result.has_error()
+                                              ? std::nullopt
+                                              : std::make_optional<clpp::DecomposedQuery>(
+                                                        std::move(result).value()
+                                                )
+                              )
+                              .first->second};
+    return entry.has_value() ? &entry.value() : nullptr;
 }
 }  // namespace clp_s::search
