@@ -47,10 +47,11 @@ pytestmark = [
 @pytest.mark.startup
 def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
     """Tests package startup."""
+    logger.info("Starting test: 'test_clp_text_startup'")
+
     validate_package_instance(fixt_package_instance)
 
-    log_msg = "test_clp_text_startup was successful."
-    logger.info(log_msg)
+    logger.info("Test complete: 'test_clp_text_startup'")
 
 
 @pytest.mark.compression
@@ -60,6 +61,8 @@ def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInsta
 
     :param fixt_package_instance:
     """
+    logger.info("Starting test: 'test_clp_text_compression_text_multifile'")
+
     validate_package_instance(fixt_package_instance)
 
     # Clear archives before compressing.
@@ -80,8 +83,7 @@ def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInsta
     # Check the correctness of compression.
     verify_package_compression(compression_job.path_to_original_dataset, package_test_config)
 
-    log_msg = "test_clp_text_compression_text_multifile was successful."
-    logger.info(log_msg)
-
     # Clear archives.
     package_path_config.clear_package_archives()
+
+    logger.info("Test complete: 'test_clp_text_compression_text_multifile'")

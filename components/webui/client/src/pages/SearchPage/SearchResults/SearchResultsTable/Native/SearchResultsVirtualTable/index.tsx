@@ -14,14 +14,21 @@ interface SearchResultsVirtualTableProps {
 }
 
 /**
- * Renders search results in a virtual table.
+ * Renders search results in a virtual table and syncs results to the search store
+ * so the export action can read them without a duplicate cursor subscription.
+ *
+ * NOTE: Export is currently only available for the Native search engine. The
+ * Presto engine's PrestoResultsVirtualTable does not yet support export.
  *
  * @param props
  * @param props.tableHeight
  * @return
  */
 const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps) => {
-    const {updateNumSearchResultsTable} = useSearchStore();
+    const {
+        updateNumSearchResultsTable,
+        updateSearchResults,
+    } = useSearchStore();
     const searchResults = useSearchResults();
 
     useEffect(() => {
@@ -30,9 +37,11 @@ const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps
             0;
 
         updateNumSearchResultsTable(num);
+        updateSearchResults(searchResults);
     }, [
         searchResults,
         updateNumSearchResultsTable,
+        updateSearchResults,
     ]);
 
     return (
@@ -41,7 +50,7 @@ const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps
             dataSource={searchResults || []}
             pagination={false}
             rowKey={(record) => record._id}
-            scroll={{y: tableHeight, x: "max-content"}}/>
+            scroll={{y: tableHeight}}/>
     );
 };
 
