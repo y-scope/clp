@@ -31,8 +31,6 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "filter type is unsupported";
         case ErrorCodeEnum::UnsupportedFilterNormalization:
             return "filter normalization is unsupported";
-        case ErrorCodeEnum::CorruptFilterFile:
-            return "filter file is malformed or inconsistent";
     }
     return "unknown error code enum";
 }

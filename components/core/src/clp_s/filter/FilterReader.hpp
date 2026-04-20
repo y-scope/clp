@@ -21,7 +21,6 @@ public:
      * @param reader
      * @return A result containing an initialized FilterReader on success, or an error code
      * indicating the failure:
-     * - ErrorCodeEnum::CorruptFilterFile for malformed filter file metadata.
      * - ErrorCodeEnum::UnsupportedFilterType if the filter type ID is not supported.
      * - ErrorCodeEnum::UnsupportedFilterNormalization if the filter normalization ID is not
      *   supported.
@@ -41,12 +40,14 @@ public:
     [[nodiscard]] auto possibly_contains(std::string_view value) const -> bool;
 
     /**
-     * Checks whether the filter may contain a wildcard query string.
-     * The caller is responsible for ensuring `value` is a valid wildcard query string.
+     * Checks whether the filter may contain values matching the given query string.
+     * The caller is responsible for interpreting the query string and determining whether it
+     * includes wildcard semantics.
      * @param value
-     * @return Whether the filter may contain the query string `value`.
+     * @return true if the filter may contain values matching `value`; false if it definitely does
+     * not.
      */
-    [[nodiscard]] auto possibly_contains_wildcard(std::string_view value) const -> bool;
+    [[nodiscard]] auto possibly_contains_query_string(std::string_view value) const -> bool;
 
     [[nodiscard]] auto get_type() const -> FilterType { return m_type; }
 

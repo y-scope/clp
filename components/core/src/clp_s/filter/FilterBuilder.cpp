@@ -46,7 +46,6 @@ auto FilterBuilder::add(std::string_view value) -> void {
 }
 
 auto FilterBuilder::write(clp::WriterInterface& writer) const -> void {
-    writer.write(cFilterFileMagic.data(), cFilterFileMagic.size());
     writer.write_numeric_value(static_cast<uint8_t>(m_type));
     writer.write_numeric_value(static_cast<uint8_t>(m_normalization));
     m_bloom_filter.write(writer);

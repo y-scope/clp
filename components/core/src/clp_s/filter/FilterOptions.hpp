@@ -1,7 +1,6 @@
 #ifndef CLP_S_FILTER_FILTER_OPTIONS_HPP
 #define CLP_S_FILTER_FILTER_OPTIONS_HPP
 
-#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -22,11 +21,6 @@ enum class FilterNormalization : uint8_t {
     None = 0,
     Lowercase = 1,
 };
-
-/**
- * Magic bytes for serialized filter files: `CLPF`.
- */
-constexpr std::array<char, 4> cFilterFileMagic{{'C', 'L', 'P', 'F'}};
 
 /**
  * Parses a filter type string.

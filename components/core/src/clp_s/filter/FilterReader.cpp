@@ -1,8 +1,6 @@
 #include "FilterReader.hpp"
 
-#include <array>
 #include <cstdint>
-#include <cstring>
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -10,6 +8,8 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/ReaderInterface.hpp>
+#include <clp/string_utils/string_utils.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 
 #include "BloomFilter.hpp"
 #include "ErrorCode.hpp"
@@ -40,16 +40,6 @@ namespace {
 
 auto FilterReader::try_read(clp::ReaderInterface& reader)
         -> ystdlib::error_handling::Result<FilterReader> {
-    std::array<char, cFilterFileMagic.size()> magic{};
-    if (clp::ErrorCode_Success
-        != reader.try_read_exact_length(magic.data(), cFilterFileMagic.size()))
-    {
-        return ErrorCode{ErrorCodeEnum::ReadFailure};
-    }
-    if (0 != std::memcmp(magic.data(), cFilterFileMagic.data(), cFilterFileMagic.size())) {
-        return ErrorCode{ErrorCodeEnum::CorruptFilterFile};
-    }
-
     uint8_t filter_type_id{};
     if (clp::ErrorCode_Success != reader.try_read_numeric_value(filter_type_id)) {
         return ErrorCode{ErrorCodeEnum::ReadFailure};
@@ -85,7 +75,7 @@ auto FilterReader::possibly_contains(std::string_view value) const -> bool {
     return m_bloom_filter.possibly_contains(normalized_value);
 }
 
-auto FilterReader::possibly_contains_wildcard(std::string_view value) const -> bool {
+auto FilterReader::possibly_contains_query_string(std::string_view value) const -> bool {
     switch (m_type) {
         case FilterType::Bloom:
             if (clp_s::search::ast::has_unescaped_wildcards(value)) {
