@@ -420,7 +420,13 @@ def run_clp(
         if logs_list_path is not None:
             logs_list_path.unlink(missing_ok=True)
         if converted_inputs_dir is not None:
-            shutil.rmtree(converted_inputs_dir, ignore_errors=True)
+            try:
+                shutil.rmtree(converted_inputs_dir)
+            except OSError:
+                logger.exception(
+                    "Failed to clean up temporary directory: %s",
+                    converted_inputs_dir,
+                )
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
