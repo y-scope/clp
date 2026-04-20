@@ -173,11 +173,40 @@ NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterfa
     }
     return false;
 }
+
+auto NetworkUtils::is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool {
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
+    if (nullptr == network_reader) {
+        return false;
+    }
+    auto const curl_error_info = network_reader->get_curl_error_info();
+    if (false == curl_error_info.has_value()) {
+        return false;
+    }
+    auto const code{curl_error_info->code()};
+    // NOTE: CURLE_HTTP_RETURNED_ERROR (22) triggers for HTTP errors >= 400 (both 4xx and 5xx)
+    // when CURLOPT_FAILONERROR is enabled. We treat it as retryable since we cannot distinguish
+    // server errors (5xx) from client errors (4xx) without the HTTP response code. In practice,
+    // the most common errors are transient S3 503/500 responses.
+    //
+    // CURLE_SSL_CONNECT_ERROR (35): SSL connection reset by peer
+    // CURLE_GOT_NOTHING (52): Empty reply from server
+    // CURLE_RECV_ERROR (56): Failure in receiving network data
+    // CURLE_OPERATION_TIMEDOUT (28): Operation timed out
+    return CURLE_HTTP_RETURNED_ERROR == code || CURLE_SSL_CONNECT_ERROR == code
+           || CURLE_GOT_NOTHING == code || CURLE_RECV_ERROR == code
+           || CURLE_OPERATION_TIMEDOUT == code;
+}
 #else
 auto NetworkUtils::check_and_log_curl_error(
         [[maybe_unused]] std::string_view path,
         [[maybe_unused]] clp::ReaderInterface const* reader
 ) -> bool {
+    return false;
+}
+
+auto NetworkUtils::is_retryable_curl_error([[maybe_unused]] clp::ReaderInterface const* reader)
+        -> bool {
     return false;
 }
 #endif
