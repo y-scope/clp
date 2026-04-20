@@ -263,8 +263,8 @@ async fn get_timestamp_column_names(
 #[utoipa::path(
     get,
     path = "/usage/compression",
-    description = "Returns one row per compression job within the given \
-        epoch-millisecond time range.",
+    description = "Gets resource usage statistics for compression jobs \
+        within the given time range.",
     params(CompressionUsageParams),
     responses(
         (status = OK, body = Vec<CompressionUsage>),
