@@ -1,6 +1,7 @@
 #include "FileCompressor.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <set>
@@ -405,7 +406,7 @@ bool FileCompressor::try_compressing_as_archive(
             // Remove .clp suffix if found
             static constexpr char cIrStreamExtension[] = ".clp";
             if (boost::iends_with(file_path, cIrStreamExtension)) {
-                file_path.resize(file_path.length() - strlen(cIrStreamExtension));
+                file_path.resize(file_path.length() - std::strlen(cIrStreamExtension));
             }
             auto boost_path_for_compression = parent_boost_path / file_path;
 
