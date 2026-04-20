@@ -418,9 +418,9 @@ def run_clp(
 
     def cleanup_temporary_files():
         if logs_list_path is not None:
-            logs_list_path.unlink()
+            logs_list_path.unlink(missing_ok=True)
         if converted_inputs_dir is not None:
-            shutil.rmtree(converted_inputs_dir)
+            shutil.rmtree(converted_inputs_dir, ignore_errors=True)
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
@@ -547,7 +547,8 @@ def run_clp(
         logger.error(f"Failed to compress, return_code={return_code!s}")
     else:
         compression_successful = True
-        cleanup_temporary_files()
+
+    cleanup_temporary_files()
 
     logger.debug("Compressed.")
 
