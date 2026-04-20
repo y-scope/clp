@@ -1,12 +1,19 @@
+import {message} from "antd";
 import {Dayjs} from "dayjs";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
+import {downloadTextFile} from "../../../utils/download";
 import {
     DEFAULT_TIME_RANGE,
     DEFAULT_TIME_RANGE_OPTION,
     TIME_RANGE_OPTION,
 } from "../SearchControls/TimeRangeInput/utils";
+import {
+    formatResultAsJsonl,
+    SearchResult,
+} from "../SearchResults/SearchResultsTable/Native/SearchResultsVirtualTable/typings";
+import {formatExportFilenameTimestamp} from "../SearchResults/SearchResultsTable/Native/utils";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
 import {SEARCH_UI_STATE} from "./typings";
 
@@ -23,6 +30,7 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     queryIsCaseSensitive: false,
     queryString: "",
     searchJobId: null,
+    searchResults: null as SearchResult[] | null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     selectedDatasets: [],
     timeRange: DEFAULT_TIME_RANGE,
@@ -73,6 +81,11 @@ interface SearchState {
     searchJobId: string | null;
 
     /**
+     * Current search results from the cursor subscription.
+     */
+    searchResults: SearchResult[] | null;
+
+    /**
      * UI state of search page.
      */
     searchUiState: SEARCH_UI_STATE;
@@ -99,6 +112,14 @@ interface SearchState {
      */
     timelineConfig: TimelineConfig;
 
+    /**
+     * Exports all search results as a JSONL file download.
+     *
+     * NOTE: Results are exported in the original cursor order (i.e., timestamp descending),
+     * which may differ from the user's current table sort.
+     */
+    handleSearchResultsExport: () => void;
+
     updateAggregationJobId: (id: string | null) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
@@ -107,6 +128,7 @@ interface SearchState {
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
+    updateSearchResults: (results: SearchResult[] | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
     updateSelectedDatasets: (datasets: string[]) => void;
     updateTimeRange: (range: [Dayjs, Dayjs]) => void;
@@ -114,8 +136,26 @@ interface SearchState {
     updateTimelineConfig: (config: TimelineConfig) => void;
 }
 
-const useSearchStore = create<SearchState>((set) => ({
+const useSearchStore = create<SearchState>((set, get) => ({
     ...SEARCH_STATE_DEFAULT,
+
+    handleSearchResultsExport: () => {
+        const {searchResults} = get();
+        if (null === searchResults || 0 === searchResults.length) {
+            return;
+        }
+
+        try {
+            downloadTextFile(
+                searchResults.map((r) => `${formatResultAsJsonl(r)}\n`),
+                `clp-search-results-${formatExportFilenameTimestamp()}.jsonl`
+            );
+            message.success(`Exported ${searchResults.length} results`);
+        } catch (e) {
+            message.error("Failed to export results");
+            console.error(e);
+        }
+    },
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
     },
@@ -131,7 +171,7 @@ const useSearchStore = create<SearchState>((set) => ({
     updateQueriedDatasets: (datasets) => {
         set({queriedDatasets: datasets});
     },
-    updateQueryIsCaseSensitive: (newValue: boolean) => {
+    updateQueryIsCaseSensitive: (newValue) => {
         set({queryIsCaseSensitive: newValue});
     },
     updateQueryString: (query) => {
@@ -139,6 +179,9 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateSearchJobId: (id) => {
         set({searchJobId: id});
+    },
+    updateSearchResults: (results) => {
+        set({searchResults: results});
     },
     updateSearchUiState: (state) => {
         set({searchUiState: state});
@@ -149,7 +192,7 @@ const useSearchStore = create<SearchState>((set) => ({
     updateTimeRange: (range) => {
         set({timeRange: range});
     },
-    updateTimeRangeOption: (option: TIME_RANGE_OPTION) => {
+    updateTimeRangeOption: (option) => {
         set({timeRangeOption: option});
     },
     updateTimelineConfig: (config) => {
