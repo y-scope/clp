@@ -11,9 +11,7 @@ from clp_py_utils.clp_config import (
 )
 from pydantic import ValidationError
 
-from tests.utils.classes import (
-    IntegrationTestPathConfig,
-)
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
     load_yaml_to_dict,
     validate_dir_exists,

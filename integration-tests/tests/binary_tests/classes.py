@@ -3,9 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from tests.utils.classes import (
-    IntegrationTestPathConfig,
-)
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
     validate_dir_exists,
 )
