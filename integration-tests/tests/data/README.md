@@ -41,24 +41,16 @@ rules must be observed:
    }
    ```
 
-   <dl>
-   <dt><code>dataset_name</code></dt>
-   <dd>The name of the dataset directory.</dd>
-   <dt><code>unstructured</code></dt>
-   <dd><code>True</code> if logs are unstructured, else <code>False</code>.</dd>
-   <dt><code>timestamp_key</code></dt>
-   <dd>The authoritative timestamp key, or `null` if there is no such key.</dd>
-   <dt><code>begin_ts</code></dt>
-   <dd>The earliest timestamp present in the dataset (ms).</dd>
-   <dt><code>end_ts</code></dt>
-   <dd>The latest timestamp present in the dataset (ms).</dd>
-   <dt><code>logs_subdir</code></dt>
-   <dd>The name of the subdirectory containing logs.</dd>
-   <dt><code>file_names</code></dt>
-   <dd>A list of the files within `logs_subdir`.</dd>
-   <dt><code>single_match_wildcard_query</code></dt>
-   <dd>A wildcard query which, when searched, will match a single log message in the dataset.</dd>
-   </dl>
+   | Field | Description |
+   | --- | --- |
+   | `dataset_name` | The name of the dataset directory. |
+   | `unstructured` | `True` if logs are unstructured, else `False`. |
+   | `timestamp_key` | The authoritative timestamp key, or `null` if there is no such key. |
+   | `begin_ts` | The earliest timestamp present in the dataset (ms). |
+   | `end_ts` | The latest timestamp present in the dataset (ms). |
+   | `logs_subdir` | The name of the subdirectory containing logs. |
+   | `file_names` | A list of the files within `logs_subdir`. |
+   | `single_match_wildcard_query` | A wildcard query which, when searched, will match a single log message in the dataset. |
 
 ## Accessing datasets within the testing system
 
