@@ -559,7 +559,125 @@ def run_clp(
     logger.debug("Compressed.")
 
     # Close stderr log file
-    stderr_log_file.close()
+    try:
+        if conversion_return_code != 0:
+            logger.error(
+                f"Failed to convert unstructured log text, return_code={conversion_return_code}"
+            )
+            worker_output = {
+                "total_uncompressed_size": 0,
+                "total_compressed_size": 0,
+                "error_message": f"Check logs in {stderr_log_path}",
+            }
+            return CompressionTaskStatus.FAILED, worker_output
+
+        # Start compression
+        logger.debug("Compressing...")
+        compression_successful = False
+        proc = subprocess.Popen(
+            compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file, env=compression_env
+        )
+
+        # Compute the total amount of data compressed
+        last_archive_stats = None
+        last_line_decoded = False
+        total_uncompressed_size = 0
+        total_compressed_size = 0
+
+        # Handle job metadata update and S3 write if enabled
+        s3_error = None
+        while not last_line_decoded:
+            stats: dict[str, Any] | None = None
+
+            line = proc.stdout.readline()
+            if not line:
+                last_line_decoded = True
+            else:
+                stats = json.loads(line.decode("utf-8"))
+
+            if last_archive_stats is not None and (
+                None is stats or stats["id"] != last_archive_stats["id"]
+            ):
+                archive_id = last_archive_stats["id"]
+                archive_path = archive_output_dir / archive_id
+                if enable_s3_write:
+                    if s3_error is None:
+                        logger.info(f"Uploading archive {archive_id} to S3...")
+                        try:
+                            _upload_archive_to_s3(s3_config, archive_path, archive_id, dataset)
+                            logger.info(f"Finished uploading archive {archive_id} to S3.")
+                        except Exception as err:
+                            logger.exception(f"Failed to upload archive {archive_id}")
+                            s3_error = str(err)
+                            # NOTE: It's possible `proc` finishes before we call `terminate` on it,
+                            # in which case the process will still return success.
+                            proc.terminate()
+
+                if s3_error is None:
+                    # We've started a new archive so add the previous archive's last reported size
+                    # to the total
+                    total_uncompressed_size += last_archive_stats["uncompressed_size"]
+                    total_compressed_size += last_archive_stats["size"]
+                    with (
+                        closing(sql_adapter.create_connection(True)) as db_conn,
+                        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+                    ):
+                        table_prefix = clp_metadata_db_connection_config["table_prefix"]
+                        if StorageEngine.CLP_S == clp_storage_engine:
+                            update_archive_metadata(
+                                db_cursor, table_prefix, dataset, last_archive_stats
+                            )
+                        update_job_metadata(
+                            db_cursor,
+                            job_id,
+                            last_archive_stats,
+                        )
+                        db_conn.commit()
+
+                    if StorageEngine.CLP_S == clp_storage_engine:
+                        indexer_cmd = [
+                            str(clp_home / "bin" / "indexer"),
+                            *_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config),
+                            dataset,
+                            archive_path,
+                        ]
+
+                        # Set environment variables for database credentials
+                        indexer_env = dict(os.environ)
+                        indexer_env.update(
+                            _get_db_connection_env_vars_for_clp_cmd(
+                                clp_metadata_db_connection_config
+                            )
+                        )
+
+                        try:
+                            subprocess.run(
+                                indexer_cmd,
+                                stdout=subprocess.DEVNULL,
+                                stderr=stderr_log_file,
+                                check=True,
+                                env=indexer_env,
+                            )
+                        except subprocess.CalledProcessError:
+                            logger.exception("Failed to index archive.")
+
+                if enable_s3_write:
+                    archive_path.unlink()
+
+            last_archive_stats = stats
+
+        # Wait for compression to finish
+        return_code = proc.wait()
+
+        if 0 != return_code:
+            logger.error(f"Failed to compress, return_code={return_code!s}")
+        else:
+            compression_successful = True
+
+        logger.debug("Compressed.")
+    finally:
+        cleanup_temporary_files()
+        stderr_log_file.close()
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,
