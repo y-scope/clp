@@ -2,17 +2,16 @@
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 from clp_py_utils.clp_config import (
     ClpConfig,
 )
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from tests.utils.classes import (
-    IntegrationTestExternalAction,
     IntegrationTestPathConfig,
 )
 from tests.utils.utils import (
@@ -213,37 +212,3 @@ class ClpPackage:
             pytest.fail(fail_msg)
 
         return running_config
-
-
-class ClpPackageCmdArgs(BaseModel):
-    """Base class for all CLP package command argument models."""
-
-    script_path: Path
-    config_path: Path
-
-    def to_cmd(self) -> list[str]:
-        """
-        When overriding `to_cmd()` in derived classes, `super().to_cmd()` should be called.
-
-        :return: list of command arguments.
-        """
-        return [
-            str(self.script_path),
-            "--config",
-            str(self.config_path),
-        ]
-
-
-@dataclass
-class ClpPackageExternalAction(IntegrationTestExternalAction):
-    """Metadata for an external action executed during a CLP package integration test."""
-
-    #: Pydantic object storing semantic info required to construct `cmd` and verify the Action.
-    args: ClpPackageCmdArgs
-
-    #: Overridden from `IntegrationTestExternalAction`. Constructed in `__post_init__` using `args`.
-    cmd: list[str] = field(init=False)
-
-    def __post_init__(self) -> None:
-        """Constructs `cmd` using `args`."""
-        self.cmd = self.args.to_cmd()

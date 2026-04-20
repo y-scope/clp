@@ -6,13 +6,13 @@ import subprocess
 from pathlib import Path
 
 from tests.conftest import get_test_log_dir
-from tests.utils.classes import IntegrationTestExternalAction
+from tests.utils.classes import ExternalAction
 
 logger = logging.getLogger(__name__)
 
 
 # TODO: `log_subprocess_output_to_file` will be phased out in favour of
-# `IntegrationTestExternalAction._log_action_summary_to_file()`.
+# `ExternalAction._log_action_summary_to_file()`.
 def log_subprocess_output_to_file(
     proc: subprocess.CompletedProcess[str],
     cmd: list[str],
@@ -67,9 +67,7 @@ def log_subprocess_output_to_file(
     logger.info(log_msg)
 
 
-def format_action_failure_msg(
-    reason: str, *actions: IntegrationTestExternalAction
-) -> tuple[bool, str]:
+def format_action_failure_msg(reason: str, *actions: ExternalAction) -> tuple[bool, str]:
     """
     Formats a failure message that indicates where to find the subprocess log(s) relevant to the
     failure.

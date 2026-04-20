@@ -3,11 +3,13 @@
 import datetime
 import logging
 import subprocess
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from tests.conftest import get_test_log_dir
 from tests.utils.subprocess_utils import run_subprocess
@@ -80,7 +82,7 @@ class IntegrationTestDataset:
 
 
 @dataclass
-class IntegrationTestExternalAction:
+class ExternalAction:
     """Metadata for an external action executed during an integration test."""
 
     #: Command to pass to `subprocess.run()`.
@@ -92,8 +94,10 @@ class IntegrationTestExternalAction:
     #: Path to the file where this action's subprocess output was logged.
     log_file_path: Path = field(init=False)
 
-    def execute(self) -> None:
+    def __post_init__(self) -> None:
         """Execute the external action and log output."""
+        if not self.cmd:
+            pytest.fail("Cannot create `ExternalAction` object: `cmd` list is empty.")
         self.completed_proc = run_subprocess(self.cmd)
         self._log_action_summary_to_file()
 
@@ -141,3 +145,11 @@ class IntegrationTestExternalAction:
             f"Subprocess returned. stdout and stderr written to log file: '{self.log_file_path}'"
         )
         logger.info(log_msg)
+
+
+class CmdArgs(BaseModel, ABC):
+    """Abstract base class for all CLP command argument models."""
+
+    @abstractmethod
+    def to_cmd(self) -> list[str]:
+        """:return: list of command arguments constructed from this instance's data members."""
