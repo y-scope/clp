@@ -87,7 +87,8 @@ To configure CLP for multi-host deployment, you'll need to:
      shared filesystem.
    * (Optional) set `scheduler_concurrency` under `query_scheduler` to control
      the size of the process pool used by the query scheduler. Higher
-     concurrency can help improve performance for larger clusters.
+     concurrency can help improve throughput when many query jobs can be
+     run concurrently in larger clusters.
 
 4. Set up the CLP package's environment:
 
