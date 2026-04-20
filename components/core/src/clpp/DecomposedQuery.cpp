@@ -147,7 +147,6 @@ auto DecomposedQuery::process_query(
         std::optional<std::string_view> rule_type,
         std::string_view query
 ) -> ystdlib::error_handling::Result<DecomposedQuery> {
-    SPDLOG_INFO("lol rip");
     size_t parser_pos{0};
     auto event{parser.next_event(query, &parser_pos)};
     if (false == event.has_value() || query.size() != parser_pos) {
