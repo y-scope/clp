@@ -327,17 +327,16 @@ def _schedule_job(
     existing_datasets: set[str],
 ) -> None:
     """
-    Schedules a single pending compression job: deserializes its config, validates input paths,
-    and submits compression tasks.
-
-    On failure, the job is marked as FAILED in the database and the function returns early.
+    Schedules a single pending compression job. On failure, the job is marked as FAILED in the
+    database.
 
     :param clp_config:
     :param clp_metadata_db_connection_config:
     :param task_manager:
     :param db_context:
     :param job_row: A row from the compression jobs table.
-    :param existing_datasets: [in/out] May be updated with newly created datasets.
+    :param existing_datasets: The current set of datasets. May be updated if the job creates a new
+    dataset.
     """
     job_id = job_row["id"]
     try:
@@ -351,7 +350,7 @@ def _schedule_job(
             job_id,
             {
                 "status": CompressionJobStatus.FAILED,
-                "status_msg": "Failed to decompress job config. The config data may be"
+                "status_msg": "Failed to decompress job config. The config data may have been"
                 " corrupted or truncated.",
             },
         )
