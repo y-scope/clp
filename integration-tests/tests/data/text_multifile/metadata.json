@@ -3,7 +3,7 @@
     "unstructured": true,
     "timestamp_key": null,
     "begin_ts": 92554380000,
-    "end_ts": 93596040000,
+    "end_ts": 93596007004,
     "logs_subdir": "logs",
     "file_names": [
         "apollo-17_day01.txt",

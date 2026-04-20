@@ -17,7 +17,7 @@ must be observed:
 When adding or changing a dataset directory within `clp/integration-tests/tests/data`, the following
 rules must be observed:
 
-1. Each dataset directory must contain a first-level subdirectory that holds all log files for the 
+1. Each dataset directory must contain a first-level subdirectory that holds all log files for the
    dataset.
 2. The logs subdirectory may only contain log files. (These log files may be organized in any way
    within the logs subdirectory.)
