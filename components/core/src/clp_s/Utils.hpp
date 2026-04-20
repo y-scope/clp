@@ -60,6 +60,14 @@ public:
      */
     [[maybe_unused]] static auto
     check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader) -> bool;
+
+    /**
+     * Checks if a reader is a `clp::NetworkReader` that has encountered a transient (retryable)
+     * CURL error such as HTTP 500, 502, 503, 504, SSL connection reset, or empty reply.
+     * @param reader The open reader which may have experienced a CURL error.
+     * @return Whether a retryable CURL error has occurred on the reader.
+     */
+    [[nodiscard]] static auto is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool;
 };
 
 class UriUtils {
