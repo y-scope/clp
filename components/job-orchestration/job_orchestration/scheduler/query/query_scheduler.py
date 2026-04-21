@@ -765,7 +765,7 @@ def handle_pending_query_jobs(
                     reducer_acquisition_tasks=reducer_acquisition_tasks,
                 )
             elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
-                job_config = msgpack.unpackb()
+                job_config = msgpack.unpackb(config_blob)
                 _handle_new_extraction_job(
                     db_conn=db_conn,
                     job_id=job_id,
