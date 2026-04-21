@@ -686,6 +686,7 @@ async def acquire_reducer_for_job(job: SearchJob):
     job.reducer_handler_msg_queues = reducer_handler_msg_queues
     job.search_config.aggregation_config.reducer_host = reducer_host
     job.search_config.aggregation_config.reducer_port = reducer_port
+    job.search_config_blob = msgpack.packb(job.get_config().model_dump())
     job.state = InternalJobState.WAITING_FOR_DISPATCH
     job.reducer_acquisition_task = None
 

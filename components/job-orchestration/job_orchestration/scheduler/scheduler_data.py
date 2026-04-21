@@ -64,6 +64,9 @@ class ExtractIrJob(QueryJob):
     def get_config(self) -> QueryJobConfig:
         return self.extract_ir_config
 
+    def get_config_blob(self) -> bytes:
+        raise NotImplementedError
+
 
 class ExtractJsonJob(QueryJob):
     extract_json_config: ExtractJsonJobConfig
@@ -73,6 +76,9 @@ class ExtractJsonJob(QueryJob):
 
     def get_config(self) -> QueryJobConfig:
         return self.extract_json_config
+
+    def get_config_blob(self) -> bytes:
+        raise NotImplementedError
 
 
 class SearchJob(QueryJob):
