@@ -9,7 +9,6 @@ import pytest
 from tests.utils.logging_utils import log_subprocess_output_to_file
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
-
 logger = logging.getLogger(__name__)
 
 
