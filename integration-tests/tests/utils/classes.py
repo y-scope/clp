@@ -12,10 +12,9 @@ import pytest
 from pydantic import BaseModel
 
 from tests.conftest import get_test_log_dir
-from tests.utils.subprocess_utils import run_subprocess
-from tests.utils.utils import (
-    validate_dir_exists,
-)
+from tests.utils.utils import validate_dir_exists
+
+DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +97,33 @@ class ExternalAction:
         """Execute the external action and log output."""
         if not self.cmd:
             pytest.fail("Cannot create `ExternalAction` object: `cmd` list is empty.")
-        self.completed_proc = run_subprocess(self.cmd)
+        self.completed_proc = self._run_subprocess()
         self._log_action_summary_to_file()
+
+    def _run_subprocess(self) -> subprocess.CompletedProcess[str]:
+        """
+        Passes `self.cmd` to `subprocess.run()` with preset parameters:
+            capture_output=True:                    Output will be logged and analysed later.
+            timeout=DEFAULT_CMD_TIMEOUT_SECONDS:
+            check=False:                            Error will be handled during verification.
+            text=True:                              Output should be str for analysis purposes.
+        """
+        exe_name = Path(self.cmd[0]).name
+        log_msg = f"Running '{exe_name}' subprocess. Command: {self.cmd}"
+        logger.info(log_msg)
+
+        try:
+            return subprocess.run(
+                self.cmd,
+                capture_output=True,
+                timeout=DEFAULT_CMD_TIMEOUT_SECONDS,
+                check=False,
+                text=True,
+            )
+        except subprocess.TimeoutExpired:
+            pytest.fail(f"Subprocess '{exe_name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s.")
+        except OSError as e:
+            pytest.fail(f"Subprocess '{exe_name}' failed to start: {e}")
 
     def _log_action_summary_to_file(self) -> None:
         """Logs a summary of the external action execution to a unique file."""
