@@ -9,7 +9,7 @@
     "license": {
       "name": ""
     },
-    "version": "0.11.1-dev"
+    "version": "0.12.0"
   },
   "paths": {
     "/health": {

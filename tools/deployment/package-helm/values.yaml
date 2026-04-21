@@ -8,7 +8,7 @@ image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
-    tag: "main"
+    tag: "0.12.0"
   prestoCoordinator:
     repository: "ghcr.io/y-scope/presto/coordinator"
     pullPolicy: "IfNotPresent"
