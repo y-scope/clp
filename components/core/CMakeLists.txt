@@ -211,7 +211,7 @@ if(CLP_NEED_NLOHMANN_JSON)
 endif()
 
 if(CLP_NEED_SIMDJSON)
-    find_package(simdjson REQUIRED)
+    find_package(simdjson 4.6.2 REQUIRED)
     if(simdjson_FOUND)
         message(STATUS "Found simdjson ${simdjson_VERSION}")
     endif()

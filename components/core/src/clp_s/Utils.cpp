@@ -8,6 +8,7 @@
 
 #include <boost/url.hpp>
 #include <fmt/format.h>
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
@@ -197,6 +198,17 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
+    simdjson::builtin::builder::string_builder json_string_builder{};
+    json_string_builder.clear();
+    json_string_builder.escape_and_append(source);
+    std::string_view escaped_source;
+    auto const status = json_string_builder.view().get(escaped_source);
+    if (simdjson::SUCCESS == status) {
+        destination.append(escaped_source);
+        return;
+    }
+
+    // Preserve the original implementation in case simdjson fails.
     // Escaping is implemented using this `append_unescaped_slice` approach to offer a fast path
     // when strings are mostly or entirely valid escaped JSON. Benchmarking shows that this offers
     // a net decompression speedup of ~30% compared to adding every character to the destination one
