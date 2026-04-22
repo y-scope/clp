@@ -5,7 +5,7 @@ from enum import auto, Enum
 from typing import Any
 
 import msgpack
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
@@ -45,7 +45,7 @@ class QueryJob(BaseModel, ABC):
     state: InternalJobState
     start_time: datetime.datetime | None = None
     current_sub_job_async_task_result: Any | None = None
-    cached_config_blob: bytes | None = None
+    cached_config_blob: bytes | None = Field(default=None, exclude=True, repr=False)
 
     @abstractmethod
     def get_type(self) -> QueryJobType: ...
