@@ -18,7 +18,7 @@ When adding or changing a dataset directory within `integration-tests/tests/data
 rules must be observed:
 
 1. Each dataset directory must contain a subdirectory that holds all log files for the dataset.
-2. Each dataset directory must contain a file called `metadata.json`, which must comform to the
+2. Each dataset directory must contain a file called `metadata.json`, which must conform to the
    following schema:
 
    ```json
