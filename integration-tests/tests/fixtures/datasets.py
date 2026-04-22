@@ -14,7 +14,7 @@ def json_multifile(
 ) -> IntegrationTestDataset:
     """Returns an object corresponding to the `json_multifile` test dataset."""
     return IntegrationTestDataset(
-        path_to_dataset_root=integration_test_path_config.test_data_path / "json_multifile",
+        dataset_root_dir=integration_test_path_config.test_data_dir / "json_multifile",
     )
 
 
@@ -24,5 +24,5 @@ def text_multifile(
 ) -> IntegrationTestDataset:
     """Returns an object corresponding to the `text_multifile` test dataset."""
     return IntegrationTestDataset(
-        path_to_dataset_root=integration_test_path_config.test_data_path / "text_multifile",
+        dataset_root_dir=integration_test_path_config.test_data_dir / "text_multifile",
     )

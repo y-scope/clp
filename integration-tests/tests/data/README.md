@@ -1,28 +1,25 @@
 # Integration test data
 
-This directory (`clp/integration-tests/tests/data`) contains test datasets for use throughout the
+The `integration-tests/tests/data` directory contains test datasets for use throughout the
 integration test system.
 
 ## Directory structure
 
-When augmenting or changing the contents of `clp/integration-tests/tests/data`, the following rules
+When augmenting or changing the contents of `integration-tests/tests/data`, the following rules
 must be observed:
 
 1. Each dataset must be located in its own directory.
-2. Each dataset directory must be a first-level directory within `clp/integration-tests/tests/data`,
-   i.e., dataset directories cannot be nested.
+2. Each dataset directory must be a direct child of `integration-tests/tests/data`; nested dataset
+   directories are not permitted.
 
 ## Dataset contents
 
-When adding or changing a dataset directory within `clp/integration-tests/tests/data`, the following
+When adding or changing a dataset directory within `integration-tests/tests/data`, the following
 rules must be observed:
 
-1. Each dataset directory must contain a first-level subdirectory that holds all log files for the
-   dataset.
-2. The logs subdirectory may only contain log files. (These log files may be organized in any way
-   within the logs subdirectory.)
-3. Each dataset directory must contain a file called `metadata.json`.
-4. The content of `metadata.json` must conform to the following schema:
+1. Each dataset directory must contain a subdirectory that holds all log files for the dataset.
+2. Each dataset directory must contain a file called `metadata.json`, which must comform to the
+   following schema:
 
    ```json
    {
@@ -50,14 +47,14 @@ rules must be observed:
    | `end_ts` | The latest timestamp present in the dataset (ms). |
    | `logs_subdir` | The name of the subdirectory containing logs. |
    | `file_names` | A list of the files within `logs_subdir`. |
-   | `single_match_wildcard_query` | A wildcard query which, when searched, will match a single log message in the dataset. |
+   | `single_match_wildcard_query` | A wildcard query that matches exactly one log message in the dataset. |
 
 ## Accessing datasets within the testing system
 
 To access a dataset from within the test system, the following rules should be observed:
 
 1. All datasets should have their own session-scoped fixture in
-   `clp/integration-tests/tests/fixtures/datasets.py`. Test code should access this fixture to
+   `integration-tests/tests/fixtures/datasets.py`. Test code should access this fixture to
    access the dataset.
 2. Each session-scoped dataset fixture should be given the same name as the dataset directory name,
    and should conform to the following format:
@@ -69,10 +66,9 @@ To access a dataset from within the test system, the following rules should be o
    ) -> IntegrationTestDataset:
        """Returns an object corresponding to the `dataset_name` test dataset."""
        return IntegrationTestDataset(
-           path_to_dataset_root=integration_test_path_config.test_data_path / "dataset_name",
+           dataset_root_dir=integration_test_path_config.test_data_dir / "dataset_name",
        )
    ```
 
-3. While it is possible to read the logs from a dataset directly (i.e., without using a 
-   session-scoped dataset fixture), it is not recommended, as dataset metadata is needed in several
-   verification processes throughout the testing system.
+Tests should use dataset fixtures instead of reading the logs directly, because many verification
+flows rely on dataset metadata.

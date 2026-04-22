@@ -45,7 +45,7 @@ class IntegrationTestPathConfig:
         return self.clp_build_dir / "integration_tests"
 
     @property
-    def test_data_path(self) -> Path:
+    def test_data_dir(self) -> Path:
         """:return: The absolute path to the sample dataset directory."""
         return self.integration_tests_project_root / "tests" / "data"
 
@@ -56,7 +56,7 @@ class IntegrationTestPathConfig:
 
     def _static_paths(self) -> list[Path]:
         """:return: List of paths that must exist on disk at construction time."""
-        return [self.test_data_path]
+        return [self.test_data_dir]
 
 
 class IntegrationTestDatasetMetadata(BaseModel):
@@ -79,8 +79,8 @@ class IntegrationTestDatasetMetadata(BaseModel):
 class IntegrationTestDataset:
     """Path layout and metadata storage for a sample dataset."""
 
-    #: Absolute path to the dataset root.
-    path_to_dataset_root: Path
+    #: Absolute path to the dataset root directory.
+    dataset_root_dir: Path
 
     #: Pydantic model of metadata describing the dataset.
     metadata: IntegrationTestDatasetMetadata = field(init=False)
@@ -90,7 +90,7 @@ class IntegrationTestDataset:
 
     def __post_init__(self) -> None:
         """Validate data members and load metadata."""
-        validate_dir_exists(self.path_to_dataset_root)
+        validate_dir_exists(self.dataset_root_dir)
 
         # Load metadata.
         validate_file_exists(self.metadata_file_path)
@@ -104,10 +104,11 @@ class IntegrationTestDataset:
         validate_dir_exists(self.logs_path)
 
         if self.metadata.begin_ts > self.metadata.end_ts:
-            pytest.fail(
+            err_msg = (
                 f"Dataset metadata failure: `begin_ts` '{self.metadata.begin_ts}' is larger than"
                 f" `end_ts` '{self.metadata.end_ts}'"
             )
+            raise ValueError(err_msg)
 
         for file_path in self.metadata.file_names:
             file_path_abs = self.logs_path / file_path
@@ -116,9 +117,9 @@ class IntegrationTestDataset:
     @property
     def metadata_file_path(self) -> Path:
         """:return: The absolute path to the file containing metadata for the dataset."""
-        return self.path_to_dataset_root / "metadata.json"
+        return self.dataset_root_dir / "metadata.json"
 
     @property
     def logs_path(self) -> Path:
-        """:return: The absolute path to the subdirectory containing logs."""
-        return self.path_to_dataset_root / self.metadata.logs_subdir
+        """:return: The absolute path to the logs directory."""
+        return self.dataset_root_dir / self.metadata.logs_subdir
