@@ -597,7 +597,7 @@ def get_task_group_for_job(
                 job_id=job.id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                search_config_blob=job.get_config_blob(),
+                search_config_blob=job.get_cached_config_blob(),
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
@@ -605,13 +605,12 @@ def get_task_group_for_job(
             for i in range(len(archives))
         )
     if job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
-        job_config = job.get_config().model_dump()
         return celery.group(
             extract_stream.s(
                 job_id=job.id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                job_config=job_config,
+                job_config=job.get_config().model_dump(),
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
@@ -686,7 +685,6 @@ async def acquire_reducer_for_job(job: SearchJob):
     job.reducer_handler_msg_queues = reducer_handler_msg_queues
     job.search_config.aggregation_config.reducer_host = reducer_host
     job.search_config.aggregation_config.reducer_port = reducer_port
-    job.search_config_blob = msgpack.packb(job.get_config().model_dump())
     job.state = InternalJobState.WAITING_FOR_DISPATCH
     job.reducer_acquisition_task = None
 
@@ -746,7 +744,7 @@ def handle_pending_query_jobs(
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
             job_type = job["type"]
-            config_blob = job["job_config"]
+            job_config = msgpack.unpackb(job["job_config"])
             job_creation_time = job["creation_time"].timestamp()
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
@@ -756,7 +754,7 @@ def handle_pending_query_jobs(
                     db_conn=db_conn,
                     db_cursor=db_cursor,
                     job_id=job_id,
-                    search_config_blob=config_blob,
+                    job_config=job_config,
                     job_creation_time=job_creation_time,
                     table_prefix=table_prefix,
                     max_datasets_per_query=max_datasets_per_query,
@@ -766,7 +764,6 @@ def handle_pending_query_jobs(
                     reducer_acquisition_tasks=reducer_acquisition_tasks,
                 )
             elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
-                job_config = msgpack.unpackb(config_blob)
                 _handle_new_extraction_job(
                     db_conn=db_conn,
                     job_id=job_id,
@@ -816,7 +813,7 @@ def handle_pending_query_jobs(
             futures.append(
                 process_pool.submit(
                     DispatchExecutor.dispatch_job_and_update_db,
-                    job.get_config_blob(),
+                    job.get_cached_config_blob(),
                     job.get_type(),
                     job_id,
                     archives_for_search,
@@ -1230,7 +1227,7 @@ def _handle_new_search_job(
     db_conn,
     db_cursor,
     job_id: str,
-    search_config_blob: bytes,
+    job_config: dict,
     job_creation_time: float,
     table_prefix: str,
     max_datasets_per_query: int | None,
@@ -1252,7 +1249,7 @@ def _handle_new_search_job(
     :param db_conn:
     :param db_cursor:
     :param job_id:
-    :param search_config_blob:
+    :param job_config:
     :param job_creation_time:
     :param table_prefix:
     :param max_datasets_per_query:
@@ -1267,7 +1264,7 @@ def _handle_new_search_job(
     if job_id in active_jobs:
         return
 
-    search_config = SearchJobConfig.model_validate(msgpack.unpackb(search_config_blob))
+    search_config = SearchJobConfig.model_validate(job_config)
     datasets = search_config.datasets
     if datasets is not None:
         # Deduplicate
@@ -1357,7 +1354,6 @@ def _handle_new_search_job(
     new_search_job = SearchJob(
         id=job_id,
         search_config=search_config,
-        search_config_blob=search_config_blob,
         state=InternalJobState.WAITING_FOR_DISPATCH,
         num_archives_to_search=len(archives_for_search),
         num_archives_searched=0,

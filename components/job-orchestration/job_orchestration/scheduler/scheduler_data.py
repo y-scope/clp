@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from enum import auto, Enum
 from typing import Any
 
+import msgpack
 from pydantic import BaseModel, ConfigDict
 
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
@@ -44,6 +45,7 @@ class QueryJob(BaseModel, ABC):
     state: InternalJobState
     start_time: datetime.datetime | None = None
     current_sub_job_async_task_result: Any | None = None
+    cached_config_blob: bytes | None = None
 
     @abstractmethod
     def get_type(self) -> QueryJobType: ...
@@ -51,8 +53,10 @@ class QueryJob(BaseModel, ABC):
     @abstractmethod
     def get_config(self) -> QueryJobConfig: ...
 
-    @abstractmethod
-    def get_config_blob(self) -> bytes: ...
+    def get_cached_config_blob(self) -> bytes:
+        if self.cached_config_blob is None:
+            self.cached_config_blob = msgpack.packb(self.get_config().model_dump())
+        return self.cached_config_blob
 
 
 class ExtractIrJob(QueryJob):
@@ -64,9 +68,6 @@ class ExtractIrJob(QueryJob):
     def get_config(self) -> QueryJobConfig:
         return self.extract_ir_config
 
-    def get_config_blob(self) -> bytes:
-        raise NotImplementedError
-
 
 class ExtractJsonJob(QueryJob):
     extract_json_config: ExtractJsonJobConfig
@@ -77,16 +78,12 @@ class ExtractJsonJob(QueryJob):
     def get_config(self) -> QueryJobConfig:
         return self.extract_json_config
 
-    def get_config_blob(self) -> bytes:
-        raise NotImplementedError
-
 
 class SearchJob(QueryJob):
     # To allow asyncio.Task and asyncio.Queue
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     search_config: SearchJobConfig
-    search_config_blob: bytes
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: list[dict[str, Any]]
@@ -98,9 +95,6 @@ class SearchJob(QueryJob):
 
     def get_config(self) -> QueryJobConfig:
         return self.search_config
-
-    def get_config_blob(self) -> bytes:
-        return self.search_config_blob
 
 
 class QueryTaskResult(BaseModel):
