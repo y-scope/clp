@@ -26,7 +26,11 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
         case ErrorCodeEnum::CorruptFilterPayload:
             return "bloom filter payload is malformed or inconsistent";
         case ErrorCodeEnum::ReadFailure:
-            return "failed to read Bloom filter payload from reader";
+            return "failed to read filter data from reader";
+        case ErrorCodeEnum::UnsupportedFilterType:
+            return "filter type is unsupported";
+        case ErrorCodeEnum::UnsupportedFilterNormalization:
+            return "filter normalization is unsupported";
     }
     return "unknown error code enum";
 }
