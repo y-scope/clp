@@ -16,9 +16,10 @@
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
-#include "ir_unit_deserialization_methods.hpp"
+#include "DeserializerImpl.hpp"
 #include "IrUnitHandlerReq.hpp"
 #include "IrUnitType.hpp"
+#include "KvIrDeserializerImpl.hpp"
 #include "protocol_constants.hpp"
 #include "search/AstEvaluationResult.hpp"
 #include "search/QueryHandlerReq.hpp"
@@ -31,9 +32,9 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * A deserializer for reading IR units from a CLP kv-pair IR stream. An IR unit handler should be
- * provided to perform user-defined operations on each deserialized IR unit. Additionally, a query
- * handler can be provided to handle queries and column projections.
+ * A deserializer for reading IR units from a CLP IR stream. An IR unit handler should be provided
+ * to perform user-defined operations on each deserialized IR unit. Additionally, a query handler
+ * can be provided to handle queries and column projections.
  *
  * NOTE: This class is designed only to provide deserialization functionalities. Callers are
  * responsible for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
@@ -104,23 +105,22 @@ public:
      * returns `search::AstEvaluationResult::True`.
      *
      * @param reader
-     * @return Forwards `deserialize_tag`s return values if no tag bytes can be read to determine
-     * the next IR unit type.
-     * @return std::errc::protocol_not_supported if the IR unit type is not supported.
+     * @return Forwards `DeserializerImpl::get_next_ir_unit_type`'s return values if it fails to
+     * determine the type of the next IR unit.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in the previous calls.
      * @return IrUnitType::LogEvent if a log event IR unit is deserialized, or an error code
      * indicating the failure:
-     * - Forwards `deserialize_ir_unit_kv_pair_log_event`'s return values if it failed to
-     *   deserialize and construct the log event.
+     * - Forwards `DeserializerImpl::deserialize_ir_unit_kv_pair_log_event`'s return values if it
+     *   failed to deserialize and construct the log event.
      * - Forwards `handle_log_event`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
      * - Forwards `search::QueryHandler::evaluate_kv_pair_log_event`'s return values on failure, if
      *   `QueryHandlerType` is not `search::EmptyQueryHandler`.
      * @return IrUnitType::SchemaTreeNodeInsertion if a schema tree node insertion IR unit is
      * deserialized, or an error code indicating the failure:
-     * - Forwards `deserialize_ir_unit_schema_tree_node_insertion`'s return values if it failed to
-     *   deserialize and construct the schema tree node locator.
+     * - Forwards `DeserializerImpl::deserialize_ir_unit_schema_tree_node_insertion`'s return values
+     *   if it failed to deserialize and construct the schema tree node locator.
      * - Forwards `handle_schema_tree_node_insertion`'s return values from the user-defined IR unit
      *   handler on unit handling failure.
      * - Forwards `search::QueryHandler::update_partially_resolved_columns`'s return values on
@@ -129,8 +129,8 @@ public:
      *   tree.
      * @return IrUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
      * error code indicating the failure:
-     * - Forwards `deserialize_ir_unit_utc_offset_change`'s return values if it failed to
-     *   deserialize the UTC offset.
+     * - Forwards `DeserializerImpl::deserialize_ir_unit_utc_offset_change`'s return values if it
+     *   failed to deserialize the UTC offset.
      * - Forwards `handle_utc_offset_change`'s return values from the user-defined IR unit handler
      *   on unit handling failure.
      * @return IrUnitType::EndOfStream if an end-of-stream IR unit is deserialized, or an error code
@@ -192,15 +192,18 @@ private:
 
     // Constructor
     Deserializer(
+            std::unique_ptr<DeserializerImpl> deserializer_impl,
             IrUnitHandlerType ir_unit_handler,
             nlohmann::json metadata,
             QueryHandlerType query_handler
     )
-            : m_metadata(std::move(metadata)),
+            : m_deserializer_impl{std::move(deserializer_impl)},
+              m_metadata(std::move(metadata)),
               m_ir_unit_handler{std::move(ir_unit_handler)},
               m_query_handler{std::move(query_handler)} {}
 
     // Variables
+    std::unique_ptr<DeserializerImpl> m_deserializer_impl;
     std::shared_ptr<SchemaTree> m_auto_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
     std::shared_ptr<SchemaTree> m_user_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
     nlohmann::json m_metadata;
@@ -272,6 +275,7 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
     }
 
     return Deserializer{
+            std::make_unique<KvIrDeserializerImpl>(),
             std::move(ir_unit_handler),
             std::move(metadata_json),
             std::move(query_handler)
@@ -286,22 +290,20 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         return std::errc::operation_not_permitted;
     }
 
-    auto const tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
-    auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
-    if (false == optional_ir_unit_type.has_value()) {
-        return std::errc::protocol_not_supported;
-    }
-
-    auto const ir_unit_type{optional_ir_unit_type.value()};
+    auto const [ir_unit_type, tag]{
+            YSTDLIB_ERROR_HANDLING_TRYX(m_deserializer_impl->get_next_ir_unit_type(reader))
+    };
     switch (ir_unit_type) {
         case IrUnitType::LogEvent: {
-            auto log_event{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_ir_unit_kv_pair_log_event(
-                    reader,
-                    tag,
-                    m_auto_gen_keys_schema_tree,
-                    m_user_gen_keys_schema_tree,
-                    m_utc_offset
-            ))};
+            auto log_event{YSTDLIB_ERROR_HANDLING_TRYX(
+                    m_deserializer_impl->deserialize_ir_unit_kv_pair_log_event(
+                            reader,
+                            tag,
+                            m_auto_gen_keys_schema_tree,
+                            m_user_gen_keys_schema_tree,
+                            m_utc_offset
+                    )
+            )};
 
             auto const log_event_idx{m_next_log_event_idx};
             m_next_log_event_idx += 1;
@@ -329,7 +331,8 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         case IrUnitType::SchemaTreeNodeInsertion: {
             std::string key_name;
             auto const [is_auto_generated, node_locator]{YSTDLIB_ERROR_HANDLING_TRYX(
-                    deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
+                    m_deserializer_impl
+                            ->deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
             )};
             auto& schema_tree_to_insert{
                     is_auto_generated ? m_auto_gen_keys_schema_tree : m_user_gen_keys_schema_tree
@@ -362,9 +365,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         }
 
         case IrUnitType::UtcOffsetChange: {
-            auto const new_utc_offset{
-                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_utc_offset_change(reader))
-            };
+            auto const new_utc_offset{YSTDLIB_ERROR_HANDLING_TRYX(
+                    DeserializerImpl::deserialize_ir_unit_utc_offset_change(reader)
+            )};
             if (auto const err{
                         m_ir_unit_handler.handle_utc_offset_change(m_utc_offset, new_utc_offset)
                 };
