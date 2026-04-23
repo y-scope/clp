@@ -1,7 +1,5 @@
 """Provides definition of the clp-text operating mode."""
 
-import logging
-
 from clp_py_utils.clp_config import (
     ClpConfig,
     Package,
@@ -18,8 +16,6 @@ from tests.package_tests.utils.modes import (
     CLP_QUERY_COMPONENTS,
     CLP_REDUCER_COMPONENT,
 )
-
-logger = logging.getLogger(__name__)
 
 CLP_TEXT_MODE = ClpPackageModeConfig(
     mode_name="clp-text",
