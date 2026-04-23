@@ -7,8 +7,10 @@
 # It discovers shared library dependencies via ldd, copies non-system libraries
 # into a lib directory, rewrites RPATHs with patchelf, and strips binaries.
 #
-# Uses standard DESTDIR/PREFIX convention:
-#   DESTDIR  Staging/packaging root (e.g., /tmp/clp-deb-staging)
+# Uses DESTDIR/PREFIX convention:
+#   DESTDIR  Staging/packaging root — owned by this script, wiped on each run
+#            (e.g., /tmp/clp-deb-staging). Unlike GNU DESTDIR, this is required
+#            and the directory is fully replaced.
 #   PREFIX   Runtime install prefix  (e.g., /usr, /usr/local, or "")
 #
 # After this script completes, the staging directory contains:
@@ -16,7 +18,7 @@
 #   ${DESTDIR}${PREFIX}/lib/clp/{bundled .so files}
 #
 # Required environment variables:
-#   DESTDIR  Path to the staging directory (will be created/cleaned)
+#   DESTDIR  Staging directory — will be wiped and recreated
 #   BIN_DIR  Path to the directory containing compiled binaries
 #
 # Optional environment variables:
