@@ -35,6 +35,16 @@ if [[ -z "${DESTDIR:-}" ]]; then
     exit 1
 fi
 
+if [[ "${DESTDIR}" != /* ]]; then
+    echo "ERROR: DESTDIR must be an absolute path, got: '${DESTDIR}'" >&2
+    exit 1
+fi
+
+if [[ "${DESTDIR}" == "/" ]]; then
+    echo "ERROR: DESTDIR must not be /" >&2
+    exit 1
+fi
+
 if [[ -z "${BIN_DIR:-}" ]]; then
     echo "ERROR: BIN_DIR is required" >&2
     exit 1
