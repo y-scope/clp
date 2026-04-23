@@ -508,6 +508,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/test/test_StringBlob.cpp
         src/clp/ffi/ir_stream/byteswap.hpp
         src/clp/ffi/ir_stream/Deserializer.hpp
+        src/clp/ffi/ir_stream/DeserializerImpl.cpp
+        src/clp/ffi/ir_stream/DeserializerImpl.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
         src/clp/ffi/ir_stream/decoding_methods.inc
@@ -519,6 +521,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
+        src/clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
+        src/clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
