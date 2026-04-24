@@ -17,8 +17,8 @@ on:
 env:
   AARCH64_DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-aarch64-"
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
-  X86_DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
   PYTHON_WHEELS_ARTIFACT_NAME_PREFIX: "clp-python-wheels-"
+  X86_DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
