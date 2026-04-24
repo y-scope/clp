@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
 
 env:
-  ARM64_DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-aarch64-"
+  AARCH64_DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-aarch64-"
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
-  DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
+  X86_DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
   PYTHON_WHEELS_ARTIFACT_NAME_PREFIX: "clp-python-wheels-"
 
 concurrency:
@@ -138,7 +138,7 @@ jobs:
         env:
           OS_NAME: "centos-stream-9"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
@@ -164,7 +164,7 @@ jobs:
         env:
           OS_NAME: "manylinux_2_28"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
             /Dockerfile"
@@ -190,7 +190,7 @@ jobs:
         env:
           OS_NAME: "musllinux_1_2"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
             /Dockerfile"
@@ -216,7 +216,7 @@ jobs:
         env:
           OS_NAME: "manylinux_2_28"
         with:
-          image_name: "${{env.ARM64_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.AARCH64_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-aarch64\
             /Dockerfile"
@@ -242,7 +242,7 @@ jobs:
         env:
           OS_NAME: "musllinux_1_2"
         with:
-          image_name: "${{env.ARM64_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.AARCH64_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-aarch64\
             /Dockerfile"
@@ -268,7 +268,7 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
@@ -303,7 +303,7 @@ jobs:
         env:
           OS_NAME: "centos-stream-9"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -343,7 +343,7 @@ jobs:
         env:
           OS_NAME: "manylinux_2_28"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -381,7 +381,7 @@ jobs:
 
       - uses: "./.github/actions/run-on-image"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -436,7 +436,7 @@ jobs:
         env:
           OS_NAME: "musllinux_1_2"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.musllinux_1_2_x86_64_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -479,7 +479,7 @@ jobs:
 
       - uses: "./.github/actions/run-on-image"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -616,7 +616,7 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -673,7 +673,7 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_name: "${{env.X86_DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
