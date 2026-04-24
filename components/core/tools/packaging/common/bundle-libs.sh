@@ -117,7 +117,7 @@ done
 echo "==> Patching bundled libraries..."
 for lib in "${DESTDIR}${lib_install_dir}/"*.so*; do
     [[ -f "${lib}" ]] || continue
-    patchelf --set-rpath "${lib_install_dir}" "${lib}"
+    patchelf --set-rpath '$ORIGIN' "${lib}"
 done
 
 # --- Install and patch binaries ----------------------------------------------
@@ -128,7 +128,7 @@ for bin in "${BINARIES[@]}"; do
     [[ -f "${bin_path}" ]] || continue
 
     cp "${bin_path}" "${DESTDIR}${prefix}/bin/${bin}"
-    patchelf --set-rpath "${lib_install_dir}" "${DESTDIR}${prefix}/bin/${bin}"
+    patchelf --set-rpath '$ORIGIN/../lib/clp' "${DESTDIR}${prefix}/bin/${bin}"
     strip "${DESTDIR}${prefix}/bin/${bin}"
     echo "    Installed: ${bin}"
 done
