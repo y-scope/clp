@@ -1129,18 +1129,6 @@ auto JsonParser::ingest_kvir(
     return true;
 }
 
-auto JsonParser::add_log_type_id_node(logtype_id_t id) -> SchemaNode::id_t {
-    return m_archive_writer->add_node(
-            m_archive_writer->add_node(
-                    constants::cRootNodeId,
-                    NodeType::LogType,
-                    constants::cLogTypeNodeName
-            ),
-            NodeType::LogTypeID,
-            fmt::format("{}", id)
-    );
-}
-
 auto JsonParser::add_metadata_field(std::string_view const field_name, NodeType type)
         -> SchemaNode::id_t {
     auto metadata_subtree_id = m_archive_writer->add_node(
@@ -1591,14 +1579,12 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     auto [log_type_id, new_logtype]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
     };
-    // TODO clpp: swap to this
-    // m_current_schema.insert_unordered(m_archive_writer->add_node(
-    //         m_archive_writer
-    //                 ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogTypeNodeName),
-    //         NodeType::LogTypeID,
-    //         fmt::format("{}", log_type_id)
-    // ));
-    m_current_schema.insert_unordered(add_log_type_id_node(log_type_id));
+    m_current_schema.insert_unordered(m_archive_writer->add_node(
+            m_archive_writer
+                    ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogTypeNodeName),
+            NodeType::LogTypeID,
+            fmt::format("{}", log_type_id)
+    ));
 
     if (new_logtype) {
         clpp::LogTypeMetadata metadata;
@@ -1620,12 +1606,12 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 break;
             }
             auto const old_size{leaf_cap->range.end - leaf_cap->range.start};
-            auto const new_size{get_cap_name(*leaf_cap).size()};
+            auto const new_size{get_cap_name(*leaf_cap).size() + 2};
             auto const diff{static_cast<ssize_t>(old_size) - static_cast<ssize_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
-                if (leaf_cap->range.start < std::get<0>(og_parent_match_pos.at(j))) {
+                if (leaf_cap->range.start < og_parent_match_pos.at(j).first) {
                     metadata.parent_match(j).m_start -= diff;
-                } else if (leaf_cap->range.end <= std::get<1>(og_parent_match_pos.at(j))) {
+                } else if (leaf_cap->range.end <= og_parent_match_pos.at(j).second) {
                     metadata.parent_match(j).m_size -= diff;
                 }
             }
@@ -1638,31 +1624,30 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         //         }
         //         SPDLOG_INFO(
         //                 "[clpsls] leaf match '{}' ({}.{}.{}): '{}'",
-        //                 cap->capture_id == 0 ? cap->variable_name.as_cpp_view()
-        //                                      : cap->capture_name.as_cpp_view(),
-        //                 cap->rule_id,
+        //                 get_cap_name(*cap),
+        //                 cap->rule_idx.index,
         //                 cap->capture_id,
         //                 cap->parent_id,
-        //                 log_msg.substr(cap->start, cap->end - cap->start)
+        //                 log_msg.substr(cap->range.start, cap->range.end - cap->range.start)
         //         );
         //     }
-        //     for (size_t i{0};; ++i) {
-        //         auto const cap{event.get_non_leaf_capture(i)};
-        //         if (false == cap.has_value()) {
-        //             break;
+        //     size_t parent_match_idx{0};
+        //     for (auto const& cap : event.get_all_captures()) {
+        //         if (cap.is_leaf) {
+        //             continue;
         //         }
         //         SPDLOG_INFO(
-        //                 "[clpsls] non-leaf match '{}' ({}.{}.{}): '{}'",
-        //                 cap->capture_id == 0 ? cap->variable_name.as_cpp_view()
-        //                                      : cap->capture_name.as_cpp_view(),
-        //                 cap->rule_id,
-        //                 cap->capture_id,
-        //                 cap->parent_id,
+        //                 "[clpsls] parent match '{}' ({}.{}.{}): '{}'",
+        //                 get_cap_name(cap),
+        //                 cap.rule_idx.index,
+        //                 cap.capture_id,
+        //                 cap.parent_id,
         //                 log_type.substr(
-        //                         metadata.parent_match(i).m_start,
-        //                         metadata.parent_match(i).m_size
+        //                         metadata.parent_match(parent_match_idx).m_start,
+        //                         metadata.parent_match(parent_match_idx).m_size
         //                 )
         //         );
+        //         ++parent_match_idx;
         //     }
         // }
         YSTDLIB_ERROR_HANDLING_TRYV(

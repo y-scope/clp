@@ -103,6 +103,16 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     }
     return NodeType::Unknown;
 }
+
+void collect_columns(std::shared_ptr<Expression> const& cur, std::set<ColumnDescriptor*>& columns) {
+    for (auto it = cur->op_begin(); it != cur->op_end(); ++it) {
+        if (auto sub_expr = std::dynamic_pointer_cast<Expression>(*it)) {
+            collect_columns(sub_expr, columns);
+        } else if (auto column = std::dynamic_pointer_cast<ColumnDescriptor>(*it)) {
+            columns.insert(column.get());
+        }
+    }
+}
 }  // namespace
 
 // TODO: write proper iterators on the AST to make this code less awful.
@@ -117,6 +127,7 @@ SchemaMatch::SchemaMatch(
           m_ls_schema_reader(std::move(ls_schema_reader)) {}
 
 std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) {
+    build_logtype_id_to_schema_id_map();
     ConstantProp propagate_empty;
     expr = populate_column_mapping(expr);
     expr = propagate_empty.run(expr);
@@ -407,34 +418,23 @@ auto SchemaMatch::populate_column_mapping(
                                 matched_ids.emplace_back(log_type.get_id());
                             }
                         }
-                        // TODO clpp: we could exit early once we know no log types match?
 
-                        auto log_type_expr{ast::OrExpr::create()};
+                        // Convert matched logtype IDs to schema IDs
+                        std::unordered_set<int32_t> matched_schema_ids;
                         for (auto const id : matched_ids) {
-                            auto id_str{fmt::format("{}", id)};
-                            auto new_col{column->copy()};
-                            new_col->set_matching_types(LiteralType::ClpStringT);
-                            new_col->set_namespace(constants::cLogTypeNodeName);
-                            auto& new_col_descriptors{new_col->get_descriptor_list()};
-                            new_col_descriptors.clear();
-                            new_col_descriptors.emplace_back(
-                                    DescriptorToken::create_descriptor_from_literal_token(id_str)
-                            );
-                            log_type_expr->add_operand(
-                                    FilterExpr::create(new_col, ast::FilterOperation::EXISTS)
-                            );
-                            {
-                                std::string full_name;
-                                for (auto const& desc : new_col_descriptors) {
-                                    full_name.append(desc.get_token());
-                                }
+                            auto schema_it = m_logtype_id_to_schema_id.find(id);
+                            if (m_logtype_id_to_schema_id.end() != schema_it) {
+                                matched_schema_ids.insert(schema_it->second);
                             }
                         }
 
-                        auto full_expr{ast::AndExpr::create()};
-                        full_expr->add_operand(log_type_expr);
-                        full_expr->add_operand(build_leaves_expr(column, *decomposed_query));
-                        return {true, full_expr};
+                        if (matched_schema_ids.empty()) {
+                            continue;
+                        }
+
+                        auto leaves_expr = build_leaves_expr(column, *decomposed_query);
+                        leaves_expr->set_clpp_matched_schemas(std::move(matched_schema_ids));
+                        return {true, leaves_expr};
                     }
                     if (NodeType::ParentVarType == cur_node.get_type()) {
                         std::string type_name{cur_node.get_key_name()};
@@ -470,19 +470,18 @@ auto SchemaMatch::populate_column_mapping(
                             };
                             for (auto const& parent_match : metadata.get_parent_matches()) {
                                 // SPDLOG_INFO(
-                                //         "checking log type parent name: {} cur token: {} | query:
-                                //         "
+                                //         "checking log type parent name: {} cur token: {} | "
+                                //         "query:"
                                 //         "{} metadata: {}",
                                 //         parent_match.m_name,
                                 //         cur_it->get_token(),
-                                //         decomposed_query.value().get_log_type(),
+                                //         decomposed_query->get_log_type(),
                                 //         log_type.get_value()
-                                //                 .substr(parent_match.m_start,
-                                //                 parent_match.m_size)
+                                //                 .substr(parent_match.m_start, parent_match.m_size)
                                 // );
-                                // TODO clpp: bug in the metadata?? or log type??
+                                // TODO clpp: need to recompress hadoop for this to work!
                                 // if (parent_match.m_name == cur_it->get_token()
-                                //     && decomposed_query.value().get_log_type()
+                                //     && decomposed_query->get_log_type()
                                 //                == log_type.get_value().substr(
                                 //                        parent_match.m_start,
                                 //                        parent_match.m_size
@@ -492,34 +491,23 @@ auto SchemaMatch::populate_column_mapping(
                                 }
                             }
                         }
-                        // TODO clpp: we could exit early once we know no log types match?
-
-                        auto log_type_expr{ast::OrExpr::create()};
+                        // Convert matched logtype IDs to schema IDs
+                        std::unordered_set<int32_t> matched_schema_ids;
                         for (auto const id : matched_ids) {
-                            auto id_str{fmt::format("{}", id)};
-                            auto new_col{column->copy()};
-                            new_col->set_matching_types(LiteralType::ClpStringT);
-                            new_col->set_namespace(constants::cLogTypeNodeName);
-                            auto& new_col_descriptors{new_col->get_descriptor_list()};
-                            new_col_descriptors.clear();
-                            new_col_descriptors.emplace_back(
-                                    DescriptorToken::create_descriptor_from_literal_token(id_str)
-                            );
-                            log_type_expr->add_operand(
-                                    FilterExpr::create(new_col, ast::FilterOperation::EXISTS)
-                            );
+                            if (auto schema_it{m_logtype_id_to_schema_id.find(id)};
+                                m_logtype_id_to_schema_id.end() != schema_it)
                             {
-                                std::string full_name;
-                                for (auto const& desc : new_col_descriptors) {
-                                    full_name.append(desc.get_token());
-                                }
+                                matched_schema_ids.insert(schema_it->second);
                             }
                         }
 
-                        auto full_expr{ast::AndExpr::create()};
-                        full_expr->add_operand(log_type_expr);
-                        full_expr->add_operand(build_leaves_expr(column, *decomposed_query));
-                        return {true, full_expr};
+                        if (matched_schema_ids.empty()) {
+                            continue;
+                        }
+
+                        auto leaves_expr = build_leaves_expr(column, *decomposed_query);
+                        leaves_expr->set_clpp_matched_schemas(std::move(matched_schema_ids));
+                        return {true, leaves_expr};
                     }
                 }
                 auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
@@ -559,13 +547,9 @@ void SchemaMatch::populate_schema_mapping() {
     // TODO: consider refactoring this to take advantage of the ordered region of the schema
     for (auto& it : *m_schemas) {
         int32_t schema_id = it.first;
-        std::string_view log_type_id;
         for (int32_t column_id : it.second) {
             if (Schema::schema_entry_is_unordered_object(column_id)) {
                 continue;
-            }
-            if (NodeType::LogTypeID == m_tree->get_node(column_id).get_type()) {
-                log_type_id = m_tree->get_node(column_id).get_key_name();
             }
             if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                 m_array_schema_ids.insert(schema_id);
@@ -646,6 +630,24 @@ bool SchemaMatch::intersect_and_sub_expr(
         std::set<ColumnDescriptor*>& columns,
         bool first
 ) {
+    // Handle clpp expression: use precomputed schemas instead of column-based resolution
+    if (cur->has_clpp_matched_schemas()) {
+        collect_columns(cur, columns);
+        auto const& clpp_schemas = cur->get_clpp_matched_schemas();
+        if (first) {
+            common_schema.insert(clpp_schemas.begin(), clpp_schemas.end());
+        } else {
+            std::set<int32_t> intersection;
+            for (int32_t schema : common_schema) {
+                if (clpp_schemas.count(schema)) {
+                    intersection.insert(schema);
+                }
+            }
+            common_schema = intersection;
+        }
+        return false;
+    }
+
     // Note: EmptyExpr are already constant propogated out of the ands, so don't
     // need to check for them here
     for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
@@ -828,6 +830,22 @@ LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, i
 
 std::shared_ptr<Expression> SchemaMatch::get_query_for_schema(int32_t schema) {
     return m_schema_to_query.at(schema);
+}
+
+void SchemaMatch::build_logtype_id_to_schema_id_map() {
+    for (auto const& [schema_id, schema] : *m_schemas) {
+        for (int32_t node_id : schema) {
+            if (Schema::schema_entry_is_unordered_object(node_id)) {
+                continue;
+            }
+            if (NodeType::LogTypeID == m_tree->get_node(node_id).get_type()) {
+                auto logtype_id
+                        = std::stoull(std::string{m_tree->get_node(node_id).get_key_name()});
+                m_logtype_id_to_schema_id[static_cast<logtype_id_t>(logtype_id)] = schema_id;
+                break;
+            }
+        }
+    }
 }
 
 auto SchemaMatch::decompose_query(

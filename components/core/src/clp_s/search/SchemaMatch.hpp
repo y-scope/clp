@@ -106,6 +106,13 @@ private:
             std::optional<clpp::DecomposedQuery>
     >
             m_decomposed_query_cache;
+    std::unordered_map<logtype_id_t, int32_t> m_logtype_id_to_schema_id;
+
+    /**
+     * Builds the reverse mapping from logtype_id to schema_id by scanning schemas
+     * for their NodeType::LogTypeID nodes.
+     */
+    void build_logtype_id_to_schema_id_map();
 
     /**
      * Populates the column mapping for a given column

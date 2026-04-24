@@ -214,11 +214,6 @@ private:
     void split_archive();
 
     /**
-     * Adds a log type ID node to the MPT and get its ID.
-     */
-    auto add_log_type_id_node(logtype_id_t id) -> SchemaNode::id_t;
-
-    /**
      * Adds an internal field to the MPT and get its Id.
      *
      * Note: this method should be called before parsing a record so that internal fields come first
