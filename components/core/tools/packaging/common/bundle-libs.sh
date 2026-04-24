@@ -51,7 +51,7 @@ if [[ -z "${BIN_DIR:-}" ]]; then
 fi
 
 if [[ ! -d "${BIN_DIR}" ]]; then
-    echo "ERROR: Binary directory not found: ${BIN_DIR}" >&2
+    echo "ERROR: Binary directory not found: '${BIN_DIR}'" >&2
     exit 1
 fi
 
