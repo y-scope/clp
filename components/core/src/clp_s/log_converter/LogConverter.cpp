@@ -30,7 +30,11 @@ constexpr std::string_view cTimestampSchema{
         R"(((Jan(uary){0,1})|(Feb(ruary){0,1})|(Mar(ch){0,1})|(Apr(il){0,1})|(May)|(Jun(e){0,1})|)"
         R"((Jul(y){0,1})|(Aug(ust){0,1})|(Sep(tember){0,1})|(Oct(ober){0,1})|(Nov(ember){0,1})|)"
         R"((Dec(ember){0,1}))[ /\-]\d{2,4}))[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2}([,\.:]\d{1,9}){0,1})"
-        R"(([ ]{0,1}(UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1}){0,1}))"
+        // Timezone matching:
+        R"(((( UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})|)"
+        R"(((UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})){0,1})|)"
+        R"((( [\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})|)"
+        R"((( Z){0,1}))"
 };
 
 constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
@@ -136,7 +140,7 @@ auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void
     }
 
     size_t const new_size{2 * m_buffer.size()};
-    if (new_size > cMaxBufferSize) {
+    if (new_size > m_max_buffer_size) {
         return std::errc::result_out_of_range;
     }
     ystdlib::containers::Array<char> new_buffer(new_size);
