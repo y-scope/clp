@@ -186,6 +186,49 @@ When using AWS DocumentDB or MongoDB Atlas:
 3. Ensure the security group or IP access list allows connections from your CLP hosts.
 4. Use the provided connection string when configuring CLP (see below).
 
+:::{note}
+**AWS DocumentDB enforces TLS by default.** You will need to enable TLS in CLP's `results_cache`
+config (see [Enabling TLS for the results cache](#enabling-tls-for-the-results-cache)) and supply
+the AWS-provided [`global-bundle.pem`][docdb-ca] as the CA file. Alternatively, you can disable TLS
+on the cluster via a custom [DocumentDB cluster parameter group][docdb-tls-param] if your security
+policy permits.
+:::
+
+### Enabling TLS for the results cache
+
+CLP supports connecting to MongoDB-compatible services that require TLS (e.g., AWS DocumentDB,
+MongoDB Atlas, or self-hosted MongoDB with TLS enabled). Configure TLS via two optional fields
+under `results_cache` in `etc/clp-config.yaml`:
+
+```yaml
+results_cache:
+  host: "<mongodb-hostname-or-ip>"
+  port: <mongodb-port>
+  tls: true
+  # Optional: path inside the CLP container to a CA certificate bundle used to verify the
+  # server's TLS certificate. Required when the server uses a CA that isn't in the system trust
+  # store (e.g., AWS DocumentDB).
+  tls_ca_file: "/etc/ssl/certs/global-bundle.pem"
+```
+
+When `tls: true`, CLP appends `?tls=true` to the MongoDB connection URI. When `tls_ca_file` is
+also set, `&tlsCAFile=<path>` is appended.
+
+:::{note}
+The `tls_ca_file` path must be reachable from inside the CLP containers. For Docker Compose
+deployments, mount the CA bundle into the container; for the Helm chart, use the
+`results_cache.tlsVolume` value to inject the certificate from a Kubernetes Secret or ConfigMap
+(see [the Helm chart values][helm-values] for an example).
+:::
+
+For AWS DocumentDB specifically, download the CA bundle from AWS:
+
+```bash
+wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+```
+
+Then make it available to the CLP containers and set `tls_ca_file` to the in-container path.
+
 ## Configuring CLP to use external databases
 
 After setting up your external databases, configure CLP to use them:
@@ -231,7 +274,10 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 [aws-rds]: https://aws.amazon.com/rds/
 [azure-databases]: https://azure.microsoft.com/en-us/products/category/databases
+[docdb-ca]: https://docs.aws.amazon.com/documentdb/latest/developerguide/security.encryption.ssl.html
+[docdb-tls-param]: https://docs.aws.amazon.com/documentdb/latest/developerguide/security.encryption.in-transit.html
 [docker-compose-orchestration]: guides-docker-compose-deployment.md
+[helm-values]: https://github.com/y-scope/clp/blob/main/tools/deployment/package-helm/values.yaml
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
 [multi-host-guide]: guides-docker-compose-deployment.md#starting-clp
