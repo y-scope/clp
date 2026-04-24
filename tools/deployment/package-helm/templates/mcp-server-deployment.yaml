@@ -18,7 +18,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "mcp-server"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       initContainers:
         - {{- include "clp.waitFor" (dict
@@ -51,7 +51,7 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
-            - name: "mcp"
+            - name: "mcp-server"
               containerPort: 8000
           volumeMounts:
             - name: "config"
@@ -69,7 +69,7 @@ spec:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet: &mcp-server-health-check
               path: "/health"
-              port: "mcp"
+              port: "mcp-server"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *mcp-server-health-check

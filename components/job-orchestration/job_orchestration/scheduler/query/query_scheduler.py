@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import concurrent.futures
 import contextlib
 import datetime
 import pathlib
@@ -29,6 +30,7 @@ import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
     ClpConfig,
+    Database,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
@@ -41,9 +43,10 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
-from clp_py_utils.sql_adapter import SqlAdapter
+from clp_py_utils.sql_adapter import ConnectionPoolWrapper, SqlAdapter
 from pydantic import ValidationError
 
+from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
@@ -87,6 +90,54 @@ active_file_split_ir_extractions: dict[str, list[str]] = {}
 active_archive_json_extractions: dict[str, list[str]] = {}
 
 reducer_connection_queue: asyncio.Queue | None = None
+
+
+class DispatchExecutor:
+    # Globals for dispatch executor pool
+    _db_conn_pool: ConnectionPoolWrapper | None = None
+    _clp_metadata_db_conn_params: dict[str, any] | None = None
+    _results_cache_uri: str | None = None
+
+    @classmethod
+    def initialize(
+        cls,
+        database_config: Database,
+        clp_metadata_db_conn_params: dict[str, any],
+        results_cache_uri: str,
+    ) -> None:
+        cls._clp_metadata_db_conn_params = clp_metadata_db_conn_params
+        sql_adapter = SqlAdapter(database_config)
+        cls._db_conn_pool = sql_adapter.create_connection_pool(
+            logger=logger, pool_size=1, disable_localhost_socket_connection=True
+        )
+        cls._results_cache_uri = results_cache_uri
+
+    @staticmethod
+    def dispatch_job_and_update_db(
+        job_config: dict[str, any], job_type: QueryJobType, job_id: str, archives: list[dict]
+    ) -> tuple[str, int, str]:
+        if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
+            raise NotImplementedError(f"Unexpected job type: {job_type}")
+
+        archive_ids = [a["archive_id"] for a in archives]
+        with contextlib.closing(DispatchExecutor._db_conn_pool.connect()) as db_conn:
+            task_ids = insert_query_tasks_into_db(db_conn, job_id, archive_ids)
+
+        celery_task_group = celery.group(
+            search.s(
+                job_id=job_id,
+                archive_id=archives[i]["archive_id"],
+                task_id=task_ids[i],
+                job_config=job_config,
+                dataset=archives[i].get("dataset"),
+                clp_metadata_db_conn_params=DispatchExecutor._clp_metadata_db_conn_params,
+                results_cache_uri=DispatchExecutor._results_cache_uri,
+            )
+            for i in range(len(archives))
+        )
+        group_result = celery_task_group.apply_async()
+        group_result.save()
+        return job_id, len(archives), group_result.id
 
 
 class StreamExtractionHandle(ABC):
@@ -675,6 +726,7 @@ def handle_pending_query_jobs(
     max_datasets_per_query: int | None,
     existing_datasets: set[str],
     archive_retention_period: int | None,
+    process_pool: concurrent.futures.ProcessPoolExecutor,
 ) -> list[asyncio.Task]:
     global active_jobs
 
@@ -730,6 +782,7 @@ def handle_pending_query_jobs(
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
                 continue
 
+        futures = []
         for job in pending_search_jobs:
             job_id = job.id
             if (
@@ -746,18 +799,37 @@ def handle_pending_query_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            dispatch_job_and_update_db(
-                db_conn,
-                job,
-                archives_for_search,
-                clp_metadata_db_conn_params,
-                results_cache_uri,
-                job.num_archives_to_search,
+            if job.start_time is None:
+                job.start_time = datetime.datetime.now()
+                set_job_or_task_status(
+                    db_conn,
+                    QUERY_JOBS_TABLE_NAME,
+                    job_id,
+                    QueryJobStatus.RUNNING,
+                    QueryJobStatus.PENDING,
+                    start_time=job.start_time,
+                    num_tasks=job.num_archives_to_search,
+                )
+
+            futures.append(
+                process_pool.submit(
+                    DispatchExecutor.dispatch_job_and_update_db,
+                    job.get_config().model_dump(),
+                    job.get_type(),
+                    job_id,
+                    archives_for_search,
+                )
             )
+
+        for future in concurrent.futures.as_completed(futures):
+            job_id, num_archives_for_search, group_result_id = future.result()
+            job = active_jobs[job_id]
+            job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
+                group_result_id, app=app
+            )
+            job.state = InternalJobState.RUNNING
             logger.info(
-                "Dispatched job %s with %d archives to search.",
-                job_id,
-                len(archives_for_search),
+                "Dispatched job %s with %d archives to search.", job_id, num_archives_for_search
             )
 
     return reducer_acquisition_tasks
@@ -1005,6 +1077,7 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 
 async def handle_jobs(
     db_conn_pool,
+    database_config: Database,
     clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
     stream_collection_name: str,
@@ -1012,38 +1085,45 @@ async def handle_jobs(
     num_archives_to_search_per_sub_job: int,
     max_datasets_per_query: int | None,
     archive_retention_period: int | None,
+    scheduler_concurrency: int,
 ) -> None:
-    handle_updating_task = asyncio.create_task(
-        handle_job_updates(db_conn_pool, results_cache_uri, jobs_poll_delay)
-    )
-
-    tasks = [handle_updating_task]
-    existing_datasets: set[str] = set()
-    while True:
-        reducer_acquisition_tasks = handle_pending_query_jobs(
-            db_conn_pool,
-            clp_metadata_db_conn_params,
-            results_cache_uri,
-            stream_collection_name,
-            num_archives_to_search_per_sub_job,
-            max_datasets_per_query,
-            existing_datasets,
-            archive_retention_period,
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=scheduler_concurrency,
+        initializer=DispatchExecutor.initialize,
+        initargs=(database_config, clp_metadata_db_conn_params, results_cache_uri),
+    ) as process_pool:
+        handle_updating_task = asyncio.create_task(
+            handle_job_updates(db_conn_pool, results_cache_uri, jobs_poll_delay)
         )
-        if 0 == len(reducer_acquisition_tasks):
-            tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
-        else:
-            tasks.extend(reducer_acquisition_tasks)
 
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        if handle_updating_task in done:
-            logger.error("handle_job_updates completed unexpectedly.")
-            try:
-                handle_updating_task.result()
-            except Exception:
-                logger.exception("handle_job_updates failed.")
-            return
-        tasks = list(pending)
+        tasks = [handle_updating_task]
+        existing_datasets: set[str] = set()
+        while True:
+            reducer_acquisition_tasks = handle_pending_query_jobs(
+                db_conn_pool,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                stream_collection_name,
+                num_archives_to_search_per_sub_job,
+                max_datasets_per_query,
+                existing_datasets,
+                archive_retention_period,
+                process_pool,
+            )
+            if 0 == len(reducer_acquisition_tasks):
+                tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
+            else:
+                tasks.extend(reducer_acquisition_tasks)
+
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            if handle_updating_task in done:
+                logger.error("handle_job_updates completed unexpectedly.")
+                try:
+                    handle_updating_task.result()
+                except Exception:
+                    logger.exception("handle_job_updates failed.")
+                return
+            tasks = list(pending)
 
 
 async def main(argv: list[str]) -> int:
@@ -1109,6 +1189,7 @@ async def main(argv: list[str]) -> int:
         job_handler = asyncio.create_task(
             handle_jobs(
                 db_conn_pool=db_conn_pool,
+                database_config=clp_config.database,
                 clp_metadata_db_conn_params=clp_config.database.get_clp_connection_params_and_type(
                     True
                 ),
@@ -1118,6 +1199,7 @@ async def main(argv: list[str]) -> int:
                 num_archives_to_search_per_sub_job=batch_size,
                 max_datasets_per_query=clp_config.query_scheduler.max_datasets_per_query,
                 archive_retention_period=clp_config.archive_output.retention_period,
+                scheduler_concurrency=clp_config.query_scheduler.scheduler_concurrency,
             )
         )
         reducer_handler = asyncio.create_task(reducer_handler.serve_forever())

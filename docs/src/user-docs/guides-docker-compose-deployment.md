@@ -82,9 +82,13 @@ To configure CLP for multi-host deployment, you'll need to:
 
    * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
      plan to run the specific service.
-   * When using local filesystem storage (i.e., not S3), set `logs_input.storage.directory`,
+   * When using local filesystem storage (i.e., not S3), set `logs_input.directory`,
      `archive_output.storage.directory`, and `stream_output.storage.directory` to directories on the
      shared filesystem.
+   * (Optional) set `scheduler_concurrency` under `query_scheduler` to control
+     the size of the process pool used by the query scheduler. Higher
+     concurrency can help improve throughput when many query jobs can be
+     run concurrently in larger clusters.
 
 4. Set up the CLP package's environment:
 
