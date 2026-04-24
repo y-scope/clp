@@ -249,8 +249,8 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
-    if (command_line_arguments.do_count_by_time_aggregation()
-        || command_line_arguments.do_count_results_aggregation())
+    if (CommandLineArguments::OutputHandlerType::Reducer
+        == command_line_arguments.get_output_handler_type())
     {
         SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};

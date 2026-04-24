@@ -633,31 +633,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(match_options);
 
-            po::options_description aggregation_options("Aggregation Options");
-            // clang-format off
-            aggregation_options.add_options()(
-                    "count",
-                    po::bool_switch(&m_do_count_results_aggregation),
-                    "Count the number of results"
-            )(
-                    "count-by-time",
-                    po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
-                    "Count the number of results in each time span of the given size (ms)"
-            );
-            // clang-format on
-            search_options.add(aggregation_options);
-
             po::options_description network_output_handler_options(
                     "Network Output Handler Options"
             );
             // clang-format off
             network_output_handler_options.add_options()(
                     "host",
-                    po::value<std::string>(&m_network_dest_host)->value_name("HOST"),
+                    po::value<std::string>(
+                        &m_network_output_handler_options.host)->value_name("HOST"),
                     "Network destination host"
             )(
                     "port",
-                    po::value<int>(&m_network_dest_port)->value_name("PORT"),
+                    po::value<int>(&m_network_output_handler_options.port)->value_name("PORT"),
                     "Network destination port"
             );
             // clang-format on
@@ -668,16 +655,27 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format off
             reducer_output_handler_options.add_options()(
                     "host",
-                    po::value<std::string>(&m_reducer_host)->value_name("HOST"),
+                    po::value<std::string>(
+                        &m_reducer_output_handler_options.host)->value_name("HOST"),
                     "Host the reducer is running on"
             )(
                     "port",
-                    po::value<int>(&m_reducer_port)->value_name("PORT"),
+                    po::value<int>(&m_reducer_output_handler_options.port)->value_name("PORT"),
                     "Port the reducer is listening on"
             )(
                     "job-id",
-                    po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
+                    po::value<reducer::job_id_t>(
+                        &m_reducer_output_handler_options.job_id)->value_name("ID"),
                     "Job ID for the requested aggregation operation"
+            )(
+                    "count",
+                    "Count the number of results"
+            )(
+                    "count-by-time",
+                    po::value<int64_t>(
+                        &m_reducer_output_handler_options.count_by_time_bucket_size
+                    )->value_name("SIZE"),
+                    "Count the number of results in each time span of the given size (ms)"
             );
             // clang-format on
 
@@ -686,32 +684,38 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             results_cache_output_handler_options.add_options()(
                     "uri",
-                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
+                    po::value<std::string>(
+                        &m_results_cache_output_handler_options.uri)->value_name("URI"),
                     "MongoDB URI for the results cache"
             )(
                     "collection",
-                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
+                    po::value<std::string>(
+                        &m_results_cache_output_handler_options.collection)->value_name("COLLECTION"),
                     "MongoDB collection to output to"
             )(
                     "batch-size",
-                    po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->
-                            default_value(m_batch_size),
+                    po::value<uint64_t>(
+                        &m_results_cache_output_handler_options.batch_size)->value_name("SIZE")->
+                            default_value(m_results_cache_output_handler_options.batch_size),
                     "The number of documents to insert into MongoDB per batch"
             )(
                     "max-num-results",
-                    po::value<uint64_t>(&m_max_num_results)->value_name("MAX")->
-                            default_value(m_max_num_results),
+                    po::value<uint64_t>(
+                        &m_results_cache_output_handler_options.max_num_results)->value_name("MAX")->
+                            default_value(m_results_cache_output_handler_options.max_num_results),
                     "The maximum number of results to output"
             )(
                     "dataset",
-                    po::value<std::string>(&m_dataset)->value_name("DATASET"),
+                    po::value<std::string>(
+                        &m_results_cache_output_handler_options.dataset)->value_name("DATASET"),
                     "The dataset name to include in each result document"
             );
 
             po::options_description file_output_handler_options("File Output Handler Options");
             file_output_handler_options.add_options()(
                     "path",
-                    po::value<std::string>(&m_file_output_path)->value_name("PATH"),
+                    po::value<std::string>(&m_file_output_handler_options.output_path)
+                            ->value_name("PATH"),
                     "File output path"
             );
 
@@ -795,7 +799,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(match_options);
-                visible_options.add(aggregation_options);
                 visible_options.add(file_output_handler_options);
                 visible_options.add(network_output_handler_options);
                 visible_options.add(results_cache_output_handler_options);
@@ -826,15 +829,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument(
                         "Timestamp range is invalid - begin timestamp is after end timestamp."
                 );
-            }
-
-            if (parsed_command_line_options.count("count-by-time") > 0) {
-                m_do_count_by_time_aggregation = true;
-                if (m_count_by_time_bucket_size <= 0) {
-                    throw std::invalid_argument(
-                            "Value for count-by-time must be greater than zero."
-                    );
-                }
             }
 
             if (parsed_command_line_options.count("output-handler") > 0) {
@@ -893,27 +887,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         + std::to_string(clp::enum_to_underlying_type(m_output_handler_type))
                 );
             }
-
-            bool aggregation_was_specified
-                    = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
-            if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
-                throw std::invalid_argument(
-                        "Aggregations are only supported with the reducer output handler."
-                );
-            } else if ((false == aggregation_was_specified
-                        && OutputHandlerType::Reducer == m_output_handler_type))
-            {
-                throw std::invalid_argument(
-                        "The reducer output handler currently only supports count and"
-                        " count-by-time aggregations."
-                );
-            }
-
-            if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
-                throw std::invalid_argument(
-                        "The --count-by-time and --count options are mutually exclusive."
-                );
-            }
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
@@ -936,14 +909,14 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
     if (parsed_options.count("host") == 0) {
         throw std::invalid_argument("host must be specified.");
     }
-    if (m_network_dest_host.empty()) {
+    if (m_network_output_handler_options.host.empty()) {
         throw std::invalid_argument("host cannot be an empty string.");
     }
 
     if (parsed_options.count("port") == 0) {
         throw std::invalid_argument("port must be specified.");
     }
-    if (m_network_dest_port <= 0) {
+    if (m_network_output_handler_options.port <= 0) {
         throw std::invalid_argument("port must be greater than zero.");
     }
 }
@@ -958,22 +931,52 @@ void CommandLineArguments::parse_reducer_output_handler_options(
     if (parsed_options.count("host") == 0) {
         throw std::invalid_argument("host must be specified.");
     }
-    if (m_reducer_host.empty()) {
+
+    if (m_reducer_output_handler_options.host.empty()) {
         throw std::invalid_argument("host cannot be an empty string.");
     }
 
     if (parsed_options.count("port") == 0) {
         throw std::invalid_argument("port must be specified.");
     }
-    if (m_reducer_port <= 0) {
+    if (m_reducer_output_handler_options.port <= 0) {
         throw std::invalid_argument("port must be greater than zero.");
     }
 
     if (parsed_options.count("job-id") == 0) {
         throw std::invalid_argument("job-id must be specified.");
     }
-    if (m_job_id < 0) {
+    if (m_reducer_output_handler_options.job_id < 0) {
         throw std::invalid_argument("job-id cannot be negative.");
+    }
+
+    bool has_aggregation{};
+    if (parsed_options.count("count")) {
+        m_reducer_output_handler_options.aggregation_type = AggregationType::Count;
+        has_aggregation = true;
+    }
+    if (parsed_options.count("count-by-time")) {
+        if (has_aggregation) {
+            throw std::invalid_argument(
+                    "The --count-by-time and --count options are mutually exclusive."
+            );
+        }
+
+        if (m_reducer_output_handler_options.count_by_time_bucket_size <= 0) {
+            throw std::invalid_argument(
+                    "Value for count-by-time must be greater than zero."
+            );
+        }
+
+        m_reducer_output_handler_options.aggregation_type = AggregationType::CountByTime;
+        has_aggregation = true;
+    }
+
+    if (false == has_aggregation) {
+        throw std::invalid_argument(
+            "The reducer output handler currently only supports count and"
+            " count-by-time aggregations."
+        );
     }
 }
 
@@ -987,22 +990,22 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
     if (parsed_options.count("uri") == 0) {
         throw std::invalid_argument("uri must be specified.");
     }
-    if (m_mongodb_uri.empty()) {
+    if (m_results_cache_output_handler_options.uri.empty()) {
         throw std::invalid_argument("uri cannot be an empty string.");
     }
 
     if (parsed_options.count("collection") == 0) {
         throw std::invalid_argument("collection must be specified.");
     }
-    if (m_mongodb_collection.empty()) {
+    if (m_results_cache_output_handler_options.collection.empty()) {
         throw std::invalid_argument("collection cannot be an empty string.");
     }
 
-    if (0 == m_batch_size) {
+    if (0 == m_results_cache_output_handler_options.batch_size) {
         throw std::invalid_argument("batch-size cannot be 0.");
     }
 
-    if (0 == m_max_num_results) {
+    if (0 == m_results_cache_output_handler_options.max_num_results) {
         throw std::invalid_argument("max-num-results cannot be 0.");
     }
 }
@@ -1016,7 +1019,7 @@ void CommandLineArguments::parse_file_output_handler_options(
     if (parsed_options.count("path") == 0) {
         throw std::invalid_argument("path must be specified.");
     }
-    if (m_file_output_path.empty()) {
+    if (m_file_output_handler_options.output_path.empty()) {
         throw std::invalid_argument("path cannot be an empty string.");
     }
 }

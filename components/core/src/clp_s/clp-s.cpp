@@ -226,40 +226,48 @@ bool search_archive(
     std::unique_ptr<OutputHandler> output_handler;
     try {
         switch (command_line_arguments.get_output_handler_type()) {
-            case CommandLineArguments::OutputHandlerType::File:
-                output_handler = std::make_unique<clp_s::FileOutputHandler>(
-                        command_line_arguments.get_file_output_path(),
-                        true
-                );
+            case CommandLineArguments::OutputHandlerType::File: {
+                auto const& options{command_line_arguments.get_file_output_handler_options()};
+                output_handler
+                        = std::make_unique<clp_s::FileOutputHandler>(options.output_path, true);
                 break;
-            case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
-                        command_line_arguments.get_network_dest_host(),
-                        command_line_arguments.get_network_dest_port()
-                );
+            }
+            case CommandLineArguments::OutputHandlerType::Network: {
+                auto const& options{command_line_arguments.get_network_output_handler_options()};
+                output_handler
+                        = std::make_unique<clp_s::NetworkOutputHandler>(options.host, options.port);
                 break;
-            case CommandLineArguments::OutputHandlerType::Reducer:
-                if (command_line_arguments.do_count_results_aggregation()) {
+            }
+            case CommandLineArguments::OutputHandlerType::Reducer: {
+                auto const& options{command_line_arguments.get_reducer_output_handler_options()};
+                if (CommandLineArguments::AggregationType::Count == options.aggregation_type) {
                     output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
-                } else if (command_line_arguments.do_count_by_time_aggregation()) {
+                } else if (CommandLineArguments::AggregationType::CountByTime
+                           == options.aggregation_type)
+                {
                     output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
                             reducer_socket_fd,
-                            command_line_arguments.get_count_by_time_bucket_size()
+                            options.count_by_time_bucket_size
                     );
                 } else {
                     SPDLOG_ERROR("Unhandled aggregation type.");
                     return false;
                 }
                 break;
-            case CommandLineArguments::OutputHandlerType::ResultsCache:
+            }
+            case CommandLineArguments::OutputHandlerType::ResultsCache: {
+                auto const& options{
+                        command_line_arguments.get_results_cache_output_handler_options()
+                };
                 output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                        command_line_arguments.get_mongodb_uri(),
-                        command_line_arguments.get_mongodb_collection(),
-                        command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results(),
-                        command_line_arguments.get_dataset()
+                        options.uri,
+                        options.collection,
+                        options.batch_size,
+                        options.max_num_results,
+                        options.dataset
                 );
                 break;
+            }
             case CommandLineArguments::OutputHandlerType::Stdout:
                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                 break;
@@ -359,11 +367,9 @@ int main(int argc, char const* argv[]) {
         if (command_line_arguments.get_output_handler_type()
             == CommandLineArguments::OutputHandlerType::Reducer)
         {
-            reducer_socket_fd = reducer::connect_to_reducer(
-                    command_line_arguments.get_reducer_host(),
-                    command_line_arguments.get_reducer_port(),
-                    command_line_arguments.get_job_id()
-            );
+            auto const& options{command_line_arguments.get_reducer_output_handler_options()};
+            reducer_socket_fd
+                    = reducer::connect_to_reducer(options.host, options.port, options.job_id);
             if (-1 == reducer_socket_fd) {
                 SPDLOG_ERROR("Failed to connect to reducer");
                 return 1;
