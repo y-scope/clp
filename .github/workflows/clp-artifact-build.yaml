@@ -146,58 +146,6 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
-  manylinux_2_28-x86_64-deps-image:
-    name: "manylinux_2_28-x86_64-deps-image"
-    if: "needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'true'"
-    needs: "filter-relevant-changes"
-    runs-on: *runner
-    steps:
-      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/clp-core-build-containers"
-        env:
-          OS_NAME: "manylinux_2_28"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
-            /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
-
-  musllinux_1_2-x86_64-deps-image:
-    name: "musllinux_1_2-x86_64-deps-image"
-    if: "needs.filter-relevant-changes.outputs.musllinux_1_2_x86_64_image_changed == 'true'"
-    needs: "filter-relevant-changes"
-    runs-on: *runner
-    steps:
-      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/clp-core-build-containers"
-        env:
-          OS_NAME: "musllinux_1_2"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
-            /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
-
   manylinux_2_28-aarch64-deps-image:
     name: "manylinux_2_28-aarch64-deps-image"
     if: "needs.filter-relevant-changes.outputs.manylinux_2_28_aarch64_image_changed == 'true'"
@@ -224,6 +172,32 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
+  manylinux_2_28-x86_64-deps-image:
+    name: "manylinux_2_28-x86_64-deps-image"
+    if: "needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: *runner
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "manylinux_2_28"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
   musllinux_1_2-aarch64-deps-image:
     name: "musllinux_1_2-aarch64-deps-image"
     if: "needs.filter-relevant-changes.outputs.musllinux_1_2_aarch64_image_changed == 'true'"
@@ -245,6 +219,32 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AARCH64}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-aarch64\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  musllinux_1_2-x86_64-deps-image:
+    name: "musllinux_1_2-x86_64-deps-image"
+    if: "needs.filter-relevant-changes.outputs.musllinux_1_2_x86_64_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: *runner
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "musllinux_1_2"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
