@@ -15,8 +15,6 @@ use crate::s3::ObjectMetadata;
 ///
 /// # Errors
 ///
-/// Returns an error if:
-///
 /// * Forwards
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
