@@ -508,9 +508,25 @@ class ResultsCache(BaseModel):
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
     retention_period: PositiveInt | None = 60
+    tls: bool = False
+    tls_ca_file: NonEmptyStr | None = None
+
+    @model_validator(mode="after")
+    def validate_tls_config(self):
+        if self.tls_ca_file is not None and not self.tls:
+            raise ValueError("tls_ca_file requires tls to be enabled.")
+        return self
 
     def get_uri(self):
-        return f"mongodb://{self.host}:{self.port}/{self.db_name}"
+        uri = f"mongodb://{self.host}:{self.port}/{self.db_name}"
+        params = []
+        if self.tls:
+            params.append("tls=true")
+            if self.tls_ca_file:
+                params.append(f"tlsCAFile={self.tls_ca_file}")
+        if params:
+            uri += "?" + "&".join(params)
+        return uri
 
     def transform_for_container(self, is_bundled: bool):
         self.host = RESULTS_CACHE_COMPONENT_NAME

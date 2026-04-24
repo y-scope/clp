@@ -175,6 +175,30 @@ clpConfig:
     # Retention period for search results, in minutes. Set to null to disable automatic deletion.
     retention_period: 60
 
+    # TLS configuration for the results cache connection (e.g., for AWS DocumentDB or MongoDB with
+    # TLS enabled). When `tls` is true, the connection URI includes `?tls=true`. Set `tls_ca_file`
+    # to the path of a CA certificate bundle inside the container (e.g.,
+    # "/etc/ssl/certs/results-cache-ca.pem"). Use `tlsVolume` to mount the CA certificate from a
+    # Secret or ConfigMap.
+    tls: false
+    tls_ca_file: null
+
+    # Optional volume and mount to inject a TLS CA certificate into pods that connect to the
+    # results cache. When set, the volume is added to all pods that use the results cache
+    # connection (query-scheduler, query-worker, garbage-collector, reducer, webui, and
+    # results-cache-indices-creator).
+    # Example:
+    #   tlsVolume:
+    #     volume:
+    #       name: results-cache-ca
+    #       secret:
+    #         secretName: my-docdb-ca-bundle
+    #     mount:
+    #       mountPath: /etc/ssl/certs/results-cache-ca.pem
+    #       subPath: global-bundle.pem
+    #       readOnly: true
+    tlsVolume: null
+
   compression_worker:
     logging_level: "INFO"
 

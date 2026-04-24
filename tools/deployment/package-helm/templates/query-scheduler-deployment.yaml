@@ -74,6 +74,9 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if .Values.clpConfig.results_cache.tlsVolume }}
+            - {{- include "clp.resultsCacheTlsVolumeMount" . | nindent 14 }}
+            {{- end }}
           command: [
             "python3", "-u",
             "-m", "job_orchestration.scheduler.query.query_scheduler",
@@ -90,4 +93,7 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if .Values.clpConfig.results_cache.tlsVolume }}
+        - {{- include "clp.resultsCacheTlsVolume" . | nindent 10 }}
+        {{- end }}
 {{- end }}
