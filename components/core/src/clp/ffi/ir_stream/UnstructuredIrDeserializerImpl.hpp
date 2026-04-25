@@ -1,0 +1,124 @@
+#ifndef CLP_FFI_IR_STREAM_UNSTRUCTURED_IR_DESERIALIZER_IMPL_HPP
+#define CLP_FFI_IR_STREAM_UNSTRUCTURED_IR_DESERIALIZER_IMPL_HPP
+
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <nlohmann/json_fwd.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include "../../ir/types.hpp"
+#include "../../ReaderInterface.hpp"
+#include "../../time_types.hpp"
+#include "../KeyValuePairLogEvent.hpp"
+#include "../SchemaTree.hpp"
+#include "decoding_methods.hpp"
+#include "DeserializerImpl.hpp"
+#include "IrUnitType.hpp"
+
+namespace clp::ffi::ir_stream {
+/**
+ * Deserializer implementation for backward-compatible unstructured IR streams.
+ *
+ * Simulates KV-IR deserialization behavior so `Deserializer` can reuse the same flow across
+ * formats. It emits synthetic schema tree node insertion IR units for `message` and `timestamp`
+ * before reading stream tags and converts unstructured log events into `KeyValuePairLogEvent`
+ * values.
+ * @tparam encoded_variable_t
+ */
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+class UnstructuredIrDeserializerImpl : public DeserializerImpl {
+public:
+    // Factory function
+    /**
+     * @param encoding_type
+     * @param metadata
+     * @return A result containing the deserializer on success, or an error code indicating the
+     * failure:
+     * - std::errc::protocol_error if the encoding type mismatches the template parameter, or the
+     *   reference timestamp is missing/invalid (four-byte only).
+     */
+    [[nodiscard]] static auto create(EncodingType encoding_type, nlohmann::json const& metadata)
+            -> ystdlib::error_handling::Result<std::unique_ptr<UnstructuredIrDeserializerImpl>>;
+
+    // Delete copy constructor and assignment operator
+    UnstructuredIrDeserializerImpl(UnstructuredIrDeserializerImpl const&) = delete;
+    auto operator=(UnstructuredIrDeserializerImpl const&)
+            -> UnstructuredIrDeserializerImpl& = delete;
+
+    // Default move constructor and assignment operator
+    UnstructuredIrDeserializerImpl(UnstructuredIrDeserializerImpl&&) = default;
+    auto operator=(UnstructuredIrDeserializerImpl&&) -> UnstructuredIrDeserializerImpl& = default;
+
+    // Destructor
+    ~UnstructuredIrDeserializerImpl() override = default;
+
+    // Methods implementing `DeserializerImpl`
+    /**
+     * The possible error codes:
+     * - Forwards `deserialize_tag`'s return values on failure.
+     */
+    [[nodiscard]] auto get_next_ir_unit_type(ReaderInterface& reader)
+            -> ystdlib::error_handling::Result<std::pair<IrUnitType, encoded_tag_t>> override;
+
+    /**
+     * The possible error codes:
+     * - std::errc::protocol_error if deserialization fails.
+     * - Forwards `KeyValuePairLogEvent::create`'s return values on failure.
+     */
+    [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
+            ReaderInterface& reader,
+            encoded_tag_t tag,
+            std::shared_ptr<SchemaTree> const& auto_gen_keys_schema_tree,
+            std::shared_ptr<SchemaTree> const& user_gen_keys_schema_tree,
+            UtcOffset utc_offset
+    ) -> ystdlib::error_handling::Result<KeyValuePairLogEvent> override;
+
+    /**
+     * Emits one synthetic schema tree node insertion IR unit.
+     * NOTE: Pops from pending insertions. Does not read from the reader.
+     */
+    [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
+            ReaderInterface& reader,
+            encoded_tag_t tag,
+            std::string& key_name
+    ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> override;
+
+private:
+    // Constructors
+    explicit UnstructuredIrDeserializerImpl(
+            std::vector<SchemaTree::NodeLocator> initial_insertions
+    );
+
+    UnstructuredIrDeserializerImpl(
+            std::vector<SchemaTree::NodeLocator> initial_insertions,
+            ir::epoch_time_ms_t reference_timestamp
+    );
+
+    // Methods
+    /**
+     * Resolves the node IDs for `message` and `timestamp` in the schema tree.
+     * If the node IDs are already resolved, returns them immediately.
+     * @param user_gen_keys_schema_tree
+     * @return A result containing a pair on success, or an error code indicating the failure:
+     * - The pair:
+     *   - `message` node ID
+     *   - `timestamp` node ID
+     * - std::errc::protocol_error if either required schema node is missing.
+     */
+    [[nodiscard]] auto resolve_required_node_ids(
+            std::shared_ptr<SchemaTree> const& user_gen_keys_schema_tree
+    ) -> ystdlib::error_handling::Result<std::pair<SchemaTree::Node::id_t, SchemaTree::Node::id_t>>;
+
+    // Variables
+    std::vector<SchemaTree::NodeLocator> m_pending_schema_insertions;
+    std::optional<SchemaTree::Node::id_t> m_optional_message_node_id;
+    std::optional<SchemaTree::Node::id_t> m_optional_timestamp_node_id;
+    ir::epoch_time_ms_t m_previous_timestamp{0};
+};
+}  // namespace clp::ffi::ir_stream
+
+#endif  // CLP_FFI_IR_STREAM_UNSTRUCTURED_IR_DESERIALIZER_IMPL_HPP

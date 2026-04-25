@@ -1364,6 +1364,94 @@ TEMPLATE_TEST_CASE(
     REQUIRE((eof_result.has_error() && std::errc::operation_not_permitted == eof_result.error()));
 }
 
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_unstructured_log_events_serde",
+        "[clp][ffi][ir_stream]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    vector<int8_t> ir_buf;
+
+    epoch_time_ms_t const preamble_ts{get_current_ts()};
+    constexpr string_view cTimestampPattern{"%Y-%m-%d %H:%M:%S,%3"};
+    constexpr string_view cTimestampPatternSyntax{"yyyy-MM-dd HH:mm:ss"};
+    constexpr string_view cTimeZoneId{"Asia/Tokyo"};
+    REQUIRE(serialize_preamble<TestType>(
+            cTimestampPattern,
+            cTimestampPatternSyntax,
+            cTimeZoneId,
+            preamble_ts,
+            ir_buf
+    ));
+
+    auto const test_log_events{create_test_log_events()};
+    vector<string> encoded_logtypes;
+    REQUIRE(serialize_log_events<TestType>(test_log_events, preamble_ts, ir_buf, encoded_logtypes));
+    ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
+
+    BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
+    auto deserializer_result{Deserializer<IrUnitHandler>::create(reader, IrUnitHandler{})};
+    REQUIRE_FALSE(deserializer_result.has_error());
+    auto& deserializer{deserializer_result.value()};
+
+    while (true) {
+        auto const result{deserializer.deserialize_next_ir_unit(reader)};
+        REQUIRE_FALSE(result.has_error());
+        if (result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
+            break;
+        }
+    }
+    auto const& ir_unit_handler{deserializer.get_ir_unit_handler()};
+
+    REQUIRE(ir_unit_handler.is_complete());
+    REQUIRE(deserializer.is_stream_completed());
+
+    auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
+    REQUIRE((test_log_events.size() == deserialized_log_events.size()));
+
+    for (size_t idx{0}; idx < deserialized_log_events.size(); ++idx) {
+        auto const& deserialized_log_event{deserialized_log_events.at(idx)};
+        auto const& user_gen_schema_tree{deserialized_log_event.get_user_gen_keys_schema_tree()};
+        auto const& user_gen_node_id_value_pairs{
+                deserialized_log_event.get_user_gen_node_id_value_pairs()
+        };
+
+        REQUIRE((3 == user_gen_schema_tree.get_size()));
+        REQUIRE((user_gen_schema_tree.has_node(
+                clp::ffi::SchemaTree::NodeLocator{
+                        clp::ffi::SchemaTree::cRootId,
+                        "message",
+                        clp::ffi::SchemaTree::Node::Type::Str
+                }
+        )));
+        REQUIRE((user_gen_schema_tree.has_node(
+                clp::ffi::SchemaTree::NodeLocator{
+                        clp::ffi::SchemaTree::cRootId,
+                        "timestamp",
+                        clp::ffi::SchemaTree::Node::Type::Int
+                }
+        )));
+
+        REQUIRE((2 == user_gen_node_id_value_pairs.size()));
+
+        auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
+        REQUIRE_FALSE(serialized_json_result.has_error());
+        auto const& [auto_gen_json_obj, user_gen_json_obj]{serialized_json_result.value()};
+        REQUIRE(auto_gen_json_obj.empty());
+        REQUIRE(
+                (test_log_events.at(idx).get_message()
+                 == user_gen_json_obj.at("message").template get<string>())
+        );
+        REQUIRE(
+                (test_log_events.at(idx).get_timestamp()
+                 == user_gen_json_obj.at("timestamp").template get<epoch_time_ms_t>())
+        );
+    }
+
+    auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};
+    REQUIRE((eof_result.has_error() && std::errc::operation_not_permitted == eof_result.error()));
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEMPLATE_TEST_CASE(
         "ffi_ir_stream_serialize_schema_tree_node_id",
