@@ -410,18 +410,18 @@ auto SchemaMatch::populate_column_mapping(
                             m_archive_reader->get_typed_log_type_dictionary()->read_entries();
                         }
 
-                        std::vector<clp_s::logtype_id_t> matched_ids;
+                        std::vector<clp_s::logtype_id_t> matched_lt_ids;
                         for (auto const& log_type :
                              m_archive_reader->get_typed_log_type_dictionary()->get_entries())
                         {
                             if (decomposed_query->get_log_type() == log_type.get_value()) {
-                                matched_ids.emplace_back(log_type.get_id());
+                                matched_lt_ids.emplace_back(log_type.get_id());
                             }
                         }
 
                         // Convert matched logtype IDs to schema IDs
                         std::unordered_set<int32_t> matched_schema_ids;
-                        for (auto const id : matched_ids) {
+                        for (auto const id : matched_lt_ids) {
                             auto schema_it = m_logtype_id_to_schema_id.find(id);
                             if (m_logtype_id_to_schema_id.end() != schema_it) {
                                 matched_schema_ids.insert(schema_it->second);
@@ -461,7 +461,7 @@ auto SchemaMatch::populate_column_mapping(
                             m_archive_reader->get_typed_log_type_dictionary()->read_entries();
                         }
 
-                        std::vector<clp_s::logtype_id_t> matched_ids;
+                        std::vector<clp_s::logtype_id_t> matched_lt_ids;
                         for (auto const& log_type :
                              m_archive_reader->get_typed_log_type_dictionary()->get_entries())
                         {
@@ -469,31 +469,20 @@ auto SchemaMatch::populate_column_mapping(
                                     m_archive_reader->get_logtype_metadata().at(log_type.get_id())
                             };
                             for (auto const& parent_match : metadata.get_parent_matches()) {
-                                // SPDLOG_INFO(
-                                //         "checking log type parent name: {} cur token: {} | "
-                                //         "query:"
-                                //         "{} metadata: {}",
-                                //         parent_match.m_name,
-                                //         cur_it->get_token(),
-                                //         decomposed_query->get_log_type(),
-                                //         log_type.get_value()
-                                //                 .substr(parent_match.m_start, parent_match.m_size)
-                                // );
-                                // TODO clpp: need to recompress hadoop for this to work!
-                                // if (parent_match.m_name == cur_it->get_token()
-                                //     && decomposed_query->get_log_type()
-                                //                == log_type.get_value().substr(
-                                //                        parent_match.m_start,
-                                //                        parent_match.m_size
-                                //                ))
-                                if (parent_match.m_name == cur_it->get_token()) {
-                                    matched_ids.emplace_back(log_type.get_id());
+                                if (parent_match.m_name == cur_it->get_token()
+                                    && decomposed_query->get_log_type()
+                                               == log_type.get_value().substr(
+                                                       parent_match.m_start,
+                                                       parent_match.m_size
+                                               ))
+                                {
+                                    matched_lt_ids.emplace_back(log_type.get_id());
                                 }
                             }
                         }
                         // Convert matched logtype IDs to schema IDs
                         std::unordered_set<int32_t> matched_schema_ids;
-                        for (auto const id : matched_ids) {
+                        for (auto const id : matched_lt_ids) {
                             if (auto schema_it{m_logtype_id_to_schema_id.find(id)};
                                 m_logtype_id_to_schema_id.end() != schema_it)
                             {
