@@ -31,6 +31,7 @@ void ArchiveReader::open(Path const& archive_path, Options const& options) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
+    m_options = options;
 
     if (false == get_archive_id_from_path(archive_path, m_archive_id)) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -38,7 +39,7 @@ void ArchiveReader::open(Path const& archive_path, Options const& options) {
 
     m_archive_reader_adaptor
             = std::make_shared<ArchiveReaderAdaptor>(archive_path, options.m_network_auth);
-    initialize_archive_reader(options);
+    initialize_archive_reader();
 }
 
 auto ArchiveReader::open(
@@ -57,10 +58,10 @@ auto ArchiveReader::open(
 
     m_archive_reader_adaptor
             = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
-    initialize_archive_reader({});
+    initialize_archive_reader();
 }
 
-auto ArchiveReader::initialize_archive_reader(Options const& options) -> void {
+auto ArchiveReader::initialize_archive_reader() -> void {
     if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
@@ -71,7 +72,7 @@ auto ArchiveReader::initialize_archive_reader(Options const& options) -> void {
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
-    if (options.m_experimental) {
+    if (m_options.m_experimental) {
         // TODO clpp: inlined get_variable_dictionary_reader
         m_typed_log_dict = std::make_shared<VariableDictionaryReader>(*m_archive_reader_adaptor);
         m_typed_log_dict->open(constants::cArchiveLogDictFile);
@@ -81,7 +82,7 @@ auto ArchiveReader::initialize_archive_reader(Options const& options) -> void {
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
 
     // TODO clpp: go back to reading metadata and stats on demand
-    if (options.m_experimental) {
+    if (m_options.m_experimental) {
         auto metadata{read_logtype_metadata()};
         if (metadata.has_error()) {
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -566,5 +567,12 @@ auto ArchiveReader::read_logtype_stats() -> ystdlib::error_handling::Result<void
     decompressor.close();
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogTypeStatsFile);
     return ystdlib::error_handling::success();
+}
+
+auto ArchiveReader::read_log_surgeon_schema() -> ystdlib::error_handling::Result<std::string> {
+    if (false == m_options.m_experimental) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+    }
+    return ReaderUtils::read_log_surgeon_schema(*m_archive_reader_adaptor);
 }
 }  // namespace clp_s

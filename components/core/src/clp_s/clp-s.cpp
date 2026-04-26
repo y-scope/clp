@@ -191,13 +191,7 @@ bool search_archive(
     }
 
     // Narrow against schemas
-    auto match_pass = std::make_shared<SchemaMatch>(
-            archive_reader,
-            try_create_reader(
-                    command_line_arguments.get_log_surgeon_schema_path().value(),
-                    command_line_arguments.get_network_auth()
-            )
-    );
+    auto match_pass = std::make_shared<SchemaMatch>(archive_reader);
     if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;

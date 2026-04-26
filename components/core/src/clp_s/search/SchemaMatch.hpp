@@ -4,10 +4,15 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include <log_surgeon/log_surgeon.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clpp/DecomposedQuery.hpp>
 
 #include "../ReaderUtils.hpp"
 #include "ast/ColumnDescriptor.hpp"
@@ -17,16 +22,12 @@
 #include "ast/Transformation.hpp"
 #include "clp_s/ArchiveReader.hpp"
 #include "clp_s/search/ast/StringLiteral.hpp"
-#include "clpp/DecomposedQuery.hpp"
 
 namespace clp_s::search {
 class SchemaMatch : public ast::Transformation {
 public:
     // Constructor
-    SchemaMatch(
-            std::shared_ptr<ArchiveReader> archive_reader,
-            std::shared_ptr<clp::ReaderInterface> ls_schema_reader
-    );
+    SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader);
 
     /**
      * Runs the transformation on an expression
@@ -98,13 +99,9 @@ private:
     // TODO clpp: refactor m_tree and m_schemas
     std::shared_ptr<ArchiveReader> m_archive_reader;
     bool m_clpp_decomposed_query{false};
-    std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
     log_surgeon::Schema* m_ls_schema;
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
-    absl::flat_hash_map<
-            std::pair<std::optional<std::string>, std::string>,
-            std::optional<clpp::DecomposedQuery>
-    >
+    absl::flat_hash_map<std::pair<std::optional<std::string>, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
     std::unordered_map<logtype_id_t, int32_t> m_logtype_id_to_schema_id;
 
@@ -198,9 +195,16 @@ private:
      */
     ast::LiteralType get_literal_type_for_column(ast::ColumnDescriptor* column, int32_t schema);
 
-    auto
-    decompose_query(std::optional<std::string> type_name, std::string const& query, bool rule_query)
-            -> clpp::DecomposedQuery const*;
+    /** clpp TODO
+     * @param
+     * @param
+     * @return
+     */
+    auto decompose_query(
+            std::optional<std::string> rule_name,
+            std::string const& query,
+            bool root_rule_query
+    ) -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
 };
 }  // namespace clp_s::search
 

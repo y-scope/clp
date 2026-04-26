@@ -137,6 +137,14 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         );
     }
 
+    if (false == m_log_surgeon_schema_text.empty()) {
+        auto compressed_size{store_log_surgeon_schema()};
+        files.emplace_back(
+                std::string(constants::cArchiveLogSurgeonSchemaFile),
+                compressed_size
+        );
+    }
+
     uint64_t offset = 0;
     for (auto& file : files) {
         uint64_t original_size = file.o;
@@ -598,6 +606,28 @@ auto ArchiveWriter::close_logtype_stats() -> ystdlib::error_handling::Result<siz
     writer.close();
 
     m_logtype_stats->clear();
+    return compressed_size;
+}
+
+auto ArchiveWriter::store_log_surgeon_schema() -> size_t {
+    if (m_log_surgeon_schema_text.empty()) {
+        return 0;
+    }
+
+    FileWriter writer{};
+    writer.open(
+            m_archive_path + std::string{constants::cArchiveLogSurgeonSchemaFile},
+            FileWriter::OpenMode::CreateForWriting
+    );
+
+    ZstdCompressor compressor{};
+    compressor.open(writer, m_compression_level);
+    compressor.write_numeric_value(static_cast<uint64_t>(m_log_surgeon_schema_text.size()));
+    compressor.write(m_log_surgeon_schema_text.data(), m_log_surgeon_schema_text.size());
+
+    compressor.close();
+    auto compressed_size{writer.get_pos()};
+    writer.close();
     return compressed_size;
 }
 }  // namespace clp_s

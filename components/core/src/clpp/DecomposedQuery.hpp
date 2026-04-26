@@ -30,14 +30,14 @@ public:
     };
 
     // Factory methods
-    static auto process_query(
+    static auto decompose_query(
             log_surgeon::ParserHandle& parser,
             std::optional<std::string_view> type,
             std::string_view query
     ) -> ystdlib::error_handling::Result<DecomposedQuery>;
 
     static auto
-    process_query(log_surgeon::Schema const* schema, std::string_view type, std::string_view query)
+    decompose_query(log_surgeon::Schema const* schema, std::string_view type, std::string_view query)
             -> ystdlib::error_handling::Result<DecomposedQuery>;
 
     // Constructors
@@ -67,11 +67,6 @@ public:
     [[nodiscard]] auto get_leaves() const -> std::vector<LeafMatch> const& { return m_leaves; }
 
     [[nodiscard]] auto get_log_type() const -> std::string_view { return m_log_type; }
-
-    // TODO clpp: Temporary methods that should probably be moved to log surgeon
-    static auto create_log_surgeon_schema(
-            std::shared_ptr<clp::ReaderInterface> const& schema_reader
-    ) -> ystdlib::error_handling::Result<log_surgeon::Schema*>;
 
     static auto create_parent_dicts(log_surgeon::EventHandle const& event) -> std::
             pair<absl::flat_hash_map<uint32_t, log_surgeon::Capture const>,

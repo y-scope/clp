@@ -112,14 +112,23 @@ public:
     }
 
     /**
-     * Reads the experimental log type metadata from the archive.
+     * Reads the log type metadata from the archive.
+     * @return The read log type metadata array, or an error code indicating the failure:
+     * - Forwards `Array::decompress`'s return values on failure.
+     * @throws
      */
     auto read_logtype_metadata() -> ystdlib::error_handling::Result<clpp::LogTypeMetadataArray>;
 
     /**
-     * Reads the experimental log type statistics from the archive.
+     * Reads the log type statistics from the archive.
+     * @return
      */
     auto read_logtype_stats() -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Reads the log surgeon schema from the archive.
+     */
+    auto read_log_surgeon_schema() -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * Reads the metadata from the archive.
@@ -234,9 +243,8 @@ public:
 private:
     /**
      * Reads archive metadata and prepares the archive reader for subsequent archive reads.
-     * @param options User specified options for reading an archive.
      */
-    auto initialize_archive_reader(Options const& options) -> void;
+    auto initialize_archive_reader() -> void;
 
     /**
      * Reads a single schema table entry from the table metadata stream.
@@ -327,6 +335,7 @@ private:
     std::optional<clpp::LogTypeStatArray> m_logtype_stats;
     std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
     std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
+    Options m_options;
 };
 }  // namespace clp_s
 

@@ -36,6 +36,7 @@
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
+#include <clp/StringReader.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/Defs.hpp>
@@ -165,16 +166,35 @@ JsonParser::JsonParser(JsonParserOption const& option)
         auto schema_reader{
                 try_create_reader(option.log_surgeon_schema_path.value(), option.network_auth)
         };
-        auto schema{clpp::DecomposedQuery::create_log_surgeon_schema(schema_reader)};
-        if (schema.has_error()) {
+        constexpr size_t cBufSize{4096};
+        std::array<char, cBufSize> buf{};
+        size_t bytes_read{};
+        while (true) {
+            auto code{schema_reader->try_read(buf.data(), buf.size(), bytes_read)};
+            if (clp::ErrorCode_EndOfFile == code) {
+                break;
+            }
+            if (clp::ErrorCode_Success != code) {
+                SPDLOG_ERROR(
+                        "Failed to read log-surgeon schema from: \"{}\"",
+                        option.log_surgeon_schema_path.value().path
+                );
+                throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+            }
+            m_log_surgeon_schema_text.append(buf.data(), bytes_read);
+        }
+
+        auto* schema{log_surgeon::log_surgeon_schema_from_definition(
+                log_surgeon::CCharArray::from_string_view(m_log_surgeon_schema_text)
+        )};
+        if (nullptr == schema) {
             SPDLOG_ERROR(
-                    "Failed to create log surgeon parser from: \"{}\" due to: \"{}\"",
-                    option.log_surgeon_schema_path.value().path,
-                    schema.error().message()
+                    "Failed to create log surgeon parser from: \"{}\"",
+                    option.log_surgeon_schema_path.value().path
             );
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
-        m_log_surgeon_parser = std::make_unique<log_surgeon::ParserHandle>(schema.value());
+        m_log_surgeon_parser = std::make_unique<log_surgeon::ParserHandle>(schema);
     }
     if (false == m_timestamp_key.empty()) {
         if (false
@@ -216,6 +236,9 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
+    if (false == m_log_surgeon_schema_text.empty()) {
+        m_archive_writer->set_log_surgeon_schema(m_log_surgeon_schema_text);
+    }
 }
 
 void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id) {
@@ -1457,6 +1480,9 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
+    if (false == m_log_surgeon_schema_text.empty()) {
+        m_archive_writer->set_log_surgeon_schema(m_log_surgeon_schema_text);
+    }
 }
 
 auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)

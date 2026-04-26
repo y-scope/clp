@@ -141,4 +141,28 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
 
     return schemas_pointer;
 }
+
+auto ReaderUtils::read_log_surgeon_schema(ArchiveReaderAdaptor& adaptor) -> std::string {
+    auto reader = adaptor.checkout_reader_for_section(constants::cArchiveLogSurgeonSchemaFile);
+
+    ZstdDecompressor decompressor;
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    uint64_t schema_size{0};
+    auto error_code{decompressor.try_read_numeric_value(schema_size)};
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    std::string schema_text(schema_size, '\0');
+    error_code = decompressor.try_read_exact_length(schema_text.data(), schema_size);
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    decompressor.close();
+    adaptor.checkin_reader_for_section(constants::cArchiveLogSurgeonSchemaFile);
+
+    return schema_text;
+}
 }  // namespace clp_s

@@ -306,6 +306,14 @@ public:
     }
 
     /**
+     * Stores the log-surgeon schema text for persistence in the archive.
+     * @param schema_text The raw log-surgeon schema text.
+     */
+    void set_log_surgeon_schema(std::string schema_text) {
+        m_log_surgeon_schema_text = std::move(schema_text);
+    }
+
+    /**
      * Update the stats for the given log type, adding it to the log type dictionary if necessary.
      * @param logtype
      * @return The log type ID.
@@ -341,6 +349,12 @@ private:
      */
     [[nodiscard]] auto close_logtype_stats() -> ystdlib::error_handling::Result<size_t>;
     [[nodiscard]] auto close_logtype_metadata() -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Writes the log-surgeon schema to the archive.
+     * @return The compressed size in bytes, or 0 if no schema was set.
+     */
+    [[nodiscard]] auto store_log_surgeon_schema() -> size_t;
 
     /**
      * Writes the archive to a single file
@@ -417,6 +431,7 @@ private:
     std::optional<clpp::LogTypeStatArray> m_logtype_stats;
     std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
     std::shared_ptr<VariableDictionaryWriter> m_typed_log_dict;
+    std::string m_log_surgeon_schema_text;
 };
 }  // namespace clp_s
 

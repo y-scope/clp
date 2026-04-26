@@ -745,15 +745,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "File output path"
             );
 
-            po::options_description experimental_options("Experimental Options");
-            std::string log_surgeon_schema_path{};
-            experimental_options.add_options()(
-                    "schema-path",
-                    po::value<std::string>(&log_surgeon_schema_path)->value_name("PATH"),
-                    "Path to a log surgeon schema. See README-Schema.md for details."
-            );
-            search_options.add(experimental_options);
-
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -839,7 +830,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(network_output_handler_options);
                 visible_options.add(results_cache_output_handler_options);
                 visible_options.add(reducer_output_handler_options);
-                visible_options.add(experimental_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -847,10 +837,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             validate_archive_paths(archive_path, archive_id, m_input_paths);
 
             validate_network_auth(auth, m_network_auth);
-
-            if (false == log_surgeon_schema_path.empty()) {
-                m_log_surgeon_schema_path = get_path_object_for_raw_path(log_surgeon_schema_path);
-            }
 
             validate_experimental();
 

@@ -11,6 +11,8 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/StringReader.hpp>
+
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
 #include "Schema.hpp"
@@ -72,6 +74,14 @@ public:
     static std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary_reader(
             ArchiveReaderAdaptor& adaptor
     );
+
+    /**
+     * Reads the log-surgeon schema from an archive.
+     * @param adaptor
+     * @return The schema text.
+     * @throw OperationFailed if the schema is missing or corrupt.
+     */
+    static auto read_log_surgeon_schema(ArchiveReaderAdaptor& adaptor) -> std::string;
 
     /**
      * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.
