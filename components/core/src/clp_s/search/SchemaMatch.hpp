@@ -103,7 +103,7 @@ private:
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
     absl::flat_hash_map<std::pair<std::optional<std::string>, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
-    std::unordered_map<logtype_id_t, int32_t> m_logtype_id_to_schema_id;
+    std::unordered_map<logtype_id_t, std::vector<int32_t>> m_logtype_id_to_schema_id;
 
     /**
      * Builds the reverse mapping from logtype_id to schema_id by scanning schemas

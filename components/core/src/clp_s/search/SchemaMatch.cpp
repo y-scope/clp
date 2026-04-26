@@ -422,9 +422,12 @@ auto SchemaMatch::populate_column_mapping(
                         // Convert matched logtype IDs to schema IDs
                         std::unordered_set<int32_t> matched_schema_ids;
                         for (auto const id : matched_lt_ids) {
-                            auto schema_it{m_logtype_id_to_schema_id.find(id)};
+                            auto const schema_it{m_logtype_id_to_schema_id.find(id)};
                             if (m_logtype_id_to_schema_id.end() != schema_it) {
-                                matched_schema_ids.insert(schema_it->second);
+                                matched_schema_ids.insert(
+                                        schema_it->second.begin(),
+                                        schema_it->second.end()
+                                );
                             }
                         }
 
@@ -485,10 +488,13 @@ auto SchemaMatch::populate_column_mapping(
                         // Convert matched logtype IDs to schema IDs
                         std::unordered_set<int32_t> matched_schema_ids;
                         for (auto const id : matched_lt_ids) {
-                            if (auto schema_it{m_logtype_id_to_schema_id.find(id)};
+                            if (auto const schema_it{m_logtype_id_to_schema_id.find(id)};
                                 m_logtype_id_to_schema_id.end() != schema_it)
                             {
-                                matched_schema_ids.insert(schema_it->second);
+                                matched_schema_ids.insert(
+                                        schema_it->second.begin(),
+                                        schema_it->second.end()
+                                );
                             }
                         }
 
@@ -832,7 +838,9 @@ void SchemaMatch::build_logtype_id_to_schema_id_map() {
             if (NodeType::LogTypeID == m_tree->get_node(node_id).get_type()) {
                 auto logtype_id
                         = std::stoull(std::string{m_tree->get_node(node_id).get_key_name()});
-                m_logtype_id_to_schema_id[static_cast<logtype_id_t>(logtype_id)] = schema_id;
+                m_logtype_id_to_schema_id[static_cast<logtype_id_t>(logtype_id)].emplace_back(
+                        schema_id
+                );
                 break;
             }
         }
