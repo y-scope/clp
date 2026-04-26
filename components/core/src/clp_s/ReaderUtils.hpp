@@ -11,8 +11,6 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clp/StringReader.hpp>
-
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
 #include "Schema.hpp"
