@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use clp_rust_utils::{s3::ObjectMetadata, types::non_empty_string::ExpectedNonEmpty};
 use log_ingestor::ingestion_job::IngestionJobId;
 use non_empty_string::NonEmptyString;
-use uuid::Uuid;
 
 /// Creates S3 objects in the given bucket based on the provided metadata. The object content is
 /// filled with dummy data.
@@ -66,27 +65,4 @@ pub async fn upload_test_objects(
 
     create_s3_objects(s3_client, objects_to_create.clone()).await?;
     Ok(objects_to_create)
-}
-
-/// Uploads noise S3 objects that do not match any testing prefix.
-///
-/// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
-///
-/// # Errors
-///
-/// * Forwards [`create_s3_objects`]'s return values on failure.
-pub async fn upload_noise_objects(
-    s3_client: aws_sdk_s3::Client,
-    bucket: NonEmptyString,
-    num_objects_to_create: usize,
-) -> Result<()> {
-    let objects_to_create: Vec<_> = (0..num_objects_to_create)
-        .map(|_| ObjectMetadata {
-            bucket: bucket.clone(),
-            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
-            size: 16,
-        })
-        .collect();
-
-    create_s3_objects(s3_client, objects_to_create).await
 }
