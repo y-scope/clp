@@ -370,8 +370,13 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/filter/tests/test-clp_s-xxhash.cpp
     src/clp_s/FloatFormatEncoding.cpp
     src/clp_s/FloatFormatEncoding.hpp
+    src/clp_s/ffi/sfa/ClpArchiveDecoder.cpp
+    src/clp_s/ffi/sfa/ClpArchiveDecoder.hpp
     src/clp_s/ffi/sfa/ClpArchiveReader.cpp
     src/clp_s/ffi/sfa/ClpArchiveReader.hpp
+    src/clp_s/ffi/sfa/KqlQuery.cpp
+    src/clp_s/ffi/sfa/KqlQuery.hpp
+    src/clp_s/ffi/sfa/LogEvent.hpp
     src/clp_s/ffi/sfa/SfaErrorCode.cpp
     src/clp_s/ffi/sfa/SfaErrorCode.hpp
     src/clp_s/InputConfig.cpp

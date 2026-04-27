@@ -2,8 +2,12 @@ set(
         CLP_S_FFI_SFA_SOURCES
         sfa/SfaErrorCode.cpp
         sfa/SfaErrorCode.hpp
+        sfa/ClpArchiveDecoder.cpp
+        sfa/ClpArchiveDecoder.hpp
         sfa/ClpArchiveReader.cpp
         sfa/ClpArchiveReader.hpp
+        sfa/KqlQuery.cpp
+        sfa/KqlQuery.hpp
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEREADER)
@@ -18,8 +22,10 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s_ffi_sfa
                 PUBLIC
                 clp_s::archive_reader
+                clp_s::search
                 ystdlib::error_handling
                 PRIVATE
+                clp_s::search::kql
                 spdlog::spdlog
         )
 endif()
