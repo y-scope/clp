@@ -35,7 +35,10 @@ pub fn init_telemetry(service_name: &'static str) {
     let provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-        .with_resource(Resource::new(vec![KeyValue::new("service.name", service_name)]))
+        .with_resource(Resource::new(vec![KeyValue::new(
+            "service.name",
+            service_name,
+        )]))
         .build();
 
     match provider {

@@ -18,17 +18,16 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry import metrics
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
     report_task_failure,
     run_query_task,
 )
-from job_orchestration.executor.utils import load_worker_config
+from job_orchestration.executor.utils import init_otel, load_worker_config
 from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
-from job_orchestration.executor.utils import init_otel
-from opentelemetry import metrics
 
 meter = metrics.get_meter("clp.query")
 bytes_scanned_total_counter = meter.create_counter(

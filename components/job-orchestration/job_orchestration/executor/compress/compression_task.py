@@ -31,7 +31,9 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry import metrics
 
+from job_orchestration.executor.utils import init_otel
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -42,8 +44,6 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
-from job_orchestration.executor.utils import init_otel
-from opentelemetry import metrics
 
 meter = metrics.get_meter("clp.compression")
 bytes_input_total_counter = meter.create_counter(

@@ -63,7 +63,9 @@ async fn main() -> anyhow::Result<()> {
     let provider_result = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-        .with_resource(opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new("service.name", "log-ingestor")]))
+        .with_resource(opentelemetry_sdk::Resource::new(vec![
+            opentelemetry::KeyValue::new("service.name", "log-ingestor"),
+        ]))
         .build();
     if let Ok(provider) = provider_result {
         opentelemetry::global::set_meter_provider(provider);
