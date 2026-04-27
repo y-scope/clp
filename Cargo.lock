@@ -112,7 +112,7 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "api-server"
-version = "0.1.0"
+version = "0.12.1-dev"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -122,6 +122,7 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "futures",
+ "http-body-util",
  "mongodb",
  "non-empty-string",
  "num_enum",
@@ -134,6 +135,7 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
+ "tower",
  "tower-http",
  "tracing",
  "utoipa",
@@ -914,7 +916,7 @@ checksum = "c3e64b0cc0439b12df2fa678eae89a1c56a529fd067a9115f7827f1fffd22b32"
 
 [[package]]
 name = "clp-rust-utils"
-version = "0.1.0"
+version = "0.12.1-dev"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
@@ -2221,7 +2223,7 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "log-ingestor"
-version = "0.1.0"
+version = "0.12.1-dev"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3535,6 +3537,7 @@ checksum = "ee6798b1838b6a0f69c007c133b8df5866302197e404e8b6ee8ed3e3a5e68dc6"
 dependencies = [
  "base64",
  "bytes",
+ "chrono",
  "crc",
  "crossbeam-queue",
  "either",
@@ -3610,6 +3613,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "bytes",
+ "chrono",
  "crc",
  "digest",
  "dotenvy",
@@ -3651,6 +3655,7 @@ dependencies = [
  "base64",
  "bitflags",
  "byteorder",
+ "chrono",
  "crc",
  "dotenvy",
  "etcetera",
@@ -3685,6 +3690,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2d12fe70b2c1b4401038055f90f151b78208de1f9f89a7dbfd41587a10c3eea"
 dependencies = [
  "atoi",
+ "chrono",
  "flume",
  "futures-channel",
  "futures-core",
@@ -3730,6 +3736,9 @@ name = "strum"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
+dependencies = [
+ "strum_macros",
+]
 
 [[package]]
 name = "strum_macros"

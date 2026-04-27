@@ -1,3 +1,5 @@
+add_subdirectory(ffi)
+add_subdirectory(filter)
 add_subdirectory(indexer)
 add_subdirectory(log_converter)
 add_subdirectory(search)
@@ -28,12 +30,16 @@ set(
         ../clp/ffi/ir_stream/decoding_methods.hpp
         ../clp/ffi/ir_stream/decoding_methods.inc
         ../clp/ffi/ir_stream/Deserializer.hpp
+        ../clp/ffi/ir_stream/DeserializerImpl.cpp
+        ../clp/ffi/ir_stream/DeserializerImpl.hpp
         ../clp/ffi/ir_stream/encoding_methods.cpp
         ../clp/ffi/ir_stream/encoding_methods.hpp
-        ../clp/ffi/ir_stream/IrErrorCode.cpp
-        ../clp/ffi/ir_stream/IrErrorCode.hpp
+        ../clp/ffi/ir_stream/IrDeserializationError.cpp
+        ../clp/ffi/ir_stream/IrDeserializationError.hpp
         ../clp/ffi/ir_stream/IrSerializationError.cpp
         ../clp/ffi/ir_stream/IrSerializationError.hpp
+        ../clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
+        ../clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp

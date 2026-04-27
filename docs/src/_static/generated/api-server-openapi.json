@@ -9,7 +9,7 @@
     "license": {
       "name": ""
     },
-    "version": "0.1.0"
+    "version": "0.12.1-dev"
   },
   "paths": {
     "/health": {
@@ -140,10 +140,154 @@
           }
         }
       }
+    },
+    "/usage/compression": {
+      "get": {
+        "tags": [],
+        "description": "Gets resource usage statistics for compression jobs within the given time range.",
+        "operationId": "compression_usage",
+        "parameters": [
+          {
+            "name": "time_range_begin_millisecs",
+            "in": "query",
+            "description": "Start of usage window (epoch milliseconds, inclusive).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "time_range_end_millisecs",
+            "in": "query",
+            "description": "End of usage window (epoch milliseconds, exclusive).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "job_status",
+            "in": "query",
+            "description": "Job statuses to include as a comma-separated list (e.g.\n`job_status=succeeded,failed`). Recognized values (case-insensitive):\n`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.\nDefaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of jobs to return. Must be > 0; defaults to 1000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompressionUsage"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters (e.g., time_range_begin_millisecs > time_range_end_millisecs, missing required fields)"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "CompressionJobStatus": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Running",
+          "Succeeded",
+          "Failed",
+          "Killed"
+        ]
+      },
+      "CompressionUsage": {
+        "type": "object",
+        "description": "Resource usage statistics for the compression job with the specified ID.",
+        "required": [
+          "id",
+          "job_status",
+          "time_creation_millisecs",
+          "time_begin_millisecs",
+          "uncompressed_size_bytes",
+          "compressed_size_bytes",
+          "num_tasks"
+        ],
+        "properties": {
+          "compressed_size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total compressed archive size, in bytes."
+          },
+          "duration_secs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Wall-clock duration the job ran, in seconds. Absent if the job did not complete."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Compression job ID."
+          },
+          "job_status": {
+            "$ref": "#/components/schemas/CompressionJobStatus",
+            "description": "Current status of the job."
+          },
+          "num_tasks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of tasks the job was split into."
+          },
+          "tasks_duration_secs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Sum of all task durations, in seconds. Absent if no tasks reported a duration."
+          },
+          "time_begin_millisecs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time the job started executing (epoch milliseconds)."
+          },
+          "time_creation_millisecs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time the job was created (epoch milliseconds)."
+          },
+          "uncompressed_size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total uncompressed size of input files, in bytes."
+          }
+        }
+      },
       "QueryConfig": {
         "type": "object",
         "description": "Defines the request configuration for submitting a search query.",

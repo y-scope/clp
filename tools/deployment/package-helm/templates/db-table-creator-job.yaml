@@ -12,7 +12,7 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "db-table-creator"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       restartPolicy: "OnFailure"
       {{- if has "database" .Values.clpConfig.bundled }}
       initContainers:

@@ -201,7 +201,6 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
             bucket: record.s3.bucket.name,
             key: record.s3.object.key,
             size: record.s3.object.size,
-            id: None,
         })
     }
 
