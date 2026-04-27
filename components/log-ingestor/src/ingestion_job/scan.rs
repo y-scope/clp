@@ -6,6 +6,7 @@ use non_empty_string::NonEmptyString;
 /// Scans all objects under the given S3 prefix using continuation tokens and invokes a callback
 /// for each non-empty scanned page.
 ///
+///
 /// This function applies the following filters to the S3 objects:
 /// * Entries with a missing key or size are skipped.
 /// * Keys ending in `/` are skipped.
@@ -17,12 +18,12 @@ use non_empty_string::NonEmptyString;
 ///
 /// # Errors
 ///
+/// * [`anyhow::Error`] if the request returns an empty object key.
 /// * Forwards
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
 /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
 /// * Forwards `on_page` callback return values on failure.
-/// * Returns an [`anyhow::Error`] if S3 returns an empty object key.
 pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result<()>>(
     client: &Client,
     bucket_name: &NonEmptyString,
@@ -35,14 +36,18 @@ pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result
     let mut use_start_after = start_after.map(std::string::ToString::to_string);
 
     loop {
-        let response = client
+        let mut request = client
             .list_objects_v2()
             .bucket(bucket_name.as_str())
-            .prefix(key_prefix.as_str())
-            .set_start_after(use_start_after.take())
-            .set_continuation_token(continuation_token)
-            .send()
-            .await?;
+            .prefix(key_prefix.as_str());
+
+        if let Some(continuation_token) = continuation_token.take() {
+            request = request.continuation_token(continuation_token);
+        } else if let Some(start_after) = start_after {
+            request = request.start_after(start_after.to_string());
+        }
+
+        let response = request.send().await?;
 
         let Some(contents) = response.contents else {
             continuation_token = response.next_continuation_token;
