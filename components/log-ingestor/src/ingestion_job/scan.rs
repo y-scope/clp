@@ -1,37 +1,29 @@
-use std::future::Future;
-
 use anyhow::Result;
 use aws_sdk_s3::Client;
+use clp_rust_utils::s3::ObjectMetadata;
 use non_empty_string::NonEmptyString;
-
-use crate::s3::ObjectMetadata;
 
 /// Scans all objects under the given S3 prefix using continuation tokens and invokes a callback
 /// for each non-empty scanned page.
 ///
+/// This function applies the following filters to the S3 objects:
+/// * Entries with a missing key or size are skipped.
+/// * Keys ending in `/` are skipped.
+/// * Empty keys cause an error.
+///
 /// # Returns
 ///
 /// The last scanned object key, if any non-directory object was scanned.
-///
-/// # Note
-///
-/// This function filters S3 listing results for ingestion use cases:
-/// * Entries with a missing key or size are skipped.
-/// * Keys ending in `/` (directory-like entries) are skipped.
-/// * Empty keys (after S3 returns them) result in an error.
 ///
 /// # Errors
 ///
 /// * Forwards
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
-/// * Returns an [`anyhow::Error`] if S3 returns an empty object key.
 /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
 /// * Forwards `on_page` callback return values on failure.
-pub async fn scan_prefix<
-    CallbackType: FnMut(Vec<ObjectMetadata>) -> CallbackFutureType,
-    CallbackFutureType: Future<Output = Result<()>>,
->(
+/// * Returns an [`anyhow::Error`] if S3 returns an empty object key.
+pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result<()>>(
     client: &Client,
     bucket_name: &NonEmptyString,
     key_prefix: &NonEmptyString,

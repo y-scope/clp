@@ -2,17 +2,14 @@ use std::time::Duration;
 
 use anyhow::Result;
 use aws_sdk_s3::Client;
-use clp_rust_utils::{
-    job_config::ingestion::s3::S3ScannerConfig,
-    s3::{ObjectMetadata, scan_prefix},
-};
+use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetadata};
 use non_empty_string::NonEmptyString;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
     aws_client_manager::AwsClientManagerType,
-    ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState},
+    ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState, scan_prefix},
 };
 
 /// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
@@ -83,55 +80,34 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
     /// meaning that it requires the keys of newly inserted objects to be lexicographically larger
     /// than the last successfully ingested key.
     ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards [`Self::ingest_scanned_page`]'s return values on failure.
-    /// * Forwards [`clp_rust_utils::s3::scan_prefix`]'s return values on failure.
+    /// * Forwards [`crate::ingestion_job::scan_prefix`]'s return values on failure.
     pub async fn scan_until_exhausted(&mut self) -> Result<()> {
         let client = self.s3_client_manager.get().await?;
+        let state = self.state.clone();
         let last_scanned_key = scan_prefix(
             &client,
             &self.config.base.bucket_name,
             &self.config.base.key_prefix,
             self.start_after.as_ref(),
-            |page| self.ingest_scanned_page(page),
+            async move |page: Vec<ObjectMetadata>| -> Result<()> {
+                let last_ingested_key =
+                    page.last().expect("`page` should not be empty").key.clone();
+                state.ingest(page, last_ingested_key.as_str()).await
+            },
         )
         .await?;
         self.start_after = last_scanned_key;
-
         Ok(())
     }
 
     /// Sleeps for the configured scanning interval.
     pub async fn sleep(&self) {
         tokio::time::sleep(self.scanning_interval).await;
-    }
-
-    /// Ingests one scanned page and updates the scanner state using the page's last object key.
-    ///
-    /// # Returns
-    ///
-    /// `Ok(())` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`S3ScannerState::ingest`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `page` is empty.
-    async fn ingest_scanned_page(&self, page: Vec<ObjectMetadata>) -> Result<()> {
-        let last_ingested_key = page.last().expect("`page` should not be empty").key.clone();
-        self.state.ingest(page, last_ingested_key.as_str()).await
     }
 }
 

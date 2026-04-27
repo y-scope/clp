@@ -1,9 +1,6 @@
 mod client;
-mod scan;
 
 pub use client::create_new_client;
-pub use scan::scan_prefix;
-
 use non_empty_string::NonEmptyString;
 
 /// Represents the unique identifier for an S3 object metadata entry in CLP DB.
