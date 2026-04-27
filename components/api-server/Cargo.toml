@@ -2,7 +2,6 @@
 name = "api-server"
 version = "0.12.1-dev"
 edition = "2024"
-rust-version = "1.85"
 
 [lib]
 name = "api_server"
