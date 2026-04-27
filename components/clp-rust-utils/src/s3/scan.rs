@@ -18,19 +18,19 @@ use crate::s3::ObjectMetadata;
 /// * Forwards
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
-/// * Forwards [`NonEmptyString::new`]'s return values if an empty object key is received.
+/// * Returns an [`anyhow::Error`] if S3 returns an empty object key.
 /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
 /// * Forwards `on_page` callback return values on failure.
-pub async fn scan_prefix<F, Fut>(
+pub async fn scan_prefix<
+    CallbackType: FnMut(Vec<ObjectMetadata>) -> CallbackFutureType,
+    CallbackFutureType: Future<Output = Result<()>>,
+>(
     client: &Client,
     bucket_name: &NonEmptyString,
     key_prefix: &NonEmptyString,
     start_after: Option<&NonEmptyString>,
-    mut on_page: F,
-) -> Result<Option<NonEmptyString>>
-where
-    F: FnMut(Vec<ObjectMetadata>) -> Fut,
-    Fut: Future<Output = Result<()>>, {
+    mut on_page: CallbackType,
+) -> Result<Option<NonEmptyString>> {
     let mut continuation_token: Option<String> = None;
     let mut last_scanned_key: Option<NonEmptyString> = None;
     let mut use_start_after = start_after.map(std::string::ToString::to_string);
@@ -62,7 +62,7 @@ where
                 continue;
             }
             let non_empty_key = NonEmptyString::new(key)
-                .map_err(|_| anyhow::anyhow!("An empty key is received."))?;
+                .map_err(|_| anyhow::anyhow!("received an empty object key from S3"))?;
             last_scanned_key = Some(non_empty_key.clone());
             object_metadata_to_ingest.push(ObjectMetadata {
                 bucket: bucket_name.clone(),
