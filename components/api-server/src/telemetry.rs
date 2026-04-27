@@ -6,17 +6,17 @@ use opentelemetry_sdk::Resource;
 /// Checks whether telemetry is disabled through any of the supported mechanisms.
 fn is_telemetry_disabled() -> bool {
     // Check CLP_DISABLE_TELEMETRY env var
-    if let Ok(val) = env::var("CLP_DISABLE_TELEMETRY") {
-        if val.eq_ignore_ascii_case("true") || val == "1" {
-            return true;
-        }
+    if let Ok(val) = env::var("CLP_DISABLE_TELEMETRY")
+        && (val.eq_ignore_ascii_case("true") || val == "1")
+    {
+        return true;
     }
 
     // Check DO_NOT_TRACK env var
-    if let Ok(val) = env::var("DO_NOT_TRACK") {
-        if val == "1" {
-            return true;
-        }
+    if let Ok(val) = env::var("DO_NOT_TRACK")
+        && val == "1"
+    {
+        return true;
     }
 
     false
