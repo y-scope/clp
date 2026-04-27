@@ -152,11 +152,7 @@ auto UnstructuredIrDeserializerImpl<encoded_variable_t>::get_next_ir_unit_type(
         return std::pair{IrUnitType::SchemaTreeNodeInsertion, encoded_tag_t{0}};
     }
 
-    auto const tag_result{deserialize_tag(reader)};
-    if (tag_result.has_error()) {
-        return tag_result.error();
-    }
-    auto const tag{tag_result.value()};
+    auto const tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
 
     if (cProtocol::Eof == tag) {
         return std::pair{IrUnitType::EndOfStream, tag};
@@ -165,7 +161,7 @@ auto UnstructuredIrDeserializerImpl<encoded_variable_t>::get_next_ir_unit_type(
         return std::pair{IrUnitType::UtcOffsetChange, tag};
     }
 
-    return std::pair{IrUnitType::LogEvent, tag};
+    return {IrUnitType::LogEvent, tag};
 }
 
 template <ir::EncodedVariableTypeReq encoded_variable_t>
