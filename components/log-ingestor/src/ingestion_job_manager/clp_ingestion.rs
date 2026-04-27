@@ -792,7 +792,16 @@ impl ClpIngestionState {
         // NOTE: MySQL has a maximum placeholder limit of 65535. We need to batch the ingestion to
         // avoid hitting this limit. If the number of placeholders per insert changes, we may need
         // to adjust the chunk size accordingly.
+        
+        let meter = opentelemetry::global::meter("clp.ingest");
+        let bytes_counter = meter.u64_counter("clp.ingest.bytes_total").init();
+        let records_counter = meter.u64_counter("clp.ingest.records_total").init();
+        
         for chunk in objects.chunks(CHUNK_SIZE) {
+            let total_size: u64 = chunk.iter().map(|o| o.size).sum();
+            bytes_counter.add(total_size, &[]);
+            records_counter.add(chunk.len() as u64, &[]);
+            
             let query_string = format!(
                 "{}{}",
                 BASE_INGESTION_QUERY,

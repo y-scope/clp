@@ -40,7 +40,9 @@ tracing = "0.1.44"
 uuid = { version = "1", features = ["v4"] }
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 utoipa-axum = "0.2.0"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+opentelemetry = { version = "0.22", default-features = false, features = ["metrics"] }
+opentelemetry_sdk = { version = "0.22", default-features = false, features = ["metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.15", default-features = false, features = ["metrics", "grpc-tonic"] }
 
 [dev-dependencies]
 http-body-util = "0.1"

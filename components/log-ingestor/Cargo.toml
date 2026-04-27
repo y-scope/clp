@@ -38,6 +38,9 @@ tower-http = { version = "0.6.8", features = ["cors"] }
 thiserror = "2.0.18"
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 utoipa-axum = "0.2.0"
+opentelemetry = { version = "0.22", default-features = false, features = ["metrics"] }
+opentelemetry_sdk = { version = "0.22", default-features = false, features = ["metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.15", default-features = false, features = ["metrics", "grpc-tonic"] }
 
 [dev-dependencies]
 serial_test = "3.3.1"

@@ -72,8 +72,8 @@ async fn main() -> anyhow::Result<()> {
 
     let router = api_server::routes::from_client(client)?;
 
-    // Spawn telemetry background task (non-blocking, failures are silent)
-    tokio::spawn(api_server::telemetry::run_telemetry_loop(config));
+    // Initialize Telemetry
+    api_server::telemetry::init_telemetry("api-server");
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, router)

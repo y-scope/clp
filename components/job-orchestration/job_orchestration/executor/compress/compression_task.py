@@ -42,6 +42,16 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
+from job_orchestration.executor.utils import init_otel
+from opentelemetry import metrics
+
+meter = metrics.get_meter("clp.compression")
+bytes_input_total_counter = meter.create_counter(
+    "clp.compression.bytes_input_total", description="Total bytes compressed"
+)
+bytes_output_total_counter = meter.create_counter(
+    "clp.compression.bytes_output_total", description="Total bytes after compression"
+)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -584,6 +594,7 @@ def compression_entry_point(
     clp_metadata_db_connection_config: dict[str, Any],
     logger,
 ):
+    init_otel("compression-worker")
     clp_home = pathlib.Path(os.getenv("CLP_HOME"))
 
     # Set logging level
@@ -645,6 +656,8 @@ def compression_entry_point(
         )
         if CompressionTaskStatus.SUCCEEDED == compression_task_status:
             increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
+            bytes_input_total_counter.add(worker_output["total_uncompressed_size"])
+            bytes_output_total_counter.add(worker_output["total_compressed_size"])
         db_conn.commit()
 
     compression_task_result = CompressionTaskResult(
