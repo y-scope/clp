@@ -49,6 +49,8 @@ async fn create_test_s3_client(aws_config: &AwsConfig) -> aws_sdk_s3::Client {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_scan_prefix_across_multiple_pages() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
+    // Prevent unused fields linting.
+    let _ = (&aws_config.account_id, &aws_config.queue_name);
     let s3_client = create_test_s3_client(&aws_config).await;
 
     let job_id = Uuid::new_v4().as_u64_pair().0;
@@ -97,6 +99,8 @@ async fn test_scan_prefix_across_multiple_pages() -> Result<()> {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_scan_prefix_multi_page_filtering() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
+    // Prevent unused fields linting.
+    let _ = (&aws_config.account_id, &aws_config.queue_name);
     let s3_client = create_test_s3_client(&aws_config).await;
 
     let job_id = Uuid::new_v4().as_u64_pair().0;

@@ -201,7 +201,7 @@ async fn run_sqs_listener_test(
 
     noise_upload_handle
         .await
-        .context("Error while awaiting noise upload")?;
+        .context("Error while awaiting noise upload")??;
     let mut created_objects = upload_handle
         .await
         .context("Error while awaiting test object upload")??;
@@ -323,7 +323,7 @@ async fn test_s3_scanner() -> Result<()> {
 
     noise_upload_handle
         .await
-        .context("Error while awaiting noise upload")?;
+        .context("Error while awaiting noise upload")??;
     let mut created_objects = test_upload_handle
         .await
         .context("Error while awaiting test object upload")??;
