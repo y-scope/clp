@@ -40,7 +40,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.10.1-dev"
+  G_PACKAGE_VERSION: "0.12.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -134,10 +134,13 @@ tasks:
         rsync --archive
         "components/package-template/src/"
         "{{.OUTPUT_DIR}}"
-      - >-
-        rsync --archive
-        "{{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml"
-        "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
+      # Use the default template as clp-config.yaml unless a local dev override already exists.
+      - |-
+        if [ ! -f "components/package-template/src/etc/clp-config.yaml" ] ; then
+          rsync --archive \
+            "{{.OUTPUT_DIR}}/etc/clp-config.template.json.yaml" \
+            "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
+        fi
       - >-
         rsync --archive --mkpath
         "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/"
@@ -447,12 +450,13 @@ tasks:
       # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
       - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
 
-      # Apply the config template for the selected FLAVOUR
+      # Apply the config template for the selected FLAVOUR and remove any overrides
       - >-
         mv
         "{{.OUTPUT_DIR}}/etc/clp-config.template.{{.FLAVOUR}}.yaml"
         "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
       - "rm {{.OUTPUT_DIR}}/etc/clp-config.template.*.yaml"
+      - "rm -f '{{.OUTPUT_DIR}}/etc/credentials.yaml'"
 
       - >-
         tar czf '{{.OUTPUT_FILE}}'
