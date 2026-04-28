@@ -30,15 +30,28 @@ constexpr std::string_view cStdoutCacheOutputHandlerName{"stdout"};
 
 /**
  * Splits unrecognized options into lists of arguments for one or more known subcommands.
- * @param subcommand_names
+ * @param subcommands A map of subcommands characterized by the positional subcommand name and a
+ * description of the valid arguments for the subcommand.
  * @param options A vector of arguments that should correspond to a known set of subcommands.
  * @return A map of subcommand names to a vector of corresponding arguments.
  * @throws std::invalid_argument if a string of options begins with an unknown subcommand name.
  */
 auto collect_subcommands(
-        std::set<std::string> const& subcommand_names,
+        std::map<std::string, po::options_description const*> const& subcommands,
         std::vector<std::string> const& options
 ) -> std::map<std::string, std::vector<std::string>>;
+
+/**
+ * Gets the maximum number of tokens for an option.
+ * @param options_description The options description potentially containing the option.
+ * @param option
+ * @return The maximum number of tokens for the option, or an std::nullopt if the maximum number of
+ * tokens could not be determined.
+ */
+auto get_max_tokens_for_option(
+        po::options_description const* options_description,
+        std::string const& option
+) -> std::optional<unsigned>;
 
 /**
  * Parses options for a subcommand according to an options_description.
@@ -146,29 +159,40 @@ void validate_archive_paths(
 }
 
 auto collect_subcommands(
-        std::set<std::string> const& subcommand_names,
+        std::map<std::string, po::options_description const*> const& subcommands,
         std::vector<std::string> const& options
 ) -> std::map<std::string, std::vector<std::string>> {
     std::optional<std::string> current_subcommand;
     std::optional<std::vector<std::string>> current_subcommand_arguments;
+    po::options_description const* current_subcommand_options_description{};
+    unsigned remaining_tokens_in_current_argument{};
     std::map<std::string, std::vector<std::string>> collected_subcommands;
 
     auto collect_subcommand = [&]() -> void {
-        if (current_subcommand.has_value() && current_subcommand_arguments.has_value()) {
+        if (current_subcommand.has_value()) {
             collected_subcommands.emplace(
                     std::move(current_subcommand.value()),
                     std::move(current_subcommand_arguments.value())
             );
             current_subcommand.reset();
             current_subcommand_arguments.reset();
+            current_subcommand_options_description = nullptr;
+            remaining_tokens_in_current_argument = 0;
         }
     };
 
     for (auto const& option : options) {
-        if (subcommand_names.contains(option)) {
+        if (remaining_tokens_in_current_argument > 0) {
+            current_subcommand_arguments.value().emplace_back(option);
+            --remaining_tokens_in_current_argument;
+            continue;
+        }
+
+        if (subcommands.contains(option)) {
             collect_subcommand();
             current_subcommand = option;
             current_subcommand_arguments.emplace();
+            current_subcommand_options_description = subcommands.at(option);
             continue;
         }
 
@@ -179,9 +203,40 @@ auto collect_subcommands(
         }
 
         current_subcommand_arguments.value().emplace_back(option);
+        remaining_tokens_in_current_argument
+                = get_max_tokens_for_option(current_subcommand_options_description, option)
+                          .value_or(0);
     }
     collect_subcommand();
     return collected_subcommands;
+}
+
+auto get_max_tokens_for_option(
+        po::options_description const* options_description,
+        std::string const& option
+) -> std::optional<unsigned> {
+    if (nullptr == options_description) {
+        return std::nullopt;
+    }
+
+    std::string trimmed_option{
+            std::find_if(
+                    option.begin(),
+                    option.end(),
+                    [](unsigned char c) -> bool { return c != '-'; }
+            ),
+            option.end()
+    };
+    if (auto const option_description{options_description->find_nothrow(trimmed_option, true)};
+        nullptr != option_description)
+    {
+        auto const semantic{option_description->semantic()};
+        if (nullptr == semantic) {
+            return 0;
+        }
+        return semantic->max_tokens();
+    }
+    return std::nullopt;
 }
 
 auto parse_subcommand_options(
@@ -189,7 +244,10 @@ auto parse_subcommand_options(
         std::vector<std::string> const& options,
         po::variables_map& parsed_options
 ) -> void {
-    po::store(po::command_line_parser(options).options(options_description).run(), parsed_options);
+    po::store(
+            po::command_line_parser(options).options(options_description).positional({}).run(),
+            parsed_options
+    );
     po::notify(parsed_options);
 }
 }  // namespace
@@ -896,15 +954,16 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                                     unrecognized_output_options.size()
                             )
             );
-            std::set<std::string> const subcommand_names{
-                    std::string{cFileOutputHandlerName},
-                    std::string{cNetworkOutputHandlerName},
-                    std::string{cReducerOutputHandlerName},
-                    std::string{cResultsCacheOutputHandlerName},
-                    std::string{cStdoutCacheOutputHandlerName}
+            std::map<std::string, po::options_description const*> const subcommands{
+                    {std::string{cFileOutputHandlerName}, &file_output_handler_options},
+                    {std::string{cNetworkOutputHandlerName}, &network_output_handler_options},
+                    {std::string{cReducerOutputHandlerName}, &reducer_output_handler_options},
+                    {std::string{cResultsCacheOutputHandlerName},
+                     &results_cache_output_handler_options},
+                    {std::string{cStdoutCacheOutputHandlerName}, nullptr}
             };
             auto const output_options_map{
-                    collect_subcommands(subcommand_names, unrecognized_output_options)
+                    collect_subcommands(subcommands, unrecognized_output_options)
             };
 
             validate_archive_paths(archive_path, archive_id, m_input_paths);
