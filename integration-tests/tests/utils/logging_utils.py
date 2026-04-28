@@ -76,7 +76,5 @@ def format_action_failure_msg(reason: str, *actions: ExternalAction) -> str:
     :param actions:
     :return: The failure message.
     """
-    action_log_paths: list[str] = []
-    for action in actions:
-        action_log_paths.append(str(action.log_file_path))
+    action_log_paths = [str(action.log_file_path) for action in actions]
     return f"{reason} See relevant subprocess log(s) at: {action_log_paths}"
