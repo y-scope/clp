@@ -116,6 +116,16 @@ export CLP_HOST_OS_VERSION
 export CLP_HOST_ARCH
 CLP_HOST_ARCH="$(uname -m)"
 
+CLP_OTEL_COLLECTOR_ENABLED="1"
+if [[ "$telemetry_prompt_needed" == "true" ]] && [[ "$telemetry_response" =~ ^[Nn]$ ]]; then
+    CLP_OTEL_COLLECTOR_ENABLED="0"
+elif [[ "${CLP_DISABLE_TELEMETRY:-}" == "true" ]] || [[ "${CLP_DISABLE_TELEMETRY:-}" == "1" ]] || [[ "${DO_NOT_TRACK:-}" == "1" ]]; then
+    CLP_OTEL_COLLECTOR_ENABLED="0"
+elif [[ -f "$clp_config_path" ]] && grep -A 1 "^telemetry:" "$clp_config_path" 2>/dev/null | grep -q "disable: true"; then
+    CLP_OTEL_COLLECTOR_ENABLED="0"
+fi
+export CLP_OTEL_COLLECTOR_ENABLED
+
 docker compose -f "$CLP_HOME/docker-compose.runtime.yaml" \
     run --rm "${CLP_COMPOSE_RUN_EXTRA_FLAGS[@]}" clp-runtime \
     python3 \

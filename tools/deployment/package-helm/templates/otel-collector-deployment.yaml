@@ -1,0 +1,33 @@
+{{- if not .Values.clpConfig.telemetry.disable }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "clp.fullname" . }}-otel-collector
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "clp.fullname" . }}-otel-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "clp.fullname" . }}-otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: "otel/opentelemetry-collector:0.100.0"
+          command:
+            - "/otelcol"
+            - "--config=/conf/otel-collector-config.yaml"
+          ports:
+            - containerPort: 4317
+          volumeMounts:
+            - name: otel-collector-config
+              mountPath: /conf
+      volumes:
+        - name: otel-collector-config
+          configMap:
+            name: {{ include "clp.fullname" . }}-otel-collector
+{{- end }}

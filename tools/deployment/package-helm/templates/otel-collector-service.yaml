@@ -1,0 +1,16 @@
+{{- if not .Values.clpConfig.telemetry.disable }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clp.fullname" . }}-otel-collector
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: 4317
+      targetPort: 4317
+      protocol: TCP
+      name: grpc
+  selector:
+    app.kubernetes.io/name: {{ include "clp.fullname" . }}-otel-collector
+{{- end }}

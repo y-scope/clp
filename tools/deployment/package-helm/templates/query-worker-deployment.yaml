@@ -36,6 +36,13 @@ spec:
               ) | nindent 14 }}
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yaml"
+            {{- if .Values.clpConfig.telemetry.disable }}
+            - name: "CLP_DISABLE_TELEMETRY"
+              value: "true"
+            {{- else }}
+            - name: "OTEL_EXPORTER_OTLP_ENDPOINT"
+              value: "http://{{ include "clp.fullname" . }}-otel-collector:4317"
+            {{- end }}
             - name: "CLP_HOME"
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
