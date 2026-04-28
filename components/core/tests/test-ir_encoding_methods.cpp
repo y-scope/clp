@@ -1412,11 +1412,14 @@ TEMPLATE_TEST_CASE(
     for (size_t idx{0}; idx < deserialized_log_events.size(); ++idx) {
         auto const& deserialized_log_event{deserialized_log_events.at(idx)};
         auto const& user_gen_schema_tree{deserialized_log_event.get_user_gen_keys_schema_tree()};
+        auto const& auto_gen_node_id_value_pairs{
+                deserialized_log_event.get_auto_gen_node_id_value_pairs()
+        };
         auto const& user_gen_node_id_value_pairs{
                 deserialized_log_event.get_user_gen_node_id_value_pairs()
         };
 
-        REQUIRE((3 == user_gen_schema_tree.get_size()));
+        REQUIRE((2 == user_gen_schema_tree.get_size()));
         REQUIRE((user_gen_schema_tree.has_node(
                 clp::ffi::SchemaTree::NodeLocator{
                         clp::ffi::SchemaTree::cRootId,
@@ -1424,27 +1427,19 @@ TEMPLATE_TEST_CASE(
                         clp::ffi::SchemaTree::Node::Type::Str
                 }
         )));
-        REQUIRE((user_gen_schema_tree.has_node(
-                clp::ffi::SchemaTree::NodeLocator{
-                        clp::ffi::SchemaTree::cRootId,
-                        "timestamp",
-                        clp::ffi::SchemaTree::Node::Type::Int
-                }
-        )));
-
-        REQUIRE((2 == user_gen_node_id_value_pairs.size()));
+        REQUIRE((1 == auto_gen_node_id_value_pairs.size()));
+        REQUIRE((1 == user_gen_node_id_value_pairs.size()));
 
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
         auto const& [auto_gen_json_obj, user_gen_json_obj]{serialized_json_result.value()};
-        REQUIRE(auto_gen_json_obj.empty());
+        REQUIRE(
+                (test_log_events.at(idx).get_timestamp()
+                 == auto_gen_json_obj.at("timestamp").template get<epoch_time_ms_t>())
+        );
         REQUIRE(
                 (test_log_events.at(idx).get_message()
                  == user_gen_json_obj.at("message").template get<string>())
-        );
-        REQUIRE(
-                (test_log_events.at(idx).get_timestamp()
-                 == user_gen_json_obj.at("timestamp").template get<epoch_time_ms_t>())
         );
     }
 

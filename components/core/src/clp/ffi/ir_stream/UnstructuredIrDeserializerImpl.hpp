@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -13,6 +14,7 @@
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
+#include "../../type_utils.hpp"
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
 #include "decoding_methods.hpp"
@@ -89,12 +91,20 @@ public:
 
 private:
     // Constructors
+    template <
+            typename T = encoded_variable_t,
+            std::enable_if_t<std::is_same_v<T, ir::eight_byte_encoded_variable_t>, int> = 0
+    >
     explicit UnstructuredIrDeserializerImpl(
-            std::vector<SchemaTree::NodeLocator> initial_insertions
+            std::vector<std::pair<bool, SchemaTree::NodeLocator>> initial_insertions
     );
 
+    template <
+            typename T = encoded_variable_t,
+            std::enable_if_t<std::is_same_v<T, ir::four_byte_encoded_variable_t>, int> = 0
+    >
     UnstructuredIrDeserializerImpl(
-            std::vector<SchemaTree::NodeLocator> initial_insertions,
+            std::vector<std::pair<bool, SchemaTree::NodeLocator>> initial_insertions,
             ir::epoch_time_ms_t reference_timestamp
     );
 
@@ -102,6 +112,9 @@ private:
     /**
      * Resolves the node IDs for `message` and `timestamp` in the schema tree.
      * If the node IDs are already resolved, returns them immediately.
+     * NOTE: `message` is resolved from the user-generated schema tree, while `timestamp` is
+     * resolved from the auto-generated schema tree.
+     * @param auto_gen_keys_schema_tree
      * @param user_gen_keys_schema_tree
      * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
@@ -110,14 +123,19 @@ private:
      * - std::errc::protocol_error if either required schema node is missing.
      */
     [[nodiscard]] auto resolve_required_node_ids(
+            std::shared_ptr<SchemaTree> const& auto_gen_keys_schema_tree,
             std::shared_ptr<SchemaTree> const& user_gen_keys_schema_tree
     ) -> ystdlib::error_handling::Result<std::pair<SchemaTree::Node::id_t, SchemaTree::Node::id_t>>;
 
     // Variables
-    std::vector<SchemaTree::NodeLocator> m_pending_schema_insertions;
+    std::vector<std::pair<bool, SchemaTree::NodeLocator>> m_pending_schema_insertions;
     std::optional<SchemaTree::Node::id_t> m_optional_message_node_id;
     std::optional<SchemaTree::Node::id_t> m_optional_timestamp_node_id;
-    ir::epoch_time_ms_t m_previous_timestamp{0};
+    [[no_unique_address]] std::conditional_t<
+            std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
+            ir::epoch_time_ms_t,
+            EmptyType
+    > m_previous_timestamp{};
 };
 }  // namespace clp::ffi::ir_stream
 
