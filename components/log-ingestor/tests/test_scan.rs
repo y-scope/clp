@@ -1,9 +1,12 @@
 mod aws_config;
 mod test_utils;
 
-use std::sync::{
-    Arc,
-    atomic::{AtomicUsize, Ordering},
+use std::{
+    collections::HashSet,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
 };
 
 use anyhow::Result;
@@ -19,6 +22,7 @@ use test_utils::{create_s3_objects, get_testing_prefix_as_non_empty_string, uplo
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+const NUM_OBJECTS: usize = 250;
 // ListObjectsV2 returns at most 1,000 objects from a bucket
 const NUM_MULTI_PAGE_OBJECTS: usize = 1_205;
 const NUM_FILTERED_OUT_DIRECTORY_MARKERS: usize = 25;
@@ -42,43 +46,71 @@ async fn create_test_s3_client(aws_config: &AwsConfig) -> aws_sdk_s3::Client {
 #[tokio::test]
 #[serial_test::serial]
 #[ignore = "Requires LocalStack or AWS environment"]
-async fn test_scan_prefix_across_multiple_pages() -> Result<()> {
+async fn test_scan_prefix_early_exit() -> Result<()> {
     let aws_config = AwsConfig::from_env()?;
     let s3_client = create_test_s3_client(&aws_config).await;
 
     let job_id = Uuid::new_v4().as_u64_pair().0;
     let prefix = get_testing_prefix_as_non_empty_string(job_id);
-    let mut created_objects = upload_test_objects(
+    let created_objects = upload_test_objects(
         s3_client.clone(),
         aws_config.bucket_name.clone(),
         prefix.clone(),
-        NUM_MULTI_PAGE_OBJECTS,
+        NUM_OBJECTS,
     )
     .await?;
 
-    let page_count = Arc::new(AtomicUsize::new(0));
-    let scanned_objects = Arc::new(Mutex::new(Vec::<ObjectMetadata>::new()));
-    let last_scanned_key = scan_prefix(&s3_client, &aws_config.bucket_name, &prefix, None, {
-        let page_count = page_count.clone();
-        let scanned_objects = scanned_objects.clone();
-        move |objects| {
-            let page_count = page_count.clone();
-            let scanned_objects = scanned_objects.clone();
-            async move {
-                page_count.fetch_add(1, Ordering::Relaxed);
-                scanned_objects.lock().await.extend(objects);
-                Ok(())
+    let requested_keys: HashSet<NonEmptyString> = [10_usize, 100, 200]
+        .into_iter()
+        .map(|idx| created_objects[idx].key.clone())
+        .collect();
+
+    let remaining_keys = Arc::new(Mutex::new(requested_keys.clone()));
+    let found_objects = Arc::new(Mutex::new(Vec::<ObjectMetadata>::new()));
+    let remaining_keys_for_scan = remaining_keys.clone();
+    let found_objects_for_scan = found_objects.clone();
+
+    let last_scanned_key: Option<NonEmptyString> = scan_prefix(
+        &s3_client,
+        &aws_config.bucket_name,
+        &prefix,
+        None::<NonEmptyString>,
+        async move |objects: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
+            let page_last_key = objects
+                .last()
+                .expect("`objects` should not be empty")
+                .key
+                .clone();
+
+            let mut remaining_keys = remaining_keys_for_scan.lock().await;
+            let mut matched_objects = Vec::new();
+            for object in objects {
+                if remaining_keys.remove(&object.key) {
+                    matched_objects.push(object);
+                }
             }
-        }
-    })
+            let should_continue_scanning = !remaining_keys.is_empty();
+            drop(remaining_keys);
+            found_objects_for_scan.lock().await.extend(matched_objects);
+
+            Ok((should_continue_scanning, page_last_key))
+        },
+    )
     .await?;
 
-    let mut received_objects = scanned_objects.lock().await.clone();
-    created_objects.sort();
-    received_objects.sort();
+    let remaining_keys = remaining_keys.lock().await.clone();
+    let mut received_requested_keys: Vec<_> = found_objects
+        .lock()
+        .await
+        .iter()
+        .map(|object| object.key.clone())
+        .collect();
+    let mut expected_requested_keys: Vec<_> = requested_keys.iter().cloned().collect();
+    received_requested_keys.sort();
+    expected_requested_keys.sort();
 
-    assert!(page_count.load(Ordering::Relaxed) > 1);
-    assert_eq!(received_objects, created_objects);
+    assert!(remaining_keys.is_empty());
+    assert_eq!(received_requested_keys, expected_requested_keys);
     assert_eq!(
         last_scanned_key,
         created_objects.last().map(|obj| obj.key.clone())
@@ -116,19 +148,24 @@ async fn test_scan_prefix_multi_page_filtering() -> Result<()> {
 
     let page_count = Arc::new(AtomicUsize::new(0));
     let scanned_objects = Arc::new(Mutex::new(Vec::<ObjectMetadata>::new()));
-    let last_scanned_key = scan_prefix(&s3_client, &aws_config.bucket_name, &prefix, None, {
-        let page_count = page_count.clone();
-        let scanned_objects = scanned_objects.clone();
-        move |objects| {
-            let page_count = page_count.clone();
-            let scanned_objects = scanned_objects.clone();
-            async move {
-                page_count.fetch_add(1, Ordering::Relaxed);
-                scanned_objects.lock().await.extend(objects);
-                Ok(())
-            }
-        }
-    })
+    let page_count_for_scan = page_count.clone();
+    let scanned_objects_for_scan = scanned_objects.clone();
+    let last_scanned_key: Option<NonEmptyString> = scan_prefix(
+        &s3_client,
+        &aws_config.bucket_name,
+        &prefix,
+        None::<NonEmptyString>,
+        async move |objects: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
+            page_count_for_scan.fetch_add(1, Ordering::Relaxed);
+            let last_key = objects
+                .last()
+                .expect("`objects` should not be empty")
+                .key
+                .clone();
+            scanned_objects_for_scan.lock().await.extend(objects);
+            Ok((true, last_key))
+        },
+    )
     .await?;
 
     let mut received_objects = scanned_objects.lock().await.clone();

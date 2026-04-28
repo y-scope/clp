@@ -12,9 +12,16 @@ use non_empty_string::NonEmptyString;
 /// * Keys ending in `/` are skipped.
 /// * Empty keys cause an error.
 ///
+/// # Type Parameters
+///
+/// * [`CallbackType`]: The type of the async callback invoked once per non-empty scanned page of
+///   object metadata. It must return (`should_continue_scanning`, `processed_last_key`), where
+///   `should_continue_scanning` controls whether to fetch more pages, and `processed_last_key` is
+///   the last key from that page.
+///
 /// # Returns
 ///
-/// The last scanned object key, if any non-directory object was scanned.
+/// The last key successfully processed by `page_callback`, if any object was processed.
 ///
 /// # Errors
 ///
@@ -23,17 +30,18 @@ use non_empty_string::NonEmptyString;
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
 /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
-/// * Forwards `on_page` callback return values on failure.
-pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result<()>>(
+/// * Forwards `page_callback` callback return values on failure.
+pub async fn scan_prefix<
+    CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result<(bool, NonEmptyString)>,
+>(
     client: &Client,
     bucket_name: &NonEmptyString,
     key_prefix: &NonEmptyString,
-    start_after: Option<&NonEmptyString>,
-    mut on_page: CallbackType,
+    mut start_after: Option<NonEmptyString>,
+    mut page_callback: CallbackType,
 ) -> Result<Option<NonEmptyString>> {
     let mut continuation_token: Option<String> = None;
     let mut last_scanned_key: Option<NonEmptyString> = None;
-    let mut use_start_after = start_after.map(std::string::ToString::to_string);
 
     loop {
         let mut request = client
@@ -43,20 +51,13 @@ pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result
 
         if let Some(continuation_token) = continuation_token.take() {
             request = request.continuation_token(continuation_token);
-        } else if let Some(start_after) = start_after {
-            request = request.start_after(start_after.to_string());
+        } else if let Some(start_after) = start_after.take() {
+            request = request.start_after(start_after);
         }
 
         let response = request.send().await?;
 
-        let Some(contents) = response.contents else {
-            continuation_token = response.next_continuation_token;
-            if continuation_token.is_none() {
-                break;
-            }
-            continue;
-        };
-
+        let contents = response.contents.unwrap_or_default();
         let mut object_metadata_to_ingest = Vec::with_capacity(contents.len());
         for content in contents {
             let (Some(key), Some(size)) = (content.key, content.size) else {
@@ -67,7 +68,6 @@ pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result
             }
             let non_empty_key = NonEmptyString::new(key)
                 .map_err(|_| anyhow::anyhow!("received an empty object key from S3"))?;
-            last_scanned_key = Some(non_empty_key.clone());
             object_metadata_to_ingest.push(ObjectMetadata {
                 bucket: bucket_name.clone(),
                 key: non_empty_key,
@@ -76,7 +76,12 @@ pub async fn scan_prefix<CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result
         }
 
         if !object_metadata_to_ingest.is_empty() {
-            on_page(object_metadata_to_ingest).await?;
+            let (should_continue_scanning, processed_last_key) =
+                page_callback(object_metadata_to_ingest).await?;
+            last_scanned_key = Some(processed_last_key);
+            if !should_continue_scanning {
+                break;
+            }
         }
 
         continuation_token = response.next_continuation_token;

@@ -93,11 +93,12 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
             &client,
             &self.config.base.bucket_name,
             &self.config.base.key_prefix,
-            self.start_after.as_ref(),
-            async move |page: Vec<ObjectMetadata>| -> Result<()> {
+            self.start_after.take(),
+            async move |page: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
                 let last_ingested_key =
                     page.last().expect("`page` should not be empty").key.clone();
-                state.ingest(page, last_ingested_key.as_str()).await
+                state.ingest(page, last_ingested_key.as_str()).await?;
+                Ok((true, last_ingested_key))
             },
         )
         .await?;
