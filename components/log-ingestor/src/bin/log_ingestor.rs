@@ -61,7 +61,8 @@ async fn main() -> anyhow::Result<()> {
 
     let telemetry_id = std::env::var("CLP_INSTANCE_ID").unwrap_or_else(|_| "unknown".to_owned());
     let clp_version = std::env::var("CLP_VERSION").unwrap_or_else(|_| "unknown".to_owned());
-    let deployment_method = std::env::var("CLP_DEPLOYMENT_METHOD").unwrap_or_else(|_| "unknown".to_owned());
+    let deployment_method =
+        std::env::var("CLP_DEPLOYMENT_METHOD").unwrap_or_else(|_| "unknown".to_owned());
     let os = std::env::var("CLP_HOST_OS").unwrap_or_else(|_| std::env::consts::OS.to_owned());
     let os_version = std::env::var("CLP_HOST_OS_VERSION").unwrap_or_else(|_| "unknown".to_owned());
     let arch = std::env::var("CLP_HOST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_owned());

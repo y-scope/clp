@@ -1,5 +1,4 @@
-use std::env;
-use std::time::Duration;
+use std::{env, time::Duration};
 
 use opentelemetry::KeyValue;
 use opentelemetry_sdk::Resource;
@@ -28,7 +27,8 @@ fn is_telemetry_disabled() -> bool {
 fn build_resource(service_name: &str) -> Resource {
     let telemetry_id = env::var("CLP_INSTANCE_ID").unwrap_or_else(|_| "unknown".to_owned());
     let clp_version = env::var("CLP_VERSION").unwrap_or_else(|_| "unknown".to_owned());
-    let deployment_method = env::var("CLP_DEPLOYMENT_METHOD").unwrap_or_else(|_| "unknown".to_owned());
+    let deployment_method =
+        env::var("CLP_DEPLOYMENT_METHOD").unwrap_or_else(|_| "unknown".to_owned());
     let os = env::var("CLP_HOST_OS").unwrap_or_else(|_| std::env::consts::OS.to_owned());
     let os_version = env::var("CLP_HOST_OS_VERSION").unwrap_or_else(|_| "unknown".to_owned());
     let arch = env::var("CLP_HOST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_owned());
@@ -57,14 +57,32 @@ pub fn init_telemetry(service_name: &'static str) {
     let provider = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-        .with_resource(Resource::new(vec![KeyValue::new(
-            "service.name",
-            service_name,
-        )]))
+        .with_resource(build_resource(service_name))
         .build();
 
     match provider {
-        Ok(p) => opentelemetry::global::set_meter_provider(p),
+        Ok(p) => {
+            opentelemetry::global::set_meter_provider(p);
+
+            // Emit deployment_start counter exactly once on startup
+            let meter = opentelemetry::global::meter("clp.api");
+            let start_counter = meter.u64_counter("clp.api.deployment_start").init();
+            start_counter.add(1, &[]);
+
+            // Spawn heartbeat loop (every 24 hours)
+            tokio::spawn(async move {
+                // Initial wait for the first heartbeat
+                let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
+                // We don't want an immediate tick because deployment_start already signals the start
+                interval.tick().await; 
+                let heartbeat_counter = meter.u64_counter("clp.api.heartbeat").init();
+                
+                loop {
+                    interval.tick().await;
+                    heartbeat_counter.add(1, &[]);
+                }
+            });
+        },
         Err(err) => tracing::warn!("Failed to build OTLP metrics pipeline: {}", err),
     }
 }
