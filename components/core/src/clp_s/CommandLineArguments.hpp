@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/program_options/option.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 
@@ -162,12 +161,10 @@ private:
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
      */
     void parse_network_dest_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options
     );
 
     /**
@@ -175,12 +172,10 @@ private:
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
      */
     void parse_reducer_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options
     );
 
     /**
@@ -188,12 +183,10 @@ private:
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
      */
     void parse_results_cache_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options
     );
 
     /**
@@ -201,12 +194,10 @@ private:
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
      * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
      */
     void parse_file_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options
     );
 
     void print_basic_usage() const;

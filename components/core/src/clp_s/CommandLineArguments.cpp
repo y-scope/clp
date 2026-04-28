@@ -1,5 +1,6 @@
 #include "CommandLineArguments.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <string_view>
@@ -8,7 +9,6 @@
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/cli_utils.hpp"
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
@@ -20,6 +20,37 @@ namespace {
 // Authorization method constants
 constexpr std::string_view cNoAuth{"none"};
 constexpr std::string_view cS3Auth{"s3"};
+
+// Output handler constants
+constexpr std::string_view cFileOutputHandlerName{"file"};
+constexpr std::string_view cNetworkOutputHandlerName{"network"};
+constexpr std::string_view cReducerOutputHandlerName{"reducer"};
+constexpr std::string_view cResultsCacheOutputHandlerName{"results-cache"};
+constexpr std::string_view cStdoutCacheOutputHandlerName{"stdout"};
+
+/**
+ * Splits unrecognized options into lists of arguments for one or more known subcommands.
+ * @param subcommand_names
+ * @param options A vector of arguments that should correspond to a known set of subcommands.
+ * @return A map of subcommand names to a vector of corresponding arguments.
+ * @throws std::invalid_argument if a string of options begins with an unknown subcommand name.
+ */
+auto collect_subcommands(
+        std::set<std::string> const& subcommand_names,
+        std::vector<std::string> const& options
+) -> std::map<std::string, std::vector<std::string>>;
+
+/**
+ * Parses options for a subcommand according to an options_description.
+ * @param options_description
+ * @param options
+ * @param parsed_options The parsed options.
+ */
+auto parse_subcommand_options(
+        po::options_description const& options_description,
+        std::vector<std::string> const& options,
+        po::variables_map& parsed_options
+) -> void;
 
 /**
  * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
@@ -112,6 +143,54 @@ void validate_archive_paths(
     if (archive_paths.empty()) {
         throw std::invalid_argument("No archive paths specified");
     }
+}
+
+auto collect_subcommands(
+        std::set<std::string> const& subcommand_names,
+        std::vector<std::string> const& options
+) -> std::map<std::string, std::vector<std::string>> {
+    std::optional<std::string> current_subcommand;
+    std::optional<std::vector<std::string>> current_subcommand_arguments;
+    std::map<std::string, std::vector<std::string>> collected_subcommands;
+
+    auto collect_subcommand = [&]() -> void {
+        if (current_subcommand.has_value() && current_subcommand_arguments.has_value()) {
+            collected_subcommands.emplace(
+                    std::move(current_subcommand.value()),
+                    std::move(current_subcommand_arguments.value())
+            );
+            current_subcommand.reset();
+            current_subcommand_arguments.reset();
+        }
+    };
+
+    for (auto const& option : options) {
+        if (subcommand_names.contains(option)) {
+            collect_subcommand();
+            current_subcommand = option;
+            current_subcommand_arguments.emplace();
+            continue;
+        }
+
+        if (false == current_subcommand.has_value()
+            || false == current_subcommand_arguments.has_value())
+        {
+            throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
+        }
+
+        current_subcommand_arguments.value().emplace_back(option);
+    }
+    collect_subcommand();
+    return collected_subcommands;
+}
+
+auto parse_subcommand_options(
+        po::options_description const& options_description,
+        std::vector<std::string> const& options,
+        po::variables_map& parsed_options
+) -> void {
+    po::store(po::command_line_parser(options).options(options_description).run(), parsed_options);
+    po::notify(parsed_options);
 }
 }  // namespace
 
@@ -568,7 +647,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             std::string query;
 
             po::options_description search_options;
-            std::string output_handler_name;
             std::string archive_path;
             // clang-format off
             search_options.add_options()(
@@ -580,17 +658,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_query),
                     "Query to perform"
             )(
-                    "output-handler",
-                    po::value<std::string>(&output_handler_name)
-            )(
                     "output-handler-args",
                     po::value<std::vector<std::string>>()
             );
             // clang-format on
+            constexpr size_t cNumRequiredPositionalArguments{2};
             po::positional_options_description positional_options;
             positional_options.add("archive-path", 1);
             positional_options.add("query", 1);
-            positional_options.add("output-handler", 1);
             positional_options.add("output-handler-args", -1);
 
             po::options_description match_options("Match Controls");
@@ -731,25 +806,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::notify(parsed_command_line_options);
 
-            constexpr char cFileOutputHandlerName[] = "file";
-            constexpr char cNetworkOutputHandlerName[] = "network";
-            constexpr char cReducerOutputHandlerName[] = "reducer";
-            constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
-            constexpr char cStdoutCacheOutputHandlerName[] = "stdout";
-
             if (parsed_command_line_options.count("help")) {
                 print_search_usage();
                 std::cerr << "OUTPUT_HANDLER is one of:" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cStdoutCacheOutputHandlerName)
+                std::cerr << "  " << cStdoutCacheOutputHandlerName
                           << " (default) - Output to stdout" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cFileOutputHandlerName)
-                          << " - Output to a file" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
+                std::cerr << "  " << cFileOutputHandlerName << " - Output to a file" << std::endl;
+                std::cerr << "  " << cNetworkOutputHandlerName
                           << " - Output to a network destination" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
+                std::cerr << "  " << cResultsCacheOutputHandlerName
                           << " - Output to the results cache" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
-                          << " - Output to the reducer" << std::endl;
+                std::cerr << "  " << cReducerOutputHandlerName << " - Output to the reducer"
+                          << std::endl;
                 std::cerr << std::endl;
 
                 std::cerr << "Examples:" << std::endl;
@@ -807,6 +875,38 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
+            if (false == parsed_command_line_options.count("archive-path")) {
+                throw std::invalid_argument(
+                        "missing required positional argument \"ARCHIVES_DIR\""
+                );
+            }
+
+            if (false == parsed_command_line_options.count("query")) {
+                throw std::invalid_argument("missing required positional argument \"KQL_QUERY\"");
+            }
+
+            auto unrecognized_output_options{
+                    po::collect_unrecognized(search_parsed.options, po::include_positional)
+            };
+            unrecognized_output_options.erase(
+                    unrecognized_output_options.begin(),
+                    unrecognized_output_options.begin()
+                            + std::min(
+                                    cNumRequiredPositionalArguments,
+                                    unrecognized_output_options.size()
+                            )
+            );
+            std::set<std::string> const subcommand_names{
+                    std::string{cFileOutputHandlerName},
+                    std::string{cNetworkOutputHandlerName},
+                    std::string{cReducerOutputHandlerName},
+                    std::string{cResultsCacheOutputHandlerName},
+                    std::string{cStdoutCacheOutputHandlerName}
+            };
+            auto const output_options_map{
+                    collect_subcommands(subcommand_names, unrecognized_output_options)
+            };
+
             validate_archive_paths(archive_path, archive_id, m_input_paths);
 
             validate_network_auth(auth, m_network_auth);
@@ -831,61 +931,49 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (parsed_command_line_options.count("output-handler") > 0) {
-                if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
+            if (output_options_map.size() > 1) {
+                throw std::invalid_argument("clp-s only supports one output handler at a time");
+            }
+
+            for (auto const& [output_handler_name, output_handler_options] : output_options_map) {
+                if (cNetworkOutputHandlerName == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::Network;
-                } else if ((static_cast<char const*>(cReducerOutputHandlerName)
-                            == output_handler_name))
-                {
+                    parse_network_dest_output_handler_options(
+                            network_output_handler_options,
+                            output_handler_options
+                    );
+                } else if (cReducerOutputHandlerName == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::Reducer;
-                } else if ((static_cast<char const*>(cResultsCacheOutputHandlerName)
-                            == output_handler_name))
-                {
+                    parse_reducer_output_handler_options(
+                            reducer_output_handler_options,
+                            output_handler_options
+                    );
+                } else if (cResultsCacheOutputHandlerName == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::ResultsCache;
-                } else if ((static_cast<char const*>(cStdoutCacheOutputHandlerName)
-                            == output_handler_name))
-                {
+                    parse_results_cache_output_handler_options(
+                            results_cache_output_handler_options,
+                            output_handler_options
+                    );
+                } else if (cStdoutCacheOutputHandlerName == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::Stdout;
-                } else if ((static_cast<char const*>(cFileOutputHandlerName)
-                            == output_handler_name))
-                {
+                    if (false == output_handler_options.empty()) {
+                        std::string error_msg{fmt::format(
+                                "stdout output handler does not support \"{}\"",
+                                output_handler_options.front()
+                        )};
+                        throw std::invalid_argument(error_msg);
+                    }
+                } else if (cFileOutputHandlerName == output_handler_name) {
                     m_output_handler_type = OutputHandlerType::File;
+                    parse_file_output_handler_options(
+                            file_output_handler_options,
+                            output_handler_options
+                    );
                 } else if (output_handler_name.empty()) {
                     throw std::invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
                 } else {
                     throw std::invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
                 }
-            }
-
-            if (OutputHandlerType::Network == m_output_handler_type) {
-                parse_network_dest_output_handler_options(
-                        network_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (OutputHandlerType::Reducer == m_output_handler_type) {
-                parse_reducer_output_handler_options(
-                        reducer_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (OutputHandlerType::ResultsCache == m_output_handler_type) {
-                parse_results_cache_output_handler_options(
-                        results_cache_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (OutputHandlerType::File == m_output_handler_type) {
-                parse_file_output_handler_options(
-                        file_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (m_output_handler_type != OutputHandlerType::Stdout) {
-                throw std::invalid_argument(
-                        "Unhandled OutputHandlerType="
-                        + std::to_string(clp::enum_to_underlying_type(m_output_handler_type))
-                );
             }
         }
     } catch (std::exception& e) {
@@ -901,10 +989,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
 void CommandLineArguments::parse_network_dest_output_handler_options(
         po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
+        std::vector<std::string> const& options
 ) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    po::variables_map parsed_options;
+    parse_subcommand_options(options_description, options, parsed_options);
 
     if (parsed_options.count("host") == 0) {
         throw std::invalid_argument("host must be specified.");
@@ -923,10 +1011,10 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
 
 void CommandLineArguments::parse_reducer_output_handler_options(
         po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
+        std::vector<std::string> const& options
 ) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    po::variables_map parsed_options;
+    parse_subcommand_options(options_description, options, parsed_options);
 
     if (parsed_options.count("host") == 0) {
         throw std::invalid_argument("host must be specified.");
@@ -963,9 +1051,7 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         }
 
         if (m_reducer_output_handler_options.count_by_time_bucket_size <= 0) {
-            throw std::invalid_argument(
-                    "Value for count-by-time must be greater than zero."
-            );
+            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
 
         m_reducer_output_handler_options.aggregation_type = AggregationType::CountByTime;
@@ -974,18 +1060,18 @@ void CommandLineArguments::parse_reducer_output_handler_options(
 
     if (false == has_aggregation) {
         throw std::invalid_argument(
-            "The reducer output handler currently only supports count and"
-            " count-by-time aggregations."
+                "The reducer output handler currently only supports count and"
+                " count-by-time aggregations."
         );
     }
 }
 
 void CommandLineArguments::parse_results_cache_output_handler_options(
         po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
+        std::vector<std::string> const& options
 ) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    po::variables_map parsed_options;
+    parse_subcommand_options(options_description, options, parsed_options);
 
     if (parsed_options.count("uri") == 0) {
         throw std::invalid_argument("uri must be specified.");
@@ -1012,10 +1098,10 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
 
 void CommandLineArguments::parse_file_output_handler_options(
         po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
+        std::vector<std::string> const& options
 ) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    po::variables_map parsed_options;
+    parse_subcommand_options(options_description, options, parsed_options);
     if (parsed_options.count("path") == 0) {
         throw std::invalid_argument("path must be specified.");
     }
