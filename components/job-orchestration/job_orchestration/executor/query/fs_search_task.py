@@ -142,12 +142,6 @@ def _make_command_and_env_vars(
 
     if search_config.aggregation_config is not None:
         aggregation_config = search_config.aggregation_config
-        if aggregation_config.do_count_aggregation is not None:
-            command.append("--count")
-        if aggregation_config.count_by_time_bucket_size is not None:
-            command.append("--count-by-time")
-            command.append(str(aggregation_config.count_by_time_bucket_size))
-
         # fmt: off
         command.extend((
             "reducer",
@@ -156,6 +150,11 @@ def _make_command_and_env_vars(
             "--job-id", str(aggregation_config.job_id)
         ))
         # fmt: on
+        if aggregation_config.do_count_aggregation is not None:
+            command.append("--count")
+        if aggregation_config.count_by_time_bucket_size is not None:
+            command.append("--count-by-time")
+            command.append(str(aggregation_config.count_by_time_bucket_size))
     elif search_config.network_address is not None:
         # fmt: off
         command.extend((
