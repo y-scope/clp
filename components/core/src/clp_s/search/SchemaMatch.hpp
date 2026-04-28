@@ -79,6 +79,22 @@ public:
     bool has_array_search(int32_t schema_id);
 
 private:
+    // Types
+    /**
+     * Result of decomposing a query and matching it against log types in the typed dictionary.
+     */
+    struct ClppDecompositionMatch {
+        clpp::DecomposedQuery const* decomposed_query;
+        std::vector<clp_s::logtype_id_t> matched_lt_ids;
+
+        ClppDecompositionMatch(
+                clpp::DecomposedQuery const* query,
+                std::vector<clp_s::logtype_id_t> ids
+        )
+                : decomposed_query{query},
+                  matched_lt_ids{std::move(ids)} {}
+    };
+
     // Data members
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;
@@ -105,6 +121,7 @@ private:
             m_decomposed_query_cache;
     std::unordered_map<logtype_id_t, std::vector<int32_t>> m_logtype_id_to_schema_id;
 
+    // Methods
     /**
      * Builds the reverse mapping from logtype_id to schema_id by scanning schemas
      * for their NodeType::LogTypeID nodes.
@@ -195,16 +212,40 @@ private:
      */
     ast::LiteralType get_literal_type_for_column(ast::ColumnDescriptor* column, int32_t schema);
 
-    /** clpp TODO
-     * @param
-     * @param
-     * @return
+    auto decompose_and_match_log_message(std::string const& query) -> ClppDecompositionMatch;
+
+    auto decompose_and_match_parent_var(
+            SchemaNode const& cur_node,
+            ast::DescriptorList::iterator cur_it,
+            std::string const& query
+    ) -> ClppDecompositionMatch;
+
+    /**
+     * Decomposes a query string using the log-surgeon schema.
+     * @param rule_name
+     * @param query
+     * @param root_rule_query
+     * @return A pointer to the cached decomposed query, or an error.
      */
     auto decompose_query(
             std::optional<std::string> rule_name,
             std::string const& query,
             bool root_rule_query
     ) -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
+
+    /**
+     * Converts matched logtype IDs to schema IDs, builds the leaves expression, and returns the
+     * result. Returns std::nullopt if no schemas matched.
+     * @param column
+     * @param decomposed_query
+     * @param matched_lt_ids
+     * @return The resolved match result, or std::nullopt if no schemas matched.
+     */
+    auto try_resolve_clpp_match(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            clpp::DecomposedQuery const* decomposed_query,
+            std::vector<clp_s::logtype_id_t> matched_lt_ids
+    ) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>>;
 };
 }  // namespace clp_s::search
 
