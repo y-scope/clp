@@ -59,13 +59,30 @@ async fn main() -> anyhow::Result<()> {
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = clp_rust_utils::logging::set_up_logging("log_ingestor.log");
 
+    let telemetry_id = std::env::var("CLP_INSTANCE_ID").unwrap_or_else(|_| "unknown".to_owned());
+    let clp_version = std::env::var("CLP_VERSION").unwrap_or_else(|_| "unknown".to_owned());
+    let deployment_method = std::env::var("CLP_DEPLOYMENT_METHOD").unwrap_or_else(|_| "unknown".to_owned());
+    let os = std::env::var("CLP_HOST_OS").unwrap_or_else(|_| std::env::consts::OS.to_owned());
+    let os_version = std::env::var("CLP_HOST_OS_VERSION").unwrap_or_else(|_| "unknown".to_owned());
+    let arch = std::env::var("CLP_HOST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_owned());
+    let storage_engine = std::env::var("CLP_STORAGE_ENGINE").unwrap_or_else(|_| "clp".to_owned());
+
+    let resource = opentelemetry_sdk::Resource::new(vec![
+        opentelemetry::KeyValue::new("service.name", "log-ingestor"),
+        opentelemetry::KeyValue::new("telemetry.id", telemetry_id),
+        opentelemetry::KeyValue::new("clp.version", clp_version),
+        opentelemetry::KeyValue::new("deployment.method", deployment_method),
+        opentelemetry::KeyValue::new("os.type", os),
+        opentelemetry::KeyValue::new("os.version", os_version),
+        opentelemetry::KeyValue::new("host.arch", arch),
+        opentelemetry::KeyValue::new("clp.storage_engine", storage_engine),
+    ]);
+
     // Init Global OpenTelemetry context via OTLP via tonic
     let provider_result = opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-        .with_resource(opentelemetry_sdk::Resource::new(vec![
-            opentelemetry::KeyValue::new("service.name", "log-ingestor"),
-        ]))
+        .with_resource(resource)
         .build();
     if let Ok(provider) = provider_result {
         opentelemetry::global::set_meter_provider(provider);

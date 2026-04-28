@@ -22,7 +22,17 @@ def init_otel(service_name: str) -> None:
     if os.environ.get("OTEL_SDK_DISABLED", "false").lower() == "true":
         return
 
-    resource = Resource.create({"service.name": service_name})
+    import platform
+    resource = Resource.create({
+        "service.name": service_name,
+        "telemetry.id": os.environ.get("CLP_INSTANCE_ID", "unknown"),
+        "clp.version": os.environ.get("CLP_VERSION", "unknown"),
+        "deployment.method": os.environ.get("CLP_DEPLOYMENT_METHOD", "unknown"),
+        "os.type": os.environ.get("CLP_HOST_OS", platform.system().lower()),
+        "os.version": os.environ.get("CLP_HOST_OS_VERSION", "unknown"),
+        "host.arch": os.environ.get("CLP_HOST_ARCH", platform.machine().lower()),
+        "clp.storage_engine": os.environ.get("CLP_STORAGE_ENGINE", "clp"),
+    })
     reader = PeriodicExportingMetricReader(OTLPMetricExporter())
     provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(provider)

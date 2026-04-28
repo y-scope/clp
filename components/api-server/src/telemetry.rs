@@ -1,4 +1,5 @@
 use std::env;
+use std::time::Duration;
 
 use opentelemetry::KeyValue;
 use opentelemetry_sdk::Resource;
@@ -24,6 +25,27 @@ fn is_telemetry_disabled() -> bool {
 
 /// Initializes the global OpenTelemetry meter provider with the default OTLP exporter.
 /// Should be called during application startup.
+fn build_resource(service_name: &str) -> Resource {
+    let telemetry_id = env::var("CLP_INSTANCE_ID").unwrap_or_else(|_| "unknown".to_owned());
+    let clp_version = env::var("CLP_VERSION").unwrap_or_else(|_| "unknown".to_owned());
+    let deployment_method = env::var("CLP_DEPLOYMENT_METHOD").unwrap_or_else(|_| "unknown".to_owned());
+    let os = env::var("CLP_HOST_OS").unwrap_or_else(|_| std::env::consts::OS.to_owned());
+    let os_version = env::var("CLP_HOST_OS_VERSION").unwrap_or_else(|_| "unknown".to_owned());
+    let arch = env::var("CLP_HOST_ARCH").unwrap_or_else(|_| std::env::consts::ARCH.to_owned());
+    let storage_engine = env::var("CLP_STORAGE_ENGINE").unwrap_or_else(|_| "clp".to_owned());
+
+    Resource::new(vec![
+        KeyValue::new("service.name", service_name.to_owned()),
+        KeyValue::new("telemetry.id", telemetry_id),
+        KeyValue::new("clp.version", clp_version),
+        KeyValue::new("deployment.method", deployment_method),
+        KeyValue::new("os.type", os),
+        KeyValue::new("os.version", os_version),
+        KeyValue::new("host.arch", arch),
+        KeyValue::new("clp.storage_engine", storage_engine),
+    ])
+}
+
 pub fn init_telemetry(service_name: &'static str) {
     if is_telemetry_disabled() {
         tracing::info!("Anonymous telemetry is disabled.");
