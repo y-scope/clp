@@ -23,7 +23,8 @@ Anonymous telemetry helps us:
 | OS type and version | `linux`, `ubuntu-22.04` | Inform platform support |
 | CPU architecture | `x86_64`, `aarch64` | Inform build target priorities |
 | Storage engine | `clp-s` / `clp` | Track feature adoption |
-| Event type | `deployment_start`, `heartbeat` | Understand usage patterns |
+| Metric Counters | `clp.api.deployment_start`, `clp.api.heartbeat` | Track lifecycle events |
+| Performance Metrics | `clp.ingest.bytes_total`, `clp.query.scanned_bytes` | Understand processing scale |
 | Timestamp (UTC) | `2025-01-15T10:30:00Z` | Time-series analysis |
 
 ## What we do NOT collect
@@ -85,20 +86,28 @@ disable telemetry for an entire organization.
 
 ## Debug mode
 
-To inspect exactly what telemetry data would be sent without actually sending it:
+To inspect exactly what telemetry data would be sent without actually sending it to YScope, you can modify the `otel-collector-config.yaml` file to use a `debug` exporter:
 
-```bash
-export CLP_TELEMETRY_DEBUG=true
+```yaml
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug] # Replaced otlp/telemetry_server with debug
 ```
 
-The JSON payload will be logged to the API server log file instead of being transmitted.
+The OpenTelemetry metrics payload will be logged to the Collector's standard output instead of being transmitted over the network.
 
 ## Source code
 
 The telemetry implementation is fully open source:
 
-- **Client**:
-  [components/api-server/src/telemetry.rs](https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/api-server/src/telemetry.rs)
+- **Clients**: Extends across multiple components including `api-server`, `log-ingestor`, and Python workers.
 - **Consent prompt**:
   [components/package-template/src/sbin/start-clp.sh](https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/package-template/src/sbin/start-clp.sh)
 - **Configuration**: `telemetry.disable` in `clp-config.yaml`

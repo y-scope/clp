@@ -1,8 +1,9 @@
 ================================================================================
 CLP collects anonymous usage telemetry to help improve the software.
-This includes: CLP version, OS/architecture, deployment method, and
-component health status. It does NOT include: log content, queries,
-hostnames, IP addresses, or any personally identifiable information.
+This includes: CLP version, OS/architecture, deployment method,
+performance metrics, and component health status. It does NOT include:
+log content, queries, hostnames, IP addresses, or any personally
+identifiable information.
 
 Telemetry is sent to: https://telemetry.yscope.io
 For details, see: https://docs.yscope.com/clp/main/user-guide/telemetry

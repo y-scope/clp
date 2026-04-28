@@ -1,4 +1,7 @@
+"""Utility functions for job orchestration executors."""
+
 import os
+import platform
 from logging import Logger
 from pathlib import Path
 
@@ -10,29 +13,31 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 
-_OTEL_INITIALIZED = False
-
 
 def init_otel(service_name: str) -> None:
-    global _OTEL_INITIALIZED
-    if _OTEL_INITIALIZED:
+    """
+    Initializes the OpenTelemetry meter provider for the given service.
+
+    :param service_name: The name of the service to register with OpenTelemetry.
+    """
+    if getattr(init_otel, "initialized", False):
         return
-    _OTEL_INITIALIZED = True
+    init_otel.initialized = True
 
     if os.environ.get("OTEL_SDK_DISABLED", "false").lower() == "true":
         return
-
-    import platform
-    resource = Resource.create({
-        "service.name": service_name,
-        "telemetry.id": os.environ.get("CLP_INSTANCE_ID", "unknown"),
-        "clp.version": os.environ.get("CLP_VERSION", "unknown"),
-        "deployment.method": os.environ.get("CLP_DEPLOYMENT_METHOD", "unknown"),
-        "os.type": os.environ.get("CLP_HOST_OS", platform.system().lower()),
-        "os.version": os.environ.get("CLP_HOST_OS_VERSION", "unknown"),
-        "host.arch": os.environ.get("CLP_HOST_ARCH", platform.machine().lower()),
-        "clp.storage_engine": os.environ.get("CLP_STORAGE_ENGINE", "clp"),
-    })
+    resource = Resource.create(
+        {
+            "service.name": service_name,
+            "telemetry.id": os.environ.get("CLP_INSTANCE_ID", "unknown"),
+            "clp.version": os.environ.get("CLP_VERSION", "unknown"),
+            "deployment.method": os.environ.get("CLP_DEPLOYMENT_METHOD", "unknown"),
+            "os.type": os.environ.get("CLP_HOST_OS", platform.system().lower()),
+            "os.version": os.environ.get("CLP_HOST_OS_VERSION", "unknown"),
+            "host.arch": os.environ.get("CLP_HOST_ARCH", platform.machine().lower()),
+            "clp.storage_engine": os.environ.get("CLP_STORAGE_ENGINE", "clp"),
+        }
+    )
     reader = PeriodicExportingMetricReader(OTLPMetricExporter())
     provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(provider)
