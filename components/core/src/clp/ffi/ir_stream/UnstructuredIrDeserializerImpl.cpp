@@ -101,20 +101,6 @@ auto UnstructuredIrDeserializerImpl<encoded_variable_t>::get_next_ir_unit_type(
     return {IrUnitType::LogEvent, tag};
 }
 
-template <ir::EncodedVariableTypeReq encoded_variable_t>
-auto
-UnstructuredIrDeserializerImpl<encoded_variable_t>::deserialize_ir_unit_schema_tree_node_insertion(
-        [[maybe_unused]] ReaderInterface& reader,
-        [[maybe_unused]] encoded_tag_t tag,
-        std::string& key_name
-) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    auto const node_locator{m_pending_schema_insertions.back()};
-    m_pending_schema_insertions.pop_back();
-
-    key_name.clear();
-    return std::pair{false, node_locator};
-}
-
 template <>
 auto UnstructuredIrDeserializerImpl<ir::four_byte_encoded_variable_t>::
         deserialize_ir_unit_kv_pair_log_event(
