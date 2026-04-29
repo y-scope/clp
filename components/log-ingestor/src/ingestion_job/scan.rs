@@ -15,9 +15,9 @@ use non_empty_string::NonEmptyString;
 /// # Type Parameters
 ///
 /// * [`CallbackType`]: The type of the async callback invoked once per non-empty scanned page of
-///   object metadata. It must return (`should_continue_scanning`, `processed_last_key`), where
-///   `should_continue_scanning` controls whether to fetch more pages, and `processed_last_key` is
-///   the last key from that page.
+///   object metadata. It must return (`should_continue_scanning`, `last_processed_key`), where:
+///   * `should_continue_scanning` indicates whether the scanning should proceed.
+///   * `last_processed_key` is the last key processed by the callback.
 ///
 /// # Returns
 ///
@@ -30,7 +30,7 @@ use non_empty_string::NonEmptyString;
 ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
 ///   return values on failure.
 /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
-/// * Forwards `page_callback` callback return values on failure.
+/// * Forwards `page_callback`'s return values on failure.
 pub async fn scan_prefix<
     CallbackType: AsyncFnMut(Vec<ObjectMetadata>) -> Result<(bool, NonEmptyString)>,
 >(

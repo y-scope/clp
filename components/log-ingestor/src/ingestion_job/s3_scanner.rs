@@ -85,7 +85,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
     /// Returns an error if:
     ///
     /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards [`crate::ingestion_job::scan_prefix`]'s return values on failure.
+    /// * Forwards [`scan_prefix`]'s return values on failure.
     pub async fn scan_until_exhausted(&mut self) -> Result<()> {
         let client = self.s3_client_manager.get().await?;
         let state = self.state.clone();
