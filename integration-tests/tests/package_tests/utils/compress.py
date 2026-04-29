@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class CompressArgs(CmdArgs):
-    """Docstring."""
+    """Command argument model for compressing with the CLP package."""
 
     script_path: Path
     config: Path
@@ -31,7 +31,7 @@ class CompressArgs(CmdArgs):
     paths: list[Path]
 
     def to_cmd(self) -> list[str]:
-        """Docstring."""
+        """Converts the model attributes to a command list."""
         cmd: list[str] = [
             str(self.script_path),
             "--config",
@@ -56,9 +56,18 @@ def compress_clp_package(
     clp_package: ClpPackage,
     dataset: IntegrationTestDataset,
 ) -> ExternalAction:
-    """Docstring."""
-    log_msg = f"Compressing the '{dataset.dataset_name}' dataset."
-    logger.info(log_msg)
+    """
+    Compresses the specified dataset into a CLP package.
+
+    :param clp_package:
+    :param dataset:
+    :return: The `ExternalAction` instance that runs the compression.
+    """
+    logger.info(
+        "Compressing the '%s' dataset with the '%s' package.",
+        dataset.dataset_name,
+        clp_package.mode_name,
+    )
 
     args: CompressArgs = _construct_compress_args(clp_package, dataset)
     return ExternalAction(cmd=args.to_cmd(), args=args)
@@ -67,7 +76,7 @@ def compress_clp_package(
 def _construct_compress_args(
     clp_package: ClpPackage, dataset: IntegrationTestDataset
 ) -> CompressArgs:
-    """Docstring."""
+    """Construct the `CompressArgs` object for compressing the specified dataset."""
     path_config = clp_package.path_config
     args = CompressArgs(
         script_path=path_config.compress_path,
@@ -88,7 +97,14 @@ def verify_compress_action(
     clp_package: ClpPackage,
     original_dataset: IntegrationTestDataset,
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verifies the compression action.
+
+    :param compress_action:
+    :param clp_package:
+    :param original_dataset:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying %s package compression.", clp_package.mode_name)
     if compress_action.completed_proc.returncode != 0:
         return VerificationResult.fail(
@@ -108,7 +124,7 @@ def verify_compress_action(
 def _verify_compress_action_structured_logs(
     compress_action: ExternalAction, clp_package: ClpPackage
 ) -> VerificationResult:
-    """Docstring."""
+    """Verifies the compression of structured logs."""
     logger.info("Verifying %s package compression of structured logs.", clp_package.mode_name)
     if compress_action.completed_proc.returncode != 0:
         return VerificationResult.fail(
@@ -127,7 +143,7 @@ def _verify_compress_action_unstructured_logs(
     clp_package: ClpPackage,
     original_dataset: IntegrationTestDataset,
 ) -> VerificationResult:
-    """Docstring."""
+    """Verifies the compression of unstructured logs."""
     logger.info("Verifying %s package compression of unstructured logs.", clp_package.mode_name)
     if compress_action.completed_proc.returncode != 0:
         return VerificationResult.fail(
