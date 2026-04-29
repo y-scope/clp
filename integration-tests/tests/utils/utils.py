@@ -155,6 +155,14 @@ def validate_file_exists(file_path: Path) -> None:
         raise ValueError(err_msg)
 
 
+def write_dict_to_yaml(payload: dict[str, Any], file_path: Path) -> None:
+    """Docstring."""
+    tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(payload, f, sort_keys=False)
+    tmp_path.replace(file_path)
+
+
 def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     """
     Normalize a JSON file to a stable, deterministically ordered form for comparison.
