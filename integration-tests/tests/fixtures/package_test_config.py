@@ -1,5 +1,8 @@
 """Fixtures that create and remove temporary config files for CLP packages."""
 
+# NOTE: this module will be deprecated in favour of
+# `integration-tests/tests/package_tests/fixtures.py`.
+
 import logging
 from collections.abc import Iterator
 

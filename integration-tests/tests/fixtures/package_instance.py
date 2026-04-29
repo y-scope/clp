@@ -1,5 +1,8 @@
 """Fixtures that start and stop CLP package instances for integration tests."""
 
+# NOTE: this module will be deprecated in favour of
+# `integration-tests/tests/package_tests/fixtures.py`.
+
 from collections.abc import Iterator
 
 import pytest
