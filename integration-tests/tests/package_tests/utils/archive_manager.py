@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class ArchiveManagerArgs(CmdArgs):
-    """Docstring."""
+    """Command argument model for running archive-manager."""
 
     script_path: Path
     config: Path
@@ -27,7 +27,7 @@ class ArchiveManagerArgs(CmdArgs):
     end_ts: int | None = None
 
     def to_cmd(self) -> list[str]:
-        """Docstring."""
+        """Converts the model attributes to a command list."""
         cmd: list[str] = [
             str(self.script_path),
             "--config",
@@ -55,14 +55,14 @@ class ArchiveManagerArgs(CmdArgs):
 
 
 class ClpPackageArchiveManagerSubcommand(StrEnum):
-    """Docstring."""
+    """Subcommands supported by the CLP package's archive-manager."""
 
     FIND_COMMAND = "find"
     DEL_COMMAND = "del"
 
 
 class ClpPackageArchiveManagerDelSubcommand(StrEnum):
-    """Docstring."""
+    """Subcommands supported by the CLP package's archive-manager 'del' command."""
 
     BY_IDS_COMMAND = "by-ids"
     BY_FILTER_COMMAND = "by-filter"
@@ -74,7 +74,15 @@ def archive_manager_find(
     begin_ts: int | None = None,
     end_ts: int | None = None,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Runs an archive-manager 'find' operation.
+
+    :param clp_package:
+    :param dataset:
+    :param begin_ts:
+    :param end_ts:
+    :return: The `ExternalAction` instance that runs the operation.
+    """
     logger.info("Performing 'FIND' operation with archive-manager.")
 
     path_config = clp_package.path_config
@@ -94,7 +102,14 @@ def archive_manager_del_by_ids(
     dataset: IntegrationTestDataset | None = None,
     ids: list[str] | None = None,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Runs an archive-manager 'del by-ids' operation.
+
+    :param clp_package:
+    :param dataset:
+    :param ids:
+    :return: The `ExternalAction` instance that runs the deletion.
+    """
     logger.info("Performing 'DEL_BY_IDS' operation with archive-manager.")
 
     if ids is None:
@@ -127,7 +142,15 @@ def archive_manager_del_by_filter(
     end_ts: int,
     dataset: IntegrationTestDataset | None = None,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Runs an archive-manager 'del by-filter' operation.
+
+    :param clp_package:
+    :param begin_ts:
+    :param end_ts:
+    :param dataset:
+    :return: The `ExternalAction` instance that runs the deletion.
+    """
     logger.info("Performing 'DEL_BY_FILTER' operation with archive-manager.")
 
     path_config = clp_package.path_config
@@ -148,7 +171,14 @@ def verify_archive_manager_find_action(
     clp_package: ClpPackage,
     dataset: IntegrationTestDataset | None = None,
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verifies the archive-manager 'find' action.
+
+    :param action:
+    :param clp_package:
+    :param dataset:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying archive-manager 'FIND'.")
 
     if action.completed_proc.returncode != 0:
@@ -231,8 +261,16 @@ def verify_archive_manager_del_by_ids_action(
     clp_package: ClpPackage,
     dataset: IntegrationTestDataset | None = None,
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verifies the archive-manager 'del by-ids' action.
+
+    :param action:
+    :param clp_package:
+    :param dataset:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying archive-manager 'DEL_BY_IDS'.")
+
     if action.completed_proc.returncode != 0:
         return VerificationResult.fail(
             format_action_failure_msg(
@@ -272,8 +310,16 @@ def verify_archive_manager_del_by_filter_action(
     clp_package: ClpPackage,
     dataset: IntegrationTestDataset | None = None,
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verifies the archive-manager 'del by-filter' action.
+
+    :param action:
+    :param clp_package:
+    :param dataset:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying archive-manager 'DEL_BY_FILTER'.")
+
     if action.completed_proc.returncode != 0:
         return VerificationResult.fail(
             format_action_failure_msg(
