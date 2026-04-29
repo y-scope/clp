@@ -21,6 +21,13 @@ distros using glibc 2.28+, including:
 
 ### clp-core-dependencies-aarch64-manylinux_2_28
 
+* [GitHub Packages page][core-deps-manylinux_2_28-aarch64]
+* Pull command:
+
+  ```bash
+  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-aarch64-manylinux_2_28:main
+  ```
+
 * Path:
 
   ```text
@@ -53,6 +60,13 @@ other distros using musl 1.2, including:
 * Alpine Linux 3.13+
 
 ### clp-core-dependencies-aarch64-musllinux_1_2
+
+* [GitHub Packages page][core-deps-musllinux_1_2-aarch64]
+* Pull command:
+
+  ```bash
+  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-aarch64-musllinux_1_2:main
+  ```
 
 * Path:
 
@@ -233,7 +247,9 @@ Each distro supports an environment variable to override the default package mir
 | `DOCKER_NETWORK` | (auto)  | Override Docker's network mode (e.g., `host`, `bridge`).                       |
 
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
+[core-deps-manylinux_2_28-aarch64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-aarch64-manylinux_2_28
 [core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
+[core-deps-musllinux_1_2-aarch64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-aarch64-musllinux_1_2
 [core-deps-musllinux_1_2-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-musllinux_1_2
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
