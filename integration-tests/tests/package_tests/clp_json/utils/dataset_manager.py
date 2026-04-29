@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatasetManagerArgs(CmdArgs):
-    """Docstring."""
+    """Command argument model for dataset-manager."""
 
     script_path: Path
     config: Path
@@ -24,7 +24,7 @@ class DatasetManagerArgs(CmdArgs):
     datasets: list[str] | None = None
 
     def to_cmd(self) -> list[str]:
-        """Docstring."""
+        """Converts the model attributes to a command list."""
         cmd = [str(self.script_path), "--config", str(self.config)]
 
         cmd.append(self.subcommand)
@@ -38,14 +38,19 @@ class DatasetManagerArgs(CmdArgs):
 
 
 class ClpPackageDatasetManagerSubcommand(StrEnum):
-    """Docstring."""
+    """Subcommands supported by dataset-manager."""
 
     LIST_COMMAND = "list"
     DEL_COMMAND = "del"
 
 
 def dataset_manager_list(clp_package: ClpPackage) -> ExternalAction:
-    """Docstring."""
+    """
+    Lists the datasets currently stored in package archives.
+
+    :param clp_package:
+    :return: The `ExternalAction` instance that runs the list operation.
+    """
     logger.info("Performing 'list' operation with dataset-manager.")
 
     path_config = clp_package.path_config
@@ -62,7 +67,14 @@ def dataset_manager_del(
     datasets_to_del: list[IntegrationTestDataset] | None = None,
     del_all: bool = False,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Deletes datasets from the package archives.
+
+    :param clp_package:
+    :param datasets_to_del:
+    :param del_all:
+    :return: The `ExternalAction` instance that runs the delete operation.
+    """
     logger.info("Performing 'del' operation with dataset-manager.")
 
     path_config = clp_package.path_config
@@ -86,7 +98,13 @@ def verify_dataset_manager_list_action_clp_json(
     action: ExternalAction,
     expected_datasets: list[str],
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verifies the dataset-manager list action.
+
+    :param action:
+    :param expected_datasets:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying dataset-manager 'list'.")
 
     if action.completed_proc.returncode != 0:
@@ -116,7 +134,13 @@ def verify_dataset_manager_del_action_clp_json(
     action: ExternalAction,
     clp_package: ClpPackage,
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verifies the dataset-manager del action.
+
+    :param action:
+    :param clp_package:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying dataset-manager 'del'.")
 
     if action.completed_proc.returncode != 0:
@@ -165,6 +189,7 @@ def verify_dataset_manager_del_action_clp_json(
 def _extract_dataset_names_from_output(
     action: ExternalAction,
 ) -> list[str]:
+    """Extracts the sorted list of dataset names from a dataset-manager 'list' action's output."""
     dataset_list: list[str] = []
     output = action.get_output()
     output_lines = output.splitlines()
