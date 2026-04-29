@@ -9,7 +9,12 @@ import pytest
 from clp_py_utils.clp_config import StorageEngine
 
 from tests.package_tests.classes import ClpPackage
-from tests.utils.classes import CmdArgs, ExternalAction, IntegrationTestDataset, VerificationResult
+from tests.utils.classes import (
+    CmdArgs,
+    ExternalAction,
+    IntegrationTestDataset,
+    VerificationResult,
+)
 from tests.utils.logging_utils import format_action_failure_msg
 from tests.utils.utils import get_binary_path
 
@@ -20,7 +25,7 @@ DEFAULT_COUNT_BY_TIME_INTERVAL = 10
 
 
 class SearchArgs(CmdArgs):
-    """Docstring."""
+    """Command argument model for searching with the CLP package."""
 
     script_path: Path
     config: Path
@@ -35,7 +40,7 @@ class SearchArgs(CmdArgs):
     end_ts: int | None = None
 
     def to_cmd(self) -> list[str]:
-        """Docstring."""
+        """Converts the model attributes to a command list."""
         cmd: list[str] = [
             str(self.script_path),
             "--config",
@@ -70,7 +75,7 @@ class SearchArgs(CmdArgs):
 
 
 class ClpPackageSearchType(Enum):
-    """An enumeration of the types of search we can perform with the CLP package."""
+    """Possible search types."""
 
     BASIC = auto()
     FILE_PATH = auto()
@@ -86,9 +91,19 @@ def search_clp_package(
     search_type: ClpPackageSearchType,
     wildcard_query: str,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Performs the specified search on the dataset using the CLP package.
+
+    :param clp_package:
+    :param dataset:
+    :param search_type:
+    :param wildcard_query:
+    :return: The `ExternalAction` instance that runs the search.
+    """
     logger.info(
-        "Performing '%s' search on the '%s' dataset.", search_type.name, dataset.dataset_name
+        "Performing '%s' search on the '%s' dataset.",
+        search_type.name,
+        dataset.dataset_name,
     )
 
     args: SearchArgs = _construct_args(clp_package, dataset, search_type, wildcard_query)
@@ -101,7 +116,7 @@ def _construct_args(
     search_type: ClpPackageSearchType,
     wildcard_query: str,
 ) -> SearchArgs:
-    """Docstring."""
+    """Construct the `SearchArgs` object for the specified search on the dataset."""
     path_config = clp_package.path_config
     args = SearchArgs(
         script_path=path_config.search_path,
@@ -137,8 +152,20 @@ def verify_search_action(
     search_type: ClpPackageSearchType,
     original_dataset: IntegrationTestDataset,
 ) -> VerificationResult:
-    """Docstring."""
-    logger.info("Verifying search.")
+    """
+    Verifies the search action.
+
+    :param action:
+    :param search_type:
+    :param original_dataset:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
+    logger.info(
+        "Verifying '%s' search on the '%s' dataset.",
+        search_type.name,
+        original_dataset.dataset_name,
+    )
+
     if action.completed_proc.returncode != 0:
         return VerificationResult.fail(
             format_action_failure_msg(
