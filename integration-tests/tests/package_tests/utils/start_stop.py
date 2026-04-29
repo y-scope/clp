@@ -1,4 +1,4 @@
-"""Utilities that start/stop the CLP package."""
+"""Utilities that start and stop the CLP package."""
 
 import logging
 from pathlib import Path
