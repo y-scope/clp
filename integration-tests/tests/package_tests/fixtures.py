@@ -37,7 +37,16 @@ def clp_package(
     request: pytest.FixtureRequest,
     clp_package_test_path_config: ClpPackageTestPathConfig,
 ) -> Iterator[ClpPackage]:
-    """Docstring for clp_package fixture."""
+    """
+    Creates and maintains a module-level `ClpPackage` for a specific CLP mode, starts the package
+    instance, and stops it during teardown. For efficiency, group all tests for a given mode in the
+    same module.
+
+    :param request: Provides `ClpPackageModeConfig` via `request.param`.
+    :param clp_package_test_path_config:
+    :return: An iterator that yields the running `ClpPackage` for the specified mode.
+    :raise ValueError: if the CLP base port's value is invalid.
+    """
     mode_config: ClpPackageModeConfig = request.param
     mode_name = mode_config.mode_name
     clp_config = mode_config.clp_config

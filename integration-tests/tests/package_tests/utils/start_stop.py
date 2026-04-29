@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 class StartStopArgs(CmdArgs):
-    """Docstring."""
+    """Command argument model for starting and stopping the CLP package."""
 
     script_path: Path
     config: Path
 
     def to_cmd(self) -> list[str]:
-        """Docstring."""
+        """Convert the model attributes to a command list."""
         return [
             str(self.script_path),
             "--config",
@@ -29,14 +29,19 @@ class StartStopArgs(CmdArgs):
 def start_clp_package(
     clp_package: ClpPackage,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Starts the CLP package.
+
+    :param clp_package:
+    :return: The `ExternalAction` instance that starts the package.
+    """
     logger.info("Starting up the '%s' package.", clp_package.mode_name)
     args: StartStopArgs = _construct_start_clp_args(clp_package)
     return ExternalAction(cmd=args.to_cmd(), args=args)
 
 
 def _construct_start_clp_args(clp_package: ClpPackage) -> StartStopArgs:
-    """Docstring."""
+    """Construct the `StartStopArgs` object that will start the package."""
     path_config = clp_package.path_config
     return StartStopArgs(
         script_path=path_config.start_clp_path, config=clp_package.temp_config_file_path
@@ -46,14 +51,19 @@ def _construct_start_clp_args(clp_package: ClpPackage) -> StartStopArgs:
 def stop_clp_package(
     clp_package: ClpPackage,
 ) -> ExternalAction:
-    """Docstring."""
+    """
+    Stops the CLP package.
+
+    :param clp_package:
+    :return: The `ExternalAction` instance that stops the package.
+    """
     logger.info("Stopping the '%s' package.", clp_package.mode_name)
     args: StartStopArgs = _construct_stop_clp_args(clp_package)
     return ExternalAction(cmd=args.to_cmd(), args=args)
 
 
 def _construct_stop_clp_args(clp_package: ClpPackage) -> StartStopArgs:
-    """Docstring."""
+    """Construct the `StartStopArgs` object that will stop the package."""
     path_config = clp_package.path_config
     return StartStopArgs(
         script_path=path_config.stop_clp_path, config=clp_package.temp_config_file_path
@@ -63,7 +73,13 @@ def _construct_stop_clp_args(clp_package: ClpPackage) -> StartStopArgs:
 def verify_start_clp_action(
     start_clp_action: ExternalAction, clp_package: ClpPackage
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verify the startup of the CLP package.
+
+    :param start_clp_action:
+    :param clp_package:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying the startup of the '%s' package.", clp_package.mode_name)
     if start_clp_action.completed_proc.returncode != 0:
         return VerificationResult.fail(
@@ -85,7 +101,13 @@ def verify_start_clp_action(
 def verify_stop_clp_action(
     stop_clp_action: ExternalAction, clp_package: ClpPackage
 ) -> VerificationResult:
-    """Docstring."""
+    """
+    Verify the spindown of the CLP package.
+
+    :param stop_clp_action:
+    :param clp_package:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     logger.info("Verifying the spindown of the '%s' package.", clp_package.mode_name)
     if stop_clp_action.completed_proc.returncode != 0:
         return VerificationResult.fail(
@@ -104,7 +126,12 @@ def verify_stop_clp_action(
 
 
 def _validate_clp_package_running(clp_package: ClpPackage) -> VerificationResult:
-    """Docstring."""
+    """
+    Verify that the CLP package is running.
+
+    :param clp_package:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     # Get list of services currently running in the Compose project.
     instance_id = clp_package.get_clp_instance_id()
     project_name = f"clp-package-{instance_id}"
@@ -133,6 +160,12 @@ def _validate_clp_package_running(clp_package: ClpPackage) -> VerificationResult
 
 
 def _validate_clp_package_not_running(clp_package: ClpPackage) -> VerificationResult:
+    """
+    Verify that the CLP package is not running.
+
+    :param clp_package:
+    :return: A `VerificationResult` indicating the success or failure of the verification.
+    """
     # Get list of services currently running in the Compose project.
     instance_id = clp_package.get_clp_instance_id()
     project_name = f"clp-package-{instance_id}"

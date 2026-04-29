@@ -156,7 +156,12 @@ def validate_file_exists(file_path: Path) -> None:
 
 
 def write_dict_to_yaml(payload: dict[str, Any], file_path: Path) -> None:
-    """Docstring."""
+    """
+    Write a dictionary to a YAML file.
+
+    :param payload: The dictionary to write.
+    :param file_path: The path to the YAML file.
+    """
     tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
     with tmp_path.open("w", encoding="utf-8") as f:
         yaml.safe_dump(payload, f, sort_keys=False)
