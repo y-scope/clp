@@ -1,6 +1,3 @@
-mod aws_config;
-mod test_utils;
-
 use std::{
     collections::HashSet,
     sync::{
@@ -10,7 +7,6 @@ use std::{
 };
 
 use anyhow::Result;
-use aws_config::AwsConfig;
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials},
     s3::ObjectMetadata,
@@ -18,9 +14,15 @@ use clp_rust_utils::{
 };
 use log_ingestor::ingestion_job::scan_prefix;
 use non_empty_string::NonEmptyString;
-use test_utils::{create_s3_objects, get_testing_prefix_as_non_empty_string, upload_test_objects};
 use tokio::sync::Mutex;
 use uuid::Uuid;
+
+use super::aws_config::AwsConfig;
+use super::test_utils::{
+    create_s3_objects,
+    get_testing_prefix_as_non_empty_string,
+    upload_test_objects,
+};
 
 const NUM_OBJECTS: usize = 250;
 // ListObjectsV2 returns at most 1,000 objects from a bucket

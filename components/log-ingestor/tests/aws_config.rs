@@ -15,10 +15,8 @@ pub struct AwsConfig {
     pub access_key_id: String,
     pub secret_access_key: String,
     pub region: NonEmptyString,
-    #[allow(dead_code)]
     pub account_id: String,
     pub bucket_name: NonEmptyString,
-    #[allow(dead_code)]
     pub queue_name: NonEmptyString,
 }
 

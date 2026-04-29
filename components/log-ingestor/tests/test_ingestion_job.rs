@@ -1,11 +1,7 @@
-mod aws_config;
-mod test_utils;
-
 use std::{sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use aws_config::AwsConfig;
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials},
     job_config::ingestion::s3::{
@@ -30,9 +26,11 @@ use log_ingestor::{
     },
 };
 use non_empty_string::NonEmptyString;
-use test_utils::{get_testing_prefix_as_non_empty_string, upload_test_objects};
 use tokio::sync::Mutex;
 use uuid::Uuid;
+
+use super::aws_config::AwsConfig;
+use super::test_utils::{self, get_testing_prefix_as_non_empty_string, upload_test_objects};
 
 const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
 const INGESTED_OBJECT_POLL_INTERVAL_MS: u64 = 100;
