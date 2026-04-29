@@ -29,8 +29,10 @@ use non_empty_string::NonEmptyString;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use super::aws_config::AwsConfig;
-use super::test_utils::{self, get_testing_prefix_as_non_empty_string, upload_test_objects};
+use super::{
+    aws_config::AwsConfig,
+    test_utils::{self, get_testing_prefix_as_non_empty_string, upload_test_objects},
+};
 
 const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
 const INGESTED_OBJECT_POLL_INTERVAL_MS: u64 = 100;

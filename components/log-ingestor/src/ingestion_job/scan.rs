@@ -58,7 +58,7 @@ pub async fn scan_prefix<
         let response = request.send().await?;
 
         let contents = response.contents.unwrap_or_default();
-        let mut object_metadata_to_ingest = Vec::with_capacity(contents.len());
+        let mut paged_object_metadata = Vec::with_capacity(contents.len());
         for content in contents {
             let (Some(key), Some(size)) = (content.key, content.size) else {
                 continue;
@@ -68,17 +68,17 @@ pub async fn scan_prefix<
             }
             let non_empty_key = NonEmptyString::new(key)
                 .map_err(|_| anyhow::anyhow!("received an empty object key from S3"))?;
-            object_metadata_to_ingest.push(ObjectMetadata {
+            paged_object_metadata.push(ObjectMetadata {
                 bucket: bucket_name.clone(),
                 key: non_empty_key,
                 size: size.try_into()?,
             });
         }
 
-        if !object_metadata_to_ingest.is_empty() {
-            let (should_continue_scanning, processed_last_key) =
-                page_callback(object_metadata_to_ingest).await?;
-            last_scanned_key = Some(processed_last_key);
+        if !paged_object_metadata.is_empty() {
+            let (should_continue_scanning, last_processed_key) =
+                page_callback(paged_object_metadata).await?;
+            last_scanned_key = Some(last_processed_key);
             if !should_continue_scanning {
                 break;
             }
