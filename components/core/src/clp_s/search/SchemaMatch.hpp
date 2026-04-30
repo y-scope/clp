@@ -244,7 +244,7 @@ private:
     auto try_resolve_clpp_match(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             clpp::DecomposedQuery const* decomposed_query,
-            std::vector<clp_s::logtype_id_t> matched_lt_ids
+            std::vector<clp_s::logtype_id_t> const& matched_lt_ids
     ) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>>;
 };
 }  // namespace clp_s::search

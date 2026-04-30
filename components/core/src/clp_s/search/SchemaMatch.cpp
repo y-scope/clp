@@ -71,7 +71,7 @@ auto build_leaves_expr(
     for (auto const& leaf : decomposed_query.get_leaves()) {
         auto new_col{column->copy()};
         new_col->set_matching_types(
-                LiteralType::VarStringT | LiteralType::ClpStringT | LiteralType::IntegerT
+                LiteralType::FloatT | LiteralType::IntegerT | LiteralType::VarStringT
         );
         auto& new_col_descriptors{new_col->get_descriptor_list()};
 
@@ -88,12 +88,6 @@ auto build_leaves_expr(
         leaves_expr->add_operand(
                 FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
         );
-        {
-            std::string full_name;
-            for (auto const& desc : new_col_descriptors) {
-                full_name.append(desc.get_token());
-            }
-        }
     }
     return leaves_expr;
 }
@@ -418,11 +412,10 @@ auto SchemaMatch::populate_column_mapping(
                                       ? decompose_and_match_log_message(query)
                                       : decompose_and_match_parent_var(cur_node, cur_it, query);
 
-                    if (auto result{try_resolve_clpp_match(
-                                column,
-                                decomposed_query,
-                                std::move(matched_lt_ids)
-                        )})
+                    if (auto result{
+                                try_resolve_clpp_match(column, decomposed_query, matched_lt_ids)
+                        };
+                        result.has_value())
                     {
                         return std::move(result).value();
                     }
@@ -542,22 +535,22 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
     return cur;
 }
 
-bool SchemaMatch::intersect_and_sub_expr(
+auto SchemaMatch::intersect_and_sub_expr(
         std::shared_ptr<Expression> const& cur,
         std::set<int32_t>& common_schema,
         std::set<ColumnDescriptor*>& columns,
         bool first
-) {
+) -> bool {
     // Handle clpp expression: use precomputed schemas instead of column-based resolution
     if (cur->has_clpp_matched_schemas()) {
         collect_columns(cur, columns);
-        auto const& clpp_schemas = cur->get_clpp_matched_schemas();
+        auto const& clpp_schemas{cur->get_clpp_matched_schemas()};
         if (first) {
             common_schema.insert(clpp_schemas.begin(), clpp_schemas.end());
         } else {
             std::set<int32_t> intersection;
-            for (int32_t schema : common_schema) {
-                if (clpp_schemas.count(schema)) {
+            for (auto const schema : common_schema) {
+                if (clpp_schemas.contains(schema)) {
                     intersection.insert(schema);
                 }
             }
@@ -771,7 +764,7 @@ void SchemaMatch::build_logtype_id_to_schema_id_map() {
 auto SchemaMatch::try_resolve_clpp_match(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         clpp::DecomposedQuery const* decomposed_query,
-        std::vector<clp_s::logtype_id_t> matched_lt_ids
+        std::vector<clp_s::logtype_id_t> const& matched_lt_ids
 ) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>> {
     auto matched_schema_ids{
             convert_lt_ids_to_schema_ids(matched_lt_ids, m_logtype_id_to_schema_id)

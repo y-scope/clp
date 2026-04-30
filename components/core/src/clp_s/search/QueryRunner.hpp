@@ -258,8 +258,6 @@ private:
             std::vector<ClpStringColumnReader*> const& readers
     ) const -> bool;
 
-    auto evaluate_clpp_string_filter(ast::FilterExpr* expr, int32_t schema_id) -> bool;
-
     /**
      * Evaluates a var string filter expression
      * @param op

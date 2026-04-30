@@ -304,14 +304,12 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
         case LiteralType::FloatT:
             return evaluate_float_filter(expr->get_operation(), column_id, literal);
         case LiteralType::ClpStringT:
-            // q = m_expr_clp_query.at(expr);
-            // return evaluate_clp_string_filter(
-            //         expr->get_operation(),
-            //         q,
-            //         m_clp_string_readers[column_id]
-            // );
-            // }
-            return evaluate_clpp_string_filter(expr, schema);
+            q = m_expr_clp_query.at(expr);
+            return evaluate_clp_string_filter(
+                    expr->get_operation(),
+                    q,
+                    m_clp_string_readers[column_id]
+            );
         case LiteralType::VarStringT:
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
@@ -489,46 +487,6 @@ bool QueryRunner::evaluate_clp_string_filter(
             return true;
         }
     }
-    return false;
-}
-
-auto QueryRunner::evaluate_clpp_string_filter(ast::FilterExpr* expr, int32_t schema_id) -> bool {
-    // TODO clpp: we evaluated this in SchemaMatch
-    return true;
-    auto op{expr->get_operation()};
-    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
-        return true;
-    }
-
-    if (op != FilterOperation::EQ && op != FilterOperation::NEQ) {
-        return false;
-    }
-
-    // auto* q{m_expr_clpp_query.at(expr)};
-    // if (nullptr == q) {
-    //     return op == FilterOperation::NEQ;
-    // }
-
-    // if (q->search_string_matches_all()) {
-    //     return op == FilterOperation::EQ;
-    // }
-
-    std::string query_string;
-    expr->get_operand()->as_clp_string(query_string, expr->get_operation());
-    auto* column{expr->get_column().get()};
-    SPDLOG_INFO("huh {}", column->get_column_id());
-    SPDLOG_INFO("tokens:");
-    for (auto it{column->descriptor_begin()}; column->descriptor_end() != it; ++it) {
-        SPDLOG_INFO("\t{}", it->get_token());
-    }
-    SPDLOG_INFO("unordered? {}", Schema::schema_entry_is_unordered_object(column->get_column_id()));
-
-    // column->get_matching_types auto const schema{m_schemas->at(schema_id)};
-
-    // static auto get_unordered_object_type(int32_t schema_entry) -> NodeType {
-    // static auto get_unordered_object_length(int32_t schema_entry) -> int32_t {
-
-    bool matched = false;
     return false;
 }
 

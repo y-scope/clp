@@ -106,12 +106,16 @@ public:
     /**
      * @return Whether this expression carries precomputed clpp-matched schema IDs
      */
-    [[nodiscard]] bool has_clpp_matched_schemas() const { return m_clpp_matched_schemas.has_value(); }
+    [[nodiscard]] auto has_clpp_matched_schemas() const -> bool {
+        return m_clpp_matched_schemas.has_value();
+    }
 
     /**
      * @return The precomputed clpp-matched schema IDs
      */
-    [[nodiscard]] auto const& get_clpp_matched_schemas() const { return m_clpp_matched_schemas.value(); }
+    [[nodiscard]] auto get_clpp_matched_schemas() const -> std::unordered_set<int32_t> const& {
+        return m_clpp_matched_schemas.value();
+    }
 
     /**
      * Sets the precomputed clpp-matched schema IDs for this expression.
