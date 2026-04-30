@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Any
 
 from clp_package_utils.general import EXTRACT_FILE_CMD
 
@@ -39,7 +38,7 @@ class DecompressArgs(CmdArgs):
 
 def decompress_clp_package(
     clp_package: ClpPackage,
-    extraction_dir: Any,
+    extraction_dir: Path,
     paths: list[Path] | None = None,
 ) -> ExternalAction:
     """
@@ -59,18 +58,14 @@ def decompress_clp_package(
 
 def _construct_decompress_args(
     clp_package: ClpPackage,
-    extraction_dir: Any,
+    extraction_dir: Path,
     paths: list[Path] | None = None,
 ) -> DecompressArgs:
     """Constructs the `DecompressArgs` object for decompressing the specified CLP package."""
     path_config = clp_package.path_config
-    args = DecompressArgs(
+    return DecompressArgs(
         script_path=path_config.decompress_path,
         config=clp_package.temp_config_file_path,
         extraction_dir=extraction_dir,
+        paths=paths,
     )
-
-    if paths:
-        args.paths = paths
-
-    return args
