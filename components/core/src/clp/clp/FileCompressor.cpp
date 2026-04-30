@@ -254,13 +254,18 @@ void FileCompressor::parse_and_encode_with_library(
         buffer_pos = 0;
 
         while (true) {
+            size_t buffer_start = buffer_pos;
             log_surgeon::CCharArray view{buf, buffer_size};
             auto optional_event{m_parser.next_event(view, &buffer_pos)};
             // No error handling for failures?
             if (false == optional_event.has_value()) {
                 break;
             }
-            archive_writer.write_msg_using_schema(buf, optional_event.value());
+            archive_writer.write_msg_using_schema(
+                    buf + buffer_start,
+                    buffer_pos - buffer_start,
+                    optional_event.value()
+            );
         }
     } while (cSizeOfBuf == num_bytes_read);
     close_file_and_append_to_segment(archive_writer);

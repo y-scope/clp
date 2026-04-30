@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -314,122 +315,57 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     update_segment_indices(logtype_id, var_ids);
 }
 
-auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_surgeon::Token token)
-        -> void {
-    auto const* type_ids{token.get_type_ids()};
-    if (nullptr == type_ids || type_ids->empty()) {
-        throw std::runtime_error("Token has no type IDs: " + token.to_string());
-    }
-    auto const token_type{type_ids->at(0)};
-    switch (token_type) {
-        case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
-        case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-            m_logtype_dict_entry.add_static_text(token.to_string_view());
-            break;
-        }
-        case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
-            encoded_variable_t encoded_var{};
-            if (false
-                == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                        token.to_string_view(),
-                        encoded_var
-                ))
-            {
-                variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string_view(), id);
-                m_var_ids.push_back(id);
-                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                m_logtype_dict_entry.add_dictionary_var();
-            } else {
-                m_logtype_dict_entry.add_int_var();
-            }
-            m_encoded_vars.push_back(encoded_var);
-            break;
-        }
-        case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
-            encoded_variable_t encoded_var{};
-            if (false
-                == EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                        token.to_string_view(),
-                        encoded_var
-                ))
-            {
-                variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string_view(), id);
-                m_var_ids.push_back(id);
-                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                m_logtype_dict_entry.add_dictionary_var();
-            } else {
-                m_logtype_dict_entry.add_float_var();
-            }
-            m_encoded_vars.push_back(encoded_var);
-            break;
-        }
-        default: {
-            // If there are no capture groups the entire variable token is stored as a variable.
-            // If the variable token contains capture groups, we break the token up by storing
-            // each capture as a variable and any substrings surrounding the capture as part of
-            // the logtype. Capture repetition currently does not work so we explicitly only
-            // store the first capture.
-
-            auto const& lexer{event.get_log_parser().m_lexer};
-            auto captures{lexer.get_captures_from_rule_id(token_type)};
-            if (false == captures.has_value()) {
-                variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string_view(), id);
-                m_var_ids.push_back(id);
-                m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
-                m_logtype_dict_entry.add_dictionary_var();
-                break;
-            }
-
-            if (captures.value().empty()) {
-                SPDLOG_ERROR(
-                        "Capture group list empty for token {}. Storing token as static text.",
-                        event.get_log_parser().get_id_symbol(token_type)
-                );
-                m_logtype_dict_entry.add_static_text(token.to_string_view());
-                break;
-            }
-
-            auto capture_pos_result{event.get_capture_position(token, captures.value().at(0))};
-            if (capture_pos_result.has_error()) {
-                SPDLOG_ERROR(
-                        "Capture group match not found for token {} ({} {}). Storing token as "
-                        "static text.",
-                        event.get_log_parser().get_id_symbol(token_type),
-                        capture_pos_result.error().category().name(),
-                        capture_pos_result.error().message()
-                );
-                m_logtype_dict_entry.add_static_text(token.to_string_view());
-                break;
-            }
-            auto const [capture_start_pos, capture_end_pos]{capture_pos_result.value()};
-
-            auto const before_capture{
-                    token.get_sub_token(token.get_start_pos(), capture_start_pos).to_string_view()
-            };
-            m_logtype_dict_entry.add_static_text(before_capture);
-
+auto Archive::add_token_to_dicts(std::string_view cap_string, std::string_view cap_name) -> void {
+    if ("int" == cap_name) {
+        encoded_variable_t encoded_var{};
+        if (false
+            == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                    cap_string,
+                    encoded_var
+            ))
+        {
             variable_dictionary_id_t id{};
-            m_var_dict.add_entry(
-                    token.get_sub_token(capture_start_pos, capture_end_pos).to_string_view(),
-                    id
-            );
+            m_var_dict.add_entry(cap_string, id);
             m_var_ids.push_back(id);
-            m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
+            encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
             m_logtype_dict_entry.add_dictionary_var();
-
-            auto const after_capture{
-                    token.get_sub_token(capture_end_pos, token.get_end_pos()).to_string_view()
-            };
-            m_logtype_dict_entry.add_static_text(after_capture);
-            break;
+        } else {
+            m_logtype_dict_entry.add_int_var();
         }
+        m_encoded_vars.push_back(encoded_var);
+        return;
     }
+    if ("float" == cap_name) {
+        encoded_variable_t encoded_var{};
+        if (false
+            == EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                    cap_string,
+                    encoded_var
+            ))
+        {
+            variable_dictionary_id_t id{};
+            m_var_dict.add_entry(cap_string, id);
+            m_var_ids.push_back(id);
+            encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+            m_logtype_dict_entry.add_dictionary_var();
+        } else {
+            m_logtype_dict_entry.add_float_var();
+        }
+        m_encoded_vars.push_back(encoded_var);
+        return;
+    }
+    variable_dictionary_id_t id{};
+    m_var_dict.add_entry(cap_string, id);
+    m_var_ids.push_back(id);
+    m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
+    m_logtype_dict_entry.add_dictionary_var();
 }
 
-auto Archive::write_msg_using_schema(char* buf, log_surgeon::EventHandle const& event) -> void {
+auto Archive::write_msg_using_schema(
+        char* buf,
+        size_t buffer_size,
+        log_surgeon::EventHandle const& event
+) -> void {
     epochtime_t timestamp{0};
     TimestampPattern const* timestamp_pattern{nullptr};
     // Ideally the event would just have its timestamp accessible as event.get_timestamp()
@@ -482,34 +418,27 @@ auto Archive::write_msg_using_schema(char* buf, log_surgeon::EventHandle const& 
     m_var_ids.clear();
     m_logtype_dict_entry.clear();
 
-    size_t num_uncompressed_bytes{0};
+    size_t prev_pos{0};
+    leaf_id = 0;
+    while (true) {
+        auto optional_leaf{event.get_leaf_capture(leaf_id)};
+        if (false == optional_leaf.has_value()) {
+            break;
+        }
+        auto leaf{optional_leaf.value()};
+        std::string_view static_text{buf + prev_pos, leaf.range.start - prev_pos};
+        std::string_view leaf_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
+
+        m_logtype_dict_entry.add_static_text(static_text);
+        add_token_to_dicts(leaf_string, leaf.ffi_pointers.capture_name.as_cpp_view());
+
+        prev_pos = leaf.range.end;
+        leaf_id++;
+    }
+    std::string static_text{buf + prev_pos, buffer_size - prev_pos};
+    m_logtype_dict_entry.add_static_text(static_text);
+
     // Timestamp is included in the uncompressed message size
-    auto start_pos{log_buf->get_token(0).get_start_pos()};
-    if (timestamp_pattern == nullptr) {
-        start_pos = log_buf->get_token(1).get_start_pos();
-    }
-    auto const end_pos{log_buf->get_token(log_buf->pos() - 1).get_end_pos()};
-    if (start_pos <= end_pos) {
-        num_uncompressed_bytes = end_pos - start_pos;
-    } else {
-        num_uncompressed_bytes = log_buf->get_token(0).get_buffer_size() - start_pos + end_pos;
-    }
-    for (auto token_idx{1}; token_idx < log_buf->pos(); token_idx++) {
-        auto token{log_buf->get_token(token_idx)};
-        auto const* type_ids{token.get_type_ids()};
-        if (nullptr == type_ids || type_ids->empty()) {
-            throw std::runtime_error("Token has no type IDs: " + token.to_string());
-        }
-        auto const token_type{type_ids->at(0)};
-        if (log_buf->has_delimiters() && (timestamp_pattern != nullptr || token_idx > 1)
-            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
-            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
-        {
-            m_logtype_dict_entry.add_static_text(token.get_delimiter());
-            token.increment_start_pos();
-        }
-        add_token_to_dicts(event, token);
-    }
     if (false == m_logtype_dict_entry.get_value().empty()) {
         logtype_dictionary_id_t logtype_id{};
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
@@ -518,9 +447,8 @@ auto Archive::write_msg_using_schema(char* buf, log_surgeon::EventHandle const& 
                 logtype_id,
                 m_encoded_vars,
                 m_var_ids,
-                num_uncompressed_bytes
+                buffer_size
         );
-
         update_segment_indices(logtype_id, m_var_ids);
     }
 }

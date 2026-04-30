@@ -6,6 +6,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -147,10 +148,15 @@ public:
     /**
      * Encodes and writes a message to the given file using schema file
      * @param buf
+     * @param buffer_size
      * @param event
      * @throw FileWriter::OperationFailed if any write fails
      */
-    auto write_msg_using_schema(char* buf, log_surgeon::EventHandle const& event) -> void;
+    auto write_msg_using_schema(
+            char* buf,
+            size_t buffer_size,
+            log_surgeon::EventHandle const& event
+    ) -> void;
 
     /**
      * Writes an IR log event to the current encoded file
@@ -291,12 +297,11 @@ private:
     auto update_global_metadata() -> void;
 
     /**
-     * Inspect a log surgeon token and add its information to the logtype and variable dictionaries.
-     * @param event The log event containing the token.
-     * @param token The token to add to the dictionaries.
+     * Add a capture to the logtype and variable dictionaries.
+     * @param cap_string The contents of the capture.
+     * @param cap_name The name of the capture.
      */
-    auto add_token_to_dicts(log_surgeon::LogEventView const& event, log_surgeon::Token token)
-            -> void;
+    auto add_token_to_dicts(std::string_view cap_string, std::string_view cap_name) -> void;
 
     // Variables
     boost::uuids::uuid m_id;
