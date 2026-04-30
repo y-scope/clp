@@ -164,7 +164,12 @@ def verify_dataset_manager_del_action_clp_json(
     current_datasets = _extract_dataset_names_from_output(list_action)
 
     args = action.args
-    assert isinstance(args, DatasetManagerArgs)
+    if not isinstance(args, DatasetManagerArgs):
+        pytest.fail(
+            "dataset-manager verification requires `ExternalAction.args` to be a DatasetManagerArgs"
+            " instance."
+        )
+
     datasets_specified_for_deletion = args.datasets or []
     del_all_flag = args.del_all
     if del_all_flag:
