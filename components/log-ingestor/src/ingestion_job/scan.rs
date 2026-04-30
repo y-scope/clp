@@ -6,7 +6,6 @@ use non_empty_string::NonEmptyString;
 /// Scans all objects under the given S3 prefix using continuation tokens and invokes a callback
 /// for each non-empty scanned page.
 ///
-///
 /// This function applies the following filters to the S3 objects:
 /// * Entries with a missing key or size are skipped.
 /// * Keys ending in `/` are skipped.
