@@ -1704,7 +1704,7 @@ auto JsonParser::get_parent_schema_node(
     if (0 == cap.parent_id) {
         auto node_id{m_archive_writer->add_node(
                 root_node_id,
-                NodeType::ParentVarType,
+                NodeType::ParentRule,
                 rules.at(cap.rule_idx.index).ffi_pointers.variable_name.as_cpp_view()
         )};
         m_current_schema.insert_unordered(node_id);
@@ -1724,7 +1724,7 @@ auto JsonParser::get_parent_schema_node(
     log_surgeon::Capture const parent{parent_captures.at({cap.rule_idx.index, cap.parent_id})};
     auto node_id{m_archive_writer->add_node(
             get_parent_schema_node(parent, root_node_id, rules, parent_captures),
-            NodeType::ParentVarType,
+            NodeType::ParentRule,
             parent.ffi_pointers.capture_name.as_cpp_view()
     )};
     m_current_schema.insert_unordered(node_id);

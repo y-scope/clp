@@ -21,7 +21,7 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::LogMessage:
-        case NodeType::ParentVarType:
+        case NodeType::ParentRule:
         case NodeType::LogTypeID:
             return clp_s::search::ast::LiteralType::ClppDecomposeT;
         case NodeType::ClpString:

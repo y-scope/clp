@@ -416,7 +416,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::LogMessage:
             case NodeType::LogType:
             case NodeType::LogTypeID:
-            case NodeType::ParentVarType:
+            case NodeType::ParentRule:
             case NodeType::Unknown:
                 break;
         }

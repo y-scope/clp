@@ -527,7 +527,7 @@ size_t SchemaReader::generate_structured_array_template(
                 case NodeType::LogMessage:
                 case NodeType::LogType:
                 case NodeType::LogTypeID:
-                case NodeType::ParentVarType:
+                case NodeType::ParentRule:
                 case NodeType::Timestamp:
                 case NodeType::Unknown:
                     break;
@@ -624,7 +624,7 @@ size_t SchemaReader::generate_structured_object_template(
                 case NodeType::LogMessage:
                 case NodeType::LogType:
                 case NodeType::LogTypeID:
-                case NodeType::ParentVarType:
+                case NodeType::ParentRule:
                 case NodeType::Timestamp:
                 case NodeType::Unknown:
                     break;
@@ -757,7 +757,7 @@ void SchemaReader::generate_json_template(int32_t id) {
             case NodeType::Metadata:
             case NodeType::LogType:
             case NodeType::LogTypeID:
-            case NodeType::ParentVarType:
+            case NodeType::ParentRule:
             case NodeType::Unknown: {
                 break;
             }
@@ -817,7 +817,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
             case NodeType::LogMessage:
             case NodeType::LogType:
             case NodeType::LogTypeID:
-            case NodeType::ParentVarType:
+            case NodeType::ParentRule:
                 break;
             case NodeType::Object:
             case NodeType::StructuredArray:

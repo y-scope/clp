@@ -319,7 +319,7 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::LogMessage:
         case NodeType::LogType:
         case NodeType::LogTypeID:
-        case NodeType::ParentVarType:
+        case NodeType::ParentRule:
         case NodeType::Unknown:
             break;
     }
@@ -398,7 +398,7 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::LogMessage:
             case NodeType::LogType:
             case NodeType::LogTypeID:
-            case NodeType::ParentVarType:
+            case NodeType::ParentRule:
             case NodeType::Unknown:
                 break;
         }

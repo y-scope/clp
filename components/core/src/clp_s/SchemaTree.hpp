@@ -59,7 +59,7 @@ enum class NodeType : uint8_t {
     LogMessage = 100,
     LogType,
     LogTypeID,
-    ParentVarType,
+    ParentRule,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 

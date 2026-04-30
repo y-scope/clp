@@ -102,11 +102,13 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     return NodeType::Unknown;
 }
 
-void collect_columns(std::shared_ptr<Expression> const& cur, std::set<ColumnDescriptor*>& columns) {
-    for (auto it = cur->op_begin(); it != cur->op_end(); ++it) {
-        if (auto sub_expr = std::dynamic_pointer_cast<Expression>(*it)) {
+auto collect_columns(std::shared_ptr<Expression> const& cur, std::set<ColumnDescriptor*>& columns)
+        -> void {
+    for (auto it{cur->op_begin()}; it != cur->op_end(); ++it) {
+        if (auto sub_expr{std::dynamic_pointer_cast<Expression>(*it)}; nullptr != sub_expr) {
             collect_columns(sub_expr, columns);
-        } else if (auto column = std::dynamic_pointer_cast<ColumnDescriptor>(*it)) {
+        } else if (auto column{std::dynamic_pointer_cast<ColumnDescriptor>(*it)}; nullptr != column)
+        {
             columns.insert(column.get());
         }
     }
@@ -394,7 +396,7 @@ auto SchemaMatch::populate_column_mapping(
         {
             if (false == column->is_unresolved_descriptor()) {
                 if (NodeType::LogMessage == cur_node.get_type()
-                    || NodeType::ParentVarType == cur_node.get_type())
+                    || NodeType::ParentRule == cur_node.get_type())
                 {
                     m_clpp_decomposed_query = true;
 
