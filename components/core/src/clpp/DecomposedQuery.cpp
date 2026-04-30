@@ -65,15 +65,15 @@ auto DecomposedQuery::decompose_query(
     size_t parser_pos{0};
     auto event{parser.next_event(query, &parser_pos)};
     if (false == event.has_value() || query.size() != parser_pos) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
-    auto [rules, parent_captures]{create_parent_dicts(event.value())};
+    auto [rules, parent_captures]{create_parent_match_dicts(event.value())};
     if (rule_name.has_value()
         && (1 != rules.size()
             || rule_name != rules.begin()->second.ffi_pointers.variable_name.as_cpp_view()))
     {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
     DecomposedQuery decomposed_query;
@@ -111,7 +111,7 @@ auto DecomposedQuery::decompose_query(
             log_surgeon::CCharArray::from_string_view(query)
     )};
     if (nullptr == search_result) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
     DecomposedQuery decomposed_query{search_result};
@@ -140,21 +140,21 @@ auto DecomposedQuery::decompose_query(
     return decomposed_query;
 }
 
-auto DecomposedQuery::create_parent_dicts(log_surgeon::EventHandle const& event) -> std::
+auto DecomposedQuery::create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
         pair<absl::flat_hash_map<uint32_t, log_surgeon::Capture const>,
              absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const>> {
-    absl::flat_hash_map<uint32_t, log_surgeon::Capture const> rules;
-    absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const> parent_captures;
-    for (auto const& cap : event.get_all_captures()) {
-        if (cap.is_leaf) {
+    absl::flat_hash_map<uint32_t, log_surgeon::Capture const> root_matches;
+    absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const> parent_matches;
+    for (auto const& match : event.get_all_captures()) {
+        if (match.is_leaf) {
             continue;
         }
-        if (0 == cap.capture_id) {
-            rules.emplace(cap.rule_idx.index, cap);
+        if (0 == match.capture_id) {
+            root_matches.emplace(match.rule_idx.index, match);
         } else {
-            parent_captures.emplace(std::pair{cap.rule_idx.index, cap.capture_id}, cap);
+            parent_matches.emplace(std::pair{match.rule_idx.index, match.capture_id}, match);
         }
     }
-    return {rules, parent_captures};
+    return {root_matches, parent_matches};
 }
 }  // namespace clpp

@@ -58,6 +58,8 @@ auto ClppErrorCategory::message(ClppErrorCodeEnum error_enum) const -> std::stri
             return "Clpp FailureDbBulkWrite";
         case ClppErrorCodeEnum::FailureNetwork:
             return "Clpp FailureNetwork";
+        case ClppErrorCodeEnum::DecomposeQueryFailure:
+            return "Clpp DecomposeQueryFailure";
         default:
             return "Unrecognized ClppErrorCode";
     }

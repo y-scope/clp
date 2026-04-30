@@ -28,6 +28,7 @@ enum class ClppErrorCodeEnum : uint8_t {
     MetadataCorrupted,
     FailureDbBulkWrite,
     FailureNetwork,
+    DecomposeQueryFailure
 };
 
 using ClppErrorCode = ystdlib::error_handling::ErrorCode<ClppErrorCodeEnum>;

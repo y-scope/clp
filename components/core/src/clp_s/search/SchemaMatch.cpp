@@ -51,7 +51,7 @@ using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
 namespace {
-auto build_leaves_expr(
+auto build_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         clpp::DecomposedQuery const& decomposed_query
 ) -> std::shared_ptr<ast::Expression>;
@@ -63,7 +63,7 @@ auto build_leaves_expr(
  */
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 
-auto build_leaves_expr(
+auto build_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         clpp::DecomposedQuery const& decomposed_query
 ) -> std::shared_ptr<ast::Expression> {
@@ -774,7 +774,7 @@ auto SchemaMatch::try_resolve_clpp_match(
     if (matched_schema_ids.empty()) {
         return std::nullopt;
     }
-    auto leaves_expr{build_leaves_expr(column, *decomposed_query)};
+    auto leaves_expr{build_leaf_query_expr(column, *decomposed_query)};
     leaves_expr->set_clpp_matched_schemas(std::move(matched_schema_ids));
     return std::make_tuple(true, std::move(leaves_expr));
 }

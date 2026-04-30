@@ -1500,32 +1500,36 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     // SPDLOG_INFO("####");
     // SPDLOG_INFO("[clpsls] log msg: '{}'", log_msg);
 
-    auto get_cap_name{[](log_surgeon::Capture const& cap) -> std::string {
-        if (0 == cap.capture_id) {
-            return std::string{cap.ffi_pointers.variable_name.as_cpp_view()};
+    auto get_name{[](log_surgeon::Capture const& match) -> std::string {
+        if (0 == match.capture_id) {
+            return std::string{match.ffi_pointers.variable_name.as_cpp_view()};
         }
-        return std::string{cap.ffi_pointers.capture_name.as_cpp_view()};
+        return std::string{match.ffi_pointers.capture_name.as_cpp_view()};
     }};
 
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
-    auto [rules, parent_captures]{clpp::DecomposedQuery::create_parent_dicts(event)};
+    auto [root_matches, parent_matches]{clpp::DecomposedQuery::create_parent_match_dicts(event)};
 
     // This log type isn't escaped yet be careful
     std::string log_type{};
     log_type.reserve(log_msg.size());
     size_t log_msg_pos{0};
     for (size_t i{0};; ++i) {
-        auto const cap{event.get_leaf_capture(i)};
-        if (false == cap.has_value()) {
+        auto const match{event.get_leaf_capture(i)};
+        if (false == match.has_value()) {
             break;
         }
 
-        auto name{get_cap_name(*cap)};
+        auto name{get_name(*match)};
         auto parent_node_id{log_msg_node_id};
-        if (0 != cap->capture_id) {
-            parent_node_id
-                    = get_parent_schema_node(cap.value(), log_msg_node_id, rules, parent_captures);
+        if (0 != match->capture_id) {
+            parent_node_id = get_parent_schema_node(
+                    match.value(),
+                    log_msg_node_id,
+                    root_matches,
+                    parent_matches
+            );
         }
         // SPDLOG_ERROR(
         //         "[node] adding leaf {}: {} {} {}",
@@ -1579,7 +1583,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         if (encoded_variable_t var{0};
             cIntSet.contains(name)
             && clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                    cap->ffi_pointers.lexeme.as_cpp_view(),
+                    match->ffi_pointers.lexeme.as_cpp_view(),
                     var
             ))
         {
@@ -1591,12 +1595,12 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             m_current_schema.insert_unordered(
                     m_archive_writer->add_node(parent_node_id, NodeType::VarString, name)
             );
-            m_current_parsed_message.add_unordered_value(cap->ffi_pointers.lexeme.as_cpp_view());
+            m_current_parsed_message.add_unordered_value(match->ffi_pointers.lexeme.as_cpp_view());
         }
 
-        log_type.append(log_msg.substr(log_msg_pos, cap->range.start - log_msg_pos));
+        log_type.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
         log_type.append(fmt::format("%{}%", name));
-        log_msg_pos = cap->range.end;
+        log_msg_pos = match->range.end;
     }
     log_type.append(log_msg.substr(log_msg_pos));
 
@@ -1615,29 +1619,29 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     if (new_logtype) {
         clpp::LogTypeMetadata metadata;
         std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
-        for (auto const& cap : event.get_all_captures()) {
-            if (cap.is_leaf) {
+        for (auto const& match : event.get_all_captures()) {
+            if (match.is_leaf) {
                 continue;
             }
             metadata.emplace_parent_match(
-                    get_cap_name(cap),
-                    cap.range.start,
-                    cap.range.end - cap.range.start
+                    get_name(match),
+                    match.range.start,
+                    match.range.end - match.range.start
             );
-            og_parent_match_pos.emplace_back(cap.range.start, cap.range.end);
+            og_parent_match_pos.emplace_back(match.range.start, match.range.end);
         }
         for (size_t i{0};; ++i) {
-            auto const leaf_cap{event.get_leaf_capture(i)};
-            if (false == leaf_cap.has_value()) {
+            auto const leaf_match{event.get_leaf_capture(i)};
+            if (false == leaf_match.has_value()) {
                 break;
             }
-            auto const old_size{leaf_cap->range.end - leaf_cap->range.start};
-            auto const new_size{get_cap_name(*leaf_cap).size() + 2};
+            auto const old_size{leaf_match->range.end - leaf_match->range.start};
+            auto const new_size{get_name(*leaf_match).size() + 2};
             auto const diff{static_cast<ssize_t>(old_size) - static_cast<ssize_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
-                if (leaf_cap->range.start < og_parent_match_pos.at(j).first) {
+                if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
                     metadata.parent_match(j).m_start -= diff;
-                } else if (leaf_cap->range.end <= og_parent_match_pos.at(j).second) {
+                } else if (leaf_match->range.end <= og_parent_match_pos.at(j).second) {
                     metadata.parent_match(j).m_size -= diff;
                 }
             }
@@ -1686,26 +1690,26 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
 }
 
 auto JsonParser::get_parent_schema_node(
-        log_surgeon::Capture const cap,
+        log_surgeon::Capture const match,
         SchemaNode::id_t root_node_id,
-        absl::flat_hash_map<uint32_t, log_surgeon::Capture const> const& rules,
+        absl::flat_hash_map<uint32_t, log_surgeon::Capture const> const& root_matches,
         absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const> const&
-                parent_captures
+                parent_matches
 ) -> SchemaNode::id_t {
-    if (0 == cap.capture_id) {
+    if (0 == match.capture_id) {
         throw(std::runtime_error(
                 fmt::format(
                         "get parent called from root {}'",
-                        cap.ffi_pointers.variable_name.as_cpp_view()
+                        match.ffi_pointers.variable_name.as_cpp_view()
                 )
         ));
     }
 
-    if (0 == cap.parent_id) {
+    if (0 == match.parent_id) {
         auto node_id{m_archive_writer->add_node(
                 root_node_id,
                 NodeType::ParentRule,
-                rules.at(cap.rule_idx.index).ffi_pointers.variable_name.as_cpp_view()
+                root_matches.at(match.rule_idx.index).ffi_pointers.variable_name.as_cpp_view()
         )};
         m_current_schema.insert_unordered(node_id);
         // SPDLOG_ERROR(
@@ -1721,9 +1725,9 @@ auto JsonParser::get_parent_schema_node(
         // );
         return node_id;
     }
-    log_surgeon::Capture const parent{parent_captures.at({cap.rule_idx.index, cap.parent_id})};
+    log_surgeon::Capture const parent{parent_matches.at({match.rule_idx.index, match.parent_id})};
     auto node_id{m_archive_writer->add_node(
-            get_parent_schema_node(parent, root_node_id, rules, parent_captures),
+            get_parent_schema_node(parent, root_node_id, root_matches, parent_matches),
             NodeType::ParentRule,
             parent.ffi_pointers.capture_name.as_cpp_view()
     )};
