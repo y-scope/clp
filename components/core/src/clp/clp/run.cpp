@@ -1,8 +1,12 @@
 #include "run.hpp"
 
+#include <fstream>
+#include <string>
 #include <unordered_set>
 
-#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/generated_bindings.hpp>
+#include <log_surgeon/log_surgeon.hpp>
+#include <log_surgeon/rust_compat.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../Profiler.hpp"
@@ -56,36 +60,22 @@ int run(int argc, char const* argv[]) {
 
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command) {
-        /// TODO: make this not a unique_ptr and test performance difference
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
+        log_surgeon::Schema* schema{nullptr};
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
-            // Capture groups are temporarily disabled, until NFA intersection support for search.
-            auto const& lexer{reader_parser->get_log_parser().m_lexer};
-            for (auto const& [rule_id, rule_name] : lexer.m_id_symbol) {
-                auto optional_captures{lexer.get_captures_from_rule_id(rule_id)};
-                if (false == optional_captures.has_value()) {
-                    continue;
-                }
-
-                auto const& captures{optional_captures.value()};
-                if (captures.empty()) {
-                    continue;
-                }
-
-                if ("header" == rule_name && 1 == captures.size()
-                    && "timestamp" == captures[0]->get_name())
-                {
-                    continue;
-                }
-
-                throw std::runtime_error(
-                        schema_file_path + ": error: the schema rule '" + rule_name
-                        + "' has a regex pattern containing capture groups.\n"
-                );
+            std::ifstream schema_file{schema_file_path};
+            if (false == schema_file.good()) {
+                SPDLOG_ERROR("Schema file at {} failed to open.", schema_file_path);
+                return -1;
             }
+            std::string schema_text{
+                    (std::istreambuf_iterator<char>(schema_file)),
+                    std::istreambuf_iterator<char>()
+            };
+            log_surgeon::CCharArray schema_arr{schema_text.data(), schema_text.size()};
+            schema = log_surgeon::log_surgeon_schema_from_definition(schema_arr);
         }
+        log_surgeon::ParserHandle parser{schema};
 
         boost::filesystem::path path_prefix_to_remove(
                 command_line_args.get_path_prefix_to_remove()
@@ -129,7 +119,7 @@ int run(int argc, char const* argv[]) {
                     empty_directory_paths,
                     grouped_files_to_compress,
                     command_line_args.get_target_encoded_file_size(),
-                    std::move(reader_parser),
+                    parser,
                     command_line_args.get_use_heuristic()
             );
         } catch (TraceableException& e) {

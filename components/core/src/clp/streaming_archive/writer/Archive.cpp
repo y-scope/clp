@@ -13,10 +13,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/LogParser.hpp>
-#include <log_surgeon/Token.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <nlohmann/json.hpp>
 
 #include <clp/Defs.h>
@@ -432,29 +429,42 @@ auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_sur
     }
 }
 
-auto Archive::write_msg_using_schema(log_surgeon::LogEventView const& event) -> void {
+auto Archive::write_msg_using_schema(char* buf, log_surgeon::EventHandle const& event) -> void {
     epochtime_t timestamp{0};
     TimestampPattern const* timestamp_pattern{nullptr};
-    auto const& log_buf{event.get_log_output_buffer()};
-    if (log_buf->has_header()) {
-        size_t start{};
-        size_t end{};
-        timestamp_pattern = TimestampPattern::search_known_ts_patterns(
-                log_buf->get_mutable_token(0).to_string(),
-                timestamp,
-                start,
-                end
-        );
-        if (nullptr == timestamp_pattern) {
-            throw(std::runtime_error(
-                    "Schema contains a timestamp regex that matches "
-                    + log_buf->get_mutable_token(0).to_string()
-                    + " which does not match any known timestamp pattern."
-            ));
+    // Ideally the event would just have its timestamp accessible as event.get_timestamp()
+    size_t leaf_id{0};
+    while (true) {
+        auto optional_leaf{event.get_leaf_capture(leaf_id)};
+        if (false == optional_leaf.has_value()) {
+            break;
         }
-        if (m_old_ts_pattern != timestamp_pattern) {
-            change_ts_pattern(timestamp_pattern);
-            m_old_ts_pattern = const_cast<TimestampPattern*>(timestamp_pattern);
+        auto leaf{optional_leaf.value()};
+        if ("header" != leaf.ffi_pointers.variable_name.as_cpp_view()) {
+            break;
+        }
+        if ("timestamp" == leaf.ffi_pointers.capture_name.as_cpp_view()) {
+            std::string timestamp_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
+            size_t start{};
+            size_t end{};
+            timestamp_pattern = TimestampPattern::search_known_ts_patterns(
+                    timestamp_string,
+                    timestamp,
+                    start,
+                    end
+            );
+            if (nullptr == timestamp_pattern) {
+                throw(std::runtime_error(
+                        "Schema contains a timestamp regex that matches "
+                        + timestamp_string
+                        + " which does not match any known timestamp pattern."
+                ));
+            }
+            if (m_old_ts_pattern != timestamp_pattern) {
+                change_ts_pattern(timestamp_pattern);
+                m_old_ts_pattern = const_cast<TimestampPattern*>(timestamp_pattern);
+            }
+            break;
         }
     }
     if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {

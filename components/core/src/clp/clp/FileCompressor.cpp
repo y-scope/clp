@@ -4,14 +4,15 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <utility>
 
 #include <archive_entry.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
+#include <log_surgeon/rust_compat.hpp>
 
 #include "../BufferedReader.hpp"
 #include "../ffi/ir_stream/decoding_methods.hpp"
@@ -31,13 +32,11 @@ using clp::ParsedMessage;
 using clp::streaming_archive::writer::split_archive;
 using clp::streaming_archive::writer::split_file;
 using clp::streaming_archive::writer::split_file_and_archive;
-using log_surgeon::LogEventView;
-using log_surgeon::Reader;
-using log_surgeon::ReaderParser;
 using std::cout;
 using std::endl;
 using std::make_unique;
 using std::move;
+using std::optional;
 using std::set;
 using std::string;
 using std::unique_ptr;
@@ -238,18 +237,32 @@ void FileCompressor::parse_and_encode_with_library(
     // Open compressed file
     archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator());
     archive_writer.m_old_ts_pattern = nullptr;
-    LogSurgeonReader log_surgeon_reader(reader);
-    m_reader_parser->reset_and_set_reader(log_surgeon_reader);
-    while (false == m_reader_parser->done()) {
-        if (log_surgeon::ErrorCode err{m_reader_parser->parse_next_event()};
-            log_surgeon::ErrorCode::Success != err)
-        {
-            SPDLOG_ERROR("Parsing Failed");
-            throw(std::runtime_error("Parsing Failed"));
+
+    constexpr size_t cSizeOfBuf{1'000'000};
+    char buf[cSizeOfBuf];
+    size_t num_bytes_read{0};
+    size_t buffer_size{0};
+    size_t buffer_pos{0};
+    do {
+        size_t remaining{buffer_size - buffer_pos};
+        if (remaining > 0) {
+            std::memmove(buf, buf + buffer_pos, remaining);
         }
-        LogEventView const& log_view = m_reader_parser->get_log_parser().get_log_event_view();
-        archive_writer.write_msg_using_schema(log_view);
-    }
+
+        reader.read(buf + remaining, cSizeOfBuf - remaining, num_bytes_read);
+        buffer_size = remaining + num_bytes_read;
+        buffer_pos = 0;
+
+        while (true) {
+            log_surgeon::CCharArray view{buf, buffer_size};
+            auto optional_event{m_parser.next_event(view, &buffer_pos)};
+            // No error handling for failures?
+            if (false == optional_event.has_value()) {
+                break;
+            }
+            archive_writer.write_msg_using_schema(buf, optional_event.value());
+        }
+    } while (cSizeOfBuf == num_bytes_read);
     close_file_and_append_to_segment(archive_writer);
     // archive_writer_config needs to persist between files
     archive_user_config = archive_writer.m_archive_user_config;

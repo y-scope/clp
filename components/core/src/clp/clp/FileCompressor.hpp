@@ -4,8 +4,7 @@
 #include <system_error>
 
 #include <boost/uuid/random_generator.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include "../ir/LogEventDeserializer.hpp"
 #include "../LibarchiveFileReader.hpp"
@@ -22,12 +21,9 @@ namespace clp::clp {
 class FileCompressor {
 public:
     // Constructors
-    FileCompressor(
-            boost::uuids::random_generator& uuid_generator,
-            std::unique_ptr<log_surgeon::ReaderParser> reader_parser
-    )
+    FileCompressor(boost::uuids::random_generator& uuid_generator, log_surgeon::ParserHandle parser)
             : m_uuid_generator(uuid_generator),
-              m_reader_parser(std::move(reader_parser)) {}
+              m_parser(parser) {}
 
     // Methods
     /**
@@ -167,7 +163,7 @@ private:
     LibarchiveFileReader m_libarchive_file_reader;
     MessageParser m_message_parser;
     ParsedMessage m_parsed_message;
-    std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;
+    log_surgeon::ParserHandle m_parser;
 };
 }  // namespace clp::clp
 

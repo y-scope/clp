@@ -11,8 +11,7 @@
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/Token.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -147,10 +146,11 @@ public:
 
     /**
      * Encodes and writes a message to the given file using schema file
+     * @param buf
      * @param event
      * @throw FileWriter::OperationFailed if any write fails
      */
-    auto write_msg_using_schema(log_surgeon::LogEventView const& event) -> void;
+    auto write_msg_using_schema(char* buf, log_surgeon::EventHandle const& event) -> void;
 
     /**
      * Writes an IR log event to the current encoded file
