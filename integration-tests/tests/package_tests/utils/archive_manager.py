@@ -199,7 +199,12 @@ def verify_archive_manager_find_action(
         )
 
     args = action.args
-    assert isinstance(args, ArchiveManagerArgs)
+    if not isinstance(args, ArchiveManagerArgs):
+        pytest.fail(
+            "archive-manager verification requires `ExternalAction.args` to be a ArchiveManagerArgs"
+            " instance."
+        )
+
     begin_ts = args.begin_ts if args.begin_ts is not None else 0
     end_ts = args.end_ts
     assembled_archive_id_list: list[str] = []
@@ -302,7 +307,11 @@ def verify_archive_manager_del_by_ids_action(
         )
 
     args = action.args
-    assert isinstance(args, ArchiveManagerArgs)
+    if not isinstance(args, ArchiveManagerArgs):
+        pytest.fail(
+            "archive-manager verification requires `ExternalAction.args` to be a ArchiveManagerArgs"
+            " instance."
+        )
 
     find_all_action = archive_manager_find(clp_package=clp_package, dataset=dataset)
     find_result = verify_archive_manager_find_action(find_all_action, clp_package, dataset)
@@ -351,7 +360,12 @@ def verify_archive_manager_del_by_filter_action(
         )
 
     args = action.args
-    assert isinstance(args, ArchiveManagerArgs)
+    if not isinstance(args, ArchiveManagerArgs):
+        pytest.fail(
+            "archive-manager verification requires `ExternalAction.args` to be a ArchiveManagerArgs"
+            " instance."
+        )
+
     find_action = archive_manager_find(
         clp_package=clp_package,
         dataset=dataset,
