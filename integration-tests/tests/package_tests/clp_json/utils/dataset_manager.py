@@ -8,7 +8,12 @@ import pytest
 from strenum import StrEnum
 
 from tests.package_tests.classes import ClpPackage
-from tests.utils.classes import CmdArgs, ExternalAction, IntegrationTestDataset, VerificationResult
+from tests.utils.classes import (
+    CmdArgs,
+    ExternalAction,
+    IntegrationTestDataset,
+    VerificationResult,
+)
 from tests.utils.logging_utils import format_action_failure_msg
 
 logger = logging.getLogger(__name__)
@@ -200,13 +205,18 @@ def _extract_dataset_names_from_output(
     dataset_list: list[str] = []
     output = action.get_output()
     output_lines = output.splitlines()
-    num_datasets = 0
+    num_datasets: int | None = None
     for line in output_lines:
         match = re.search(r"Found (\d+) datasets", line)
         if match:
             num_datasets = int(match.group(1))
             output_lines.remove(line)
             break
+
+    if num_datasets is None:
+        pytest.fail(
+            "Unable to parse dataset-manager list output: missing 'Found <N> datasets' marker."
+        )
 
     if num_datasets == 0:
         return dataset_list
@@ -215,5 +225,11 @@ def _extract_dataset_names_from_output(
         match = re.search(r"INFO \[dataset_manager\] (.+)", line)
         if match:
             dataset_list.append(match.group(1))
+
+    if len(dataset_list) != num_datasets:
+        pytest.fail(
+            "Unable to parse dataset-manager list output: reported dataset count does not match"
+            " parsed entries."
+        )
 
     return sorted(dataset_list)
