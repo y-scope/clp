@@ -2,7 +2,6 @@
 #define CLPP_DECOMPOSEDQUERY_HPP
 
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -14,31 +13,31 @@
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clp/ReaderInterface.hpp>
-
 namespace clpp {
 class DecomposedQuery {
 public:
     // Types
-    struct LeafMatch {
-        LeafMatch(std::vector<std::string> type_names, std::string_view match)
-                : m_type_names(std::move(type_names)),
-                  m_match(match) {}
+    struct LeafQuery {
+        LeafQuery(std::vector<std::string> type_names, std::string_view match)
+                : m_names(std::move(type_names)),
+                  m_query(match) {}
 
-        std::vector<std::string> m_type_names;
-        std::string m_match;
+        std::vector<std::string> m_names;
+        std::string m_query;
     };
 
     // Factory methods
     static auto decompose_query(
             log_surgeon::ParserHandle& parser,
-            std::optional<std::string_view> type,
+            std::optional<std::string_view> rule_name,
             std::string_view query
     ) -> ystdlib::error_handling::Result<DecomposedQuery>;
 
-    static auto
-    decompose_query(log_surgeon::Schema const* schema, std::string_view type, std::string_view query)
-            -> ystdlib::error_handling::Result<DecomposedQuery>;
+    static auto decompose_query(
+            log_surgeon::Schema const* schema,
+            std::string_view rule_name,
+            std::string_view query
+    ) -> ystdlib::error_handling::Result<DecomposedQuery>;
 
     // Constructors
     DecomposedQuery() : m_search_result(nullptr) {}
@@ -64,7 +63,9 @@ public:
     }
 
     // Methods
-    [[nodiscard]] auto get_leaves() const -> std::vector<LeafMatch> const& { return m_leaves; }
+    [[nodiscard]] auto get_leaf_queries() const -> std::vector<LeafQuery> const& {
+        return m_leaf_queries;
+    }
 
     [[nodiscard]] auto get_log_type() const -> std::string_view { return m_log_type; }
 
@@ -74,7 +75,7 @@ public:
 
 private:
     // Data members
-    std::vector<LeafMatch> m_leaves;
+    std::vector<LeafQuery> m_leaf_queries;
     std::string m_log_type;
     log_surgeon::SearchResult const* m_search_result;
 };

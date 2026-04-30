@@ -68,23 +68,23 @@ auto build_leaves_expr(
         clpp::DecomposedQuery const& decomposed_query
 ) -> std::shared_ptr<ast::Expression> {
     auto leaves_expr{ast::AndExpr::create()};
-    for (auto const& leaf : decomposed_query.get_leaves()) {
+    for (auto const& leaf : decomposed_query.get_leaf_queries()) {
         auto new_col{column->copy()};
         new_col->set_matching_types(
                 LiteralType::FloatT | LiteralType::IntegerT | LiteralType::VarStringT
         );
         auto& new_col_descriptors{new_col->get_descriptor_list()};
 
-        auto start{leaf.m_type_names.rbegin()};
+        auto start{leaf.m_names.rbegin()};
         if (new_col_descriptors.back().get_token() == *start) {
             ++start;
         }
-        for (auto it{start}; leaf.m_type_names.rend() != it; ++it) {
+        for (auto it{start}; leaf.m_names.rend() != it; ++it) {
             new_col_descriptors.emplace_back(
                     DescriptorToken::create_descriptor_from_literal_token(*it)
             );
         }
-        auto leaf_literal{ast::StringLiteral::create(leaf.m_match)};
+        auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
         leaves_expr->add_operand(
                 FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
         );
