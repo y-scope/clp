@@ -84,7 +84,7 @@ def dataset_manager_del(
         subcommand=ClpPackageDatasetManagerSubcommand.DEL_COMMAND,
         del_all=del_all,
     )
-    if datasets_to_del is not None:
+    if datasets_to_del:
         args.datasets = [dataset.dataset_name for dataset in datasets_to_del]
     elif not del_all:
         pytest.fail(
@@ -99,7 +99,8 @@ def verify_dataset_manager_list_action_clp_json(
     expected_datasets: list[str],
 ) -> VerificationResult:
     """
-    Verifies the dataset-manager list action.
+    Verifies the dataset-manager list action by checking that the output dataset list matches the
+    list of expected datasets.
 
     :param action:
     :param expected_datasets:
@@ -135,7 +136,8 @@ def verify_dataset_manager_del_action_clp_json(
     clp_package: ClpPackage,
 ) -> VerificationResult:
     """
-    Verifies the dataset-manager del action.
+    Verifies the dataset-manager del action by checking that the datasets specified for deletion are
+    no longer present in the output of a supporting dataset-manager list command.
 
     :param action:
     :param clp_package:
