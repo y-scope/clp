@@ -162,6 +162,7 @@ def write_dict_to_yaml(payload: dict[str, Any], file_path: Path) -> None:
     :param payload: The dictionary to write.
     :param file_path: The path to the YAML file.
     """
+    file_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = file_path.with_suffix(file_path.suffix + ".tmp")
     with tmp_path.open("w", encoding="utf-8") as f:
         yaml.safe_dump(payload, f, sort_keys=False)
