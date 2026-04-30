@@ -141,8 +141,12 @@ def _verify_compress_action_unstructured_logs(
     decompress_action = decompress_clp_package(clp_package, path_config.package_decompression_dir)
     if decompress_action.completed_proc.returncode != 0:
         pytest.fail(
-            "During compress action verification, supporting call to 'decompress.sh' returned a"
-            f" non-zero exit code. Subprocess log: {decompress_action.log_file_path}"
+            format_action_failure_msg(
+                "During compress action verification, supporting call to 'decompress.sh' returned a"
+                " non-zero exit code.",
+                compress_action,
+                decompress_action,
+            )
         )
 
     # Verify equality between original logs and decompressed logs.
@@ -161,5 +165,6 @@ def _verify_compress_action_unstructured_logs(
             f"Compress verification failure: mismatch between original logs at"
             f" '{original_logs_path}' and decompressed logs at '{decompressed_logs_path}'.",
             compress_action,
+            decompress_action,
         )
     )
