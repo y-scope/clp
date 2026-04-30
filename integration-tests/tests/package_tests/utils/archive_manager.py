@@ -104,29 +104,23 @@ def archive_manager_find(
 
 def archive_manager_del_by_ids(
     clp_package: ClpPackage,
+    ids: list[str],
     dataset: IntegrationTestDataset | None = None,
-    ids: list[str] | None = None,
 ) -> ExternalAction:
     """
-    Runs an archive-manager 'del by-ids' operation.
+    Runs an archive-manager 'del by-ids' operation against the given list of archive IDs.
 
     :param clp_package:
-    :param dataset:
     :param ids:
+    :param dataset:
     :return: The `ExternalAction` instance that runs the deletion.
     """
     logger.info("Performing 'DEL_BY_IDS' operation with archive-manager.")
 
-    if ids is None:
-        # If no IDs were provided, delete all.
-        find_action = archive_manager_find(clp_package=clp_package, dataset=dataset)
-        find_result = verify_archive_manager_find_action(find_action, clp_package, dataset)
-        if not find_result:
-            pytest.fail(
-                "During 'DEL_BY_IDS' argument construction, supporting call to"
-                f" archive-manager 'find' could not be verified: '{find_result.failure_message}'"
-            )
-        ids = _extract_archive_ids_from_find_output(find_action)
+    if not ids:
+        pytest.fail(
+            "archive_manager_del_by_ids requires at least one archive ID; got an empty list."
+        )
 
     path_config = clp_package.path_config
     args = ArchiveManagerArgs(
