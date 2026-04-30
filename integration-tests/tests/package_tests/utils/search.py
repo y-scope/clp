@@ -174,14 +174,17 @@ def verify_search_action(
         )
 
     args = action.args
-    assert isinstance(args, SearchArgs)
+    if not isinstance(args, SearchArgs):
+        pytest.fail(
+            "Search verification requires `ExternalAction.args` to be a SearchArgs instance."
+        )
 
     # Construct and run grep command.
     grep_action = ExternalAction(
         cmd=_construct_grep_verification_cmd(args, search_type, original_dataset)
     )
 
-    if grep_action.completed_proc.returncode != 0:
+    if grep_action.completed_proc.returncode not in (0, 1):
         pytest.fail(
             "During search action verification, internal grep command returned a non-zero exit"
             f" code. Subprocess log: {grep_action.log_file_path}"
