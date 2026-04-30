@@ -131,7 +131,7 @@ def _construct_args(
         case ClpPackageSearchType.BASIC:
             pass
         case ClpPackageSearchType.FILE_PATH:
-            args.file_path = dataset.logs_path / dataset.metadata.file_names[0]
+            args.file_path = dataset.logs_path / dataset.metadata.single_match_file
         case ClpPackageSearchType.IGNORE_CASE:
             args.ignore_case = True
         case ClpPackageSearchType.COUNT_RESULTS:

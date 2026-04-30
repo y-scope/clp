@@ -80,6 +80,7 @@ class IntegrationTestDatasetMetadata(BaseModel):
     logs_subdir: str
     file_names: list[str]
     single_match_wildcard_query: str
+    single_match_file: str
 
 
 @dataclass
@@ -120,6 +121,13 @@ class IntegrationTestDataset:
         for file_path in self.metadata.file_names:
             file_path_abs = self.logs_path / file_path
             validate_file_exists(file_path_abs)
+
+        if self.metadata.single_match_file not in self.metadata.file_names:
+            err_msg = (
+                f"`single_match_file` '{self.metadata.single_match_file}' is not listed in"
+                " `file_names`."
+            )
+            raise ValueError(err_msg)
 
     @property
     def metadata_file_path(self) -> Path:
