@@ -27,15 +27,19 @@ public:
      * @param path The input path for the unstructured text file.
      * @param reader A reader positioned at the start of the input stream.
      * @param output_dir The output directory for generated KV-IR files.
+     * @param compress_converted_file Whether the converted file should be compressed.
      * @return A void result on success, or an error code indicating the failure:
      * - std::errc::no_message if `log_surgeon::BufferParser::parse_next_event` returns an error.
      * - Forwards `LogSerializer::create()`'s return values.
      * - Forwards `refill_buffer()`'s return values.
      * - Forwards `LogSerializer::add_message()`'s return values.
      */
-    [[nodiscard]] auto
-    convert_file(clp_s::Path const& path, clp::ReaderInterface* reader, std::string_view output_dir)
-            -> ystdlib::error_handling::Result<void>;
+    [[nodiscard]] auto convert_file(
+            clp_s::Path const& path,
+            clp::ReaderInterface* reader,
+            std::string_view output_dir,
+            bool compress_converted_file
+    ) -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constants

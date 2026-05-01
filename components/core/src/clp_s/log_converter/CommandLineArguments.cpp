@@ -116,6 +116,7 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
         po::options_description conversion_options("Conversion options");
         std::string input_path_list_file_path;
         std::string auth{cNoAuth};
+        bool no_compress_converted_files{};
         // clang-format off
         conversion_options.add_options()(
                 "inputs-from,f",
@@ -143,6 +144,10 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
                     ->value_name("LOG_EVENT_SIZE")
                     ->default_value(m_max_log_event_size),
                 "Maximum allowed size (B) for a single log event before conversion fails."
+        )(
+                "no-compress-converted-files",
+                po::bool_switch(&no_compress_converted_files),
+                "Disable compression on the converted KV-IR files."
         );
         // clang-format on
 
@@ -198,6 +203,8 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
         if (m_max_log_event_size <= 0) {
             throw std::invalid_argument("Max event size must be greater than zero.");
         }
+
+        m_compress_converted_files = false == no_compress_converted_files;
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
