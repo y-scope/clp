@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -234,15 +235,18 @@ private:
     ) -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
 
     /**
-     * Converts matched logtype IDs to schema IDs, builds the leaves expression, and returns the
-     * result. Returns std::nullopt if no schemas matched.
+     * Converts matched logtype IDs to schema IDs, builds the leaves expression, and registers
+     * the leaf columns in the schema mapping. Returns std::nullopt if no schemas matched.
      * @param column
+     * @param cur_node_id The node ID where the clpp decomposition was triggered (LogMessage or
+     * ParentRule)
      * @param decomposed_query
      * @param matched_lt_ids
      * @return The resolved match result, or std::nullopt if no schemas matched.
      */
-    auto try_resolve_clpp_match(
+    auto resolve_clpp_match(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
+            int32_t cur_node_id,
             clpp::DecomposedQuery const* decomposed_query,
             std::vector<clp_s::logtype_id_t> const& matched_lt_ids
     ) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>>;

@@ -5,7 +5,6 @@
 #include <list>
 #include <memory>
 #include <optional>
-#include <unordered_set>
 
 #include "Literal.hpp"
 #include "Value.hpp"
@@ -103,28 +102,6 @@ public:
      */
     virtual bool has_only_expression_operands() = 0;
 
-    /**
-     * @return Whether this expression carries precomputed clpp-matched schema IDs
-     */
-    [[nodiscard]] auto has_clpp_matched_schemas() const -> bool {
-        return m_clpp_matched_schemas.has_value();
-    }
-
-    /**
-     * @return The precomputed clpp-matched schema IDs
-     */
-    [[nodiscard]] auto get_clpp_matched_schemas() const -> std::unordered_set<int32_t> const& {
-        return m_clpp_matched_schemas.value();
-    }
-
-    /**
-     * Sets the precomputed clpp-matched schema IDs for this expression.
-     * @param schemas The schema IDs that match this expression's log type criteria
-     */
-    void set_clpp_matched_schemas(std::unordered_set<int32_t> schemas) {
-        m_clpp_matched_schemas = std::move(schemas);
-    }
-
     // Methods inherited from Value
     void print() const override = 0;
 
@@ -136,7 +113,6 @@ protected:
     bool m_inverted;
     Expression* m_parent;
     std::list<std::shared_ptr<Value>> m_operands;
-    std::optional<std::unordered_set<int32_t>> m_clpp_matched_schemas;
 
     // Copy Semantic is create shallow copy with parent pointing to null
     Expression(Expression const&);

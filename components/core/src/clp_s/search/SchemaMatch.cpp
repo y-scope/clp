@@ -1,19 +1,22 @@
 #include "SchemaMatch.hpp"
 
 #include <algorithm>
-#include <charconv>
+#include <cstddef>
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <queue>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 #include <log_surgeon/log_surgeon.hpp>
-#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/search/ast/StringLiteral.hpp>
@@ -414,9 +417,12 @@ auto SchemaMatch::populate_column_mapping(
                                       ? decompose_and_match_log_message(query)
                                       : decompose_and_match_parent_var(cur_node, cur_it, query);
 
-                    if (auto result{
-                                try_resolve_clpp_match(column, decomposed_query, matched_lt_ids)
-                        };
+                    if (auto result{resolve_clpp_match(
+                                column,
+                                cur_node_id,
+                                decomposed_query,
+                                matched_lt_ids
+                        )};
                         result.has_value())
                     {
                         return std::move(result).value();
@@ -543,24 +549,6 @@ auto SchemaMatch::intersect_and_sub_expr(
         std::set<ColumnDescriptor*>& columns,
         bool first
 ) -> bool {
-    // Handle clpp expression: use precomputed schemas instead of column-based resolution
-    if (cur->has_clpp_matched_schemas()) {
-        collect_columns(cur, columns);
-        auto const& clpp_schemas{cur->get_clpp_matched_schemas()};
-        if (first) {
-            common_schema.insert(clpp_schemas.begin(), clpp_schemas.end());
-        } else {
-            std::set<int32_t> intersection;
-            for (auto const schema : common_schema) {
-                if (clpp_schemas.contains(schema)) {
-                    intersection.insert(schema);
-                }
-            }
-            common_schema = intersection;
-        }
-        return false;
-    }
-
     // Note: EmptyExpr are already constant propogated out of the ands, so don't
     // need to check for them here
     for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
@@ -763,8 +751,9 @@ void SchemaMatch::build_logtype_id_to_schema_id_map() {
     }
 }
 
-auto SchemaMatch::try_resolve_clpp_match(
+auto SchemaMatch::resolve_clpp_match(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
+        int32_t cur_node_id,
         clpp::DecomposedQuery const* decomposed_query,
         std::vector<clp_s::logtype_id_t> const& matched_lt_ids
 ) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>> {
@@ -774,8 +763,44 @@ auto SchemaMatch::try_resolve_clpp_match(
     if (matched_schema_ids.empty()) {
         return std::nullopt;
     }
+
     auto leaves_expr{build_leaf_query_expr(column, *decomposed_query)};
-    leaves_expr->set_clpp_matched_schemas(std::move(matched_schema_ids));
+    auto const& leaf_queries{decomposed_query->get_leaf_queries()};
+    auto op_it{leaves_expr->op_begin()};
+    for (size_t leaf_idx{0}; leaf_idx < leaf_queries.size(); ++leaf_idx, ++op_it) {
+        auto filter_expr{std::static_pointer_cast<ast::FilterExpr>(*op_it)};
+        auto leaf_col{filter_expr->get_column()};
+
+        int32_t node_id{cur_node_id};
+        auto const& leaf{leaf_queries[leaf_idx]};
+        auto start{leaf.m_names.rbegin()};
+        if (false == leaf.m_names.empty()) {
+            if (auto const& column_descriptors{column->get_descriptor_list()};
+                false == column_descriptors.empty()
+                && column_descriptors.back().get_token() == *start)
+            {
+                ++start;
+            }
+        }
+        for (auto it{start}; leaf.m_names.rend() != it; ++it) {
+            bool found{false};
+            for (auto child_id : m_tree->get_node(node_id).get_children_ids()) {
+                if (m_tree->get_node(child_id).get_key_name() == *it) {
+                    node_id = child_id;
+                    found = true;
+                    break;
+                }
+            }
+            if (false == found) {
+                return std::nullopt;
+            }
+        }
+
+        for (auto schema_id : matched_schema_ids) {
+            m_descriptor_to_schema[leaf_col.get()].emplace(schema_id, node_id);
+        }
+    }
+
     return std::make_tuple(true, std::move(leaves_expr));
 }
 

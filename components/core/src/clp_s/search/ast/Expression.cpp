@@ -10,7 +10,6 @@ Expression::Expression(Expression const& expr) {
     m_parent = nullptr;
     m_inverted = expr.m_inverted;
     m_operands = expr.m_operands;
-    m_clpp_matched_schemas = expr.m_clpp_matched_schemas;
 }
 
 void Expression::add_operand(std::shared_ptr<Expression> const& operand) {
