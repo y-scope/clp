@@ -91,22 +91,19 @@ public:
 
 private:
     // Constructors
-    template <
-            typename T = encoded_variable_t,
-            std::enable_if_t<std::is_same_v<T, ir::eight_byte_encoded_variable_t>, int> = 0
-    >
     explicit UnstructuredIrDeserializerImpl(
             std::vector<std::pair<bool, SchemaTree::NodeLocator>> initial_insertions
-    );
+    )
+    requires std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
+            : m_pending_schema_insertions{std::move(initial_insertions)} {}
 
-    template <
-            typename T = encoded_variable_t,
-            std::enable_if_t<std::is_same_v<T, ir::four_byte_encoded_variable_t>, int> = 0
-    >
     UnstructuredIrDeserializerImpl(
             std::vector<std::pair<bool, SchemaTree::NodeLocator>> initial_insertions,
             ir::epoch_time_ms_t reference_timestamp
-    );
+    )
+    requires std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
+            : m_pending_schema_insertions{std::move(initial_insertions)},
+              m_previous_timestamp{reference_timestamp} {}
 
     // Methods
     /**

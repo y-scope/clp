@@ -59,9 +59,9 @@ auto UnstructuredIrDeserializerImpl<encoded_variable_t>::create(
         if (EncodingType::EightByte != encoding_type) {
             return std::errc::protocol_error;
         }
-        return std::unique_ptr<UnstructuredIrDeserializerImpl>{
-                new UnstructuredIrDeserializerImpl{std::move(initial_insertions)}
-        };
+        return std::make_unique<UnstructuredIrDeserializerImpl>(
+                UnstructuredIrDeserializerImpl{std::move(initial_insertions)}
+        );
     } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
         if (EncodingType::FourByte != encoding_type) {
             return std::errc::protocol_error;
@@ -130,13 +130,12 @@ auto UnstructuredIrDeserializerImpl<ir::four_byte_encoded_variable_t>::
             this->resolve_required_node_ids(auto_gen_keys_schema_tree, user_gen_keys_schema_tree)
     )};
 
-    KeyValuePairLogEvent::NodeIdValuePairs auto_gen_pairs;
-    auto_gen_pairs.emplace(
-            timestamp_node_id,
-            Value{static_cast<value_int_t>(m_previous_timestamp)}
-    );
-    KeyValuePairLogEvent::NodeIdValuePairs user_gen_pairs;
-    user_gen_pairs.emplace(message_node_id, Value{std::move(encoded_text_ast)});
+    KeyValuePairLogEvent::NodeIdValuePairs auto_gen_pairs{
+            {timestamp_node_id, Value{static_cast<value_int_t>(m_previous_timestamp)}}
+    };
+    KeyValuePairLogEvent::NodeIdValuePairs user_gen_pairs{
+            {message_node_id, Value{std::move(encoded_text_ast)}}
+    };
 
     return KeyValuePairLogEvent::create(
             auto_gen_keys_schema_tree,
