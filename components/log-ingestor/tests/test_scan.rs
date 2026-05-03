@@ -45,7 +45,7 @@ async fn create_test_s3_client(aws_config: &AwsConfig) -> aws_sdk_s3::Client {
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_scan_prefix_early_exit() -> Result<()> {
     const NUM_OBJECTS: usize = 250;
-    
+
     let aws_config = AwsConfig::from_env()?;
     let s3_client = create_test_s3_client(&aws_config).await;
 
