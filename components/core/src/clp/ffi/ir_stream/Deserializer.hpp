@@ -279,14 +279,12 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
         if (EncodingType::FourByte == encoding_type) {
             deserializer_impl = YSTDLIB_ERROR_HANDLING_TRYX(
                     UnstructuredIrDeserializerImpl<ir::four_byte_encoded_variable_t>::create(
-                            encoding_type,
                             metadata_json
                     )
             );
         } else {
             deserializer_impl = YSTDLIB_ERROR_HANDLING_TRYX(
                     UnstructuredIrDeserializerImpl<ir::eight_byte_encoded_variable_t>::create(
-                            encoding_type,
                             metadata_json
                     )
             );
@@ -348,10 +346,13 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         }
 
         case IrUnitType::SchemaTreeNodeInsertion: {
-            std::string key_name;
+            std::string key_name_buffer;
             auto const [is_auto_generated, node_locator]{YSTDLIB_ERROR_HANDLING_TRYX(
-                    m_deserializer_impl
-                            ->deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
+                    m_deserializer_impl->deserialize_ir_unit_schema_tree_node_insertion(
+                            reader,
+                            tag,
+                            key_name_buffer
+                    )
             )};
             auto& schema_tree_to_insert{
                     is_auto_generated ? m_auto_gen_keys_schema_tree : m_user_gen_keys_schema_tree

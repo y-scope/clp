@@ -178,6 +178,21 @@ static IRErrorCode
 deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string& dict_var);
 
 /**
+ * Deserializes a timestamp from the given reader
+ * @tparam encoded_variable_t Type of the encoded variable
+ * @param reader
+ * @param encoded_tag
+ * @param ts Returns the timestamp delta if encoded_variable_t == four_byte_encoded_variable_t or
+ * the actual timestamp if encoded_variable_t == eight_byte_encoded_variable_t
+ * @return IRErrorCode_Success on success
+ * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ */
+template <typename encoded_variable_t>
+static IRErrorCode
+deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts);
+
+/**
  * Deserializes the next log event from the given reader
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
@@ -308,7 +323,7 @@ deserialize_dict_var(ReaderInterface& reader, encoded_tag_t encoded_tag, string&
 }
 
 template <typename encoded_variable_t>
-IRErrorCode
+static IRErrorCode
 deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
     static_assert(
             is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
@@ -458,7 +473,7 @@ auto deserialize_log_event(
     if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
         return IRErrorCode_Incomplete_IR;
     }
-    if (auto const error_code = deserialize_timestamp<encoded_variable_t>(
+    if (auto error_code = deserialize_timestamp<encoded_variable_t>(
                 reader,
                 encoded_tag,
                 timestamp_or_timestamp_delta
@@ -611,6 +626,21 @@ auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result
         return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
     return tag;
+}
+
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+auto deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> ystdlib::error_handling::Result<epoch_time_ms_t> {
+    epoch_time_ms_t ts{};
+    if (auto const error_code = deserialize_timestamp<encoded_variable_t>(reader, encoded_tag, ts);
+        IRErrorCode_Success != error_code)
+    {
+        if (IRErrorCode_Corrupted_IR == error_code) {
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
+        }
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+    return ts;
 }
 
 IRErrorCode deserialize_preamble(
@@ -817,13 +847,11 @@ template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
 
 template auto deserialize_timestamp<four_byte_encoded_variable_t>(
         ReaderInterface& reader,
-        encoded_tag_t encoded_tag,
-        epoch_time_ms_t& ts
-) -> IRErrorCode;
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<epoch_time_ms_t>;
 
 template auto deserialize_timestamp<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
-        encoded_tag_t encoded_tag,
-        epoch_time_ms_t& ts
-) -> IRErrorCode;
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<epoch_time_ms_t>;
 }  // namespace clp::ffi::ir_stream

@@ -25,10 +25,10 @@ namespace clp::ffi::ir_stream {
 /**
  * Deserializer implementation for backward-compatible unstructured IR streams.
  *
- * Simulates KV-IR deserialization behavior so `Deserializer` can reuse the same flow across
- * formats. It emits synthetic schema tree node insertion IR units for `message` and `timestamp`
- * before reading stream tags and converts unstructured log events into `KeyValuePairLogEvent`
- * values.
+ * Simulates KV-IR deserialization behavior so `Deserializer` can reuse the same
+ * flow across formats. It emits synthetic schema tree node insertion IR units
+ * for `message` and `timestamp` before reading stream tags and converts
+ * unstructured log events into `KeyValuePairLogEvent` values.
  * @tparam encoded_variable_t
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
@@ -36,14 +36,15 @@ class UnstructuredIrDeserializerImpl : public DeserializerImpl {
 public:
     // Factory function
     /**
-     * @param encoding_type
      * @param metadata
-     * @return A result containing the deserializer on success, or an error code indicating the
-     * failure:
-     * - std::errc::protocol_error if the encoding type mismatches the template parameter, or the
-     *   reference timestamp is missing/invalid (four-byte only).
+     * @return A result containing the deserializer on success, or an error code
+     * indicating the failure:
+     * - IrDeserializationErrorEnum::InvalidReferenceTimestampMetadata if the
+     * reference timestamp is missing or not a string (four-byte only).
+     * - IrDeserializationErrorEnum::InvalidReferenceTimestampValue if the
+     * reference timestamp string is not an integer (four-byte only).
      */
-    [[nodiscard]] static auto create(EncodingType encoding_type, nlohmann::json const& metadata)
+    [[nodiscard]] static auto create(nlohmann::json const& metadata)
             -> ystdlib::error_handling::Result<std::unique_ptr<UnstructuredIrDeserializerImpl>>;
 
     // Delete copy constructor and assignment operator
@@ -61,15 +62,19 @@ public:
     // Methods implementing `DeserializerImpl`
     /**
      * The possible error codes:
-     * - Forwards `deserialize_tag`'s return values on failure.
+     * - Forwards `deserialize_tag`'s return value on failure.
      */
     [[nodiscard]] auto get_next_ir_unit_type(ReaderInterface& reader)
             -> ystdlib::error_handling::Result<std::pair<IrUnitType, encoded_tag_t>> override;
 
     /**
      * The possible error codes:
-     * - std::errc::protocol_error if deserialization fails.
-     * - Forwards `KeyValuePairLogEvent::create`'s return values on failure.
+     * - IrDeserializationErrorEnum::MissingRequiredSchemaNodes if required
+     *   schema nodes are missing.
+     * - Forwards `deserialize_encoded_text_ast`'s return value on failure.
+     * - Forwards `deserialize_tag`'s return value on failure.
+     * - Forwards `deserialize_timestamp`'s return value on failure.
+     * - Forwards `KeyValuePairLogEvent::create`'s return value on failure.
      */
     [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
             ReaderInterface& reader,
@@ -86,7 +91,7 @@ public:
     [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
             encoded_tag_t tag,
-            std::string& key_name
+            std::string& key_name_buffer
     ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> override;
 
 private:
@@ -109,15 +114,17 @@ private:
     /**
      * Resolves the node IDs for `message` and `timestamp` in the schema tree.
      * If the node IDs are already resolved, returns them immediately.
-     * NOTE: `message` is resolved from the user-generated schema tree, while `timestamp` is
-     * resolved from the auto-generated schema tree.
+     * NOTE: `message` is resolved from the user-generated schema tree, while
+     * `timestamp` is resolved from the auto-generated schema tree.
      * @param auto_gen_keys_schema_tree
      * @param user_gen_keys_schema_tree
-     * @return A result containing a pair on success, or an error code indicating the failure:
+     * @return A result containing a pair on success, or an error code indicating
+     * the failure:
      * - The pair:
      *   - `message` node ID
      *   - `timestamp` node ID
-     * - std::errc::protocol_error if either required schema node is missing.
+     * - IrDeserializationErrorEnum::MissingRequiredSchemaNodes if either required
+     * schema node is missing.
      */
     [[nodiscard]] auto resolve_required_node_ids(
             std::shared_ptr<SchemaTree> const& auto_gen_keys_schema_tree,
