@@ -21,11 +21,8 @@ use super::{
     test_utils::{get_testing_prefix_as_non_empty_string, upload_test_objects},
 };
 
-const NUM_OBJECTS: usize = 250;
-
 /// `ListObjectsV2` returns at most 1,000 keys per response.
 const MAX_NUM_OBJECTS_PER_PAGE: usize = 1000;
-const NUM_PAGES: usize = 2;
 
 async fn create_test_s3_client(aws_config: &AwsConfig) -> aws_sdk_s3::Client {
     let aws_auth = AwsAuthentication::Credentials {
@@ -47,6 +44,8 @@ async fn create_test_s3_client(aws_config: &AwsConfig) -> aws_sdk_s3::Client {
 #[serial_test::serial]
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_scan_prefix_early_exit() -> Result<()> {
+    const NUM_OBJECTS: usize = 250;
+    
     let aws_config = AwsConfig::from_env()?;
     let s3_client = create_test_s3_client(&aws_config).await;
 
@@ -123,6 +122,8 @@ async fn test_scan_prefix_early_exit() -> Result<()> {
 #[serial_test::serial]
 #[ignore = "Requires LocalStack or AWS environment"]
 async fn test_scan_prefix_multi_page_filtering() -> Result<()> {
+    const NUM_PAGES: usize = 2;
+
     let aws_config = AwsConfig::from_env()?;
     let s3_client = create_test_s3_client(&aws_config).await;
 
