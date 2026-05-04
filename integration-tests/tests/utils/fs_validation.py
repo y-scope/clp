@@ -1,11 +1,11 @@
 """File structure validators."""
 
-import shutil
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import IO
 
 from tests.utils.classes import ExternalAction
+from tests.utils.utils import get_binary_path
 
 
 def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
@@ -15,7 +15,7 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     :return: Whether two files/directories hold the exactly same content.
     :raise: RuntimeError if the diff command fails due to execution errors.
     """
-    cmd = ["diff", "--brief", "--recursive", str(path1), str(path2)]
+    cmd = [get_binary_path("diff"), "--brief", "--recursive", str(path1), str(path2)]
     diff_action = ExternalAction(cmd=cmd)
     rc = diff_action.completed_proc.returncode
     if rc == 0:
@@ -47,13 +47,8 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     :return: A named temporary file (delete on close) that contains the sorted JSON content.
     :raise: RuntimeError if jq is missing or fails due to execution errors.
     """
-    jq_bin = shutil.which("jq")
-    if jq_bin is None:
-        err_msg = "jq executable not found"
-        raise RuntimeError(err_msg)
-
     jq_action = ExternalAction(
-        cmd=[jq_bin, "--sort-keys", "--compact-output", ".", str(json_fp)],
+        cmd=[get_binary_path("jq"), "--sort-keys", "--compact-output", ".", str(json_fp)],
     )
     jq_rc = jq_action.completed_proc.returncode
     if jq_rc != 0:

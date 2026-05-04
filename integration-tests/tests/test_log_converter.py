@@ -95,8 +95,7 @@ def _convert_and_compress(
     search_action = ExternalAction(cmd=[clp_s_bin_path, "s", compression_path, "timestamp > 0"])
     if search_action.completed_proc.returncode != 0:
         pytest.fail(format_action_failure_msg("`clp-s` search failed.", search_action))
-    stdout = search_action.completed_proc.stdout
-    lines = stdout.splitlines() if stdout else []
+    lines = search_action.completed_proc.stdout.splitlines()
     if len(lines) != test_paths.num_log_events:
         pytest.fail(
             f"Expected {test_paths.num_log_events} log events after conversion, "
