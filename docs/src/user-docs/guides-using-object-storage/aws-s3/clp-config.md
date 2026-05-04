@@ -149,20 +149,38 @@ aws_authentication:
 `<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
 
 In addition, the *top-level* config `aws_config_directory` must be set to the directory containing
-the profile configurations (typically `~/.aws`):
+the profile configurations:
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+Typically `~/.aws`:
 
 ```yaml
 aws_config_directory: "<aws-config-dir>"
 ```
 
+:::
+
+:::{tab-item} Kubernetes (Helm)
+:sync: kind
+
+`aws_config_directory` is set automatically by the chart. Provide your AWS config file contents via
+`--set-file`:
+
+```bash
+helm install <release> <chart> \
+  --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
+  --set-file clpConfig.aws_config.config=$HOME/.aws/config
+```
+
+:::
+::::
+
 :::{note}
 If profiles are not used for AWS authentication, `aws_config_directory` should be commented or set
 to `null`.
-:::
-
-:::{note}
-For Helm deployments, users should provide AWS config file contents via `--set-file` rather than
-setting `aws_config_directory` manually. See the Helm chart's `values.yaml` for details.
 :::
 
 ### env_vars
