@@ -4,9 +4,9 @@
 #  storage_engine: "clp-s"
 
 #webui:
-#  query_engine: "clp-s"
 #  host: "localhost"
 #  port: 4000
+#  query_engine: "clp-s"
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
 

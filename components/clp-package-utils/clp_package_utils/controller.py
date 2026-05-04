@@ -526,7 +526,7 @@ class BaseController(ABC):
             )
             return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -586,7 +586,7 @@ class BaseController(ABC):
             )
             return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -621,7 +621,7 @@ class BaseController(ABC):
             )
             return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -744,7 +744,11 @@ class BaseController(ABC):
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.webui.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
-            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
+            "MaxDatasetsPerQuery": (
+                self._clp_config.query_scheduler.max_datasets_per_query
+                if self._clp_config.query_scheduler is not None
+                else None
+            ),
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
