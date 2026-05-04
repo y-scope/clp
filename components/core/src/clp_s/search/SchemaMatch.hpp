@@ -116,7 +116,8 @@ private:
     // TODO clpp: refactor m_tree and m_schemas
     std::shared_ptr<ArchiveReader> m_archive_reader;
     bool m_clpp_decomposed_query{false};
-    log_surgeon::Schema* m_ls_schema;
+    std::string m_ls_schema_contents;
+    log_surgeon::Schema* m_ls_schema{nullptr};
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
     absl::flat_hash_map<std::pair<std::optional<std::string>, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;

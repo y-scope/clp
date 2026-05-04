@@ -868,10 +868,12 @@ auto SchemaMatch::decompose_query(
     }
 
     if (nullptr == m_ls_schema) {
+        if (m_ls_schema_contents.empty()) {
+            m_ls_schema_contents
+                    = YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_log_surgeon_schema());
+        }
         if (m_ls_schema = log_surgeon::log_surgeon_schema_from_definition(
-                    log_surgeon::CCharArray::from_string_view(
-                            YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_log_surgeon_schema())
-                    )
+                    log_surgeon::CCharArray::from_string_view(m_ls_schema_contents)
             );
             nullptr == m_ls_schema)
         {
@@ -880,6 +882,7 @@ auto SchemaMatch::decompose_query(
     }
     if (root_rule_query && nullptr == m_ls_parser) {
         m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+        m_ls_schema = nullptr;
     }
 
     auto dq{(root_rule_query)
