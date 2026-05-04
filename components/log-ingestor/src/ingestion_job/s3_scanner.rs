@@ -9,7 +9,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{
     aws_client_manager::AwsClientManagerType,
-    ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState},
+    ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState, scan_prefix},
 };
 
 /// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
@@ -27,7 +27,7 @@ struct Task<
     s3_client_manager: S3ClientManager,
     scanning_interval: Duration,
     config: S3ScannerConfig,
-    start_after: Option<String>,
+    start_after: Option<NonEmptyString>,
     state: State,
 }
 
@@ -36,8 +36,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
 {
     /// Runs the S3 scanner task to scan the given bucket.
     ///
-    /// This is a wrapper of [`Self::scan_once`] that supports cancellation via the provided
-    /// cancellation token.
+    /// This is a wrapper of [`Self::scan_until_exhausted`] that supports cancellation via the
+    /// provided cancellation token.
     ///
     /// # Returns
     ///
@@ -47,7 +47,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::scan_once`]'s return values on failure.
+    /// * Forwards [`Self::scan_until_exhausted`]'s return values on failure.
     pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
         loop {
             select! {
@@ -57,15 +57,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
                 }
 
                 // Scanner execution
-                is_truncated_result = self.scan_once() => {
-                    if is_truncated_result? {
-                        // The results are truncated. Keep going until all objects are listed.
-                        // Ideally, we can use the continuation token to continue listing objects,
-                        // but since we may refresh the client in the next scan cycle, we will use
-                        // `start_after` to send a new request to resume the scanning progress for
-                        // simplicity.
-                        continue;
-                    }
+                result = self.scan_until_exhausted() => {
+                    result?;
                 }
             }
 
@@ -79,8 +72,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
         }
     }
 
-    /// Scans the configured S3 bucket and prefix for new objects and ingests their metadata into
-    /// the provided state.
+    /// Scans the configured S3 bucket and prefix until all pages are exhausted.
     ///
     /// # Note
     ///
@@ -88,68 +80,30 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
     /// meaning that it requires the keys of newly inserted objects to be lexicographically larger
     /// than the last successfully ingested key.
     ///
-    /// # Returns
-    ///
-    /// Whether the underlying `list_buckets` call was truncated.
-    ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards
-    ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
-    ///   return values on failure.
-    /// * Forwards [`NonEmptyString::new`]'s return values on failure.
-    /// * Forwards [`S3ScannerState::ingest`]'s return values on failure.
-    /// * Forwards [`i64::try_into`]'s return values when failing to convert object size to [`u64`].
-    pub async fn scan_once(&mut self) -> Result<bool> {
+    /// * Forwards [`scan_prefix`]'s return values on failure.
+    pub async fn scan_until_exhausted(&mut self) -> Result<()> {
         let client = self.s3_client_manager.get().await?;
-        let response = client
-            .list_objects_v2()
-            .bucket(self.config.base.bucket_name.as_str())
-            .prefix(self.config.base.key_prefix.as_str())
-            .set_start_after(self.start_after.clone())
-            .send()
-            .await?;
-        let Some(contents) = response.contents else {
-            return Ok(false);
-        };
-
-        let mut object_metadata_to_ingest = Vec::with_capacity(contents.len());
-        for content in contents {
-            let (Some(key), Some(size)) = (content.key, content.size) else {
-                continue;
-            };
-            if key.ends_with('/') {
-                continue;
-            }
-            let object_metadata = ObjectMetadata {
-                bucket: self.config.base.bucket_name.clone(),
-                key: NonEmptyString::new(key.clone())
-                    .map_err(|_| anyhow::anyhow!("An empty key is received."))?,
-                size: size.try_into()?,
-                id: None,
-            };
-            object_metadata_to_ingest.push(object_metadata);
-        }
-
-        if object_metadata_to_ingest.is_empty() {
-            return Ok(response.is_truncated.unwrap_or(false));
-        }
-
-        let last_ingested_key: String = object_metadata_to_ingest
-            .last()
-            .expect("`object_metadata_to_ingest` should not be empty")
-            .key
-            .clone()
-            .into();
-        self.state
-            .ingest(object_metadata_to_ingest, last_ingested_key.as_str())
-            .await?;
-        self.start_after = Some(last_ingested_key);
-
-        Ok(response.is_truncated.unwrap_or(false))
+        let state = self.state.clone();
+        let last_scanned_key = scan_prefix(
+            &client,
+            &self.config.base.bucket_name,
+            &self.config.base.key_prefix,
+            self.start_after.take(),
+            async move |page: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
+                let last_ingested_key =
+                    page.last().expect("`page` should not be empty").key.clone();
+                state.ingest(page, last_ingested_key.as_str()).await?;
+                Ok((true, last_ingested_key))
+            },
+        )
+        .await?;
+        self.start_after = last_scanned_key;
+        Ok(())
     }
 
     /// Sleeps for the configured scanning interval.
@@ -192,7 +146,7 @@ impl<State: IngestionJobState + S3ScannerState> S3Scanner<State> {
         state: State,
     ) -> Self {
         let scanning_interval = Duration::from_secs(u64::from(config.scanning_interval_sec));
-        let start_after = config.start_after.clone().map(Into::into);
+        let start_after = config.start_after.clone();
         let task = Task {
             s3_client_manager,
             scanning_interval,

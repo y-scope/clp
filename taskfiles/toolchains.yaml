@@ -7,6 +7,9 @@ includes:
 vars:
   G_HELM_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/helm"
   G_HELM_TOOLCHAIN_ENV_FILE: "{{.G_HELM_TOOLCHAIN_DIR}}/env"
+  G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
+  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
+  G_NODEJS_22_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/nodejs-22.md5"
   G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
   G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
 
@@ -53,6 +56,33 @@ tasks:
         #!/bin/sh
         export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
         EOF
+
+  nodejs-22:
+    internal: true
+    vars:
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      NODEJS_VERSION: "v22.20.0"
+    run: "once"
+    cmds:
+      - task: "remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+          FILE_SHA256: >-
+            {{- if and (eq OS "linux") (eq .NODEJS_ARCH "x64") -}}
+              00bbd05e306ea68b6e13e17360d0e2f680b493ef95f2fea1c4296ff7437530bc
+            {{- else if and (eq OS "linux") (eq .NODEJS_ARCH "arm64") -}}
+              06907b9c088ce62305bc1530e5c1ae1510245114645768f7750c349c5b6fe667
+            {{- else if and (eq OS "darwin") (eq .NODEJS_ARCH "arm64") -}}
+              f2ed1fbdfb79afb9343dfbb609efde657b41e7efcd5215264ce78f8906356b4d
+            {{- else if and (eq OS "darwin") (eq .NODEJS_ARCH "x64") -}}
+              2a291f0a9555f5d6685d96ce9429da3d0ea3cd896c012702c6ee0015f818684e
+            {{- else -}}
+              unsupported
+            {{- end }}
+          NUM_COMPONENTS_TO_STRIP: "1"
+          OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
+          URL: >-
+            https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
 
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.

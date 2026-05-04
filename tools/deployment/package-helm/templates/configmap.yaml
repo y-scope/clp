@@ -117,9 +117,6 @@ data:
     {{- end }}{{/* with .Values.clpConfig.logs_input */}}
     {{- with .Values.clpConfig.log_ingestor }}
     log_ingestor:
-      buffer_flush_threshold: {{ .buffer_flush_threshold | int }}
-      buffer_flush_timeout: {{ .buffer_flush_timeout | int }}
-      channel_capacity: {{ .channel_capacity | int }}
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002
@@ -135,6 +132,7 @@ data:
       logging_level: {{ .logging_level | quote }}
       num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
       port: 7000
+      scheduler_concurrency: {{ .scheduler_concurrency | int }}
     {{- end }}
     {{- with .Values.clpConfig.query_worker }}
     query_worker:

@@ -52,10 +52,11 @@ def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
 
     :param fixt_package_instance:
     """
+    logger.info("Starting test: 'test_clp_json_startup'")
+
     validate_package_instance(fixt_package_instance)
 
-    log_msg = "test_clp_json_startup was successful."
-    logger.info(log_msg)
+    logger.info("Test complete: 'test_clp_json_startup'")
 
 
 @pytest.mark.compression
@@ -65,6 +66,8 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
 
     :param fixt_package_instance:
     """
+    logger.info("Starting test: 'test_clp_json_compression_json_multifile'")
+
     validate_package_instance(fixt_package_instance)
 
     # Clear archives before compressing.
@@ -90,11 +93,10 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     # Check the correctness of compression.
     verify_package_compression(compression_job.path_to_original_dataset, package_test_config)
 
-    log_msg = "test_clp_json_compression_json_multifile was successful."
-    logger.info(log_msg)
-
     # Clear archives.
     package_path_config.clear_package_archives()
+
+    logger.info("Test complete: 'test_clp_json_compression_json_multifile'")
 
 
 @pytest.mark.search
@@ -104,6 +106,8 @@ def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
 
     :param fixt_package_instance:
     """
+    logger.info("Starting test: 'test_clp_json_search'")
+
     validate_package_instance(fixt_package_instance)
 
     # TODO: compress a dataset
@@ -114,7 +118,6 @@ def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
 
     assert True
 
-    log_msg = "test_clp_json_search was successful."
-    logger.info(log_msg)
+    logger.info("Test complete: 'test_clp_json_search'")
 
     # TODO: clean up clp-package/var/data, clp-package/var/log, and clp-package/var/tmp

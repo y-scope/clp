@@ -96,9 +96,10 @@ Once the pods are ready, you can [query your logs through Presto](#querying-your
 using CLP's Web UI.
 
 :::{note}
-When using Kubernetes, Presto worker scheduling can be configured using the `prestoWorker.scheduling`
-key in Helm values. See the [worker scheduling][k8s-scheduling] section of the Kubernetes deployment
-guide for details.
+When using Kubernetes, Presto worker scheduling can be configured using the
+`scheduling.prestoWorker` key in Helm values. Presto coordinator scheduling uses
+`scheduling.prestoCoordinator`. See the [component scheduling][k8s-scheduling] section of the
+Kubernetes deployment guide for details.
 :::
 
 ## Docker Compose
@@ -316,7 +317,7 @@ These limitations will be addressed in a future release of the Presto integratio
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
 [k8s-deployment]: guides-k8s-deployment.md
-[k8s-scheduling]: guides-k8s-deployment.md#worker-scheduling
+[k8s-scheduling]: guides-k8s-deployment.md#component-scheduling
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8

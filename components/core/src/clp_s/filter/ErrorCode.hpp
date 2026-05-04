@@ -12,6 +12,8 @@ enum class ErrorCodeEnum : uint8_t {
     UnsupportedHashAlgorithm,
     CorruptFilterPayload,
     ReadFailure,
+    UnsupportedFilterType,
+    UnsupportedFilterNormalization,
 };
 
 using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;

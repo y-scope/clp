@@ -1,5 +1,7 @@
 """Provides utilities related to the user-level configurations of CLP's operating modes."""
 
+# TODO: this file will be phased out in favour of `tests/package_tests/utils/modes.py`.
+
 from typing import Any
 
 from clp_py_utils.clp_config import (

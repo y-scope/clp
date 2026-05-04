@@ -79,6 +79,16 @@ where `<flavor>` is `json` or `text`.
 The tar will be written to `build/clp-<flavor>-<os>-<arch>-v<version>.tar.gz`, with appropriate
 values for the fields in angle brackets.
 
+## Config overrides
+
+To persist custom config or credentials across rebuilds, place overrides in
+`components/package-template/src/etc/`:
+
+* `clp-config.yaml` overrides the template-generated config.
+* `credentials.yaml` overrides the auto-generated credentials.
+
+These files are git-ignored.
+
 ## Cleanup
 
 To clean up all build artifacts, run:
