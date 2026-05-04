@@ -13,7 +13,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/CurlGlobalInstance.hpp"
+#if CLP_BUILD_CLP_S_ENABLE_CURL
+    #include "../clp/CurlGlobalInstance.hpp"
+#endif
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
@@ -24,11 +26,8 @@
 #include "kv_ir_search.hpp"
 #include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
-#include "search/ast/ConvertToExists.hpp"
 #include "search/ast/EmptyExpr.hpp"
 #include "search/ast/Expression.hpp"
-#include "search/ast/NarrowTypes.hpp"
-#include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
 #include "search/ast/SetTimestampLiteralPrecision.hpp"
 #include "search/ast/TimestampLiteral.hpp"
@@ -94,7 +93,8 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     }
 
     clp_s::JsonParserOption option{};
-    option.input_paths = command_line_arguments.get_input_paths();
+    option.input_paths_and_canonical_filenames
+            = command_line_arguments.get_input_paths_and_canonical_filenames();
     option.network_auth = command_line_arguments.get_network_auth();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
@@ -148,20 +148,9 @@ bool search_archive(
         return false;
     }
 
-    ast::OrOfAndForm standardize_pass;
-    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
-        return false;
-    }
-
-    ast::NarrowTypes narrow_pass;
-    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
-        return false;
-    }
-
-    ast::ConvertToExists convert_pass;
-    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+    if (expr = clp_s::search::ast::preprocess_query(expr);
+        std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
+    {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
@@ -267,7 +256,8 @@ bool search_archive(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
                         command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results()
+                        command_line_arguments.get_max_num_results(),
+                        command_line_arguments.get_dataset()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
@@ -305,7 +295,9 @@ int main(int argc, char const* argv[]) {
     }
 
     mongocxx::instance const mongocxx_instance{};
+#if CLP_BUILD_CLP_S_ENABLE_CURL
     clp::CurlGlobalInstance const curl_instance{};
+#endif
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);

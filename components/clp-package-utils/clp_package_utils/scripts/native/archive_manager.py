@@ -28,7 +28,7 @@ from clp_package_utils.scripts.archive_manager import (
     END_TS_ARG,
     FIND_COMMAND,
 )
-from clp_package_utils.scripts.native.utils import validate_dataset_exists
+from clp_package_utils.scripts.native.utils import validate_datasets_exist
 
 logger: logging.Logger = logging.getLogger(__file__)
 
@@ -200,7 +200,7 @@ def main(argv: list[str]) -> int:
     dataset = parsed_args.dataset
     if dataset is not None:
         try:
-            validate_dataset_exists(database_config, dataset)
+            validate_datasets_exist(database_config, [dataset])
         except Exception as e:
             logger.error(e)
             return -1

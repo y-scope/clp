@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <boost/program_options/option.hpp>
@@ -48,6 +49,11 @@ public:
     Command get_command() const { return m_command; }
 
     std::vector<Path> const& get_input_paths() const { return m_input_paths; }
+
+    [[nodiscard]] auto get_input_paths_and_canonical_filenames() const
+            -> std::vector<std::pair<Path, std::string>> const& {
+        return m_input_paths_and_canonical_filenames;
+    }
 
     NetworkAuthOption const& get_network_auth() const { return m_network_auth; }
 
@@ -123,6 +129,8 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
+    std::string const& get_dataset() const { return m_dataset; }
+
 private:
     // Methods
     /**
@@ -191,6 +199,7 @@ private:
 
     // Compression and decompression variables
     std::vector<Path> m_input_paths;
+    std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
     std::string m_archives_dir;
     std::string m_output_dir;
@@ -227,6 +236,7 @@ private:
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
     std::vector<std::string> m_projection_columns;
+    std::string m_dataset;
 
     // Search aggregation variables
     std::string m_reducer_host;

@@ -1,6 +1,6 @@
 [project]
 name = "yscope-clp-core"
-version = "0.9.1-dev"
+version = "0.12.1-dev"
 description = "YScope CLP (Compressed Log Processor) Core Python Distribution"
 readme = "README.md"
 authors = [

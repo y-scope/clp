@@ -5,13 +5,12 @@
 #include <system_error>
 #include <utility>
 
-#include <curl/curl.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "../../clp/NetworkReader.hpp"
 #include "../../clp/ReaderInterface.hpp"
 #include "../InputConfig.hpp"
+#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "LogConverter.hpp"
 
@@ -20,43 +19,14 @@ using clp_s::log_converter::LogConverter;
 
 namespace {
 /**
- * Checks for and logs CURL errors on a reader.
- * @param path The path that the reader has opened.
- * @param reader The open reader which may have experienced a CURL error.
- * @return Whether a CURL error has occurred on the reader.
- */
-[[nodiscard]] auto
-check_and_log_curl_error(clp_s::Path const& path, clp::ReaderInterface const* reader) -> bool;
-
-/**
  * Converts all files according to the command line arguments.
  * @param command_line_arguments
  * @return Whether conversion was successful.
  */
 [[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
-auto check_and_log_curl_error(clp_s::Path const& path, clp::ReaderInterface const* reader) -> bool {
-    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
-    if (nullptr == network_reader) {
-        return false;
-    }
-    if (auto const rc = network_reader->get_curl_ret_code();
-        rc.has_value() && CURLcode::CURLE_OK != rc.value())
-    {
-        auto const curl_error_message = network_reader->get_curl_error_msg();
-        SPDLOG_ERROR(
-                "Encountered curl error while converting {} - Code: {} - Message: {}",
-                path.path,
-                static_cast<int64_t>(rc.value()),
-                curl_error_message.value_or("Unknown error.")
-        );
-        return true;
-    }
-    return false;
-}
-
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
-    LogConverter log_converter;
+    LogConverter log_converter{command_line_arguments.get_max_log_event_size()};
 
     std::error_code ec{};
     if (false == std::filesystem::create_directory(command_line_arguments.get_output_dir(), ec)
@@ -71,22 +41,26 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
     }
 
     for (auto const& path : command_line_arguments.get_input_paths()) {
-        auto reader{clp_s::try_create_reader(path, command_line_arguments.get_network_auth())};
-        if (nullptr == reader) {
-            SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
-            return false;
-        }
+        auto [nested_readers, file_type] = clp_s::try_create_reader_and_deduce_type_with_retries(
+                path,
+                command_line_arguments.get_network_auth()
+        );
 
-        auto [nested_readers, file_type] = clp_s::try_deduce_reader_type(reader);
         switch (file_type) {
             case clp_s::FileType::LogText:
+            case clp_s::FileType::EmptyFile:
                 break;
             case clp_s::FileType::Json:
             case clp_s::FileType::KeyValueIr:
             case clp_s::FileType::Zstd:
             case clp_s::FileType::Unknown:
             default: {
-                std::ignore = check_and_log_curl_error(path, reader.get());
+                if (false == nested_readers.empty()) {
+                    clp_s::NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    );
+                }
                 SPDLOG_ERROR("Received input that was not unstructured logtext: {}.", path.path);
                 return false;
             }
