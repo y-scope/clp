@@ -1,10 +1,13 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
+import pytest
+
+from tests.utils.classes import ExternalAction
 from tests.utils.config import (
     PackageCompressionJob,
     PackageTestConfig,
 )
-from tests.utils.subprocess_utils import run_and_log_subprocess
+from tests.utils.logging_utils import format_action_failure_msg
 
 
 def start_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -12,7 +15,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
     Starts an instance of the CLP package.
 
     :param package_test_config:
-    :raise: Propagates `run_and_log_subprocess`'s errors.
+    :raise pytest.fail: if the start script returns a non-zero exit code.
     """
     path_config = package_test_config.path_config
     start_script_path = path_config.start_script_path
@@ -24,7 +27,14 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_log_subprocess(start_cmd)
+    start_action = ExternalAction(cmd=start_cmd)
+    if start_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"Failed to start CLP package using `{start_script_path.name}`.",
+                start_action,
+            )
+        )
 
 
 def stop_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -32,7 +42,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     Stops the running instance of the CLP package.
 
     :param package_test_config:
-    :raise: Propagates `run_and_log_subprocess`'s errors.
+    :raise pytest.fail: if the stop script returns a non-zero exit code.
     """
     path_config = package_test_config.path_config
     stop_script_path = path_config.stop_script_path
@@ -44,7 +54,14 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    run_and_log_subprocess(stop_cmd)
+    stop_action = ExternalAction(cmd=stop_cmd)
+    if stop_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"Failed to stop CLP package using `{stop_script_path.name}`.",
+                stop_action,
+            )
+        )
 
 
 def run_package_compression_script(
@@ -56,6 +73,7 @@ def run_package_compression_script(
 
     :param compression_job:
     :param package_test_config:
+    :raise pytest.fail: if the compression script returns a non-zero exit code.
     """
     path_config = package_test_config.path_config
     compress_script_path = path_config.compress_script_path
@@ -76,4 +94,11 @@ def run_package_compression_script(
     compress_cmd.append(str(compression_job.path_to_original_dataset))
 
     # Run compression command for this job and assert that it succeeds.
-    run_and_log_subprocess(compress_cmd)
+    compress_action = ExternalAction(cmd=compress_cmd)
+    if compress_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"Compression script `{compress_script_path.name}` failed.",
+                compress_action,
+            )
+        )

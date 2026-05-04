@@ -8,13 +8,14 @@ from clp_package_utils.general import EXTRACT_FILE_CMD
 from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
+from tests.utils.classes import ExternalAction
 from tests.utils.clp_mode_utils import compare_mode_signatures
 from tests.utils.config import PackageInstance, PackageTestConfig
 from tests.utils.docker_utils import list_running_services_in_compose_project
-from tests.utils.subprocess_utils import run_and_log_subprocess
+from tests.utils.fs_validation import is_dir_tree_content_equal
+from tests.utils.logging_utils import format_action_failure_msg
 from tests.utils.utils import (
     clear_directory,
-    is_dir_tree_content_equal,
     load_yaml_to_dict,
 )
 
@@ -133,7 +134,14 @@ def verify_package_compression(
         ]
 
         # Run decompression command and assert that it succeeds.
-        run_and_log_subprocess(decompress_cmd)
+        decompress_action = ExternalAction(cmd=decompress_cmd)
+        if decompress_action.completed_proc.returncode != 0:
+            pytest.fail(
+                format_action_failure_msg(
+                    f"Decompression script `{decompress_script_path.name}` failed.",
+                    decompress_action,
+                )
+            )
 
         # Verify content equality.
         output_path = decompression_dir / path_to_original_dataset.relative_to(

@@ -2,14 +2,15 @@
 
 import logging
 import pathlib
-import subprocess
 
 import pytest
 
+from tests.utils.classes import ExternalAction
 from tests.utils.config import (
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
+from tests.utils.logging_utils import format_action_failure_msg
 from tests.utils.utils import (
     get_binary_path,
     remove_path,
@@ -100,7 +101,7 @@ def _download_and_extract_gzip_dataset(
     :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
         Defaults to False to avoid an unnecessary extra directory level.
     :return: An IntegrationTestLogs instance providing metadata for the downloaded logs.
-    :raises subprocess.CalledProcessError: If `curl`, `tar`, or `chmod` fails.
+    :raise pytest.fail: If `curl`, `tar`, or `chmod` returns a non-zero exit code.
     """
     integration_test_logs = IntegrationTestLogs(
         name=name,
@@ -128,7 +129,14 @@ def _download_and_extract_gzip_dataset(
         tarball_url,
     ]
     # fmt: on
-    subprocess.run(curl_cmd, check=True)
+    curl_action = ExternalAction(cmd=curl_cmd)
+    if curl_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"`curl` failed when downloading `{tarball_url}`.",
+                curl_action,
+            )
+        )
 
     # fmt: off
     extract_cmd = [
@@ -141,13 +149,34 @@ def _download_and_extract_gzip_dataset(
     # fmt: on
     if not keep_leading_dir:
         extract_cmd.extend(["--strip-components", "1"])
-    subprocess.run(extract_cmd, check=True)
+    extract_action = ExternalAction(cmd=extract_cmd)
+    if extract_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"`tar` failed when extracting `{tarball_path_str}`.",
+                extract_action,
+            )
+        )
 
     # Allow the downloaded and extracted contents to be deletable or overwritable by adding write
     # permissions for both the user and the group.
     chmod_bin = get_binary_path("chmod")
-    subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
-    subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
+    chmod_tarball_action = ExternalAction(cmd=[chmod_bin, "gu+w", tarball_path_str])
+    if chmod_tarball_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"`chmod` failed for `{tarball_path_str}`.",
+                chmod_tarball_action,
+            )
+        )
+    chmod_extract_action = ExternalAction(cmd=[chmod_bin, "-R", "gu+w", extract_path_str])
+    if chmod_extract_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg(
+                f"`chmod` failed for `{extract_path_str}`.",
+                chmod_extract_action,
+            )
+        )
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)

@@ -5,17 +5,18 @@ compression and decompression.
 
 import pytest
 
+from tests.utils.classes import ExternalAction
 from tests.utils.config import (
     ClpCorePathConfig,
     CompressionTestPathConfig,
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
-from tests.utils.subprocess_utils import run_and_log_subprocess
-from tests.utils.utils import (
+from tests.utils.fs_validation import (
     is_dir_tree_content_equal,
     is_json_file_structurally_equal,
 )
+from tests.utils.logging_utils import format_action_failure_msg
 
 pytestmark = pytest.mark.core
 
@@ -73,10 +74,14 @@ def test_clp_identity_transform(
         src_path,
     ]
     # fmt: on
-    run_and_log_subprocess(compression_cmd)
+    compression_action = ExternalAction(cmd=compression_cmd)
+    if compression_action.completed_proc.returncode != 0:
+        pytest.fail(format_action_failure_msg("`clp` compression failed.", compression_action))
 
     decompression_cmd = [bin_path, "x", compression_path, decompression_path]
-    run_and_log_subprocess(decompression_cmd)
+    decompression_action = ExternalAction(cmd=decompression_cmd)
+    if decompression_action.completed_proc.returncode != 0:
+        pytest.fail(format_action_failure_msg("`clp` decompression failed.", decompression_action))
 
     input_path = test_paths.logs_source_dir
     output_path = test_paths.decompression_dir
@@ -148,5 +153,12 @@ def _clp_s_compress_and_decompress(
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
-    run_and_log_subprocess([bin_path, "c", compression_path, src_path])
-    run_and_log_subprocess([bin_path, "x", compression_path, decompression_path])
+    compression_action = ExternalAction(cmd=[bin_path, "c", compression_path, src_path])
+    if compression_action.completed_proc.returncode != 0:
+        pytest.fail(format_action_failure_msg("`clp-s` compression failed.", compression_action))
+
+    decompression_action = ExternalAction(cmd=[bin_path, "x", compression_path, decompression_path])
+    if decompression_action.completed_proc.returncode != 0:
+        pytest.fail(
+            format_action_failure_msg("`clp-s` decompression failed.", decompression_action)
+        )
