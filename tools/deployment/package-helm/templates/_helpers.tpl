@@ -423,14 +423,13 @@ When distributedDeployment is false (single-node mode), a control-plane tolerati
 added so pods can be scheduled on tainted control-plane nodes without manual untainting.
 
 @param {object} root Root template context
-@param {string} component Key name in top-level Values (e.g., "compressionWorker", "queryWorker")
+@param {string} component Key name under .Values.scheduling (e.g., "compressionWorker", "database")
 @return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
   topologySpreadConstraints)
 */}}
 {{- define "clp.createSchedulingConfigs" -}}
-{{- $componentConfig := index .root.Values .component | default dict -}}
-{{- $scheduling := $componentConfig.scheduling | default dict -}}
-{{- $tolerations := $scheduling.tolerations | default list -}}
+{{- $schedulingConfig := index .root.Values.scheduling .component | default dict -}}
+{{- $tolerations := $schedulingConfig.tolerations | default list -}}
 {{- if not .root.Values.distributedDeployment -}}
 {{- $tolerations = append $tolerations (dict
     "key" "node-role.kubernetes.io/control-plane"
@@ -438,11 +437,11 @@ added so pods can be scheduled on tainted control-plane nodes without manual unt
     "effect" "NoSchedule"
 ) -}}
 {{- end -}}
-{{- with $scheduling.nodeSelector }}
+{{- with $schedulingConfig.nodeSelector }}
 nodeSelector:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with $scheduling.affinity }}
+{{- with $schedulingConfig.affinity }}
 affinity:
   {{- toYaml . | nindent 2 }}
 {{- end }}
@@ -450,7 +449,7 @@ affinity:
 tolerations:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with $scheduling.topologySpreadConstraints }}
+{{- with $schedulingConfig.topologySpreadConstraints }}
 topologySpreadConstraints:
   {{- toYaml . | nindent 2 }}
 {{- end }}

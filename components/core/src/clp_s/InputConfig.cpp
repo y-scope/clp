@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cctype>
+#include <chrono>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -9,12 +11,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/BufferedReader.hpp"
+#include "../clp/ErrorCode.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
 #include "../clp/ReaderInterface.hpp"
@@ -361,6 +365,13 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
     size_t peek_size{};
     reader->peek_buffered_data(peek_buf, peek_size);
     if (nullptr == peek_buf || 0 == peek_size) {
+        char buf{};
+        size_t bytes_read{};
+        if (auto const rc{reader->try_read(&buf, 1, bytes_read)};
+            0 == bytes_read && clp::ErrorCode_EndOfFile == rc)
+        {
+            return FileType::EmptyFile;
+        }
         return FileType::Unknown;
     }
 
@@ -426,6 +437,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
             case FileType::Json:
             case FileType::KeyValueIr:
             case FileType::LogText:
+            case FileType::EmptyFile:
                 return {std::move(readers), type};
             case FileType::Zstd: {
                 readers.emplace_back(
@@ -457,5 +469,51 @@ void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> con
             decompressor->close();
         }
     }
+}
+
+auto try_create_reader_and_deduce_type_with_retries(
+        Path const& path,
+        NetworkAuthOption const& network_auth,
+        size_t max_retries
+) -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
+    constexpr std::chrono::seconds cInitialBackoff{1};
+
+    for (size_t attempt{0}; attempt <= max_retries; ++attempt) {
+        if (attempt > 0) {
+            auto const backoff{cInitialBackoff * (1U << (attempt - 1))};
+            SPDLOG_WARN(
+                    "Retrying input {} (attempt {}/{}) after {}s backoff.",
+                    path.path,
+                    attempt,
+                    max_retries,
+                    backoff.count()
+            );
+            std::this_thread::sleep_for(backoff);
+        }
+
+        auto reader{try_create_reader(path, network_auth)};
+        if (nullptr == reader) {
+            if (attempt < max_retries) {
+                SPDLOG_WARN("Failed to create reader for {}, will retry.", path.path);
+                continue;
+            }
+            SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
+            return {{}, FileType::Unknown};
+        }
+
+        auto result = try_deduce_reader_type(reader);
+        auto const& [nested_readers, file_type] = result;
+
+        if (FileType::Unknown == file_type && NetworkUtils::is_retryable_curl_error(reader.get())
+            && attempt < max_retries)
+        {
+            NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+            continue;
+        }
+
+        return result;
+    }
+
+    return {{}, FileType::Unknown};
 }
 }  // namespace clp_s

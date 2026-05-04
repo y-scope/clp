@@ -1,5 +1,7 @@
 #include "RecordReceiverContext.hpp"
 
+#include <cstring>
+
 #include "../clp/spdlog_with_specializations.hpp"
 #include "DeserializedRecordGroup.hpp"
 #include "types.hpp"
@@ -13,7 +15,7 @@ bool RecordReceiverContext::read_connection_init_packet() {
         return false;
     }
 
-    memcpy(&job_id, m_buf.data(), sizeof(job_id));
+    std::memcpy(&job_id, m_buf.data(), sizeof(job_id));
     if (job_id != m_server_ctx->get_job_id()) {
         SPDLOG_ERROR(
                 "Rejecting connection from worker with job_id={} during processing of "
@@ -48,7 +50,7 @@ bool RecordReceiverContext::read_record_groups_packet() {
         if (m_buf_num_bytes_occupied < sizeof(record_size)) {
             break;
         }
-        memcpy(&record_size, read_head, sizeof(record_size));
+        std::memcpy(&record_size, read_head, sizeof(record_size));
 
         // terminate if record group size is over 16 MiB
         if (record_size >= cMaxRecordSize) {
@@ -73,7 +75,7 @@ bool RecordReceiverContext::read_record_groups_packet() {
             std::copy(m_buf.begin(), m_buf.end(), new_buf.begin());
             m_buf.swap(new_buf);
         } else {
-            memmove(m_buf.data(), read_head, m_buf_num_bytes_occupied);
+            std::memmove(m_buf.data(), read_head, m_buf_num_bytes_occupied);
         }
     }
 

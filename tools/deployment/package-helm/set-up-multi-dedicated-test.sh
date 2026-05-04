@@ -11,6 +11,8 @@ CLUSTER_NAME="${CLUSTER_NAME:-clp-test}"
 NUM_COMPRESSION_NODES="${NUM_COMPRESSION_NODES:-2}"
 NUM_QUERY_NODES="${NUM_QUERY_NODES:-2}"
 NUM_PRESTO_NODES="${NUM_PRESTO_NODES:-0}"
+NUM_DB_NODES="${NUM_DB_NODES:-1}"
+NUM_CORE_NODES="${NUM_CORE_NODES:-1}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
 REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
@@ -35,6 +37,8 @@ echo "Cluster: ${CLUSTER_NAME}"
 echo "Compression nodes: ${NUM_COMPRESSION_NODES}"
 echo "Query nodes: ${NUM_QUERY_NODES}"
 echo "Presto nodes: ${NUM_PRESTO_NODES}"
+echo "DB nodes: ${NUM_DB_NODES}"
+echo "Core nodes: ${NUM_CORE_NODES}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
 echo "Reducers: ${REDUCER_REPLICAS}"
@@ -44,7 +48,7 @@ echo ""
 
 prepare_environment "${CLUSTER_NAME}"
 
-total_workers=$((NUM_COMPRESSION_NODES + NUM_QUERY_NODES + NUM_PRESTO_NODES))
+total_workers=$((NUM_COMPRESSION_NODES + NUM_QUERY_NODES + NUM_PRESTO_NODES + NUM_CORE_NODES + NUM_DB_NODES))
 
 echo "Creating kind cluster..."
 generate_kind_config "${total_workers}" | kind create cluster --name "${CLUSTER_NAME}" --config=-
@@ -66,9 +70,24 @@ for ((i = NUM_COMPRESSION_NODES; i < query_end; i++)); do
 done
 
 # Label Presto nodes
-for ((i = query_end; i < total_workers; i++)); do
+presto_end=$((query_end + NUM_PRESTO_NODES))
+for ((i = query_end; i < presto_end; i++)); do
     echo "Labeling ${worker_nodes[$i]} as presto node"
     kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=presto --overwrite
+done
+
+# Label DB nodes
+db_end=$((presto_end + NUM_DB_NODES))
+for ((i = presto_end; i < db_end; i++)); do
+    echo "Labeling ${worker_nodes[$i]} as db node"
+    kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=db --overwrite
+done
+
+# Label core nodes
+core_end=$((db_end + NUM_CORE_NODES))
+for ((i = db_end; i < core_end; i++)); do
+    echo "Labeling ${worker_nodes[$i]} as core node"
+    kubectl label node "${worker_nodes[$i]}" yscope.io/nodeType=core --overwrite
 done
 
 # Pre-create shared-data PVs with hostPath (no node affinity) so PVCs bind to them instead of
@@ -121,14 +140,26 @@ sleep 2
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
-    --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
-    --set "compressionWorker.scheduling.nodeSelector.yscope\.io/nodeType=compression" \
-    --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "queryWorker.scheduling.nodeSelector.yscope\.io/nodeType=query" \
-    --set "reducer.replicas=${REDUCER_REPLICAS}" \
-    --set "reducer.scheduling.nodeSelector.yscope\.io/nodeType=query" \
-    --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
-    --set "prestoWorker.scheduling.nodeSelector.yscope\.io/nodeType=presto" \
+    --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
+    --set "scheduling.compressionWorker.nodeSelector.yscope\.io/nodeType=compression" \
+    --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
+    --set "scheduling.queryWorker.nodeSelector.yscope\.io/nodeType=query" \
+    --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
+    --set "scheduling.reducer.nodeSelector.yscope\.io/nodeType=query" \
+    --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    --set "scheduling.prestoWorker.nodeSelector.yscope\.io/nodeType=presto" \
+    --set "scheduling.database.nodeSelector.yscope\.io/nodeType=db" \
+    --set "scheduling.queue.nodeSelector.yscope\.io/nodeType=db" \
+    --set "scheduling.redis.nodeSelector.yscope\.io/nodeType=db" \
+    --set "scheduling.resultsCache.nodeSelector.yscope\.io/nodeType=db" \
+    --set "scheduling.compressionScheduler.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.logIngestor.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.queryScheduler.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.prestoCoordinator.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.garbageCollector.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.apiServer.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.webui.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.mcpServer.nodeSelector.yscope\.io/nodeType=core" \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
 

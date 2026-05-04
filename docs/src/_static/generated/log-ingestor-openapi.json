@@ -9,7 +9,7 @@
     "license": {
       "name": ""
     },
-    "version": "0.1.0"
+    "version": "0.12.1-dev"
   },
   "paths": {
     "/health": {
@@ -222,6 +222,10 @@
             "description": "The S3 bucket to ingest from.",
             "minLength": 1
           },
+          "buffer_config": {
+            "$ref": "#/components/schemas/BufferConfig",
+            "description": "Per-job ingestion buffer config."
+          },
           "dataset": {
             "type": "string",
             "description": "The dataset to ingest into. Defaults to `None` (which uses the default dataset).",
@@ -250,6 +254,32 @@
           "unstructured": {
             "type": "boolean",
             "description": "Whether to treat the ingested objects as unstructured logs. Defaults to `false`."
+          }
+        }
+      },
+      "BufferConfig": {
+        "type": "object",
+        "description": "Configuration for buffer behavior.",
+        "properties": {
+          "channel_capacity": {
+            "type": "integer",
+            "description": "Capacity of the internal buffer channel.\n\nDefines the maximum number of objects that can be queued before being processed by the\nbuffer. Increasing this value may improve throughput at the cost of higher memory\nusage.\n\nDefaults to 16. Must be a positive integer. The behavior for values less than 1 is\nundefined.",
+            "default": 16,
+            "minimum": 1
+          },
+          "flush_threshold_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Size-based flush threshold in bytes.\n\nThe buffer is flushed to create a compression job once the total size of buffered\nobjects exceeds this threshold.\n\nDefaults to 4 GiB.",
+            "default": 4294967296,
+            "minimum": 0
+          },
+          "timeout_sec": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time-based flush threshold in seconds.\n\nThis is a hard timeout. The buffer is flushed to create a compression job when the\noldest buffered object has remained in the buffer for at least this duration,\nregardless of the total buffered size. The timer is not reset by newly ingested\nobjects.\n\nDefaults to 300 seconds (5 minutes).",
+            "default": 300,
+            "minimum": 0
           }
         }
       },
