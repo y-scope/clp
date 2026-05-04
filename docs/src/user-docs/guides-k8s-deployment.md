@@ -321,19 +321,19 @@ To run compression workers, query workers, and reducers in separate node pools:
        nodeSelector:
          yscope.io/nodeType: "presto"
 
-      # Optional: to isolate bundled data services
-      database:
-        nodeSelector:
-          yscope.io/nodeType: "db"
-      queue:
-        nodeSelector:
-          yscope.io/nodeType: "db"
-      redis:
-        nodeSelector:
-          yscope.io/nodeType: "db"
-      resultsCache:
-        nodeSelector:
-          yscope.io/nodeType: "db"
+     # Optional: to isolate bundled data services
+     database:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     queue:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     redis:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     resultsCache:
+       nodeSelector:
+         yscope.io/nodeType: "db"
    ```
 
 3. Install:

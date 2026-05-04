@@ -61,20 +61,20 @@ scheduling:
     replicas: 1
 
   # Database
-  # database: {}
-  # queue: {}
-  # redis: {}
-  # resultsCache: {}
+  database: {}
+  queue: {}
+  redis: {}
+  resultsCache: {}
 
   # Core
-  # compressionScheduler: {}
-  # logIngestor: {}
-  # queryScheduler: {}
-  # prestoCoordinator: {}
-  # garbageCollector: {}
-  # apiServer: {}
-  # webui: {}
-  # mcpServer: {}
+  compressionScheduler: {}
+  logIngestor: {}
+  queryScheduler: {}
+  prestoCoordinator: {}
+  garbageCollector: {}
+  apiServer: {}
+  webui: {}
+  mcpServer: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
