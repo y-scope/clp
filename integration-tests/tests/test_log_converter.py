@@ -34,10 +34,11 @@ def test_log_converter_transform(
     :param integration_test_path_config:
     :param text_singlefile:
     """
-    num_log_events = sum(
-        sum(1 for _ in (text_singlefile.logs_path / file_name).open(encoding="utf-8"))
-        for file_name in text_singlefile.metadata.file_names
-    )
+    num_log_events = 0
+    for file_name in text_singlefile.metadata.file_names:
+        with (text_singlefile.logs_path / file_name).open(encoding="utf-8") as f:
+            num_log_events += sum(1 for _ in f)
+
     test_paths = ConversionTestPathConfig(
         test_name=f"clp-s-{text_singlefile.dataset_name}",
         logs_source_dir=text_singlefile.logs_path,
