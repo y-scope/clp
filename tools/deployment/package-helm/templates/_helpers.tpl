@@ -346,6 +346,13 @@ hostPath:
 {{- end }}
 
 {{/*
+The mount path for the AWS config directory inside containers.
+
+@return {string} Path string
+*/}}
+{{- define "clp.awsConfigMountPath" -}}/opt/clp/.aws{{- end }}
+
+{{/*
 Creates a volumeMount for the AWS config directory.
 
 @param {object} . Root template context
@@ -353,7 +360,7 @@ Creates a volumeMount for the AWS config directory.
 */}}
 {{- define "clp.awsConfigVolumeMount" -}}
 name: "aws-config"
-mountPath: "/opt/clp/.aws"
+mountPath: {{ include "clp.awsConfigMountPath" . | quote }}
 readOnly: true
 {{- end }}
 

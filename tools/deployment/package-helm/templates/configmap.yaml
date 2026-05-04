@@ -206,7 +206,7 @@ data:
     {{- end }}{{/* with .Values.clpConfig.stream_output */}}
     tmp_directory: "/var/tmp"
     {{- if .Values.clpConfig.aws_config }}
-    aws_config_directory: "/opt/clp/.aws"
+    aws_config_directory: {{ include "clp.awsConfigMountPath" . | quote }}
     {{- end }}
     webui:
       host: "localhost"

@@ -160,6 +160,11 @@ If profiles are not used for AWS authentication, `aws_config_directory` should b
 to `null`.
 :::
 
+:::{note}
+For Helm deployments, users should provide AWS config file contents via `--set-file` rather than
+setting `aws_config_directory` manually. See the Helm chart's `values.yaml` for details.
+:::
+
 ### env_vars
 
 Settings for this type are shown below.
