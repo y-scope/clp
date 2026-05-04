@@ -1,6 +1,7 @@
 """Session-scoped test log fixtures shared across integration tests."""
 
 import logging
+import pathlib
 import subprocess
 
 import pytest
@@ -43,6 +44,42 @@ def postgresql(
         name="postgresql",
         tarball_url="https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1",
     )
+
+
+@pytest.fixture(scope="session")
+def simple_unstructured(
+    request: pytest.FixtureRequest,
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> IntegrationTestLogs:
+    """Provides a simple unstructured test log."""
+    name = "simple_unstructured"
+    integration_test_logs = IntegrationTestLogs(
+        name=name,
+        tarball_url=f"{name}.tar.gz",
+        integration_test_path_config=integration_test_path_config,
+        num_log_events=11,
+    )
+    remove_path(integration_test_logs.extraction_dir)
+    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
+
+    with pathlib.Path.open(integration_test_logs.extraction_dir / f"{name}.log", "w") as f:
+        f.write(
+            "2015-03-23 05:48:30,122 TEST1\n"
+            "2015-03-23 05:48:30,122Z TEST2\n"
+            "2015-03-23 05:48:30,122 Z TEST3\n"
+            "2015-03-23 05:48:30,122+00 TEST4\n"
+            "2015-03-23 05:48:30,122+00Z TEST5\n"
+            "2015-03-23 05:48:30,122 +00 TEST6\n"
+            "2015-03-23 05:48:30,122 +00Z TEST7\n"
+            "2015-03-23 05:48:30,122UTC+00 TEST8\n"
+            "2015-03-23 05:48:30,122UTC+00Z TEST9\n"
+            "2015-03-23 05:48:30,122 UTC+00 TEST10\n"
+            "2015-03-23 05:48:30,122 UTC+00Z TEST11\n"
+        )
+
+    logger.info("Set up logs for dataset `%s`.", name)
+    request.config.cache.set(name, True)
+    return integration_test_logs
 
 
 def _download_and_extract_gzip_dataset(

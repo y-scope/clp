@@ -6,10 +6,13 @@ import subprocess
 from pathlib import Path
 
 from tests.conftest import get_test_log_dir
+from tests.utils.classes import ExternalAction
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: `log_subprocess_output_to_file` will be phased out in favour of
+# `ExternalAction._log_action_summary_to_file()`.
 def log_subprocess_output_to_file(
     proc: subprocess.CompletedProcess[str],
     cmd: list[str],
@@ -62,3 +65,16 @@ def log_subprocess_output_to_file(
         f" '{subprocess_output_file_path}'"
     )
     logger.info(log_msg)
+
+
+def format_action_failure_msg(reason: str, *actions: ExternalAction) -> str:
+    """
+    Formats a failure message that indicates where to find the subprocess log(s) relevant to the
+    failure. This function associates a single failure with one or more external actions.
+
+    :param reason:
+    :param actions:
+    :return: The failure message.
+    """
+    action_log_paths = [str(action.log_file_path) for action in actions]
+    return f"{reason} See relevant subprocess log(s) at: {action_log_paths}"
