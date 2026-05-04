@@ -36,16 +36,11 @@ def start_clp_package(
     :return: The `ExternalAction` instance that starts the package.
     """
     logger.info("Starting up the '%s' package.", clp_package.mode_name)
-    args: StartStopArgs = _construct_start_clp_args(clp_package)
-    return ExternalAction(cmd=args.to_cmd(), args=args)
-
-
-def _construct_start_clp_args(clp_package: ClpPackage) -> StartStopArgs:
-    """Construct the `StartStopArgs` object that will start the package."""
-    path_config = clp_package.path_config
-    return StartStopArgs(
-        script_path=path_config.start_clp_path, config=clp_package.temp_config_file_path
+    args = StartStopArgs(
+        script_path=clp_package.path_config.start_clp_path,
+        config=clp_package.temp_config_file_path,
     )
+    return ExternalAction.from_args(args)
 
 
 def stop_clp_package(
@@ -58,16 +53,11 @@ def stop_clp_package(
     :return: The `ExternalAction` instance that stops the package.
     """
     logger.info("Stopping the '%s' package.", clp_package.mode_name)
-    args: StartStopArgs = _construct_stop_clp_args(clp_package)
-    return ExternalAction(cmd=args.to_cmd(), args=args)
-
-
-def _construct_stop_clp_args(clp_package: ClpPackage) -> StartStopArgs:
-    """Construct the `StartStopArgs` object that will stop the package."""
-    path_config = clp_package.path_config
-    return StartStopArgs(
-        script_path=path_config.stop_clp_path, config=clp_package.temp_config_file_path
+    args = StartStopArgs(
+        script_path=clp_package.path_config.stop_clp_path,
+        config=clp_package.temp_config_file_path,
     )
+    return ExternalAction.from_args(args)
 
 
 def verify_start_clp_action(

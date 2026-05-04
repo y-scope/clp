@@ -142,7 +142,10 @@ class CmdArgs(BaseModel, ABC):
 
 @dataclass
 class ExternalAction:
-    """Metadata for an external action executed during an integration test."""
+    """
+    Metadata for an external action executed during an integration test. Instances should be
+    constructed via the `from_args` or `from_cmd` class methods.
+    """
 
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
@@ -156,10 +159,24 @@ class ExternalAction:
     #: Path to the file where this action's subprocess output was logged.
     log_file_path: Path = field(init=False)
 
+    @classmethod
+    def from_args(cls, args: CmdArgs) -> "ExternalAction":
+        """:return: An `ExternalAction` whose `cmd` is derived from `args.to_cmd()`."""
+        return cls(cmd=args.to_cmd(), args=args)
+
+    @classmethod
+    def from_cmd(cls, cmd: list[str]) -> "ExternalAction":
+        """:return: An `ExternalAction` for the given raw `cmd`, with no associated `args`."""
+        return cls(cmd=cmd, args=None)
+
     def __post_init__(self) -> None:
         """Execute the external action and log output."""
         if not self.cmd:
             pytest.fail("Cannot create `ExternalAction` object: `cmd` list is empty.")
+        if self.args is not None and self.cmd != self.args.to_cmd():
+            pytest.fail(
+                "Cannot create `ExternalAction` object: `cmd` does not match `args.to_cmd()`."
+            )
         self.completed_proc = self._run_subprocess()
         self._log_action_summary_to_file()
 

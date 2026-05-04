@@ -16,6 +16,7 @@ from tests.package_tests.utils.start_stop import (
     verify_start_clp_action,
     verify_stop_clp_action,
 )
+from tests.utils.classes import ExternalAction  # noqa: TC001
 from tests.utils.port_utils import assign_ports_from_base
 from tests.utils.utils import resolve_path_env_var, write_dict_to_yaml
 
@@ -62,16 +63,6 @@ def clp_package(
         raise ValueError(err_msg) from err
     assign_ports_from_base(base_port, clp_config)
 
-    # Write the temporary config file.
-    logger.info("Writing the temporary config file for the '%s' package.", mode_name)
-    temp_config_file_path = (
-        clp_package_test_path_config.temp_config_dir / f"clp-config-{mode_name}.yaml"
-    )
-    write_dict_to_yaml(
-        clp_config.dump_to_primitive_dict(),  # type: ignore[no-untyped-call]
-        temp_config_file_path,
-    )
-
     # Construct `ClpPackage` object.
     clp_package = ClpPackage(
         path_config=clp_package_test_path_config,
@@ -80,13 +71,20 @@ def clp_package(
         component_list=component_list,
     )
 
+    # Write the temporary config file.
+    logger.info("Writing the temporary config file for the '%s' package.", mode_name)
+    write_dict_to_yaml(
+        clp_config.dump_to_primitive_dict(),  # type: ignore[no-untyped-call]
+        clp_package.temp_config_file_path,
+    )
+
     try:
-        start_clp_action = start_clp_package(clp_package)
+        start_clp_action: ExternalAction = start_clp_package(clp_package)
         start_result = verify_start_clp_action(start_clp_action, clp_package)
         assert start_result, start_result.failure_message
         yield clp_package
     finally:
-        stop_clp_action = stop_clp_package(clp_package)
+        stop_clp_action: ExternalAction = stop_clp_package(clp_package)
         stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
         assert stop_result, stop_result.failure_message
 
