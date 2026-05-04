@@ -1500,11 +1500,11 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     // SPDLOG_INFO("####");
     // SPDLOG_INFO("[clpsls] log msg: '{}'", log_msg);
 
-    auto get_name{[](log_surgeon::Capture const& match) -> std::string {
-        if (0 == match.capture_id) {
-            return std::string{match.ffi_pointers.variable_name.as_cpp_view()};
+    auto get_name{[](log_surgeon::Match const& match) -> std::string {
+        if (0 == match.sub_rule_id) {
+            return std::string{match.ffi_pointers.rule_name.as_cpp_view()};
         }
-        return std::string{match.ffi_pointers.capture_name.as_cpp_view()};
+        return std::string{match.ffi_pointers.sub_rule_name.as_cpp_view()};
     }};
 
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
@@ -1516,14 +1516,14 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     log_type.reserve(log_msg.size());
     size_t log_msg_pos{0};
     for (size_t i{0};; ++i) {
-        auto const match{event.get_leaf_capture(i)};
+        auto const match{event.get_leaf_match(i)};
         if (false == match.has_value()) {
             break;
         }
 
         auto name{get_name(*match)};
         auto parent_node_id{log_msg_node_id};
-        if (0 != match->capture_id) {
+        if (0 != match->sub_rule_id) {
             parent_node_id = get_parent_schema_node(
                     match.value(),
                     log_msg_node_id,
@@ -1535,7 +1535,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         //         "[node] adding leaf {}: {} {} {}",
         //         name,
         //         cap->rule_id,
-        //         cap->capture_id,
+        //         cap->sub_rule_id,
         //         cap->parent_id
         // );
 
@@ -1555,7 +1555,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 "fetcherID",
                 "reduceID",
                 "processTreeID",
-                // "durationSuffix", // regex needs better capture to use
+                // "durationSuffix", // regex needs better rule to use
                 // hadoop
                 "blockID",
                 "serverCallId",
@@ -1619,7 +1619,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     if (new_logtype) {
         clpp::LogTypeMetadata metadata;
         std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
-        for (auto const& match : event.get_all_captures()) {
+        for (auto const& match : event.get_all_matches()) {
             if (match.is_leaf) {
                 continue;
             }
@@ -1631,7 +1631,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             og_parent_match_pos.emplace_back(match.range.start, match.range.end);
         }
         for (size_t i{0};; ++i) {
-            auto const leaf_match{event.get_leaf_capture(i)};
+            auto const leaf_match{event.get_leaf_match(i)};
             if (false == leaf_match.has_value()) {
                 break;
             }
@@ -1648,29 +1648,29 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         }
         // {  // DEBUG
         //     for (size_t i{0};; ++i) {
-        //         auto const cap{event.get_leaf_capture(i)};
+        //         auto const cap{event.get_leaf_match(i)};
         //         if (false == cap.has_value()) {
         //             break;
         //         }
         //         SPDLOG_INFO(
         //                 "[clpsls] leaf match '{}' ({}.{}.{}): '{}'",
         //                 get_cap_name(*cap),
-        //                 cap->rule_idx.index,
-        //                 cap->capture_id,
+        //                 cap->rule_idx,
+        //                 cap->sub_rule_id,
         //                 cap->parent_id,
         //                 log_msg.substr(cap->range.start, cap->range.end - cap->range.start)
         //         );
         //     }
         //     size_t parent_match_idx{0};
-        //     for (auto const& cap : event.get_all_captures()) {
+        //     for (auto const& cap : event.get_all_matches()) {
         //         if (cap.is_leaf) {
         //             continue;
         //         }
         //         SPDLOG_INFO(
         //                 "[clpsls] parent match '{}' ({}.{}.{}): '{}'",
         //                 get_cap_name(cap),
-        //                 cap.rule_idx.index,
-        //                 cap.capture_id,
+        //                 cap.rule_idx,
+        //                 cap.sub_rule_id,
         //                 cap.parent_id,
         //                 log_type.substr(
         //                         metadata.parent_match(parent_match_idx).m_start,
@@ -1690,17 +1690,17 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
 }
 
 auto JsonParser::get_parent_schema_node(
-        log_surgeon::Capture const match,
+        log_surgeon::Match const match,
         SchemaNode::id_t root_node_id,
-        absl::flat_hash_map<uint32_t, log_surgeon::Capture const> const& root_matches,
-        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const> const&
+        absl::flat_hash_map<uint32_t, log_surgeon::Match const> const& root_matches,
+        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> const&
                 parent_matches
 ) -> SchemaNode::id_t {
-    if (0 == match.capture_id) {
+    if (0 == match.sub_rule_id) {
         throw(std::runtime_error(
                 fmt::format(
                         "get parent called from root {}'",
-                        match.ffi_pointers.variable_name.as_cpp_view()
+                        match.ffi_pointers.rule_name.as_cpp_view()
                 )
         ));
     }
@@ -1709,38 +1709,38 @@ auto JsonParser::get_parent_schema_node(
         auto node_id{m_archive_writer->add_node(
                 root_node_id,
                 NodeType::ParentRule,
-                root_matches.at(match.rule_idx.index).ffi_pointers.variable_name.as_cpp_view()
+                root_matches.at(match.rule_idx).ffi_pointers.rule_name.as_cpp_view()
         )};
         m_current_schema.insert_unordered(node_id);
         // SPDLOG_ERROR(
         //         "[node] adding parent rule {}: {} {} {} for {}: {} {} {}",
-        //         rules.at(cap.rule_id).variable_name.as_cpp_view(),
+        //         rules.at(cap.rule_id).rule_name.as_cpp_view(),
         //         rules.at(cap.rule_id).rule_id,
-        //         rules.at(cap.rule_id).capture_id,
+        //         rules.at(cap.rule_id).sub_rule_id,
         //         rules.at(cap.rule_id).parent_id,
-        //         cap.capture_name.as_cpp_view(),
+        //         cap.sub_rule_name.as_cpp_view(),
         //         cap.rule_id,
-        //         cap.capture_id,
+        //         cap.sub_rule_id,
         //         cap.parent_id
         // );
         return node_id;
     }
-    log_surgeon::Capture const parent{parent_matches.at({match.rule_idx.index, match.parent_id})};
+    log_surgeon::Match const parent{parent_matches.at({match.rule_idx, match.parent_id})};
     auto node_id{m_archive_writer->add_node(
             get_parent_schema_node(parent, root_node_id, root_matches, parent_matches),
             NodeType::ParentRule,
-            parent.ffi_pointers.capture_name.as_cpp_view()
+            parent.ffi_pointers.sub_rule_name.as_cpp_view()
     )};
     m_current_schema.insert_unordered(node_id);
     // SPDLOG_ERROR(
-    //         "[node] adding parent capture {}: {} {} {} for {}: {} {} {}",
-    //         parent.capture_name.as_cpp_view(),
+    //         "[node] adding parent rule {}: {} {} {} for {}: {} {} {}",
+    //         parent.sub_rule_name.as_cpp_view(),
     //         parent.rule_id,
-    //         parent.capture_id,
+    //         parent.sub_rule_id,
     //         parent.parent_id,
-    //         cap.capture_name.as_cpp_view(),
+    //         cap.sub_rule_name.as_cpp_view(),
     //         cap.rule_id,
-    //         cap.capture_id,
+    //         cap.sub_rule_id,
     //         cap.parent_id
     // );
     return node_id;

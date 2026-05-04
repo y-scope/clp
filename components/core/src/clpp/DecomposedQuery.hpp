@@ -70,8 +70,8 @@ public:
     [[nodiscard]] auto get_log_type() const -> std::string_view { return m_log_type; }
 
     static auto create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
-            pair<absl::flat_hash_map<uint32_t, log_surgeon::Capture const>,
-                 absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const>>;
+            pair<absl::flat_hash_map<uint32_t, log_surgeon::Match const>,
+                 absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const>>;
 
 private:
     // Data members

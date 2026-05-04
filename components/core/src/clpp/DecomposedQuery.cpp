@@ -21,38 +21,36 @@
 namespace clpp {
 namespace {
 auto get_full_type_name(
-        log_surgeon::Capture const& cap,
-        absl::flat_hash_map<uint32_t, log_surgeon::Capture const> rules,
-        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const>
-                parent_captures
+        log_surgeon::Match const& cap,
+        absl::flat_hash_map<uint32_t, log_surgeon::Match const> root_matches,
+        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> parent_matches
 ) -> std::vector<std::string>;
 
-auto get_type_name(log_surgeon::Capture const& cap) -> std::string;
+auto get_type_name(log_surgeon::Match const& match) -> std::string;
 
-auto get_type_name(log_surgeon::Capture const& cap) -> std::string {
-    if (0 == cap.capture_id) {
-        return std::string{cap.ffi_pointers.variable_name.as_cpp_view()};
+auto get_type_name(log_surgeon::Match const& match) -> std::string {
+    if (0 == match.sub_rule_id) {
+        return std::string{match.ffi_pointers.rule_name.as_cpp_view()};
     }
-    return std::string{cap.ffi_pointers.capture_name.as_cpp_view()};
+    return std::string{match.ffi_pointers.sub_rule_name.as_cpp_view()};
 }
 
 auto get_full_type_name(
-        log_surgeon::Capture const& cap,
-        absl::flat_hash_map<uint32_t, log_surgeon::Capture const> rules,
-        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const>
-                parent_captures
+        log_surgeon::Match const& match,
+        absl::flat_hash_map<uint32_t, log_surgeon::Match const> root_matches,
+        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> parent_matches
 ) -> std::vector<std::string> {
     std::vector<std::string> types;
-    auto const* cur{&cap};
-    while (0 != cur->capture_id) {
-        types.emplace_back(cap.ffi_pointers.capture_name.as_cpp_view());
+    auto const* cur{&match};
+    while (0 != cur->sub_rule_id) {
+        types.emplace_back(match.ffi_pointers.sub_rule_name.as_cpp_view());
         if (0 == cur->parent_id) {
-            cur = &rules.at(cur->rule_idx.index);
+            cur = &root_matches.at(cur->rule_idx);
         } else {
-            cur = &parent_captures.at({cur->rule_idx.index, cur->parent_id});
+            cur = &parent_matches.at({cur->rule_idx, cur->parent_id});
         }
     }
-    types.emplace_back(cur->ffi_pointers.variable_name.as_cpp_view());
+    types.emplace_back(cur->ffi_pointers.rule_name.as_cpp_view());
     return types;
 }
 }  // namespace
@@ -68,10 +66,10 @@ auto DecomposedQuery::decompose_query(
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
-    auto [rules, parent_captures]{create_parent_match_dicts(event.value())};
+    auto [root_matches, parent_matches]{create_parent_match_dicts(event.value())};
     if (rule_name.has_value()
-        && (1 != rules.size()
-            || rule_name != rules.begin()->second.ffi_pointers.variable_name.as_cpp_view()))
+        && (1 != root_matches.size()
+            || rule_name != root_matches.begin()->second.ffi_pointers.rule_name.as_cpp_view()))
     {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
@@ -80,19 +78,19 @@ auto DecomposedQuery::decompose_query(
     decomposed_query.m_log_type.reserve(query.size());
     size_t query_pos{0};
     for (size_t i{0};; ++i) {
-        auto const cap{event->get_leaf_capture(i)};
-        if (false == cap.has_value()) {
+        auto const match{event->get_leaf_match(i)};
+        if (false == match.has_value()) {
             break;
         }
 
         decomposed_query.m_leaf_queries.emplace_back(
-                get_full_type_name(*cap, rules, parent_captures),
-                cap->ffi_pointers.lexeme.as_cpp_view()
+                get_full_type_name(*match, root_matches, parent_matches),
+                match->ffi_pointers.lexeme.as_cpp_view()
         );
 
-        decomposed_query.m_log_type.append(query.substr(query_pos, cap->range.start - query_pos));
-        decomposed_query.m_log_type.append(fmt::format("%{}%", get_type_name(*cap)));
-        query_pos = cap->range.end;
+        decomposed_query.m_log_type.append(query.substr(query_pos, match->range.start - query_pos));
+        decomposed_query.m_log_type.append(fmt::format("%{}%", get_type_name(*match)));
+        query_pos = match->range.end;
     }
     decomposed_query.m_log_type.append(query.substr(query_pos));
     return decomposed_query;
@@ -118,21 +116,22 @@ auto DecomposedQuery::decompose_query(
     std::string log_type{};
     log_type.reserve(query.size());
     size_t query_pos{0};
-    size_t leaf_caps_len{0};
-    auto const* leaf_caps{
-            log_surgeon::log_surgeon_search_result_get_leaf_captures(search_result, &leaf_caps_len)
-    };
-    for (size_t i{0}; i < leaf_caps_len; ++i) {
-        auto const cap{leaf_caps[i]};
+    size_t leaf_matches_len{0};
+    auto const* leaf_matches{log_surgeon::log_surgeon_search_result_get_leaf_matches(
+            search_result,
+            &leaf_matches_len
+    )};
+    for (size_t i{0}; i < leaf_matches_len; ++i) {
+        auto const match{leaf_matches[i]};
         decomposed_query.m_leaf_queries.emplace_back(
-                // get_full_type_name(*cap, rules, parent_captures),
-                std::vector{get_type_name(cap)},
-                cap.ffi_pointers.lexeme.as_cpp_view()
+                // get_full_type_name(*match, rules, parent_matches),
+                std::vector{get_type_name(match)},
+                match.ffi_pointers.lexeme.as_cpp_view()
         );
 
-        log_type.append(query.substr(query_pos, cap.range.start - query_pos));
-        log_type.append(fmt::format("%{}%", get_type_name(cap)));
-        query_pos = cap.range.end;
+        log_type.append(query.substr(query_pos, match.range.start - query_pos));
+        log_type.append(fmt::format("%{}%", get_type_name(match)));
+        query_pos = match.range.end;
     }
 
     log_type.append(query.substr(query_pos));
@@ -141,18 +140,18 @@ auto DecomposedQuery::decompose_query(
 }
 
 auto DecomposedQuery::create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
-        pair<absl::flat_hash_map<uint32_t, log_surgeon::Capture const>,
-             absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const>> {
-    absl::flat_hash_map<uint32_t, log_surgeon::Capture const> root_matches;
-    absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Capture const> parent_matches;
-    for (auto const& match : event.get_all_captures()) {
+        pair<absl::flat_hash_map<uint32_t, log_surgeon::Match const>,
+             absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const>> {
+    absl::flat_hash_map<uint32_t, log_surgeon::Match const> root_matches;
+    absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> parent_matches;
+    for (auto const& match : event.get_all_matches()) {
         if (match.is_leaf) {
             continue;
         }
-        if (0 == match.capture_id) {
-            root_matches.emplace(match.rule_idx.index, match);
+        if (0 == match.sub_rule_id) {
+            root_matches.emplace(match.rule_idx, match);
         } else {
-            parent_matches.emplace(std::pair{match.rule_idx.index, match.capture_id}, match);
+            parent_matches.emplace(std::pair{match.rule_idx, match.sub_rule_id}, match);
         }
     }
     return {root_matches, parent_matches};
