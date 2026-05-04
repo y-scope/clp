@@ -7,17 +7,22 @@
 # It discovers shared library dependencies via ldd, copies non-system libraries
 # into a lib directory, rewrites RPATHs with patchelf, and strips binaries.
 #
+# Uses DESTDIR/PREFIX convention:
+#   DESTDIR  Staging/packaging root — owned by this script, wiped on each run
+#            (e.g., /tmp/clp-deb-staging). Unlike GNU DESTDIR, this is required
+#            and the directory is fully replaced.
+#   PREFIX   Runtime install prefix  (e.g., /usr, /usr/local, or "")
+#
 # After this script completes, the staging directory contains:
-#   <staging>/usr/bin/{clg,clo,clp,clp-s,indexer,log-converter,reducer-server}
-#   <staging>/usr/lib/clp/{bundled .so files}
+#   ${DESTDIR}${PREFIX}/bin/{clg,clo,clp,clp-s,indexer,log-converter,reducer-server}
+#   ${DESTDIR}${PREFIX}/lib/clp/{bundled .so files}
 #
 # Required environment variables:
-#   STAGING_DIR  Path to the staging directory (will be created/cleaned)
-#   BIN_DIR      Path to the directory containing compiled binaries
+#   DESTDIR  Staging directory — will be wiped and recreated
+#   BIN_DIR  Path to the directory containing compiled binaries
 #
 # Optional environment variables:
-#   LIB_INSTALL_DIR  Library install path inside the package
-#                    (default: /usr/lib/clp)
+#   PREFIX  Runtime install prefix (default: /usr/local)
 
 set -o errexit
 set -o nounset
@@ -25,8 +30,18 @@ set -o pipefail
 
 # --- Validate inputs --------------------------------------------------------
 
-if [[ -z "${STAGING_DIR:-}" ]]; then
-    echo "ERROR: STAGING_DIR is required" >&2
+if [[ -z "${DESTDIR:-}" ]]; then
+    echo "ERROR: DESTDIR is required" >&2
+    exit 1
+fi
+
+if [[ "${DESTDIR}" != /* ]]; then
+    echo "ERROR: DESTDIR must be an absolute path, got: '${DESTDIR}'" >&2
+    exit 1
+fi
+
+if [[ "${DESTDIR}" == "/" ]]; then
+    echo "ERROR: DESTDIR must not be /" >&2
     exit 1
 fi
 
@@ -36,11 +51,18 @@ if [[ -z "${BIN_DIR:-}" ]]; then
 fi
 
 if [[ ! -d "${BIN_DIR}" ]]; then
-    echo "ERROR: Binary directory not found: ${BIN_DIR}" >&2
+    echo "ERROR: Binary directory not found: '${BIN_DIR}'" >&2
     exit 1
 fi
 
-lib_install_dir="${LIB_INSTALL_DIR:-/usr/lib/clp}"
+# PREFIX unset → /usr/local; PREFIX="" → empty (for tarballs).
+# Non-empty PREFIX must be an absolute path.
+prefix="${PREFIX-/usr/local}"
+if [[ -n "${prefix}" && "${prefix}" != /* ]]; then
+    echo "ERROR: PREFIX must start with '/' or be empty, got: '${prefix}'" >&2
+    exit 1
+fi
+lib_install_dir="${prefix}/lib/clp"
 
 # --- Constants ---------------------------------------------------------------
 
@@ -51,12 +73,12 @@ BINARIES=(clg clo clp clp-s indexer log-converter reducer-server)
 # Libraries provided by the base system (libc, libstdc++, libgcc).
 # These must NOT be bundled — the target system's versions are used instead.
 # Covers both glibc (ld-linux, libc.so) and musl (ld-musl, libc.musl-*).
-EXCLUDE_PATTERN="linux-vdso|ld-linux|ld-musl|libc\.so|libc\.musl|libm\.so|libmvec|libcrypt\.so|libanl|libutil|libnsl|libpthread|libdl|librt\.so|libresolv|libstdc\+\+|libgcc_s"
+EXCLUDE_PATTERN="linux-vdso|ld-linux|ld-musl|libc\.so|libc\.musl|libm\.so|libmvec|libanl|libutil|libnsl|libpthread|libdl|librt\.so|libresolv|libstdc\+\+|libgcc_s"
 
 # --- Prepare staging directory -----------------------------------------------
 
-rm -rf "${STAGING_DIR}"
-mkdir -p "${STAGING_DIR}/usr/bin" "${STAGING_DIR}${lib_install_dir}"
+rm -rf "${DESTDIR}"
+mkdir -p "${DESTDIR}${prefix}/bin" "${DESTDIR}${lib_install_dir}"
 
 # --- Collect shared library dependencies -------------------------------------
 
@@ -81,10 +103,10 @@ for bin in "${BINARIES[@]}"; do
         [[ -n "${lib_path}" && "${lib_path}" == /* ]] || continue
 
         lib_name=$(basename "${lib_path}")
-        echo "${lib_name}" | grep --quiet --extended-regexp "${EXCLUDE_PATTERN}" && continue
+        echo "${lib_name}" | grep -qE "${EXCLUDE_PATTERN}" && continue
 
-        if [[ ! -f "${STAGING_DIR}${lib_install_dir}/${lib_name}" ]]; then
-            cp --dereference "${lib_path}" "${STAGING_DIR}${lib_install_dir}/${lib_name}"
+        if [[ ! -f "${DESTDIR}${lib_install_dir}/${lib_name}" ]]; then
+            cp --dereference "${lib_path}" "${DESTDIR}${lib_install_dir}/${lib_name}"
             echo "    Bundled: ${lib_name}"
         fi
     done
@@ -93,9 +115,9 @@ done
 # --- Patch bundled libraries' RPATH ------------------------------------------
 
 echo "==> Patching bundled libraries..."
-for lib in "${STAGING_DIR}${lib_install_dir}/"*.so*; do
+for lib in "${DESTDIR}${lib_install_dir}/"*.so*; do
     [[ -f "${lib}" ]] || continue
-    patchelf --set-rpath "${lib_install_dir}" "${lib}"
+    patchelf --set-rpath '$ORIGIN' "${lib}"
 done
 
 # --- Install and patch binaries ----------------------------------------------
@@ -105,9 +127,9 @@ for bin in "${BINARIES[@]}"; do
     bin_path="${BIN_DIR}/${bin}"
     [[ -f "${bin_path}" ]] || continue
 
-    cp "${bin_path}" "${STAGING_DIR}/usr/bin/${bin}"
-    patchelf --set-rpath "${lib_install_dir}" "${STAGING_DIR}/usr/bin/${bin}"
-    strip "${STAGING_DIR}/usr/bin/${bin}"
+    cp "${bin_path}" "${DESTDIR}${prefix}/bin/${bin}"
+    patchelf --set-rpath '$ORIGIN/../lib/clp' "${DESTDIR}${prefix}/bin/${bin}"
+    strip "${DESTDIR}${prefix}/bin/${bin}"
     echo "    Installed: ${bin}"
 done
 

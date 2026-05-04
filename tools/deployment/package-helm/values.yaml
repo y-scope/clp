@@ -30,69 +30,51 @@ distributedDeployment: false
 # Number of concurrent processes per worker pod.
 workerConcurrency: 8
 
-compressionWorker:
-  replicas: 1
-  # Controls which nodes run compression workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "compression"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "compression"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
+# Per-component node scheduling and replica config.
+# Each component accepts: replicas (workers only), nodeSelector, affinity, tolerations,
+# topologySpreadConstraints.
+#
+# Example:
+#   scheduling:
+#     compressionWorker:
+#       replicas: 3
+#       nodeSelector:
+#         yscope.io/nodeType: "compression"
+#       tolerations:
+#         - key: "yscope.io/dedicated"
+#           operator: "Equal"
+#           value: "compression"
+#           effect: "NoSchedule"
+#       topologySpreadConstraints:
+#         - maxSkew: 1
+#           topologyKey: "kubernetes.io/hostname"
+#           whenUnsatisfiable: "DoNotSchedule"
+scheduling:
+  # Worker
+  compressionWorker:
+    replicas: 1
+  queryWorker:
+    replicas: 1
+  reducer:
+    replicas: 1
+  prestoWorker:
+    replicas: 1
 
-queryWorker:
-  replicas: 1
-  # Controls which nodes run query workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "query"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "query"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
+  # Database
+  database: {}
+  queue: {}
+  redis: {}
+  resultsCache: {}
 
-reducer:
-  replicas: 1
-  # Controls which nodes run reducers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "query"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "reducer"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
-
-prestoWorker:
-  replicas: 1
-  # Controls which nodes run Presto workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "presto"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "presto"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
+  # Core
+  compressionScheduler: {}
+  logIngestor: {}
+  queryScheduler: {}
+  prestoCoordinator: {}
+  garbageCollector: {}
+  apiServer: {}
+  webui: {}
+  mcpServer: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
@@ -145,6 +127,7 @@ clpConfig:
     jobs_poll_delay: 0.1  # seconds
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
+    scheduler_concurrency: 4
 
   queue:
     # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
@@ -213,14 +196,6 @@ clpConfig:
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
     port: 30302
-    # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
-    # arrives.
-    buffer_flush_timeout: 300
-    # The log buffer size (in bytes) that triggers a flush for compression.
-    buffer_flush_threshold: 4294967296  # 4 GiB
-    # The capacity of the internal channel used for communication between an ingestion job and the
-    # log buffer.
-    channel_capacity: 10
     logging_level: "INFO"
 
   # Where archives should be output to

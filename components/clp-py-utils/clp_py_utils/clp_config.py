@@ -436,6 +436,7 @@ class QueryScheduler(BaseModel):
     max_datasets_per_query: PositiveInt | None = 10
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
+    scheduler_concurrency: PositiveInt = 4
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
@@ -778,9 +779,6 @@ class ApiServer(BaseModel):
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
-    buffer_flush_timeout: PositiveInt = 300  # seconds
-    buffer_flush_threshold: PositiveInt = 4096 * 1024 * 1024  # 4 GiB
-    channel_capacity: PositiveInt = 10
     logging_level: LoggingLevelRust = "INFO"
 
 
