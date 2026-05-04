@@ -15,8 +15,8 @@ pub struct Config {
     pub package: Package,
     pub database: Database,
     pub results_cache: ResultsCache,
-    pub api_server: ApiServer,
-    pub log_ingestor: LogIngestor,
+    pub api_server: Option<ApiServer>,
+    pub log_ingestor: Option<LogIngestor>,
     pub logs_directory: String,
     pub stream_output: StreamOutput,
     pub logs_input: LogsInput,
@@ -29,8 +29,8 @@ impl Default for Config {
             package: Package::default(),
             database: Database::default(),
             results_cache: ResultsCache::default(),
-            api_server: ApiServer::default(),
-            log_ingestor: LogIngestor::default(),
+            api_server: None,
+            log_ingestor: None,
             logs_directory: "var/log".to_owned(),
             stream_output: StreamOutput::default(),
             logs_input: LogsInput::Fs {
@@ -226,10 +226,6 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
-    #[serde(rename = "buffer_flush_timeout")]
-    pub buffer_flush_timeout_sec: u64,
-    pub buffer_flush_threshold: u64,
-    pub channel_capacity: usize,
     pub logging_level: String,
 }
 
@@ -238,9 +234,6 @@ impl Default for LogIngestor {
         Self {
             host: "localhost".to_owned(),
             port: 3002,
-            buffer_flush_timeout_sec: 300,
-            buffer_flush_threshold: 256 * 1024 * 1024,
-            channel_capacity: 10,
             logging_level: "INFO".to_owned(),
         }
     }
@@ -345,7 +338,34 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
+                crate::clp_config::AwsAuthentication::Default => {
+                    panic!("Expected credentials, got `default`")
+                }
             },
+            LogsInput::Fs { .. } => panic!("Expected S3"),
+        }
+    }
+
+    #[test]
+    fn deserialize_logs_input_s3_default_config() {
+        let logs_input_config_json = serde_json::json!({
+            "type": "s3",
+            "aws_authentication": {
+                "type": "default",
+            }
+        });
+
+        let deserialized =
+            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())
+                .expect("failed to deserialize `LogsInput` from JSON");
+
+        match deserialized {
+            LogsInput::S3 { config } => {
+                assert_eq!(
+                    config.aws_authentication,
+                    crate::clp_config::AwsAuthentication::Default
+                );
+            }
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }
     }

@@ -2,46 +2,48 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::{
     clp_config::{
-        AwsAuthentication::Credentials,
-        AwsCredentials,
+        AwsAuthentication,
         S3Config,
         package::{DEFAULT_DATASET_NAME, config::ArchiveOutput},
     },
     job_config::{
         ClpIoConfig,
+        CompressionJobId,
         CompressionJobStatus,
         InputConfig,
         OutputConfig,
-        S3InputConfig,
+        S3ObjectMetadataInputConfig,
         ingestion::s3::BaseConfig,
     },
-    s3::ObjectMetadata,
+    s3::S3ObjectMetadataId,
 };
-use const_format::formatcp;
-use sqlx::MySqlPool;
 
-use crate::compression::BufferSubmitter;
+use crate::{compression::BufferSubmitter, ingestion_job_manager::ClpCompressionState};
 
 /// The CLP compression job table name.
-const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
+pub const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 
 /// A compression submitter that implements [`BufferSubmitter`] to submit compression jobs to CLP.
 pub struct CompressionJobSubmitter {
-    db_pool: MySqlPool,
     io_config_template: ClpIoConfig,
+    state: ClpCompressionState,
 }
 
 #[async_trait]
 impl BufferSubmitter for CompressionJobSubmitter {
-    async fn submit(&self, buffer: &[ObjectMetadata]) -> Result<()> {
+    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
         let mut io_config = self.io_config_template.clone();
-        let s3_input_config = match &mut io_config.input {
-            InputConfig::S3InputConfig { config } => config,
-        };
-        s3_input_config.keys = Some(buffer.iter().map(|obj| obj.key.clone()).collect());
+        match &mut io_config.input {
+            InputConfig::S3ObjectMetadataInputConfig { config } => {
+                config.s3_object_metadata_ids = buffer.to_vec();
+            }
+            InputConfig::S3InputConfig { .. } => {
+                unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
+            }
+        }
+        let state = self.state.clone();
         tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
-            self.db_pool.clone(),
-            io_config,
+            state, io_config,
         ));
         Ok(())
     }
@@ -53,25 +55,25 @@ impl CompressionJobSubmitter {
     /// # Returns
     ///
     /// A newly created instance with the given parameters, dedicated to submitting compression jobs
-    /// created by the given ingestion job specification.
+    /// using the given [`ClpCompressionState`] for its underlying ingestion job.
     #[must_use]
     pub fn new(
-        db_pool: MySqlPool,
-        aws_credentials: AwsCredentials,
+        clp_compression_state: ClpCompressionState,
+        aws_authentication: AwsAuthentication,
         archive_output_config: &ArchiveOutput,
         ingestion_job_config: &BaseConfig,
     ) -> Self {
-        let s3_input_config = S3InputConfig {
+        let ingestion_job_id = clp_compression_state.get_ingestion_job_id();
+        let s3_object_metadata_input_config = S3ObjectMetadataInputConfig {
             s3_config: S3Config {
                 bucket: ingestion_job_config.bucket_name.clone(),
                 region_code: ingestion_job_config.region.clone(),
                 key_prefix: ingestion_job_config.key_prefix.clone(),
                 endpoint_url: ingestion_job_config.endpoint_url.clone(),
-                aws_authentication: Credentials {
-                    credentials: aws_credentials,
-                },
+                aws_authentication,
             },
-            keys: None,
+            ingestion_job_id,
+            s3_object_metadata_ids: vec![],
             // NOTE: Workaround for #1735
             dataset: Some(
                 ingestion_job_config
@@ -83,7 +85,6 @@ impl CompressionJobSubmitter {
             unstructured: ingestion_job_config.unstructured,
         };
         let output_config = OutputConfig {
-            tags: ingestion_job_config.tags.clone(),
             target_archive_size: archive_output_config.target_archive_size,
             target_dictionaries_size: archive_output_config.target_dictionaries_size,
             target_encoded_file_size: archive_output_config.target_encoded_file_size,
@@ -91,14 +92,63 @@ impl CompressionJobSubmitter {
             compression_level: archive_output_config.compression_level,
         };
         let io_config_template = ClpIoConfig {
-            input: InputConfig::S3InputConfig {
-                config: s3_input_config,
+            input: InputConfig::S3ObjectMetadataInputConfig {
+                config: s3_object_metadata_input_config,
             },
             output: output_config,
         };
         Self {
-            db_pool,
+            state: clp_compression_state,
             io_config_template,
+        }
+    }
+}
+
+/// Waits for the compression job to complete and updates the submitted metadata in the state
+/// accordingly.
+///
+/// # NOTE
+///
+/// This function will be called inside a detached coroutine. Errors are logged only instead of
+/// returning them to the caller.
+pub async fn wait_for_compression_job_completion_and_update_metadata(
+    state: ClpCompressionState,
+    compression_job_id: CompressionJobId,
+    num_objects_submitted: usize,
+) {
+    let ingestion_job_id = state.get_ingestion_job_id();
+    match state
+        .wait_for_compression_and_update_submitted_metadata(
+            compression_job_id,
+            num_objects_submitted,
+        )
+        .await
+    {
+        Ok((compression_job_status, message)) => match compression_job_status {
+            CompressionJobStatus::Succeeded => tracing::info!(
+                ingestion_job_id = ? ingestion_job_id,
+                compression_job_id = ? compression_job_id,
+                "Compression job succeeded."
+            ),
+            CompressionJobStatus::Failed | CompressionJobStatus::Killed => tracing::warn!(
+                ingestion_job_id = ? ingestion_job_id,
+                compression_job_id = ? compression_job_id,
+                compression_job_status = ? compression_job_status,
+                compression_job_status_msg = ? message,
+                "Compression job failed."
+            ),
+            _ => unreachable!(
+                "Unknown compression job status: {:?}",
+                compression_job_status
+            ),
+        },
+        Err(e) => {
+            tracing::error!(
+                ingestion_job_id = ? ingestion_job_id,
+                compression_job_id = ? compression_job_id,
+                error = ? e,
+                "Failed to wait for CLP compression job completion."
+            );
         }
     }
 }
@@ -107,83 +157,42 @@ impl CompressionJobSubmitter {
 ///
 /// # NOTE
 ///
-/// * This function logs errors instead of returning them to the caller.
-/// * This function interacts with CLP database directly. We should replace this with a CLP client
-///   implementation once it's available.
+/// This function logs errors instead of returning them to the caller since the caller is a detached
+/// coroutine.
 async fn submit_clp_compression_job_and_wait_for_completion(
-    db_pool: MySqlPool,
+    state: ClpCompressionState,
     io_config: ClpIoConfig,
 ) {
-    const SUBMISSION_QUERY: &str = formatcp!(
-        "INSERT INTO {} (`clp_config`) VALUES (?)",
-        CLP_COMPRESSION_JOB_TABLE_NAME
+    let ingestion_job_id = state.get_ingestion_job_id();
+    let num_objects_submitted = match &io_config.input {
+        InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_object_metadata_ids.len(),
+        InputConfig::S3InputConfig { .. } => {
+            unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
+        }
+    };
+    tracing::info!(ingestion_job_id = ? ingestion_job_id, "Submitting CLP compression job.");
+
+    let compression_job_id = match state.submit_for_compression(io_config).await {
+        Ok(id) => id,
+        Err(e) => {
+            tracing::error!(
+                ingestion_job_id = ? ingestion_job_id,
+                error = ? e,
+                "Failed to submit CLP compression job."
+            );
+            return;
+        }
+    };
+    tracing::info!(
+        ingestion_job_id = ? ingestion_job_id,
+        compression_job_id = ? compression_job_id,
+        "Compression job submitted."
     );
-    const POLLING_QUERY: &str =
-        formatcp!("SELECT status, status_msg FROM {CLP_COMPRESSION_JOB_TABLE_NAME} WHERE id = ?");
-    const MAX_SLEEP_DURATION_SEC: u32 = 30;
 
-    let serialized_io_config = match clp_rust_utils::serde::BrotliMsgpack::serialize(&io_config) {
-        Ok(data) => data,
-        Err(e) => {
-            tracing::error!("Failed to serialize CLP IO config: {}", e);
-            return;
-        }
-    };
-
-    tracing::info!("Submitting CLP compression job...");
-    let job_id = match sqlx::query(SUBMISSION_QUERY)
-        .bind(serialized_io_config)
-        .execute(&db_pool)
-        .await
-    {
-        Ok(result) => result.last_insert_id(),
-        Err(e) => {
-            tracing::error!("Failed to submit CLP compression job: {}", e);
-            return;
-        }
-    };
-    tracing::info!("Compression job submitted with ID: {}", job_id);
-
-    let mut sleep_duration_sec: u32 = 1;
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(sleep_duration_sec.into())).await;
-        sleep_duration_sec =
-            std::cmp::min(sleep_duration_sec.saturating_mul(2), MAX_SLEEP_DURATION_SEC);
-
-        match sqlx::query_as::<_, (i32, Option<String>)>(POLLING_QUERY)
-            .bind(job_id)
-            .fetch_one(&db_pool)
-            .await
-        {
-            Ok((status, status_message)) => {
-                let status = match CompressionJobStatus::try_from(status) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("Unknown compression job status code {}: {}", status, e);
-                        return;
-                    }
-                };
-                match status {
-                    CompressionJobStatus::Failed => {
-                        tracing::error!(
-                            "Compression job {} failed. Status message: {:?}",
-                            job_id,
-                            status_message
-                        );
-                        return;
-                    }
-                    CompressionJobStatus::Succeeded => {
-                        break;
-                    }
-                    _ => {}
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to fetch compression job status: {}", e);
-                return;
-            }
-        }
-    }
-
-    tracing::info!("Compression job {} completed successfully.", job_id);
+    wait_for_compression_job_completion_and_update_metadata(
+        state,
+        compression_job_id,
+        num_objects_submitted,
+    )
+    .await;
 }

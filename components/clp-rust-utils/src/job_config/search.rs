@@ -11,10 +11,9 @@ pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
-    pub dataset: Option<String>,
+    pub datasets: Option<Vec<String>>,
     pub query_string: String,
     pub max_num_results: u32,
-    pub tags: Option<Vec<String>>,
     pub begin_timestamp: Option<i64>,
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,

@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cctype>
+#include <chrono>
+#include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -9,22 +11,27 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/aws/AwsAuthenticationSigner.hpp"
 #include "../clp/BufferedReader.hpp"
+#include "../clp/ErrorCode.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
-#include "../clp/NetworkReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../clp/utf8_utils.hpp"
 #include "Utils.hpp"
+
+#if CLP_BUILD_CLP_S_ENABLE_CURL
+    #include "../clp/aws/AwsAuthenticationSigner.hpp"
+    #include "../clp/NetworkReader.hpp"
+#endif
 
 namespace clp_s {
 auto get_source_for_path(std::string_view const path) -> InputSource {
@@ -37,6 +44,37 @@ auto get_source_for_path(std::string_view const path) -> InputSource {
 
 auto get_path_object_for_raw_path(std::string_view const path) -> Path {
     return Path{.source = get_source_for_path(path), .path = std::string{path}};
+}
+
+auto remove_path_prefix(std::string_view path, std::string_view prefix)
+        -> std::optional<std::string> {
+    try {
+        std::filesystem::path input_path{path};
+        std::filesystem::path prefix_path{prefix};
+
+        auto path_it = input_path.begin();
+        auto prefix_end_idx = prefix_path.end();
+        if (false == prefix_path.empty() && (--prefix_path.end())->empty()) {
+            --prefix_end_idx;
+        }
+        for (auto prefix_it = prefix_path.begin(); prefix_end_idx != prefix_it; ++prefix_it) {
+            if (input_path.end() == path_it) {
+                return std::nullopt;
+            }
+            if (*prefix_it != *path_it) {
+                return std::nullopt;
+            }
+            ++path_it;
+        }
+
+        std::filesystem::path path_without_prefix{"/"};
+        for (; input_path.end() != path_it; ++path_it) {
+            path_without_prefix.append(path_it->string());
+        }
+        return path_without_prefix.string();
+    } catch (std::exception const&) {
+        return std::nullopt;
+    }
 }
 
 auto get_input_files_for_raw_path(std::string_view const path, std::vector<Path>& files) -> bool {
@@ -155,6 +193,7 @@ auto try_create_file_reader(std::string_view const file_path)
     }
 }
 
+#if CLP_BUILD_CLP_S_ENABLE_CURL
 auto try_sign_url(std::string& url) -> bool {
     auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
     auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
@@ -213,6 +252,15 @@ auto try_create_network_reader(std::string_view const url, NetworkAuthOption con
         return nullptr;
     }
 }
+#else
+auto try_create_network_reader(
+        [[maybe_unused]] std::string_view const url,
+        [[maybe_unused]] NetworkAuthOption const& auth
+) -> std::shared_ptr<clp::ReaderInterface> {
+    SPDLOG_ERROR("This build of clp-s does not support network inputs (libcurl excluded).");
+    return nullptr;
+}
+#endif
 
 auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool {
     constexpr std::array<char, 4> cZstdMagicNumber = {'\x28', '\xB5', '\x2F', '\xFD'};
@@ -275,11 +323,11 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
  */
 auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
     constexpr size_t cMaxUtf8CodepointBytes = 4ULL;
-    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1ULL;
+    constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1;
 
     size_t cur_byte{
             peek_size < cMaxRunWithoutFullUtf8Codepoint
-                    ? 0ULL
+                    ? size_t{0}
                     : (peek_size - cMaxRunWithoutFullUtf8Codepoint)
     };
 
@@ -317,6 +365,13 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
     size_t peek_size{};
     reader->peek_buffered_data(peek_buf, peek_size);
     if (nullptr == peek_buf || 0 == peek_size) {
+        char buf{};
+        size_t bytes_read{};
+        if (auto const rc{reader->try_read(&buf, 1, bytes_read)};
+            0 == bytes_read && clp::ErrorCode_EndOfFile == rc)
+        {
+            return FileType::EmptyFile;
+        }
         return FileType::Unknown;
     }
 
@@ -382,6 +437,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
             case FileType::Json:
             case FileType::KeyValueIr:
             case FileType::LogText:
+            case FileType::EmptyFile:
                 return {std::move(readers), type};
             case FileType::Zstd: {
                 readers.emplace_back(
@@ -413,5 +469,51 @@ void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> con
             decompressor->close();
         }
     }
+}
+
+auto try_create_reader_and_deduce_type_with_retries(
+        Path const& path,
+        NetworkAuthOption const& network_auth,
+        size_t max_retries
+) -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
+    constexpr std::chrono::seconds cInitialBackoff{1};
+
+    for (size_t attempt{0}; attempt <= max_retries; ++attempt) {
+        if (attempt > 0) {
+            auto const backoff{cInitialBackoff * (1U << (attempt - 1))};
+            SPDLOG_WARN(
+                    "Retrying input {} (attempt {}/{}) after {}s backoff.",
+                    path.path,
+                    attempt,
+                    max_retries,
+                    backoff.count()
+            );
+            std::this_thread::sleep_for(backoff);
+        }
+
+        auto reader{try_create_reader(path, network_auth)};
+        if (nullptr == reader) {
+            if (attempt < max_retries) {
+                SPDLOG_WARN("Failed to create reader for {}, will retry.", path.path);
+                continue;
+            }
+            SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
+            return {{}, FileType::Unknown};
+        }
+
+        auto result = try_deduce_reader_type(reader);
+        auto const& [nested_readers, file_type] = result;
+
+        if (FileType::Unknown == file_type && NetworkUtils::is_retryable_curl_error(reader.get())
+            && attempt < max_retries)
+        {
+            NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+            continue;
+        }
+
+        return result;
+    }
+
+    return {{}, FileType::Unknown};
 }
 }  // namespace clp_s

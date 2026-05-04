@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/outcome/std_result.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
@@ -29,6 +29,11 @@ enum class IRProtocolErrorCode : uint8_t {
     BackwardCompatible,
     Unsupported,
     Invalid,
+};
+
+enum class EncodingType : uint8_t {
+    FourByte,
+    EightByte,
 };
 
 class DecodingException : public TraceableException {
@@ -61,6 +66,17 @@ private:
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
+ * Reads the IR stream's encoding type from the magic number.
+ * @param reader
+ * @return A result containing the encoding type on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if `reader` doesn't contain enough data to decode
+ *   the magic number.
+ * - IrDeserializationErrorEnum::InvalidMagicNumber if the magic number is invalid.
+ */
+[[nodiscard]] auto get_encoding_type(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<EncodingType>;
+/**
  * Deserializes the tag for the next packet.
  * @param reader
  * @param tag Returns the tag of the next packet.
@@ -68,6 +84,17 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 [[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
+
+/**
+ * Deserializes the tag for the next packet.
+ * @param reader
+ * @return A result containing the tag of the next packet on success, or an error code indicating
+ * the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ */
+[[nodiscard]] auto deserialize_tag(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<encoded_tag_t>;
 
 /**
  * Deserializes a log event from the given stream
@@ -121,14 +148,13 @@ auto deserialize_encoded_text_ast(
  * @param encoded_tag
  * @return A result containing the deserialized encoded text AST on success, or an error code
  * indicating the failure:
- * - IRErrorCode_Corrupted_IR: if IR stream is invalid.
- * - IRErrorCode_Incomplete_IR: if IR stream is incomplete.
- * - Forwards `deserialize_and_append_logtype`'s return values on failure.
- * - Forwards `deserialize_and_append_dict_var`'s return values on failure.
+ * - IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure if the encoded text AST
+ *   cannot be deserialized.
+ * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is incomplete.
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)
-        -> boost::outcome_v2::std_checked<EncodedTextAst<encoded_variable_t>, IRErrorCode>;
+        -> ystdlib::error_handling::Result<EncodedTextAst<encoded_variable_t>>;
 
 /**
  * Decodes the IR message calls the given methods to handle each component of the message
@@ -203,6 +229,25 @@ IRErrorCode deserialize_preamble(
 );
 
 /**
+ * Deserializes the preamble for an IR stream.
+ * @param reader
+ * @return A result containing a pair on success, or an error code indicating the failure:
+ * - The pair:
+ *   - The tag indicating the type of the deserialized metadata.
+ *   - The payload of the deserialized metadata.
+ * - The possible error codes:
+ *   - IrDeserializationErrorEnum::UnsupportedMetadataFormat if the metadata format is not
+ *     supported.
+ *   - IrDeserializationErrorEnum::IncompleteStream if `reader` doesn't contain enough data to
+ *     deserialize.
+ *   - Forwards `deserialize_int`'s return values on failure.
+ *   - Forwards `deserialize_metadata`'s return values on failure.
+ *   - Forwards `deserialize_tag`'s return values on failure.
+ */
+[[nodiscard]] auto deserialize_preamble(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<encoded_tag_t, std::vector<int8_t>>>;
+
+/**
  * Deserializes a UTC offset change packet.
  * @param reader
  * @param utc_offset The deserialized UTC offset.
@@ -210,6 +255,17 @@ IRErrorCode deserialize_preamble(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+
+/**
+ * Deserializes a UTC offset change packet.
+ * @param reader
+ * @return A result containing the deserialized UTC offset on success, or an error code indicating
+ * the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ */
+[[nodiscard]] auto deserialize_utc_offset_change(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<UtcOffset>;
 
 /**
  * Validates whether the given protocol version can be supported by the current build.

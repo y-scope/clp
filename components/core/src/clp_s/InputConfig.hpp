@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -25,6 +26,7 @@ enum class FileType : uint8_t {
     KeyValueIr,
     LogText,
     Zstd,
+    EmptyFile,
     Unknown
 };
 
@@ -72,6 +74,16 @@ struct Path {
  * @return a Path object representing the raw path or url
  */
 [[nodiscard]] auto get_path_object_for_raw_path(std::string_view const path) -> Path;
+
+/**
+ * Removes a prefix from a filesystem path.
+ * @param path
+ * @param prefix
+ * @return An option containing the path with the prefix removed on success, or an empty option on
+ * failure.
+ */
+[[nodiscard]] auto remove_path_prefix(std::string_view path, std::string_view prefix)
+        -> std::optional<std::string>;
 
 /**
  * Recursively collects all file paths from the given raw path, including the path itself.
@@ -143,6 +155,21 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  * @param readers
  */
 void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> const& readers);
+
+/**
+ * Creates a reader for the given path and deduces its file type, retrying on transient network
+ * errors with exponential backoff.
+ * @param path
+ * @param network_auth
+ * @param max_retries Maximum number of retry attempts after the initial attempt.
+ * @return A pair of (nested_readers, file_type). On unrecoverable failure, returns an empty vector
+ * and `FileType::Unknown`.
+ */
+[[nodiscard]] auto try_create_reader_and_deduce_type_with_retries(
+        Path const& path,
+        NetworkAuthOption const& network_auth,
+        size_t max_retries = 3
+) -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP

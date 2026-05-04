@@ -11,8 +11,7 @@ CLP core is the low-level component that performs compression, decompression, an
 * [CMake] >= 3.23.0 and < 4.0.0
   * Minimum version 3.23.0 is required for [yscope-dev-utils].
   * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
-* [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
+* [Task] >= 3.48.0
 * [uv] >= 0.8
 
 To build, we require some source dependencies, packages from package managers, and libraries built
@@ -55,6 +54,7 @@ The task will download, build, and install (within the build directory) the foll
 | [spdlog](https://github.com/gabime/spdlog)                            | v1.15.3        |
 | [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |
 | [utfcpp](https://github.com/nemtrif/utfcpp)                           | v4.0.6         |
+| [xxHash](https://github.com/Cyan4973/xxHash)                          | v0.8.3         |
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp)                        | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer)     | 3abe4cc        |
 | [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp)                 | 9ed78cd        |
@@ -133,5 +133,4 @@ regex-utils
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
-[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
 [yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils

@@ -13,7 +13,6 @@ def compress(
     _: TaskContext,
     job_id: Int64,
     task_id: Int64,
-    tag_ids: list[Int64],
     clp_io_config_json: bytes,
     paths_to_compress_json: bytes,
     clp_metadata_db_connection_config_json: bytes,
@@ -23,7 +22,6 @@ def compress(
     :param _: Spider's task context. Not used in the function.
     :param job_id:
     :param task_id:
-    :param tag_ids:
     :param clp_io_config_json: A JSON string representation of
         `job_orchestration.scheduler.constants.ClpIoConfig`.
     :param paths_to_compress_json: A JSON string representation of
@@ -38,7 +36,6 @@ def compress(
         compression_entry_point(
             int(job_id),
             int(task_id),
-            [int(tag_id) for tag_id in tag_ids],
             clp_io_config_json.decode("utf-8"),
             paths_to_compress_json.decode("utf-8"),
             json.loads(clp_metadata_db_connection_config_json.decode("utf-8")),

@@ -22,8 +22,8 @@ inputs:
       (e.g. jammy, focal, etc.)"
     required: false
   arch:
-    description: "Target architecture (amd64 or arm64)"
-    default: "amd64"
+    description: "Target architecture (x86_64 or aarch64)"
+    default: "x86_64"
     required: false
 
 runs:
@@ -66,13 +66,23 @@ runs:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
           /${{steps.compute-meta.outputs.IMAGE_NAME}}"
 
+    - name: "Map arch to Docker platform"
+      id: "map-arch"
+      shell: "bash"
+      run: |
+        if [ "${{inputs.arch}}" = "aarch64" ]; then
+          echo "platform=linux/arm64" >> "$GITHUB_OUTPUT"
+        else
+          echo "platform=linux/amd64" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: "Build and Push"
       if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
       uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
       with:
         context: "./"
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
-        platforms: "linux/${{inputs.arch}}"
+        platforms: "${{steps.map-arch.outputs.platform}}"
         # Disable provenance to create a simple image instead of a manifest list.
         # This allows `docker manifest create` to combine the per-arch images.
         provenance: false

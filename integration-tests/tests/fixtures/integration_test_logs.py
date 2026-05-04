@@ -1,7 +1,7 @@
 """Session-scoped test log fixtures shared across integration tests."""
 
 import logging
-import shutil
+import pathlib
 import subprocess
 
 import pytest
@@ -10,7 +10,10 @@ from tests.utils.config import (
     IntegrationTestLogs,
     IntegrationTestPathConfig,
 )
-from tests.utils.utils import unlink
+from tests.utils.utils import (
+    get_binary_path,
+    remove_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +24,7 @@ def hive_24hr(
     integration_test_path_config: IntegrationTestPathConfig,
 ) -> IntegrationTestLogs:
     """Provides shared `hive_24hr` test logs."""
-    return _download_and_extract_dataset(
+    return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
         name="hive-24hr",
@@ -35,7 +38,7 @@ def postgresql(
     integration_test_path_config: IntegrationTestPathConfig,
 ) -> IntegrationTestLogs:
     """Provides shared `postgresql` test logs."""
-    return _download_and_extract_dataset(
+    return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
         name="postgresql",
@@ -43,12 +46,62 @@ def postgresql(
     )
 
 
-def _download_and_extract_dataset(
+@pytest.fixture(scope="session")
+def simple_unstructured(
+    request: pytest.FixtureRequest,
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> IntegrationTestLogs:
+    """Provides a simple unstructured test log."""
+    name = "simple_unstructured"
+    integration_test_logs = IntegrationTestLogs(
+        name=name,
+        tarball_url=f"{name}.tar.gz",
+        integration_test_path_config=integration_test_path_config,
+        num_log_events=11,
+    )
+    remove_path(integration_test_logs.extraction_dir)
+    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
+
+    with pathlib.Path.open(integration_test_logs.extraction_dir / f"{name}.log", "w") as f:
+        f.write(
+            "2015-03-23 05:48:30,122 TEST1\n"
+            "2015-03-23 05:48:30,122Z TEST2\n"
+            "2015-03-23 05:48:30,122 Z TEST3\n"
+            "2015-03-23 05:48:30,122+00 TEST4\n"
+            "2015-03-23 05:48:30,122+00Z TEST5\n"
+            "2015-03-23 05:48:30,122 +00 TEST6\n"
+            "2015-03-23 05:48:30,122 +00Z TEST7\n"
+            "2015-03-23 05:48:30,122UTC+00 TEST8\n"
+            "2015-03-23 05:48:30,122UTC+00Z TEST9\n"
+            "2015-03-23 05:48:30,122 UTC+00 TEST10\n"
+            "2015-03-23 05:48:30,122 UTC+00Z TEST11\n"
+        )
+
+    logger.info("Set up logs for dataset `%s`.", name)
+    request.config.cache.set(name, True)
+    return integration_test_logs
+
+
+def _download_and_extract_gzip_dataset(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
     name: str,
     tarball_url: str,
+    keep_leading_dir: bool = False,
 ) -> IntegrationTestLogs:
+    """
+    Download and extract a gzip-compressed dataset tarball for setting up the `IntegrationTestLogs`
+    fixture. Adjust its file permissions for test use.
+
+    :param request: Provides access to the pytest cache.
+    :param integration_test_path_config: See `IntegrationTestPathConfig`.
+    :param name: Dataset name.
+    :param tarball_url: Dataset tarball URL.
+    :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
+        Defaults to False to avoid an unnecessary extra directory level.
+    :return: An IntegrationTestLogs instance providing metadata for the downloaded logs.
+    :raises subprocess.CalledProcessError: If `curl`, `tar`, or `chmod` fails.
+    """
     integration_test_logs = IntegrationTestLogs(
         name=name,
         tarball_url=tarball_url,
@@ -58,38 +111,43 @@ def _download_and_extract_dataset(
         logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
         return integration_test_logs
 
-    curl_bin = shutil.which("curl")
-    if curl_bin is None:
-        err_msg = "curl executable not found"
-        raise RuntimeError(err_msg)
+    remove_path(integration_test_logs.tarball_path)
+    remove_path(integration_test_logs.extraction_dir)
+    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
 
-    try:
-        # fmt: off
-        curl_cmds = [
-            curl_bin,
-            "--fail",
-            "--location",
-            "--output", str(integration_test_logs.tarball_path),
-            "--show-error",
-            tarball_url,
-        ]
-        # fmt: on
-        subprocess.run(curl_cmds, check=True)
+    tarball_path_str = str(integration_test_logs.tarball_path)
+    extract_path_str = str(integration_test_logs.extraction_dir)
 
-        unlink(integration_test_logs.extraction_dir)
-        shutil.unpack_archive(
-            integration_test_logs.tarball_path, integration_test_logs.extraction_dir
-        )
-    except Exception as e:
-        err_msg = f"Failed to download and extract dataset `{name}`."
-        raise RuntimeError(err_msg) from e
+    # fmt: off
+    curl_cmd = [
+        get_binary_path("curl"),
+        "--fail",
+        "--location",
+        "--output", tarball_path_str,
+        "--show-error",
+        tarball_url,
+    ]
+    # fmt: on
+    subprocess.run(curl_cmd, check=True)
 
-    # Allow the extracted content to be deletable or overwritable
-    chmod_bin = shutil.which("chmod")
-    if chmod_bin is None:
-        err_msg = "chmod executable not found"
-        raise RuntimeError(err_msg)
-    subprocess.run([chmod_bin, "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
+    # fmt: off
+    extract_cmd = [
+        get_binary_path("tar"),
+        "--extract",
+        "--gzip",
+        "--file", tarball_path_str,
+        "--directory", extract_path_str,
+    ]
+    # fmt: on
+    if not keep_leading_dir:
+        extract_cmd.extend(["--strip-components", "1"])
+    subprocess.run(extract_cmd, check=True)
+
+    # Allow the downloaded and extracted contents to be deletable or overwritable by adding write
+    # permissions for both the user and the group.
+    chmod_bin = get_binary_path("chmod")
+    subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
+    subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)

@@ -2,33 +2,23 @@ name: "clp-core-build-macos"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".github/workflows/clp-core-build-macos.yaml"
       - ".gitmodules"
       - "components/core/cmake/**"
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
+      - "components/core/tools/scripts/lib_install/pipx-packages/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "taskfile.yaml"
       - "taskfiles/**"
       - "tools/scripts/deps-download/**"
+      - "tools/yscope-dev-utils"
   push:
-    paths:
-      - ".github/workflows/clp-core-build-macos.yaml"
-      - ".gitmodules"
-      - "components/core/cmake/**"
-      - "components/core/CMakeLists.txt"
-      - "components/core/src/**"
-      - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos/**"
-      - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
-      - "taskfile.yaml"
-      - "taskfiles/**"
-      - "tools/scripts/deps-download/**"
+    paths: *monitored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
@@ -51,7 +41,7 @@ jobs:
           - false
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           # Fetch history so that the `clang-tidy-diff` task can compare against the main branch.
           fetch-depth: 0

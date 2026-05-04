@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include "../clp/ReaderInterface.hpp"
+
 namespace clp_s {
 class FileUtils {
 public:
@@ -45,6 +47,27 @@ public:
      * @return true on success, false otherwise
      */
     static bool get_last_non_empty_path_component(std::string_view const path, std::string& name);
+};
+
+class NetworkUtils {
+public:
+    /**
+     * Checks if a reader is a `clp::NetworkReader` that has encountered a CURL error, and logs
+     * relevant CURL error information if a CURL error has occurred.
+     * @param path The path that the reader has opened.
+     * @param reader The open reader which may have experienced a CURL error.
+     * @return Whether a CURL error has occurred on the reader.
+     */
+    [[maybe_unused]] static auto
+    check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader) -> bool;
+
+    /**
+     * Checks if a reader is a `clp::NetworkReader` that has encountered a transient (retryable)
+     * CURL error such as HTTP 500, 502, 503, 504, SSL connection reset, or empty reply.
+     * @param reader The open reader which may have experienced a CURL error.
+     * @return Whether a retryable CURL error has occurred on the reader.
+     */
+    [[nodiscard]] static auto is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool;
 };
 
 class UriUtils {
@@ -150,7 +173,7 @@ void write_numeric_value(std::stringstream& stream, ValueType value) {
  *
  * In C++ creating a pointer to objects of type T that is not correctly aligned for type T is
  * undefined behaviour, as is dereferencing such a pointer. This class avoids this undefined
- * behaviour by using memcpy (which any modern compiler should be able to optimize away).
+ * behaviour by using std::memcpy (which any modern compiler should be able to optimize away).
  *
  * For any modern x86 platform the performance difference between using std::span and
  * UnalignedMemSpan should be fairly minimal.
@@ -168,7 +191,7 @@ public:
 
     T operator[](size_t i) const {
         T tmp;
-        memcpy(&tmp, m_begin + i * sizeof(T), sizeof(T));
+        std::memcpy(&tmp, m_begin + i * sizeof(T), sizeof(T));
         return tmp;
     }
 
