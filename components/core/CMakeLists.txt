@@ -347,90 +347,6 @@ add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
-set(SOURCE_FILES_clp_s_unitTest
-    src/clp_s/ArchiveReader.cpp
-    src/clp_s/ArchiveReader.hpp
-    src/clp_s/ArchiveReaderAdaptor.cpp
-    src/clp_s/ArchiveReaderAdaptor.hpp
-    src/clp_s/ArchiveWriter.cpp
-    src/clp_s/ArchiveWriter.hpp
-    src/clp_s/ColumnReader.cpp
-    src/clp_s/ColumnReader.hpp
-    src/clp_s/ColumnWriter.cpp
-    src/clp_s/ColumnWriter.hpp
-    src/clp_s/DictionaryEntry.cpp
-    src/clp_s/DictionaryEntry.hpp
-    src/clp_s/DictionaryWriter.cpp
-    src/clp_s/DictionaryWriter.hpp
-    src/clp_s/FileReader.cpp
-    src/clp_s/FileReader.hpp
-    src/clp_s/FileWriter.cpp
-    src/clp_s/FileWriter.hpp
-    src/clp_s/filter/tests/test-clp_s-bloom_filter.cpp
-    src/clp_s/filter/tests/test-clp_s-xxhash.cpp
-    src/clp_s/FloatFormatEncoding.cpp
-    src/clp_s/FloatFormatEncoding.hpp
-    src/clp_s/ffi/sfa/ClpArchiveReader.cpp
-    src/clp_s/ffi/sfa/ClpArchiveReader.hpp
-    src/clp_s/ffi/sfa/SfaErrorCode.cpp
-    src/clp_s/ffi/sfa/SfaErrorCode.hpp
-    src/clp_s/InputConfig.cpp
-    src/clp_s/InputConfig.hpp
-    src/clp_s/JsonConstructor.cpp
-    src/clp_s/JsonConstructor.hpp
-    src/clp_s/JsonFileIterator.cpp
-    src/clp_s/JsonFileIterator.hpp
-    src/clp_s/JsonParser.cpp
-    src/clp_s/JsonParser.hpp
-    src/clp_s/OutputHandlerImpl.cpp
-    src/clp_s/OutputHandlerImpl.hpp
-    src/clp_s/PackedStreamReader.cpp
-    src/clp_s/PackedStreamReader.hpp
-    src/clp_s/RangeIndexWriter.cpp
-    src/clp_s/RangeIndexWriter.hpp
-    src/clp_s/ReaderUtils.cpp
-    src/clp_s/ReaderUtils.hpp
-    src/clp_s/Schema.cpp
-    src/clp_s/Schema.hpp
-    src/clp_s/SchemaMap.cpp
-    src/clp_s/SchemaMap.hpp
-    src/clp_s/SchemaReader.cpp
-    src/clp_s/SchemaReader.hpp
-    src/clp_s/SchemaTree.cpp
-    src/clp_s/SchemaTree.hpp
-    src/clp_s/SchemaWriter.cpp
-    src/clp_s/SchemaWriter.hpp
-    src/clp_s/search/AddTimestampConditions.cpp
-    src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/EvaluateRangeIndexFilters.cpp
-    src/clp_s/search/EvaluateRangeIndexFilters.hpp
-    src/clp_s/search/EvaluateTimestampIndex.cpp
-    src/clp_s/search/EvaluateTimestampIndex.hpp
-    src/clp_s/search/Output.cpp
-    src/clp_s/search/Output.hpp
-    src/clp_s/search/OutputHandler.hpp
-    src/clp_s/search/Projection.cpp
-    src/clp_s/search/Projection.hpp
-    src/clp_s/search/QueryRunner.cpp
-    src/clp_s/search/QueryRunner.hpp
-    src/clp_s/search/SchemaMatch.cpp
-    src/clp_s/search/SchemaMatch.hpp
-    src/clp_s/test/test_InputConfig.cpp
-    src/clp_s/TimestampDictionaryReader.cpp
-    src/clp_s/TimestampDictionaryReader.hpp
-    src/clp_s/TimestampDictionaryWriter.cpp
-    src/clp_s/TimestampDictionaryWriter.hpp
-    src/clp_s/TimestampEntry.cpp
-    src/clp_s/TimestampEntry.hpp
-    src/clp_s/timestamp_parser/test/test_TimestampParser.cpp
-    src/clp_s/Utils.cpp
-    src/clp_s/Utils.hpp
-    src/clp_s/ZstdCompressor.cpp
-    src/clp_s/ZstdCompressor.hpp
-    src/clp_s/ZstdDecompressor.cpp
-    src/clp_s/ZstdDecompressor.hpp
-    )
-
 set(SOURCE_FILES_reducer_unitTest
     src/reducer/BufferedSocketWriter.cpp
     src/reducer/BufferedSocketWriter.hpp
@@ -508,6 +424,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/test/test_StringBlob.cpp
         src/clp/ffi/ir_stream/byteswap.hpp
         src/clp/ffi/ir_stream/Deserializer.hpp
+        src/clp/ffi/ir_stream/DeserializerImpl.cpp
+        src/clp/ffi/ir_stream/DeserializerImpl.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
         src/clp/ffi/ir_stream/decoding_methods.inc
@@ -519,6 +437,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/IrSerializationError.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
+        src/clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
+        src/clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
@@ -714,8 +634,6 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        tests/clp_s_test_utils.cpp
-        tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
         tests/MockLogTypeDictionary.hpp
         tests/MockVariableDictionary.hpp
@@ -725,25 +643,18 @@ set(SOURCE_FILES_unitTest
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedReader.cpp
-        tests/test-clp_s-delta-encode-log-order.cpp
-        tests/test-clp_s-end_to_end.cpp
-        tests/test-clp_s-ffi_sfa_reader.cpp
-        tests/test-clp_s-range_index.cpp
-        tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-ffi_IrUnitHandlerReq.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-FloatFormatEncoding.cpp
         tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
-        tests/test-kql.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -756,21 +667,41 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
-        tests/test-sql.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
 
 if(CLP_ENABLE_TESTS)
+    # Runtime dependencies built by clp-core for unit tests. Keep in sync with flags required by
+    # `CLP_BUILD_TESTING` in options.cmake.
+    add_library(clp_unit_test_runtime INTERFACE)
+    add_library(clp::unit_test_runtime ALIAS clp_unit_test_runtime)
+    target_link_libraries(clp_unit_test_runtime
+            INTERFACE
+            clp::regex_utils
+            clp::string_utils
+            clp_s::archive_reader
+            clp_s::archive_writer
+            clp_s::ffi::sfa
+            clp_s::filter
+            clp_s::json_constructor
+            clp_s::search
+            clp_s::search::ast
+            clp_s::search::kql
+            clp_s::search::sql
+            clp_s::timestamp_parser
+            clp_s::timestamp_pattern
+            )
+
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
-            ${SOURCE_FILES_clp_s_unitTest}
             ${SOURCE_FILES_reducer_unitTest}
             )
     target_include_directories(unitTest
             PRIVATE
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
             )
     target_link_libraries(unitTest
             PRIVATE
@@ -781,13 +712,9 @@ if(CLP_ENABLE_TESTS)
             Boost::regex
             Boost::url
             Catch2::Catch2WithMain
+            clp::unit_test_runtime
+            clp_s::unit_test_sources
             ${CURL_LIBRARIES}
-            clp_s::search::ast
-            clp_s::search::kql
-            clp_s::search::sql
-            clp_s::timestamp_parser
-            clp_s::timestamp_pattern
-            clp_s::filter
             date::date
             fmt::fmt
             log_surgeon::log_surgeon
@@ -802,8 +729,6 @@ if(CLP_ENABLE_TESTS)
             OpenSSL::Crypto
             ${sqlite_LIBRARY_DEPENDENCIES}
             ${STD_FS_LIBS}
-            clp::regex_utils
-            clp::string_utils
             ystdlib::containers
             ystdlib::error_handling
             zstd::libzstd_static
