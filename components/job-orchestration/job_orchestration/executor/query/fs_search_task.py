@@ -214,7 +214,7 @@ def search(
     self: Task,
     job_id: str,
     task_id: int,
-    search_config_blob: bytes,
+    job_config_blob: bytes,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
@@ -244,7 +244,7 @@ def search(
 
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    search_config = SearchJobConfig.model_validate(msgpack.unpackb(search_config_blob))
+    search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
