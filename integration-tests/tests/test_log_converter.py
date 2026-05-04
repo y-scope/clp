@@ -7,11 +7,10 @@ import json
 
 import pytest
 
+from tests.utils.classes import IntegrationTestDataset, IntegrationTestPathConfig
 from tests.utils.config import (
     ClpCorePathConfig,
     ConversionTestPathConfig,
-    IntegrationTestLogs,
-    IntegrationTestPathConfig,
 )
 from tests.utils.subprocess_utils import run_and_log_subprocess
 
@@ -20,38 +19,29 @@ LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY = "timestamp"
 
 pytestmark = pytest.mark.core
 
-text_datasets = pytest.mark.parametrize(
-    "test_logs_fixture",
-    [
-        "simple_unstructured",
-    ],
-)
-
 
 @pytest.mark.clp_s
-@text_datasets
 def test_log_converter_transform(
-    request: pytest.FixtureRequest,
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
-    test_logs_fixture: str,
+    text_singlefile: IntegrationTestDataset,
 ) -> None:
     """
     Validate that converted logs from the core binary `log-converter` can be ingested successfully
     by `clp-s`.
 
-    :param request:
     :param clp_core_path_config:
     :param integration_test_path_config:
-    :param test_logs_fixture:
+    :param text_singlefile:
     """
-    integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
-    test_logs_name = integration_test_logs.name
-
+    num_log_events = sum(
+        sum(1 for _ in (text_singlefile.logs_path / file_name).open(encoding="utf-8"))
+        for file_name in text_singlefile.metadata.file_names
+    )
     test_paths = ConversionTestPathConfig(
-        test_name=f"clp-s-{test_logs_name}",
-        logs_source_dir=integration_test_logs.extraction_dir,
-        num_log_events=integration_test_logs.num_log_events,
+        test_name=f"clp-s-{text_singlefile.dataset_name}",
+        logs_source_dir=text_singlefile.logs_path,
+        num_log_events=num_log_events,
         integration_test_path_config=integration_test_path_config,
     )
     try:

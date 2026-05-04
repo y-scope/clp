@@ -26,3 +26,13 @@ def text_multifile(
     return IntegrationTestDataset(
         dataset_root_dir=integration_test_path_config.test_data_dir / "text_multifile",
     )
+
+
+@pytest.fixture(scope="session")
+def text_singlefile(
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> IntegrationTestDataset:
+    """Returns an object corresponding to the `text_singlefile` test dataset."""
+    return IntegrationTestDataset(
+        dataset_root_dir=integration_test_path_config.test_data_dir / "text_singlefile",
+    )
