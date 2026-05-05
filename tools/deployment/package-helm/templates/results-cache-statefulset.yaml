@@ -19,6 +19,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "results-cache"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "resultsCache"
+        ) | nindent 6 }}
       containers:
         - name: "results-cache"
           image: "mongo:8.0.19"

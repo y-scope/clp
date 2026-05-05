@@ -404,9 +404,9 @@ services:
       <<: *healthcheck_defaults
       test: [
         "CMD",
-        "bash",
-        "-c",
-        "< /dev/tcp/webui/4000"
+        "curl",
+        "-f",
+        "http://webui:4000/"
       ]
 
   garbage-collector:
