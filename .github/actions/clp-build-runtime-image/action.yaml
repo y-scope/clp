@@ -22,8 +22,8 @@ inputs:
       (e.g. jammy, focal, etc.)"
     required: false
   arch:
-    description: "Target architecture (x86_64 or aarch64)"
-    default: "x86_64"
+    description: "Target architecture (amd64 or arm64)"
+    default: "amd64"
     required: false
 
 runs:
@@ -33,7 +33,7 @@ runs:
       uses: "docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2"
 
     - name: "Login to Image Registry"
-      uses: "docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772"
+      uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
       with:
         registry: "${{inputs.image_registry}}"
         username: "${{inputs.image_registry_username}}"
@@ -65,15 +65,20 @@ runs:
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
           /${{steps.compute-meta.outputs.IMAGE_NAME}}"
+        flavor: |
+          suffix=-${{inputs.arch}}
 
     - name: "Map arch to Docker platform"
       id: "map-arch"
       shell: "bash"
       run: |
-        if [ "${{inputs.arch}}" = "aarch64" ]; then
+        if [ "${{inputs.arch}}" = "arm64" ]; then
           echo "platform=linux/arm64" >> "$GITHUB_OUTPUT"
-        else
+        elif [ "${{inputs.arch}}" = "amd64" ]; then
           echo "platform=linux/amd64" >> "$GITHUB_OUTPUT"
+        else
+          echo >&2 "ERROR: Unsupported arch '${{inputs.arch}}'. Must be 'amd64' or 'arm64'."
+          exit 1
         fi
 
     - name: "Build and Push"
@@ -84,8 +89,8 @@ runs:
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
         platforms: "${{steps.map-arch.outputs.platform}}"
         # Disable provenance to create a simple image instead of a manifest list.
-        # This allows `docker manifest create` to combine the per-arch images.
+        # This allows `docker manifest create` to combine the per-arch images later.
         provenance: false
         push: true
-        tags: "${{steps.extract-gh-meta.outputs.tags}}-${{inputs.arch}}"
+        tags: "${{steps.extract-gh-meta.outputs.tags}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
