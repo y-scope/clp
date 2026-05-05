@@ -70,14 +70,14 @@ def _convert_and_compress(
     src_path = str(test_paths.logs_source_dir)
     conversion_path = str(test_paths.conversion_dir)
     compression_path = str(test_paths.compression_dir)
-    conversion_action = ExternalAction(
-        cmd=[log_converter_bin_path, src_path, "--output-dir", conversion_path]
+    conversion_action = ExternalAction.from_cmd(
+        [log_converter_bin_path, src_path, "--output-dir", conversion_path]
     )
     if conversion_action.completed_proc.returncode != 0:
         pytest.fail(format_action_failure_msg("`log-converter` failed.", conversion_action))
 
-    compression_action = ExternalAction(
-        cmd=[
+    compression_action = ExternalAction.from_cmd(
+        [
             clp_s_bin_path,
             "c",
             compression_path,
@@ -92,7 +92,9 @@ def _convert_and_compress(
     if test_paths.num_log_events is None:
         return
 
-    search_action = ExternalAction(cmd=[clp_s_bin_path, "s", compression_path, "timestamp > 0"])
+    search_action = ExternalAction.from_cmd(
+        [clp_s_bin_path, "s", compression_path, "timestamp > 0"]
+    )
     if search_action.completed_proc.returncode != 0:
         pytest.fail(format_action_failure_msg("`clp-s` search failed.", search_action))
     lines = search_action.completed_proc.stdout.splitlines()

@@ -27,7 +27,7 @@ def list_running_services_in_compose_project(project_name: str) -> list[str]:
     ]
     # fmt: on
 
-    compose_ps_action = ExternalAction(cmd=compose_ps_cmd)
+    compose_ps_action = ExternalAction.from_cmd(compose_ps_cmd)
     if compose_ps_action.completed_proc.returncode != 0:
         pytest.fail(
             format_action_failure_msg(

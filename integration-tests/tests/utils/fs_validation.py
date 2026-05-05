@@ -16,7 +16,7 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     :raise: RuntimeError if the diff command fails due to execution errors.
     """
     cmd = [get_binary_path("diff"), "--brief", "--recursive", str(path1), str(path2)]
-    diff_action = ExternalAction(cmd=cmd)
+    diff_action = ExternalAction.from_cmd(cmd)
     rc = diff_action.completed_proc.returncode
     if rc == 0:
         return True
@@ -47,8 +47,8 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     :return: A named temporary file (delete on close) that contains the sorted JSON content.
     :raise: RuntimeError if jq is missing or fails due to execution errors.
     """
-    jq_action = ExternalAction(
-        cmd=[get_binary_path("jq"), "--sort-keys", "--compact-output", ".", str(json_fp)],
+    jq_action = ExternalAction.from_cmd(
+        [get_binary_path("jq"), "--sort-keys", "--compact-output", ".", str(json_fp)],
     )
     jq_rc = jq_action.completed_proc.returncode
     if jq_rc != 0:

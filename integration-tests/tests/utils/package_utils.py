@@ -27,7 +27,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    start_action = ExternalAction(cmd=start_cmd)
+    start_action = ExternalAction.from_cmd(start_cmd)
     if start_action.completed_proc.returncode != 0:
         pytest.fail(
             format_action_failure_msg(
@@ -54,7 +54,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    stop_action = ExternalAction(cmd=stop_cmd)
+    stop_action = ExternalAction.from_cmd(stop_cmd)
     if stop_action.completed_proc.returncode != 0:
         pytest.fail(
             format_action_failure_msg(
@@ -94,7 +94,7 @@ def run_package_compression_script(
     compress_cmd.append(str(compression_job.path_to_original_dataset))
 
     # Run compression command for this job and assert that it succeeds.
-    compress_action = ExternalAction(cmd=compress_cmd)
+    compress_action = ExternalAction.from_cmd(compress_cmd)
     if compress_action.completed_proc.returncode != 0:
         pytest.fail(
             format_action_failure_msg(

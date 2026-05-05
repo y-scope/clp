@@ -134,7 +134,7 @@ def verify_package_compression(
         ]
 
         # Run decompression command and assert that it succeeds.
-        decompress_action = ExternalAction(cmd=decompress_cmd)
+        decompress_action = ExternalAction.from_cmd(decompress_cmd)
         if decompress_action.completed_proc.returncode != 0:
             pytest.fail(
                 format_action_failure_msg(
