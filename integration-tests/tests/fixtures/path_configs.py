@@ -35,5 +35,5 @@ def fixt_package_path_config(
         package_test_scripts_dir=(
             resolve_path_env_var("INTEGRATION_TESTS_PROJECT_ROOT") / "tests" / "package_tests"
         ),
-        test_root_dir=integration_test_path_config.test_cache_dir,
+        test_cache_dir=integration_test_path_config.test_cache_dir,
     )

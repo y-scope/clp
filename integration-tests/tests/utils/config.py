@@ -79,7 +79,7 @@ class PackagePathConfig:
     package_test_scripts_dir: Path
 
     #: Root directory for package tests output.
-    test_root_dir: InitVar[Path]
+    test_cache_dir: InitVar[Path]
 
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
@@ -90,7 +90,7 @@ class PackagePathConfig:
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self, test_root_dir: Path) -> None:
+    def __post_init__(self, test_cache_dir: Path) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the CLP package directory exists and contains required directories.
         clp_package_dir = self.clp_package_dir
@@ -109,10 +109,10 @@ class PackagePathConfig:
         validate_dir_exists(self.package_test_scripts_dir)
 
         # Initialize directory for package test output.
-        validate_dir_exists(test_root_dir)
-        object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        validate_dir_exists(test_cache_dir)
+        object.__setattr__(self, "temp_config_dir", test_cache_dir / "temp_config_files")
         object.__setattr__(
-            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+            self, "package_decompression_dir", test_cache_dir / "package-decompressed-logs"
         )
 
         # Initialize log directory for the package.
@@ -299,13 +299,13 @@ class CompressionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_cache_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
         object.__setattr__(
-            self, "decompression_dir", test_root_dir / f"{test_name}-decompressed-logs"
+            self, "decompression_dir", test_cache_dir / f"{test_name}-decompressed-logs"
         )
 
     def clear_test_outputs(self) -> None:
@@ -336,12 +336,12 @@ class ConversionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_cache_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "conversion_dir", test_root_dir / f"{test_name}-converted")
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "conversion_dir", test_cache_dir / f"{test_name}-converted")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this conversion test."""
