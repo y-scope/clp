@@ -78,7 +78,7 @@ auto
 find_first_of(string_view haystack, char const* needles, size_t search_start_pos, size_t& needle_ix)
         -> size_t {
     auto const haystack_length = haystack.length();
-    auto const needles_length = strlen(needles);
+    auto const needles_length = std::strlen(needles);
     for (size_t i{search_start_pos}; i < haystack_length; ++i) {
         for (needle_ix = 0; needle_ix < needles_length; ++needle_ix) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -154,9 +154,8 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
     bool is_escaped{false};
-    auto const* const str_end = str.cend();
-    for (auto const* current = str.cbegin(); current != str_end;) {
-        auto c = *current;
+    for (size_t current{0}; current < str.size();) {
+        auto const c = str[current];
         if (is_escaped) {
             is_escaped = false;
 
@@ -166,16 +165,13 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
                 cleaned_str += cWildcardEscapeChar;
             }
             cleaned_str += c;
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
         } else if (cZeroOrMoreCharsWildcard == c) {
             cleaned_str += c;
 
             // Skip over all '*' to find the next non-'*'
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
-            while (current != str_end && cZeroOrMoreCharsWildcard == *current) {
-                // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            while (current < str.size() && cZeroOrMoreCharsWildcard == str[current]) {
                 ++current;
             }
         } else {
@@ -184,7 +180,6 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
             } else {
                 cleaned_str += c;
             }
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             ++current;
         }
     }

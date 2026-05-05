@@ -165,10 +165,10 @@ class StorageType(LowercaseStrEnum):
 
 
 class AwsAuthType(LowercaseStrEnum):
+    default = auto()
     credentials = auto()
     profile = auto()
     env_vars = auto()
-    ec2 = auto()
 
 
 AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
@@ -339,7 +339,7 @@ class Database(BaseModel):
             }
         )
         return (
-            f"jdbc:{self.type.value}://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/"
+            f"jdbc:{self.type.value}://{self.host}:{self.port}/"
             f"{self.names[_DB_USER_TYPE_TO_DB_NAME_TYPE[user_type]]}?{query}"
         )
 
@@ -401,9 +401,10 @@ class Database(BaseModel):
             password=_get_env_var(pass_env_var),
         )
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = DB_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class SpiderScheduler(BaseModel):
@@ -432,8 +433,10 @@ class QueryScheduler(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    max_datasets_per_query: PositiveInt | None = 10
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
+    scheduler_concurrency: PositiveInt = 4
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
@@ -478,9 +481,10 @@ class Redis(BaseModel):
         """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = REDIS_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class Reducer(BaseModel):
@@ -508,9 +512,10 @@ class ResultsCache(BaseModel):
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = RESULTS_CACHE_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class Queue(BaseModel):
@@ -544,9 +549,10 @@ class Queue(BaseModel):
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
-    def transform_for_container(self):
+    def transform_for_container(self, is_bundled: bool):
         self.host = QUEUE_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
 
 
 class S3Credentials(BaseModel):
@@ -583,7 +589,7 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"profile must be set when type is '{auth_enum}.'")
         if AwsAuthType.credentials == auth_enum and not credentials:
             raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
-        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
+        if auth_enum in [AwsAuthType.default, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return data
 
@@ -773,9 +779,6 @@ class ApiServer(BaseModel):
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
-    buffer_flush_timeout: PositiveInt = 300  # seconds
-    buffer_flush_threshold: PositiveInt = 4096 * 1024 * 1024  # 4 GiB
-    channel_capacity: PositiveInt = 10
     logging_level: LoggingLevelRust = "INFO"
 
 
@@ -946,7 +949,6 @@ class ClpConfig(BaseModel):
             raise ValueError(f"tmp_directory is invalid: {ex}")
 
     def validate_aws_config_dir(self, use_host_mount: bool = False):
-        profile_auth_used = False
         auth_configs = []
 
         if StorageType.S3 == self.logs_input.type:
@@ -956,15 +958,22 @@ class ClpConfig(BaseModel):
         if StorageType.S3 == self.stream_output.storage.type:
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
-        for auth in auth_configs:
-            if AwsAuthType.profile == auth.type:
-                profile_auth_used = True
-                break
+        auth_types_used = {auth.type for auth in auth_configs}
+        default_auth_used = AwsAuthType.default in auth_types_used
+        profile_auth_used = AwsAuthType.profile in auth_types_used
+        config_dir_allowed = profile_auth_used or default_auth_used
 
         if profile_auth_used:
             if self.aws_config_directory is None:
                 raise ValueError(
                     "aws_config_directory must be set when using profile authentication"
+                )
+
+        if self.aws_config_directory is not None:
+            if not config_dir_allowed:
+                raise ValueError(
+                    "aws_config_directory is only supported with 'profile' or 'default'"
+                    " authentication"
                 )
             resolved_aws_config_dir = (
                 resolve_host_path_in_container(self.aws_config_directory)
@@ -975,10 +984,6 @@ class ClpConfig(BaseModel):
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
-        if not profile_auth_used and self.aws_config_directory is not None:
-            raise ValueError(
-                "aws_config_directory should not be set when profile authentication is not used"
-            )
 
     def validate_api_server(self):
         if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
@@ -1077,14 +1082,14 @@ class ClpConfig(BaseModel):
         self.archive_output.storage.transform_for_container()
         self.stream_output.storage.transform_for_container()
 
-        self.database.transform_for_container()
+        self.database.transform_for_container(BundledService.DATABASE in self.bundled)
         if self.queue is not None:
-            self.queue.transform_for_container()
+            self.queue.transform_for_container(BundledService.QUEUE in self.bundled)
         if self.redis is not None:
-            self.redis.transform_for_container()
+            self.redis.transform_for_container(BundledService.REDIS in self.bundled)
         if self.spider_scheduler is not None:
             self.spider_scheduler.transform_for_container()
-        self.results_cache.transform_for_container()
+        self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
         if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:

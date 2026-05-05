@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+import msgpack
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
@@ -26,7 +27,7 @@ from job_orchestration.executor.query.utils import (
 )
 from job_orchestration.executor.utils import load_worker_config
 from job_orchestration.scheduler.job_config import SearchJobConfig
-from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
+from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -66,13 +67,12 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
+    dataset: str,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
     ]
-
-    dataset = search_config.dataset
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
@@ -112,6 +112,7 @@ def _make_command_and_env_vars(
     search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
+    dataset: str | None = None,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
 
@@ -121,7 +122,7 @@ def _make_command_and_env_vars(
         )
     elif StorageEngine.CLP_S == storage_engine:
         command, env_vars = _make_core_clp_s_command_and_env_vars(
-            clp_home, worker_config, archive_id, search_config
+            clp_home, worker_config, archive_id, search_config, dataset
         )
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
@@ -180,11 +181,32 @@ def _make_command_and_env_vars(
             "results-cache",
             "--uri", results_cache_uri,
             "--collection", results_collection,
-            "--max-num-results", str(search_config.max_num_results)
+            "--max-num-results", str(search_config.max_num_results),
         ))
         # fmt: on
+        if dataset is not None:
+            command.extend(("--dataset", dataset))
 
     return command, env_vars
+
+
+def upload_results_to_s3(
+    task_results: QueryTaskResult, s3_config: Any, src_file: Path, dest_path: str
+):
+    if not src_file.exists() or src_file.stat().st_size == 0:
+        logger.info(f"Skipping upload for empty query results file {dest_path} to S3.")
+        src_file.unlink(missing_ok=True)
+        return
+    logger.info(f"Uploading query results {dest_path} to S3...")
+    try:
+        s3_put(s3_config, src_file, dest_path)
+        logger.info(f"Finished uploading query results {dest_path} to S3.")
+    except Exception as err:
+        logger.error(f"Failed to upload query results {dest_path}: {err}")
+        task_results.status = QueryTaskStatus.FAILED
+        task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
+    src_file.unlink()
+    return
 
 
 @app.task(bind=True)
@@ -192,10 +214,11 @@ def search(
     self: Task,
     job_id: str,
     task_id: int,
-    job_config: dict,
+    job_config_blob: bytes,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
     task_name = "search"
 
@@ -221,7 +244,7 @@ def search(
 
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    search_config = SearchJobConfig.model_validate(job_config)
+    search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
@@ -230,6 +253,7 @@ def search(
         search_config=search_config,
         results_cache_uri=results_cache_uri,
         results_collection=job_id,
+        dataset=dataset,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")
@@ -258,18 +282,8 @@ def search(
         and QueryTaskStatus.SUCCEEDED == task_results.status
     ):
         s3_config = storage_config.s3_config
-        dest_path = f"{job_id}/{archive_id}"
         src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
-
-        logger.info(f"Uploading query results {dest_path} to S3...")
-        try:
-            s3_put(s3_config, src_file, dest_path)
-            logger.info(f"Finished uploading query results {dest_path} to S3.")
-        except Exception as err:
-            logger.error(f"Failed to upload query results {dest_path}: {err}")
-            task_results.status = QueryTaskStatus.FAILED
-            task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
-
-        src_file.unlink()
+        dest_path = f"{job_id}/{archive_id}"
+        upload_results_to_s3(task_results, s3_config, src_file, dest_path)
 
     return task_results.model_dump()
