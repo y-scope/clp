@@ -1,7 +1,8 @@
 [package]
 name = "log-ingestor"
-version = "0.1.0"
+version = "0.12.1-dev"
 edition = "2024"
+autotests = false
 
 [lib]
 name = "log_ingestor"
@@ -14,6 +15,10 @@ path  = "src/bin/log_ingestor.rs"
 [[bin]]
 name = "log-ingestor-openapi-codegen"
 path = "src/bin/log_ingestor_openapi_codegen.rs"
+
+[[test]]
+name = "log_ingestor_tests"
+path = "tests/test.rs"
 
 [dependencies]
 anyhow = "1.0.100"
@@ -29,16 +34,16 @@ secrecy = "0.10.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
+strum = "0.28.0"
+strum_macros = "0.28.0"
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tokio-util = "0.7.18"
 tracing = "0.1.44"
-tracing-appender = "0.2.4"
-tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter", "fmt", "std"] }
 tower-http = { version = "0.6.8", features = ["cors"] }
-uuid = { version = "1.20.0", features = ["v4"] }
 thiserror = "2.0.18"
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 utoipa-axum = "0.2.0"
 
 [dev-dependencies]
 serial_test = "3.3.1"
+uuid = { version = "1.20.0", features = ["v4"] }

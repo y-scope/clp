@@ -1,7 +1,5 @@
 """Define all python classes used in `integration-tests`."""
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
@@ -14,7 +12,8 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.utils import (
-    unlink,
+    clear_directory,
+    remove_path,
     validate_dir_exists,
     validate_file_exists,
 )
@@ -62,6 +61,11 @@ class ClpCorePathConfig:
         """:return: The absolute path to the core binary `clp-s`."""
         return self.clp_core_bins_dir / "clp-s"
 
+    @property
+    def log_converter_binary_path(self) -> Path:
+        """:return: The absolute path to the core binary `log-converter`."""
+        return self.clp_core_bins_dir / "log-converter"
+
 
 @dataclass(frozen=True)
 class PackagePathConfig:
@@ -70,11 +74,17 @@ class PackagePathConfig:
     #: Root directory containing all CLP package contents.
     clp_package_dir: Path
 
+    #: Root directory where all package test scripts and data are stored.
+    package_test_scripts_dir: Path
+
     #: Root directory for package tests output.
     test_root_dir: InitVar[Path]
 
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
+
+    #: Directory where decompressed logs will be stored.
+    package_decompression_dir: Path = field(init=False, repr=True)
 
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
@@ -94,9 +104,15 @@ class PackagePathConfig:
             )
             raise RuntimeError(err_msg)
 
-        # Initialize directory for package tests.
+        # Validate directory for package test scripts.
+        validate_dir_exists(self.package_test_scripts_dir)
+
+        # Initialize directory for package test output.
         validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        object.__setattr__(
+            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+        )
 
         # Initialize log directory for the package.
         object.__setattr__(
@@ -118,6 +134,45 @@ class PackagePathConfig:
     def stop_script_path(self) -> Path:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
+
+    @property
+    def compress_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "compress.sh"
+
+    @property
+    def decompress_script_path(self) -> Path:
+        """:return: The absolute path to the package decompress script."""
+        return self.clp_package_dir / "sbin" / "decompress.sh"
+
+    @property
+    def clp_json_test_data_path(self) -> Path:
+        """:return: The absolute path to the data for clp-json tests."""
+        return self.package_test_scripts_dir / "clp_json" / "data"
+
+    @property
+    def clp_text_test_data_path(self) -> Path:
+        """:return: The absolute path to the data for clp-text tests."""
+        return self.package_test_scripts_dir / "clp_text" / "data"
+
+    def clear_package_archives(self) -> None:
+        """Removes the contents of `clp-package/var/data/archives`."""
+        archives_dir = self.clp_package_dir / "var" / "data" / "archives"
+        clear_directory(archives_dir)
+
+
+@dataclass(frozen=True)
+class PackageCompressionJob:
+    """A compression job for a package test."""
+
+    #: The absolute path to the dataset (either a file or directory).
+    path_to_original_dataset: Path
+
+    #: Options to specify in the compression command.
+    options: list[str] | None
+
+    #: Positional arguments to specify in the compression command (do not put paths to compress)
+    positional_args: list[str] | None
 
 
 @dataclass(frozen=True)
@@ -260,6 +315,8 @@ class IntegrationTestLogs:
     tarball_path: Path = field(init=False, repr=True)
     #:
     extraction_dir: Path = field(init=False, repr=True)
+    #: Optional number of log events in the downloaded logs.
+    num_log_events: int | None = None
 
     def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
         """Initialize and set tarball and extraction paths for integration test logs."""
@@ -306,5 +363,40 @@ class CompressionTestPathConfig:
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
-        unlink(self.compression_dir)
-        unlink(self.decompression_dir)
+        remove_path(self.compression_dir)
+        remove_path(self.decompression_dir)
+
+
+@dataclass(frozen=True)
+class ConversionTestPathConfig:
+    """Per-test path configuration for conversion workflow artifacts."""
+
+    #:
+    test_name: str
+    #: Directory containing the original (uncompressed) log files used by this test.
+    logs_source_dir: Path
+    integration_test_path_config: InitVar[IntegrationTestPathConfig]
+    #: Path to store converted kv-ir files generated by the test.
+    conversion_dir: Path = field(init=False, repr=True)
+    #: Path to store compressed archives generated by the test.
+    compression_dir: Path = field(init=False, repr=True)
+    #: Optional number of log events in the converted logs.
+    num_log_events: int | None = None
+
+    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
+        """Initialize and set required directory paths for conversion tests."""
+        test_name = self.test_name.strip()
+        if 0 == len(test_name):
+            err_msg = "`test_name` cannot be empty."
+            raise ValueError(err_msg)
+        test_root_dir = integration_test_path_config.test_root_dir
+        validate_dir_exists(test_root_dir)
+
+        object.__setattr__(self, "test_name", test_name)
+        object.__setattr__(self, "conversion_dir", test_root_dir / f"{test_name}-converted")
+        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+
+    def clear_test_outputs(self) -> None:
+        """Remove any existing output directories created by this conversion test."""
+        remove_path(self.conversion_dir)
+        remove_path(self.compression_dir)

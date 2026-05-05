@@ -20,9 +20,7 @@
 #include <clp/FileReader.hpp>
 #include <clp/ir/types.hpp>
 #include <clp/LogSurgeonReader.hpp>
-#include <clp/streaming_archive/Constants.hpp>
 #include <clp/streaming_archive/reader/Archive.hpp>
-#include <clp/type_utils.hpp>
 #include <clp/Utils.hpp>
 
 #include "TestOutputCleaner.hpp"
@@ -40,6 +38,7 @@ auto run_clp_compress(
         std::filesystem::path const& output_path,
         std::filesystem::path const& input_path
 ) -> int;
+[[nodiscard]] auto get_config_schema_files_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_tests_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_test_schema_files_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_test_queries_dir() -> std::filesystem::path;
@@ -48,6 +47,11 @@ auto run_clp_compress(
 auto get_tests_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
     return std::filesystem::canonical(current_file_path.parent_path());
+}
+
+auto get_config_schema_files_dir() -> std::filesystem::path {
+    std::filesystem::path const current_file_path{__FILE__};
+    return std::filesystem::canonical(current_file_path.parent_path().parent_path()) / "config";
 }
 
 auto get_test_schema_files_dir() -> std::filesystem::path {
@@ -79,6 +83,10 @@ auto run_clp_compress(
             input_path_str.data(),
             nullptr
     };
+    // `clp::clp::run` registers a logger for `spdlog` that persists across runs. `spdlog` will
+    // error if a logger with the same name already exists. `spdlog::drop_all` clears all loggers,
+    // ensuring `clp::clp::run` can safely create a fresh logger for each new call.
+    spdlog::drop_all();
     return clp::clp::run(static_cast<int>(argv.size() - 1), argv.data());
 }
 }  // namespace
@@ -147,6 +155,11 @@ TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]"
     generate_log_parser(schema_file_path.string());
 }
 
+TEST_CASE("Test creating log parser from config schema", "[LALR1Parser][LogParser]") {
+    auto const schema_file_path = get_config_schema_files_dir() / "schemas.txt";
+    REQUIRE_NOTHROW(generate_log_parser(schema_file_path.string()));
+}
+
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
     auto const schema_file_path = get_test_schema_files_dir() / "schema_without_delimiters.txt";
     REQUIRE_THROWS_WITH(
@@ -180,61 +193,118 @@ TEST_CASE("Test lexer", "[Search]") {
     }
 }
 
-TEST_CASE("Test schema with single capture group", "[load_lexer]") {
+TEST_CASE("Error on schema rule with a single non-header capture group", "[load_lexer]") {
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     ByteLexer lexer;
-    load_lexer_from_file(schema_file_path, lexer);
-
-    auto const rule_id{lexer.m_symbol_id.at("capture")};
-    auto captures{lexer.get_captures_from_rule_id(rule_id)};
-    REQUIRE(captures.has_value());
-    REQUIRE(1 == captures->size());
-    REQUIRE("group" == captures->at(0)->get_name());
+    REQUIRE_THROWS_WITH(
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
+                    + ":3: error: the schema rule 'capture' has a regex pattern containing capture "
+                      "groups (found 1).\n"
+    );
 }
 
-TEST_CASE("Error on schema rule with multiple capture groups", "[load_lexer]") {
+TEST_CASE("Error on schema rule with multiple non-header capture groups", "[load_lexer]") {
     auto const schema_file_path{get_test_schema_files_dir() / "multiple_capture_groups.txt"};
     ByteLexer lexer;
     REQUIRE_THROWS_WITH(
             load_lexer_from_file(schema_file_path, lexer),
             schema_file_path.string()
-                    + ":3: error: the schema rule 'multicapture' has a regex pattern containing > "
-                      "1 capture groups (found 2).\n"
+                    + ":3: error: the schema rule 'multicapture' has a regex pattern containing "
+                      "capture groups (found 2).\n"
     );
 }
 
-TEST_CASE("Verify dictionary contents", "[Compression]") {
+TEST_CASE("Verify CLP compression fails with non-header capture groups", "[Compression]") {
     auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
     std::filesystem::create_directory(cTestArchiveDirectory);
 
+    REQUIRE_THROWS_WITH(
+            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
+            schema_file_path.string()
+                    + ": error: the schema rule 'capture' has a regex pattern containing capture "
+                      "groups.\n"
+    );
+}
+
+TEST_CASE("Succeed on header rule with no capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_no_capture.txt"};
+    ByteLexer lexer;
+    REQUIRE_NOTHROW(load_lexer_from_file(schema_file_path, lexer));
+}
+
+TEST_CASE("Succeed on header rule with a single timestamp capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp.txt"};
+    ByteLexer lexer;
+    REQUIRE_NOTHROW(load_lexer_from_file(schema_file_path, lexer));
+}
+
+TEST_CASE("Error on header rule with a single non-timestamp capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_int.txt"};
+    ByteLexer lexer;
+    REQUIRE_THROWS_WITH(
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
+                    + ":3: error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups (found 1).\n"
+    );
+}
+
+TEST_CASE("Error on header rule with a timestamp and non-timestamp capture", "[load_lexer]") {
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp_and_int.txt"};
+    ByteLexer lexer;
+    REQUIRE_THROWS_WITH(
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
+                    + ":3: error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups (found 2).\n"
+    );
+}
+
+TEST_CASE("Verify CLP compression succeeds with non-capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_no_capture.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
+
     REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
+}
 
-    std::vector<std::filesystem::path> archive_paths;
-    for (auto const& entry : std::filesystem::directory_iterator{cTestArchiveDirectory}) {
-        auto const& path{entry.path()};
-        if (false == path.string().ends_with(clp::streaming_archive::cMetadataDBFileName)) {
-            archive_paths.emplace_back(path);
-        }
-    }
-    REQUIRE(1 == archive_paths.size());
+TEST_CASE("Verify CLP compression succeeds with timestamp capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
 
-    clp::streaming_archive::reader::Archive archive_reader;
-    archive_reader.open(archive_paths.at(0));
-    archive_reader.refresh_dictionaries();
+    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
+}
 
-    auto const& logtype_dict{archive_reader.get_logtype_dictionary()};
-    REQUIRE(1 == logtype_dict.get_entries().size());
-    REQUIRE(fmt::format(
-                    "2016-05-08 07:34:05.251 MyDog{} APet{} test.txt\n",
-                    clp::enum_to_underlying_type(clp::ir::VariablePlaceholder::Dictionary),
-                    clp::enum_to_underlying_type(clp::ir::VariablePlaceholder::Dictionary)
-            )
-            == logtype_dict.get_value(0));
+TEST_CASE("Verify CLP compression fails with non-timestamp capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_int.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
 
-    auto const& var_dict{archive_reader.get_var_dictionary()};
-    REQUIRE(2 == var_dict.get_entries().size());
-    REQUIRE("123" == var_dict.get_value(0));
-    REQUIRE("4123" == var_dict.get_value(1));
+    REQUIRE_THROWS_WITH(
+            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
+            schema_file_path.string()
+                    + ": error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups.\n"
+    );
+}
+
+TEST_CASE("Verify CLP compression fails with multi-capture header", "[Compression]") {
+    auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp_and_int.txt"};
+    TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
+    std::filesystem::create_directory(cTestArchiveDirectory);
+
+    REQUIRE_THROWS_WITH(
+            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
+            schema_file_path.string()
+                    + ": error: the schema rule 'header' has a regex pattern containing capture "
+                      "groups.\n"
+    );
 }

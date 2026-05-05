@@ -125,72 +125,28 @@ helm repo update clp
 The following configurations are optional but recommended for production deployments. You can skip
 this section for testing or development.
 
-1. **Storage for CLP package services' data and logs** (optional, for centralized debugging):
-
-   The Helm chart creates static PersistentVolumes using local host paths by default, so no
-   StorageClass configuration is required for basic deployments. For easier debugging, you can
-   configure a centralized storage backend for the following directories:
-
-   * `data_directory` - where CLP stores runtime data
-   * `logs_directory` - where CLP services write logs
-   * `tmp_directory` - where temporary files are stored
-
-   :::{note}
-   We aim to improve the logging infrastructure so mapping log volumes will not be required in the
-   future. See [y-scope/clp#1760][logging-infra-issue] for details.
-   :::
-
-2. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
+1. **Shared storage for workers** (required for multi-node clusters using filesystem storage):
 
    :::{tip}
    [S3 storage][s3-storage] is **strongly recommended** for multi-node clusters as it does not
    require shared local storage between workers. If you use S3 storage, you can skip this section.
    :::
 
-   For multi-node clusters using filesystem storage, the following directories **must** be
-   accessible from all worker nodes at the same paths. Without shared storage, compressed logs
-   created by one worker cannot be searched by other workers.
+   If storage type is set to `fs`, the shared-data directories (`/var/data/archives`,
+   `/var/data/streams`) must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+   the same path). Users must pre-create PersistentVolumes backed by this shared storage and use
+   `claimRef` to bind them to the chart's PVCs (`<release>-clp-shared-data-archives` and
+   `<release>-clp-shared-data-streams`).
 
-   * `archive_output.storage.directory` - where compressed archives are stored
-   * `stream_output.storage.directory` - where stream files are stored
-   * `logs_input.directory` - where input logs are read from
-
-   Set up NFS, SeaweedFS, or another shared filesystem to provide this access. See the
-   [SeaweedFS section][seaweedfs-setup] in the Docker Compose deployment guide for setup
-   instructions.
-
-3. **External databases** (recommended for production):
+2. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
      MariaDB/MySQL and MongoDB databases
 
 ### Basic installation
 
-Create the required directories on all worker nodes:
+Generate credentials and install CLP:
 
 ```bash
-export CLP_HOME="/tmp/clp"
-
-mkdir -p \
-  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-  "$CLP_HOME/var/tmp"
-```
-
-Then on the **control-plane node**, create the required directories, generate credentials, and
-install CLP:
-
-```bash
-export CLP_HOME="/tmp/clp"
-
-mkdir -p \
-  "$CLP_HOME/var/"{data,log}/{database,queue,redis,results_cache} \
-  "$CLP_HOME/var/data/"{archives,streams,staged-archives,staged-streams} \
-  "$CLP_HOME/var/log/"{compression_scheduler,compression_worker,user} \
-  "$CLP_HOME/var/log/"{query_scheduler,query_worker,reducer} \
-  "$CLP_HOME/var/log/"{garbage_collector,api_server,log_ingestor,mcp_server} \
-  "$CLP_HOME/var/tmp"
-
 # Credentials (change these for production)
 export CLP_DB_PASS="pass"
 export CLP_DB_ROOT_PASS="root-pass"
@@ -203,18 +159,13 @@ export CLP_QUERY_WORKER_REPLICAS=1
 export CLP_REDUCER_REPLICAS=1
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
-  --set clpConfig.data_directory="$CLP_HOME/var/data" \
-  --set clpConfig.logs_directory="$CLP_HOME/var/log" \
-  --set clpConfig.tmp_directory="$CLP_HOME/var/tmp" \
-  --set clpConfig.archive_output.storage.directory="$CLP_HOME/var/data/archives" \
-  --set clpConfig.stream_output.storage.directory="$CLP_HOME/var/data/streams" \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
   --set credentials.redis.password="$CLP_REDIS_PASS" \
-  --set compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
-  --set queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
-  --set reducer.replicas="$CLP_REDUCER_REPLICAS"
+  --set scheduling.compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
+  --set scheduling.queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
+  --set scheduling.reducer.replicas="$CLP_REDUCER_REPLICAS"
 ```
 
 ### Multi-node deployment
@@ -225,9 +176,9 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 ```bash
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set distributedDeployment=true \
-  --set compressionWorker.replicas=3 \
-  --set queryWorker.replicas=3 \
-  --set reducer.replicas=3
+  --set scheduling.compressionWorker.replicas=3 \
+  --set scheduling.queryWorker.replicas=3 \
+  --set scheduling.reducer.replicas=3
 ```
 
 ### Installation with custom values
@@ -252,6 +203,8 @@ clpConfig:
   # Use clp-text, instead of clp-json (default)
   package:
     storage_engine: "clp"  # Use "clp-s" for clp-json, "clp" for clp-text
+
+  webui:
     query_engine: "clp"   # Use "clp-s" for clp-json, "clp" for clp-text, "presto" for Presto
 
   # Configure archive output
@@ -268,6 +221,10 @@ clpConfig:
   # Configure results cache
   results_cache:
     retention_period: 120  # (in minutes) 2 hours
+
+  # Adjust query scheduler concurrency
+  query_scheduler:
+    scheduler_concurrency: 4
 
 # Override credentials (use secrets in production!)
 credentials:
@@ -298,10 +255,22 @@ helm template clp . -f custom-values.yaml
 
 ::::
 
-### Worker scheduling
+### Using Presto as the query engine
 
-You can control where workers are scheduled using standard Kubernetes scheduling primitives
-(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
+instructions, including the Helm values file and installation steps.
+
+### Component scheduling
+
+You can control where any CLP component is scheduled using standard Kubernetes scheduling primitives
+(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`). All components support
+the same scheduling config under the top-level `scheduling` key.
+
+:::{note}
+When using Presto as the query engine, use `scheduling.prestoWorker` instead of
+`scheduling.queryWorker` and `scheduling.reducer` to configure Presto worker scheduling. Presto
+coordinator scheduling can be configured via `scheduling.prestoCoordinator`.
+:::
 
 #### Dedicated node pools
 
@@ -315,6 +284,12 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    # Label query nodes
    kubectl label nodes node3 node4 yscope.io/nodeType=query
+
+   # Optional: Label Presto nodes (if using Presto as the query engine)
+   kubectl label nodes node5 node6 yscope.io/nodeType=presto
+
+   # Optional: Label DB nodes (to isolate bundled data services)
+   kubectl label nodes node7 yscope.io/nodeType=db
    ```
 
 2. Configure scheduling:
@@ -324,23 +299,41 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    distributedDeployment: true
 
-   compressionWorker:
-     replicas: 2
-     scheduling:
+   scheduling:
+     compressionWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compression
+         yscope.io/nodeType: "compression"
 
-   queryWorker:
-     replicas: 2
-     scheduling:
+     queryWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
 
-   reducer:
-     replicas: 2
-     scheduling:
+     reducer:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
+
+     # Optional: if using Presto as the query engine
+     prestoWorker:
+       replicas: 2
+       nodeSelector:
+         yscope.io/nodeType: "presto"
+
+     # Optional: to isolate bundled data services
+     database:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     queue:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     redis:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     resultsCache:
+       nodeSelector:
+         yscope.io/nodeType: "db"
    ```
 
 3. Install:
@@ -366,11 +359,11 @@ To run all worker types in the same node pool:
 
    distributedDeployment: true
 
-   compressionWorker:
-     replicas: 2
-     scheduling:
+   scheduling:
+     compressionWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
        topologySpreadConstraints:
          - maxSkew: 1
            topologyKey: "kubernetes.io/hostname"
@@ -379,17 +372,20 @@ To run all worker types in the same node pool:
              matchLabels:
                app.kubernetes.io/component: compression-worker
 
-   queryWorker:
-     replicas: 2
-     scheduling:
+     queryWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
 
-   reducer:
-     replicas: 2
-     scheduling:
+     reducer:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
+
+     prestoWorker:
+       replicas: 2
+       nodeSelector:
+         yscope.io/nodeType: "compute"
    ```
 
 3. Install:
@@ -481,9 +477,9 @@ How to compress and search unstructured text logs.
 
 :::{note}
 By default (`allowHostAccessForSbinScripts: true`), the database and results cache are exposed on
-NodePorts, allowing you to use `sbin/` scripts from the CLP package. Download a
-[release][clp-releases] matching the chart's `appVersion`, then update the following configurations
-in `etc/clp-config.yaml`:
+NodePorts, allowing you to use `sbin/compress.sh` and `sbin/search.sh` from the CLP package.
+Download a [release][clp-releases] matching the chart's `appVersion`, then update the following
+configurations in `etc/clp-config.yaml`:
 
 ```yaml
 database:
@@ -495,6 +491,12 @@ results_cache:
 Alternatively, use the Web UI ([clp-json][webui-clp-json] or [clp-text][webui-clp-text]) to compress
 logs and search interactively, or the [API server][api-server] to submit queries and view results
 programmatically.
+
+The [admin tools][admin-tools] (`sbin/admin-tools/archive-manager.sh` and
+`sbin/admin-tools/dataset-manager.sh`) are **not supported** in Kubernetes deployments with
+filesystem storage (`archive_output.storage.type: "fs"`). Those scripts require direct filesystem
+access to the archive directory via Docker bind mounts, which is not possible when archives are
+backed by PVCs inside the cluster.
 :::
 
 ---
@@ -547,9 +549,9 @@ helm uninstall clp
 ```
 
 :::{warning}
-Uninstalling the Helm release will delete all CLP pods and services. However, PersistentVolumes
-with the `Retain` policy will preserve your data. To completely remove all data, delete the PVs and
-the data directories manually.
+Uninstalling the Helm release will delete all CLP pods and services. However, dynamically
+provisioned PersistentVolumeClaims (database, results cache, archives, streams) may be retained
+depending on the cluster's `reclaimPolicy`. To completely remove all data, delete the PVCs manually.
 :::
 
 ---
@@ -588,7 +590,9 @@ To tear down a `kubeadm` cluster:
 * [External database setup][external-db-guide]: Using external MariaDB and MongoDB
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
+* [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
 
+[admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
@@ -604,7 +608,7 @@ To tear down a `kubeadm` cluster:
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
-[logging-infra-issue]: https://github.com/y-scope/clp/issues/1760
+[presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3

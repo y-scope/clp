@@ -12,9 +12,9 @@ tasks:
     internal: true
     run: "once"
     sources:
-      - "{{.ROOT_DIR}}/Taskfile.yaml"
       - "{{.ROOT_DIR}}/taskfiles/**/*.yaml"
       - "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/**/*.yaml"
+      - "{{.ROOT_TASKFILE}}"
     cmd: "rm -f '{{.G_DEPS_CPP_CHECKSUMS_DIR}}'/*"
 
   # Combines all of cpp's checksum files into `G_DEPS_CPP_CHECKSUM_FILE`.

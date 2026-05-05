@@ -1,14 +1,13 @@
 use std::pin::Pin;
 
 use async_stream::stream;
+use chrono::{DateTime, TimeZone, Utc};
+pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::{
     aws::AWS_DEFAULT_REGION,
-    clp_config::{
-        AwsAuthentication,
-        package::{
-            config::{Config, StorageEngine, StreamOutputStorage},
-            credentials::Credentials,
-        },
+    clp_config::package::{
+        config::{Config, StorageEngine, StreamOutputStorage},
+        credentials::Credentials,
     },
     database::mysql::create_clp_db_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
@@ -17,9 +16,156 @@ use futures::{Stream, StreamExt};
 use pin_project_lite::pin_project;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 pub use crate::error::ClientError;
+
+/// Default job statuses to include when the caller does not specify `job_status`.
+/// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
+pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
+    CompressionJobStatus::Succeeded,
+    CompressionJobStatus::Failed,
+    CompressionJobStatus::Killed,
+];
+
+/// Query parameters for the compression usage endpoint.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct CompressionUsageParams {
+    /// Start of usage window (epoch milliseconds, inclusive).
+    pub time_range_begin_millisecs: i64,
+    /// End of usage window (epoch milliseconds, exclusive).
+    pub time_range_end_millisecs: i64,
+    /// Job statuses to include as a comma-separated list (e.g.
+    /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
+    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
+    /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+    #[serde(default)]
+    pub job_status: Option<String>,
+    /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+}
+
+const fn default_limit() -> i64 {
+    1000
+}
+
+/// Validated parameters produced by [`TryFrom<CompressionUsageParams>`].
+pub struct ValidatedCompressionUsageParams {
+    pub time_range_begin: DateTime<Utc>,
+    pub time_range_end: DateTime<Utc>,
+    pub job_statuses: Vec<CompressionJobStatus>,
+    pub limit: i64,
+}
+
+impl TryFrom<CompressionUsageParams> for ValidatedCompressionUsageParams {
+    type Error = ClientError;
+
+    /// Validates the parameters and resolves the requested job statuses into
+    /// [`CompressionJobStatus`] variants.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::InvalidInput`] if:
+    /// - `time_range_begin_millisecs > time_range_end_millisecs`
+    /// - `time_range_begin_millisecs` or `time_range_end_millisecs` is outside the representable
+    ///   range
+    /// - `limit <= 0`
+    /// - `job_status` contains unrecognized, empty, or duplicate values
+    fn try_from(value: CompressionUsageParams) -> Result<Self, Self::Error> {
+        if value.time_range_begin_millisecs > value.time_range_end_millisecs {
+            return Err(ClientError::InvalidInput(
+                "time_range_begin_millisecs must be <= time_range_end_millisecs".to_owned(),
+            ));
+        }
+        if value.limit <= 0 {
+            return Err(ClientError::InvalidInput("limit must be > 0".to_owned()));
+        }
+        let time_range_begin = Utc
+            .timestamp_millis_opt(value.time_range_begin_millisecs)
+            .earliest();
+        let time_range_end = Utc
+            .timestamp_millis_opt(value.time_range_end_millisecs)
+            .earliest();
+        let (Some(time_range_begin), Some(time_range_end)) = (time_range_begin, time_range_end)
+        else {
+            return Err(ClientError::InvalidInput(
+                "timestamp out of representable range".to_owned(),
+            ));
+        };
+        let job_statuses = match &value.job_status {
+            Some(s) => {
+                let parsed: Vec<CompressionJobStatus> = s
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|t| !t.is_empty())
+                    .map(|token| {
+                        token.parse().map_err(|_| {
+                            ClientError::InvalidInput(format!("Unknown job_status: {token}"))
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                let mut seen = Vec::new();
+                for &status in &parsed {
+                    if seen.contains(&status) {
+                        return Err(ClientError::InvalidInput(format!(
+                            "Duplicate job_status: {status:?}"
+                        )));
+                    }
+                    seen.push(status);
+                }
+                parsed
+            }
+            None => DEFAULT_JOB_STATUSES.to_vec(),
+        };
+        if job_statuses.is_empty() {
+            return Err(ClientError::InvalidInput(
+                "job_status must contain at least one valid status".to_owned(),
+            ));
+        }
+        Ok(Self {
+            time_range_begin,
+            time_range_end,
+            job_statuses,
+            limit: value.limit,
+        })
+    }
+}
+
+/// Resource usage statistics for the compression job with the specified ID.
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
+pub struct CompressionUsage {
+    /// Compression job ID.
+    pub id: i32,
+    /// Current status of the job.
+    #[sqlx(rename = "status", try_from = "i32")]
+    pub job_status: CompressionJobStatus,
+    /// Time the job was created (epoch milliseconds).
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    #[schema(value_type = i64)]
+    #[sqlx(rename = "creation_time")]
+    pub time_creation_millisecs: DateTime<Utc>,
+    /// Time the job started executing (epoch milliseconds).
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    #[schema(value_type = i64)]
+    #[sqlx(rename = "start_time")]
+    pub time_begin_millisecs: DateTime<Utc>,
+    /// Wall-clock duration the job ran, in seconds. Absent if the job did not complete.
+    #[sqlx(rename = "duration")]
+    pub duration_secs: Option<f64>,
+    /// Total uncompressed size of input files, in bytes.
+    #[sqlx(rename = "uncompressed_size")]
+    pub uncompressed_size_bytes: i64,
+    /// Total compressed archive size, in bytes.
+    #[sqlx(rename = "compressed_size")]
+    pub compressed_size_bytes: i64,
+    /// Number of tasks the job was split into.
+    pub num_tasks: i32,
+    /// Sum of all task durations, in seconds. Absent if no tasks reported a duration.
+    #[sqlx(rename = "tasks_duration")]
+    pub tasks_duration_secs: Option<f64>,
+}
 
 /// Defines the request configuration for submitting a search query.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
@@ -28,9 +174,9 @@ pub struct QueryConfig {
     /// The search query as a KQL string.
     pub query_string: String,
 
-    /// The dataset to search within. If not provided, only `default` dataset will be searched.
+    /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub datasets: Option<Vec<String>>,
 
     /// The maximum number of results to return. Set to `0` for no limit.
     #[serde(default)]
@@ -58,7 +204,7 @@ pub struct QueryConfig {
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
         Self {
-            dataset: value.dataset,
+            datasets: value.datasets,
             query_string: value.query_string,
             max_num_results: value.max_num_results,
             begin_timestamp: value.time_range_begin_millisecs,
@@ -128,10 +274,10 @@ impl Client {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.dataset.is_none() {
-            search_job_config.dataset = match self.config.package.storage_engine {
+        if search_job_config.datasets.is_none() {
+            search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some("default".to_owned()),
+                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
         }
         if search_job_config.max_num_results == 0 {
@@ -189,10 +335,13 @@ impl Client {
                 QueryJobStatus::Succeeded => {
                     break;
                 }
-                QueryJobStatus::Failed | QueryJobStatus::Cancelled | QueryJobStatus::Killed => {
+                QueryJobStatus::Failed
+                | QueryJobStatus::Cancelled
+                | QueryJobStatus::Killed
+                | QueryJobStatus::Cancelling => {
                     return Err(ClientError::QueryNotSucceeded);
                 }
-                QueryJobStatus::Running | QueryJobStatus::Pending | QueryJobStatus::Cancelling => {
+                QueryJobStatus::Running | QueryJobStatus::Pending => {
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
                     delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
                 }
@@ -200,22 +349,56 @@ impl Client {
         }
 
         let job_config = self.get_job_config(search_job_id).await?;
+        let max_num_results = job_config.max_num_results;
 
         if job_config.write_to_file {
             let stream = match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
-                    inner: self.fetch_results_from_file(search_job_id),
+                    inner: self.fetch_results_from_file(search_job_id, max_num_results)?,
                 },
                 StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self.fetch_results_from_s3(search_job_id).await?,
+                    inner: self
+                        .fetch_results_from_s3(search_job_id, max_num_results)
+                        .await?,
                 },
             };
             return Ok(stream);
         }
 
-        self.fetch_results_from_mongo(search_job_id)
+        self.fetch_results_from_mongo(search_job_id, max_num_results)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
+    }
+
+    /// Submits a cancellation request for a search job.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::SearchJobNotFound`] if no matching job was found (e.g., the job doesn't
+    ///   exist or is not in a cancellable state).
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
+        let result = sqlx::query(&format!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
+        ))
+        .bind::<i32>(QueryJobStatus::Cancelling.into())
+        .bind(search_job_id)
+        .bind::<i32>(QueryJobStatus::Pending.into())
+        .bind::<i32>(QueryJobStatus::Running.into())
+        .execute(&self.sql_pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(ClientError::SearchJobNotFound(search_job_id));
+        }
+
+        Ok(())
     }
 
     /// Retrieves the status of a previously submitted search job.
@@ -277,7 +460,8 @@ impl Client {
     fn fetch_results_from_file(
         &self,
         search_job_id: u64,
-    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
+        max_num_results: u32,
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
             unreachable!();
         };
@@ -296,7 +480,12 @@ impl Client {
                 }
             }
         };
-        stream
+        let limit: usize = max_num_results.try_into().map_err(|_| {
+            ClientError::InvalidSearchJobConfig(
+                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
+            )
+        })?;
+        Ok(stream.take(limit))
     }
 
     /// Asynchronously fetches results of a completed search job from S3.
@@ -334,13 +523,12 @@ impl Client {
     async fn fetch_results_from_s3(
         &self,
         search_job_id: u64,
+        max_num_results: u32,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
             unreachable!();
         };
-
-        let AwsAuthentication::Credentials { credentials } = &s3_config.aws_authentication;
 
         let s3_config = s3_config.clone();
         if s3_config.region_code.is_none() && s3_config.endpoint_url.is_none() {
@@ -350,15 +538,14 @@ impl Client {
             });
         }
 
-        let credentials = credentials.clone();
+        let region_str = s3_config
+            .region_code
+            .as_ref()
+            .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str);
         let s3_client = clp_rust_utils::s3::create_new_client(
-            credentials.access_key_id.as_str(),
-            credentials.secret_access_key.as_str(),
-            s3_config
-                .region_code
-                .as_ref()
-                .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
+            region_str,
             s3_config.endpoint_url.as_ref(),
+            &s3_config.aws_authentication,
         )
         .await;
 
@@ -371,7 +558,7 @@ impl Client {
             .into_paginator()
             .send();
 
-        Ok(stream! {
+        let stream = stream! {
             while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
@@ -398,10 +585,19 @@ impl Client {
                     }
                 }
             }
-        })
+        };
+        let limit: usize = max_num_results.try_into().map_err(|_| {
+            ClientError::InvalidSearchJobConfig(
+                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
+            )
+        })?;
+        Ok(stream.take(limit))
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
+    ///
+    /// When `max_num_results` is greater than 0, the query is limited to at most that many
+    /// documents.
     ///
     /// # Returns
     ///
@@ -428,13 +624,24 @@ impl Client {
     async fn fetch_results_from_mongo(
         &self,
         search_job_id: u64,
+        max_num_results: u32,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let database = self
             .mongodb_client
             .database(&self.config.results_cache.db_name);
         let collection: mongodb::Collection<mongodb::bson::Document> =
             database.collection(&search_job_id.to_string());
-        let cursor = collection.find(mongodb::bson::doc! {}).await?;
+        let find_options = if max_num_results > 0 {
+            mongodb::options::FindOptions::builder()
+                .limit(i64::from(max_num_results))
+                .build()
+        } else {
+            mongodb::options::FindOptions::default()
+        };
+        let cursor = collection
+            .find(mongodb::bson::doc! {})
+            .with_options(find_options)
+            .await?;
 
         let mapped = cursor.map(|res| {
             let doc = res?;
@@ -447,6 +654,125 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
+    }
+
+    /// Retrieves timestamp column names for a given dataset.
+    ///
+    /// # Returns
+    ///
+    /// A vector of timestamp column name strings on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    pub async fn get_timestamp_column_names(
+        &self,
+        dataset_name: &str,
+    ) -> Result<Vec<String>, ClientError> {
+        // Must be kept in sync with `NodeType::Timestamp` in
+        // `components/core/src/clp_s/SchemaTree.hpp`.
+        const TIMESTAMP_NODE_TYPE: i8 = 14;
+        // MySQL error number for "Table doesn't exist".
+        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
+
+        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+            return Err(ClientError::InvalidDatasetName);
+        }
+        let table_name = format!("clp_{dataset_name}_column_metadata");
+        let names: Vec<String> =
+            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
+                .bind(TIMESTAMP_NODE_TYPE)
+                .fetch_all(&self.sql_pool)
+                .await
+                .map_err(|err| {
+                    if let sqlx::Error::Database(db_err) = &err
+                        && let Some(mysql_err) =
+                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                    {
+                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                    }
+                    err.into()
+                })?;
+
+        Ok(names)
+    }
+
+    /// Returns compression usage for each job within a time range, optionally
+    /// filtered by job outcome.
+    ///
+    /// # Returns
+    ///
+    /// A vector of [`CompressionUsage`] (one per job) on success, ordered by
+    /// `start_time` descending.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    pub async fn get_compression_usage(
+        &self,
+        params: &ValidatedCompressionUsageParams,
+    ) -> Result<Vec<CompressionUsage>, ClientError> {
+        // Build the job-status IN clause dynamically so the DB sees a
+        // static `IN (?, ?, ...)` predicate and can use an index on `j.status`.
+        let placeholders = params
+            .job_statuses
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(", ");
+        let job_status_clause = format!(" AND j.status IN ({placeholders})");
+
+        #[rustfmt::skip]
+        let sql = format!(
+            // MAX() is used on non-aggregated columns because they are all
+            // functionally dependent on j.id (the primary key). Since each group
+            // contains exactly one row, MAX() simply returns the column's value.
+            // This is used instead of MySQL-only ANY_VALUE() for MariaDB compat.
+            //
+            // sqlx binds DateTime<Utc> as a UTC timestamp, so we compare
+            // directly against the DATETIME columns in the database.
+            //
+            // Task durations are summed regardless of individual task status so
+            // that failed jobs still report the compute resources they consumed.
+            //
+            // INNER JOIN filters out jobs with zero tasks (e.g. killed before
+            // task creation) since they consumed no compute resources.
+            "SELECT \
+              j.id, \
+              MAX(j.status) AS status, \
+              MAX(j.creation_time) AS creation_time, \
+              MAX(j.start_time) AS start_time, \
+              MAX(j.duration) AS duration, \
+              MAX(j.uncompressed_size) AS uncompressed_size, \
+              MAX(j.compressed_size) AS compressed_size, \
+              MAX(j.num_tasks) AS num_tasks, \
+              SUM(t.duration) AS tasks_duration \
+            FROM compression_jobs j \
+            JOIN compression_tasks t ON t.job_id = j.id \
+            WHERE j.start_time >= ? \
+              AND j.start_time < ? \
+              {job_status_clause} \
+            GROUP BY j.id \
+            ORDER BY MAX(j.start_time) DESC \
+            LIMIT ?"
+        );
+
+        let mut query = sqlx::query_as::<_, CompressionUsage>(&sql)
+            .bind(params.time_range_begin)
+            .bind(params.time_range_end);
+        for &status in &params.job_statuses {
+            query = query.bind(i32::from(status));
+        }
+        query = query.bind(params.limit);
+        query.fetch_all(&self.sql_pool).await.map_err(Into::into)
     }
 
     /// # Returns
@@ -509,5 +835,33 @@ where
             tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn parse_job_status_pending_not_in_defaults() {
+        assert_eq!(
+            CompressionJobStatus::from_str("PENDING"),
+            Ok(CompressionJobStatus::Pending)
+        );
+        assert!(!DEFAULT_JOB_STATUSES.contains(&CompressionJobStatus::Pending));
+    }
+
+    #[test]
+    fn reject_duplicate_job_status() {
+        let params = CompressionUsageParams {
+            time_range_begin_millisecs: 0,
+            time_range_end_millisecs: 1,
+            job_status: Some("succeeded,succeeded".to_owned()),
+            limit: 100,
+        };
+        let result = ValidatedCompressionUsageParams::try_from(params);
+        assert!(result.is_err());
     }
 }

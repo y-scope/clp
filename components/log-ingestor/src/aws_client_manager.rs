@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
-use clp_rust_utils::aws::AWS_DEFAULT_REGION;
+use clp_rust_utils::{aws::AWS_DEFAULT_REGION, clp_config::AwsAuthentication};
 use non_empty_string::NonEmptyString;
 
 /// A marker trait for AWS client types.
@@ -19,7 +19,7 @@ impl AwsClientType for S3Client {}
 ///
 /// * [`Client`]: The AWS SKD client type. Must implement the [`AwsClientType`].
 #[async_trait]
-pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + 'static {
+pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + Clone + 'static {
     /// Retrieves an AWS client instance. The specific behavior depends on the implementation.
     ///
     /// # Returns:
@@ -33,6 +33,7 @@ pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + 'static {
 }
 
 /// A simple wrapper around an `SqsClient` that implements the `AwsClientManagerType` trait.
+#[derive(Clone)]
 pub struct SqsClientWrapper {
     client: SqsClient,
 }
@@ -50,23 +51,15 @@ impl SqsClientWrapper {
         Self { client }
     }
 
-    pub async fn create(
-        region: Option<&NonEmptyString>,
-        access_key_id: &str,
-        secret_access_key: &str,
-    ) -> Self {
-        let sqs_client = clp_rust_utils::sqs::create_new_client(
-            access_key_id,
-            secret_access_key,
-            region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str),
-            None,
-        )
-        .await;
+    pub async fn create(region: Option<&NonEmptyString>, aws_auth: &AwsAuthentication) -> Self {
+        let region_str = region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+        let sqs_client = clp_rust_utils::sqs::create_new_client(region_str, None, aws_auth).await;
         Self::from(sqs_client)
     }
 }
 
 /// A simple wrapper around an `S3Client` that implements the `AwsClientManagerType` trait.
+#[derive(Clone)]
 pub struct S3ClientWrapper {
     client: S3Client,
 }
@@ -86,17 +79,12 @@ impl S3ClientWrapper {
 
     pub async fn create(
         region: Option<&NonEmptyString>,
-        access_key_id: &str,
-        secret_access_key: &str,
         endpoint_url: Option<&NonEmptyString>,
+        aws_auth: &AwsAuthentication,
     ) -> Self {
-        let s3_client = clp_rust_utils::s3::create_new_client(
-            access_key_id,
-            secret_access_key,
-            region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str),
-            endpoint_url,
-        )
-        .await;
+        let region_str = region.map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+        let s3_client =
+            clp_rust_utils::s3::create_new_client(region_str, endpoint_url, aws_auth).await;
         Self::from(s3_client)
     }
 }
