@@ -52,10 +52,12 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     )
     jq_rc = jq_action.completed_proc.returncode
     if jq_rc != 0:
-        err_msg = f"jq failed with exit code {jq_rc} for {json_fp}"
+        err_msg = (
+            f"jq failed with exit code {jq_rc} for {json_fp}: {jq_action.completed_proc.stderr}"
+        )
         raise RuntimeError(err_msg)
 
-    sorted_fp = NamedTemporaryFile(mode="w+", delete=True)  # noqa: SIM115
+    sorted_fp = NamedTemporaryFile(mode="w+")  # noqa: SIM115
     sorted_lines = sorted(jq_action.completed_proc.stdout.splitlines())
     for line in sorted_lines:
         sorted_fp.write(f"{line}\n")
