@@ -157,6 +157,10 @@ def _validate_clp_package_not_running(clp_package: ClpPackage) -> VerificationRe
     :return: A `VerificationResult` indicating the success or failure of the verification.
     """
     # Get list of services currently running in the Compose project.
+    instance_id_path = clp_package.clp_instance_id_file_path
+    if not instance_id_path.exists():
+        return VerificationResult.ok()
+
     instance_id = clp_package.get_clp_instance_id()
     project_name = f"clp-package-{instance_id}"
     running_services = set(list_running_services_in_compose_project(project_name))

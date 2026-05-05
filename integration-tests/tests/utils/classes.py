@@ -160,12 +160,12 @@ class ExternalAction:
     log_file_path: Path = field(init=False)
 
     @classmethod
-    def from_args(cls, args: CmdArgs) -> "ExternalAction":
+    def from_args(cls, args: CmdArgs) -> Self:
         """:return: An `ExternalAction` whose `cmd` is derived from `args.to_cmd()`."""
         return cls(cmd=args.to_cmd(), args=args)
 
     @classmethod
-    def from_cmd(cls, cmd: list[str]) -> "ExternalAction":
+    def from_cmd(cls, cmd: list[str]) -> Self:
         """:return: An `ExternalAction` for the given raw `cmd`, with no associated `args`."""
         return cls(cmd=cmd, args=None)
 
