@@ -82,6 +82,15 @@ def dataset_manager_del(
     """
     logger.info("Performing 'del' operation with dataset-manager.")
 
+    if datasets_to_del and del_all:
+        pytest.fail(
+            "You must specify either `datasets_to_del` or `del_all` for dataset-manager, not both."
+        )
+    if not datasets_to_del and not del_all:
+        pytest.fail(
+            "You must specify either `datasets_to_del` or `del_all` arguments for dataset-manager."
+        )
+
     path_config = clp_package.path_config
     args = DatasetManagerArgs(
         script_path=path_config.dataset_manager_path,
@@ -91,10 +100,6 @@ def dataset_manager_del(
     )
     if datasets_to_del:
         args.datasets = [dataset.dataset_name for dataset in datasets_to_del]
-    elif not del_all:
-        pytest.fail(
-            "You must specify either `datasets_to_del` or `del_all` arguments for dataset-manager."
-        )
 
     return ExternalAction(cmd=args.to_cmd(), args=args)
 
