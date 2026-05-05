@@ -70,7 +70,10 @@ auto decompress_and_compare(
         Array<char> const& uncompressed_buffer,
         Array<char>& decompressed_buffer
 ) -> void {
-    clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{string(cCompressedFilePath)};
+    auto result{clp::ReadOnlyMemoryMappedFile::create(string(cCompressedFilePath))};
+    REQUIRE_FALSE(result.has_error());
+    auto const memory_mapped_compressed_file{std::move(result.value())};
+
     auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
     decompressor->open(compressed_file_view.data(), compressed_file_view.size());
 

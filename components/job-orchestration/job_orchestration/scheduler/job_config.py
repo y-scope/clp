@@ -11,6 +11,7 @@ from strenum import LowercaseStrEnum
 class InputType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
+    S3_OBJECT_METADATA = auto()
 
 
 class PathsToCompress(BaseModel):
@@ -44,6 +45,24 @@ class S3InputConfig(S3Config):
         return value
 
 
+class S3ObjectMetadataInputConfig(S3Config):
+    type: Literal[InputType.S3_OBJECT_METADATA.value] = InputType.S3_OBJECT_METADATA.value
+    ingestion_job_id: int
+    dataset: str | None = None
+    timestamp_key: str | None = None
+    unstructured: bool = False
+    s3_object_metadata_ids: list[int]
+
+    @field_validator("s3_object_metadata_ids")
+    @classmethod
+    def validate_s3_object_metadata_ids(cls, value: list[int]) -> list[int]:
+        if len(value) == 0:
+            raise ValueError("s3_object_metadata_ids cannot be an empty list")
+        if len(value) != len(set(value)):
+            raise ValueError("s3_object_metadata_ids must be a list of unique IDs")
+        return value
+
+
 class OutputConfig(BaseModel):
     target_archive_size: int
     target_dictionaries_size: int
@@ -53,7 +72,7 @@ class OutputConfig(BaseModel):
 
 
 class ClpIoConfig(BaseModel):
-    input: FsInputConfig | S3InputConfig
+    input: FsInputConfig | S3InputConfig | S3ObjectMetadataInputConfig
     output: OutputConfig
 
 
@@ -66,7 +85,7 @@ class AggregationConfig(BaseModel):
 
 
 class QueryJobConfig(BaseModel):
-    dataset: str | None = None
+    pass
 
 
 class ExtractIrJobConfig(QueryJobConfig):
@@ -77,11 +96,13 @@ class ExtractIrJobConfig(QueryJobConfig):
 
 
 class ExtractJsonJobConfig(QueryJobConfig):
+    dataset: str | None = None
     archive_id: str
     target_chunk_size: int | None = None
 
 
 class SearchJobConfig(QueryJobConfig):
+    datasets: list[str] | None = None
     query_string: str
     max_num_results: int
     begin_timestamp: int | None = None

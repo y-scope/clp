@@ -10,7 +10,6 @@ const THEME_CONFIG: ThemeConfig = Object.freeze({
         colorPrimary: "#2a8efa",
         borderRadius: 3,
     },
-    cssVar: true,
     hashed: false,
 });
 

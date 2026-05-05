@@ -1,6 +1,7 @@
 #ifndef CLP_S_SCHEMAWRITER_HPP
 #define CLP_S_SCHEMAWRITER_HPP
 
+#include <memory>
 #include <vector>
 
 #include "ColumnWriter.hpp"
@@ -15,7 +16,7 @@ public:
     SchemaWriter() : m_num_messages(0) {}
 
     // Destructor
-    ~SchemaWriter();
+    ~SchemaWriter() = default;
 
     /**
      * Opens the schema writer.
@@ -28,7 +29,7 @@ public:
      * Appends a column to the schema writer.
      * @param column_writer
      */
-    void append_column(BaseColumnWriter* column_writer);
+    void append_column(std::unique_ptr<BaseColumnWriter> column_writer);
 
     /**
      * Appends a message to the schema writer.
@@ -54,8 +55,7 @@ private:
     uint64_t m_num_messages;
     size_t m_total_uncompressed_size{};
 
-    std::vector<BaseColumnWriter*> m_columns;
-    std::vector<BaseColumnWriter*> m_unordered_columns;
+    std::vector<std::unique_ptr<BaseColumnWriter>> m_columns;
 };
 }  // namespace clp_s
 

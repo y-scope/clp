@@ -1,11 +1,20 @@
+import {CopyOutlined} from "@ant-design/icons";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {TableProps} from "antd";
-import dayjs from "dayjs";
+import {
+    Button,
+    message,
+    TableProps,
+    Tooltip,
+} from "antd";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../../../../config";
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../../../typings/datetime";
 import Message from "../Message";
-import {getStreamId} from "../utils";
+import {
+    formatResultAsJsonl,
+    formatTimestamp,
+    getStreamId,
+} from "../utils";
+import ActionsHeader from "./ActionsHeader";
 
 
 /**
@@ -14,6 +23,7 @@ import {getStreamId} from "../utils";
 interface SearchResult {
     _id: string;
     archive_id: string;
+    dataset: string;
     filePath: string;
     log_event_ix: number;
     message: string;
@@ -23,14 +33,39 @@ interface SearchResult {
 }
 
 /**
- * Columns configuration for the search results table.
+ * Cell renderer for the Actions column. Renders a per-row copy button.
+ *
+ * @param _
+ * @param record
+ * @return
  */
+const renderActionsCell = (_: unknown, record: SearchResult) => {
+    const handleCopyRow = () => {
+        navigator.clipboard.writeText(formatResultAsJsonl(record))
+            .catch((e: unknown) => {
+                const errMsg = "Failed to copy event to clipboard.";
+                message.error(errMsg);
+                console.error(errMsg, e);
+            });
+    };
+
+    return (
+        <Tooltip title={"Copy this event"}>
+            <Button
+                icon={<CopyOutlined/>}
+                size={"small"}
+                type={"text"}
+                onClick={handleCopyRow}/>
+        </Tooltip>
+    );
+};
+
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         dataIndex: "timestamp",
         defaultSortOrder: "descend",
         key: "timestamp",
-        render: (timestamp: number) => dayjs.utc(timestamp).format(DATETIME_FORMAT_TEMPLATE),
+        render: (timestamp: number) => formatTimestamp(timestamp),
         sorter: (a, b) => {
             const timestampDiff = a.timestamp - b.timestamp;
             if (0 !== timestampDiff) {
@@ -47,13 +82,14 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
             "ascend",
         ],
         title: "Timestamp",
-        width: 15,
+        width: 12,
     },
     {
         dataIndex: "message",
         key: "message",
         render: (_, record) => (
             <Message
+                dataset={record.dataset}
                 logEventIdx={record.log_event_ix}
                 message={record.message}
                 streamId={getStreamId(record)}
@@ -64,9 +100,20 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
                 }/>
         ),
         title: "Message",
-        width: 85,
+        width: 82,
+    },
+    {
+        align: "right",
+        key: "actions",
+        render: renderActionsCell,
+        title: <ActionsHeader/>,
+        width: 6,
     },
 ];
 
 export type {SearchResult};
-export {searchResultsTableColumns};
+export {
+    formatResultAsJsonl,
+    formatTimestamp,
+    searchResultsTableColumns,
+};

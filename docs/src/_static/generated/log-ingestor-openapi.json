@@ -9,7 +9,7 @@
     "license": {
       "name": ""
     },
-    "version": "0.1.0"
+    "version": "0.12.1-dev"
   },
   "paths": {
     "/health": {
@@ -32,21 +32,21 @@
         }
       }
     },
-    "/job/{job_id}": {
-      "delete": {
+    "/job/{job_id}/terminate": {
+      "post": {
         "tags": [
           "IngestionJob"
         ],
-        "description": "Deletes an existing ingestion job by its ID. This operation stops the job if it is currently running and removes all associated resources.",
-        "operationId": "stop_and_delete_job",
+        "description": "Terminates the ingestion job instance identified by the given job ID.\n\nThis operation only terminates the job instance; the job record, including its status and statistics, is preserved and can still be accessible using the same job ID.\n\nThis operation is idempotent.",
+        "operationId": "terminate_ingestion_job",
         "parameters": [
           {
             "name": "job_id",
             "in": "path",
-            "description": "The unique identifier of the ingestion job to delete.",
+            "description": "The ID of the job to terminate.",
             "required": true,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/u64"
             }
           }
         ],
@@ -56,23 +56,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "default": null
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The provided job ID is not in a valid format.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/TerminateResponse"
                 }
               }
             }
           },
           "404": {
-            "description": "The specified job ID does not correspond to any existing ingestion job.",
+            "description": "The specified job ID does not correspond to an ingestion job.",
             "content": {
               "application/json": {
                 "schema": {
@@ -99,7 +89,7 @@
         "tags": [
           "IngestionJob"
         ],
-        "description": "Creates an ingestion job that periodically scans the specified S3 bucket and key prefix for new objects to ingest.\n\nTo ensure correct and efficient ingestion, the scanner relies on the following assumptions:\n\n1. Lexicographical Order: New objects are added in lexicographical order to the bucket based on their keys. For example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater than the last ingested key.\n\n2. Immutability: Objects under the specified prefix are immutable. Once an object is created, it is not modified or overwritten.",
+        "description": "Creates an ingestion job and starts a job instance that periodically scans the specified S3 bucket and key prefix for new objects to ingest.\n\nTo ensure correct and efficient ingestion, the scanner relies on the following assumptions:\n\n1. Lexicographical Order: New objects are added in lexicographical order to the bucket based on their keys. For example, objects with keys `log1` and `log2` will be ingested sequentially. If a new object with key `log0` is added after `log2`, it will be ignored because it is not lexicographically greater than the last ingested key.\n\n2. Immutability: Objects under the specified prefix are immutable. Once an object is created, it is not modified or overwritten.",
         "operationId": "create_s3_scanner_job",
         "requestBody": {
           "content": {
@@ -133,7 +123,7 @@
             }
           },
           "409": {
-            "description": "A prefix conflict was detected. For the same bucket and dataset, only one ingestion job may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -160,7 +150,7 @@
         "tags": [
           "IngestionJob"
         ],
-        "description": "Creates an ingestion job that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
+        "description": "Creates an ingestion job and starts a job instance that monitors an SQS queue. The queue receives notifications whenever new objects are added to the specified S3 bucket and key prefix.\n\nThe specified SQS queue must be dedicated to this ingestion job. Upon successful ingestion, the job deletes the corresponding message from the queue to ensure objects are not ingested multiple times.\n\nTo maintain correctness and avoid backpressure, the job may also delete messages that are irrelevant to this ingestion job (for example, messages referring to objects outside the configured bucket or key prefix).",
         "operationId": "create_sqs_listener_job",
         "requestBody": {
           "content": {
@@ -184,7 +174,7 @@
             }
           },
           "400": {
-            "description": "Custom endpoint URLs are not supported for SQS listener jobs.",
+            "description": "Custom endpoint URLs are not supported for SQS listener jobs, or the specified number of concurrent listener tasks is invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -194,7 +184,7 @@
             }
           },
           "409": {
-            "description": "A prefix conflict was detected. For the same bucket and dataset, only one ingestion job may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
+            "description": "A prefix conflict was detected. For the same bucket and dataset, only one running ingestion job instance may monitor a given S3 prefix or any of its ancestor or descendant prefixes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -232,6 +222,10 @@
             "description": "The S3 bucket to ingest from.",
             "minLength": 1
           },
+          "buffer_config": {
+            "$ref": "#/components/schemas/BufferConfig",
+            "description": "Per-job ingestion buffer config."
+          },
           "dataset": {
             "type": "string",
             "description": "The dataset to ingest into. Defaults to `None` (which uses the default dataset).",
@@ -263,6 +257,32 @@
           }
         }
       },
+      "BufferConfig": {
+        "type": "object",
+        "description": "Configuration for buffer behavior.",
+        "properties": {
+          "channel_capacity": {
+            "type": "integer",
+            "description": "Capacity of the internal buffer channel.\n\nDefines the maximum number of objects that can be queued before being processed by the\nbuffer. Increasing this value may improve throughput at the cost of higher memory\nusage.\n\nDefaults to 16. Must be a positive integer. The behavior for values less than 1 is\nundefined.",
+            "default": 16,
+            "minimum": 1
+          },
+          "flush_threshold_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Size-based flush threshold in bytes.\n\nThe buffer is flushed to create a compression job once the total size of buffered\nobjects exceeds this threshold.\n\nDefaults to 4 GiB.",
+            "default": 4294967296,
+            "minimum": 0
+          },
+          "timeout_sec": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time-based flush threshold in seconds.\n\nThis is a hard timeout. The buffer is flushed to create a compression job when the\noldest buffered object has remained in the buffer for at least this duration,\nregardless of the total buffered size. The timer is not reset by newly ingested\nobjects.\n\nDefaults to 300 seconds (5 minutes).",
+            "default": 300,
+            "minimum": 0
+          }
+        }
+      },
       "CreationResponse": {
         "type": "object",
         "required": [
@@ -270,8 +290,8 @@
         ],
         "properties": {
           "id": {
-            "type": "string",
-            "description": "The unique ID of the created ingestion job."
+            "$ref": "#/components/schemas/u64",
+            "description": "The ID of the created ingestion job."
           }
         }
       },
@@ -322,15 +342,59 @@
               "queue_url"
             ],
             "properties": {
+              "num_concurrent_listener_tasks": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The number of concurrent listener tasks to run.\n\nEach listener task is an asynchronous coroutine that continuously polls the configured\nSQS queue and processes incoming S3 event notifications.\n\nDefaults to `1`.",
+                "maximum": 32,
+                "minimum": 1
+              },
               "queue_url": {
                 "type": "string",
                 "description": "The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated\nto this ingestion job.",
                 "minLength": 1
+              },
+              "wait_time_sec": {
+                "type": "integer",
+                "format": "int32",
+                "description": "The long polling wait time, in seconds, for receiving messages from the SQS queue.\n\nThis value controls how long an SQS `ReceiveMessage` call will wait for a message to\narrive before returning a response. Enabling long polling can reduce empty responses\nand lower overall request costs.\n\nAWS SQS enforces a maximum wait time of 20 seconds. Any configured value greater than\n20 seconds will be considered invalid.\n\nDefaults to `20`.",
+                "maximum": 20,
+                "minimum": 0
               }
             }
           }
         ],
         "description": "Configuration for a SQS listener job."
+      },
+      "TerminalStatus": {
+        "type": "string",
+        "description": "Status of a terminated ingestion job.",
+        "enum": [
+          "finished",
+          "failed"
+        ]
+      },
+      "TerminateResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "terminal_status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/u64",
+            "description": "The ID of the job whose instance is terminated."
+          },
+          "terminal_status": {
+            "$ref": "#/components/schemas/TerminalStatus",
+            "description": "Terminal status of the job."
+          }
+        }
+      },
+      "u64": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
       }
     }
   },
