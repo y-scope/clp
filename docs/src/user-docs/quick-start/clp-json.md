@@ -29,7 +29,7 @@ services instead of bundled services, see the
 ```
 
 ```{note}
-Keep in mind about `etc/clp-config.yaml`:
+Configurations are stored in `etc/clp-config.yaml`:
 - If CLP fails to start (e.g., due to a port conflict), try adjusting the settings and restarting.
 - Configuration changes are **not** hot-reloaded. You must run `sbin/stop-clp.sh` followed by
   `sbin/start-clp.sh` for changes to take effect.
