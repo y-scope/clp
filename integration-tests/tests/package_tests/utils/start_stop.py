@@ -127,24 +127,24 @@ def _validate_clp_package_running(clp_package: ClpPackage) -> VerificationResult
     project_name = f"clp-package-{instance_id}"
     running_services = set(list_running_services_in_compose_project(project_name))
 
-    # Compare with list of required components.
-    required_components = set(clp_package.component_list)
-    if required_components == running_services:
+    # Compare with list of required services.
+    required_services = set(clp_package.component_list)
+    if required_services == running_services:
         return VerificationResult.ok()
 
     # Construct failure message.
     mode_name = clp_package.mode_name
     fail_msg = (
-        f"'{mode_name}' package start up verification failure: components could not be validated."
+        f"'{mode_name}' package start up verification failure: services could not be validated."
     )
 
-    missing_components = required_components - running_services
-    if missing_components:
-        fail_msg += f" Missing components: {missing_components}."
+    missing_services = required_services - running_services
+    if missing_services:
+        fail_msg += f" Missing services: {missing_services}."
 
-    unexpected_components = running_services - required_components
-    if unexpected_components:
-        fail_msg += f" Unexpected services: {unexpected_components}."
+    unexpected_services = running_services - required_services
+    if unexpected_services:
+        fail_msg += f" Unexpected services: {unexpected_services}."
 
     return VerificationResult.fail(fail_msg)
 
@@ -172,7 +172,7 @@ def _validate_clp_package_not_running(clp_package: ClpPackage) -> VerificationRe
     # Construct failure message.
     mode_name = clp_package.mode_name
     fail_msg = (
-        f"'{mode_name}' package stop verification failure: there are components of the package that"
-        f" are still running: '{running_services}'"
+        f"'{mode_name}' package stop verification failure: there are services that are still"
+        f" running: '{running_services}'"
     )
     return VerificationResult.fail(fail_msg)
