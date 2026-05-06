@@ -315,14 +315,14 @@ pub enum LogsInput {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Telemetry {
-    pub disable: bool,
+    pub disable: Option<bool>,
     pub collector_endpoint: String,
 }
 
 impl Default for Telemetry {
     fn default() -> Self {
         Self {
-            disable: false,
+            disable: None,
             collector_endpoint: "https://telemetry.yscope.io:4318".to_owned(),
         }
     }

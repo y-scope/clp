@@ -177,7 +177,7 @@
 #aws_config_directory: null
 #
 ## Anonymous usage telemetry. Set to true to disable.
-## See: https://docs.yscope.com/clp/main/user-guide/telemetry
+## See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
 #telemetry:
 #  disable: false
 #  collector_endpoint: "https://telemetry.yscope.io:4318"

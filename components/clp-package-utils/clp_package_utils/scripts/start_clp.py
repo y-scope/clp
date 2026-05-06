@@ -9,7 +9,7 @@ import tempfile
 
 import click
 import yaml
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
 from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.cli_utils import RESTART_POLICY
@@ -45,7 +45,7 @@ Enable anonymous telemetry to help improve CLP? [Y/n]
 """
 
 
-def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None:
+def _check_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Path) -> None:
     """
     Checks telemetry consent and prompts the user on first run if needed.
 
@@ -68,7 +68,7 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
         return
 
     # Priority 2: Config file already has explicit setting
-    if clp_config.telemetry.disable:
+    if clp_config.telemetry.disable is not None:
         return
 
     # Priority 3: First-run prompt
@@ -78,7 +78,7 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
 
     # First run — show prompt if interactive
     if sys.stdin.isatty():
-        print(TELEMETRY_PROMPT)
+        sys.stdout.write(TELEMETRY_PROMPT)
         try:
             response = input().strip().lower()
         except EOFError:
@@ -111,7 +111,7 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
     config_data = {}
 
     if config_file_path.exists():
-        with open(config_file_path, "r") as f:
+        with config_file_path.open("r") as f:
             config_data = yaml.safe_load(f) or {}
 
     telemetry = config_data.get("telemetry", {})
@@ -125,9 +125,9 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
             yaml.safe_dump(config_data, f, default_flow_style=False)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(temp_path, config_file_path)
+        pathlib.Path(temp_path).replace(config_file_path)
     except:
-        os.unlink(temp_path)
+        pathlib.Path(temp_path).unlink()
         raise
 
 

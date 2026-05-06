@@ -801,7 +801,7 @@ def _get_env_var(name: str) -> str:
 
 
 class Telemetry(BaseModel):
-    disable: bool = False
+    disable: bool | None = None
     collector_endpoint: str = "https://telemetry.yscope.io:4318"
 
 
