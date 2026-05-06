@@ -118,16 +118,21 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
     telemetry["disable"] = disable
     config_data["telemetry"] = telemetry
 
+    # Preserve the original file's permissions (mkstemp creates files with 0o600)
+    original_mode = config_file_path.stat().st_mode if config_file_path.exists() else 0o644
+
     # Write atomically: write to temp file, then replace
     fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
+    temp_path_obj = pathlib.Path(temp_path)
     try:
         with os.fdopen(fd, "w") as f:
             yaml.safe_dump(config_data, f, default_flow_style=False)
             f.flush()
             os.fsync(f.fileno())
-        pathlib.Path(temp_path).replace(config_file_path)
+        temp_path_obj.chmod(original_mode)
+        temp_path_obj.replace(config_file_path)
     except:
-        pathlib.Path(temp_path).unlink()
+        temp_path_obj.unlink()
         raise
 
 
