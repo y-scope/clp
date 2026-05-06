@@ -92,7 +92,7 @@ def _download_and_extract_gzip_dataset(
     :param tarball_url: Dataset tarball URL.
     :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
         Defaults to False to avoid an unnecessary extra directory level.
-    :return: An DownloadedDataset instance providing metadata for the downloaded logs.
+    :return: A DownloadedDataset instance providing metadata for the downloaded logs.
     :raises subprocess.CalledProcessError: If `curl`, `tar`, or `chmod` fails.
     """
     downloaded_dataset = DownloadedDataset(
