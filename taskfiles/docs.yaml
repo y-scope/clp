@@ -28,7 +28,7 @@ tasks:
       - "{{.TASKFILE}}"
       - "conf/**/*"
       - "src/**/*"
-    dir: "{{.ROOT_DIR}}/docs"
+    dir: "{{.G_DOCS_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
@@ -64,7 +64,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
-      REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
+      REQUIREMENTS_FILE: "{{.G_DOCS_DIR}}/requirements.txt"
     sources:
       - "{{.REQUIREMENTS_FILE}}"
       - "{{.ROOT_TASKFILE}}"
