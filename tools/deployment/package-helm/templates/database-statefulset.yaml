@@ -27,7 +27,7 @@ spec:
         - name: "database"
           image: >-
             {{- if eq .Values.clpConfig.database.type "mysql" }}
-              mysql:8.0.45
+              mysql:8.0.46
             {{- else }}
               mariadb:10.11.16
             {{- end }}

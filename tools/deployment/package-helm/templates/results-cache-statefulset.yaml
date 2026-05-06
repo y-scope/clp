@@ -25,7 +25,7 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "results-cache"
-          image: "mongo:8.0.19"
+          image: "mongo:8.0.21"
           imagePullPolicy: "Always"
           ports:
             - name: "results-cache"

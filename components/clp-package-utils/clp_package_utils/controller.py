@@ -168,7 +168,7 @@ class BaseController(ABC):
         # Runtime config
         env_vars |= {
             "CLP_DB_CONTAINER_IMAGE_REF": (
-                "mysql:8.0.45"
+                "mysql:8.0.46"
                 if self._clp_config.database.type == DatabaseEngine.MYSQL
                 else "mariadb:10.11.16"
             ),

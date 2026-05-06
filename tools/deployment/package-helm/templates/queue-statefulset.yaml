@@ -25,7 +25,7 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "queue"
-          image: "rabbitmq:4.2.4"
+          image: "rabbitmq:4.2.6"
           imagePullPolicy: "Always"
           env:
             - name: "RABBITMQ_DEFAULT_USER"

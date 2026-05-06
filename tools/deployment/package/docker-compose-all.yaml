@@ -118,7 +118,7 @@ services:
 
   queue:
     <<: *service_defaults
-    image: "rabbitmq:4.2.4"
+    image: "rabbitmq:4.2.6"
     hostname: "queue"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the queue.
@@ -184,7 +184,7 @@ services:
 
   results-cache:
     <<: *service_defaults
-    image: "mongo:8.0.19"
+    image: "mongo:8.0.21"
     hostname: "results_cache"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the results cache.
