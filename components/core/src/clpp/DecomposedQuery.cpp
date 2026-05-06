@@ -36,7 +36,7 @@ auto DecomposedQuery::decompose_query(
     decomposed_query.m_log_type.reserve(query.size());
     for (auto const& sub_queries : interpretations) {
         for (auto const& sub_query : sub_queries) {
-            if (sub_query.rule_idx == 0) {
+            if (sub_query.qualified_name.empty()) {
                 decomposed_query.m_log_type.append(sub_query.value);
             } else {
                 decomposed_query.m_leaf_queries.emplace_back(
