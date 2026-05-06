@@ -33,29 +33,6 @@ public:
             std::string_view query
     ) -> ystdlib::error_handling::Result<DecomposedQuery>;
 
-    // Constructors
-    DecomposedQuery() : m_search_result(nullptr) {}
-
-    DecomposedQuery(log_surgeon::SearchResult const* search_result)
-            : m_search_result(search_result) {}
-
-    DecomposedQuery(DecomposedQuery const&) = delete;
-    DecomposedQuery(DecomposedQuery&&) noexcept = default;
-
-    // Operators
-    auto operator=(DecomposedQuery const&) -> DecomposedQuery& = delete;
-    auto operator=(DecomposedQuery&&) noexcept -> DecomposedQuery& = default;
-
-    // Destructor
-    ~DecomposedQuery() {
-        if (nullptr != m_search_result) {
-            log_surgeon::log_surgeon_search_result_drop(
-                    const_cast<log_surgeon::SearchResult*>(m_search_result)
-            );
-            m_search_result = nullptr;
-        }
-    }
-
     // Methods
     [[nodiscard]] auto get_leaf_queries() const -> std::vector<LeafQuery> const& {
         return m_leaf_queries;
@@ -71,10 +48,12 @@ public:
     static auto get_qualified_name(log_surgeon::Match const& match) -> std::string;
 
 private:
+    // Constructors
+    DecomposedQuery() = default;
+
     // Data members
     std::vector<LeafQuery> m_leaf_queries;
     std::string m_log_type;
-    log_surgeon::SearchResult const* m_search_result;
 };
 }  // namespace clpp
 #endif  // CLPP_DECOMPOSEDQUERY_HPP
