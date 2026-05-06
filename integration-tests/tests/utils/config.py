@@ -259,7 +259,7 @@ class PackageInstance:
         Reads the CLP instance ID from the given file and validates its format.
 
         :param clp_instance_id_file_path:
-        :return: The instance ID (UUID or legacy 4-character hex string).
+        :return: The instance ID (4-character hex, 32-character hex, or full UUID).
         :raise ValueError: If the file cannot be read or contents are not a valid instance ID.
         """
         try:

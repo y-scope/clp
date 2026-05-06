@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 import sys
+import tempfile
 
 import click
 import yaml
@@ -33,11 +34,11 @@ ingested, compression ratios, and query volume. It does NOT include:
 log content, queries, hostnames, IP addresses, or any personally
 identifiable information.
 
-Metrics are sent via OTLP to: https://telemetry.yscope.io
-For details, see: https://docs.yscope.com/clp/main/user-guide/telemetry
+Metrics are sent via OTLP to: https://telemetry.yscope.io:4318
+For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
 
 You can disable metrics at any time by setting CLP_DISABLE_TELEMETRY=true
-or by blocking https://telemetry.yscope.io at the network level.
+or by blocking https://telemetry.yscope.io:4318 at the network level.
 
 Enable anonymous telemetry to help improve CLP? [Y/n]
 ================================================================================
@@ -45,7 +46,7 @@ Enable anonymous telemetry to help improve CLP? [Y/n]
 
 
 def _check_telemetry_consent(
-    clp_config, config_file_path: pathlib.Path, clp_home: pathlib.Path
+    clp_config, config_file_path: pathlib.Path
 ) -> None:
     """
     Checks telemetry consent and prompts the user on first run if needed.
@@ -57,10 +58,9 @@ def _check_telemetry_consent(
 
     :param clp_config: The loaded ClpConfig object.
     :param config_file_path: Path to the config file (for persisting consent).
-    :param clp_home: CLP home directory.
     """
     # Priority 1: Environment variables
-    disable_env = os.environ.get("CLP_DISABLE_TELEMETRY", "").lower()
+    disable_env = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
     if disable_env in ("true", "1"):
         clp_config.telemetry.disable = True
         return
@@ -112,8 +112,17 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
     telemetry["disable"] = disable
     config_data["telemetry"] = telemetry
 
-    with open(config_file_path, "w") as f:
-        yaml.safe_dump(config_data, f, default_flow_style=False)
+    # Write atomically: write to temp file, then replace
+    fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
+    try:
+        with os.fdopen(fd, "w") as f:
+            yaml.safe_dump(config_data, f, default_flow_style=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_path, config_file_path)
+    except:
+        os.unlink(temp_path)
+        raise
 
 
 @click.command()
@@ -178,7 +187,7 @@ def main(
         sys.exit(1)
 
     # Check telemetry consent (may prompt user on first run)
-    _check_telemetry_consent(clp_config, resolved_config_path, clp_home)
+    _check_telemetry_consent(clp_config, resolved_config_path)
 
     try:
         # Create necessary directories.
