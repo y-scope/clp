@@ -802,6 +802,7 @@ def _get_env_var(name: str) -> str:
 
 class Telemetry(BaseModel):
     disable: bool = False
+    collector_endpoint: str = "https://telemetry.yscope.io:4318"
 
 
 class ClpConfig(BaseModel):

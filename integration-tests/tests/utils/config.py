@@ -259,8 +259,8 @@ class PackageInstance:
         Reads the CLP instance ID from the given file and validates its format.
 
         :param clp_instance_id_file_path:
-        :return: The 4-character hexadecimal instance ID.
-        :raise ValueError: If the file cannot be read or contents are not a 4-character hex string.
+        :return: The instance ID (UUID or legacy 4-character hex string).
+        :raise ValueError: If the file cannot be read or contents are not a valid instance ID.
         """
         try:
             contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
@@ -271,7 +271,7 @@ class PackageInstance:
         if not re.fullmatch(r"[0-9a-fA-F]{4}|[0-9a-fA-F]{32}|[0-9a-fA-F-]{36}", contents):
             err_msg = (
                 f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
-                f" hexadecimal string or a full UUID, but read {contents}."
+                f" hex string, a 32-character hex string, or a full UUID, but read {contents}."
             )
             raise ValueError(err_msg)
 

@@ -2,10 +2,12 @@
 """Script to start the CLP Package."""
 
 import logging
+import os
 import pathlib
 import sys
 
 import click
+import yaml
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 from clp_py_utils.core import resolve_host_path_in_container
 
@@ -22,6 +24,94 @@ from clp_package_utils.general import (
 )
 
 logger = logging.getLogger(__name__)
+
+TELEMETRY_PROMPT = """
+================================================================================
+CLP collects anonymous operational metrics to help improve the software.
+This includes: CLP version, OS/architecture, deployment method, bytes
+ingested, compression ratios, and query volume. It does NOT include:
+log content, queries, hostnames, IP addresses, or any personally
+identifiable information.
+
+Metrics are sent via OTLP to: https://telemetry.yscope.io
+For details, see: https://docs.yscope.com/clp/main/user-guide/telemetry
+
+You can disable metrics at any time by setting CLP_DISABLE_TELEMETRY=true
+or by blocking https://telemetry.yscope.io at the network level.
+
+Enable anonymous telemetry to help improve CLP? [Y/n]
+================================================================================
+"""
+
+
+def _check_telemetry_consent(
+    clp_config, config_file_path: pathlib.Path, clp_home: pathlib.Path
+) -> None:
+    """
+    Checks telemetry consent and prompts the user on first run if needed.
+
+    Priority order for disabling telemetry:
+    1. CLP_DISABLE_TELEMETRY or DO_NOT_TRACK environment variables
+    2. telemetry.disable explicitly set in config file
+    3. First-run interactive prompt (persists choice to config)
+
+    :param clp_config: The loaded ClpConfig object.
+    :param config_file_path: Path to the config file (for persisting consent).
+    :param clp_home: CLP home directory.
+    """
+    # Priority 1: Environment variables
+    disable_env = os.environ.get("CLP_DISABLE_TELEMETRY", "").lower()
+    if disable_env in ("true", "1"):
+        clp_config.telemetry.disable = True
+        return
+
+    if os.environ.get("DO_NOT_TRACK", "") in ("1", "true", "yes"):
+        clp_config.telemetry.disable = True
+        return
+
+    # Priority 2: Config file already has explicit setting
+    if clp_config.telemetry.disable:
+        return
+
+    # Priority 3: First-run prompt
+    instance_id_file = clp_config.logs_directory / "instance-id"
+    if resolve_host_path_in_container(instance_id_file).exists():
+        return  # Not first run, skip prompt
+
+    # First run — show prompt if interactive
+    if sys.stdin.isatty():
+        print(TELEMETRY_PROMPT)
+        try:
+            response = input().strip().lower()
+        except EOFError:
+            response = ""
+
+        if response == "n":
+            clp_config.telemetry.disable = True
+            # Persist the choice to the config file
+            _update_config_file_telemetry(config_file_path, disable=True)
+            logger.info("Telemetry has been disabled. You can re-enable it in %s", config_file_path)
+
+    # Non-interactive: default to enabled (no config write needed)
+
+
+def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool) -> None:
+    """
+    Updates the telemetry.disable setting in the config file.
+
+    :param config_file_path: Path to the config file.
+    :param disable: Whether to disable telemetry.
+    """
+    config_data = {}
+
+    if config_file_path.exists():
+        with open(config_file_path, "r") as f:
+            config_data = yaml.safe_load(f) or {}
+
+    config_data["telemetry"] = {"disable": disable}
+
+    with open(config_file_path, "w") as f:
+        yaml.safe_dump(config_data, f, default_flow_style=False)
 
 
 @click.command()
@@ -84,6 +174,9 @@ def main(
     except Exception:
         logger.exception("Failed to load config.")
         sys.exit(1)
+
+    # Check telemetry consent (may prompt user on first run)
+    _check_telemetry_consent(clp_config, resolved_config_path, clp_home)
 
     try:
         # Create necessary directories.

@@ -645,33 +645,6 @@ class BaseController(ABC):
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
 
-        # Telemetry env vars
-        instance_id_file = self._clp_config.logs_directory / "instance-id"
-        resolved_id_file = resolve_host_path_in_container(instance_id_file)
-        if resolved_id_file.exists():
-            with resolved_id_file.open("r") as f:
-                env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
-
-        version_file = resolve_host_path_in_container(self._clp_home / "VERSION")
-        if version_file.exists():
-            with version_file.open("r") as f:
-                env_vars["CLP_VERSION"] = f.read().strip()
-
-        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
-
-        # Pass through host OS info (set by start-clp.sh)
-        for var in (
-            "CLP_HOST_OS",
-            "CLP_HOST_OS_VERSION",
-            "CLP_HOST_ARCH",
-            "CLP_DISABLE_TELEMETRY",
-            "CLP_TELEMETRY_DEBUG",
-            "DO_NOT_TRACK",
-        ):
-            val = os.environ.get(var)
-            if val is not None:
-                env_vars[var] = val
-
         return env_vars
 
     def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
@@ -1090,6 +1063,36 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
 
+        # Telemetry env vars — needed by ALL containers for OpenTelemetry instrumentation
+        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
+        env_vars["CLP_STORAGE_ENGINE"] = self._clp_config.package.storage_engine
+
+        instance_id_file = self._clp_config.logs_directory / "instance-id"
+        resolved_id_file = resolve_host_path_in_container(instance_id_file)
+        if resolved_id_file.exists():
+            with resolved_id_file.open("r") as f:
+                env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
+
+        version_file = resolve_host_path_in_container(self._clp_home / "VERSION")
+        if version_file.exists():
+            with version_file.open("r") as f:
+                env_vars["CLP_VERSION"] = f.read().strip()
+
+        env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = self._clp_config.telemetry.collector_endpoint
+
+        # Pass through host OS info and telemetry opt-out vars (set by start-clp.sh)
+        for var in (
+            "CLP_HOST_OS",
+            "CLP_HOST_OS_VERSION",
+            "CLP_HOST_ARCH",
+            "CLP_DISABLE_TELEMETRY",
+            "CLP_TELEMETRY_DEBUG",
+            "DO_NOT_TRACK",
+        ):
+            val = os.environ.get(var)
+            if val is not None:
+                env_vars[var] = val
+
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_vars.items():
@@ -1182,7 +1185,7 @@ def get_or_create_instance_id(clp_config: ClpConfig) -> str:
         with open(resolved_instance_id_file_path, "r") as f:
             instance_id = f.readline().strip()
     else:
-        instance_id = uuid.uuid4().hex
+        instance_id = str(uuid.uuid4())
         with open(resolved_instance_id_file_path, "w") as f:
             f.write(instance_id)
 

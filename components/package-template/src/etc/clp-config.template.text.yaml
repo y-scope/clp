@@ -171,3 +171,4 @@ log_ingestor: null
 ## See: https://docs.yscope.com/clp/main/user-guide/telemetry
 #telemetry:
 #  disable: false
+#  collector_endpoint: "https://telemetry.yscope.io:4318"

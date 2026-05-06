@@ -312,10 +312,20 @@ pub enum LogsInput {
 }
 
 /// Mirror of `clp_py_utils.clp_config.Telemetry`.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Telemetry {
     pub disable: bool,
+    pub collector_endpoint: String,
+}
+
+impl Default for Telemetry {
+    fn default() -> Self {
+        Self {
+            disable: false,
+            collector_endpoint: "https://telemetry.yscope.io:4318".to_owned(),
+        }
+    }
 }
 
 #[cfg(test)]
