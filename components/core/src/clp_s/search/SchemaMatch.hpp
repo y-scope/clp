@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
@@ -108,7 +109,8 @@ private:
      * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon
      * parser and schema on first use. The cache is keyed on the fully qualified column name
      * and the raw query string.
-     * @param qualified_name The fully qualified dot-separated column name (e.g. "message.block_id").
+     * @param qualified_name The fully qualified dot-separated column name (e.g.
+     * "message.block_id").
      * @param query The raw CLP-string query text.
      * @return A pointer to the cached DecomposedQuery on success.
      */
@@ -126,11 +128,11 @@ private:
 
     /**
      * Builds a fully qualified dot-separated name from a schema node up to (but not including)
-     * the LogMessage root.
-     * @param cur_node The schema node to start from.
+     * the LogMessage root. The qualified name of a node that is a LogMessage is the empty string.
+     * @param start_node
      * @return The qualified name.
      */
-    auto build_qualified_name(SchemaNode const& cur_node) -> std::string;
+    auto build_qualified_name(SchemaNode const& start_node) -> std::string;
 
     /**
      * Lazily initializes the log-surgeon parser and schema if not already done.
@@ -282,16 +284,12 @@ private:
      * for log types whose parent matches and log-type value align with the query.
      * @param cur_node The schema tree node where decomposition is triggered (LogMessage or
      *     ParentRule).
-     * @param descriptor The descriptor token matched against the node.
      * @param query The raw CLP-string query text.
      * @return A ClppDecompositionMatch containing the decomposed query and matched log-type IDs,
      *     or an error if decomposition fails.
      */
-    auto decompose_clpp_query(
-            SchemaNode const& cur_node,
-            ast::DescriptorToken const& descriptor,
-            std::string const& query
-    ) -> ystdlib::error_handling::Result<ClppDecompositionMatch>;
+    auto decompose_clpp_query(SchemaNode const& cur_node, std::string const& query)
+            -> ystdlib::error_handling::Result<ClppDecompositionMatch>;
 
     /**
      * Builds an AndExpr of leaf equality filters from a decomposed clpp query, and registers
@@ -314,16 +312,14 @@ private:
      * Decomposes a CLP-string query at a LogMessage or ParentRule node, matches log types against
      * the typed dictionary, and returns an AndExpr of leaf equality filters. Returns nullptr if
      * no schemas match or a leaf column cannot be resolved in the schema tree.
-     * @param column The column descriptor triggering clpp decomposition.
+     * @param column The column triggering clpp decomposition.
      * @param node_id The node ID where decomposition was triggered (LogMessage or ParentRule).
-     * @param descriptor The descriptor token matched against the node.
      * @param expr The original expression containing the filter.
      * @return The transformed expression on success, nullptr otherwise.
      */
     auto resolve_clpp_query(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             SchemaNode::id_t node_id,
-            ast::DescriptorToken const& descriptor,
             std::shared_ptr<ast::Expression> const& expr
     ) -> std::shared_ptr<ast::Expression>;
 };

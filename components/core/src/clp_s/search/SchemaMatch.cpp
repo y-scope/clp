@@ -17,6 +17,7 @@
 
 #include <fmt/format.h>
 #include <log_surgeon/log_surgeon.hpp>
+#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/search/ast/StringLiteral.hpp>
@@ -367,7 +368,7 @@ auto SchemaMatch::populate_column_mapping(
                 if (NodeType::LogMessage == cur_node.get_type()
                     || NodeType::ParentRule == cur_node.get_type())
                 {
-                    if (auto result{resolve_clpp_query(column, cur_node_id, *cur_it, expr)};
+                    if (auto result{resolve_clpp_query(column, cur_node_id, expr)};
                         nullptr != result)
                     {
                         return std::make_tuple(true, std::move(result));
@@ -706,13 +707,20 @@ auto SchemaMatch::find_child_node_by_key_name(SchemaNode::id_t parent_id, std::s
     return std::nullopt;
 }
 
-auto SchemaMatch::build_qualified_name(SchemaNode const& cur_node) -> std::string {
-    std::string qualified_name{cur_node.get_key_name()};
-    auto const* parent_node{&m_tree->get_node(cur_node.get_parent_id())};
-    while (NodeType::LogMessage != parent_node->get_type()) {
-        qualified_name.insert(0, parent_node->get_key_name());
-        qualified_name.append(".");
-        parent_node = &m_tree->get_node(parent_node->get_parent_id());
+auto SchemaMatch::build_qualified_name(SchemaNode const& start_node) -> std::string {
+    std::vector<std::string_view> names;
+    auto const* cur_node{&start_node};
+    while (NodeType::LogMessage != cur_node->get_type()) {
+        names.emplace_back(cur_node->get_key_name());
+        cur_node = &m_tree->get_node(cur_node->get_parent_id());
+    }
+
+    std::string qualified_name;
+    for (auto it{names.rbegin()}; names.rend() != it; ++it) {
+        if (names.rbegin() != it) {
+            qualified_name.append(".");
+        }
+        qualified_name.append(*it);
     }
     return qualified_name;
 }
@@ -739,9 +747,7 @@ auto SchemaMatch::build_leaf_query_expr(
             start = end + 1;
             end = leaf.m_qualified_name.find('.', start);
         } else {
-            if (auto child_id{find_child_node_by_key_name(node_id, name)};
-                child_id.has_value())
-            {
+            if (auto child_id{find_child_node_by_key_name(node_id, name)}; child_id.has_value()) {
                 node_id = child_id.value();
             } else {
                 return std::nullopt;
@@ -752,9 +758,7 @@ auto SchemaMatch::build_leaf_query_expr(
             new_col_descriptors.emplace_back(
                     DescriptorToken::create_descriptor_from_literal_token(token)
             );
-            if (auto child_id{find_child_node_by_key_name(node_id, token)};
-                child_id.has_value())
-            {
+            if (auto child_id{find_child_node_by_key_name(node_id, token)}; child_id.has_value()) {
                 node_id = child_id.value();
             } else {
                 return std::nullopt;
@@ -766,9 +770,7 @@ auto SchemaMatch::build_leaf_query_expr(
         new_col_descriptors.emplace_back(
                 DescriptorToken::create_descriptor_from_literal_token(last_token)
         );
-        if (auto child_id{find_child_node_by_key_name(node_id, last_token)};
-            child_id.has_value())
-        {
+        if (auto child_id{find_child_node_by_key_name(node_id, last_token)}; child_id.has_value()) {
             node_id = child_id.value();
         } else {
             return std::nullopt;
@@ -789,7 +791,6 @@ auto SchemaMatch::build_leaf_query_expr(
 auto SchemaMatch::resolve_clpp_query(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         SchemaNode::id_t node_id,
-        ast::DescriptorToken const& descriptor,
         std::shared_ptr<ast::Expression> const& expr
 ) -> std::shared_ptr<ast::Expression> {
     m_clpp_decomposed_query = true;
@@ -798,7 +799,7 @@ auto SchemaMatch::resolve_clpp_query(
     std::string query;
     filter->get_operand()->as_clp_string(query, filter->get_operation());
 
-    auto dq{decompose_clpp_query(m_tree->get_node(node_id), descriptor, query)};
+    auto dq{decompose_clpp_query(m_tree->get_node(node_id), query)};
     if (dq.has_error()) {
         throw std::runtime_error(fmt::format("clpp query decomposition failed for {}", query));
     }
@@ -822,13 +823,9 @@ auto SchemaMatch::resolve_clpp_query(
     return nullptr;
 }
 
-auto SchemaMatch::decompose_clpp_query(
-        SchemaNode const& cur_node,
-        ast::DescriptorToken const& descriptor,
-        std::string const& query
-) -> ystdlib::error_handling::Result<ClppDecompositionMatch> {
+auto SchemaMatch::decompose_clpp_query(SchemaNode const& cur_node, std::string const& query)
+        -> ystdlib::error_handling::Result<ClppDecompositionMatch> {
     auto const qualified_name{build_qualified_name(cur_node)};
-
     auto const* decomposed_query{
             YSTDLIB_ERROR_HANDLING_TRYX(lookup_decomposed_query(qualified_name, query))
     };
@@ -840,22 +837,27 @@ auto SchemaMatch::decompose_clpp_query(
 
     std::vector<clp_s::logtype_id_t> matched_lt_ids;
     for (auto const& log_type : typed_lt_dict.get_entries()) {
-        auto metadata{m_archive_reader->get_logtype_metadata().at(log_type.get_id())};
-        for (auto const& parent_match : metadata.get_parent_matches()) {
-            if (parent_match.m_name == descriptor.get_token()
-                && decomposed_query->get_log_type()
-                           == log_type.get_value()
-                                      .substr(parent_match.m_start, parent_match.m_size))
-            {
+        if (NodeType::LogMessage == cur_node.get_type()) {
+            if (decomposed_query->get_log_type() == log_type.get_value()) {
                 matched_lt_ids.emplace_back(log_type.get_id());
+            }
+        } else {
+            auto metadata{m_archive_reader->get_logtype_metadata().at(log_type.get_id())};
+            for (auto const& parent_match : metadata.get_parent_matches()) {
+                if (qualified_name == parent_match.m_name
+                    && decomposed_query->get_log_type()
+                               == log_type.get_value()
+                                          .substr(parent_match.m_start, parent_match.m_size))
+                {
+                    matched_lt_ids.emplace_back(log_type.get_id());
+                }
             }
         }
     }
     return {decomposed_query, std::move(matched_lt_ids)};
 }
 
-auto SchemaMatch::ensure_log_surgeon_parser_initialized()
-        -> ystdlib::error_handling::Result<void> {
+auto SchemaMatch::ensure_log_surgeon_parser_initialized() -> ystdlib::error_handling::Result<void> {
     if (nullptr != m_ls_parser) {
         return ystdlib::error_handling::success();
     }
