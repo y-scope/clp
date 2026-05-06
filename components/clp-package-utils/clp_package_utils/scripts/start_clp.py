@@ -45,9 +45,7 @@ Enable anonymous telemetry to help improve CLP? [Y/n]
 """
 
 
-def _check_telemetry_consent(
-    clp_config, config_file_path: pathlib.Path
-) -> None:
+def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None:
     """
     Checks telemetry consent and prompts the user on first run if needed.
 
