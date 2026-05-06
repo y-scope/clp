@@ -754,13 +754,9 @@ void JsonParser::parse_line(
 bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& [path, file_name_in_metadata] : m_input_paths_and_canonical_filenames) {
-        auto reader{try_create_reader(path, m_network_auth)};
-        if (nullptr == reader) {
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
+        auto [nested_readers, file_type]
+                = try_create_reader_and_deduce_type_with_retries(path, m_network_auth);
 
-        auto const [nested_readers, file_type] = try_deduce_reader_type(reader);
         bool ingestion_successful{};
         switch (file_type) {
             case FileType::EmptyFile:
@@ -790,7 +786,9 @@ bool JsonParser::ingest() {
             case FileType::Zstd:
             case FileType::Unknown:
             default: {
-                NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+                if (false == nested_readers.empty()) {
+                    NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get());
+                }
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
                 std::ignore = m_archive_writer->close();
                 return false;
@@ -799,7 +797,8 @@ bool JsonParser::ingest() {
 
         close_nested_readers(nested_readers);
         if (false == ingestion_successful
-            || NetworkUtils::check_and_log_curl_error(path.path, reader.get()))
+            || (false == nested_readers.empty()
+                && NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get())))
         {
             std::ignore = m_archive_writer->close();
             return false;

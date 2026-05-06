@@ -5,6 +5,7 @@ includes:
   toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+  yscope-log-viewer: "./log-viewer.yaml"
 
 vars:
   # Directories
@@ -14,7 +15,6 @@ vars:
 
   # Checksum file paths
   G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
-  G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
   # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
   G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
@@ -38,7 +38,7 @@ tasks:
   default:
     deps:
       - "core"
-      - "log-viewer"
+      - "yscope-log-viewer"
 
   core:
     deps:
@@ -51,18 +51,6 @@ tasks:
           CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
           DEP_TASK: "core-all-parallel"
       - task: "utils:combine-cpp-checksum-files"
-
-  log-viewer:
-    deps:
-      - "utils:init"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
-          OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
-          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
 
   core-all-parallel:
     internal: true

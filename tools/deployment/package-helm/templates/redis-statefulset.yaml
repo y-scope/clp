@@ -19,6 +19,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "redis"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "redis"
+        ) | nindent 6 }}
       containers:
         - name: "redis"
           image: "redis:7.2.4"
