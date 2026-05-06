@@ -65,7 +65,7 @@ def _check_telemetry_consent(
         clp_config.telemetry.disable = True
         return
 
-    if os.environ.get("DO_NOT_TRACK", "") in ("1", "true", "yes"):
+    if os.environ.get("DO_NOT_TRACK", "").strip().lower() in ("1", "true", "yes"):
         clp_config.telemetry.disable = True
         return
 
@@ -108,7 +108,9 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
         with open(config_file_path, "r") as f:
             config_data = yaml.safe_load(f) or {}
 
-    config_data["telemetry"] = {"disable": disable}
+    telemetry = config_data.get("telemetry", {})
+    telemetry["disable"] = disable
+    config_data["telemetry"] = telemetry
 
     with open(config_file_path, "w") as f:
         yaml.safe_dump(config_data, f, default_flow_style=False)
