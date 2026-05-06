@@ -1,7 +1,6 @@
 #include "DecomposedQuery.hpp"
 
-#include <array>
-#include <cstddef>
+#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -19,123 +18,36 @@
 #include <clpp/ErrorCode.hpp>
 
 namespace clpp {
-namespace {
-auto get_full_type_name(
-        log_surgeon::Match const& cap,
-        absl::flat_hash_map<uint32_t, log_surgeon::Match const> root_matches,
-        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> parent_matches
-) -> std::vector<std::string>;
-
-auto get_type_name(log_surgeon::Match const& match) -> std::string;
-
-auto get_type_name(log_surgeon::Match const& match) -> std::string {
-    if (0 == match.sub_rule_id) {
-        return std::string{match.ffi_pointers.rule_name.as_cpp_view()};
-    }
-    return std::string{match.ffi_pointers.sub_rule_name.as_cpp_view()};
-}
-
-auto get_full_type_name(
-        log_surgeon::Match const& match,
-        absl::flat_hash_map<uint32_t, log_surgeon::Match const> root_matches,
-        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> parent_matches
-) -> std::vector<std::string> {
-    std::vector<std::string> types;
-    auto const* cur{&match};
-    while (0 != cur->sub_rule_id) {
-        types.emplace_back(match.ffi_pointers.sub_rule_name.as_cpp_view());
-        if (0 == cur->parent_id) {
-            cur = &root_matches.at(cur->rule_idx);
-        } else {
-            cur = &parent_matches.at({cur->rule_idx, cur->parent_id});
-        }
-    }
-    types.emplace_back(cur->ffi_pointers.rule_name.as_cpp_view());
-    return types;
-}
-}  // namespace
-
 auto DecomposedQuery::decompose_query(
         log_surgeon::ParserHandle& parser,
         std::optional<std::string_view> rule_name,
         std::string_view query
 ) -> ystdlib::error_handling::Result<DecomposedQuery> {
-    size_t parser_pos{0};
-    auto event{parser.next_event(query, &parser_pos)};
-    if (false == event.has_value() || query.size() != parser_pos) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
-    }
+    auto const interpretations{parser.query_interpretations(
+            log_surgeon::CCharArray::from_string_view(rule_name.value()),
+            log_surgeon::CCharArray::from_string_view(query)
+    )};
 
-    auto [root_matches, parent_matches]{create_parent_match_dicts(event.value())};
-    if (rule_name.has_value()
-        && (1 != root_matches.size()
-            || rule_name != root_matches.begin()->second.ffi_pointers.rule_name.as_cpp_view()))
-    {
+    if (interpretations.empty()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
     DecomposedQuery decomposed_query;
     decomposed_query.m_log_type.reserve(query.size());
-    size_t query_pos{0};
-    for (size_t i{0};; ++i) {
-        auto const match{event->get_leaf_match(i)};
-        if (false == match.has_value()) {
-            break;
+    for (auto const& sub_queries : interpretations) {
+        for (auto const& sub_query : sub_queries) {
+            if (sub_query.rule_idx == 0) {
+                decomposed_query.m_log_type.append(sub_query.value);
+            } else {
+                decomposed_query.m_leaf_queries.emplace_back(
+                        sub_query.qualified_name,
+                        sub_query.value
+                );
+                decomposed_query.m_log_type.append(fmt::format("%{}%", sub_query.qualified_name));
+            }
         }
-
-        decomposed_query.m_leaf_queries.emplace_back(
-                get_full_type_name(*match, root_matches, parent_matches),
-                match->ffi_pointers.lexeme.as_cpp_view()
-        );
-
-        decomposed_query.m_log_type.append(query.substr(query_pos, match->range.start - query_pos));
-        decomposed_query.m_log_type.append(fmt::format("%{}%", get_type_name(*match)));
-        query_pos = match->range.end;
-    }
-    decomposed_query.m_log_type.append(query.substr(query_pos));
-    return decomposed_query;
-}
-
-// TODO clpp: need a way to get type names for parents
-// atm this only works when the parent type only contains leaves (no nesting)
-auto DecomposedQuery::decompose_query(
-        log_surgeon::Schema const* schema,
-        std::string_view rule_name,
-        std::string_view query
-) -> ystdlib::error_handling::Result<DecomposedQuery> {
-    auto const* search_result{log_surgeon::log_surgeon_search_by_named_type(
-            schema,
-            log_surgeon::CCharArray::from_string_view(rule_name),
-            log_surgeon::CCharArray::from_string_view(query)
-    )};
-    if (nullptr == search_result) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
-    DecomposedQuery decomposed_query{search_result};
-    std::string log_type{};
-    log_type.reserve(query.size());
-    size_t query_pos{0};
-    size_t leaf_matches_len{0};
-    auto const* leaf_matches{log_surgeon::log_surgeon_search_result_get_leaf_matches(
-            search_result,
-            &leaf_matches_len
-    )};
-    for (size_t i{0}; i < leaf_matches_len; ++i) {
-        auto const match{leaf_matches[i]};
-        decomposed_query.m_leaf_queries.emplace_back(
-                // get_full_type_name(*match, rules, parent_matches),
-                std::vector{get_type_name(match)},
-                match.ffi_pointers.lexeme.as_cpp_view()
-        );
-
-        log_type.append(query.substr(query_pos, match.range.start - query_pos));
-        log_type.append(fmt::format("%{}%", get_type_name(match)));
-        query_pos = match.range.end;
-    }
-
-    log_type.append(query.substr(query_pos));
-    decomposed_query.m_log_type = log_type;
     return decomposed_query;
 }
 
@@ -155,5 +67,29 @@ auto DecomposedQuery::create_parent_match_dicts(log_surgeon::EventHandle const& 
         }
     }
     return {root_matches, parent_matches};
+}
+
+auto DecomposedQuery::get_qualified_name(log_surgeon::Match const& match) -> std::string {
+    std::vector<std::string_view> names;
+    auto const* cur{&match};
+    while (0 != cur->sub_rule_id) {
+        names.emplace_back(cur->ffi_pointers.sub_rule_name.as_cpp_view());
+        cur = cur->ffi_pointers.parent;
+        if (nullptr == cur) {
+            break;
+        }
+    }
+    if (nullptr != cur) {
+        names.emplace_back(cur->ffi_pointers.rule_name.as_cpp_view());
+    }
+
+    std::string qualified_name;
+    for (auto it{names.rbegin()}; names.rend() != it; ++it) {
+        if (names.rbegin() != it) {
+            qualified_name.append(".");
+        }
+        qualified_name.append(*it);
+    }
+    return qualified_name;
 }
 }  // namespace clpp

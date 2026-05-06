@@ -54,46 +54,12 @@ using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
 namespace {
-auto build_leaf_query_expr(
-        std::shared_ptr<ast::ColumnDescriptor> const& column,
-        clpp::DecomposedQuery const& decomposed_query
-) -> std::shared_ptr<ast::Expression>;
-
 /**
  * Gets the `NodeType` corresponding to a given subtree type.
  * @param subtree_type
  * @return the corresponding `NodeType` or `NodeType::Unknown` if the subtree type is unknown.
  */
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
-
-auto build_leaf_query_expr(
-        std::shared_ptr<ast::ColumnDescriptor> const& column,
-        clpp::DecomposedQuery const& decomposed_query
-) -> std::shared_ptr<ast::Expression> {
-    auto leaves_expr{ast::AndExpr::create()};
-    for (auto const& leaf : decomposed_query.get_leaf_queries()) {
-        auto new_col{column->copy()};
-        new_col->set_matching_types(
-                LiteralType::FloatT | LiteralType::IntegerT | LiteralType::VarStringT
-        );
-        auto& new_col_descriptors{new_col->get_descriptor_list()};
-
-        auto start{leaf.m_names.rbegin()};
-        if (new_col_descriptors.back().get_token() == *start) {
-            ++start;
-        }
-        for (auto it{start}; leaf.m_names.rend() != it; ++it) {
-            new_col_descriptors.emplace_back(
-                    DescriptorToken::create_descriptor_from_literal_token(*it)
-            );
-        }
-        auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
-        leaves_expr->add_operand(
-                FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
-        );
-    }
-    return leaves_expr;
-}
 
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
@@ -401,31 +367,10 @@ auto SchemaMatch::populate_column_mapping(
                 if (NodeType::LogMessage == cur_node.get_type()
                     || NodeType::ParentRule == cur_node.get_type())
                 {
-                    m_clpp_decomposed_query = true;
-
-                    auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
-                    std::string query;
-                    filter->get_operand()->as_clp_string(query, filter->get_operation());
-
-                    auto& typed_dict{*m_archive_reader->get_typed_log_type_dictionary()};
-                    if (typed_dict.get_entries().empty()) {
-                        typed_dict.read_entries();
-                    }
-
-                    auto [decomposed_query, matched_lt_ids]
-                            = (NodeType::LogMessage == cur_node.get_type())
-                                      ? decompose_and_match_log_message(query)
-                                      : decompose_and_match_parent_var(cur_node, cur_it, query);
-
-                    if (auto result{resolve_clpp_match(
-                                column,
-                                cur_node_id,
-                                decomposed_query,
-                                matched_lt_ids
-                        )};
-                        result.has_value())
+                    if (auto result{resolve_clpp_query(column, cur_node_id, *cur_it, expr)};
+                        nullptr != result)
                     {
-                        return std::move(result).value();
+                        return std::make_tuple(true, std::move(result));
                     }
                     continue;
                 }
@@ -751,101 +696,154 @@ void SchemaMatch::build_logtype_id_to_schema_id_map() {
     }
 }
 
-auto SchemaMatch::resolve_clpp_match(
+auto SchemaMatch::find_child_node_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
+        -> std::optional<SchemaNode::id_t> {
+    for (auto child_id : m_tree->get_node(parent_id).get_children_ids()) {
+        if (m_tree->get_node(child_id).get_key_name() == key_name) {
+            return child_id;
+        }
+    }
+    return std::nullopt;
+}
+
+auto SchemaMatch::build_qualified_name(SchemaNode const& cur_node) -> std::string {
+    std::string qualified_name{cur_node.get_key_name()};
+    auto const* parent_node{&m_tree->get_node(cur_node.get_parent_id())};
+    while (NodeType::LogMessage != parent_node->get_type()) {
+        qualified_name.insert(0, parent_node->get_key_name());
+        qualified_name.append(".");
+        parent_node = &m_tree->get_node(parent_node->get_parent_id());
+    }
+    return qualified_name;
+}
+
+auto SchemaMatch::build_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         int32_t cur_node_id,
-        clpp::DecomposedQuery const* decomposed_query,
-        std::vector<clp_s::logtype_id_t> const& matched_lt_ids
-) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>> {
-    auto matched_schema_ids{
-            convert_lt_ids_to_schema_ids(matched_lt_ids, m_logtype_id_to_schema_id)
-    };
-    if (matched_schema_ids.empty()) {
-        return std::nullopt;
-    }
-
-    auto leaves_expr{build_leaf_query_expr(column, *decomposed_query)};
-    auto const& leaf_queries{decomposed_query->get_leaf_queries()};
-    auto op_it{leaves_expr->op_begin()};
-    for (size_t leaf_idx{0}; leaf_idx < leaf_queries.size(); ++leaf_idx, ++op_it) {
-        auto filter_expr{std::static_pointer_cast<ast::FilterExpr>(*op_it)};
-        auto leaf_col{filter_expr->get_column()};
+        clpp::DecomposedQuery const& decomposed_query,
+        std::unordered_set<int32_t> const& matched_schema_ids
+) -> std::optional<std::shared_ptr<ast::Expression>> {
+    auto leaves_expr{ast::AndExpr::create()};
+    for (auto const& leaf : decomposed_query.get_leaf_queries()) {
+        auto new_col{column->copy()};
+        new_col->set_matching_types(
+                LiteralType::FloatT | LiteralType::IntegerT | LiteralType::VarStringT
+        );
+        auto& new_col_descriptors{new_col->get_descriptor_list()};
 
         int32_t node_id{cur_node_id};
-        auto const& leaf{leaf_queries[leaf_idx]};
-        auto start{leaf.m_names.rbegin()};
-        if (false == leaf.m_names.empty()) {
-            if (auto const& column_descriptors{column->get_descriptor_list()};
-                false == column_descriptors.empty()
-                && column_descriptors.back().get_token() == *start)
+        size_t start{0};
+        size_t end{leaf.m_qualified_name.find('.')};
+        auto name{leaf.m_qualified_name.substr(start, end - start)};
+        if (new_col_descriptors.back().get_token() == name) {
+            start = end + 1;
+            end = leaf.m_qualified_name.find('.', start);
+        } else {
+            if (auto child_id{find_child_node_by_key_name(node_id, name)};
+                child_id.has_value())
             {
-                ++start;
-            }
-        }
-        for (auto it{start}; leaf.m_names.rend() != it; ++it) {
-            bool found{false};
-            for (auto child_id : m_tree->get_node(node_id).get_children_ids()) {
-                if (m_tree->get_node(child_id).get_key_name() == *it) {
-                    node_id = child_id;
-                    found = true;
-                    break;
-                }
-            }
-            if (false == found) {
+                node_id = child_id.value();
+            } else {
                 return std::nullopt;
             }
         }
+        while (end != std::string::npos) {
+            auto token{leaf.m_qualified_name.substr(start, end - start)};
+            new_col_descriptors.emplace_back(
+                    DescriptorToken::create_descriptor_from_literal_token(token)
+            );
+            if (auto child_id{find_child_node_by_key_name(node_id, token)};
+                child_id.has_value())
+            {
+                node_id = child_id.value();
+            } else {
+                return std::nullopt;
+            }
+            start = end + 1;
+            end = leaf.m_qualified_name.find('.', start);
+        }
+        auto last_token{leaf.m_qualified_name.substr(start)};
+        new_col_descriptors.emplace_back(
+                DescriptorToken::create_descriptor_from_literal_token(last_token)
+        );
+        if (auto child_id{find_child_node_by_key_name(node_id, last_token)};
+            child_id.has_value())
+        {
+            node_id = child_id.value();
+        } else {
+            return std::nullopt;
+        }
 
         for (auto schema_id : matched_schema_ids) {
-            m_descriptor_to_schema[leaf_col.get()].emplace(schema_id, node_id);
+            m_descriptor_to_schema[new_col.get()].emplace(schema_id, node_id);
         }
-    }
 
-    return std::make_tuple(true, std::move(leaves_expr));
+        auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
+        leaves_expr->add_operand(
+                FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
+        );
+    }
+    return leaves_expr;
 }
 
-auto SchemaMatch::decompose_and_match_log_message(std::string const& query)
-        -> ClppDecompositionMatch {
-    auto decomposed_query{decompose_query(std::nullopt, query, true)};
-    if (decomposed_query.has_error()) {
-        throw std::runtime_error(fmt::format("query decomposition failed for {}", query));
+auto SchemaMatch::resolve_clpp_query(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t node_id,
+        ast::DescriptorToken const& descriptor,
+        std::shared_ptr<ast::Expression> const& expr
+) -> std::shared_ptr<ast::Expression> {
+    m_clpp_decomposed_query = true;
+
+    auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
+    std::string query;
+    filter->get_operand()->as_clp_string(query, filter->get_operation());
+
+    auto dq{decompose_clpp_query(m_tree->get_node(node_id), descriptor, query)};
+    if (dq.has_error()) {
+        throw std::runtime_error(fmt::format("clpp query decomposition failed for {}", query));
     }
 
-    std::vector<clp_s::logtype_id_t> matched_lt_ids;
-    for (auto const& log_type : m_archive_reader->get_typed_log_type_dictionary()->get_entries()) {
-        if (decomposed_query.value()->get_log_type() == log_type.get_value()) {
-            matched_lt_ids.emplace_back(log_type.get_id());
-        }
+    auto matched_schema_ids{
+            convert_lt_ids_to_schema_ids(dq.value().matched_lt_ids, m_logtype_id_to_schema_id)
+    };
+    if (matched_schema_ids.empty()) {
+        return nullptr;
     }
-    return {decomposed_query.value(), std::move(matched_lt_ids)};
+
+    if (auto leaves_expr{build_leaf_query_expr(
+                column,
+                node_id,
+                *dq.value().decomposed_query,
+                matched_schema_ids
+        )})
+    {
+        return std::move(*leaves_expr);
+    }
+    return nullptr;
 }
 
-auto SchemaMatch::decompose_and_match_parent_var(
+auto SchemaMatch::decompose_clpp_query(
         SchemaNode const& cur_node,
-        ast::DescriptorList::iterator cur_it,
+        ast::DescriptorToken const& descriptor,
         std::string const& query
-) -> ClppDecompositionMatch {
-    std::string type_name{cur_node.get_key_name()};
-    auto const* parent_node{&m_tree->get_node(cur_node.get_parent_id())};
-    size_t num_variable_descriptors{1};
-    while (NodeType::LogMessage != parent_node->get_type()) {
-        type_name.insert(0, parent_node->get_key_name());
-        type_name.append(".");
-        parent_node = &m_tree->get_node(parent_node->get_parent_id());
-        ++num_variable_descriptors;
-    }
+) -> ystdlib::error_handling::Result<ClppDecompositionMatch> {
+    auto const qualified_name{build_qualified_name(cur_node)};
 
-    auto decomposed_query{decompose_query(type_name, query, 1 == num_variable_descriptors)};
-    if (decomposed_query.has_error()) {
-        throw std::runtime_error(fmt::format("query decomposition failed for {}", query));
+    auto const* decomposed_query{
+            YSTDLIB_ERROR_HANDLING_TRYX(lookup_decomposed_query(qualified_name, query))
+    };
+
+    auto& typed_lt_dict{*m_archive_reader->get_typed_log_type_dictionary()};
+    if (typed_lt_dict.get_entries().empty()) {
+        typed_lt_dict.read_entries();
     }
 
     std::vector<clp_s::logtype_id_t> matched_lt_ids;
-    for (auto const& log_type : m_archive_reader->get_typed_log_type_dictionary()->get_entries()) {
+    for (auto const& log_type : typed_lt_dict.get_entries()) {
         auto metadata{m_archive_reader->get_logtype_metadata().at(log_type.get_id())};
         for (auto const& parent_match : metadata.get_parent_matches()) {
-            if (parent_match.m_name == cur_it->get_token()
-                && decomposed_query.value()->get_log_type()
+            if (parent_match.m_name == descriptor.get_token()
+                && decomposed_query->get_log_type()
                            == log_type.get_value()
                                       .substr(parent_match.m_start, parent_match.m_size))
             {
@@ -853,20 +851,14 @@ auto SchemaMatch::decompose_and_match_parent_var(
             }
         }
     }
-    return {decomposed_query.value(), std::move(matched_lt_ids)};
+    return {decomposed_query, std::move(matched_lt_ids)};
 }
 
-auto SchemaMatch::decompose_query(
-        std::optional<std::string> rule_name,
-        std::string const& query,
-        bool root_rule_query
-) -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*> {
-    if (auto entry{m_decomposed_query_cache.find({rule_name, query})};
-        m_decomposed_query_cache.end() != entry)
-    {
-        return &entry->second;
+auto SchemaMatch::ensure_log_surgeon_parser_initialized()
+        -> ystdlib::error_handling::Result<void> {
+    if (nullptr != m_ls_parser) {
+        return ystdlib::error_handling::success();
     }
-
     if (nullptr == m_ls_schema) {
         if (m_ls_schema_contents.empty()) {
             m_ls_schema_contents
@@ -880,23 +872,35 @@ auto SchemaMatch::decompose_query(
             return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
         }
     }
-    if (root_rule_query && nullptr == m_ls_parser) {
-        m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
-        m_ls_schema = nullptr;
+    m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
+    m_ls_schema = nullptr;
+    if (nullptr == m_ls_parser) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+    }
+    return ystdlib::error_handling::success();
+}
+
+auto SchemaMatch::lookup_decomposed_query(std::string qualified_name, std::string const& query)
+        -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*> {
+    if (auto entry{m_decomposed_query_cache.find({qualified_name, query})};
+        m_decomposed_query_cache.end() != entry)
+    {
+        return &entry->second;
     }
 
-    auto dq{(root_rule_query)
-                    ? YSTDLIB_ERROR_HANDLING_TRYX(
-                              clpp::DecomposedQuery::decompose_query(*m_ls_parser, rule_name, query)
-                      )
-                    : YSTDLIB_ERROR_HANDLING_TRYX(
-                              clpp::DecomposedQuery::decompose_query(
-                                      m_ls_schema,
-                                      rule_name.value(),
-                                      query
-                              )
-                      )};
-    return &m_decomposed_query_cache.emplace(std::pair{rule_name, query}, std::move(dq))
+    YSTDLIB_ERROR_HANDLING_TRYV(ensure_log_surgeon_parser_initialized());
+
+    return &m_decomposed_query_cache
+                    .emplace(
+                            std::pair{qualified_name, query},
+                            YSTDLIB_ERROR_HANDLING_TRYX(
+                                    clpp::DecomposedQuery::decompose_query(
+                                            *m_ls_parser,
+                                            qualified_name,
+                                            query
+                                    )
+                            )
+                    )
                     .first->second;
 }
 }  // namespace clp_s::search

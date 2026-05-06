@@ -22,6 +22,7 @@
 #include "ast/Literal.hpp"
 #include "ast/Transformation.hpp"
 #include "clp_s/ArchiveReader.hpp"
+#include "clp_s/SchemaTree.hpp"
 #include "clp_s/search/ast/StringLiteral.hpp"
 
 namespace clp_s::search {
@@ -96,6 +97,71 @@ private:
                   matched_lt_ids{std::move(ids)} {}
     };
 
+    // Methods
+    /**
+     * Builds the reverse mapping from logtype_id to schema_id by scanning schemas
+     * for their NodeType::LogTypeID nodes.
+     */
+    void build_logtype_id_to_schema_id_map();
+
+    /**
+     * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon
+     * parser and schema on first use. The cache is keyed on the fully qualified column name
+     * and the raw query string.
+     * @param qualified_name The fully qualified dot-separated column name (e.g. "message.block_id").
+     * @param query The raw CLP-string query text.
+     * @return A pointer to the cached DecomposedQuery on success.
+     */
+    auto lookup_decomposed_query(std::string qualified_name, std::string const& query)
+            -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
+
+    /**
+     * Finds a child schema node whose key name matches the given name.
+     * @param parent_id The parent schema node ID.
+     * @param key_name The key name to match.
+     * @return The child node ID, or std::nullopt if no child matches.
+     */
+    auto find_child_node_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
+            -> std::optional<SchemaNode::id_t>;
+
+    /**
+     * Builds a fully qualified dot-separated name from a schema node up to (but not including)
+     * the LogMessage root.
+     * @param cur_node The schema node to start from.
+     * @return The qualified name.
+     */
+    auto build_qualified_name(SchemaNode const& cur_node) -> std::string;
+
+    /**
+     * Lazily initializes the log-surgeon parser and schema if not already done.
+     * @return true on success, false on failure.
+     */
+    auto ensure_log_surgeon_parser_initialized() -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Intersects common_schema with the schemas matched by a column for EXISTS operations.
+     * @param common_schema The set of common schemas to update.
+     * @param column The column descriptor.
+     * @param first true on the first call (initializes common_schema), false on recursive calls.
+     */
+    void intersect_for_exists(
+            std::set<int32_t>& common_schema,
+            ast::ColumnDescriptor* column,
+            bool first
+    );
+
+    /**
+     * Intersects common_schema with the schemas NOT matched by a column for NEXISTS operations.
+     * @param common_schema The set of common schemas to update.
+     * @param column The column descriptor.
+     * @param first true on the first call (initializes common_schema), false on recursive calls.
+     */
+    void intersect_for_nexists(
+            std::set<int32_t>& common_schema,
+            ast::ColumnDescriptor* column,
+            bool first
+    );
+
     // Data members
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;
@@ -119,16 +185,9 @@ private:
     std::string m_ls_schema_contents;
     log_surgeon::Schema* m_ls_schema{nullptr};
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
-    absl::flat_hash_map<std::pair<std::optional<std::string>, std::string>, clpp::DecomposedQuery>
+    absl::flat_hash_map<std::pair<std::string, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
     std::unordered_map<logtype_id_t, std::vector<int32_t>> m_logtype_id_to_schema_id;
-
-    // Methods
-    /**
-     * Builds the reverse mapping from logtype_id to schema_id by scanning schemas
-     * for their NodeType::LogTypeID nodes.
-     */
-    void build_logtype_id_to_schema_id_map();
 
     /**
      * Populates the column mapping for a given column
@@ -174,12 +233,15 @@ private:
     std::shared_ptr<ast::Expression> intersect_schemas(std::shared_ptr<ast::Expression> cur);
 
     /**
-     * Finds common schemas and relevant columns across filters
-     * @param cur
-     * @param common_schema
-     * @param columns
-     * @param first
-     * @return true before firstly processing common schemas, false otherwise
+     * Finds common schemas and relevant columns across filters. The `first` parameter is true
+     * on the initial call (initializing `common_schema` with the matched schemas for the first
+     * column) and false on recursive calls (intersecting subsequent columns into `common_schema`).
+     * @param cur The current expression node to process.
+     * @param common_schema The set of schemas common to all processed columns so far, updated
+     *     in place.
+     * @param columns The set of column descriptors found; populated on each call.
+     * @param first True on the initial call, false on recursive calls.
+     * @return True when `first` was true and no column was a pure wildcard; false otherwise.
      */
     bool intersect_and_sub_expr(
             std::shared_ptr<ast::Expression> const& cur,
@@ -214,43 +276,56 @@ private:
      */
     ast::LiteralType get_literal_type_for_column(ast::ColumnDescriptor* column, int32_t schema);
 
-    auto decompose_and_match_log_message(std::string const& query) -> ClppDecompositionMatch;
-
-    auto decompose_and_match_parent_var(
+    /**
+     * Builds the fully qualified name from the schema tree root to the given node, looks up
+     * (or creates and caches) the decomposed query, then scans the typed log-type dictionary
+     * for log types whose parent matches and log-type value align with the query.
+     * @param cur_node The schema tree node where decomposition is triggered (LogMessage or
+     *     ParentRule).
+     * @param descriptor The descriptor token matched against the node.
+     * @param query The raw CLP-string query text.
+     * @return A ClppDecompositionMatch containing the decomposed query and matched log-type IDs,
+     *     or an error if decomposition fails.
+     */
+    auto decompose_clpp_query(
             SchemaNode const& cur_node,
-            ast::DescriptorList::iterator cur_it,
+            ast::DescriptorToken const& descriptor,
             std::string const& query
-    ) -> ClppDecompositionMatch;
+    ) -> ystdlib::error_handling::Result<ClppDecompositionMatch>;
 
     /**
-     * Decomposes a query string using the log-surgeon schema.
-     * @param rule_name
-     * @param query
-     * @param root_rule_query
-     * @return A pointer to the cached decomposed query, or an error.
+     * Builds an AndExpr of leaf equality filters from a decomposed clpp query, and registers
+     * each leaf column in m_descriptor_to_schema for the given schemas. Returns std::nullopt if
+     * any leaf column cannot be resolved in the schema tree.
+     * @param column The original column descriptor triggering clpp decomposition.
+     * @param node_id The schema-tree node where decomposition was triggered.
+     * @param decomposed_query The decomposed clpp query.
+     * @param matched_schema_ids Schemas to register the leaf columns against.
+     * @return The leaf expression, or std::nullopt on resolution failure.
      */
-    auto decompose_query(
-            std::optional<std::string> rule_name,
-            std::string const& query,
-            bool root_rule_query
-    ) -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
-
-    /**
-     * Converts matched logtype IDs to schema IDs, builds the leaves expression, and registers
-     * the leaf columns in the schema mapping. Returns std::nullopt if no schemas matched.
-     * @param column
-     * @param cur_node_id The node ID where the clpp decomposition was triggered (LogMessage or
-     * ParentRule)
-     * @param decomposed_query
-     * @param matched_lt_ids
-     * @return The resolved match result, or std::nullopt if no schemas matched.
-     */
-    auto resolve_clpp_match(
+    auto build_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            int32_t cur_node_id,
-            clpp::DecomposedQuery const* decomposed_query,
-            std::vector<clp_s::logtype_id_t> const& matched_lt_ids
-    ) -> std::optional<std::tuple<bool, std::shared_ptr<ast::Expression>>>;
+            SchemaNode::id_t node_id,
+            clpp::DecomposedQuery const& decomposed_query,
+            std::unordered_set<int32_t> const& matched_schema_ids
+    ) -> std::optional<std::shared_ptr<ast::Expression>>;
+
+    /**
+     * Decomposes a CLP-string query at a LogMessage or ParentRule node, matches log types against
+     * the typed dictionary, and returns an AndExpr of leaf equality filters. Returns nullptr if
+     * no schemas match or a leaf column cannot be resolved in the schema tree.
+     * @param column The column descriptor triggering clpp decomposition.
+     * @param node_id The node ID where decomposition was triggered (LogMessage or ParentRule).
+     * @param descriptor The descriptor token matched against the node.
+     * @param expr The original expression containing the filter.
+     * @return The transformed expression on success, nullptr otherwise.
+     */
+    auto resolve_clpp_query(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t node_id,
+            ast::DescriptorToken const& descriptor,
+            std::shared_ptr<ast::Expression> const& expr
+    ) -> std::shared_ptr<ast::Expression>;
 };
 }  // namespace clp_s::search
 

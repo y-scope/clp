@@ -1500,13 +1500,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     // SPDLOG_INFO("####");
     // SPDLOG_INFO("[clpsls] log msg: '{}'", log_msg);
 
-    auto get_name{[](log_surgeon::Match const& match) -> std::string {
-        if (0 == match.sub_rule_id) {
-            return std::string{match.ffi_pointers.rule_name.as_cpp_view()};
-        }
-        return std::string{match.ffi_pointers.sub_rule_name.as_cpp_view()};
-    }};
-
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
     auto [root_matches, parent_matches]{clpp::DecomposedQuery::create_parent_match_dicts(event)};
@@ -1521,7 +1514,11 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             break;
         }
 
-        auto name{get_name(*match)};
+        auto name{
+                0 == match->sub_rule_id
+                        ? std::string{match->ffi_pointers.rule_name.as_cpp_view()}
+                        : std::string{match->ffi_pointers.sub_rule_name.as_cpp_view()}
+        };
         auto parent_node_id{log_msg_node_id};
         if (0 != match->sub_rule_id) {
             parent_node_id = get_parent_schema_node(
@@ -1599,7 +1596,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         }
 
         log_type.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
-        log_type.append(fmt::format("%{}%", name));
+        log_type.append(fmt::format("%{}%", clpp::DecomposedQuery::get_qualified_name(match.value())));
         log_msg_pos = match->range.end;
     }
     log_type.append(log_msg.substr(log_msg_pos));
@@ -1624,7 +1621,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 continue;
             }
             metadata.emplace_parent_match(
-                    get_name(match),
+                    clpp::DecomposedQuery::get_qualified_name(match),
                     match.range.start,
                     match.range.end - match.range.start
             );
@@ -1636,7 +1633,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 break;
             }
             auto const old_size{leaf_match->range.end - leaf_match->range.start};
-            auto const new_size{get_name(*leaf_match).size() + 2};
+            auto const new_size{clpp::DecomposedQuery::get_qualified_name(*leaf_match).size() + 2};
             auto const diff{static_cast<ssize_t>(old_size) - static_cast<ssize_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
                 if (leaf_match->range.start < og_parent_match_pos.at(j).first) {

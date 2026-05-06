@@ -18,11 +18,11 @@ class DecomposedQuery {
 public:
     // Types
     struct LeafQuery {
-        LeafQuery(std::vector<std::string> type_names, std::string_view match)
-                : m_names(std::move(type_names)),
+        LeafQuery(std::string qualified_name, std::string_view match)
+                : m_qualified_name(std::move(qualified_name)),
                   m_query(match) {}
 
-        std::vector<std::string> m_names;
+        std::string m_qualified_name;
         std::string m_query;
     };
 
@@ -30,12 +30,6 @@ public:
     static auto decompose_query(
             log_surgeon::ParserHandle& parser,
             std::optional<std::string_view> rule_name,
-            std::string_view query
-    ) -> ystdlib::error_handling::Result<DecomposedQuery>;
-
-    static auto decompose_query(
-            log_surgeon::Schema const* schema,
-            std::string_view rule_name,
             std::string_view query
     ) -> ystdlib::error_handling::Result<DecomposedQuery>;
 
@@ -69,9 +63,12 @@ public:
 
     [[nodiscard]] auto get_log_type() const -> std::string_view { return m_log_type; }
 
+    // TODO do something fix/remove/idk
     static auto create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
             pair<absl::flat_hash_map<uint32_t, log_surgeon::Match const>,
                  absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const>>;
+
+    static auto get_qualified_name(log_surgeon::Match const& match) -> std::string;
 
 private:
     // Data members
