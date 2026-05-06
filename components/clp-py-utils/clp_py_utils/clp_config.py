@@ -800,6 +800,10 @@ def _get_env_var(name: str) -> str:
     return value
 
 
+class Telemetry(BaseModel):
+    disable: bool = False
+
+
 class ClpConfig(BaseModel):
     container_image_ref: NonEmptyStr | None = None
 
@@ -838,6 +842,7 @@ class ClpConfig(BaseModel):
     logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
     tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
     aws_config_directory: SerializablePath | None = None
+    telemetry: Telemetry = Telemetry()
 
     _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH

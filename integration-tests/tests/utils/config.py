@@ -268,10 +268,10 @@ class PackageInstance:
             err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}'"
             raise ValueError(err_msg) from err
 
-        if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):
+        if not re.fullmatch(r"[0-9a-fA-F]{4}|[0-9a-fA-F]{32}|[0-9a-fA-F-]{36}", contents):
             err_msg = (
                 f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
-                f" hexadecimal string, but read {contents}."
+                f" hexadecimal string or a full UUID, but read {contents}."
             )
             raise ValueError(err_msg)
 

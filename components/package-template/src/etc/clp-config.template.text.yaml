@@ -166,3 +166,8 @@ log_ingestor: null
 #
 ## Location of the AWS tools' config files (e.g., `~/.aws`)
 #aws_config_directory: null
+#
+## Anonymous usage telemetry. Set to true to disable.
+## See: https://docs.yscope.com/clp/main/user-guide/telemetry
+#telemetry:
+#  disable: false
