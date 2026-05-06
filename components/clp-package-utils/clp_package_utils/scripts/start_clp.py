@@ -84,11 +84,19 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
         except EOFError:
             response = ""
 
-        if response == "n":
+        if response.startswith("n"):
             clp_config.telemetry.disable = True
             # Persist the choice to the config file
-            _update_config_file_telemetry(config_file_path, disable=True)
-            logger.info("Telemetry has been disabled. You can re-enable it in %s", config_file_path)
+            try:
+                _update_config_file_telemetry(config_file_path, disable=True)
+                logger.info(
+                    "Telemetry has been disabled. You can re-enable it in %s", config_file_path
+                )
+            except OSError:
+                logger.warning(
+                    "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
+                )
+                logger.info("Telemetry is disabled for this run but the config write failed.")
 
     # Non-interactive: default to enabled (no config write needed)
 
