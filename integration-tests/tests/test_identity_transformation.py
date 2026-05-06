@@ -5,7 +5,7 @@ compression and decompression.
 
 import pytest
 
-from tests.utils.classes import IntegrationTestDataset, IntegrationTestPathConfig
+from tests.utils.classes import IntegrationTestPathConfig, SampleDataset
 from tests.utils.config import (
     ClpCorePathConfig,
     CompressionTestPathConfig,
@@ -23,7 +23,7 @@ pytestmark = pytest.mark.core
 def test_clp_identity_transform(
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
-    text_multifile: IntegrationTestDataset,
+    text_multifile: SampleDataset,
 ) -> None:
     """
     Validate that compression and decompression by the core binary `clp` run successfully and are
@@ -73,7 +73,7 @@ def test_clp_identity_transform(
 def test_clp_s_identity_transform(
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
-    json_multifile: IntegrationTestDataset,
+    json_multifile: SampleDataset,
 ) -> None:
     """
     Validate that compression and decompression by the core binary `clp-s` run successfully and are

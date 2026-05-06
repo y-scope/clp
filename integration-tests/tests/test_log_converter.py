@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from tests.utils.classes import IntegrationTestDataset, IntegrationTestPathConfig
+from tests.utils.classes import IntegrationTestPathConfig, SampleDataset
 from tests.utils.config import (
     ClpCorePathConfig,
     ConversionTestPathConfig,
@@ -24,7 +24,7 @@ pytestmark = pytest.mark.core
 def test_log_converter_transform(
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
-    text_singlefile: IntegrationTestDataset,
+    text_singlefile: SampleDataset,
 ) -> None:
     """
     Validate that converted logs from the core binary `log-converter` can be ingested successfully

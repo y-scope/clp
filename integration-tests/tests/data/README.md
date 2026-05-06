@@ -63,9 +63,9 @@ To access a dataset from within the test system, the following rules should be o
    @pytest.fixture(scope="session")
    def dataset_name(
        integration_test_path_config: IntegrationTestPathConfig,
-   ) -> IntegrationTestDataset:
+   ) -> SampleDataset:
        """Returns an object corresponding to the `dataset_name` test dataset."""
-       return IntegrationTestDataset(
+       return SampleDataset(
            dataset_root_dir=integration_test_path_config.test_data_dir / "dataset_name",
        )
    ```

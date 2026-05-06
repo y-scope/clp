@@ -14,7 +14,7 @@ from tests.utils.asserting_utils import (
     validate_package_instance,
     verify_package_compression,
 )
-from tests.utils.classes import IntegrationTestDataset
+from tests.utils.classes import SampleDataset
 from tests.utils.clp_mode_utils import CLP_API_SERVER_COMPONENT, CLP_BASE_COMPONENTS
 from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
 from tests.utils.package_utils import run_package_compression_script
@@ -60,7 +60,7 @@ def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
 @pytest.mark.compression
 def test_clp_json_compression_json_multifile(
     fixt_package_instance: PackageInstance,
-    json_multifile: IntegrationTestDataset,
+    json_multifile: SampleDataset,
 ) -> None:
     """
     Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
