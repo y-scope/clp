@@ -68,7 +68,7 @@ set(
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
         ../clp/FileWriter.cpp
-        ../clp/FileReader.hpp
+        ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
         ../clp/SchemaSearcher.cpp

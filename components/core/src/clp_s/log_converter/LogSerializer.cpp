@@ -58,12 +58,17 @@ auto LogSerializer::create(
         return std::errc::no_such_file_or_directory;
     }
 
-    if (use_zstd) {
+    if (false == use_zstd) {
+        return LogSerializer{std::move(serializer), std::move(nested_writers)};
+    }
+
+    try {
         auto compressor{std::make_unique<clp::streaming_compression::zstd::Compressor>()};
         compressor->open(*nested_writers.back().get());
         nested_writers.emplace_back(std::move(compressor));
+    } catch (std::exception const&) {
+        return std::errc::protocol_error;
     }
-
     return LogSerializer{std::move(serializer), std::move(nested_writers)};
 }
 

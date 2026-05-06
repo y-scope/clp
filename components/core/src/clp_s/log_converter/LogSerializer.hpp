@@ -31,7 +31,8 @@ public:
      * @param use_zstd Whether the output KV-IR should be zstd-compressed.
      * @return A result containing a `LogSerializer` on success, or an error code indicating the
      * failure:
-     * - std::errc::no_such_file_or_directory if a `clp_s::FileWriter` fails to open an output file.
+     * - std::errc::no_such_file_or_directory if a `clp::FileWriter` fails to open an output file.
+     * - std::errc::protocol_error if a `clp::zstd::Compressor` fails to open a compression stream.
      * - Forwards `clp::ffi::ir_stream::Serializer<>::create()`'s return values.
      */
     [[nodiscard]] static auto
