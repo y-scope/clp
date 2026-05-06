@@ -1496,12 +1496,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     auto const event{event_opt.value()};
-
-    // SPDLOG_INFO("####");
-    // SPDLOG_INFO("[clpsls] log msg: '{}'", log_msg);
-
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
-
     auto [root_matches, parent_matches]{clpp::DecomposedQuery::create_parent_match_dicts(event)};
 
     // This log type isn't escaped yet be careful
@@ -1528,13 +1523,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                     parent_matches
             );
         }
-        // SPDLOG_ERROR(
-        //         "[node] adding leaf {}: {} {} {}",
-        //         name,
-        //         cap->rule_id,
-        //         cap->sub_rule_id,
-        //         cap->parent_id
-        // );
 
         static auto const cIntSet{absl::flat_hash_set<std::string>{
                 // heuristic
@@ -1596,12 +1584,12 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         }
 
         log_type.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
-        log_type.append(fmt::format("%{}%", clpp::DecomposedQuery::get_qualified_name(match.value())));
+        log_type.append(
+                fmt::format("%{}%", clpp::DecomposedQuery::get_qualified_name(match.value()))
+        );
         log_msg_pos = match->range.end;
     }
     log_type.append(log_msg.substr(log_msg_pos));
-
-    // SPDLOG_INFO("[clpsls] log type: '{}'", log_type);
 
     auto [log_type_id, new_logtype]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
@@ -1709,17 +1697,6 @@ auto JsonParser::get_parent_schema_node(
                 root_matches.at(match.rule_idx).ffi_pointers.rule_name.as_cpp_view()
         )};
         m_current_schema.insert_unordered(node_id);
-        // SPDLOG_ERROR(
-        //         "[node] adding parent rule {}: {} {} {} for {}: {} {} {}",
-        //         rules.at(cap.rule_id).rule_name.as_cpp_view(),
-        //         rules.at(cap.rule_id).rule_id,
-        //         rules.at(cap.rule_id).sub_rule_id,
-        //         rules.at(cap.rule_id).parent_id,
-        //         cap.sub_rule_name.as_cpp_view(),
-        //         cap.rule_id,
-        //         cap.sub_rule_id,
-        //         cap.parent_id
-        // );
         return node_id;
     }
     log_surgeon::Match const parent{parent_matches.at({match.rule_idx, match.parent_id})};
@@ -1729,17 +1706,6 @@ auto JsonParser::get_parent_schema_node(
             parent.ffi_pointers.sub_rule_name.as_cpp_view()
     )};
     m_current_schema.insert_unordered(node_id);
-    // SPDLOG_ERROR(
-    //         "[node] adding parent rule {}: {} {} {} for {}: {} {} {}",
-    //         parent.sub_rule_name.as_cpp_view(),
-    //         parent.rule_id,
-    //         parent.sub_rule_id,
-    //         parent.parent_id,
-    //         cap.sub_rule_name.as_cpp_view(),
-    //         cap.rule_id,
-    //         cap.sub_rule_id,
-    //         cap.parent_id
-    // );
     return node_id;
 }
 }  // namespace clp_s
