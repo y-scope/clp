@@ -27,6 +27,11 @@ image:
 #     the same path).
 distributedDeployment: false
 
+# StorageClass to use for all PersistentVolumeClaims. When null, the cluster's default StorageClass
+# is used. e.g.,
+# storageClassName: "gp3"
+storageClassName: null
+
 # Number of concurrent processes per worker pod.
 workerConcurrency: 8
 

@@ -67,8 +67,9 @@ spec:
             "name" "data"
           ) | quote }}
       spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: "10Gi"
+        {{- include "clp.createPvcSpec" (dict
+            "root" .
+            "accessModes" (list "ReadWriteOnce")
+            "capacity" "10Gi"
+          ) | nindent 8 }}
 {{- end }}
