@@ -1,18 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::{
-    clp_config::{
-        AwsAuthentication,
-        S3Config,
-        package::{DEFAULT_DATASET_NAME, config::ArchiveOutput},
-    },
+    clp_config::{AwsAuthentication, package::config::ArchiveOutput},
     job_config::{
         ClpIoConfig,
         CompressionJobId,
         CompressionJobStatus,
         InputConfig,
-        OutputConfig,
-        S3ObjectMetadataInputConfig,
         ingestion::s3::BaseConfig,
     },
     s3::S3ObjectMetadataId,
@@ -63,40 +57,13 @@ impl CompressionJobSubmitter {
         archive_output_config: &ArchiveOutput,
         ingestion_job_config: &BaseConfig,
     ) -> Self {
-        let ingestion_job_id = clp_compression_state.get_ingestion_job_id();
-        let s3_object_metadata_input_config = S3ObjectMetadataInputConfig {
-            s3_config: S3Config {
-                bucket: ingestion_job_config.bucket_name.clone(),
-                region_code: ingestion_job_config.region.clone(),
-                key_prefix: ingestion_job_config.key_prefix.clone(),
-                endpoint_url: ingestion_job_config.endpoint_url.clone(),
-                aws_authentication,
-            },
-            ingestion_job_id,
-            s3_object_metadata_ids: vec![],
-            // NOTE: Workaround for #1735
-            dataset: Some(
-                ingestion_job_config
-                    .dataset
-                    .clone()
-                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.clone()),
-            ),
-            timestamp_key: ingestion_job_config.timestamp_key.clone(),
-            unstructured: ingestion_job_config.unstructured,
-        };
-        let output_config = OutputConfig {
-            target_archive_size: archive_output_config.target_archive_size,
-            target_dictionaries_size: archive_output_config.target_dictionaries_size,
-            target_encoded_file_size: archive_output_config.target_encoded_file_size,
-            target_segment_size: archive_output_config.target_segment_size,
-            compression_level: archive_output_config.compression_level,
-        };
-        let io_config_template = ClpIoConfig {
-            input: InputConfig::S3ObjectMetadataInputConfig {
-                config: s3_object_metadata_input_config,
-            },
-            output: output_config,
-        };
+        let io_config_template = ClpIoConfig::from_ingested_s3_object_metadata(
+            aws_authentication,
+            archive_output_config,
+            ingestion_job_config,
+            clp_compression_state.get_ingestion_job_id(),
+            Vec::new(),
+        );
         Self {
             state: clp_compression_state,
             io_config_template,

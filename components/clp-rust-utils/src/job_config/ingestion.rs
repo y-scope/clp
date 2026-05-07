@@ -176,6 +176,13 @@ pub mod s3 {
         pub start_after: Option<NonEmptyString>,
     }
 
+    /// Configuration for a S3 prefix ingestion job.
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    pub struct S3PrefixConfig {
+        #[serde(flatten)]
+        pub base: BaseConfig,
+    }
+
     /// Configuration for buffer behavior.
     #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
     #[serde(default)]
