@@ -74,9 +74,7 @@ def _update_config_file_telemetry(config_path: Path, disable: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Check telemetry consent and prompt on first run."
-    )
+    parser = argparse.ArgumentParser(description="Check telemetry consent and prompt on first run.")
     parser.add_argument(
         "--config",
         "-c",
