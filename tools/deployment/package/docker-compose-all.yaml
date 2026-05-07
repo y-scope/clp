@@ -366,8 +366,8 @@ services:
     <<: *service_defaults
     hostname: "webui"
     environment:
-      AWS_ACCESS_KEY_ID: "${CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID:-}"
-      AWS_SECRET_ACCESS_KEY: "${CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY:-}"
+      CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: "${CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID:-}"
+      CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: "${CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY:-}"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       HOST: "0.0.0.0"
