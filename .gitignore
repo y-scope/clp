@@ -6,9 +6,3 @@ __pycache__/
 .task/
 build/
 dist/
-.omx/
-.cache/
-target/
-dev-docs/
-.cursor/
-.vscode/
