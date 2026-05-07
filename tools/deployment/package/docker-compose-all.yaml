@@ -15,6 +15,21 @@ x-service-defaults: &service_defaults
     - "${CLP_EXTRA_HOST_RESULTS_CACHE_NAME:-noop-rc}=\
       ${CLP_EXTRA_HOST_RESULTS_CACHE_ADDR:-127.0.0.2}"
 
+# Common telemetry environment for OpenTelemetry instrumentation.
+# Merged into CLP-owned services (not third-party services like database/queue/redis).
+x-telemetry-env: &telemetry_env
+  CLP_DEPLOYMENT_METHOD: "${CLP_DEPLOYMENT_METHOD:-}"
+  CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
+  CLP_HOST_ARCH: "${CLP_HOST_ARCH:-}"
+  CLP_HOST_OS: "${CLP_HOST_OS:-}"
+  CLP_HOST_OS_VERSION: "${CLP_HOST_OS_VERSION:-}"
+  CLP_INSTANCE_ID: "${CLP_INSTANCE_ID:-}"
+  CLP_STORAGE_ENGINE: "${CLP_STORAGE_ENGINE:-}"
+  CLP_TELEMETRY_DEBUG: "${CLP_TELEMETRY_DEBUG:-}"
+  CLP_VERSION: "${CLP_VERSION:-}"
+  DO_NOT_TRACK: "${DO_NOT_TRACK:-}"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+
 # Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
   # Avoid lowering to prevent excessive resource usage.
@@ -96,6 +111,7 @@ services:
     restart: "on-failure:3"
     hostname: "db_table_creator"
     environment:
+      <<: *telemetry_env
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
       CLP_DB_ROOT_USER: "${CLP_DB_ROOT_USER:-root}"
@@ -224,6 +240,7 @@ services:
     restart: "on-failure:3"
     hostname: "results_cache_indices_creator"
     environment:
+      <<: *telemetry_env
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     depends_on:
       results-cache:
@@ -241,6 +258,7 @@ services:
     <<: *service_defaults
     hostname: "spider_scheduler"
     environment:
+      <<: *telemetry_env
       SPIDER_LOG_FILE: "/var/log/spider_scheduler.log"
     depends_on:
       db-table-creator:
@@ -264,6 +282,7 @@ services:
     hostname: "compression_scheduler"
     stop_grace_period: "300s"
     environment:
+      <<: *telemetry_env
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -297,6 +316,7 @@ services:
     <<: *service_defaults
     hostname: "compression_worker"
     environment:
+      <<: *telemetry_env
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
@@ -333,6 +353,7 @@ services:
     <<: *service_defaults
     hostname: "compression_worker"
     environment:
+      <<: *telemetry_env
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
@@ -366,6 +387,7 @@ services:
     <<: *service_defaults
     hostname: "webui"
     environment:
+      <<: *telemetry_env
       AWS_ACCESS_KEY_ID: "${CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID:-}"
       AWS_SECRET_ACCESS_KEY: "${CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY:-}"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -417,6 +439,7 @@ services:
       # Value must be either 0 or 1. Set to 0 to disable the garbage collector.
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
     environment:
+      <<: *telemetry_env
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       CLP_HOME: "/opt/clp"
@@ -445,6 +468,7 @@ services:
     hostname: "query_scheduler"
     stop_grace_period: "10s"
     environment:
+      <<: *telemetry_env
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -484,6 +508,7 @@ services:
     <<: *service_defaults
     hostname: "query_worker"
     environment:
+      <<: *telemetry_env
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
@@ -520,6 +545,7 @@ services:
     hostname: "reducer"
     stop_grace_period: "10s"
     environment:
+      <<: *telemetry_env
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/reducer"
@@ -547,6 +573,7 @@ services:
       # Value must be either 0 or 1. Set to 0 to disable the MCP server.
       replicas: "${CLP_MCP_SERVER_ENABLED:-0}"
     environment:
+      <<: *telemetry_env
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -587,6 +614,7 @@ services:
       # Value must be either 0 or 1. Set to 0 to disable the API server.
       replicas: "${CLP_API_SERVER_ENABLED:-1}"
     environment:
+      <<: *telemetry_env
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
@@ -626,6 +654,7 @@ services:
       # Value must be either 0 or 1. Set to 0 to disable log-ingestor.
       replicas: "${CLP_LOG_INGESTOR_ENABLED:-1}"
     environment:
+      <<: *telemetry_env
       CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
