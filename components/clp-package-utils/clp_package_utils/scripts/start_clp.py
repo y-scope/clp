@@ -4,13 +4,12 @@
 import logging
 import os
 import pathlib
-import re
 import sys
 import tempfile
 
 import click
 import yaml
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.cli_utils import RESTART_POLICY
@@ -29,31 +28,29 @@ logger = logging.getLogger(__name__)
 
 TELEMETRY_PROMPT = """
 ================================================================================
-CLP collects anonymous operational metrics to help improve the software.
-This includes: CLP version, OS/architecture, deployment method, bytes
-ingested, compression ratios, and query volume. It does NOT include:
-log content, queries, hostnames, IP addresses, or any personally
-identifiable information.
+CLP collects anonymous usage telemetry to help improve the software.
+This includes: CLP version, OS/architecture, deployment method, and
+component health status. It does NOT include: log content, queries,
+hostnames, IP addresses, or any personally identifiable
+information.
 
-Metrics are sent via OTLP to: https://telemetry.yscope.io:4318
+Telemetry is sent to: https://telemetry.yscope.io:4318
 For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
 
-You can disable metrics at any time by setting CLP_DISABLE_TELEMETRY=true
-or by blocking https://telemetry.yscope.io:4318 at the network level.
+You can disable telemetry at any time by setting CLP_DISABLE_TELEMETRY=true
+or by blocking https://telemetry.yscope.io at the network level.
 
 Enable anonymous telemetry to help improve CLP? [Y/n]
 ================================================================================
 """
 
 
-def _check_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Path) -> None:
+def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None:
     """
     Checks telemetry consent and prompts the user on first run if needed.
 
-    Priority order for telemetry settings:
+    Priority order for disabling telemetry:
     1. CLP_DISABLE_TELEMETRY or DO_NOT_TRACK environment variables
-       - CLP_DISABLE_TELEMETRY=true/1 disables telemetry
-       - CLP_DISABLE_TELEMETRY=false/0 explicitly enables telemetry (overrides config)
     2. telemetry.disable explicitly set in config file
     3. First-run interactive prompt (persists choice to config)
 
@@ -66,18 +63,13 @@ def _check_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Pa
         clp_config.telemetry.disable = True
         return
 
-    # An explicit CLP_DISABLE_TELEMETRY=false means the user wants telemetry enabled,
-    # even if the config says disable: true. This overrides the config.
-    if disable_env in ("false", "0"):
-        clp_config.telemetry.disable = False
-        return
-
     if os.environ.get("DO_NOT_TRACK", "").strip().lower() in ("1", "true", "yes"):
         clp_config.telemetry.disable = True
         return
 
     # Priority 2: Config file already has explicit setting
-    if clp_config.telemetry.disable is not None:
+    telemetry = getattr(clp_config, "telemetry", None)
+    if telemetry is not None and getattr(telemetry, "disable", None) is not None:
         return
 
     # Priority 3: First-run prompt
@@ -87,27 +79,24 @@ def _check_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Pa
 
     # First run — show prompt if interactive
     if sys.stdin.isatty():
-        sys.stdout.write(TELEMETRY_PROMPT)
+        print(TELEMETRY_PROMPT)
         try:
             response = input().strip().lower()
         except EOFError:
             response = ""
 
-        # Persist the user's choice (both "yes" and "no") so the consent decision
-        # survives independent of the instance-id file.
-        disable = response.startswith("n")
-        clp_config.telemetry.disable = disable
-        try:
-            _update_config_file_telemetry(config_file_path, disable=disable)
-            if disable:
+        if response.startswith("n"):
+            clp_config.telemetry.disable = True
+            # Persist the choice to the config file
+            try:
+                _update_config_file_telemetry(config_file_path, disable=True)
                 logger.info(
                     "Telemetry has been disabled. You can re-enable it in %s", config_file_path
                 )
-        except OSError:
-            logger.warning(
-                "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
-            )
-            if disable:
+            except OSError:
+                logger.warning(
+                    "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
+                )
                 logger.info("Telemetry is disabled for this run but the config write failed.")
 
     # Non-interactive: default to enabled (no config write needed)
@@ -115,68 +104,31 @@ def _check_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Pa
 
 def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool) -> None:
     """
-    Updates the telemetry.disable setting in the config file while preserving
-    comments and formatting by using targeted string replacement instead of
-    a full YAML round-trip.
+    Updates the telemetry.disable setting in the config file.
 
     :param config_file_path: Path to the config file.
     :param disable: Whether to disable telemetry.
     """
-    disable_str = "true" if disable else "false"
+    config_data = {}
 
     if config_file_path.exists():
-        content = config_file_path.read_text()
-    else:
-        # File doesn't exist yet — create a minimal config with the telemetry section
-        content = ""
+        with open(config_file_path, "r") as f:
+            config_data = yaml.safe_load(f) or {}
 
-    if content:
-        # Try to update an existing `disable:` line inside the `telemetry:` section
-        telemetry_block = re.search(r"(^telemetry:.*\n(?:[ \t]+.*\n)*)", content, re.MULTILINE)
-        if telemetry_block:
-            block = telemetry_block.group(1)
-            # Check if there's already a `disable:` key in the telemetry block
-            disable_line = re.search(r"^([ \t]+disable:)\s+.*$", block, re.MULTILINE)
-            if disable_line:
-                # Replace existing disable value
-                new_block = re.sub(
-                    r"^([ \t]+disable:)\s+.*$",
-                    rf"\g<1> {disable_str}",
-                    block,
-                    flags=re.MULTILINE,
-                )
-            else:
-                # Add disable line under telemetry: (use same indentation as other keys)
-                indent_match = re.search(r"^[ \t]+\w", block, re.MULTILINE)
-                indent = indent_match.group(0).rstrip() if indent_match else "  "
-                # Insert after the `telemetry:` line
-                new_block = block.replace(
-                    "telemetry:\n",
-                    f"telemetry:\n{indent}disable: {disable_str}\n",
-                    1,
-                )
-            content = content[:telemetry_block.start()] + new_block + content[telemetry_block.end():]
-        else:
-            # No telemetry section — append one
-            content = content.rstrip("\n") + f"\n\ntelemetry:\n  disable: {disable_str}\n"
-    else:
-        content = f"telemetry:\n  disable: {disable_str}\n"
-
-    # Preserve the original file's permissions (mkstemp creates files with 0o600)
-    original_mode = config_file_path.stat().st_mode if config_file_path.exists() else 0o644
+    telemetry = config_data.get("telemetry", {})
+    telemetry["disable"] = disable
+    config_data["telemetry"] = telemetry
 
     # Write atomically: write to temp file, then replace
     fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
-    temp_path_obj = pathlib.Path(temp_path)
     try:
         with os.fdopen(fd, "w") as f:
-            f.write(content)
+            yaml.safe_dump(config_data, f, default_flow_style=False)
             f.flush()
             os.fsync(f.fileno())
-        temp_path_obj.chmod(original_mode)
-        temp_path_obj.replace(config_file_path)
+        os.replace(temp_path, config_file_path)
     except:
-        temp_path_obj.unlink()
+        os.unlink(temp_path)
         raise
 
 
