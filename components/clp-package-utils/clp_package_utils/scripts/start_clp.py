@@ -62,14 +62,15 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
     if disable_env in ("true", "1"):
         clp_config.telemetry.disable = True
         return
-
+    if disable_env in ("false", "0"):
+        clp_config.telemetry.disable = False
+        return
     if os.environ.get("DO_NOT_TRACK", "").strip().lower() in ("1", "true", "yes"):
         clp_config.telemetry.disable = True
         return
 
     # Priority 2: Config file already has explicit setting
-    telemetry = getattr(clp_config, "telemetry", None)
-    if telemetry is not None and getattr(telemetry, "disable", None) is not None:
+    if clp_config.telemetry.disable is not None:
         return
 
     # Priority 3: First-run prompt
@@ -85,19 +86,14 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
         except EOFError:
             response = ""
 
-        if response.startswith("n"):
-            clp_config.telemetry.disable = True
-            # Persist the choice to the config file
-            try:
-                _update_config_file_telemetry(config_file_path, disable=True)
-                logger.info(
-                    "Telemetry has been disabled. You can re-enable it in %s", config_file_path
-                )
-            except OSError:
-                logger.warning(
-                    "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
-                )
-                logger.info("Telemetry is disabled for this run but the config write failed.")
+        disable = response.startswith("n")
+        clp_config.telemetry.disable = disable
+        try:
+            _update_config_file_telemetry(config_file_path, disable)
+        except OSError:
+            logger.warning(
+                "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
+            )
 
     # Non-interactive: default to enabled (no config write needed)
 
@@ -110,14 +106,11 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
     :param disable: Whether to disable telemetry.
     """
     config_data = {}
-
     if config_file_path.exists():
         with open(config_file_path, "r") as f:
             config_data = yaml.safe_load(f) or {}
 
-    telemetry = config_data.get("telemetry", {})
-    telemetry["disable"] = disable
-    config_data["telemetry"] = telemetry
+    config_data.setdefault("telemetry", {})["disable"] = disable
 
     # Write atomically: write to temp file, then replace
     fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
@@ -127,7 +120,7 @@ def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool)
             f.flush()
             os.fsync(f.fileno())
         os.replace(temp_path, config_file_path)
-    except:
+    except BaseException:
         os.unlink(temp_path)
         raise
 
