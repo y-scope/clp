@@ -3,6 +3,7 @@ import {
     S3Client,
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
+import {AwsCredentialIdentity} from "@smithy/types";
 import {Nullable} from "@webui/common/utility-types";
 import fp from "fastify-plugin";
 
@@ -19,11 +20,17 @@ class S3Manager {
     /**
      * @param region
      * @param [profile]
+     * @param [credentials]
      */
-    constructor (region: string, profile: Nullable<string>) {
+    constructor (
+        region: string,
+        profile: Nullable<string>,
+        credentials: Nullable<AwsCredentialIdentity>
+    ) {
         this.#s3Client = new S3Client({
             region,
             ...((null !== profile) && {profile}),
+            ...((null !== credentials) && {credentials}),
         });
     }
 
@@ -60,25 +67,34 @@ class S3Manager {
 
 declare module "fastify" {
     interface FastifyInstance {
-        S3Manager?: S3Manager;
+        StreamFilesS3Manager?: S3Manager;
     }
 }
 
 export default fp(
     (fastify) => {
-        const region = settings.StreamFilesS3Region;
-        const profile = settings.StreamFilesS3Profile;
+        const region = settings.StreamFilesS3Region as Nullable<string>;
+        const profile = settings.StreamFilesS3Profile as Nullable<string>;
 
         // Only decorate if the region is set (i.e. s3 support is configured in package)
-        // Disable no-unnecessary-condition since linter doesn't understand that settings
-        // values are not hardcoded.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (null !== region && "" !== region) {
+            const {
+                CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: accessKeyId,
+                CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: secretAccessKey,
+            } = fastify.config;
+
             fastify.log.info(
                 {region, profile},
-                "Initializing S3Manager"
+                "Initializing StreamFilesS3Manager"
             );
-            fastify.decorate("S3Manager", new S3Manager(region, profile));
+            const credentials = (accessKeyId && secretAccessKey) ?
+                {accessKeyId, secretAccessKey} :
+                null;
+
+            fastify.decorate(
+                "StreamFilesS3Manager",
+                new S3Manager(region, profile, credentials)
+            );
         }
     },
 );
