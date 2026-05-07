@@ -43,15 +43,16 @@ fi
 # --- Pass telemetry opt-out vars to the main container ---
 # start_clp.py reads these to persist the consent choice to the config file
 # and to set the correct telemetry state for all service containers.
-if [[ -n "${CLP_DISABLE_TELEMETRY:-}" || -n "${DO_NOT_TRACK:-}" ]]; then
-    _telemetry_env_flags=(
-        -e CLP_DISABLE_TELEMETRY="${CLP_DISABLE_TELEMETRY:-}"
-        -e DO_NOT_TRACK="${DO_NOT_TRACK:-}"
-    )
+_telemetry_env_flags=()
+if [[ -n "${CLP_DISABLE_TELEMETRY:-}" ]]; then
+    _telemetry_env_flags+=(-e CLP_DISABLE_TELEMETRY="$CLP_DISABLE_TELEMETRY")
+fi
+if [[ -n "${DO_NOT_TRACK:-}" ]]; then
+    _telemetry_env_flags+=(-e DO_NOT_TRACK="$DO_NOT_TRACK")
 fi
 
 docker compose -f "$CLP_HOME/docker-compose.runtime.yaml" \
-    run --rm "${CLP_COMPOSE_RUN_EXTRA_FLAGS[@]}" "${_telemetry_env_flags[@]:-}" clp-runtime \
+    run --rm "${CLP_COMPOSE_RUN_EXTRA_FLAGS[@]}" "${_telemetry_env_flags[@]}" clp-runtime \
     python3 \
     -m clp_package_utils.scripts.start_clp \
     "$@"
