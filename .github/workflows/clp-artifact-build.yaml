@@ -767,10 +767,13 @@ jobs:
         shell: "bash"
         run: |
           image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
-          tag="${{github.ref_name}}"
-
-          docker manifest create "${image_base}:${tag}" \
-            "${image_base}:${tag}-amd64" \
-            "${image_base}:${tag}-arm64"
-
-          docker manifest push "${image_base}:${tag}"
+          tags=("${{github.ref_name}}")
+          if [ "${{github.event_name}}" = "schedule" ]; then
+            tags+=("nightly")
+          fi
+          for tag in "${tags[@]}"; do
+            docker manifest create "${image_base}:${tag}" \
+              "${image_base}:${tag}-amd64" \
+              "${image_base}:${tag}-arm64"
+            docker manifest push "${image_base}:${tag}"
+          done
