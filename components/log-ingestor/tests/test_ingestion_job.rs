@@ -270,8 +270,8 @@ async fn test_sqs_listener() -> Result<()> {
                     dataset: None,
                     timestamp_key: None,
                     unstructured: false,
-                    buffer_config: BufferConfig::default(),
                 },
+                buffer_config: BufferConfig::default(),
             },
         )
         .await
@@ -312,8 +312,8 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
-            buffer_config: BufferConfig::default(),
         },
+        buffer_config: BufferConfig::default(),
         scanning_interval_sec: 1,
         start_after: None,
     };
