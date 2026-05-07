@@ -101,11 +101,10 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param encoded_tag
- * @return A result containing the timestamp delta if encoded_variable_t ==
- * four_byte_encoded_variable_t or the actual timestamp if encoded_variable_t ==
- * eight_byte_encoded_variable_t on success, or an error code indicating the failure:
- * - IrDeserializationErrorEnum::InvalidTag if the tag does not correspond to a timestamp in this
- *   encoding.
+ * @return A result containing the timestamp delta if `encoded_variable_t` is
+ * `four_byte_encoded_variable_t` or the actual timestamp if `encoded_variable_t` is
+ * `eight_byte_encoded_variable_t` on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::InvalidTag if the tag does not correspond to a timestamp encoding.
  * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
  *   deserialize.
  */

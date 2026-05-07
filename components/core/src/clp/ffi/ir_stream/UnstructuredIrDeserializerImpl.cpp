@@ -21,12 +21,12 @@ namespace clp::ffi::ir_stream {
 namespace {
 constexpr SchemaTree::NodeLocator cRootTimestampLocator{
         SchemaTree::cRootId,
-        std::string_view{"timestamp", sizeof("timestamp") - 1},
+        std::string_view{"timestamp"},
         SchemaTree::Node::Type::Int
 };
 constexpr SchemaTree::NodeLocator cRootMessageLocator{
         SchemaTree::cRootId,
-        std::string_view{"message", sizeof("message") - 1},
+        std::string_view{"message"},
         SchemaTree::Node::Type::Str
 };
 }  // namespace
@@ -142,16 +142,15 @@ auto UnstructuredIrDeserializerImpl<ir::eight_byte_encoded_variable_t>::
             this->resolve_required_node_ids(auto_gen_keys_schema_tree, user_gen_keys_schema_tree)
     )};
 
-    KeyValuePairLogEvent::NodeIdValuePairs auto_gen_pairs;
-    auto_gen_pairs.emplace(timestamp_node_id, Value{static_cast<value_int_t>(absolute_timestamp)});
-    KeyValuePairLogEvent::NodeIdValuePairs user_gen_pairs;
-    user_gen_pairs.emplace(message_node_id, Value{std::move(encoded_text_ast)});
-
     return KeyValuePairLogEvent::create(
             auto_gen_keys_schema_tree,
             user_gen_keys_schema_tree,
-            std::move(auto_gen_pairs),
-            std::move(user_gen_pairs),
+            KeyValuePairLogEvent::NodeIdValuePairs{
+                    {timestamp_node_id, Value{static_cast<value_int_t>(absolute_timestamp)}}
+            },
+            KeyValuePairLogEvent::NodeIdValuePairs{
+                    {message_node_id, Value{std::move(encoded_text_ast)}}
+            },
             utc_offset
     );
 }
@@ -163,11 +162,10 @@ UnstructuredIrDeserializerImpl<encoded_variable_t>::deserialize_ir_unit_schema_t
         [[maybe_unused]] encoded_tag_t tag,
         std::string& key_name_buffer
 ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
-    auto const [is_auto_gen, node_locator]{m_pending_schema_insertions.back()};
-    m_pending_schema_insertions.pop_back();
-
     key_name_buffer.clear();
-    return {is_auto_gen, node_locator};
+    auto const pending_schema_insertion{m_pending_schema_insertions.back()};
+    m_pending_schema_insertions.pop_back();
+    return pending_schema_insertion;
 }
 
 template <ir::EncodedVariableTypeReq encoded_variable_t>
@@ -190,8 +188,8 @@ auto UnstructuredIrDeserializerImpl<encoded_variable_t>::resolve_required_node_i
     return {message_node_id.value(), timestamp_node_id.value()};
 }
 
-// Explicitly declare specializations to avoid having to validate that the
-// template parameters are supported
+// Explicitly declare specializations to avoid having to validate that the template parameters are
+// supported.
 template class UnstructuredIrDeserializerImpl<ir::four_byte_encoded_variable_t>;
 template class UnstructuredIrDeserializerImpl<ir::eight_byte_encoded_variable_t>;
 }  // namespace clp::ffi::ir_stream

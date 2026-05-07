@@ -82,10 +82,9 @@ public:
      * Deserializes a schema tree node insertion IR unit from the given reader.
      * @param reader
      * @param tag
-     * @param key_name_buffer Returns the inserted node's key name. May be empty
-     * if the implementation does not read a key from the stream.
-     * @return A result containing a pair on success, or an error code indicating
-     * the failure:
+     * @param key_name_buffer Returns the inserted node's key name. May be empty if the
+     * implementation does not need to read the key from the stream.
+     * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
      *   - Whether the node is for auto-generated keys schema tree.
      *   - The locator of the inserted schema tree node.

@@ -261,14 +261,14 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
     }
     auto const version{version_iter->get_ref<nlohmann::json::string_t const&>()};
     auto const protocol_version_status{ffi::ir_stream::validate_protocol_version(version)};
-    if (ffi::ir_stream::IRProtocolErrorCode::Supported != protocol_version_status
-        && ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible != protocol_version_status)
+    if (IRProtocolErrorCode::Supported != protocol_version_status
+        && IRProtocolErrorCode::BackwardCompatible != protocol_version_status)
     {
         return std::errc::protocol_not_supported;
     }
 
     std::unique_ptr<DeserializerImpl> deserializer_impl;
-    if (ffi::ir_stream::IRProtocolErrorCode::Supported == protocol_version_status) {
+    if (IRProtocolErrorCode::Supported == protocol_version_status) {
         if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
             && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
         {

@@ -631,16 +631,34 @@ auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 auto deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag)
         -> ystdlib::error_handling::Result<epoch_time_ms_t> {
-    epoch_time_ms_t ts{};
-    if (auto const error_code = deserialize_timestamp<encoded_variable_t>(reader, encoded_tag, ts);
-        IRErrorCode_Success != error_code)
-    {
-        if (IRErrorCode_Corrupted_IR == error_code) {
+    if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+        if (cProtocol::Payload::TimestampVal != encoded_tag) {
             return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
         }
-        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+        return deserialize_int<epoch_time_ms_t>(reader);
+    } else {
+        if (cProtocol::Payload::TimestampDeltaByte == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int8_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaShort == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int16_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaInt == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int32_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaLong == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int64_t>(reader))
+            );
+        }
+        return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
-    return ts;
 }
 
 IRErrorCode deserialize_preamble(
