@@ -1093,6 +1093,12 @@ class DockerComposeController(BaseController):
             if val is not None:
                 env_vars[var] = val
 
+        # Propagate telemetry.disable from config if the env var wasn't already set
+        # on the host. This ensures Rust components (which only check the env var) respect
+        # the config setting.
+        if "CLP_DISABLE_TELEMETRY" not in env_vars and self._clp_config.telemetry.disable is True:
+            env_vars["CLP_DISABLE_TELEMETRY"] = "true"
+
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_vars.items():

@@ -12,7 +12,8 @@ source "$common_env_path"
 
 # --- Export host OS info for telemetry ---
 # These environment variables are passed to containers for OpenTelemetry resource attributes.
-export CLP_HOST_OS="linux"
+CLP_HOST_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+export CLP_HOST_OS
 if [[ -f /etc/os-release ]]; then
     CLP_HOST_OS_VERSION="$(. /etc/os-release && echo "${ID:-unknown}-${VERSION_ID:-unknown}")"
 else

@@ -115,7 +115,9 @@ telemetry:
 ### First-run prompt
 
 When running `start-clp.sh` for the first time in an interactive terminal, you will see a
-consent prompt. Answering `n` will automatically set `telemetry.disable: true` in your config.
+consent prompt. Your choice is persisted to `clp-config.yaml` as `telemetry.disable: true` (for "no")
+or `telemetry.disable: false` (for "yes"), ensuring the consent decision survives independent of the
+instance-id file.
 
 ### Helm chart
 
@@ -139,7 +141,7 @@ disable telemetry for an entire organization.
 | not set | not set | Y (or default) | no | **Yes** |
 | not set | not set | N | no | **No** — prompt wrote `telemetry.disable: true` to config |
 | `true` | `false` | — | no | **No** — env var overrides config |
-| `false` | `true` | — | no | **No** — config disables it |
+| `false` | `true` | — | no | **Yes** — env var explicitly enables, overrides config |
 | not set | `false` | — | **yes** | **No** — requests fail silently at the network level |
 | `true` | `true` | — | no | **No** — both agree |
 | not set | not set | Y | **yes** | **No** — network blocking is independent of software settings |
