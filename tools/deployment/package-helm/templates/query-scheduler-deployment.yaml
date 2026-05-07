@@ -70,6 +70,10 @@ spec:
               value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "queryScheduler"
+            ) | nindent 10 }}
           ports:
             - name: "query-scheduler"
               containerPort: 7000

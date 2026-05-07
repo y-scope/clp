@@ -54,6 +54,10 @@ spec:
               value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "mcpServer"
+            ) | nindent 10 }}
           ports:
             - name: "mcp-server"
               containerPort: 8000

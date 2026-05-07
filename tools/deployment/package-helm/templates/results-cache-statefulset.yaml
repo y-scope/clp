@@ -27,6 +27,10 @@ spec:
         - name: "results-cache"
           image: "mongo:7.0.1"
           imagePullPolicy: "Always"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "resultsCache"
+            ) | nindent 10 }}
           ports:
             - name: "results-cache"
               containerPort: 27017

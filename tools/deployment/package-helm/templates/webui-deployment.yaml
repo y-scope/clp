@@ -68,6 +68,10 @@ spec:
             {{- end }}{{/* if and (eq .type "s3")
                                   (eq .s3_config.aws_authentication.type "credentials") */}}
             {{- end }}{{/* with .Values.clpConfig.stream_output.storage */}}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "webui"
+            ) | nindent 10 }}
           ports:
             - name: "webui"
               containerPort: 4000

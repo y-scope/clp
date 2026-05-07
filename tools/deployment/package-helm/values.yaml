@@ -76,6 +76,47 @@ scheduling:
   webui: {}
   mcpServer: {}
 
+# Per-component resource requests and limits.
+# Each component accepts: requests (cpu, memory) and limits (cpu, memory).
+# Values follow Kubernetes resource format (e.g., cpu: "1", memory: "1Gi").
+# When omitted, no resource requests/limits are set.
+#
+# Example:
+#   resources:
+#     compressionWorker:
+#       requests:
+#         cpu: "1"
+#         memory: "1Gi"
+#       limits:
+#         cpu: "2"
+#         memory: "2Gi"
+resources:
+  # Worker
+  compressionWorker: {}
+  queryWorker: {}
+  reducer: {}
+  prestoWorker: {}
+
+  # Database
+  database: {}
+  queue: {}
+  redis: {}
+  resultsCache: {}
+
+  # Core
+  compressionScheduler: {}
+  logIngestor: {}
+  queryScheduler: {}
+  prestoCoordinator: {}
+  garbageCollector: {}
+  apiServer: {}
+  webui: {}
+  mcpServer: {}
+
+  # Jobs
+  dbTableCreator: {}
+  resultsCacheIndicesCreator: {}
+
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
   # Remove a service from this list to use an external instance instead, and configure its host/port

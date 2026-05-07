@@ -435,3 +435,25 @@ topologySpreadConstraints:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 {{- end }}{{/* define "clp.createSchedulingConfigs" */}}
+
+{{/*
+Creates resource requests and limits configuration for a component.
+
+@param {object} root Root template context
+@param {string} component Key name under .Values.resources (e.g., "compressionWorker", "database")
+@return {string} YAML-formatted resources block (requests, limits) nested under a resources key
+*/}}
+{{- define "clp.createResourceLimits" -}}
+{{- $resourcesConfig := index .root.Values.resources .component | default dict -}}
+{{- if or $resourcesConfig.requests $resourcesConfig.limits }}
+resources:
+{{- with $resourcesConfig.requests }}
+  requests:
+{{- toYaml . | nindent 4 }}
+{{- end }}
+{{- with $resourcesConfig.limits }}
+  limits:
+{{- toYaml . | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}{{/* define "clp.createResourceLimits" */}}

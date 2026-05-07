@@ -49,6 +49,10 @@ spec:
                   key: "username"
             - name: "RUST_LOG"
               value: {{ .Values.clpConfig.log_ingestor.logging_level | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "logIngestor"
+            ) | nindent 10 }}
           ports:
             - name: "log-ingestor"
               containerPort: 3002

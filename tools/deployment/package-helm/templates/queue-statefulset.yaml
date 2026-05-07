@@ -42,6 +42,10 @@ spec:
               value: "-"
             - name: "RABBITMQ_SASL_LOGS"
               value: "-"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "queue"
+            ) | nindent 10 }}
           ports:
             - name: "queue"
               containerPort: 5672

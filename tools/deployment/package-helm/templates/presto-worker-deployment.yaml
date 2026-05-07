@@ -46,6 +46,10 @@ spec:
         - name: "presto-worker"
           image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
           imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoWorker"
+            ) | nindent 10 }}
           ports:
             - name: "presto-worker"
               containerPort: 8889
