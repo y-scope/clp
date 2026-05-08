@@ -37,7 +37,7 @@ export DO_NOT_TRACK=1
 ```
 
 ### Configuration file
- 
+
 ::::{tab-set}
 :::{tab-item} Docker Compose
 :sync: docker
@@ -73,9 +73,8 @@ helm install clp clp/clp --set clpConfig.telemetry.disable=true
 ### First-run prompt
 
 When running `start-clp.sh` for the first time in an interactive terminal, you will see a
-consent prompt. Your choice is persisted to `clp-config.yaml` as `telemetry.disable: true` (for "no")
-or `telemetry.disable: false` (for "yes"), ensuring the consent decision survives independent of the
-instance-id file.
+consent prompt. If you decline, `telemetry.disable: true` is persisted to `clp-config.yaml`,
+ensuring the consent decision survives independent of the instance-id file.
 
 ### Network-level blocking
 
