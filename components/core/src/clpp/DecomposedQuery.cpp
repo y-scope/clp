@@ -20,11 +20,11 @@
 namespace clpp {
 auto DecomposedQuery::decompose_query(
         log_surgeon::ParserHandle& parser,
-        std::optional<std::string_view> rule_name,
+        std::string_view rule_name,
         std::string_view query
 ) -> ystdlib::error_handling::Result<DecomposedQuery> {
     auto const interpretations{parser.query_interpretations(
-            log_surgeon::CCharArray::from_string_view(rule_name.value()),
+            log_surgeon::CCharArray::from_string_view(rule_name),
             log_surgeon::CCharArray::from_string_view(query)
     )};
 
@@ -33,17 +33,19 @@ auto DecomposedQuery::decompose_query(
     }
 
     DecomposedQuery decomposed_query;
-    decomposed_query.m_log_type.reserve(query.size());
     for (auto const& sub_queries : interpretations) {
+        decomposed_query.m_interpretations.emplace_back();
+        auto& interp{decomposed_query.m_interpretations.back()};
+        interp.m_static_text.reserve(query.size());
         for (auto const& sub_query : sub_queries) {
             if (sub_query.qualified_name.empty()) {
-                decomposed_query.m_log_type.append(sub_query.value);
+                interp.m_static_text.append(sub_query.value);
             } else {
-                decomposed_query.m_leaf_queries.emplace_back(
+                interp.m_leaf_queries.emplace_back(
                         sub_query.qualified_name,
                         sub_query.value
                 );
-                decomposed_query.m_log_type.append(fmt::format("%{}%", sub_query.qualified_name));
+                interp.m_static_text.append(fmt::format("%{}%", sub_query.qualified_name));
             }
         }
     }
