@@ -760,7 +760,9 @@ tasks:
     deps: [":webui-node-modules"]
     dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':'{{.G_WEBUI_SRC_DIR}}'/node_modules/.bin:$PATH turbo 'lint:{{.LINT_CMD}}'"
+      - >-
+        PATH='{{.G_NODEJS_22_BIN_DIR}}':'{{.G_WEBUI_SRC_DIR}}'/node_modules/.bin:$PATH
+        turbo 'lint:{{.LINT_CMD}}'
 
   py:
     internal: true
