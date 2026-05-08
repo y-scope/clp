@@ -74,9 +74,9 @@ tasks:
 
   check-js:
     sources: &js_source_files
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.G_WEBUI_SRC_DIR}}/**/*"
       - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
+      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/node_modules/*"
       - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     cmds:
@@ -758,10 +758,9 @@ tasks:
     requires:
       vars: ["LINT_CMD"]
     deps: [":webui-node-modules"]
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
-      - |-
-        cd "{{.G_WEBUI_SRC_DIR}}"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':'{{.G_WEBUI_SRC_DIR}}'/node_modules/.bin:$PATH turbo 'lint:{{.LINT_CMD}}'"
 
   py:
     internal: true

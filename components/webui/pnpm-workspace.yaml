@@ -1,0 +1,12 @@
+packages:
+  - "common"
+  - "client"
+  - "server"
+
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+
+confirmModulesPurge: false
+minimumReleaseAge: 0
+nodeLinker: hoisted

@@ -1,3 +1,6 @@
 # Dependencies
 node_modules/
 yscope-log-viewer/
+
+# Turborepo cache
+.turbo/

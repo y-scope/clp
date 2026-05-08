@@ -1,24 +1,18 @@
 {
   "name": "webui",
   "version": "0.1.0",
+  "packageManager": "pnpm@11.0.8",
   "description": "",
-  "workspaces": [
-    "common",
-    "client",
-    "server"
-  ],
   "scripts": {
-    "init": "npm clean-install --workspaces && npm --workspace common run build",
-    "lint:check": "npm run lint:check --workspaces",
-    "lint:fix": "npm run lint:fix --workspaces",
-    "dev": "concurrently -c auto \"npm run dev:*\"",
-    "dev:client": "npm --workspace client run dev",
-    "dev:common": "npm --workspace common run build:watch",
-    "dev:server": "npm --workspace server run dev"
+    "build": "turbo build",
+    "lint:check": "turbo lint:check",
+    "lint:fix": "turbo lint:fix",
+    "dev": "turbo dev",
+    "test": "turbo test"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "turbo": "^2.9"
   }
 }
