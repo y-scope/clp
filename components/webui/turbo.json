@@ -6,8 +6,12 @@
       "env": ["NODE_ENV"],
       "outputs": ["dist/**"]
     },
-    "lint:check": {},
-    "lint:fix": {},
+    "lint:check": {
+      "dependsOn": ["^build"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
