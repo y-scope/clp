@@ -265,8 +265,8 @@ tasks:
       - exclude: "**/node_modules/**/*"
       - exclude: "yscope-log-viewer/**/*"
     generates:
-      - "{{.G_WEBUI_BUILD_DIR}}/client/index.html"
-      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/src/main.js"
+      - "{{.G_WEBUI_BUILD_DIR}}/client/**/*"
+      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/**/*"
     deps:
       - "deps:yscope-log-viewer:build"
       - "init"
@@ -277,17 +277,17 @@ tasks:
       - >-
         PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod --legacy
         --filter=@webui/server '{{.G_WEBUI_BUILD_DIR}}/server'
-      - "rsync -a server/dist/ '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
-      - "rsync -a client/dist/ '{{.G_WEBUI_BUILD_DIR}}/client/'"
+      - "rsync -a packages/server/dist/ '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
+      - "rsync -a packages/client/dist/ '{{.G_WEBUI_BUILD_DIR}}/client/'"
       - "rsync -a '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/' '{{.G_WEBUI_BUILD_DIR}}/yscope-log-viewer/'"
 
   clean-webui-package-node-modules:
     internal: true
     cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/common/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/.turbo'"
 
   package-tar:
@@ -451,11 +451,11 @@ tasks:
     sources:
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
-      - "client/package.json"
-      - "common/package.json"
+      - "packages/client/package.json"
+      - "packages/common/package.json"
       - "pnpm-lock.yaml"
       - "package.json"
-      - "server/package.json"
+      - "packages/server/package.json"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     deps:
       - "toolchains:pnpm"

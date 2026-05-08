@@ -1,7 +1,7 @@
 packages:
-  - "common"
-  - "client"
-  - "server"
+  - "packages/common"
+  - "packages/client"
+  - "packages/server"
 
 allowBuilds:
   esbuild: true
@@ -10,3 +10,4 @@ allowBuilds:
 confirmModulesPurge: false
 minimumReleaseAge: 0
 nodeLinker: hoisted
+verifyDepsBeforeRun: false

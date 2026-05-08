@@ -12,7 +12,7 @@ importers:
         specifier: 2.9.10
         version: 2.9.10
 
-  client:
+  packages/client:
     dependencies:
       '@emotion/react':
         specifier: ^11.14.0
@@ -112,7 +112,7 @@ importers:
         specifier: ^7.3.1
         version: 7.3.3(@types/node@22.19.7)(yaml@2.8.4)
 
-  common:
+  packages/common:
     dependencies:
       '@sinclair/typebox':
         specifier: ^0.34.41
@@ -125,7 +125,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  server:
+  packages/server:
     dependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.971.0
