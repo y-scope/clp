@@ -426,7 +426,6 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
@@ -637,4 +636,21 @@ services:
         target: 3002
     volumes:
       - *volume_clp_config_readonly
-      - *vol
+      - *volume_clp_logs
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "/opt/clp/bin/log-ingestor",
+      "--config", "/etc/clp-config.yaml",
+      "--host", "0.0.0.0",
+      "--port", "3002"
+    ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "curl",
+        "-f",
+        "http://log_ingestor:3002/health"
+      ]
