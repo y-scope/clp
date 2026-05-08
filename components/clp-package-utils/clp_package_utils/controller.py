@@ -1063,42 +1063,6 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
 
-        # Telemetry env vars — needed by ALL containers for OpenTelemetry instrumentation
-        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
-        env_vars["CLP_STORAGE_ENGINE"] = self._clp_config.package.storage_engine
-
-        instance_id_file = self._clp_config.logs_directory / "instance-id"
-        resolved_id_file = resolve_host_path_in_container(instance_id_file)
-        if resolved_id_file.exists():
-            with resolved_id_file.open("r") as f:
-                env_vars["CLP_INSTANCE_ID"] = f.readline().strip()
-
-        version_file = resolve_host_path_in_container(self._clp_home / "VERSION")
-        if version_file.exists():
-            with version_file.open("r") as f:
-                env_vars["CLP_VERSION"] = f.read().strip()
-
-        env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = self._clp_config.telemetry.collector_endpoint
-
-        # Pass through host OS info and telemetry opt-out vars (set by start-clp.sh)
-        for var in (
-            "CLP_HOST_OS",
-            "CLP_HOST_OS_VERSION",
-            "CLP_HOST_ARCH",
-            "CLP_DISABLE_TELEMETRY",
-            "CLP_TELEMETRY_DEBUG",
-            "DO_NOT_TRACK",
-        ):
-            val = os.environ.get(var)
-            if val is not None:
-                env_vars[var] = val
-
-        # Propagate telemetry.disable from config if the env var wasn't already set
-        # on the host. This ensures Rust components (which only check the env var) respect
-        # the config setting.
-        if "CLP_DISABLE_TELEMETRY" not in env_vars and self._clp_config.telemetry.disable is True:
-            env_vars["CLP_DISABLE_TELEMETRY"] = "true"
-
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_vars.items():
