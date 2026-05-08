@@ -13,6 +13,6 @@
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "turbo": "^2.9"
+    "turbo": "2.9.10"
   }
 }

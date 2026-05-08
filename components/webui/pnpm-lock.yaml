@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       turbo:
-        specifier: ^2.9
+        specifier: 2.9.10
         version: 2.9.10
 
   client:
