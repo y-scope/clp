@@ -16,8 +16,8 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * Virtual base class defining methods for deserializing IR units and log events
- * called by `Deserializer`.
+ * Virtual base class defining methods for deserializing IR units and log events called by
+ * `Deserializer`.
  */
 class DeserializerImpl {
 public:
@@ -38,8 +38,8 @@ public:
     /**
      * Deserializes a UTC offset change IR unit from the given reader.
      * @param reader
-     * @return A result containing the deserialized UTC offset on success, or an
-     * error code indicating the failure:
+     * @return A result containing the deserialized UTC offset on success, or an error code
+     * indicating the failure:
      * - Forwards `deserialize_int`'s return values on failure.
      */
     [[nodiscard]] static auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
@@ -48,8 +48,7 @@ public:
     /**
      * Deserializes the type of the next IR unit from the given reader.
      * @param reader
-     * @return A result containing a pair on success, or an error code indicating
-     * the failure:
+     * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
      *   - The type of the deserialized IR unit.
      *   - The tag of the deserialized IR unit.
@@ -66,8 +65,8 @@ public:
      * @param auto_gen_keys_schema_tree
      * @param user_gen_keys_schema_tree
      * @param utc_offset
-     * @return A result containing the deserialized KV pair log event on success,
-     * or an error code indicating the failure defined by the derived class.
+     * @return A result containing the deserialized KV pair log event on success, or an error code
+     * indicating the failure defined by the derived class.
      */
     [[nodiscard]] virtual auto deserialize_ir_unit_kv_pair_log_event(
             ReaderInterface& reader,

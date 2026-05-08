@@ -97,7 +97,10 @@ auto UnstructuredIrDeserializerImpl<ir::four_byte_encoded_variable_t>::
     )};
     auto const timestamp_tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
     auto const timestamp_delta{YSTDLIB_ERROR_HANDLING_TRYX(
-            deserialize_timestamp<ir::four_byte_encoded_variable_t>(reader, timestamp_tag)
+            deserialize_timestamp_or_timestamp_delta<ir::four_byte_encoded_variable_t>(
+                    reader,
+                    timestamp_tag
+            )
     )};
     m_previous_timestamp += timestamp_delta;
 
@@ -135,7 +138,10 @@ auto UnstructuredIrDeserializerImpl<ir::eight_byte_encoded_variable_t>::
     )};
     auto const timestamp_tag{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader))};
     auto const absolute_timestamp{YSTDLIB_ERROR_HANDLING_TRYX(
-            deserialize_timestamp<ir::eight_byte_encoded_variable_t>(reader, timestamp_tag)
+            deserialize_timestamp_or_timestamp_delta<ir::eight_byte_encoded_variable_t>(
+                    reader,
+                    timestamp_tag
+            )
     )};
 
     auto const [message_node_id, timestamp_node_id]{YSTDLIB_ERROR_HANDLING_TRYX(

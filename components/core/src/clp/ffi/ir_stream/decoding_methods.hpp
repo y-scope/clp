@@ -97,7 +97,7 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
         -> ystdlib::error_handling::Result<encoded_tag_t>;
 
 /**
- * Deserializes a timestamp from the given reader.
+ * Deserializes a timestamp or a timestamp delta from the given reader.
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
  * @param encoded_tag
@@ -107,9 +107,11 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * - IrDeserializationErrorEnum::InvalidTag if the tag does not correspond to a timestamp encoding.
  * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
  *   deserialize.
+ * - Forwards `deserialize_int`'s return values on failure.
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
-[[nodiscard]] auto deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag)
+[[nodiscard]] auto
+deserialize_timestamp_or_timestamp_delta(ReaderInterface& reader, encoded_tag_t encoded_tag)
         -> ystdlib::error_handling::Result<ir::epoch_time_ms_t>;
 
 /**

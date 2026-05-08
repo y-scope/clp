@@ -16,6 +16,7 @@
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
 #include "DeserializerImpl.hpp"
+#include "IrDeserializationError.hpp"
 #include "IrUnitHandlerReq.hpp"
 #include "IrUnitType.hpp"
 #include "KvIrDeserializerImpl.hpp"
@@ -175,14 +176,19 @@ private:
      * @param ir_unit_handler
      * @param query_handler
      * @return A result containing the deserializer or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if either:
-     *   - the IR stream contains an unsupported metadata format;
-     *   - the IR stream's version is unsupported;
-     *   - or the IR stream's user-defined metadata is not a JSON object.
+     * - IrDeserializationErrorEnum::UnsupportedMetadataFormat if:
+     *   - the IR stream's preamble metadata encoding is not JSON;
+     *   - the metadata payload cannot be parsed as JSON;
+     *   - the metadata object does not contain a string value for
+     *     `cProtocol::Metadata::VersionKey`;
+     *   - or for a supported key-value pair IR protocol version,
+     *     `cProtocol::Metadata::UserDefinedMetadataKey` is present but its value is not a JSON
+     *      object.
+     * - IrDeserializationErrorEnum::UnsupportedVersion if the protocol version is neither supported
+     *   nor backward compatible.
      * - Forwards `deserialize_preamble`'s return values on failure.
      * - Forwards `get_encoding_type`'s return values on failure.
+     * - Forwards `UnstructuredIrDeserializerImpl::create`'s return values on failure.
      */
     [[nodiscard]] static auto create_generic(
             ReaderInterface& reader,
@@ -248,32 +254,33 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
     auto const [metadata_type, metadata]{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_preamble(reader))};
 
     if (cProtocol::Metadata::EncodingJson != metadata_type) {
-        return std::errc::protocol_not_supported;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
 
     auto metadata_json = nlohmann::json::parse(metadata, nullptr, false);
     if (metadata_json.is_discarded()) {
-        return std::errc::protocol_error;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
     auto const version_iter{metadata_json.find(cProtocol::Metadata::VersionKey)};
     if (metadata_json.end() == version_iter || false == version_iter->is_string()) {
-        return std::errc::protocol_error;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
     auto const version{version_iter->get_ref<nlohmann::json::string_t const&>()};
     auto const protocol_version_status{ffi::ir_stream::validate_protocol_version(version)};
     if (IRProtocolErrorCode::Supported != protocol_version_status
         && IRProtocolErrorCode::BackwardCompatible != protocol_version_status)
     {
-        return std::errc::protocol_not_supported;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedVersion};
+    }
+
+    if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
+        && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
+    {
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
 
     std::unique_ptr<DeserializerImpl> deserializer_impl;
     if (IRProtocolErrorCode::Supported == protocol_version_status) {
-        if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
-            && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
-        {
-            return std::errc::protocol_not_supported;
-        }
         deserializer_impl = std::make_unique<KvIrDeserializerImpl>();
     } else {
         if (EncodingType::FourByte == encoding_type) {
