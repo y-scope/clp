@@ -141,7 +141,7 @@ disable telemetry for an entire organization.
 | not set | not set | Y (or default) | no | **Yes** |
 | not set | not set | N | no | **No** — prompt wrote `telemetry.disable: true` to config |
 | `true` | `false` | — | no | **No** — env var overrides config |
-| `false` | `true` | — | no | **Yes** — env var explicitly enables, overrides config |
+| `false` | `true` | — | no | **No** — config disables it; env vars can only disable, not re-enable |
 | not set | `false` | — | **yes** | **No** — requests fail silently at the network level |
 | `true` | `true` | — | no | **No** — both agree |
 | not set | not set | Y | **yes** | **No** — network blocking is independent of software settings |

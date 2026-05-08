@@ -63,9 +63,7 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
     if disable_env in ("true", "1"):
         clp_config.telemetry.disable = True
         return
-    if disable_env in ("false", "0"):
         clp_config.telemetry.disable = False
-        return
     if os.environ.get("DO_NOT_TRACK", "").strip().lower() in ("1", "true", "yes"):
         clp_config.telemetry.disable = True
         return
