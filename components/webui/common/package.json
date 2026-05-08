@@ -9,9 +9,10 @@
   },
   "scripts": {
     "build": "tsc",
-    "build:watch": "npm run build -- -w --preserveWatchOutput",
+    "build:watch": "tsc -w --preserveWatchOutput",
+    "dev": "tsc -w --preserveWatchOutput",
     "lint:check": "eslint . --max-warnings 0",
-    "lint:fix": "npm run lint:check -- --fix"
+    "lint:fix": "eslint . --max-warnings 0 --fix"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",

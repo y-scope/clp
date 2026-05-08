@@ -59,14 +59,28 @@ tasks:
 
   nodejs-22:
     internal: true
+    label: "toolchains-nodejs-22"
     vars:
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
       NODEJS_VERSION: "v22.20.0"
+      PNPM_VERSION: "11.0.8"
+      CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      OUTPUT_PATTERNS: &nodejs_output_patterns
+        - "{{.G_NODEJS_22_BIN_DIR}}"
     run: "once"
+    sources:
+      - "{{.ROOT_TASKFILE}}"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: *nodejs_output_patterns
     cmds:
       - task: "remote:download-and-extract-tar"
         vars:
-          CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "/tmp/nodejs-22-download.md5"
           FILE_SHA256: >-
             {{- if and (eq OS "linux") (eq .NODEJS_ARCH "x64") -}}
               00bbd05e306ea68b6e13e17360d0e2f680b493ef95f2fea1c4296ff7437530bc
@@ -83,6 +97,19 @@ tasks:
           OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
           URL: >-
             https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack enable"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack prepare pnpm@{{.PNPM_VERSION}} --activate"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: *nodejs_output_patterns
+
+  pnpm:
+    internal: true
+    run: "once"
+    deps:
+      - "nodejs-22"
 
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
