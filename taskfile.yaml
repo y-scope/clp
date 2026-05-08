@@ -257,6 +257,16 @@ tasks:
     dir: "{{.G_WEBUI_SRC_DIR}}"
     env:
       NODE_ENV: "production"
+    sources:
+      - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
+      - "{{.TASKFILE}}"
+      - "**/*"
+      - exclude: "**/dist/**/*"
+      - exclude: "**/node_modules/**/*"
+      - exclude: "yscope-log-viewer/**/*"
+    generates:
+      - "{{.G_WEBUI_BUILD_DIR}}/client/index.html"
+      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/src/main.js"
     deps:
       - "deps:yscope-log-viewer:build"
       - "init"
