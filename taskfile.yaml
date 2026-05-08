@@ -262,18 +262,13 @@ tasks:
       - "init"
       - "webui-node-modules"
     cmds:
-      # Build all packages in dependency order (common -> client + server)
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':'{{.G_WEBUI_SRC_DIR}}'/node_modules/.bin:$PATH turbo build"
       - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
-      # Deploy server with production dependencies (includes @webui/common as a proper dep)
       - >-
         PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod --legacy
         --filter=@webui/server '{{.G_WEBUI_BUILD_DIR}}/server'
-      # Copy server build output (pnpm deploy doesn't include dist/ since it's .gitignored)
       - "rsync -a server/dist/ '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
-      # Copy client build output (static SPA, no runtime deps needed)
       - "rsync -a client/dist/ '{{.G_WEBUI_BUILD_DIR}}/client/'"
-      # Copy log-viewer build output
       - "rsync -a '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/' '{{.G_WEBUI_BUILD_DIR}}/yscope-log-viewer/'"
 
   clean-webui-package-node-modules:
