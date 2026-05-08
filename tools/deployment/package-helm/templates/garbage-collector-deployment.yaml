@@ -71,7 +71,7 @@ spec:
                 "component_category" "garbage-collector"
                 "name" "tmp"
               ) | quote }}
-              mountPath: "/var/log"
+              mountPath: "/var/tmp"
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
