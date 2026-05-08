@@ -96,21 +96,38 @@ export DO_NOT_TRACK=1
 ```
 
 ### Configuration file
-
+ 
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+ 
 Add to your `clp-config.yaml`:
-
+ 
 ```yaml
 telemetry:
   disable: true
 ```
-
+ 
 You can also override the endpoint:
-
+ 
 ```yaml
 telemetry:
   disable: false
   endpoint: "https://your-own-otel-collector"
 ```
+ 
+:::
+:::{tab-item} Kubernetes
+:sync: k8s
+ 
+Pass the config via `--set` (see the [quick-start guide](quick-start/index.md) for setup details):
+ 
+```bash
+helm install clp clp/clp --set clpConfig.telemetry.disable=true
+```
+ 
+:::
+::::
 
 ### First-run prompt
 
