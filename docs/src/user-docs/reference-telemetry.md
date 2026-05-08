@@ -145,28 +145,3 @@ disable telemetry for an entire organization.
 | not set | `false` | — | **yes** | **No** — requests fail silently at the network level |
 | `true` | `true` | — | no | **No** — both agree |
 | not set | not set | Y | **yes** | **No** — network blocking is independent of software settings |
-
-## Debug mode
-
-To inspect exactly what metrics would be sent without actually sending them:
-
-```bash
-export CLP_TELEMETRY_DEBUG=true
-```
-
-When enabled, each component uses an OpenTelemetry `ConsoleExporter` that prints metrics to its
-standard output (visible in container logs) instead of transmitting them to the remote endpoint.
-
-## Source code
-
-The telemetry implementation is fully open source:
-
-- **Component instrumentation**:
-  [components/log-ingestor/](https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/log-ingestor/),
-  [components/api-server/](https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/api-server/)
-  (and other Rust components with `opentelemetry` in their `Cargo.toml`)
-- **Consent prompt**:
-  [components/clp-package-utils/clp_package_utils/scripts/start_clp.py](https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-package-utils/clp_package_utils/scripts/start_clp.py)
-- **Configuration**: `telemetry` section in `clp-config.yaml`
-- **Server**:
-  [clp-telemetry-server](https://github.com/y-scope/clp-telemetry-server)

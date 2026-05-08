@@ -22,7 +22,6 @@ services:
 
       # Telemetry opt-out vars
       CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
-      CLP_TELEMETRY_DEBUG: "${CLP_TELEMETRY_DEBUG:-}"
       DO_NOT_TRACK: "${DO_NOT_TRACK:-}"
     volumes:
       # Docker daemon bridge
