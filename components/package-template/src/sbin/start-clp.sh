@@ -20,8 +20,8 @@ else
     CLP_HOST_OS_VERSION="unknown"
 fi
 export CLP_HOST_OS_VERSION
-export CLP_HOST_ARCH
 CLP_HOST_ARCH="$(uname -m)"
+export CLP_HOST_ARCH
 
 docker compose -f "$CLP_HOME/docker-compose.runtime.yaml" \
     run --rm "${CLP_COMPOSE_RUN_EXTRA_FLAGS[@]}" clp-runtime \
