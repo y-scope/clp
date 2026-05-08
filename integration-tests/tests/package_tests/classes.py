@@ -177,8 +177,8 @@ class ClpPackage:
         """
         Reads the CLP instance ID for the package and validates its format.
 
-        :return: The instance ID (4-character hex, 32-character hex, or full UUID).
-        :raise ValueError: If the file cannot be read or contents are not a valid instance ID.
+        :return: The instance ID (a UUIDv4 string).
+        :raise ValueError: If the file cannot be read or contents are not a valid UUID.
         """
         clp_instance_id_file_path = self.clp_instance_id_file_path
         try:
@@ -190,10 +190,10 @@ class ClpPackage:
         uuid_pattern = (
             r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
         )
-        if not re.fullmatch(r"[0-9a-fA-F]{4}|[0-9a-fA-F]{32}|" + uuid_pattern, contents):
+        if not re.fullmatch(uuid_pattern, contents):
             err_msg = (
-                f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
-                f" hex string, a 32-character hex string, or a full UUID, but read {contents}."
+                f"Invalid instance ID in {clp_instance_id_file_path}: expected a"
+                f" UUID, but read {contents}."
             )
             pytest.fail(err_msg)
 
