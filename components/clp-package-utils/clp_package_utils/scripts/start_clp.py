@@ -8,7 +8,8 @@ import sys
 import tempfile
 
 import click
-import yaml
+from ruamel.yaml import YAML
+
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 from clp_py_utils.core import resolve_host_path_in_container
 
@@ -26,8 +27,11 @@ from clp_package_utils.general import (
 
 logger = logging.getLogger(__name__)
 
+# Values accepted by both CLP_DISABLE_TELEMETRY and DO_NOT_TRACK to disable telemetry.
+_TELEMETRY_DISABLE_VALUES = ("1", "true", "yes")
 
-TELEMETRY_PROMPT = """
+
+TELEMETRY_NOTICE = """
 ================================================================================
 CLP collects anonymous usage telemetry to help improve the software.
 This includes: CLP version, OS/architecture, deployment method, and
@@ -40,15 +44,15 @@ For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
 
 You can disable telemetry at any time by setting CLP_DISABLE_TELEMETRY=true
 or by blocking https://telemetry.yscope.io at the network level.
-
-Enable anonymous telemetry to help improve CLP? [Y/n]
 ================================================================================
 """
 
+TELEMETRY_PROMPT = "Enable anonymous telemetry to help improve CLP? [Y/n] "
 
-def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None:
+
+def _handle_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None:
     """
-    Checks telemetry consent and prompts the user on first run if needed.
+    Handles telemetry consent and prompts the user on first run if needed.
 
     Priority order for disabling telemetry:
     1. CLP_DISABLE_TELEMETRY or DO_NOT_TRACK environment variables
@@ -58,12 +62,12 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
     :param clp_config: The loaded ClpConfig object.
     :param config_file_path: Path to the config file (for persisting consent).
     """
-    # Priority 1: Environment variables
+    # Priority 1: Environment variables (opt-out only — can disable but not re-enable)
     disable_env = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
-    if disable_env in ("true", "1"):
+    if disable_env in _TELEMETRY_DISABLE_VALUES:
         clp_config.telemetry.disable = True
         return
-    if os.environ.get("DO_NOT_TRACK", "").strip().lower() in ("1", "true", "yes"):
+    if os.environ.get("DO_NOT_TRACK", "").strip().lower() in _TELEMETRY_DISABLE_VALUES:
         clp_config.telemetry.disable = True
         return
 
@@ -78,43 +82,49 @@ def _check_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None
 
     # First run — show prompt if interactive
     if sys.stdin.isatty():
-        print(TELEMETRY_PROMPT)
+        print(TELEMETRY_NOTICE)
         try:
-            response = input().strip().lower()
+            response = input(TELEMETRY_PROMPT).strip().lower()
         except EOFError:
-            response = ""
+            response = "n"
 
         disable = response.startswith("n")
         clp_config.telemetry.disable = disable
-        try:
-            _update_config_file_telemetry(config_file_path, disable)
-        except OSError:
-            logger.warning(
-                "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
-            )
+        if disable:
+            try:
+                _persist_telemetry_disable(config_file_path)
+            except OSError:
+                logger.warning(
+                    "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
+                )
 
     # Non-interactive: default to enabled (no config write needed)
 
 
-def _update_config_file_telemetry(config_file_path: pathlib.Path, disable: bool) -> None:
+def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
     """
-    Updates the telemetry.disable setting in the config file.
+    Writes telemetry.disable = true to the config file.
+
+    Uses ruamel.yaml round-trip editing to preserve the user's comments,
+    key order, and formatting.
 
     :param config_file_path: Path to the config file.
-    :param disable: Whether to disable telemetry.
     """
-    config_data = {}
+    yaml = YAML()
+
     if config_file_path.exists():
         with open(config_file_path, "r") as f:
-            config_data = yaml.safe_load(f) or {}
+            config_data = yaml.load(f) or {}
+    else:
+        config_data = {}
 
-    config_data.setdefault("telemetry", {})["disable"] = disable
+    config_data.setdefault("telemetry", {})["disable"] = True
 
     # Write atomically: write to temp file, then replace
     fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
     try:
         with os.fdopen(fd, "w") as f:
-            yaml.safe_dump(config_data, f, default_flow_style=False)
+            yaml.dump(config_data, f)
             f.flush()
             os.fsync(f.fileno())
         os.replace(temp_path, config_file_path)
@@ -184,8 +194,8 @@ def main(
         logger.exception("Failed to load config.")
         sys.exit(1)
 
-    # Check telemetry consent (may prompt user on first run)
-    _check_telemetry_consent(clp_config, resolved_config_path)
+    # Handle telemetry consent (may prompt user on first run)
+    _handle_telemetry_consent(clp_config, resolved_config_path)
 
     try:
         # Create necessary directories.
