@@ -124,7 +124,6 @@ data:
     log_ingestor: null
     {{- end }}
     package:
-      query_engine: {{ .Values.clpConfig.webui.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
@@ -134,10 +133,14 @@ data:
       num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
       port: 7000
       scheduler_concurrency: {{ .scheduler_concurrency | int }}
+    {{- else }}
+    query_scheduler: null
     {{- end }}
     {{- with .Values.clpConfig.query_worker }}
     query_worker:
       logging_level: {{ .logging_level | quote }}
+    {{- else }}
+    query_worker: null
     {{- end }}
     queue:
       host: "{{ include "clp.queueHost" . }}"
@@ -153,6 +156,8 @@ data:
       host: "{{ include "clp.fullname" $ }}-reducer"
       logging_level: {{ .logging_level | quote }}
       upsert_interval: {{ .upsert_interval | int }}
+    {{- else }}
+    reducer: null
     {{- end }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
@@ -211,6 +216,7 @@ data:
     webui:
       host: "localhost"
       port: 4000
+      query_engine: {{ .Values.clpConfig.webui.query_engine | quote }}
       rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}

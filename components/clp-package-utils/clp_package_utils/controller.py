@@ -519,7 +519,14 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        if self._clp_config.query_scheduler is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -572,7 +579,14 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        if self._clp_config.query_worker is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -600,7 +614,14 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDUCER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        if self._clp_config.reducer is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -721,9 +742,13 @@ class BaseController(ABC):
 
         client_settings_json_updates = {
             "ClpStorageEngine": self._clp_config.package.storage_engine,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpQueryEngine": self._clp_config.webui.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
-            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
+            "MaxDatasetsPerQuery": (
+                self._clp_config.query_scheduler.max_datasets_per_query
+                if self._clp_config.query_scheduler is not None
+                else None
+            ),
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
@@ -761,7 +786,7 @@ class BaseController(ABC):
                 self._clp_config.archive_output.target_encoded_file_size
             ),
             "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
         }
 
@@ -786,7 +811,7 @@ class BaseController(ABC):
             server_settings_json_updates["StreamFilesS3PathPrefix"] = None
             server_settings_json_updates["StreamFilesS3Profile"] = None
 
-        query_engine = self._clp_config.package.query_engine
+        query_engine = self._clp_config.webui.query_engine
         if QueryEngine.PRESTO == query_engine:
             server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
             server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
@@ -947,10 +972,8 @@ class BaseController(ABC):
 
 _DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
     {
-        DeploymentType.BASE: "docker-compose-base.yaml",
-        DeploymentType.FULL: "docker-compose.yaml",
-        DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
-        DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
+        DeploymentType.CELERY: "docker-compose.yaml",
+        DeploymentType.SPIDER: "docker-compose-spider.yaml",
     }
 )
 

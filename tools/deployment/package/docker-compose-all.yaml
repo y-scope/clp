@@ -445,6 +445,9 @@ services:
     <<: *service_defaults
     hostname: "query_scheduler"
     stop_grace_period: "10s"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the query scheduler.
+      replicas: "${CLP_QUERY_SCHEDULER_ENABLED:-1}"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
@@ -484,6 +487,9 @@ services:
   query-worker:
     <<: *service_defaults
     hostname: "query_worker"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the query worker.
+      replicas: "${CLP_QUERY_WORKER_ENABLED:-1}"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
@@ -520,6 +526,9 @@ services:
     <<: *service_defaults
     hostname: "reducer"
     stop_grace_period: "10s"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the reducer.
+      replicas: "${CLP_REDUCER_ENABLED:-1}"
     environment:
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"

@@ -44,7 +44,7 @@ There are two flavors of the CLP package:
 
 :::{note}
 Both flavors contain the same binaries but are configured with different values for the
-`package.storage_engine` and `package.query_engine` key.
+`package.storage_engine` and `webui.query_engine` keys.
 :::
 
 To build the package, run:
