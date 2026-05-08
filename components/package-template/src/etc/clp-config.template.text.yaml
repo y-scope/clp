@@ -1,5 +1,11 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 
+# Anonymous usage telemetry.
+# See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+telemetry:
+  disable: false
+  endpoint: "https://telemetry.yscope.io"
+
 package:
   storage_engine: "clp"
   query_engine: "clp"
@@ -166,9 +172,3 @@ log_ingestor: null
 #
 ## Location of the AWS tools' config files (e.g., `~/.aws`)
 #aws_config_directory: null
-#
-## Anonymous usage telemetry. Set to true to disable.
-## See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
-#telemetry:
-#  disable: false
-#  collector_endpoint: "https://telemetry.yscope.io:4318"

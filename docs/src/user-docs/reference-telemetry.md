@@ -74,9 +74,9 @@ separate IDs.
 Metrics are exported via the [OpenTelemetry Protocol
 (OTLP)](https://opentelemetry.io/docs/specs/otlp/) to:
 
-`https://telemetry.yscope.io:4318`
+`https://telemetry.yscope.io`
 
-This is the standard OTLP/HTTP port. System administrators who do not want telemetry leaving their
+System administrators who do not want telemetry leaving their
 network can block this endpoint at the firewall or proxy level.
 
 ## How to disable telemetry
@@ -104,12 +104,12 @@ telemetry:
   disable: true
 ```
 
-You can also override the collector endpoint:
+You can also override the endpoint:
 
 ```yaml
 telemetry:
   disable: false
-  collector_endpoint: "https://your-own-otel-collector:4318"
+  endpoint: "https://your-own-otel-collector"
 ```
 
 ### First-run prompt
@@ -131,7 +131,7 @@ clpConfig:
 
 ### Network-level blocking
 
-Block `telemetry.yscope.io` (port 4318) at your firewall or proxy. This is the simplest way to
+Block `telemetry.yscope.io` at your firewall or proxy. This is the simplest way to
 disable telemetry for an entire organization.
 
 ### Interaction when multiple opt-out mechanisms are set

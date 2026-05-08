@@ -35,7 +35,7 @@ component health status. It does NOT include: log content, queries,
 hostnames, IP addresses, or any personally identifiable
 information.
 
-Telemetry is sent to: https://telemetry.yscope.io:4318
+Telemetry is sent to: https://telemetry.yscope.io
 For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
 
 You can disable telemetry at any time by setting CLP_DISABLE_TELEMETRY=true
