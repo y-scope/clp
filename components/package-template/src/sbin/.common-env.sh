@@ -73,5 +73,5 @@ CLP_COMPOSE_RUN_EXTRA_FLAGS=()
 if [[ $- != *i* ]]; then
     CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
 else
-    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--tty)
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive --tty)
 fi
