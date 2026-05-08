@@ -136,16 +136,6 @@ consent prompt. Your choice is persisted to `clp-config.yaml` as `telemetry.disa
 or `telemetry.disable: false` (for "yes"), ensuring the consent decision survives independent of the
 instance-id file.
 
-### Helm chart
-
-Set in your `values.yaml`:
-
-```yaml
-clpConfig:
-  telemetry:
-    disable: true
-```
-
 ### Network-level blocking
 
 Block `telemetry.yscope.io` at your firewall or proxy. This is the simplest way to
