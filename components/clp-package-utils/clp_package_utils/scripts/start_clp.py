@@ -56,7 +56,7 @@ def _handle_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> Non
 
     Priority order for disabling telemetry:
     1. CLP_DISABLE_TELEMETRY or DO_NOT_TRACK environment variables
-    2. telemetry.disable explicitly set in config file
+    2. telemetry.disable already set to true in config file
     3. First-run interactive prompt (persists choice to config)
 
     :param clp_config: The loaded ClpConfig object.
@@ -71,8 +71,8 @@ def _handle_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> Non
         clp_config.telemetry.disable = True
         return
 
-    # Priority 2: Config file already has explicit setting
-    if clp_config.telemetry.disable is not None:
+    # Priority 2: Config file already disables telemetry
+    if clp_config.telemetry.disable:
         return
 
     # Priority 3: First-run prompt
