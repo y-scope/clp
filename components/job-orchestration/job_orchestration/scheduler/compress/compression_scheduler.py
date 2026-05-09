@@ -644,9 +644,7 @@ def main(argv) -> int | None:
                 logger.info("Forcefully shutting down")
                 return -1
             except Exception:
-                logger.exception(
-                    "Error in scheduling loop, retrying after poll delay."
-                )
+                logger.exception("Error in scheduling loop, retrying after poll delay.")
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
 
 
