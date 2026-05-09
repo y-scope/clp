@@ -53,9 +53,7 @@ telemetry:
 :::
 :::{tab-item} Kubernetes
 :sync: k8s
- 
 Pass the config via `--set` (see the [quick-start guide](quick-start/index.md) for setup details):
- 
 ```bash
 helm install clp clp/clp --set clpConfig.telemetry.disable=true
 ```
