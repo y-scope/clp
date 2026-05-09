@@ -44,7 +44,6 @@ Edit `clp-config.yaml`:
 telemetry:
   disable: true
 ```
- 
 You can also override the endpoint:
  
 ```yaml
