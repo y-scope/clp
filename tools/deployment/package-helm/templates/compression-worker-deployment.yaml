@@ -87,7 +87,7 @@ spec:
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--loglevel", "WARNING",
             "-Q", "compression",
-            "-n", "compression-worker"
+            "-n", "compression-worker@$(HOSTNAME)"
           ]
       volumes:
         - name: {{ include "clp.volumeName" (dict
