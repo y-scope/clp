@@ -68,8 +68,8 @@ appears. If you decline, `telemetry.disable: true` is written to `clp-config.yam
 
 ### Network-level blocking
 
-Block `telemetry.yscope.io` at your firewall or proxy. This is the simplest way to
-disable telemetry for an entire organization.
+For network admins, block `telemetry.yscope.io` at your firewall or proxy. This is the simplest way
+to disable telemetry for your entire organization.
 
 ### Interaction when multiple opt-out mechanisms are set
 
