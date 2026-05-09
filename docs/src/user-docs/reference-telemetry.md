@@ -50,7 +50,6 @@ telemetry:
   disable: false
   endpoint: "https://your-own-otel-collector"
 ```
- 
 :::
 :::{tab-item} Kubernetes
 :sync: k8s
