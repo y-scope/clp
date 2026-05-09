@@ -5,7 +5,6 @@ import logging
 import os
 import pathlib
 import sys
-import tempfile
 
 import click
 from ruamel.yaml import YAML
@@ -210,17 +209,8 @@ def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
 
         config_data.setdefault("telemetry", {})["disable"] = True
 
-        # Write atomically: write to temp file, then replace
-        fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
-        try:
-            with os.fdopen(fd, "w") as f:
-                yaml.dump(config_data, f)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temp_path, config_file_path)
-        except BaseException:
-            os.unlink(temp_path)
-            raise
+        with open(config_file_path, "w") as f:
+            yaml.dump(config_data, f)
     except OSError:
         logger.warning(
             "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
