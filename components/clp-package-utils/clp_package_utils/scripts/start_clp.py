@@ -143,10 +143,6 @@ def main(
         sys.exit(1)
 
 
-if "__main__" == __name__:
-    main()
-
-
 def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Path) -> None:
     """
     Handles telemetry consent and prompts the user on first run if needed.
@@ -215,3 +211,7 @@ def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
         logger.warning(
             "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
         )
+
+
+if "__main__" == __name__:
+    main()
