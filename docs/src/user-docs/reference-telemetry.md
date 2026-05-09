@@ -39,7 +39,6 @@ export DO_NOT_TRACK=1
 ::::{tab-set}
 :::{tab-item} Docker Compose
 :sync: docker
- 
 Add to your `clp-config.yaml`:
  
 ```yaml
