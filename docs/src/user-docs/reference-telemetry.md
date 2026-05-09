@@ -40,7 +40,6 @@ export DO_NOT_TRACK=1
 :::{tab-item} Docker Compose
 :sync: docker
 Edit `clp-config.yaml`:
- 
 ```yaml
 telemetry:
   disable: true
