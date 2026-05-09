@@ -112,7 +112,6 @@ def main(
         logger.exception("Failed to load config.")
         sys.exit(1)
 
-    # Handle telemetry consent (may prompt user on first run)
     _handle_telemetry_consent(clp_config, resolved_config_path)
 
     try:
