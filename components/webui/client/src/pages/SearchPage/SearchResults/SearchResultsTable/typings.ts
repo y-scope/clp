@@ -1,3 +1,6 @@
+import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../config";
+
+
 /**
  * Padding for the table to the bottom of the page.
  */
@@ -6,7 +9,7 @@ const TABLE_BOTTOM_PADDING = 95;
 /**
  * The maximum number of results to retrieve for a search.
  */
-const SEARCH_MAX_NUM_RESULTS = 1000;
+const SEARCH_MAX_NUM_RESULTS = SETTINGS_MAX_SEARCH_RESULTS;
 
 export {
     SEARCH_MAX_NUM_RESULTS,

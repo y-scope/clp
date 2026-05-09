@@ -259,6 +259,7 @@ data:
       {{- else }}
       "LogsInputRootDir": null,
       {{- end }}
+      "MaxSearchResults": {{ .Values.clpConfig.webui.max_search_results | int }},
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "SqlDbClpArchivesTableName": "clp_archives",
@@ -323,6 +324,7 @@ data:
         {{ .Values.clpConfig.archive_output.target_segment_size | int }},
       "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
       "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      "MaxSearchResults": {{ .Values.clpConfig.webui.max_search_results | int }},
       {{- if .Values.clpConfig.presto }}
       "PrestoHost": "{{ include "clp.prestoHost" . }}",
       "PrestoPort": {{ include "clp.prestoPort" . | int }}

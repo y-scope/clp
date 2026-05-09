@@ -28,6 +28,7 @@
 
     "ClpQueryEngine": "clp-s",
     "ClpStorageEngine": "clp-s",
+    "MaxSearchResults": 1000,
     "PrestoHost": "localhost",
     "PrestoPort": 8889
 }

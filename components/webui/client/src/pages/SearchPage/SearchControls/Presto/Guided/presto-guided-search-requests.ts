@@ -6,6 +6,7 @@ import {
     submitQuery,
 } from "../../../../../api/presto-search";
 import {MAX_DATA_POINTS_PER_TIMELINE} from "../../../../../components/ResultsTimeline/typings";
+import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../../config";
 import {
     buildSearchQuery,
     buildTimelineQuery,
@@ -19,7 +20,7 @@ import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 /**
  * Default limit for presto search query
  */
-const DEFAULT_SEARCH_LIMIT = 1000;
+const DEFAULT_SEARCH_LIMIT = SETTINGS_MAX_SEARCH_RESULTS;
 
 
 /**

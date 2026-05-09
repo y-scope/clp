@@ -102,6 +102,7 @@
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
+#  max_search_results: 1000
 #
 #mcp_server: null
 #

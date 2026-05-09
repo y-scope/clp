@@ -724,6 +724,7 @@ class BaseController(ABC):
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
+            "MaxSearchResults": self._clp_config.webui.max_search_results,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
@@ -763,6 +764,7 @@ class BaseController(ABC):
             "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
+            "MaxSearchResults": self._clp_config.webui.max_search_results,
         }
 
         stream_storage = self._clp_config.stream_output.storage

@@ -4,6 +4,7 @@
     "LogsInputType": "fs",
     "LogsInputRootDir": "/",
     "MaxDatasetsPerQuery": 10,
+    "MaxSearchResults": 1000,
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
     "SqlDbClpArchivesTableName": "clp_archives",
     "SqlDbClpDatasetsTableName": "clp_datasets",
