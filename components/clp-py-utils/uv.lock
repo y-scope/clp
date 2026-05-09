@@ -226,7 +226,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pymongo", specifier = ">=4.16.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "ruamel-yaml", specifier = ">=0.18.10" },
+    { name = "ruamel-yaml", specifier = ">=0.19.1" },
 ]
 
 [package.metadata.requires-dev]
