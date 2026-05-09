@@ -28,7 +28,7 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__name__)
 
 # Values accepted by both CLP_DISABLE_TELEMETRY and DO_NOT_TRACK to disable telemetry.
-_TELEMETRY_DISABLE_VALUES = ("1", "true", "yes")
+_TELEMETRY_DISABLE_VALUES = ("1", "true", "yes", "y")
 
 
 TELEMETRY_NOTICE = """
