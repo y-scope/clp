@@ -190,8 +190,6 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
         clp_config.telemetry.disable = True
         _persist_telemetry_disable(config_file_path)
 
-    # Non-interactive: default to enabled (no config write needed)
-
 
 def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
     """
