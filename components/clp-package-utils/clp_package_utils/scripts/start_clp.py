@@ -10,7 +10,7 @@ import tempfile
 import click
 from ruamel.yaml import YAML
 
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
 from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.cli_utils import RESTART_POLICY
@@ -51,7 +51,7 @@ https://telemetry.yscope.io at the firewall level.
 TELEMETRY_PROMPT = "Enable anonymous telemetry to help improve CLP? [Y/n] "
 
 
-def _handle_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> None:
+def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Path) -> None:
     """
     Handles telemetry consent and prompts the user on first run if needed.
 
@@ -63,8 +63,7 @@ def _handle_telemetry_consent(clp_config, config_file_path: pathlib.Path) -> Non
     3. Previously confirmed telemetry preference
     4. First run consent prompt in interactive sessions
 
-    :param clp_config: The loaded ClpConfig object.
-    :param config_file_path: Path to the config file (for persisting consent).
+    :param config_file_path: for persisting consent.
     """
     disable_env = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
     if disable_env in _TELEMETRY_DISABLE_VALUES:
@@ -108,8 +107,6 @@ def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
 
     Uses ruamel.yaml round-trip editing to preserve the user's comments,
     key order, and formatting.
-
-    :param config_file_path: Path to the config file.
     """
     yaml = YAML()
 
