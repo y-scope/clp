@@ -65,11 +65,9 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
 
     :param config_file_path: for persisting consent.
     """
-    disable_env = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
-    if disable_env in _TELEMETRY_DISABLE_VALUES:
-        clp_config.telemetry.disable = True
-        return
-    if os.environ.get("DO_NOT_TRACK", "").strip().lower() in _TELEMETRY_DISABLE_VALUES:
+    clp_disable_val = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
+    dnt_val = os.environ.get("DO_NOT_TRACK", "").strip().lower()
+    if clp_disable_val in _TELEMETRY_DISABLE_VALUES or dnt_val in _TELEMETRY_DISABLE_VALUES:
         clp_config.telemetry.disable = True
         return
 
