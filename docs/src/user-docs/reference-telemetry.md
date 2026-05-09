@@ -10,6 +10,11 @@ As an open-source project, we have limited visibility into how CLP is used in th
 Anonymous metrics help us understand deployment patterns, prioritize platform support, and
 make informed build target decisions.
 
+## What we do NOT collect
+
+Telemetry does **not** include: log content, queries, hostnames, IP addresses, or any other
+Personally Identifiable Information (PII).
+
 ## Telemetry endpoint
 
 Metrics are exported via the [OpenTelemetry Protocol
@@ -24,14 +29,10 @@ Any **one** of the following methods is sufficient:
 
 ### Environment variable
 
+Set `CLP_DISABLE_TELEMETRY`, or `DO_NOT_TRACK` per the
+[Console Do Not Track](https://consoledonottrack.com/) standard, before launching `start-clp.sh`.
 ```bash
 export CLP_DISABLE_TELEMETRY=true
-```
-
-Or use the [Console Do Not Track](https://consoledonottrack.com/) standard:
-
-```bash
-export DO_NOT_TRACK=1
 ```
 
 ### Configuration file
