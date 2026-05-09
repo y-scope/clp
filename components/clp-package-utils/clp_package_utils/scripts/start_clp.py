@@ -78,8 +78,9 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
     if resolve_host_path_in_container(instance_id_file).exists():
         return  # Not first run, skip prompt
 
-    # First run — show prompt if interactive
-    if sys.stdin.isatty():
+    if not sys.stdin.isatty():
+        return
+
         print(TELEMETRY_NOTICE)
         try:
             response = input(TELEMETRY_PROMPT).strip().lower()
