@@ -73,12 +73,13 @@ disable telemetry for an entire organization.
 
 ### Interaction when multiple opt-out mechanisms are set
 
-| Env var | Config file | First-run prompt | Network blocked | Telemetry sent? |
-|---|---|---|---|---|
-| not set | not set | Y (or default) | no | **Yes** |
-| not set | not set | N | no | **No** — prompt wrote `telemetry.disable: true` to config |
-| `true` | `false` | — | no | **No** — env var overrides config |
-| `false` | `true` | — | no | **No** — config disables it; env vars can only disable, not re-enable |
-| not set | `false` | — | **yes** | **No** — requests fail silently at the network level |
-| `true` | `true` | — | no | **No** — both agree |
-| not set | not set | Y | **yes** | **No** — network blocking is independent of software settings |
+| Env var | Config file | First-run prompt | Network blocked | Telemetry sent?                                                        |
+|---------|-------------|------------------|-----------------|------------------------------------------------------------------------|
+| not set | not set     | Y (or default)   | no              | **Yes**                                                                |
+| not set | not set     | N                | no              | **No** — prompt wrote `telemetry.disable: true` to config              |
+| `true`  | `false`     | —                | no              | **No** — env var overrides config                                      |
+| `false` | `true`      | —                | no              | **No** — `false` is not a recognized disable value; config disables it |
+| not set | `false`     | —                | **yes**         | **No** — requests fail silently at the network level                   |
+| `true`  | `true`      | —                | no              | **No** — both agree                                                    |
+| not set | not set     | Y                | **yes**         | **No** — network blocking is independent of software settings          |
+
