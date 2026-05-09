@@ -64,7 +64,6 @@ Pass the config via `--set` (see the [quick-start guide](quick-start/index.md) f
 ```bash
 helm install clp clp/clp --set clpConfig.telemetry.disable=true
 ```
- 
 :::
 ::::
 
