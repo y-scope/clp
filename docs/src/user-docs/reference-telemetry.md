@@ -44,12 +44,7 @@ Edit `clp-config.yaml`:
 ```yaml
 telemetry:
   disable: true
-```
-You can also override the endpoint:
-```yaml
-telemetry:
-  disable: false
-  endpoint: "https://your-own-otel-collector"
+  endpoint: "https://telemetry.yscope.io"  # or "https://your-own-otel-collector"
 ```
 :::
 :::{tab-item} Kubernetes
