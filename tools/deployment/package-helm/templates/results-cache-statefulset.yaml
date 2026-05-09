@@ -40,6 +40,25 @@ spec:
             "--config", "/etc/mongo/mongod.conf",
             "--bind_ip", "0.0.0.0"
           ]
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "bash"
+                  - "-c"
+                  - |
+                    until mongosh --host localhost:27017 --eval "db.runCommand('ping')" \
+                        --quiet 2>/dev/null; do
+                      sleep 1
+                    done
+                    mongosh --host localhost:27017 --eval '
+                      try { rs.status(); } catch(e) {
+                        rs.initiate({
+                          _id: "rs0",
+                          members: [{_id: 0, host: "localhost:27017"}]
+                        });
+                      }
+                    ' 2>/dev/null || true
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &results-cache-health-check
