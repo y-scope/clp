@@ -81,21 +81,16 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
     if not sys.stdin.isatty():
         return
 
-        print(TELEMETRY_NOTICE)
-        try:
-            response = input(TELEMETRY_PROMPT).strip().lower()
-        except EOFError:
-            response = "n"
+    print(TELEMETRY_NOTICE)
+    try:
+        response = input(TELEMETRY_PROMPT).strip().lower()
+    except EOFError:
+        # e.g., Ctrl+D
+        response = "n"
 
-        disable = response.startswith("n")
-        clp_config.telemetry.disable = disable
-        if disable:
-            try:
-                _persist_telemetry_disable(config_file_path)
-            except OSError:
-                logger.warning(
-                    "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
-                )
+    if response.startswith("n"):
+        clp_config.telemetry.disable = True
+        _persist_telemetry_disable(config_file_path)
 
     # Non-interactive: default to enabled (no config write needed)
 
