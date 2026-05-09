@@ -17,8 +17,6 @@ Metrics are exported via the [OpenTelemetry Protocol
 
 `https://telemetry.yscope.io`
 
-System administrators who do not want telemetry leaving their
-network can block this endpoint at the firewall or proxy level.
 
 ## How to disable telemetry
 
