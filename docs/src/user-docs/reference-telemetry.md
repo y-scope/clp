@@ -68,9 +68,8 @@ helm install clp clp/clp --set clpConfig.telemetry.disable=true
 
 ### First-run prompt
 
-When running `start-clp.sh` for the first time in an interactive terminal, you will see a
-consent prompt. If you decline, `telemetry.disable: true` is persisted to `clp-config.yaml`,
-ensuring the consent decision survives independent of the instance-id file.
+When you run `start-clp.sh` for the first time in an interactive terminal, a consent prompt
+appears. If you decline, `telemetry.disable: true` is written to `clp-config.yaml`.
 
 ### Network-level blocking
 
