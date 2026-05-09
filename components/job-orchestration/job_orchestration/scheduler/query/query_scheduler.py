@@ -838,7 +838,7 @@ def handle_pending_query_jobs(
 def try_getting_task_result(async_task_result):
     if not async_task_result.ready():
         return None
-    return async_task_result.get(interval=0.005)
+    return async_task_result.get(timeout=10, interval=0.005)
 
 
 def found_max_num_latest_results(
@@ -1021,7 +1021,9 @@ async def handle_finished_stream_extraction_job(
     del active_jobs[job_id]
 
 
-async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
+async def check_job_status_and_update_db(
+    db_conn_pool, results_cache_uri, task_timeout_seconds: float = 300.0
+):
     global active_jobs
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
@@ -1051,6 +1053,27 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 continue
 
             if returned_results is None:
+                # Check for stale jobs that have been running too long without results
+                if job.start_time is not None:
+                    elapsed = (datetime.datetime.now() - job.start_time).total_seconds()
+                    if elapsed > task_timeout_seconds:
+                        logger.error(
+                            f"Job `{job_id}` timed out after {elapsed:.0f}s without results. "
+                            f"Workers may have died."
+                        )
+                        if QueryJobType.SEARCH_OR_AGGREGATION == job.get_type():
+                            if job.reducer_handler_msg_queues is not None:
+                                msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
+                                await job.reducer_handler_msg_queues.put_to_handler(msg)
+                        del active_jobs[job_id]
+                        set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.FAILED,
+                            QueryJobStatus.RUNNING,
+                            duration=elapsed,
+                        )
                 continue
             job_type = job.get_type()
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
@@ -1066,13 +1089,17 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
     while True:
-        interval_start_time = datetime.datetime.now()
-        await handle_cancelling_search_jobs(db_conn_pool)
-        await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
-        interval_end_time = datetime.datetime.now()
-        await asyncio.sleep(
-            jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
-        )
+        try:
+            interval_start_time = datetime.datetime.now()
+            await handle_cancelling_search_jobs(db_conn_pool)
+            await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
+            interval_end_time = datetime.datetime.now()
+            await asyncio.sleep(
+                jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
+            )
+        except Exception:
+            logger.exception("Error in handle_job_updates, retrying after poll delay.")
+            await asyncio.sleep(jobs_poll_delay)
 
 
 async def handle_jobs(
