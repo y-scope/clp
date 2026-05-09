@@ -33,11 +33,11 @@ _TELEMETRY_DISABLE_VALUES = ("1", "true", "yes", "y")
 
 TELEMETRY_NOTICE = """
 ================================================================================
-CLP collects anonymous usage telemetry to help improve the software.
-This includes: CLP version, OS/architecture, deployment method, and
-component health status. It does NOT include: log content, queries,
-hostnames, IP addresses, or any personally identifiable
-information.
+CLP collects anonymous operational metrics to help improve the software. This
+includes: CLP version, OS/architecture, deployment method, bytes ingested,
+compression ratios, query volume, and more. It does NOT include: log content,
+queries, hostnames, IP addresses, or any other Personally Identifiable
+Information (PII).
 
 Telemetry is sent to: https://telemetry.yscope.io
 For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
