@@ -531,6 +531,40 @@ def poll_running_jobs(
         sys.exit(0)
 
 
+COMPRESSION_JOB_TIMEOUT_SECONDS = 600
+
+
+def _timeout_stale_jobs(logs_directory: Path, db_context: DbContext) -> None:
+    """
+    Marks compression jobs as FAILED if they have been running longer than
+    COMPRESSION_JOB_TIMEOUT_SECONDS without producing results. This handles the case where
+    workers die and their task results never arrive in Redis.
+    """
+    global scheduled_jobs
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    jobs_to_timeout = []
+    for job_id, job in scheduled_jobs.items():
+        elapsed = (now - job.start_time).total_seconds()
+        if elapsed > COMPRESSION_JOB_TIMEOUT_SECONDS and job.num_tasks_completed == 0:
+            logger.error(
+                "Compression job %s timed out after %.0fs without any task completions. "
+                "Workers may have died.",
+                job_id,
+                elapsed,
+            )
+            jobs_to_timeout.append(job_id)
+
+    for job_id in jobs_to_timeout:
+        _handle_failed_compression_job(
+            logs_directory,
+            db_context,
+            job_id,
+            [f"Job timed out after {COMPRESSION_JOB_TIMEOUT_SECONDS}s without results."],
+        )
+        del scheduled_jobs[job_id]
+
+
 def main(argv) -> int | None:
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
@@ -604,13 +638,16 @@ def main(argv) -> int | None:
                     task_manager,
                     db_context,
                 )
+                _timeout_stale_jobs(clp_config.logs_directory, db_context)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")
                 return -1
             except Exception:
-                logger.exception("Error in scheduling.")
-                return -1
+                logger.exception(
+                    "Error in scheduling loop, retrying after poll delay."
+                )
+                time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
 
 
 def _batch_tasks(
