@@ -3,6 +3,7 @@ import {Dayjs} from "dayjs";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
+import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../config";
 import {downloadTextFile} from "../../../utils/download";
 import {
     DEFAULT_TIME_RANGE,
@@ -23,6 +24,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    maxNumResults: SETTINGS_MAX_SEARCH_RESULTS,
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
@@ -43,6 +45,11 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * Maximum number of results to retrieve for a search query.
+     */
+    maxNumResults: number;
 
     /**
      * The number of search results from server metadata.
@@ -121,6 +128,7 @@ interface SearchState {
     handleSearchResultsExport: () => void;
 
     updateAggregationJobId: (id: string | null) => void;
+    updateMaxNumResults: (num: number) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
@@ -158,6 +166,9 @@ const useSearchStore = create<SearchState>((set, get) => ({
     },
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateMaxNumResults: (num) => {
+        set({maxNumResults: num});
     },
     updateNumSearchResultsMetadata: (num) => {
         set({numSearchResultsMetadata: num});

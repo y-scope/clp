@@ -3,6 +3,7 @@ import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
 import Dataset from "../Dataset";
 import styles from "../index.module.css";
+import MaxResultsInput from "../MaxResultsInput";
 import QueryStatus from "../QueryStatus";
 import TimeRangeInput from "../TimeRangeInput";
 import QueryInput from "./QueryInput";
@@ -20,6 +21,7 @@ const NativeControls = () => (
             {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
             <QueryInput/>
             <TimeRangeInput/>
+            <MaxResultsInput/>
             <SearchButton/>
         </div>
         <div className={styles["status"]}>
