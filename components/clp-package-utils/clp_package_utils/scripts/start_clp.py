@@ -73,10 +73,11 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
 
     if clp_config.telemetry.disable:
         return
-
+    
+    # Skip prompt if not the first run. i.e., telemetry preference has been confirmed previously.
     instance_id_file = clp_config.logs_directory / "instance-id"
     if resolve_host_path_in_container(instance_id_file).exists():
-        return  # Not first run, skip prompt
+        return
 
     if not sys.stdin.isatty():
         return
