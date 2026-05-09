@@ -69,6 +69,10 @@ pub mod s3 {
         /// Per-job ingestion buffer config.
         #[serde(default)]
         pub buffer_config: BufferConfig,
+
+        /// Configuration for retry behavior on transient ingestion failures.
+        #[serde(default)]
+        pub retry_config: RetryConfig,
     }
 
     /// Configuration for a SQS listener job.
@@ -164,6 +168,39 @@ pub mod s3 {
         pub start_after: Option<NonEmptyString>,
     }
 
+    /// Configuration for retry behavior on transient failures.
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    #[serde(default)]
+    pub struct RetryConfig {
+        /// Maximum number of consecutive transient failures before the job is marked as failed.
+        /// Defaults to 10.
+        #[schema(minimum = 1)]
+        pub max_consecutive_failures: u32,
+
+        /// Initial backoff duration in milliseconds before the first retry.
+        /// Defaults to 1000 (1 second).
+        pub initial_backoff_ms: u64,
+
+        /// Maximum backoff duration in milliseconds.
+        /// Defaults to 60000 (60 seconds).
+        pub max_backoff_ms: u64,
+
+        /// Backoff multiplier applied after each consecutive failure.
+        /// Defaults to 2.
+        pub backoff_multiplier: u32,
+    }
+
+    impl Default for RetryConfig {
+        fn default() -> Self {
+            Self {
+                max_consecutive_failures: 10,
+                initial_backoff_ms: 1_000,
+                max_backoff_ms: 60_000,
+                backoff_multiplier: 2,
+            }
+        }
+    }
+
     /// Configuration for buffer behavior.
     #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
     #[serde(default)]
@@ -230,7 +267,28 @@ pub type JobId = u64;
 
 #[cfg(test)]
 mod tests {
-    use super::s3::BufferConfig;
+    use super::s3::{BufferConfig, RetryConfig};
+
+    #[test]
+    fn test_retry_config_defaults() -> Result<(), serde_json::Error> {
+        let config: RetryConfig = serde_json::from_str("{}")?;
+        assert_eq!(config.max_consecutive_failures, 10);
+        assert_eq!(config.initial_backoff_ms, 1_000);
+        assert_eq!(config.max_backoff_ms, 60_000);
+        assert_eq!(config.backoff_multiplier, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_retry_config_partial_override() -> Result<(), serde_json::Error> {
+        let config: RetryConfig =
+            serde_json::from_str(r#"{"max_consecutive_failures": 5}"#)?;
+        assert_eq!(config.max_consecutive_failures, 5);
+        assert_eq!(config.initial_backoff_ms, 1_000);
+        assert_eq!(config.max_backoff_ms, 60_000);
+        assert_eq!(config.backoff_multiplier, 2);
+        Ok(())
+    }
 
     #[test]
     fn test_buffer_config_partial_override() -> Result<(), serde_json::Error> {

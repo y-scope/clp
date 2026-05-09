@@ -14,6 +14,7 @@ use clp_rust_utils::{
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
+use super::retry::RetryState;
 use crate::{
     aws_client_manager::AwsClientManagerType,
     ingestion_job::{IngestionJobId, IngestionJobState, SqsListenerState},
@@ -43,7 +44,8 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
     Task<SqsClientManager, State>
 {
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
-    /// extracted metadata is ingested into the provided state.
+    /// extracted metadata is ingested into the provided state. Transient failures are retried with
+    /// exponential backoff up to the configured maximum consecutive failures.
     ///
     /// # Returns
     ///
@@ -53,34 +55,64 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
-    /// * Forwards [`Self::process_sqs_response`]'s return values on failure.
-    /// * Forwards
-    ///   [`aws_sdk_sqs::operation::receive_message::builders::ReceiveMessageFluentBuilder::send`]'s
-    ///   return values on failure.
+    /// * The maximum number of consecutive transient failures is exceeded.
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
+        let mut retry_state =
+            RetryState::new(self.config.get().base.retry_config.clone());
+
+        loop {
+            select! {
+                () = cancel_token.cancelled() => {
+                    return Ok(());
+                }
+
+                result = self.receive_and_process_once() => {
+                    match result {
+                        Ok(()) => {
+                            retry_state.record_success();
+                        }
+                        Err(err) => {
+                            if !retry_state.record_failure() {
+                                return Err(err.context(format!(
+                                    "Exceeded maximum consecutive failures ({})",
+                                    retry_state.consecutive_failures()
+                                )));
+                            }
+                            tracing::warn!(
+                                error = ?err,
+                                job_id = ?self.job_id,
+                                task_id = ?self.id,
+                                attempt = retry_state.consecutive_failures(),
+                                max_attempts = self.config.get().base.retry_config.max_consecutive_failures,
+                                "SQS listener transient failure, retrying after backoff."
+                            );
+                            if retry_state.backoff_sleep(&cancel_token).await {
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Receives messages from SQS and processes them in a single iteration.
+    async fn receive_and_process_once(&self) -> Result<()> {
         const MAX_NUM_MESSAGES_TO_FETCH: i32 = 10;
         const MAX_WAIT_TIME_SEC: u16 = 20;
         let config = self.config.get();
         let wait_time_sec = i32::from(min(config.wait_time_sec, MAX_WAIT_TIME_SEC));
 
-        loop {
-            select! {
-                // Cancellation requested.
-                () = cancel_token.cancelled() => {
-                    return Ok(());
-                }
-
-                // Listen to SQS messages.
-                result = self.sqs_client_manager.get().await?
-                    .receive_message()
-                    .queue_url(config.queue_url.as_str())
-                    .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
-                    .wait_time_seconds(wait_time_sec).send() => {
-                    self.process_sqs_response(result?).await?;
-                }
-            }
-        }
+        let client = self.sqs_client_manager.get().await?;
+        let response = client
+            .receive_message()
+            .queue_url(config.queue_url.as_str())
+            .max_number_of_messages(MAX_NUM_MESSAGES_TO_FETCH)
+            .wait_time_seconds(wait_time_sec)
+            .send()
+            .await?;
+        self.process_sqs_response(response).await?;
+        Ok(())
     }
 
     /// Processes the SQS response to extract S3 object metadata and ingests it into the provided

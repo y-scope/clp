@@ -1,3 +1,4 @@
+mod retry;
 mod s3_scanner;
 mod sqs_listener;
 mod state;

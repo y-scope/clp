@@ -7,6 +7,7 @@ use non_empty_string::NonEmptyString;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
+use super::retry::RetryState;
 use crate::{
     aws_client_manager::AwsClientManagerType,
     ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState},
@@ -37,7 +38,8 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
     /// Runs the S3 scanner task to scan the given bucket.
     ///
     /// This is a wrapper of [`Self::scan_once`] that supports cancellation via the provided
-    /// cancellation token.
+    /// cancellation token. Transient failures are retried with exponential backoff up to the
+    /// configured maximum consecutive failures.
     ///
     /// # Returns
     ///
@@ -47,24 +49,45 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::scan_once`]'s return values on failure.
+    /// * The maximum number of consecutive transient failures is exceeded.
     pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
+        let mut retry_state = RetryState::new(self.config.base.retry_config.clone());
+
         loop {
             select! {
-                // Cancellation requested.
                 () = cancel_token.cancelled() => {
                     return Ok(());
                 }
 
-                // Scanner execution
                 is_truncated_result = self.scan_once() => {
-                    if is_truncated_result? {
-                        // The results are truncated. Keep going until all objects are listed.
-                        // Ideally, we can use the continuation token to continue listing objects,
-                        // but since we may refresh the client in the next scan cycle, we will use
-                        // `start_after` to send a new request to resume the scanning progress for
-                        // simplicity.
-                        continue;
+                    match is_truncated_result {
+                        Ok(is_truncated) => {
+                            retry_state.record_success();
+                            if is_truncated {
+                                // The results are truncated. Keep going until all objects are
+                                // listed. We use `start_after` to send a new request to resume
+                                // the scanning progress.
+                                continue;
+                            }
+                        }
+                        Err(err) => {
+                            if !retry_state.record_failure() {
+                                return Err(err.context(format!(
+                                    "Exceeded maximum consecutive failures ({})",
+                                    retry_state.consecutive_failures()
+                                )));
+                            }
+                            tracing::warn!(
+                                error = ?err,
+                                attempt = retry_state.consecutive_failures(),
+                                max_attempts = self.config.base.retry_config.max_consecutive_failures,
+                                "S3 scanner transient failure, retrying after backoff."
+                            );
+                            if retry_state.backoff_sleep(&cancel_token).await {
+                                return Ok(());
+                            }
+                            continue;
+                        }
                     }
                 }
             }

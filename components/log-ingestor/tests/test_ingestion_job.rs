@@ -10,6 +10,7 @@ use clp_rust_utils::{
     job_config::ingestion::s3::{
         BaseConfig,
         BufferConfig,
+        RetryConfig,
         S3ScannerConfig,
         SqsListenerConfig,
         ValidatedSqsListenerConfig,
@@ -330,6 +331,7 @@ async fn test_sqs_listener() -> Result<()> {
                     timestamp_key: None,
                     unstructured: false,
                     buffer_config: BufferConfig::default(),
+                    retry_config: RetryConfig::default(),
                 },
             },
         )
@@ -372,6 +374,7 @@ async fn test_s3_scanner() -> Result<()> {
             timestamp_key: None,
             unstructured: false,
             buffer_config: BufferConfig::default(),
+            retry_config: RetryConfig::default(),
         },
         scanning_interval_sec: 1,
         start_after: None,
