@@ -196,26 +196,32 @@ def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
     Writes telemetry.disable = true to the config file.
 
     Uses ruamel.yaml round-trip editing to preserve the user's comments,
-    key order, and formatting.
+    key order, and formatting. Logs a warning on I/O failure rather than
+    propagating the exception.
     """
     yaml = YAML()
 
-    if config_file_path.exists():
-        with open(config_file_path, "r") as f:
-            config_data = yaml.load(f) or {}
-    else:
-        config_data = {}
-
-    config_data.setdefault("telemetry", {})["disable"] = True
-
-    # Write atomically: write to temp file, then replace
-    fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
     try:
-        with os.fdopen(fd, "w") as f:
-            yaml.dump(config_data, f)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(temp_path, config_file_path)
-    except BaseException:
-        os.unlink(temp_path)
-        raise
+        if config_file_path.exists():
+            with open(config_file_path, "r") as f:
+                config_data = yaml.load(f) or {}
+        else:
+            config_data = {}
+
+        config_data.setdefault("telemetry", {})["disable"] = True
+
+        # Write atomically: write to temp file, then replace
+        fd, temp_path = tempfile.mkstemp(suffix=".yaml", dir=config_file_path.parent)
+        try:
+            with os.fdopen(fd, "w") as f:
+                yaml.dump(config_data, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, config_file_path)
+        except BaseException:
+            os.unlink(temp_path)
+            raise
+    except OSError:
+        logger.warning(
+            "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
+        )
