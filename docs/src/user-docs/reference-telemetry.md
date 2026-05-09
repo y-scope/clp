@@ -45,7 +45,6 @@ telemetry:
   disable: true
 ```
 You can also override the endpoint:
- 
 ```yaml
 telemetry:
   disable: false
