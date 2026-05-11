@@ -1200,10 +1200,7 @@ async def handle_jobs(
         tasks = [handle_updating_task]
         existing_datasets: set[str] = set()
         while True:
-            # Run in a thread to prevent blocking the async event loop if DB/Redis
-            # calls inside handle_pending_query_jobs hang.
-            reducer_acquisition_tasks = await asyncio.to_thread(
-                handle_pending_query_jobs,
+            reducer_acquisition_tasks = handle_pending_query_jobs(
                 db_conn_pool,
                 clp_metadata_db_conn_params,
                 results_cache_uri,
