@@ -261,7 +261,7 @@ class PackageInstance:
 
         :param clp_instance_id_file_path:
         :return: The instance ID (a UUIDv4 string).
-        :raise ValueError: If the file cannot be read or contents are not a valid UUID.
+        :raise ValueError: If the file cannot be read or contents are not a valid UUIDv4.
         """
         try:
             contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
