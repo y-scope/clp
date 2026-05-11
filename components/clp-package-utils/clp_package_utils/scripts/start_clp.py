@@ -7,7 +7,6 @@ import pathlib
 import sys
 
 import click
-from ruamel.yaml import YAML
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
 from clp_py_utils.core import resolve_host_path_in_container
@@ -17,6 +16,7 @@ from clp_package_utils.controller import DockerComposeController, get_or_create_
 from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
+    set_yaml_key,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
@@ -183,34 +183,7 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
 
     if response.startswith("n"):
         clp_config.telemetry.disable = True
-        _persist_telemetry_disable(config_file_path)
-
-
-def _persist_telemetry_disable(config_file_path: pathlib.Path) -> None:
-    """
-    Writes telemetry.disable = true to the config file.
-
-    Uses ruamel.yaml round-trip editing to preserve the user's comments,
-    key order, and formatting. Logs a warning on I/O failure rather than
-    propagating the exception.
-    """
-    yaml = YAML()
-
-    try:
-        if config_file_path.exists():
-            with open(config_file_path, "r") as f:
-                config_data = yaml.load(f) or {}
-        else:
-            config_data = {}
-
-        config_data.setdefault("telemetry", {})["disable"] = True
-
-        with open(config_file_path, "w") as f:
-            yaml.dump(config_data, f)
-    except OSError:
-        logger.warning(
-            "Failed to persist telemetry preference to %s", config_file_path, exc_info=True
-        )
+        set_yaml_key(config_file_path, "telemetry.disable", "true")
 
 
 if "__main__" == __name__:
