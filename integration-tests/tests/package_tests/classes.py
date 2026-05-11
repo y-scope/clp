@@ -19,6 +19,7 @@ from tests.utils.utils import (
 
 logger = logging.getLogger(__name__)
 
+_UUID_V4_VERSION = 4
 
 @dataclass
 class ClpPackageTestPathConfig(IntegrationTestPathConfig):
