@@ -784,6 +784,8 @@ def handle_pending_query_jobs(
                 continue
 
         futures = []
+        # Track archives sent per future so we can restore them on failure
+        future_to_job_id: dict[concurrent.futures.Future, str] = {}
         for job in pending_search_jobs:
             job_id = job.id
             if (
@@ -812,27 +814,60 @@ def handle_pending_query_jobs(
                     num_tasks=job.num_archives_to_search,
                 )
 
-            futures.append(
-                process_pool.submit(
-                    DispatchExecutor.dispatch_job_and_update_db,
-                    job.get_config().model_dump(),
-                    job.get_type(),
-                    job_id,
-                    archives_for_search,
-                )
+            future = process_pool.submit(
+                DispatchExecutor.dispatch_job_and_update_db,
+                job.get_config().model_dump(),
+                job.get_type(),
+                job_id,
+                archives_for_search,
             )
+            futures.append(future)
+            future_to_job_id[future] = job_id
 
-        for future in concurrent.futures.as_completed(futures):
-            job_id, num_archives_for_search, group_result_id = future.result()
-            job = active_jobs[job_id]
-            job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
-                group_result_id, app=app
-            )
-            job.last_dispatch_time = datetime.datetime.now()
-            job.state = InternalJobState.RUNNING
-            logger.info(
-                "Dispatched job %s with %d archives to search.", job_id, num_archives_for_search
-            )
+        try:
+            for future in concurrent.futures.as_completed(futures, timeout=60):
+                job_id, num_archives_for_search, group_result_id = future.result()
+                job = active_jobs[job_id]
+                try:
+                    job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
+                        group_result_id, app=app
+                    )
+                except Exception:
+                    logger.exception("Failed to restore GroupResult for job %s from Redis.", job_id)
+                    del active_jobs[job_id]
+                    set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.RUNNING,
+                        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+                    )
+                    continue
+                job.last_dispatch_time = datetime.datetime.now()
+                job.state = InternalJobState.RUNNING
+                logger.info(
+                    "Dispatched job %s with %d archives to search.",
+                    job_id,
+                    num_archives_for_search,
+                )
+        except TimeoutError:
+            # Some dispatch futures didn't complete in time — mark those jobs as failed
+            for future in futures:
+                if not future.done():
+                    job_id = future_to_job_id[future]
+                    logger.error("Dispatch timed out for job %s. Marking as FAILED.", job_id)
+                    if job_id in active_jobs:
+                        job = active_jobs.pop(job_id)
+                        set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.FAILED,
+                            QueryJobStatus.RUNNING,
+                            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+                        )
+                    future.cancel()
 
     return reducer_acquisition_tasks
 
