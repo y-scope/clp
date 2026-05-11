@@ -57,6 +57,8 @@ public:
 
     bool as_any(FilterOperation op) override;
 
+    [[nodiscard]] bool has_wildcards() override;
+
 private:
     std::string m_v;
     literal_type_bitmask_t m_string_type;
@@ -69,9 +71,9 @@ private:
         //     m_string_type = LiteralType::VarStringT;
         // }
 
-        //if (has_unescaped_wildcards(m_v)) {
-        //    m_string_type |= LiteralType::ClpStringT;
-        //}
+        // if (has_unescaped_wildcards(m_v)) {
+        //     m_string_type |= LiteralType::ClpStringT;
+        // }
     }
 };
 }  // namespace clp_s::search::ast

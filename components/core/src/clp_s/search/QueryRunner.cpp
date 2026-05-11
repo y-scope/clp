@@ -1,8 +1,14 @@
 #include "QueryRunner.hpp"
 
+#include <array>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
+#include <fmt/compile.h>
+#include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
 
 #include "../../clp/Defs.h"
@@ -37,7 +43,74 @@ using clp_s::search::ast::OrExpr;
 
 namespace clp_s::search {
 uint64_t QueryRunner::m_int_col_checks{0};
+uint64_t QueryRunner::m_float_col_checks{0};
 uint64_t QueryRunner::m_str_col_checks{0};
+
+namespace {
+/**
+ * Wildcard fallback for numeric columns. Converts each value to string via `fmt::format_to_n` and
+ * matches against the query pattern. Uses `fmt::format("{:.17g}", value)` for doubles to avoid both
+ * rounding false negatives and trailing-zero false positives.
+ */
+template <typename T>
+auto evaluate_numeric_wildcard_filter(
+        ast::FilterOperation op,
+        std::shared_ptr<ast::Literal> const& operand,
+        std::vector<BaseColumnReader*> const& readers,
+        uint64_t& col_checks,
+        uint64_t cur_message
+) -> bool;
+
+template <typename T>
+auto evaluate_numeric_wildcard_filter(
+        ast::FilterOperation op,
+        std::shared_ptr<ast::Literal> const& operand,
+        std::vector<BaseColumnReader*> const& readers,
+        uint64_t& col_checks,
+        uint64_t cur_message
+) -> bool {
+    std::string query_string;
+    if (false == operand->as_var_string(query_string, op)) {
+        return false;
+    }
+    for (BaseColumnReader* reader : readers) {
+        ++col_checks;
+        auto const value{std::get<T>(reader->extract_value(cur_message))};
+
+        constexpr size_t cNumericConversionBufferSize{64};
+        std::array<char, cNumericConversionBufferSize> buf{};
+        auto result = [&]() -> auto {
+            if constexpr (std::is_floating_point_v<T>) {
+                return fmt::format_to_n(
+                        buf.begin(),
+                        buf.size(),
+                        FMT_COMPILE("{:.17g}"),
+                        value
+                );
+            }
+            return fmt::format_to_n(
+                    buf.begin(),
+                    buf.size(),
+                    FMT_COMPILE("{}"),
+                    value
+            );
+        }();
+
+        if (result.size > buf.size()) {
+            continue;
+        }
+
+        std::string_view const value_sv{buf.data(), result.size};
+        bool const matched{
+                clp::string_utils::wildcard_match_unsafe(value_sv, query_string, false)
+        };
+        if ((ast::FilterOperation::EQ == op) == matched) {
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
 
 void QueryRunner::global_init() {
     populate_internal_columns();
@@ -361,7 +434,13 @@ bool QueryRunner::evaluate_int_filter(
 
     int64_t op_value;
     if (false == operand->as_int(op_value, op)) {
-        return false;
+        return evaluate_numeric_wildcard_filter<int64_t>(
+                op,
+                operand,
+                m_basic_readers[column_id],
+                m_int_col_checks,
+                m_cur_message
+        );
     }
 
     for (BaseColumnReader* reader : m_basic_readers[column_id]) {
@@ -402,12 +481,23 @@ bool QueryRunner::evaluate_float_filter(
         return true;
     }
 
+    if (operand->has_wildcards()) {
+        return evaluate_numeric_wildcard_filter<double>(
+                op,
+                operand,
+                m_basic_readers[column_id],
+                m_float_col_checks,
+                m_cur_message
+        );
+    }
+
     double op_value;
     if (false == operand->as_float(op_value, op)) {
         return false;
     }
 
     for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+        ++m_float_col_checks;
         double value = std::get<double>(reader->extract_value(m_cur_message));
         if (evaluate_float_filter_core(op, value, op_value)) {
             return true;

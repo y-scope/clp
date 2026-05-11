@@ -1,8 +1,7 @@
 #include "DecomposedQuery.hpp"
 
-#include <algorithm>
+#include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -41,10 +40,7 @@ auto DecomposedQuery::decompose_query(
             if (sub_query.qualified_name.empty()) {
                 interp.m_static_text.append(sub_query.value);
             } else {
-                interp.m_leaf_queries.emplace_back(
-                        sub_query.qualified_name,
-                        sub_query.value
-                );
+                interp.m_leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
                 interp.m_static_text.append(fmt::format("%{}%", sub_query.qualified_name));
             }
         }
@@ -71,27 +67,19 @@ auto DecomposedQuery::create_parent_match_dicts(log_surgeon::EventHandle const& 
     return {root_matches, parent_matches};
 }
 
-auto DecomposedQuery::get_qualified_name(log_surgeon::Match const& match) -> std::string {
-    std::vector<std::string_view> names;
-    auto const* cur{&match};
-    while (0 != cur->sub_rule_id) {
-        names.emplace_back(cur->ffi_pointers.sub_rule_name.as_cpp_view());
-        cur = cur->ffi_pointers.parent;
-        if (nullptr == cur) {
+auto DecomposedQuery::split_qualified_name(std::string_view const qualified_name)
+        -> std::vector<std::string_view> {
+    std::vector<std::string_view> rule_names;
+    size_t start{0};
+    while (true) {
+        auto end{qualified_name.find('.', start)};
+        if (std::string::npos == end) {
+            rule_names.emplace_back(qualified_name.substr(start));
             break;
         }
+        rule_names.emplace_back(qualified_name.substr(start, end - start));
+        start = end + 1;
     }
-    if (nullptr != cur) {
-        names.emplace_back(cur->ffi_pointers.rule_name.as_cpp_view());
-    }
-
-    std::string qualified_name;
-    for (auto it{names.rbegin()}; names.rend() != it; ++it) {
-        if (names.rbegin() != it) {
-            qualified_name.append(".");
-        }
-        qualified_name.append(*it);
-    }
-    return qualified_name;
+    return rule_names;
 }
 }  // namespace clpp

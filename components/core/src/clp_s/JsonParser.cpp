@@ -1508,11 +1508,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             break;
         }
 
-        auto name{
-                0 == match->sub_rule_id
-                        ? std::string{match->ffi_pointers.rule_name.as_cpp_view()}
-                        : std::string{match->ffi_pointers.sub_rule_name.as_cpp_view()}
-        };
         auto parent_node_id{log_msg_node_id};
         if (0 != match->sub_rule_id) {
             parent_node_id = get_parent_schema_node(
@@ -1526,7 +1521,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         static auto const cIntSet{absl::flat_hash_set<std::string>{
                 // heuristic
                 "INT",
-                // hive
+                // hive 0426
                 "blk_id",
                 "blk_gen",
                 "used_memory_size",
@@ -1540,6 +1535,49 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 "reduceID",
                 "processTreeID",
                 // "durationSuffix", // regex needs better rule to use
+                // hive 0507
+                "cluster",
+                "jobSeq",
+                "task",
+                "attempt",
+                "appSeq",
+                "containerSeq",
+                "blockNum",
+                "genStamp",
+                "poolID",
+                "poolTimestamp",
+                "byteValue",
+                "portNum",
+                "port",
+                "memory",
+                "vcores",
+                "done",
+                "total",
+                "opID",
+                "counterVal",
+                "readerID",
+                "handler",
+                "retries",
+                "pid",
+                "mapOutputSize",
+                "inMemMapOutputsCount",
+                "commitMemory",
+                "usedMemory",
+                "fetcherID",
+                "decompSize",
+                "compressedLen",
+                "assignedCount",
+                "startIndex",
+                "maxEvents",
+                "processTreePID",
+                "srcLine",
+                "framesOmitted",
+                "numMapOutputs",
+                "hiveOpIdx",
+                "recordsWritten",
+                "numSegments",
+                "segmentsLeft",
+                "opChildID",
                 // hadoop
                 "blockID",
                 "serverCallId",
@@ -1562,29 +1600,33 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 "metric_value",
                 "size_value",
         }};
-        static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT"}};
+        static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT", "byteValue"}};
         // TODO clpp: handle floats too
         if (encoded_variable_t var{0};
-            cIntSet.contains(name)
+            cIntSet.contains(match->ffi_pointers.rule_name.as_cpp_view())
             && clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                     match->ffi_pointers.lexeme.as_cpp_view(),
                     var
             ))
         {
-            m_current_schema.insert_unordered(
-                    m_archive_writer->add_node(parent_node_id, NodeType::Integer, name)
-            );
+            m_current_schema.insert_unordered(m_archive_writer->add_node(
+                    parent_node_id,
+                    NodeType::Integer,
+                    match->ffi_pointers.rule_name.as_cpp_view()
+            ));
             m_current_parsed_message.add_unordered_value(var);
         } else {
-            m_current_schema.insert_unordered(
-                    m_archive_writer->add_node(parent_node_id, NodeType::VarString, name)
-            );
+            m_current_schema.insert_unordered(m_archive_writer->add_node(
+                    parent_node_id,
+                    NodeType::VarString,
+                    match->ffi_pointers.rule_name.as_cpp_view()
+            ));
             m_current_parsed_message.add_unordered_value(match->ffi_pointers.lexeme.as_cpp_view());
         }
 
         log_type.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
         log_type.append(
-                fmt::format("%{}%", clpp::DecomposedQuery::get_qualified_name(match.value()))
+                fmt::format("%{}%", match->ffi_pointers.fully_qualified_name.as_cpp_view())
         );
         log_msg_pos = match->range.end;
     }
@@ -1608,7 +1650,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 continue;
             }
             metadata.emplace_parent_match(
-                    clpp::DecomposedQuery::get_qualified_name(match),
+                    match.ffi_pointers.fully_qualified_name.as_cpp_view(),
                     match.range.start,
                     match.range.end - match.range.start
             );
@@ -1620,8 +1662,12 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 break;
             }
             auto const old_size{leaf_match->range.end - leaf_match->range.start};
-            auto const new_size{clpp::DecomposedQuery::get_qualified_name(*leaf_match).size() + 2};
-            auto const diff{static_cast<ssize_t>(old_size) - static_cast<ssize_t>(new_size)};
+            auto const new_size{
+                    leaf_match->ffi_pointers.fully_qualified_name.as_cpp_view().size() + 2
+            };
+            // clpp TODO: this is "dangerous" and should be fixed, but if the matches are hitting
+            // the boundary of size_t we probably have bigger problems.
+            auto const diff{static_cast<int64_t>(old_size) - static_cast<int64_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
                 if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
                     metadata.parent_match(j).m_start -= diff;
@@ -1630,40 +1676,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 }
             }
         }
-        // {  // DEBUG
-        //     for (size_t i{0};; ++i) {
-        //         auto const cap{event.get_leaf_match(i)};
-        //         if (false == cap.has_value()) {
-        //             break;
-        //         }
-        //         SPDLOG_INFO(
-        //                 "[clpsls] leaf match '{}' ({}.{}.{}): '{}'",
-        //                 get_cap_name(*cap),
-        //                 cap->rule_idx,
-        //                 cap->sub_rule_id,
-        //                 cap->parent_id,
-        //                 log_msg.substr(cap->range.start, cap->range.end - cap->range.start)
-        //         );
-        //     }
-        //     size_t parent_match_idx{0};
-        //     for (auto const& cap : event.get_all_matches()) {
-        //         if (cap.is_leaf) {
-        //             continue;
-        //         }
-        //         SPDLOG_INFO(
-        //                 "[clpsls] parent match '{}' ({}.{}.{}): '{}'",
-        //                 get_cap_name(cap),
-        //                 cap.rule_idx,
-        //                 cap.sub_rule_id,
-        //                 cap.parent_id,
-        //                 log_type.substr(
-        //                         metadata.parent_match(parent_match_idx).m_start,
-        //                         metadata.parent_match(parent_match_idx).m_size
-        //                 )
-        //         );
-        //         ++parent_match_idx;
-        //     }
-        // }
         YSTDLIB_ERROR_HANDLING_TRYV(
                 m_archive_writer->update_logtype_metadata(log_type_id, metadata)
         );
@@ -1702,7 +1714,7 @@ auto JsonParser::get_parent_schema_node(
     auto node_id{m_archive_writer->add_node(
             get_parent_schema_node(parent, root_node_id, root_matches, parent_matches),
             NodeType::ParentRule,
-            parent.ffi_pointers.sub_rule_name.as_cpp_view()
+            parent.ffi_pointers.rule_name.as_cpp_view()
     )};
     m_current_schema.insert_unordered(node_id);
     return node_id;

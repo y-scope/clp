@@ -112,6 +112,22 @@ private:
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
     /**
+     * Given a column and a list of rule names from a log-surgeon fully qualified name,
+     * appends only the non-common suffix (the part not already covered by the schema path
+     * from root_node_id up to LogMessage) to the column's descriptor list.
+     * @param column The original column descriptor.
+     * @param root_node_id The schema node where decomposition is rooted.
+     * @param rule_names The split rule names from the log-surgeon FQN.
+     * @return The new column with appended descriptors and the final schema node ID, or
+     * std::nullopt if any rule name cannot be resolved in the schema tree.
+     */
+    auto append_noncommon_rule_names(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t root_node_id,
+            std::vector<std::string_view> const& rule_names
+    ) -> std::optional<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>>;
+
+    /**
      * Builds the reverse mapping from logtype_id to schema_id by scanning schemas
      * for their NodeType::LogTypeID nodes.
      */
@@ -167,7 +183,7 @@ private:
      * @param query The raw CLP-string query text.
      * @return A pointer to the cached DecomposedQuery on success.
      */
-    auto lookup_decomposed_query(std::string qualified_name, std::string const& query)
+    auto lookup_decomposed_query(std::string const& qualified_name, std::string const& query)
             -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
 
     /**

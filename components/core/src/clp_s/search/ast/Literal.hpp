@@ -2,6 +2,7 @@
 #define CLP_S_SEARCH_LITERAL_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
@@ -107,6 +108,8 @@ public:
     virtual bool as_timestamp() { return false; }
 
     virtual bool as_any(FilterOperation op) { return false; }
+
+    [[nodiscard]] virtual bool has_wildcards() { return false; }
 };
 }  // namespace clp_s::search::ast
 

@@ -2,7 +2,6 @@
 #define CLPP_DECOMPOSEDQUERY_HPP
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -39,16 +38,22 @@ public:
     ) -> ystdlib::error_handling::Result<DecomposedQuery>;
 
     // Methods
-    [[nodiscard]] auto get_interpretations() const
-            -> std::vector<Interpretation> const& {
+    [[nodiscard]] auto get_interpretations() const -> std::vector<Interpretation> const& {
         return m_interpretations;
     }
 
+    // Investigate removing this
     static auto create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
             pair<absl::flat_hash_map<uint32_t, log_surgeon::Match const>,
                  absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const>>;
 
-    static auto get_qualified_name(log_surgeon::Match const& match) -> std::string;
+    /**
+     * Splits a fully qualified dot-separated rule name into its segments.
+     * @param qualified_name
+     * @return The list of rule name segments starting from the root rule.
+     */
+    [[nodiscard]] static auto split_qualified_name(std::string_view qualified_name)
+            -> std::vector<std::string_view>;
 
 private:
     // Constructors

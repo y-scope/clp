@@ -508,6 +508,10 @@ int main(int argc, char const* argv[]) {
 
     SPDLOG_INFO("[stats] total messages searched: {}", clp::GrepCore::m_total_messages_searched);
     SPDLOG_INFO("[stats] clps int filter check: {}", clp_s::search::QueryRunner::m_int_col_checks);
+    SPDLOG_INFO(
+            "[stats] clps float filter check: {}",
+            clp_s::search::QueryRunner::m_float_col_checks
+    );
     SPDLOG_INFO("[stats] clps str filter check: {}", clp_s::search::QueryRunner::m_str_col_checks);
     return 0;
 }

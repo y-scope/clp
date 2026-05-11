@@ -139,10 +139,7 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
 
     if (false == m_log_surgeon_schema_text.empty()) {
         auto compressed_size{store_log_surgeon_schema()};
-        files.emplace_back(
-                std::string(constants::cArchiveLogSurgeonSchemaFile),
-                compressed_size
-        );
+        files.emplace_back(std::string(constants::cArchiveLogSurgeonSchemaFile), compressed_size);
     }
 
     uint64_t offset = 0;
@@ -327,7 +324,8 @@ ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMes
     ++m_next_log_event_id;
 }
 
-SchemaNode::id_t ArchiveWriter::add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key) {
+SchemaNode::id_t
+ArchiveWriter::add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key) {
     auto const node_id{m_schema_tree.add_node(parent_node_id, type, key)};
     if (NodeType::Object == type && m_matched_timestamp_prefix_node_id == parent_node_id) {
         if (false == m_authoritative_timestamp.empty() && constants::cRootNodeId == parent_node_id)

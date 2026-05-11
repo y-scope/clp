@@ -17,7 +17,6 @@
 
 #include <fmt/format.h>
 #include <log_surgeon/log_surgeon.hpp>
-#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/string_utils/string_utils.hpp>
@@ -656,6 +655,54 @@ std::shared_ptr<Expression> SchemaMatch::get_query_for_schema(int32_t schema) {
     return m_schema_to_query.at(schema);
 }
 
+auto SchemaMatch::append_noncommon_rule_names(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::vector<std::string_view> const& rule_names
+) -> std::optional<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>> {
+    std::vector<std::string_view> col_descriptors;
+    auto cur_id{root_node_id};
+    while (true) {
+        auto const& node{m_tree->get_node(cur_id)};
+        if (NodeType::LogMessage == node.get_type()) {
+            break;
+        }
+        col_descriptors.emplace_back(node.get_key_name());
+        cur_id = node.get_parent_id();
+    }
+    std::reverse(col_descriptors.begin(), col_descriptors.end());
+
+    size_t seg_idx{0};
+    for (size_t path_idx{0}; path_idx < col_descriptors.size() && seg_idx < rule_names.size();
+         ++path_idx)
+    {
+        if (col_descriptors[path_idx] == rule_names.at(seg_idx)) {
+            ++seg_idx;
+        } else {
+            break;
+        }
+    }
+
+    auto new_col{column->copy()};
+    new_col->set_matching_types(
+            LiteralType::FloatT | LiteralType::IntegerT | LiteralType::VarStringT
+    );
+    auto& new_col_descriptors{new_col->get_descriptor_list()};
+    int32_t node_id{root_node_id};
+    for (; seg_idx < rule_names.size(); ++seg_idx) {
+        auto const& token{rule_names.at(seg_idx)};
+        new_col_descriptors.emplace_back(
+                DescriptorToken::create_descriptor_from_literal_token(token)
+        );
+        if (auto child_id{find_child_node_by_key_name(node_id, token)}; child_id.has_value()) {
+            node_id = child_id.value();
+        } else {
+            return std::nullopt;
+        }
+    }
+    return std::pair{new_col, node_id};
+}
+
 auto SchemaMatch::build_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         SchemaNode::id_t root_node_id,
@@ -667,48 +714,12 @@ auto SchemaMatch::build_leaf_query_expr(
     }
     auto leaves_expr{ast::AndExpr::create()};
     for (auto const& leaf : interpretation.m_leaf_queries) {
-        auto new_col{column->copy()};
-        new_col->set_matching_types(
-                LiteralType::FloatT | LiteralType::IntegerT | LiteralType::VarStringT
-        );
-        auto& new_col_descriptors{new_col->get_descriptor_list()};
-
-        int32_t node_id{root_node_id};
-        size_t start{0};
-        size_t end{leaf.m_qualified_name.find('.')};
-        auto name{leaf.m_qualified_name.substr(start, end - start)};
-        if (new_col_descriptors.back().get_token() == name) {
-            start = end + 1;
-            end = leaf.m_qualified_name.find('.', start);
-        } else {
-            if (auto child_id{find_child_node_by_key_name(node_id, name)}; child_id.has_value()) {
-                node_id = child_id.value();
-            } else {
-                return std::nullopt;
-            }
-        }
-        while (end != std::string::npos) {
-            auto token{leaf.m_qualified_name.substr(start, end - start)};
-            new_col_descriptors.emplace_back(
-                    DescriptorToken::create_descriptor_from_literal_token(token)
-            );
-            if (auto child_id{find_child_node_by_key_name(node_id, token)}; child_id.has_value()) {
-                node_id = child_id.value();
-            } else {
-                return std::nullopt;
-            }
-            start = end + 1;
-            end = leaf.m_qualified_name.find('.', start);
-        }
-        auto last_token{leaf.m_qualified_name.substr(start)};
-        new_col_descriptors.emplace_back(
-                DescriptorToken::create_descriptor_from_literal_token(last_token)
-        );
-        if (auto child_id{find_child_node_by_key_name(node_id, last_token)}; child_id.has_value()) {
-            node_id = child_id.value();
-        } else {
+        auto rule_names{clpp::DecomposedQuery::split_qualified_name(leaf.m_qualified_name)};
+        auto resolved{append_noncommon_rule_names(column, root_node_id, rule_names)};
+        if (false == resolved.has_value()) {
             return std::nullopt;
         }
+        auto [new_col, node_id]{resolved.value()};
 
         register_clpp_column(new_col, node_id, matched_schema_ids);
 
@@ -795,7 +806,8 @@ auto SchemaMatch::find_child_node_by_key_name(SchemaNode::id_t parent_id, std::s
     return std::nullopt;
 }
 
-auto SchemaMatch::lookup_decomposed_query(std::string qualified_name, std::string const& query)
+auto
+SchemaMatch::lookup_decomposed_query(std::string const& qualified_name, std::string const& query)
         -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*> {
     if (auto entry{m_decomposed_query_cache.find({qualified_name, query})};
         m_decomposed_query_cache.end() != entry)
@@ -889,7 +901,8 @@ auto SchemaMatch::resolve_clpp_query(
 
         if (auto leaves_expr{
                     build_leaf_query_expr(column, root_node_id, interpretation, matched_schema_ids)
-            })
+            };
+            leaves_expr.has_value())
         {
             results->add_operand(*leaves_expr);
         }
