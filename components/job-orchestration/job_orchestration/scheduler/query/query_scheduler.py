@@ -840,7 +840,10 @@ def handle_pending_query_jobs(
 def try_getting_task_result(async_task_result):
     if not async_task_result.ready():
         return None
-    return async_task_result.get(timeout=10, interval=0.005)
+    try:
+        return async_task_result.get(timeout=10, interval=0.005)
+    except celery.exceptions.TimeoutError:
+        return None
 
 
 def found_max_num_latest_results(
@@ -1063,9 +1066,12 @@ async def check_job_status_and_update_db(
                             f"Job `{job_id}` sub-job timed out after {elapsed:.0f}s "
                             f"without results. Workers may have died."
                         )
-                        # Revoke in-flight tasks
+                        # Revoke in-flight tasks (best-effort)
                         if job.current_sub_job_async_task_result is not None:
-                            job.current_sub_job_async_task_result.revoke(terminate=True)
+                            try:
+                                job.current_sub_job_async_task_result.revoke(terminate=True)
+                            except Exception:
+                                logger.warning(f"Failed to revoke tasks for job `{job_id}`.")
                         if QueryJobType.SEARCH_OR_AGGREGATION == job.get_type():
                             if job.reducer_handler_msg_queues is not None:
                                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
@@ -1092,18 +1098,24 @@ async def check_job_status_and_update_db(
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
 
 
-async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
+async def handle_job_updates(
+    db_conn_pool, results_cache_uri: str, jobs_poll_delay: float, task_timeout_seconds: float
+):
     while True:
         try:
             interval_start_time = datetime.datetime.now()
             await handle_cancelling_search_jobs(db_conn_pool)
-            await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
+            await check_job_status_and_update_db(
+                db_conn_pool, results_cache_uri, task_timeout_seconds
+            )
             interval_end_time = datetime.datetime.now()
             sleep_duration = max(
                 0.0,
                 jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds(),
             )
             await asyncio.sleep(sleep_duration)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             logger.exception("Error in handle_job_updates, retrying after poll delay.")
             await asyncio.sleep(jobs_poll_delay)
@@ -1120,6 +1132,7 @@ async def handle_jobs(
     max_datasets_per_query: int | None,
     archive_retention_period: int | None,
     scheduler_concurrency: int,
+    task_timeout_seconds: float = 300.0,
 ) -> None:
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=scheduler_concurrency,
@@ -1127,7 +1140,9 @@ async def handle_jobs(
         initargs=(database_config, clp_metadata_db_conn_params, results_cache_uri),
     ) as process_pool:
         handle_updating_task = asyncio.create_task(
-            handle_job_updates(db_conn_pool, results_cache_uri, jobs_poll_delay)
+            handle_job_updates(
+                db_conn_pool, results_cache_uri, jobs_poll_delay, task_timeout_seconds
+            )
         )
 
         tasks = [handle_updating_task]
@@ -1234,6 +1249,7 @@ async def main(argv: list[str]) -> int:
                 max_datasets_per_query=clp_config.query_scheduler.max_datasets_per_query,
                 archive_retention_period=clp_config.archive_output.retention_period,
                 scheduler_concurrency=clp_config.query_scheduler.scheduler_concurrency,
+                task_timeout_seconds=clp_config.query_scheduler.task_timeout_seconds,
             )
         )
         reducer_handler = asyncio.create_task(reducer_handler.serve_forever())
