@@ -179,7 +179,7 @@ class ClpPackage:
         Reads the CLP instance ID for the package and validates its format.
 
         :return: The instance ID (a UUIDv4 string).
-        :raise ValueError: If the file cannot be read or contents are not a valid UUID.
+        :raise pytest.fail(): If the file cannot be read or contents are not a valid UUIDv4.
         """
         clp_instance_id_file_path = self.clp_instance_id_file_path
         try:
