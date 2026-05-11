@@ -49,6 +49,7 @@
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+#  task_timeout_seconds: 600  # Time without progress before a job is marked failed
 #  logging_level: "INFO"
 #  type: "celery"  # "celery" or "spider"
 #
@@ -63,6 +64,7 @@
 #  jobs_poll_delay: 0.1  # seconds
 #  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
+#  task_timeout_seconds: 300  # Time without progress before a sub-job is marked failed
 #  logging_level: "INFO"
 #  scheduler_concurrency: 4
 #

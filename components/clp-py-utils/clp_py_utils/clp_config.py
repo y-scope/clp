@@ -423,6 +423,7 @@ class CompressionScheduler(BaseModel):
 
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
+    task_timeout_seconds: PositiveFloat = 600.0
     logging_level: LoggingLevel = "INFO"
     type: OrchestrationTypeStr = OrchestrationType.CELERY
 
@@ -435,6 +436,7 @@ class QueryScheduler(BaseModel):
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     max_datasets_per_query: PositiveInt | None = 10
     num_archives_to_search_per_sub_job: PositiveInt = 16
+    task_timeout_seconds: PositiveFloat = 300.0
     logging_level: LoggingLevel = "INFO"
     scheduler_concurrency: PositiveInt = 4
 

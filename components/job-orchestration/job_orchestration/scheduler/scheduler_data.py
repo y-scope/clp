@@ -27,6 +27,7 @@ class CompressionJob(BaseModel):
 
     id: int
     start_time: datetime.datetime
+    last_progress_time: datetime.datetime
     result_handle: TaskManager.ResultHandle
     num_tasks_total: int
     num_tasks_completed: int
@@ -44,6 +45,7 @@ class QueryJob(BaseModel, ABC):
     id: str
     state: InternalJobState
     start_time: datetime.datetime | None = None
+    last_dispatch_time: datetime.datetime | None = None
     current_sub_job_async_task_result: Any | None = None
     _cached_config_blob: bytes | None = PrivateAttr(default=None)
 

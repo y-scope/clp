@@ -515,6 +515,7 @@ def poll_running_jobs(
             continue
 
         job.num_tasks_completed += num_tasks_in_batch
+        job.last_progress_time = datetime.datetime.now(datetime.timezone.utc)
 
         if len(job.remaining_tasks) > 0:
             _dispatch_next_task_batch(task_manager, db_context, job, max_concurrent_tasks_per_job)
@@ -529,6 +530,49 @@ def poll_running_jobs(
     if received_sigterm and 0 == len(scheduled_jobs):
         logger.info("Received SIGTERM and there're no more running jobs. Exiting.")
         sys.exit(0)
+
+
+def _timeout_stale_jobs(
+    logs_directory: Path, db_context: DbContext, task_timeout_seconds: float
+) -> None:
+    """
+    Marks compression jobs as FAILED if they have had no progress (no task completions)
+    for longer than task_timeout_seconds. Uses last_progress_time which is updated on
+    every batch completion, so multi-batch jobs that stall mid-way are also detected.
+    """
+    global scheduled_jobs
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    jobs_to_timeout = []
+    for job_id, job in scheduled_jobs.items():
+        time_since_progress = (now - job.last_progress_time).total_seconds()
+        if time_since_progress > task_timeout_seconds:
+            logger.error(
+                "Compression job %s timed out: %.0fs since last progress "
+                "(%d/%d tasks completed). Workers may have died.",
+                job_id,
+                time_since_progress,
+                job.num_tasks_completed,
+                job.num_tasks_total,
+            )
+            jobs_to_timeout.append(job_id)
+
+    for job_id in jobs_to_timeout:
+        # Mark in-flight task rows as failed
+        db_context.cursor.execute(
+            f"UPDATE {COMPRESSION_TASKS_TABLE_NAME}"  # noqa: S608
+            f" SET status = '{CompressionTaskStatus.FAILED}'"
+            f" WHERE job_id = %s AND status = '{CompressionTaskStatus.RUNNING}'",
+            (job_id,),
+        )
+        db_context.connection.commit()
+        _handle_failed_compression_job(
+            logs_directory,
+            db_context,
+            job_id,
+            [f"Job timed out after {task_timeout_seconds:.0f}s without progress."],
+        )
+        del scheduled_jobs[job_id]
 
 
 def main(argv) -> int | None:
@@ -590,6 +634,8 @@ def main(argv) -> int | None:
         )
 
         # Start Job Processing Loop
+        max_consecutive_errors = 10
+        consecutive_errors = 0
         while True:
             try:
                 if not received_sigterm:
@@ -604,13 +650,25 @@ def main(argv) -> int | None:
                     task_manager,
                     db_context,
                 )
+                _timeout_stale_jobs(
+                    clp_config.logs_directory,
+                    db_context,
+                    clp_config.compression_scheduler.task_timeout_seconds,
+                )
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
+                consecutive_errors = 0
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")
                 return -1
             except Exception:
-                logger.exception("Error in scheduling.")
-                return -1
+                consecutive_errors += 1
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.exception(
+                        "Exceeded %d consecutive errors, exiting.", max_consecutive_errors
+                    )
+                    return -1
+                logger.exception("Error in scheduling loop, retrying after poll delay.")
+                time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
 
 
 def _batch_tasks(
@@ -681,6 +739,7 @@ def _batch_and_submit_tasks(
     job = CompressionJob(
         id=job_id,
         start_time=start_time,
+        last_progress_time=start_time,
         result_handle=result_handle,
         num_tasks_total=paths_to_compress_buffer.num_tasks,
         num_tasks_completed=0,
