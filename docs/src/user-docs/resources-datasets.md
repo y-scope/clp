@@ -16,6 +16,7 @@ For evaluation results comparing CLP and other tools, see our
 | [cockroachdb][5]                   | JSON   | 9.79 GB           | 528.97 MB     |
 | [elasticsearch][6]                 | JSON   | 7.98 GB           | 165.91 MB     |
 | [spark-event-logs][7]              | JSON   | 1.98 GB           | 211.88 MB     |
+| [postgresql][8]                    | JSON   | 392.84 MB         | 14.59 MB      |
 
 *<sup>†</sup> We will upload the other parts soon.*
 
@@ -32,3 +33,5 @@ For evaluation results comparing CLP and other tools, see our
 [6]: https://zenodo.org/records/10516226
 
 [7]: https://zenodo.org/records/10516345
+
+[8]: https://zenodo.org/records/10516401
