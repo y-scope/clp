@@ -1,5 +1,6 @@
 #include "SchemaReader.hpp"
 
+#include <charconv>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -81,9 +82,9 @@ SchemaReader::load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t 
 auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
     m_json_serializer.reset();
     m_json_serializer.begin_document();
-    size_t column_id_index = 0;
-    BaseColumnReader* column;
-    JsonSerializer::Op op;
+    size_t column_id_index{0};
+    BaseColumnReader* column{nullptr};
+    JsonSerializer::Op op{};
     while (m_json_serializer.get_next_op(op)) {
         switch (op) {
             case JsonSerializer::Op::BeginObject: {
@@ -199,6 +200,10 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
             }
             case JsonSerializer::Op::AddNullValue: {
                 m_json_serializer.append_value("null");
+                break;
+            }
+            case JsonSerializer::Op::AddConstantStringField: {
+                m_json_serializer.append_constant_string_field();
                 break;
             }
             case JsonSerializer::Op::AddLiteralField: {
@@ -785,48 +790,55 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
             case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
                 m_reordered_columns.push_back(m_columns[column_idx]);
-                column_idx++;
+                ++column_idx;
                 break;
             }
             case NodeType::Float: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
                 m_reordered_columns.push_back(m_columns[column_idx]);
-                column_idx++;
+                ++column_idx;
                 break;
             }
             case NodeType::FormattedFloat:
             case NodeType::DictionaryFloat: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
                 m_reordered_columns.push_back(m_columns[column_idx]);
-                column_idx++;
+                ++column_idx;
                 break;
             }
             case NodeType::Boolean: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
                 m_reordered_columns.push_back(m_columns[column_idx]);
-                column_idx++;
+                ++column_idx;
                 break;
             }
             case NodeType::ClpString:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_columns[column_idx]);
-                column_idx++;
+                ++column_idx;
+                break;
+            }
+            case NodeType::LogTypeID: {
+                if (nullptr == m_typed_log_dict) {
+                    return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+                }
+                auto const& key_name = node.get_key_name();
+                clp::variable_dictionary_id_t log_type_id{};
+                auto const* key_end{key_name.data() + key_name.size()};
+                auto [ptr, ec] = std::from_chars(key_name.data(), key_end, log_type_id);
+                if (std::errc() != ec || ptr != key_end) {
+                    return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+                }
+                auto const& log_type_str = m_typed_log_dict->get_value(log_type_id);
+                m_json_serializer.add_constant_string_field("log_type", log_type_str);
                 break;
             }
             case NodeType::LogMessage:
             case NodeType::LogType:
-            case NodeType::LogTypeID:
             case NodeType::ParentRule:
                 break;
-            case NodeType::Object:
-            case NodeType::StructuredArray:
-            case NodeType::NullValue:
-            case NodeType::DeprecatedDateString:
-            case NodeType::UnstructuredArray:
-            case NodeType::Metadata:
-            case NodeType::Timestamp:
-            case NodeType::Unknown: {
+            default: {
                 return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
             }
         }

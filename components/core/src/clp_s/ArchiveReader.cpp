@@ -428,6 +428,7 @@ void ArchiveReader::initialize_schema_reader(
             m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records
     );
+    reader.set_typed_log_dict(m_typed_log_dict);
     auto timestamp_column_ids
             = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();
     for (size_t i = 0; i < schema.size(); ++i) {

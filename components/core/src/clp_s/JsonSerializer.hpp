@@ -32,12 +32,13 @@ public:
         BeginUnnamedObject,
         BeginUnnamedArray,
         AddLiteralField,
+        AddConstantStringField,
     };
 
     static int64_t const cReservedLength = 4096;
 
     explicit JsonSerializer(int64_t reserved_length = cReservedLength) {
-        m_json_string.reserve(cReservedLength);
+        m_json_string.reserve(reserved_length);
     }
 
     std::string& get_serialized_string() { return m_json_string; }
@@ -49,6 +50,7 @@ public:
         m_json_string.clear();
         m_op_list_index = 0;
         m_special_keys_index = 0;
+        m_constant_strings_index = 0;
     }
 
     /**
@@ -58,6 +60,7 @@ public:
         reset();
         m_op_list.clear();
         m_special_keys.clear();
+        m_constant_strings.clear();
     }
 
     void add_op(Op op) { m_op_list.push_back(op); }
@@ -143,6 +146,21 @@ public:
         m_json_string += "\",";
     }
 
+    void add_constant_string_field(std::string_view key, std::string_view value) {
+        add_op(Op::AddConstantStringField);
+        add_special_key(key);
+        std::string tmp;
+        StringUtils::escape_json_string(tmp, value);
+        m_constant_strings.emplace_back(tmp);
+    }
+
+    void append_constant_string_field() {
+        append_key();
+        m_json_string.push_back('"');
+        m_json_string.append(m_constant_strings[m_constant_strings_index++]);
+        m_json_string.append("\",");
+    }
+
 private:
     void append_escaped_key(std::string_view const key) {
         m_json_string.push_back('"');
@@ -153,9 +171,11 @@ private:
     std::string m_json_string;
     std::vector<Op> m_op_list;
     std::vector<std::string> m_special_keys;
+    std::vector<std::string> m_constant_strings;
 
     size_t m_op_list_index{0};
     size_t m_special_keys_index{0};
+    size_t m_constant_strings_index{0};
 };
 }  // namespace clp_s
 
