@@ -1077,6 +1077,23 @@ async def check_job_status_and_update_db(
                                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                                 await job.reducer_handler_msg_queues.put_to_handler(msg)
                         del active_jobs[job_id]
+                        # Mark in-flight task rows as failed
+                        set_job_or_task_status(
+                            db_conn,
+                            QUERY_TASKS_TABLE_NAME,
+                            job_id,
+                            QueryTaskStatus.FAILED,
+                            QueryTaskStatus.PENDING,
+                            duration=0,
+                        )
+                        set_job_or_task_status(
+                            db_conn,
+                            QUERY_TASKS_TABLE_NAME,
+                            job_id,
+                            QueryTaskStatus.FAILED,
+                            QueryTaskStatus.RUNNING,
+                            duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000000.0",
+                        )
                         set_job_or_task_status(
                             db_conn,
                             QUERY_JOBS_TABLE_NAME,

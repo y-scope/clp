@@ -558,11 +558,19 @@ def _timeout_stale_jobs(
             jobs_to_timeout.append(job_id)
 
     for job_id in jobs_to_timeout:
+        # Mark in-flight task rows as failed
+        db_context.cursor.execute(
+            f"UPDATE {COMPRESSION_TASKS_TABLE_NAME}"  # noqa: S608
+            f" SET status = '{CompressionTaskStatus.FAILED}'"
+            f" WHERE job_id = %s AND status = '{CompressionTaskStatus.RUNNING}'",
+            (job_id,),
+        )
+        db_context.connection.commit()
         _handle_failed_compression_job(
             logs_directory,
             db_context,
             job_id,
-            [f"Job timed out after {task_timeout_seconds:.0f}s without results."],
+            [f"Job timed out after {task_timeout_seconds:.0f}s without progress."],
         )
         del scheduled_jobs[job_id]
 
