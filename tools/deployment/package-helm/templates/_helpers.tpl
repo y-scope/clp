@@ -397,6 +397,25 @@ command: [
 {{- end }}
 
 {{/*
+Waits for the results cache to be ready for queries.
+
+When the results cache is bundled, this waits for the results-cache pod to be ready (which requires
+both mongod to be accepting connections and the init sidecar to have finished replica set
+initialization and index creation). When the results cache is external (3rd-party), this waits for
+the results-cache-indices-creator job to complete.
+
+@param {object} root Root template context
+@return {string} YAML-formatted initContainer definition
+*/}}
+{{- define "clp.waitForResultsCache" -}}
+{{- if has "results_cache" .Values.clpConfig.bundled -}}
+{{- include "clp.waitFor" (dict "root" . "type" "service" "name" "results-cache") -}}
+{{- else -}}
+{{- include "clp.waitFor" (dict "root" . "type" "job" "name" "results-cache-indices-creator") -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Creates scheduling configuration (nodeSelector, affinity, tolerations, topologySpreadConstraints)
 for a component.
 
