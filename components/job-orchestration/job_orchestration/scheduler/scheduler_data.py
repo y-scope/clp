@@ -26,6 +26,7 @@ class CompressionJob(BaseModel):
 
     id: int
     start_time: datetime.datetime
+    last_progress_time: datetime.datetime
     result_handle: TaskManager.ResultHandle
     num_tasks_total: int
     num_tasks_completed: int
