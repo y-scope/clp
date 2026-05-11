@@ -43,6 +43,7 @@ class QueryJob(BaseModel, ABC):
     id: str
     state: InternalJobState
     start_time: datetime.datetime | None = None
+    last_dispatch_time: datetime.datetime | None = None
     current_sub_job_async_task_result: Any | None = None
 
     @abstractmethod

@@ -642,6 +642,7 @@ def dispatch_query_job(
         results_cache_uri,
     )
     job.current_sub_job_async_task_result = task_group.apply_async()
+    job.last_dispatch_time = datetime.datetime.now()
     job.state = InternalJobState.RUNNING
 
 
@@ -827,6 +828,7 @@ def handle_pending_query_jobs(
             job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
                 group_result_id, app=app
             )
+            job.last_dispatch_time = datetime.datetime.now()
             job.state = InternalJobState.RUNNING
             logger.info(
                 "Dispatched job %s with %d archives to search.", job_id, num_archives_for_search
@@ -1053,14 +1055,17 @@ async def check_job_status_and_update_db(
                 continue
 
             if returned_results is None:
-                # Check for stale jobs that have been running too long without results
-                if job.start_time is not None:
-                    elapsed = (datetime.datetime.now() - job.start_time).total_seconds()
+                # Check for stale sub-jobs that have been running too long without results
+                if job.last_dispatch_time is not None:
+                    elapsed = (datetime.datetime.now() - job.last_dispatch_time).total_seconds()
                     if elapsed > task_timeout_seconds:
                         logger.error(
-                            f"Job `{job_id}` timed out after {elapsed:.0f}s without results. "
-                            f"Workers may have died."
+                            f"Job `{job_id}` sub-job timed out after {elapsed:.0f}s "
+                            f"without results. Workers may have died."
                         )
+                        # Revoke in-flight tasks
+                        if job.current_sub_job_async_task_result is not None:
+                            job.current_sub_job_async_task_result.revoke(terminate=True)
                         if QueryJobType.SEARCH_OR_AGGREGATION == job.get_type():
                             if job.reducer_handler_msg_queues is not None:
                                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
@@ -1072,7 +1077,7 @@ async def check_job_status_and_update_db(
                             job_id,
                             QueryJobStatus.FAILED,
                             QueryJobStatus.RUNNING,
-                            duration=elapsed,
+                            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
                         )
                 continue
             job_type = job.get_type()
@@ -1094,9 +1099,11 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
             await handle_cancelling_search_jobs(db_conn_pool)
             await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
             interval_end_time = datetime.datetime.now()
-            await asyncio.sleep(
-                jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds()
+            sleep_duration = max(
+                0.0,
+                jobs_poll_delay - (interval_end_time - interval_start_time).total_seconds(),
             )
+            await asyncio.sleep(sleep_duration)
         except Exception:
             logger.exception("Error in handle_job_updates, retrying after poll delay.")
             await asyncio.sleep(jobs_poll_delay)
