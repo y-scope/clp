@@ -47,8 +47,15 @@ spec:
                   - "bash"
                   - "-c"
                   - |
+                    attempts=0
+                    max_attempts=30
                     until mongosh --host localhost:27017 --eval "db.runCommand('ping')" \
                         --quiet 2>/dev/null; do
+                      attempts=$((attempts + 1))
+                      if [ "$attempts" -ge "$max_attempts" ]; then
+                        echo "ERROR: MongoDB did not become ready after ${max_attempts}s" >&2
+                        exit 1
+                      fi
                       sleep 1
                     done
                     mongosh --host localhost:27017 --eval '
@@ -58,7 +65,7 @@ spec:
                           members: [{_id: 0, host: "localhost:27017"}]
                         });
                       }
-                    ' 2>/dev/null || true
+                    '
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec: &results-cache-health-check
