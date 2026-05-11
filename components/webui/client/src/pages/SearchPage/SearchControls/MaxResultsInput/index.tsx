@@ -1,7 +1,10 @@
+import {useCallback} from "react";
+
 import {InputNumber, Space, Typography} from "antd";
 
 import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../config";
 import useSearchStore from "../../SearchState";
+import styles from "./index.module.css";
 
 
 /**
@@ -11,32 +14,28 @@ import useSearchStore from "../../SearchState";
  */
 const MaxResultsInput = () => {
     const maxNumResults = useSearchStore((state) => state.maxNumResults);
-    const updateMaxNumResults = useSearchStore((state) => state.updateMaxNumResults);
+
+    const handleChange = useCallback((value: number | null) => {
+        if (null !== value) {
+            const {updateMaxNumResults} = useSearchStore.getState();
+            updateMaxNumResults(value);
+        }
+    }, []);
 
     return (
         <Space.Compact>
-            <Typography.Text
-                style={{
-                    alignSelf: "center",
-                    marginRight: 4,
-                    whiteSpace: "nowrap",
-                }}
-            >
+            <Typography.Text className={styles["label"]}>
                 {"Limit"}
             </Typography.Text>
             <InputNumber
                 changeOnBlur={true}
+                className={styles["input"]}
                 max={SETTINGS_MAX_SEARCH_RESULTS}
                 min={1}
                 size={"middle"}
-                style={{width: 100}}
                 title={"Max Results"}
                 value={maxNumResults}
-                onChange={(value) => {
-                    if (null !== value) {
-                        updateMaxNumResults(value);
-                    }
-                }}/>
+                onChange={handleChange}/>
         </Space.Compact>
     );
 };

@@ -741,6 +741,7 @@ class BaseController(ABC):
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
+            "MaxSearchResults": self._clp_config.webui.max_search_results,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
@@ -764,7 +765,6 @@ class BaseController(ABC):
             "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
-            "MaxSearchResults": self._clp_config.webui.max_search_results,
         }
 
         stream_storage = self._clp_config.stream_output.storage

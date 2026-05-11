@@ -73,9 +73,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 queryString,
             } = request.body;
 
-            const effectiveMaxResults = "undefined" === typeof maxNumResults ?
-                SEARCH_MAX_NUM_RESULTS :
-                Math.min(maxNumResults, SEARCH_MAX_NUM_RESULTS);
+            const clampedMaxNumResults = Math.min(maxNumResults, SEARCH_MAX_NUM_RESULTS);
 
             const args = {
                 begin_timestamp: timestampBegin,
@@ -84,7 +82,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     null,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
-                max_num_results: effectiveMaxResults,
+                max_num_results: clampedMaxNumResults,
                 query_string: queryString,
             };
 
