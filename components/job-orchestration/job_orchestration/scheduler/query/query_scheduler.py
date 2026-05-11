@@ -1262,6 +1262,51 @@ async def main(argv: list[str]) -> int:
         logger.exception("Failed to kill hanging query jobs.")
         return -1
 
+    # Clean up jobs stuck in CANCELLING state from a previous scheduler lifetime
+    try:
+        with contextlib.closing(sql_adapter.create_connection()) as db_conn:
+            with contextlib.closing(db_conn.cursor()) as cursor:
+                cursor.execute(
+                    f"UPDATE {QUERY_JOBS_TABLE_NAME}"
+                    f" SET status={QueryJobStatus.CANCELLED}"
+                    f" WHERE status={QueryJobStatus.CANCELLING}"
+                )
+                num_cancelled = cursor.rowcount
+                if num_cancelled > 0:
+                    cursor.execute(
+                        f"UPDATE {QUERY_TASKS_TABLE_NAME}"
+                        f" SET status={QueryTaskStatus.CANCELLED}, duration=0"
+                        f" WHERE status IN ({QueryTaskStatus.PENDING}, {QueryTaskStatus.RUNNING})"
+                        f" AND job_id IN ("
+                        f"   SELECT id FROM {QUERY_JOBS_TABLE_NAME}"
+                        f"   WHERE status={QueryJobStatus.CANCELLED}"
+                        f" )"
+                    )
+                db_conn.commit()
+                if num_cancelled > 0:
+                    logger.info(f"Resolved {num_cancelled} stale CANCELLING jobs on startup.")
+    except Exception:
+        logger.exception("Failed to clean up CANCELLING jobs.")
+
+    # Flush query Redis backend to remove stale GroupResult keys from dead workers
+    try:
+        import redis as redis_lib
+
+        redis_config = clp_config.redis
+        redis_client = redis_lib.Redis(
+            host=redis_config.host,
+            port=redis_config.port,
+            db=redis_config.query_backend_database,
+            password=redis_config.password,
+        )
+        redis_client.flushdb()
+        redis_client.close()
+        logger.info(
+            f"Flushed query Redis backend (db={redis_config.query_backend_database}) on startup."
+        )
+    except Exception:
+        logger.exception("Failed to flush query Redis backend on startup.")
+
     logger.debug(f"Job polling interval {clp_config.query_scheduler.jobs_poll_delay} seconds.")
     try:
         reducer_handler = await asyncio.start_server(

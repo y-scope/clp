@@ -17,6 +17,7 @@ broker_url = os.getenv("BROKER_URL")
 result_backend = os.getenv("RESULT_BACKEND")
 
 result_persistent = True
+result_expires = 7200
 
 # Differentiate between tasks that have started v.s. tasks still in queue
 task_track_started = True

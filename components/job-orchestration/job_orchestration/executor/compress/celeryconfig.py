@@ -18,6 +18,7 @@ task_create_missing_queues = True
 
 # Results backend settings
 result_persistent = True
+result_expires = 7200
 
 broker_url = os.getenv("BROKER_URL")
 result_backend = os.getenv("RESULT_BACKEND")
