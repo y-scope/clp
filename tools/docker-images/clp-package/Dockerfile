@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM ubuntu:jammy AS base
+ARG UBUNTU_VERSION_CODENAME=jammy
+FROM ubuntu:${UBUNTU_VERSION_CODENAME} AS base
 
 WORKDIR /root
 
@@ -23,7 +24,8 @@ ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
-RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+RUN userdel -r ubuntu 2>/dev/null || true \
+    && useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
 
