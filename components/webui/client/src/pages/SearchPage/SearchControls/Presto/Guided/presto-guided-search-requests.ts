@@ -18,7 +18,7 @@ import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 
 
 /**
- * Default limit for presto search query
+ * Fallback limit for presto search query when store value is unavailable.
  */
 const DEFAULT_SEARCH_LIMIT = SETTINGS_MAX_SEARCH_RESULTS;
 
@@ -89,7 +89,7 @@ const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
         endTimestamp: endTimestamp,
         selectItemList: select.trim(),
         ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
-        limitValue: String(DEFAULT_SEARCH_LIMIT),
+        limitValue: String(useSearchStore.getState().maxNumResults ?? DEFAULT_SEARCH_LIMIT),
         startTimestamp: startTimestamp,
         timestampKey: timestampKey,
     });
