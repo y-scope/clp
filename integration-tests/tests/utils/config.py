@@ -1,6 +1,6 @@
 """Define all python classes used in `integration-tests`."""
 
-import re
+import uuid
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
@@ -19,6 +19,7 @@ from tests.utils.utils import (
 )
 
 _UUID_V4_VERSION = 4
+
 
 @dataclass(frozen=True)
 class ClpCorePathConfig:
@@ -269,16 +270,20 @@ class PackageInstance:
             err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}'"
             raise ValueError(err_msg) from err
 
-        uuid_pattern = (
-            r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-        )
-        if not re.fullmatch(uuid_pattern, contents):
+        try:
+            parsed = uuid.UUID(contents)
+        except ValueError as err:
             err_msg = (
-                f"Invalid instance ID in {clp_instance_id_file_path}: expected a"
-                f" UUID, but read {contents}."
+                f"Invalid instance ID in {clp_instance_id_file_path}: expect a UUIDv4, "
+                f"but read '{contents}'."
+            )
+            raise ValueError(err_msg) from err
+        if parsed.version != _UUID_V4_VERSION:
+            err_msg = (
+                f"Instance ID in '{clp_instance_id_file_path}' was not in UUIDv4 format; found"
+                f" UUIDv{parsed.version}: '{contents}'."
             )
             raise ValueError(err_msg)
-
         return contents
 
 
