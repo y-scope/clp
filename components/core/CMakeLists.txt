@@ -203,6 +203,10 @@ if(CLP_NEED_FMT)
 endif()
 
 if(CLP_NEED_LOG_SURGEON)
+    find_package(log-surgeon REQUIRED)
+    if(log-surgeon_FOUND)
+        message(STATUS "Found log-surgeon ${log-surgeon_VERSION}")
+    endif()
     find_package(log_surgeon REQUIRED)
     if(log_surgeon_FOUND)
         message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
@@ -724,8 +728,7 @@ if(CLP_ENABLE_TESTS)
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
-            log_mechanic
-            log_surgeon::log_surgeon
+            log-surgeon::log-surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
