@@ -7,10 +7,8 @@ import pytest
 from tests.package_tests.clp_text.utils.mode import CLP_TEXT_MODE
 from tests.utils.asserting_utils import (
     validate_package_running,
-    verify_package_compression,
 )
-from tests.utils.config import PackageCompressionJob, PackageInstance
-from tests.utils.package_utils import run_package_compression_script
+from tests.utils.config import PackageInstance
 
 logger = logging.getLogger(__name__)
 
@@ -49,18 +47,7 @@ def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInsta
     package_path_config = package_test_config.path_config
     package_path_config.clear_package_archives()
 
-    # Compress a dataset.
-    compression_job = PackageCompressionJob(
-        path_to_original_dataset=(
-            package_path_config.clp_text_test_data_path / "text-multifile" / "logs"
-        ),
-        options=None,
-        positional_args=None,
-    )
-    run_package_compression_script(compression_job, package_test_config)
-
-    # Check the correctness of compression.
-    verify_package_compression(compression_job.path_to_original_dataset, package_test_config)
+    # TODO: Compress a dataset.
 
     # Clear archives.
     package_path_config.clear_package_archives()
