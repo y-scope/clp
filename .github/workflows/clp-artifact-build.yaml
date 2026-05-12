@@ -250,8 +250,8 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
-  ubuntu-jammy-deps-image:
-    name: "ubuntu-jammy-deps-image"
+  ubuntu-jammy-x86_64-deps-image:
+    name: "ubuntu-jammy-x86_64-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
     runs-on: *runner
@@ -269,6 +269,35 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-jammy-aarch64-deps-image:
+    name: "ubuntu-jammy-aarch64-deps-image"
+    if: >-
+      needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'
+      && github.event_name != 'pull_request'
+      && github.ref == 'refs/heads/main'
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-24.04-arm"
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_AARCH64}}${{env.OS_NAME}}"
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
@@ -455,7 +484,7 @@ jobs:
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
+      - "ubuntu-jammy-x86_64-deps-image"
     strategy:
       matrix:
         include:
@@ -539,7 +568,7 @@ jobs:
           tar xf clp.tar
           rm clp.tar
 
-      - uses: "docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772"
+      - uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
         with:
           registry: "ghcr.io"
           username: "${{github.actor}}"
@@ -580,7 +609,7 @@ jobs:
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
+      - "ubuntu-jammy-x86_64-deps-image"
     runs-on: *runner
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
@@ -649,16 +678,35 @@ jobs:
             )}}
 
   package-image:
-    name: "package-image"
+    name: "package-image-${{matrix.arch}}"
+    # NOTE: The aarch64 job is skipped on PRs, so we accept both 'success' and 'skipped'.
     if: >-
       !cancelled() && !failure() && (
         needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
-        needs.ubuntu-jammy-deps-image.result == 'success'
+        (needs.ubuntu-jammy-x86_64-deps-image.result == 'success'
+        && (needs.ubuntu-jammy-aarch64-deps-image.result == 'success'
+        || needs.ubuntu-jammy-aarch64-deps-image.result == 'skipped'))
       )
     needs:
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
-    runs-on: *runner
+      - "ubuntu-jammy-x86_64-deps-image"
+      - "ubuntu-jammy-aarch64-deps-image"
+    strategy:
+      matrix:
+        # Only build arm64 images on push to main to save CI resources on PRs.
+        arch: >-
+          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
+    runs-on: >-
+      ${{
+        matrix.arch == 'amd64'
+        && (github.repository_owner == 'y-scope'
+            && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
+            || 'ubuntu-24.04')
+        || (github.repository_owner == 'y-scope'
+            && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+            || 'ubuntu-24.04-arm')
+      }}
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
@@ -673,7 +721,10 @@ jobs:
         env:
           OS_NAME: "ubuntu-jammy"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          image_name: >-
+            ${{format('{0}ubuntu-jammy',
+            matrix.arch == 'amd64' && env.DEPS_IMAGE_NAME_PREFIX_X86
+            || env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -687,3 +738,42 @@ jobs:
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          arch: "${{matrix.arch}}"
+
+  package-image-multiarch-manifest:
+    name: "package-image-multiarch-manifest"
+    if: >-
+      github.event_name != 'pull_request'
+      && github.ref == 'refs/heads/main'
+      && needs.package-image.result == 'success'
+    needs: "package-image"
+    runs-on: *runner
+    steps:
+      - name: "Login to Image Registry"
+        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+        with:
+          registry: "ghcr.io"
+          username: "${{github.actor}}"
+          password: "${{secrets.GITHUB_TOKEN}}"
+
+      - name: "Sanitize Repository Name"
+        id: "sanitization"
+        shell: "bash"
+        run: |
+          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: "Create and Push Multi-arch Manifest"
+        shell: "bash"
+        run: |
+          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
+          tags=("${{github.ref_name}}")
+          if [ "${{github.event_name}}" = "schedule" ]; then
+            tags+=("nightly")
+          fi
+          for tag in "${tags[@]}"; do
+            docker manifest create "${image_base}:${tag}" \
+              "${image_base}:${tag}-amd64" \
+              "${image_base}:${tag}-arm64"
+            docker manifest push "${image_base}:${tag}"
+          done
