@@ -81,19 +81,9 @@ auto evaluate_numeric_wildcard_filter(
         std::array<char, cNumericConversionBufferSize> buf{};
         auto result = [&]() -> auto {
             if constexpr (std::is_floating_point_v<T>) {
-                return fmt::format_to_n(
-                        buf.begin(),
-                        buf.size(),
-                        FMT_COMPILE("{:.17g}"),
-                        value
-                );
+                return fmt::format_to_n(buf.begin(), buf.size(), FMT_COMPILE("{:.17g}"), value);
             }
-            return fmt::format_to_n(
-                    buf.begin(),
-                    buf.size(),
-                    FMT_COMPILE("{}"),
-                    value
-            );
+            return fmt::format_to_n(buf.begin(), buf.size(), FMT_COMPILE("{}"), value);
         }();
 
         if (result.size > buf.size()) {
@@ -101,9 +91,7 @@ auto evaluate_numeric_wildcard_filter(
         }
 
         std::string_view const value_sv{buf.data(), result.size};
-        bool const matched{
-                clp::string_utils::wildcard_match_unsafe(value_sv, query_string, false)
-        };
+        bool const matched{clp::string_utils::wildcard_match_unsafe(value_sv, query_string, false)};
         if ((ast::FilterOperation::EQ == op) == matched) {
             return true;
         }
