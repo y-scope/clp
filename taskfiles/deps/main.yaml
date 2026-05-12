@@ -371,8 +371,8 @@ tasks:
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}"
-        rsync -az "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_DIR}}"
-        rsync -az "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
+        cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_DIR}}"
+        cp -r "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
         cat << EOF > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
         add_library({{.LIB_NAME}} STATIC IMPORTED)
         set_target_properties({{.LIB_NAME}} PROPERTIES
