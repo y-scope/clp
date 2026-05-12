@@ -17,6 +17,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "compression-scheduler"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "compressionScheduler"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 300
       initContainers:

@@ -19,9 +19,13 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "redis"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "redis"
+        ) | nindent 6 }}
       containers:
         - name: "redis"
-          image: "redis:7.2.4"
+          image: "redis:7.4.8"
           imagePullPolicy: "Always"
           env:
             - name: "REDIS_PASSWORD"
