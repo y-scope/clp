@@ -40,11 +40,7 @@ tasks:
       - "yscope-log-viewer"
 
   core:
-    # We depend on "toolchains:rust" here as task cannot track dependencies through the call into
-    # "core-all-parallel" which causes it to run "toolchains:rust" both inside and outside the call
-    # (breaking the "run: once" semantic).
     deps:
-      - "toolchains:rust"
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
@@ -335,6 +331,7 @@ tasks:
   log-surgeon:
     internal: true
     run: "once"
+    deps: ["toolchains:rust"]
     vars:
       LIB_NAME: "log-surgeon"
       INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
