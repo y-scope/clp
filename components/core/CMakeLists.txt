@@ -122,13 +122,7 @@ if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
-    execute_process(
-        COMMAND git rev-parse --abbrev-ref HEAD
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    set(CLP_DEPS_CPP_DIR "${CMAKE_SOURCE_DIR}/../../build-${GIT_BRANCH}/deps/cpp")
+    set(CLP_DEPS_CPP_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/cpp")
     include("${CLP_DEPS_CPP_DIR}/cmake-settings/all-core.cmake"
             OPTIONAL
             RESULT_VARIABLE CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH
@@ -728,7 +722,7 @@ if(CLP_ENABLE_TESTS)
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
-            log-surgeon::log-surgeon
+            log_surgeon::log_surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient

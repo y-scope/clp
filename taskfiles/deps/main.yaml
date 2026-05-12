@@ -375,7 +375,7 @@ tasks:
         cargo build --no-default-features --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
         cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
-        cp -r "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
+        cp -r "{{.SRC_DIR}}/cpp_ffi/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
 
         cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
         if(NOT TARGET {{.TARGET_NAME}})

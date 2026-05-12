@@ -29,8 +29,7 @@ vars:
   G_DOCS_SRC_STATIC_GENERATED_DIR: "{{.G_DOCS_SRC_STATIC_DIR}}/generated"
 
   # Build paths
-  G_BUILD_DIR:
-    sh: 'echo "{{.ROOT_DIR}}/build-$(git rev-parse --abbrev-ref HEAD)"'
+  G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
