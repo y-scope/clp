@@ -148,8 +148,8 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp_s_clp_dependencies
                 PUBLIC
                 clp::string_utils
-                log_mechanic
-                # log_surgeon::log_surgeon
+                log-surgeon::log-surgeon
+                log_surgeon::log_surgeon
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE

@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-// #include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/Lexer.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
@@ -56,7 +56,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            // log_surgeon::lexers::ByteLexer& lexer,
+            log_surgeon::lexers::ByteLexer& lexer,
             bool use_heuristic
     );
 
@@ -148,7 +148,7 @@ std::optional<Query> GrepCore::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        // log_surgeon::lexers::ByteLexer& lexer,
+        log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
     std::vector<SubQuery> sub_queries;

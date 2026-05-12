@@ -184,6 +184,7 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
+                log-surgeon::log-surgeon
                 log_surgeon::log_surgeon
                 ${MONGOCXX_TARGET}
                 msgpack-cxx
