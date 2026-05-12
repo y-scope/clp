@@ -179,10 +179,7 @@ void search(
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
         REQUIRE(clp_s::EvaluatedValue::False != timestamp_index_pass.run(archive_expr));
 
-        auto match_pass = std::make_shared<clp_s::search::SchemaMatch>(
-                archive_reader->get_schema_tree(),
-                archive_reader->get_schema_map()
-        );
+        auto match_pass = std::make_shared<clp_s::search::SchemaMatch>(archive_reader);
         archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
