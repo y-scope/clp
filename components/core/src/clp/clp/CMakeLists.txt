@@ -193,7 +193,7 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
-                log_mechanic
+                log-surgeon::log-surgeon
                 log_surgeon::log_surgeon
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}
