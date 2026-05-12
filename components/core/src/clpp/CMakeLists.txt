@@ -17,7 +17,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         target_link_libraries(
                 clpp_core
                 PUBLIC
-                log_mechanic
+                log-surgeon::log-surgeon
                 ystdlib::error_handling
                 zstd::libzstd_static
                 PRIVATE

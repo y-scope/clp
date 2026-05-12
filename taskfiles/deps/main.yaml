@@ -349,38 +349,6 @@ tasks:
           TARBALL_SHA256: "{{.TARBALL_SHA256}}"
           TARBALL_URL: "{{.TARBALL_URL}}"
 
-  log-mechanic:
-    internal: true
-    run: "once"
-    deps: ["toolchains:rust"]
-    vars:
-      LIB_NAME: "log_mechanic"
-      INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
-      INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
-      OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
-      SRC_DIR: "{{.OUTPUT_DIR}}/rust"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "f5b515f38718e1e26f2bd0ce74d1fdc0be219345e8ba15dbe43c1cad82fbe8a1"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/log-surgeon/archive/5696111.tar.gz"
-      - |-
-        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-        cd "{{.SRC_DIR}}"
-        cargo build --no-default-features --release
-        mkdir -p "{{.INSTALL_INCLUDE_DIR}}"
-        cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_DIR}}"
-        cp -r "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
-        cat << EOF > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
-        add_library({{.LIB_NAME}} STATIC IMPORTED)
-        set_target_properties({{.LIB_NAME}} PROPERTIES
-            IMPORTED_LOCATION "{{.INSTALL_DIR}}/liblog_surgeon.a"
-            INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
-        )
-        EOF
-
   log-surgeon:
     internal: true
     run: "once"
@@ -406,8 +374,8 @@ tasks:
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
-        rsync -az "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
-        rsync -az "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
+        cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
+        cp -r "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
 
         cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
         if(NOT TARGET {{.TARGET_NAME}})
@@ -438,7 +406,6 @@ tasks:
       - "fmt"
       - "microsoft.gsl"
       - "ystdlib"
-      - "log-mechanic"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
