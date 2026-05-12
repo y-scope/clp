@@ -10,6 +10,8 @@ declare module "fastify" {
             USER: string;
             CLP_DB_USER: string;
             CLP_DB_PASS: string;
+            CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: string;
+            CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: string;
             PRESTO_CATALOG: string;
             PRESTO_SCHEMA: string;
             RATE_LIMIT: number;
@@ -54,6 +56,16 @@ const schema = {
         },
         CLP_DB_PASS: {
             type: "string",
+        },
+
+        // S3
+        CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: {
+            type: "string",
+            default: "",
+        },
+        CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: {
+            type: "string",
+            default: "",
         },
 
         // Presto
