@@ -13,8 +13,6 @@ pytest_plugins = [
     "tests.fixtures.datasets",
     "tests.fixtures.integration_test_logs",
     "tests.fixtures.path_configs",
-    "tests.fixtures.package_instance",
-    "tests.fixtures.package_test_config",
     "tests.package_tests.fixtures",
 ]
 

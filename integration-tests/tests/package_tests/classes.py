@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
+    clear_directory,
     load_yaml_to_dict,
     validate_dir_exists,
 )
@@ -113,6 +114,10 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
             self.start_clp_path,
             self.stop_clp_path,
         ]
+
+    def clear_package_archives(self) -> None:
+        """Removes the contents of the package archives directory."""
+        clear_directory(self.package_archives_path)
 
 
 @dataclass
