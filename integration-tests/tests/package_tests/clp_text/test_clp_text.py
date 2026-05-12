@@ -3,38 +3,17 @@
 import logging
 
 import pytest
-from clp_py_utils.clp_config import (
-    ClpConfig,
-    Package,
-    QueryEngine,
-    StorageEngine,
-)
 
+from tests.package_tests.clp_text.utils.mode import CLP_TEXT_MODE
 from tests.utils.asserting_utils import (
-    validate_package_instance,
+    validate_package_running,
     verify_package_compression,
 )
 from tests.utils.classes import SampleDataset
-from tests.utils.clp_mode_utils import CLP_BASE_COMPONENTS
-from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
+from tests.utils.config import PackageCompressionJob, PackageInstance
 from tests.utils.package_utils import run_package_compression_script
 
 logger = logging.getLogger(__name__)
-
-
-# Mode description for this module.
-CLP_TEXT_MODE = PackageModeConfig(
-    mode_name="clp-text",
-    clp_config=ClpConfig(
-        package=Package(
-            storage_engine=StorageEngine.CLP,
-            query_engine=QueryEngine.CLP,
-        ),
-        api_server=None,
-        log_ingestor=None,
-    ),
-    component_list=(*CLP_BASE_COMPONENTS,),
-)
 
 
 # Pytest markers for this module.
@@ -50,7 +29,7 @@ def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
     """Tests package startup."""
     logger.info("Starting test: 'test_clp_text_startup'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     logger.info("Test complete: 'test_clp_text_startup'")
 
@@ -68,7 +47,7 @@ def test_clp_text_compression_text_multifile(
     """
     logger.info("Starting test: 'test_clp_text_compression_text_multifile'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     # Clear archives before compressing.
     package_test_config = fixt_package_instance.package_test_config

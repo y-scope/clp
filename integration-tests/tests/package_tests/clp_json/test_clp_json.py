@@ -3,36 +3,17 @@
 import logging
 
 import pytest
-from clp_py_utils.clp_config import (
-    ClpConfig,
-    Package,
-    QueryEngine,
-    StorageEngine,
-)
 
+from tests.package_tests.clp_json.utils.mode import CLP_JSON_MODE
 from tests.utils.asserting_utils import (
-    validate_package_instance,
+    validate_package_running,
     verify_package_compression,
 )
 from tests.utils.classes import SampleDataset
-from tests.utils.clp_mode_utils import CLP_API_SERVER_COMPONENT, CLP_BASE_COMPONENTS
-from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
+from tests.utils.config import PackageCompressionJob, PackageInstance
 from tests.utils.package_utils import run_package_compression_script
 
 logger = logging.getLogger(__name__)
-
-
-# Mode description for this module.
-CLP_JSON_MODE = PackageModeConfig(
-    mode_name="clp-json",
-    clp_config=ClpConfig(
-        package=Package(
-            storage_engine=StorageEngine.CLP_S,
-            query_engine=QueryEngine.CLP_S,
-        ),
-    ),
-    component_list=(*CLP_BASE_COMPONENTS, CLP_API_SERVER_COMPONENT),
-)
 
 
 # Pytest markers for this module.
@@ -52,7 +33,7 @@ def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
     """
     logger.info("Starting test: 'test_clp_json_startup'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     logger.info("Test complete: 'test_clp_json_startup'")
 
@@ -70,7 +51,7 @@ def test_clp_json_compression_json_multifile(
     """
     logger.info("Starting test: 'test_clp_json_compression_json_multifile'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     # Clear archives before compressing.
     package_test_config = fixt_package_instance.package_test_config
@@ -110,7 +91,7 @@ def test_clp_json_search(fixt_package_instance: PackageInstance) -> None:
     """
     logger.info("Starting test: 'test_clp_json_search'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     # TODO: compress a dataset
 
