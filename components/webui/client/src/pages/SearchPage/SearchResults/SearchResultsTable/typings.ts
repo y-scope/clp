@@ -7,10 +7,15 @@ import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../config";
 const TABLE_BOTTOM_PADDING = 95;
 
 /**
+ * Hard cap for the default per-query result limit, ensuring safety regardless of system config.
+ */
+const SAFE_DEFAULT_LIMIT = 1_000;
+
+/**
  * Default maximum number of results per query, clamped to protect against
  * aggressive system-wide MaxSearchResults configurations.
  */
-const DEFAULT_SEARCH_MAX_NUM_RESULTS = Math.min(1000, SETTINGS_MAX_SEARCH_RESULTS);
+const DEFAULT_SEARCH_MAX_NUM_RESULTS = Math.min(SAFE_DEFAULT_LIMIT, SETTINGS_MAX_SEARCH_RESULTS);
 
 export {
     DEFAULT_SEARCH_MAX_NUM_RESULTS,

@@ -1,6 +1,10 @@
 import {useCallback} from "react";
 
-import {InputNumber, Space, Typography} from "antd";
+import {
+    InputNumber,
+    Space,
+    Typography,
+} from "antd";
 
 import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../config";
 import useSearchStore from "../../SearchState";

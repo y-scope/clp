@@ -89,7 +89,7 @@ const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
         endTimestamp: endTimestamp,
         selectItemList: select.trim(),
         ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
-        limitValue: String(useSearchStore.getState().maxNumResults ?? DEFAULT_SEARCH_LIMIT),
+        limitValue: String(useSearchStore.getState().maxNumResults),
         startTimestamp: startTimestamp,
         timestampKey: timestampKey,
     });
