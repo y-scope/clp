@@ -371,15 +371,15 @@ auto Archive::write_msg_using_schema(
     // Ideally the event would just have its timestamp accessible as event.get_timestamp()
     size_t leaf_id{0};
     while (true) {
-        auto optional_leaf{event.get_leaf_capture(leaf_id)};
+        auto optional_leaf{event.get_leaf_match(leaf_id)};
         if (false == optional_leaf.has_value()) {
             break;
         }
         auto leaf{optional_leaf.value()};
-        if ("header" != leaf.ffi_pointers.variable_name.as_cpp_view()) {
+        if ("header" != leaf.ffi_pointers.root_rule_name.as_cpp_view()) {
             break;
         }
-        if ("timestamp" == leaf.ffi_pointers.capture_name.as_cpp_view()) {
+        if ("timestamp" == leaf.ffi_pointers.rule_name.as_cpp_view()) {
             std::string timestamp_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
             size_t start{};
             size_t end{};
@@ -421,7 +421,7 @@ auto Archive::write_msg_using_schema(
     size_t prev_pos{0};
     leaf_id = 0;
     while (true) {
-        auto optional_leaf{event.get_leaf_capture(leaf_id)};
+        auto optional_leaf{event.get_leaf_match(leaf_id)};
         if (false == optional_leaf.has_value()) {
             break;
         }
@@ -430,7 +430,7 @@ auto Archive::write_msg_using_schema(
         std::string_view leaf_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
 
         m_logtype_dict_entry.add_static_text(static_text);
-        add_token_to_dicts(leaf_string, leaf.ffi_pointers.capture_name.as_cpp_view());
+        add_token_to_dicts(leaf_string, leaf.ffi_pointers.rule_name.as_cpp_view());
 
         prev_pos = leaf.range.end;
         leaf_id++;
