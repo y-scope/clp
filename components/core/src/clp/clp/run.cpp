@@ -60,22 +60,11 @@ int run(int argc, char const* argv[]) {
 
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command) {
-        log_surgeon::Schema* schema{nullptr};
+        std::optional<log_surgeon::ParserHandle> parser;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            std::ifstream schema_file{schema_file_path};
-            if (false == schema_file.good()) {
-                SPDLOG_ERROR("Schema file at {} failed to open.", schema_file_path);
-                return -1;
-            }
-            std::string schema_text{
-                    (std::istreambuf_iterator<char>(schema_file)),
-                    std::istreambuf_iterator<char>()
-            };
-            log_surgeon::CCharArray schema_arr{schema_text.data(), schema_text.size()};
-            schema = log_surgeon::log_surgeon_schema_from_definition(schema_arr);
+            parser = load_parser_from_file(schema_file_path);
         }
-        log_surgeon::ParserHandle parser{schema};
 
         boost::filesystem::path path_prefix_to_remove(
                 command_line_args.get_path_prefix_to_remove()

@@ -28,7 +28,7 @@ bool compress(
         std::vector<std::string> const& empty_directory_paths,
         std::vector<FileToCompress>& grouped_files_to_compress,
         size_t target_encoded_file_size,
-        log_surgeon::ParserHandle parser,
+        std::optional<log_surgeon::ParserHandle> parser,
         bool use_heuristic
 );
 
