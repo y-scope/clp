@@ -28,12 +28,12 @@ const MaxResultsInput = () => {
 
     return (
         <Space.Compact>
-            <Typography.Text className={styles["label"]}>
+            <Typography.Text className={styles["label"] ?? ""}>
                 {"Limit"}
             </Typography.Text>
             <InputNumber
                 changeOnBlur={true}
-                className={styles["input"]}
+                className={styles["input"] ?? ""}
                 max={SETTINGS_MAX_SEARCH_RESULTS}
                 min={1}
                 size={"middle"}
