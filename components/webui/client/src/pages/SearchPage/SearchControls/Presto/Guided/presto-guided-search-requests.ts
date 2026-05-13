@@ -6,7 +6,6 @@ import {
     submitQuery,
 } from "../../../../../api/presto-search";
 import {MAX_DATA_POINTS_PER_TIMELINE} from "../../../../../components/ResultsTimeline/typings";
-import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../../config";
 import {
     buildSearchQuery,
     buildTimelineQuery,
@@ -15,12 +14,6 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState";
 import usePrestoSearchState, {PRESTO_SEARCH_STATE_DEFAULT} from "../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
-
-
-/**
- * Fallback limit for presto search query when store value is unavailable.
- */
-const DEFAULT_SEARCH_LIMIT = SETTINGS_MAX_SEARCH_RESULTS;
 
 
 /**
