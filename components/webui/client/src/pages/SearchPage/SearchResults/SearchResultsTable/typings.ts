@@ -7,11 +7,12 @@ import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../../config";
 const TABLE_BOTTOM_PADDING = 95;
 
 /**
- * The maximum number of results to retrieve for a search.
+ * Default maximum number of results per query, clamped to protect against
+ * aggressive system-wide MaxSearchResults configurations.
  */
-const SEARCH_MAX_NUM_RESULTS = SETTINGS_MAX_SEARCH_RESULTS;
+const DEFAULT_SEARCH_MAX_NUM_RESULTS = Math.min(1000, SETTINGS_MAX_SEARCH_RESULTS);
 
 export {
-    SEARCH_MAX_NUM_RESULTS,
+    DEFAULT_SEARCH_MAX_NUM_RESULTS,
     TABLE_BOTTOM_PADDING,
 };

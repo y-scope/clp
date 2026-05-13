@@ -3,7 +3,6 @@ import {Dayjs} from "dayjs";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
-import {SETTINGS_MAX_SEARCH_RESULTS} from "../../../config";
 import {downloadTextFile} from "../../../utils/download";
 import {
     DEFAULT_TIME_RANGE,
@@ -15,6 +14,7 @@ import {
     SearchResult,
 } from "../SearchResults/SearchResultsTable/Native/SearchResultsVirtualTable/typings";
 import {formatExportFilenameTimestamp} from "../SearchResults/SearchResultsTable/Native/utils";
+import {DEFAULT_SEARCH_MAX_NUM_RESULTS} from "../SearchResults/SearchResultsTable/typings";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
 import {SEARCH_UI_STATE} from "./typings";
 
@@ -24,7 +24,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
-    maxNumResults: SETTINGS_MAX_SEARCH_RESULTS,
+    maxNumResults: DEFAULT_SEARCH_MAX_NUM_RESULTS,
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
