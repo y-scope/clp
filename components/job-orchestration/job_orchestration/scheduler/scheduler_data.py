@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from enum import auto, Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+import msgpack
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
@@ -44,12 +45,18 @@ class QueryJob(BaseModel, ABC):
     state: InternalJobState
     start_time: datetime.datetime | None = None
     current_sub_job_async_task_result: Any | None = None
+    _cached_config_blob: bytes | None = PrivateAttr(default=None)
 
     @abstractmethod
     def get_type(self) -> QueryJobType: ...
 
     @abstractmethod
     def get_config(self) -> QueryJobConfig: ...
+
+    def get_cached_config_blob(self) -> bytes:
+        if self._cached_config_blob is None:
+            self._cached_config_blob = msgpack.packb(self.get_config().model_dump())
+        return self._cached_config_blob
 
 
 class ExtractIrJob(QueryJob):
