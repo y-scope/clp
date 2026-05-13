@@ -7,7 +7,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "query-worker"
 spec:
-  replicas: {{ .Values.queryWorker.replicas }}
+  replicas: {{ .Values.scheduling.queryWorker.replicas }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -87,7 +87,7 @@ spec:
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--loglevel", "WARNING",
             "-Q", "query",
-            "-n", "query-worker@$(HOSTNAME)"
+            "-n", "query-worker"
           ]
       volumes:
         - name: {{ include "clp.volumeName" (dict
