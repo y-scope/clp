@@ -76,5 +76,5 @@ CLP_COMPOSE_RUN_EXTRA_FLAGS=()
 if [[ -t 0 && -t 1 && "$(ps --format=stat= --pid "$$")" == *+* ]]; then
     CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=true)
 else
-    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false --no-TTY)
 fi
