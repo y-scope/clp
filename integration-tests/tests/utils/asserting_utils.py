@@ -1,18 +1,11 @@
 """Utilities that raise pytest assertions on failure."""
 
 import logging
-from pathlib import Path
 
 import pytest
-from clp_package_utils.general import EXTRACT_FILE_CMD
 
-from tests.utils.config import PackageInstance, PackageTestConfig
+from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_services_in_compose_project
-from tests.utils.subprocess_utils import run_and_log_subprocess
-from tests.utils.utils import (
-    clear_directory,
-    is_dir_tree_content_equal,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -51,59 +44,3 @@ def validate_package_running(package_instance: PackageInstance) -> None:
         fail_msg += f"\nUnexpected services: {unexpected_components}."
 
     pytest.fail(fail_msg)
-
-
-def verify_package_compression(
-    path_to_original_dataset: Path,
-    package_test_config: PackageTestConfig,
-) -> None:
-    """
-    Verify that compression has been executed correctly by decompressing the contents of
-    `clp-package/var/data/archives` and comparing the decompressed logs to the originals stored at
-    `path_to_original_dataset`.
-
-    :param path_to_original_dataset:
-    :param package_test_config:
-    """
-    mode = package_test_config.mode_config.mode_name
-    log_msg = f"Verifying {mode} package compression."
-    logger.info(log_msg)
-
-    if mode == "clp-json":
-        # TODO: Waiting for PR 1299 to be merged.
-        assert True
-    elif mode == "clp-text":
-        # Decompress the contents of `clp-package/var/data/archives`.
-        path_config = package_test_config.path_config
-        decompress_script_path = path_config.decompress_script_path
-        decompression_dir = path_config.package_decompression_dir
-        temp_config_file_path = package_test_config.temp_config_file_path
-
-        clear_directory(decompression_dir)
-
-        decompress_cmd = [
-            str(decompress_script_path),
-            "--config",
-            str(temp_config_file_path),
-            EXTRACT_FILE_CMD,
-            "--extraction-dir",
-            str(decompression_dir),
-        ]
-
-        # Run decompression command and assert that it succeeds.
-        run_and_log_subprocess(decompress_cmd)
-
-        # Verify content equality.
-        output_path = decompression_dir / path_to_original_dataset.relative_to(
-            path_to_original_dataset.anchor
-        )
-
-        try:
-            if not is_dir_tree_content_equal(path_to_original_dataset, output_path):
-                err_msg = (
-                    f"Mismatch between clp input {path_to_original_dataset} and output"
-                    f" {output_path}."
-                )
-                pytest.fail(err_msg)
-        finally:
-            clear_directory(decompression_dir)

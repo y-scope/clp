@@ -164,20 +164,6 @@ class PackagePathConfig:
 
 
 @dataclass(frozen=True)
-class PackageCompressionJob:
-    """A compression job for a package test."""
-
-    #: The absolute path to the dataset (either a file or directory).
-    path_to_original_dataset: Path
-
-    #: Options to specify in the compression command.
-    options: list[str] | None
-
-    #: Positional arguments to specify in the compression command (do not put paths to compress)
-    positional_args: list[str] | None
-
-
-@dataclass(frozen=True)
 class PackageModeConfig:
     """Mode configuration for the CLP package."""
 
