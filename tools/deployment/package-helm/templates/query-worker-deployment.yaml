@@ -87,7 +87,7 @@ spec:
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--loglevel", "WARNING",
             "-Q", "query",
-            "-n", "query-worker"
+            "-n", "query-worker@%h"
           ]
       volumes:
         - name: {{ include "clp.volumeName" (dict
