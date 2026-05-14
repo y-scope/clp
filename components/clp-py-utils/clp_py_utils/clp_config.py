@@ -238,6 +238,16 @@ class DbUserCredentials(BaseModel):
     password: NonEmptyStr
 
 
+class ResourceRequirements(BaseModel):
+    cpu: NonEmptyStr | None = None
+    memory: NonEmptyStr | None = None
+
+
+class Resources(BaseModel):
+    requests: ResourceRequirements | None = None
+    limits: ResourceRequirements | None = None
+
+
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
@@ -251,6 +261,7 @@ class Database(BaseModel):
     ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
     compress: bool = True
+    resources: Resources | None = None
 
     credentials: dict[ClpDbUserType, DbUserCredentials] = {}
 
@@ -425,6 +436,7 @@ class CompressionScheduler(BaseModel):
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
     type: OrchestrationTypeStr = OrchestrationType.CELERY
+    resources: Resources | None = None
 
 
 class QueryScheduler(BaseModel):
@@ -437,6 +449,7 @@ class QueryScheduler(BaseModel):
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
     scheduler_concurrency: PositiveInt = 4
+    resources: Resources | None = None
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
@@ -445,10 +458,12 @@ class QueryScheduler(BaseModel):
 
 class CompressionWorker(BaseModel):
     logging_level: LoggingLevel = "INFO"
+    resources: Resources | None = None
 
 
 class QueryWorker(BaseModel):
     logging_level: LoggingLevel = "INFO"
+    resources: Resources | None = None
 
 
 class Redis(BaseModel):
@@ -460,6 +475,7 @@ class Redis(BaseModel):
     compression_backend_database: int = 1
     # redis can perform authentication without a username
     password: str | None = None
+    resources: Resources | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"password"})
@@ -494,6 +510,7 @@ class Reducer(BaseModel):
     base_port: Port = DEFAULT_PORT
     logging_level: LoggingLevel = "INFO"
     upsert_interval: PositiveInt = 100  # milliseconds
+    resources: Resources | None = None
 
     def transform_for_container(self):
         self.host = REDUCER_COMPONENT_NAME
@@ -508,6 +525,7 @@ class ResultsCache(BaseModel):
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
     retention_period: PositiveInt | None = 60
+    resources: Resources | None = None
 
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
@@ -526,6 +544,7 @@ class Queue(BaseModel):
 
     username: NonEmptyStr | None = None
     password: str | None = None
+    resources: Resources | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"username", "password"})
@@ -742,6 +761,7 @@ class WebUi(BaseModel):
     port: Port = DEFAULT_PORT
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
+    resources: Resources | None = None
 
 
 class SweepInterval(BaseModel):
@@ -757,11 +777,13 @@ class McpServer(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     logging_level: LoggingLevel = "INFO"
+    resources: Resources | None = None
 
 
 class GarbageCollector(BaseModel):
     logging_level: LoggingLevel = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
+    resources: Resources | None = None
 
 
 class QueryJobPollingConfig(BaseModel):
@@ -774,12 +796,14 @@ class ApiServer(BaseModel):
     port: Port = 3001
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
+    resources: Resources | None = None
 
 
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
     logging_level: LoggingLevelRust = "INFO"
+    resources: Resources | None = None
 
 
 class Presto(BaseModel):
@@ -787,6 +811,7 @@ class Presto(BaseModel):
 
     host: DomainStr
     port: Port
+    resources: Resources | None = None
 
     def transform_for_container(self):
         self.host = PRESTO_COORDINATOR_COMPONENT_NAME

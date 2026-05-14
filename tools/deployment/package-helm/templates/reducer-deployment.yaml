@@ -48,6 +48,10 @@ spec:
               value: {{ .Values.clpConfig.reducer.logging_level | quote }}
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "reducer"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"

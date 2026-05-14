@@ -58,6 +58,10 @@ spec:
               value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "garbageCollector"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"

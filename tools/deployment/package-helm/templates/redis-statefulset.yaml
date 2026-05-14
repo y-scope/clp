@@ -33,6 +33,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-redis
                   key: "password"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "redis"
+            ) | nindent 10 }}
           ports:
             - name: "redis"
               containerPort: 6379

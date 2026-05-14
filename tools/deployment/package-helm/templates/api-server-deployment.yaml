@@ -52,6 +52,10 @@ spec:
                   key: "username"
             - name: "RUST_LOG"
               value: "INFO"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "apiServer"
+            ) | nindent 10 }}
           ports:
             - name: "api-server"
               containerPort: 3001
