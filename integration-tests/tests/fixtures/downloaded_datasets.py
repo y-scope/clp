@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class DownloadedDataset:
-    """Metadata for the downloaded logs used for integration tests."""
+    """Metadata for a dataset downloaded on-demand from an external URL."""
 
     #:
-    name: str
+    dataset_name: str
     #:
     tarball_url: str
     integration_test_path_config: InitVar[IntegrationTestPathConfig]
@@ -35,16 +35,16 @@ class DownloadedDataset:
 
     def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
         """Initialize and set tarball and extraction paths for integration test logs."""
-        name = self.name.strip()
-        if 0 == len(name):
-            err_msg = "`name` cannot be empty."
+        dataset_name = self.dataset_name.strip()
+        if 0 == len(dataset_name):
+            err_msg = "`dataset_name` cannot be empty."
             raise ValueError(err_msg)
         downloaded_logs_dir = integration_test_path_config.downloaded_logs_dir
         validate_dir_exists(downloaded_logs_dir)
 
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "tarball_path", downloaded_logs_dir / f"{name}.tar.gz")
-        object.__setattr__(self, "extraction_dir", downloaded_logs_dir / name)
+        object.__setattr__(self, "dataset_name", dataset_name)
+        object.__setattr__(self, "tarball_path", downloaded_logs_dir / f"{dataset_name}.tar.gz")
+        object.__setattr__(self, "extraction_dir", downloaded_logs_dir / dataset_name)
 
 
 @pytest.fixture(scope="session")
@@ -56,7 +56,7 @@ def hive_24hr(
     return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
-        name="hive-24hr",
+        dataset_name="hive-24hr",
         tarball_url="https://zenodo.org/records/7094921/files/hive-24hr.tar.gz?download=1",
     )
 
@@ -70,7 +70,7 @@ def postgresql(
     return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
-        name="postgresql",
+        dataset_name="postgresql",
         tarball_url="https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1",
     )
 
@@ -78,7 +78,7 @@ def postgresql(
 def _download_and_extract_gzip_dataset(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
-    name: str,
+    dataset_name: str,
     tarball_url: str,
     keep_leading_dir: bool = False,
 ) -> DownloadedDataset:
@@ -88,7 +88,7 @@ def _download_and_extract_gzip_dataset(
 
     :param request: Provides access to the pytest cache.
     :param integration_test_path_config: See `IntegrationTestPathConfig`.
-    :param name: Dataset name.
+    :param dataset_name: Dataset name.
     :param tarball_url: Dataset tarball URL.
     :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
         Defaults to False to avoid an unnecessary extra directory level.
@@ -96,12 +96,12 @@ def _download_and_extract_gzip_dataset(
     :raises subprocess.CalledProcessError: If `curl`, `tar`, or `chmod` fails.
     """
     downloaded_dataset = DownloadedDataset(
-        name=name,
+        dataset_name=dataset_name,
         tarball_url=tarball_url,
         integration_test_path_config=integration_test_path_config,
     )
-    if request.config.cache.get(name, False):
-        logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
+    if request.config.cache.get(dataset_name, False):
+        logger.info("Test logs `%s` are up-to-date. Skipping download.", dataset_name)
         return downloaded_dataset
 
     remove_path(downloaded_dataset.tarball_path)
@@ -142,6 +142,6 @@ def _download_and_extract_gzip_dataset(
     subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
     subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
-    logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
-    request.config.cache.set(name, True)
+    logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", dataset_name)
+    request.config.cache.set(dataset_name, True)
     return downloaded_dataset
