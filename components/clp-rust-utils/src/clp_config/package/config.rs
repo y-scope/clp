@@ -21,6 +21,7 @@ pub struct Config {
     pub stream_output: StreamOutput,
     pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
+    pub telemetry: Telemetry,
 }
 
 impl Default for Config {
@@ -37,6 +38,7 @@ impl Default for Config {
                 config: FsIngestion::default(),
             },
             archive_output: ArchiveOutput::default(),
+            telemetry: Telemetry::default(),
         }
     }
 }
@@ -307,6 +309,23 @@ pub enum LogsInput {
         #[serde(flatten)]
         config: S3Ingestion,
     },
+}
+
+/// Mirror of `clp_py_utils.clp_config.Telemetry`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct Telemetry {
+    pub disable: bool,
+    pub endpoint: String,
+}
+
+impl Default for Telemetry {
+    fn default() -> Self {
+        Self {
+            disable: false,
+            endpoint: "https://telemetry.yscope.io".to_owned(),
+        }
+    }
 }
 
 #[cfg(test)]
