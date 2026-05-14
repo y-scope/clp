@@ -394,6 +394,8 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/FileToCompress.hpp
         src/clp/clp/run.cpp
         src/clp/clp/run.hpp
+        src/clp/clp/SchemaAnalyzer.cpp
+        src/clp/clp/SchemaAnalyzer.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
         src/clp/CurlDownloadHandler.cpp
@@ -663,6 +665,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
+        tests/test-SchemaAnalyzer.cpp
         tests/test-SchemaSearcher.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp

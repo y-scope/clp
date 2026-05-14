@@ -3,6 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <string>
 
 #include <archive_entry.h>
 #include <boost/filesystem/operations.hpp>
@@ -61,6 +62,7 @@ bool compress(
         vector<FileToCompress>& grouped_files_to_compress,
         size_t target_encoded_file_size,
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
+        SchemaAnalyzer::EncodingMap const& encoding_to_schema_vars,
         bool use_heuristic
 ) {
     auto output_dir = std::filesystem::path(command_line_args.get_output_dir());
@@ -109,7 +111,11 @@ bool compress(
     archive_writer.add_empty_directories(empty_directory_paths);
 
     bool all_files_compressed_successfully = true;
-    FileCompressor file_compressor(uuid_generator, std::move(reader_parser));
+    FileCompressor file_compressor(
+            uuid_generator,
+            std::move(reader_parser),
+            encoding_to_schema_vars
+    );
     auto target_data_size_of_dictionaries
             = command_line_args.get_target_data_size_of_dictionaries();
 

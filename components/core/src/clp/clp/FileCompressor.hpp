@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_FILECOMPRESSOR_HPP
 #define CLP_CLP_FILECOMPRESSOR_HPP
 
+#include <string>
 #include <system_error>
 
 #include <boost/uuid/random_generator.hpp>
@@ -14,6 +15,7 @@
 #include "../ParsedMessage.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "FileToCompress.hpp"
+#include "SchemaAnalyzer.hpp"
 
 namespace clp::clp {
 /**
@@ -24,10 +26,12 @@ public:
     // Constructors
     FileCompressor(
             boost::uuids::random_generator& uuid_generator,
-            std::unique_ptr<log_surgeon::ReaderParser> reader_parser
+            std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
+            SchemaAnalyzer::EncodingMap encoding_to_schema_vars
     )
             : m_uuid_generator(uuid_generator),
-              m_reader_parser(std::move(reader_parser)) {}
+              m_reader_parser(std::move(reader_parser)),
+              m_encoding_to_schema_vars(std::move(encoding_to_schema_vars)) {}
 
     // Methods
     /**
@@ -168,6 +172,7 @@ private:
     MessageParser m_message_parser;
     ParsedMessage m_parsed_message;
     std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;
+    SchemaAnalyzer::EncodingMap m_encoding_to_schema_vars;
 };
 }  // namespace clp::clp
 
