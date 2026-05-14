@@ -8,6 +8,7 @@ import platform
 import socket
 import stat
 import subprocess
+import time
 import uuid
 from abc import ABC, abstractmethod
 from types import MappingProxyType
@@ -968,6 +969,8 @@ class DockerComposeController(BaseController):
         self._instance_id = instance_id
         self._project_name = f"clp-package-{instance_id}"
         self._restart_policy = restart_policy
+        self._clp_version: str | None = None
+        self._resource_attrs: dict[str, Any] = {}
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
@@ -1020,24 +1023,24 @@ class DockerComposeController(BaseController):
         if self._clp_config.telemetry.disable:
             env_vars["CLP_DISABLE_TELEMETRY"] = "true"
         else:
-            # Read the package version for the service.version resource attribute.
             version_file_path = self._clp_home / "VERSION"
-            clp_version = (
+            self._clp_version = (
                 version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
             )
 
-            os_type = platform.system().lower()
-            arch = platform.machine().lower()
+            self._resource_attrs = {
+                "clp.deployment.id": self._instance_id,
+                "service.version": self._clp_version,
+                "clp.deployment.method": "docker-compose",
+                "clp.storage.engine": self._clp_config.package.storage_engine,
+                "os.type": platform.system().lower(),
+                "host.arch": platform.machine().lower(),
+            }
 
-            resource_attrs = (
-                f"clp.deployment.id={self._instance_id},"
-                f"service.version={clp_version},"
-                f"clp.deployment.method=docker-compose,"
-                f"clp.storage.engine={self._clp_config.package.storage_engine},"
-                f"os.type={os_type},"
-                f"host.arch={arch}"
+            resource_attrs_str = ",".join(
+                f"{k}={v}" for k, v in self._resource_attrs.items()
             )
-            env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs
+            env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
             env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://otel-collector:4318"
 
         env_vars["TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
@@ -1173,9 +1176,6 @@ class DockerComposeController(BaseController):
         return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
 
     def _emit_topology_metrics(self) -> None:
-        import json
-        import time
-
         timestamp_ns = int(time.time() * 1e9)
         metrics = []
 
@@ -1187,19 +1187,11 @@ class DockerComposeController(BaseController):
         num_workers = self._get_num_workers()
 
         add_gauge("clp.deployment.compression_worker_replicas", 1)
-        add_gauge(
-            "clp.deployment.compression_worker_concurrency",
-            num_workers,
-        )
+        add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
         add_gauge("clp.deployment.query_worker_replicas", 1)
-        add_gauge(
-            "clp.deployment.query_worker_concurrency",
-            num_workers,
-        )
+        add_gauge("clp.deployment.query_worker_concurrency", num_workers)
         add_gauge("clp.deployment.reducer_replicas", 1)
-        add_gauge(
-            "clp.deployment.reducer_concurrency", num_workers
-        )
+        add_gauge("clp.deployment.reducer_concurrency", num_workers)
 
         payload = {
             "resourceMetrics": [
@@ -1210,22 +1202,7 @@ class DockerComposeController(BaseController):
             ]
         }
 
-        version_file_path = self._clp_home / "VERSION"
-        clp_version = (
-            version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
-        )
-        import platform
-
-        resource_attrs = {
-            "clp.deployment.id": self._instance_id,
-            "service.version": clp_version,
-            "clp.deployment.method": "docker-compose",
-            "clp.storage.engine": self._clp_config.package.storage_engine,
-            "os.type": platform.system().lower(),
-            "host.arch": platform.machine().lower(),
-            "service.name": "controller",
-        }
-        for k, v in resource_attrs.items():
+        for k, v in {**self._resource_attrs, "service.name": "controller"}.items():
             payload["resourceMetrics"][0]["resource"]["attributes"].append(
                 {"key": k, "value": {"stringValue": str(v)}}
             )
