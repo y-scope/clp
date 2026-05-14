@@ -714,7 +714,7 @@ services:
 
   otel-collector:
     profiles: ["telemetry"]
-    image: "otel/opentelemetry-collector-contrib:0.127.0"
+    image: "otel/opentelemetry-collector-contrib:0.152.0"
     hostname: "otel_collector"
     restart: "${CLP_RESTART_POLICY:-on-failure:3}"
     environment:
@@ -724,3 +724,11 @@ services:
         source: "./otel-collector-config.yaml"
         target: "/etc/otelcol-contrib/config.yaml"
         read_only: true
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "bash",
+        "-c",
+        "< /dev/tcp/localhost/13133"
+      ]

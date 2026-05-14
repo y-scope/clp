@@ -1,3 +1,7 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
 receivers:
   otlp:
     protocols:
@@ -14,6 +18,7 @@ exporters:
     endpoint: ${TELEMETRY_ENDPOINT}
 
 service:
+  extensions: [health_check]
   pipelines:
     metrics:
       receivers: [otlp]
