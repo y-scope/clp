@@ -61,7 +61,7 @@ clp.deployment.id={{ .Values.clpConfig.instanceId | default "00000000-0000-0000-
 Provides environment variables for telemetry (except service.name).
 */}}
 {{- define "clp.telemetryEnv" -}}
-{{- if .Values.clpConfig.telemetry.disable }}
+{{- if and .Values.clpConfig.telemetry .Values.clpConfig.telemetry.disable }}
 - name: CLP_DISABLE_TELEMETRY
   value: "true"
 {{- else }}
