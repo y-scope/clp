@@ -1218,6 +1218,12 @@ class DockerComposeController(BaseController):
                     f"{self._project_name}_default",
                     "curlimages/curl",
                     "-s",
+                    "--fail",
+                    "--retry",
+                    "5",
+                    "--retry-all-errors",
+                    "--retry-delay",
+                    "1",
                     "-X",
                     "POST",
                     "-H",
@@ -1228,7 +1234,7 @@ class DockerComposeController(BaseController):
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                timeout=5,
+                timeout=15,
             )
         except Exception as e:
             logger.warning(f"Failed to emit topology metrics: {e}")
