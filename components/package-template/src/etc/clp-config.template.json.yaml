@@ -1,5 +1,11 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 
+# Anonymous usage telemetry.
+# See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+telemetry:
+  disable: false
+  endpoint: "https://telemetry.yscope.io"
+
 #package:
 #  storage_engine: "clp-s"
 #  query_engine: "clp-s"
@@ -64,6 +70,7 @@
 #  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
+#  scheduler_concurrency: 4
 #
 #queue:
 #  host: "localhost"

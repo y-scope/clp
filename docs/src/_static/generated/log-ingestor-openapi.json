@@ -9,7 +9,7 @@
     "license": {
       "name": ""
     },
-    "version": "0.1.0"
+    "version": "0.12.1-dev"
   },
   "paths": {
     "/health": {
@@ -222,10 +222,6 @@
             "description": "The S3 bucket to ingest from.",
             "minLength": 1
           },
-          "buffer_config": {
-            "$ref": "#/components/schemas/BufferConfig",
-            "description": "Per-job ingestion buffer config."
-          },
           "dataset": {
             "type": "string",
             "description": "The dataset to ingest into. Defaults to `None` (which uses the default dataset).",
@@ -315,6 +311,10 @@
           {
             "type": "object",
             "properties": {
+              "buffer_config": {
+                "$ref": "#/components/schemas/BufferConfig",
+                "description": "Per-job ingestion buffer config."
+              },
               "scanning_interval_sec": {
                 "type": "integer",
                 "format": "int32",
@@ -342,6 +342,10 @@
               "queue_url"
             ],
             "properties": {
+              "buffer_config": {
+                "$ref": "#/components/schemas/BufferConfig",
+                "description": "Per-job ingestion buffer config."
+              },
               "num_concurrent_listener_tasks": {
                 "type": "integer",
                 "format": "int32",

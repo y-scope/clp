@@ -17,6 +17,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "webui"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "webui"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       initContainers:
@@ -57,9 +61,9 @@ spec:
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
             {{- with .Values.clpConfig.stream_output.storage }}
             {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
-            - name: "AWS_ACCESS_KEY_ID"
+            - name: "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID"
               value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
-            - name: "AWS_SECRET_ACCESS_KEY"
+            - name: "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY"
               value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
             {{- end }}{{/* if and (eq .type "s3")
                                   (eq .s3_config.aws_authentication.type "credentials") */}}
@@ -76,7 +80,7 @@ spec:
               mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
               subPath: "webui-server-settings.json"
               readOnly: true
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -95,11 +99,12 @@ spec:
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            tcpSocket: &webui-health-check
+            httpGet: &webui-health-check
+              path: "/"
               port: "webui"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            tcpSocket: *webui-health-check
+            httpGet: *webui-health-check
       volumes:
         - name: "client-settings"
           configMap:
@@ -107,7 +112,7 @@ spec:
         - name: "server-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}

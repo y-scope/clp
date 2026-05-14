@@ -1,6 +1,6 @@
 [project]
 name = "clp-package-utils"
-version = "0.10.1-dev"
+version = "0.12.1-dev"
 description = "Utilities for the CLP package."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "pymongo>=4.16.0",
     "PyYAML>=6.0.3",
+    "ruamel.yaml>=0.19.1",
 ]
 
 [build-system]

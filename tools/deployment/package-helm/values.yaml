@@ -17,6 +17,10 @@ image:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
     pullPolicy: "IfNotPresent"
     tag: "clp-v0.10.0-fix.1"
+  kubectl:
+    repository: "bitnami/kubectl"
+    pullPolicy: "IfNotPresent"
+    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
@@ -30,69 +34,51 @@ distributedDeployment: false
 # Number of concurrent processes per worker pod.
 workerConcurrency: 8
 
-compressionWorker:
-  replicas: 1
-  # Controls which nodes run compression workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "compression"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "compression"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
+# Per-component node scheduling and replica config.
+# Each component accepts: replicas (workers only), nodeSelector, affinity, tolerations,
+# topologySpreadConstraints.
+#
+# Example:
+#   scheduling:
+#     compressionWorker:
+#       replicas: 3
+#       nodeSelector:
+#         yscope.io/nodeType: "compression"
+#       tolerations:
+#         - key: "yscope.io/dedicated"
+#           operator: "Equal"
+#           value: "compression"
+#           effect: "NoSchedule"
+#       topologySpreadConstraints:
+#         - maxSkew: 1
+#           topologyKey: "kubernetes.io/hostname"
+#           whenUnsatisfiable: "DoNotSchedule"
+scheduling:
+  # Worker
+  compressionWorker:
+    replicas: 1
+  queryWorker:
+    replicas: 1
+  reducer:
+    replicas: 1
+  prestoWorker:
+    replicas: 1
 
-queryWorker:
-  replicas: 1
-  # Controls which nodes run query workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "query"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "query"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
+  # Database
+  database: {}
+  queue: {}
+  redis: {}
+  resultsCache: {}
 
-reducer:
-  replicas: 1
-  # Controls which nodes run reducers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "query"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "reducer"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
-
-prestoWorker:
-  replicas: 1
-  # Controls which nodes run Presto workers
-  # scheduling:
-  #   nodeSelector:
-  #     yscope.io/nodeType: "presto"
-  #   tolerations:
-  #     - key: "yscope.io/dedicated"
-  #       operator: "Equal"
-  #       value: "presto"
-  #       effect: "NoSchedule"
-  #   topologySpreadConstraints:
-  #     - maxSkew: 1
-  #       topologyKey: "kubernetes.io/hostname"
-  #       whenUnsatisfiable: "DoNotSchedule"
+  # Core
+  compressionScheduler: {}
+  logIngestor: {}
+  queryScheduler: {}
+  prestoCoordinator: {}
+  garbageCollector: {}
+  apiServer: {}
+  webui: {}
+  mcpServer: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
@@ -145,6 +131,7 @@ clpConfig:
     jobs_poll_delay: 0.1  # seconds
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
+    scheduler_concurrency: 4
 
   queue:
     # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
@@ -256,8 +243,13 @@ clpConfig:
       archive: 60
       search_result: 30
 
-  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
-  aws_config_directory: null
+  # AWS config content (e.g., `~/.aws/config`). Provide file contents via `--set-file` to create a
+  # chart-managed Secret that is mounted into pods. Set to null to disable.
+  # Usage:
+  #   helm install <release> <chart> \
+  #     --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
+  #     --set-file clpConfig.aws_config.config=$HOME/.aws/config
+  aws_config: null
 
 credentials:
   database:

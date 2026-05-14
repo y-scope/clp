@@ -1,7 +1,8 @@
 [package]
 name = "log-ingestor"
-version = "0.1.0"
+version = "0.12.1-dev"
 edition = "2024"
+autotests = false
 
 [lib]
 name = "log_ingestor"
@@ -14,6 +15,10 @@ path  = "src/bin/log_ingestor.rs"
 [[bin]]
 name = "log-ingestor-openapi-codegen"
 path = "src/bin/log_ingestor_openapi_codegen.rs"
+
+[[test]]
+name = "log_ingestor_tests"
+path = "tests/test.rs"
 
 [dependencies]
 anyhow = "1.0.100"

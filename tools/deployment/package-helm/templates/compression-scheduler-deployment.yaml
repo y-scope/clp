@@ -17,6 +17,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "compression-scheduler"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "compressionScheduler"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 300
       initContainers:
@@ -73,7 +77,7 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -93,7 +97,7 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}

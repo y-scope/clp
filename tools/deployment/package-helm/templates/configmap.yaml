@@ -133,6 +133,7 @@ data:
       logging_level: {{ .logging_level | quote }}
       num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
       port: 7000
+      scheduler_concurrency: {{ .scheduler_concurrency | int }}
     {{- end }}
     {{- with .Values.clpConfig.query_worker }}
     query_worker:
@@ -204,8 +205,8 @@ data:
       target_uncompressed_size: {{ .target_uncompressed_size | int }}
     {{- end }}{{/* with .Values.clpConfig.stream_output */}}
     tmp_directory: "/var/tmp"
-    {{- if .Values.clpConfig.aws_config_directory }}
-    aws_config_directory: {{ .Values.clpConfig.aws_config_directory | quote }}
+    {{- if .Values.clpConfig.aws_config }}
+    aws_config_directory: {{ include "clp.awsConfigMountPath" . | quote }}
     {{- end }}
     webui:
       host: "localhost"
