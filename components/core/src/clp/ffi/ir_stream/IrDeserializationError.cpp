@@ -27,16 +27,22 @@ auto IrErrorCategory::message(IrDeserializationErrorEnum error_enum) const -> st
             return "invalid key-ID-group ordering";
         case IrDeserializationErrorEnum::InvalidMagicNumber:
             return "invalid magic number";
+        case IrDeserializationErrorEnum::InvalidReferenceTimestampMetadata:
+            return "reference timestamp metadata is missing or not a string";
+        case IrDeserializationErrorEnum::InvalidReferenceTimestampValue:
+            return "reference timestamp string could not be parsed as an integer";
         case IrDeserializationErrorEnum::InvalidTag:
             return "invalid tag";
-        case IrDeserializationErrorEnum::UnsupportedMetadataFormat:
-            return "IR stream metadata format unsupported";
-        case IrDeserializationErrorEnum::UnsupportedVersion:
-            return "IR stream version unsupported";
+        case IrDeserializationErrorEnum::MissingRequiredSchemaNodes:
+            return "required message or timestamp schema tree node is missing";
         case IrDeserializationErrorEnum::UnknownSchemaTreeNodeType:
             return "unknown schema tree node type";
         case IrDeserializationErrorEnum::UnknownValueType:
             return "unknown value type";
+        case IrDeserializationErrorEnum::UnsupportedMetadataFormat:
+            return "IR stream metadata format unsupported";
+        case IrDeserializationErrorEnum::UnsupportedVersion:
+            return "IR stream version unsupported";
         default:
             return "unknown error code enum";
     }
