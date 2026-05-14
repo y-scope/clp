@@ -1,0 +1,24 @@
+{{- if and .Values.gateway .Values.gateway.enabled }}
+apiVersion: "gateway.networking.k8s.io/v1"
+kind: "Gateway"
+metadata:
+  name: {{ include "clp.fullname" . }}
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+  {{- with .Values.gateway.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ .Values.gateway.className | quote }}
+  listeners:
+    - name: "http"
+      port: 80
+      protocol: "HTTP"
+      {{- if .Values.gateway.hostname }}
+      hostname: {{ .Values.gateway.hostname | quote }}
+      {{- end }}
+      allowedRoutes:
+        namespaces:
+          from: "Same"
+{{- end }}

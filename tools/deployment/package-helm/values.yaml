@@ -96,6 +96,7 @@ clpConfig:
 
   # API server config
   api_server:
+    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30301
     default_max_num_query_results: 1000
     query_job_polling:
@@ -172,12 +173,14 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   webui:
+    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     query_engine: "clp-s"
     port: 30000
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
   mcp_server: null
+  #   serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   port: 30800
   #   logging_level: "INFO"
 
@@ -199,6 +202,7 @@ clpConfig:
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
+    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30302
     logging_level: "INFO"
 
@@ -269,3 +273,13 @@ serviceAccount:
   annotations:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
+
+# Optional Gateway API resources for routing external traffic to CLP services.
+# Requires the Gateway API CRDs and a compatible controller (e.g., nginx-gateway-fabric,
+# Envoy Gateway, Traefik v3, Istio).
+# Enable this when using ClusterIP services behind a load balancer.
+gateway:
+  enabled: false
+  className: ""  # GatewayClass name (e.g., "nginx", "eg", "istio", "traefik")
+  hostname: ""  # Optional hostname filter for the Gateway listener
+  annotations: {}
