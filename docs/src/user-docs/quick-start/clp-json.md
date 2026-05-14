@@ -89,6 +89,7 @@ helm repo add clp https://y-scope.github.io/clp
 helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
+  --set clpConfig.telemetry.disable=false \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.api_server.port="$CLP_API_SERVER_PORT" \
