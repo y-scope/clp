@@ -70,6 +70,11 @@ if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
 fi
 
 CLP_COMPOSE_RUN_EXTRA_FLAGS=()
-if [[ $- != *i* ]]; then
-    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
+# Use interactive mode only for foreground terminal runs; background jobs may still inherit TTYs
+# even though they're not in the foreground process group (indicated by the absence of "+" in the
+# process stat).
+if [[ -t 0 && -t 1 && "$(ps --format=stat= --pid "$$")" == *+* ]]; then
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=true)
+else
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false --no-TTY)
 fi

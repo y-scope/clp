@@ -63,7 +63,7 @@ spec:
               ) | quote }}
               mountPath: "/var/data/archives"
             {{- end }}
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
@@ -87,7 +87,7 @@ spec:
             "--concurrency", "{{ .Values.workerConcurrency }}",
             "--loglevel", "WARNING",
             "-Q", "query",
-            "-n", "query-worker"
+            "-n", "query-worker@%h"
           ]
       volumes:
         - name: {{ include "clp.volumeName" (dict
@@ -105,7 +105,7 @@ spec:
             "name" "archives"
           ) | nindent 10 }}
         {{- end }}
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
