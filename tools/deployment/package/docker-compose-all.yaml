@@ -713,10 +713,13 @@ services:
       ]
 
   otel-collector:
-    profiles: ["telemetry"]
+    <<: *service_defaults
     image: "otel/opentelemetry-collector-contrib:0.152.0"
     hostname: "otel_collector"
-    restart: "${CLP_RESTART_POLICY:-on-failure:3}"
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the otel collector.
+      replicas: "${CLP_OTEL_COLLECTOR_ENABLED:-1}"
+    user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       TELEMETRY_ENDPOINT: "${TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
     volumes:
