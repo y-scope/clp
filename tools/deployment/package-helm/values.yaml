@@ -251,8 +251,7 @@ clpConfig:
     disable: false
     endpoint: "http://localhost:4318"
     collector:
-      # OTel contrib collector image
-      image: "otel/opentelemetry-collector-contrib:0.119.0"
+      image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.119.0" # yamllint disable-line
       resources:
         requests:
           cpu: "100m"
