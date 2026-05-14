@@ -628,6 +628,39 @@ auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result
     return tag;
 }
 
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+auto deserialize_timestamp_or_timestamp_delta(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> ystdlib::error_handling::Result<epoch_time_ms_t> {
+    if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+        if (cProtocol::Payload::TimestampVal != encoded_tag) {
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
+        }
+        return deserialize_int<epoch_time_ms_t>(reader);
+    } else {
+        if (cProtocol::Payload::TimestampDeltaByte == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int8_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaShort == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int16_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaInt == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int32_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaLong == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int64_t>(reader))
+            );
+        }
+        return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
+    }
+}
+
 IRErrorCode deserialize_preamble(
         ReaderInterface& reader,
         encoded_tag_t& metadata_type,
@@ -829,4 +862,14 @@ template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag
 ) -> ystdlib::error_handling::Result<EncodedTextAst<eight_byte_encoded_variable_t>>;
+
+template auto deserialize_timestamp_or_timestamp_delta<four_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<epoch_time_ms_t>;
+
+template auto deserialize_timestamp_or_timestamp_delta<eight_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<epoch_time_ms_t>;
 }  // namespace clp::ffi::ir_stream
