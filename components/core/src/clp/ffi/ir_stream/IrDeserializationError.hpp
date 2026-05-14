@@ -16,11 +16,14 @@ enum class IrDeserializationErrorEnum : uint8_t {
     IncompleteStream,
     InvalidKeyGroupOrdering,
     InvalidMagicNumber,
+    InvalidReferenceTimestampMetadata,
+    InvalidReferenceTimestampValue,
     InvalidTag,
-    UnsupportedMetadataFormat,
-    UnsupportedVersion,
+    MissingRequiredSchemaNodes,
     UnknownSchemaTreeNodeType,
     UnknownValueType,
+    UnsupportedMetadataFormat,
+    UnsupportedVersion,
 };
 
 using IrDeserializationError = ystdlib::error_handling::ErrorCode<IrDeserializationErrorEnum>;
