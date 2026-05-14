@@ -716,6 +716,7 @@ services:
     <<: *service_defaults
     image: "otel/opentelemetry-collector-contrib:0.152.0"
     hostname: "otel_collector"
+    profiles: ["telemetry"]
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the otel collector.
       replicas: "${CLP_OTEL_COLLECTOR_ENABLED:-1}"
