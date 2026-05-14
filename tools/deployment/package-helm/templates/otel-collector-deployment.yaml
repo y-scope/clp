@@ -22,6 +22,7 @@ spec:
         - name: otel-collector
           image: {{ .Values.clpConfig.telemetry.collector.image | quote }}
           command:
+            - "/otelcontribcol"
             - "--config=/etc/otelcol-contrib/config.yaml"
           ports:
             - containerPort: 4318
