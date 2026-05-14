@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import os
 import pathlib
+import platform
 import socket
 import stat
 import subprocess
@@ -964,6 +965,7 @@ class DockerComposeController(BaseController):
         self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
     ) -> None:
         """Initializes the DockerComposeController."""
+        self._instance_id = instance_id
         self._project_name = f"clp-package-{instance_id}"
         self._restart_policy = restart_policy
         super().__init__(clp_config)
@@ -1013,6 +1015,34 @@ class DockerComposeController(BaseController):
             "CLP_PACKAGE_CONTAINER_IMAGE_REF": self._clp_config.container_image_ref,
             "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
         }
+
+        # Telemetry
+        if not self._clp_config.telemetry.disable:
+            # Read the package version for the service.version resource attribute.
+            version_file_path = self._clp_home / "VERSION"
+            clp_version = version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
+
+            os_type = platform.system().lower()
+            arch = platform.machine().lower()
+            if arch == "x86_64":
+                arch = "amd64"
+            elif arch == "aarch64":
+                arch = "arm64"
+
+            resource_attrs = (
+                f"clp.deployment.id={self._instance_id},"
+                f"service.version={clp_version},"
+                f"clp.deployment.method=docker-compose,"
+                f"clp.storage.engine={self._clp_config.package.storage_engine},"
+                f"os.type={os_type},"
+                f"host.arch={arch}"
+            )
+            env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs
+            env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://otel-collector:4318"
+        else:
+            env_vars["CLP_DISABLE_TELEMETRY"] = "true"
+
+        env_vars["TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
 
         # Paths
         aws_config_dir = self._clp_config.aws_config_directory
@@ -1086,6 +1116,8 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
+        if not self._clp_config.telemetry.disable:
+            cmd += ["--profile", "telemetry"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
