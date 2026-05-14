@@ -1,9 +1,12 @@
 set(
         CLP_S_FFI_SFA_SOURCES
+        sfa/ClpArchiveDecoder.cpp
+        sfa/ClpArchiveDecoder.hpp
         sfa/SfaErrorCode.cpp
         sfa/SfaErrorCode.hpp
         sfa/ClpArchiveReader.cpp
         sfa/ClpArchiveReader.hpp
+        sfa/LogEvent.hpp
 )
 
 if(CLP_BUILD_CLP_S_FFI_SFA)
