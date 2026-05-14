@@ -123,6 +123,8 @@ private:
     }
 
     clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t> m_serializer;
+    // Nested writers are ordered from closest to furthest from output sink. Typically this will
+    // look like `FileWriter` <- `Compressor`.
     std::vector<std::unique_ptr<clp::WriterInterface>> m_nested_writers;
 };
 }  // namespace clp_s::log_converter
