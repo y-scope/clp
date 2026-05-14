@@ -346,7 +346,7 @@ services:
       "--loglevel", "WARNING",
       "-f", "/var/log/compression_worker/worker.log",
       "-Q", "compression",
-      "-n", "compression-worker"
+      "-n", "compression-worker@%h"
     ]
 
   spider-compression-worker:
@@ -553,7 +553,7 @@ services:
       "--loglevel", "WARNING",
       "-f", "/var/log/query_worker/worker.log",
       "-Q", "query",
-      "-n", "query-worker"
+      "-n", "query-worker@%h"
     ]
 
   reducer:
