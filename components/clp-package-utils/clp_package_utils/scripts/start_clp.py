@@ -2,11 +2,13 @@
 """Script to start the CLP Package."""
 
 import logging
+import os
 import pathlib
 import sys
 
 import click
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
 from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.cli_utils import RESTART_POLICY
@@ -14,6 +16,7 @@ from clp_package_utils.controller import DockerComposeController, get_or_create_
 from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
+    set_yaml_key,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
@@ -22,6 +25,29 @@ from clp_package_utils.general import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Values accepted by both CLP_DISABLE_TELEMETRY and DO_NOT_TRACK to disable telemetry.
+_TELEMETRY_DISABLE_VALUES = ("1", "true", "yes", "y")
+
+
+TELEMETRY_NOTICE = """
+================================================================================
+CLP collects anonymous operational metrics to help improve the software. This
+includes: CLP version, OS/architecture, deployment method, bytes ingested,
+compression ratios, query volume, and more. It does NOT include: log content,
+queries, hostnames, IP addresses, or any other Personally Identifiable
+Information (PII).
+
+Telemetry is sent to: https://telemetry.yscope.io
+For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+
+You can disable metrics at any time by setting the environment variable
+CLP_DISABLE_TELEMETRY=true. Network admins can also block
+https://telemetry.yscope.io at the firewall level.
+================================================================================
+"""
+
+TELEMETRY_PROMPT = "Enable anonymous telemetry to help improve CLP? [Y/n] "
 
 
 @click.command()
@@ -85,6 +111,8 @@ def main(
         logger.exception("Failed to load config.")
         sys.exit(1)
 
+    _handle_telemetry_consent(clp_config, resolved_config_path)
+
     try:
         # Create necessary directories.
         resolve_host_path_in_container(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
@@ -113,6 +141,49 @@ def main(
     except Exception:
         logger.exception("Failed to start CLP.")
         sys.exit(1)
+
+
+def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Path) -> None:
+    """
+    Handles telemetry consent and prompts the user on first run if needed.
+
+    Priority order for handling telemetry preference:
+    1. Session-only environment variable overrides. e.g.,
+       a. CLP_DISABLE_TELEMETRY=true
+       b. DO_NOT_TRACK=true
+    2. Config file opt-out
+    3. Previously confirmed telemetry preference
+    4. First run consent prompt in interactive sessions
+
+    :param config_file_path: for persisting consent.
+    """
+    clp_disable_val = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
+    dnt_val = os.environ.get("DO_NOT_TRACK", "").strip().lower()
+    if clp_disable_val in _TELEMETRY_DISABLE_VALUES or dnt_val in _TELEMETRY_DISABLE_VALUES:
+        clp_config.telemetry.disable = True
+        return
+
+    if clp_config.telemetry.disable:
+        return
+
+    # Skip prompt if not the first run. i.e., telemetry preference has been confirmed previously.
+    instance_id_file = clp_config.logs_directory / "instance-id"
+    if resolve_host_path_in_container(instance_id_file).exists():
+        return
+
+    if not sys.stdin.isatty():
+        return
+
+    print(TELEMETRY_NOTICE)
+    try:
+        response = input(TELEMETRY_PROMPT).strip().lower()
+    except EOFError:
+        # e.g., Ctrl+D
+        response = "n"
+
+    if response.startswith("n"):
+        clp_config.telemetry.disable = True
+        set_yaml_key(config_file_path, "telemetry.disable", "true")
 
 
 if "__main__" == __name__:
