@@ -27,7 +27,7 @@
 namespace clp_s::log_converter {
 namespace {
 constexpr msgpack::object_map cEmptyMap{.size = 0U, .ptr = nullptr};
-constexpr std::string_view cDefaultIRFileExtension{".clp"};
+constexpr std::string_view cUncompressedFileExtension{".clp"};
 }  // namespace
 
 auto LogSerializer::create(
@@ -44,7 +44,7 @@ auto LogSerializer::create(
     )};
 
     boost::uuids::random_generator uuid_generator;
-    auto file_extension{use_zstd ? clp::ir::cIrFileExtension : cDefaultIRFileExtension};
+    auto file_extension{use_zstd ? clp::ir::cIrFileExtension : cUncompressedFileExtension};
     std::string const file_name{
             boost::uuids::to_string(uuid_generator()) + std::string{file_extension}
     };
