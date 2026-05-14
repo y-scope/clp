@@ -13,7 +13,7 @@ exporters:
   clickhouse:
     endpoint: tcp://clickhouse:9000
     database: clp_telemetry
-    ttl: 90d
+    ttl: 2160h
     metrics_table_name: otel_metrics
     traces_table_name: otel_traces
     logs_table_name: otel_logs
