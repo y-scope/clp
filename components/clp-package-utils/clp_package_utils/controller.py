@@ -1037,9 +1037,7 @@ class DockerComposeController(BaseController):
                 "host.arch": platform.machine().lower(),
             }
 
-            resource_attrs_str = ",".join(
-                f"{k}={v}" for k, v in self._resource_attrs.items()
-            )
+            resource_attrs_str = ",".join(f"{k}={v}" for k, v in self._resource_attrs.items())
             env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
             env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://otel-collector:4318"
 
