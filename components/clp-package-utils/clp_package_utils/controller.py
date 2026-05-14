@@ -1184,19 +1184,21 @@ class DockerComposeController(BaseController):
                 {"name": name, "dataPoints": [{"asInt": value, "timeUnixNano": str(timestamp_ns)}]}
             )
 
+        num_workers = self._get_num_workers()
+
         add_gauge("clp.deployment.compression_worker_replicas", 1)
         add_gauge(
             "clp.deployment.compression_worker_concurrency",
-            self._clp_config.package.compression_worker_concurrency,
+            num_workers,
         )
         add_gauge("clp.deployment.query_worker_replicas", 1)
         add_gauge(
             "clp.deployment.query_worker_concurrency",
-            self._clp_config.package.query_worker_concurrency,
+            num_workers,
         )
         add_gauge("clp.deployment.reducer_replicas", 1)
         add_gauge(
-            "clp.deployment.reducer_concurrency", self._clp_config.package.reducer_concurrency
+            "clp.deployment.reducer_concurrency", num_workers
         )
 
         payload = {
