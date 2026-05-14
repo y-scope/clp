@@ -42,6 +42,7 @@ public:
     virtual ~ColumnScan() = default;
 
     auto init(SchemaReader*, std::vector<BaseColumnReader*> const&) -> void override {}
+
     [[nodiscard]] auto filter(uint64_t cur_message) -> bool override;
 
 private:

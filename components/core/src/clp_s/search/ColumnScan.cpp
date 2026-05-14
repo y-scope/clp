@@ -11,9 +11,10 @@
 #include <utility>
 #include <vector>
 
+#include <string_utils/string_utils.hpp>
+
 #include <clp/Query.hpp>
 #include <clp_s/ColumnReader.hpp>
-#include <string_utils/string_utils.hpp>
 
 #include "ast/AndExpr.hpp"
 #include "ast/Expression.hpp"
@@ -84,11 +85,8 @@ template <typename T>
     return bitmap;
 }
 
-[[nodiscard]] auto clp_string_matches(
-        ClpStringColumnReader* reader,
-        clp::Query const& query,
-        uint64_t row
-) -> bool {
+[[nodiscard]] auto
+clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t row) -> bool {
     auto const encoded_id = reader->get_encoded_id(row);
     auto const encoded_vars = reader->get_encoded_vars(row);
     if (query.contains_sub_queries()) {
@@ -160,9 +158,8 @@ template <typename T>
     }
     for (auto* reader : readers->second) {
         for (uint64_t row{0}; row < num_messages; ++row) {
-            auto const matched = matching_vars->contains(
-                    static_cast<int64_t>(reader->get_variable_id(row))
-            );
+            auto const matched
+                    = matching_vars->contains(static_cast<int64_t>(reader->get_variable_id(row)));
             bitmap[row] |= ((FilterOperation::EQ == operation) == matched) ? 1 : 0;
         }
     }
@@ -340,6 +337,7 @@ auto ColumnScan::build_node(ast::Expression* expr) const -> Bitmap {
     }
     return result;
 }
+
 // NOLINTEND(misc-no-recursion)
 
 auto ColumnScan::build_filter(FilterExpr* filter) const -> Bitmap {
