@@ -1,0 +1,6 @@
+# Development overrides for local debugging.
+# Usage: docker compose --profile telemetry -f docker-compose.yaml -f docker-compose.dev.yaml up
+services:
+  otel-collector:
+    ports:
+      - "4318:4318"
