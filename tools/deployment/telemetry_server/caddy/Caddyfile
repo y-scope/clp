@@ -1,0 +1,3 @@
+telemetry.yscope.io {
+    reverse_proxy otel-collector:4318
+}
