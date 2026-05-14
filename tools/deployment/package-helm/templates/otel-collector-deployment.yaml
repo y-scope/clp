@@ -20,14 +20,14 @@ spec:
     spec:
       containers:
         - name: otel-collector
-          image: {{ .Values.telemetry.collector.image | quote }}
+          image: {{ .Values.clpConfig.telemetry.collector.image | quote }}
           command:
             - "--config=/etc/otelcol-contrib/config.yaml"
           ports:
             - containerPort: 4318
               protocol: TCP
           resources:
-            {{- toYaml .Values.telemetry.collector.resources | nindent 12 }}
+            {{- toYaml .Values.clpConfig.telemetry.collector.resources | nindent 12 }}
           volumeMounts:
             - name: otel-collector-config
               mountPath: /etc/otelcol-contrib

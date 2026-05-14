@@ -8,7 +8,8 @@ metadata:
     app.kubernetes.io/component: "otel-collector"
 spec:
   ports:
-    - port: 4318
+    - name: "otlp-http"
+      port: 4318
       protocol: TCP
       targetPort: 4318
   selector:

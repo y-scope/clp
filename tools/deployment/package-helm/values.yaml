@@ -246,6 +246,20 @@ clpConfig:
   # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
   aws_config_directory: null
 
+  # Telemetry config
+  telemetry:
+    disable: false
+    endpoint: "http://localhost:4318"
+    collector:
+      image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.119.0"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+
 credentials:
   database:
     username: "clp-user"
