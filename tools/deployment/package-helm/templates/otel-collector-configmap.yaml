@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: otel-collector-config
+  name: {{ include "clp.fullname" . }}-otel-collector-config
 data:
   config.yaml: |
     receivers:

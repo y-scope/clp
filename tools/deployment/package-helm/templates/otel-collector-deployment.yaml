@@ -2,18 +2,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: otel-collector
+  name: {{ include "clp.fullname" . }}-otel-collector
   labels:
-    app: otel-collector
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "otel-collector"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: otel-collector
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "otel-collector"
   template:
     metadata:
       labels:
-        app: otel-collector
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "otel-collector"
     spec:
       containers:
         - name: otel-collector
@@ -31,5 +34,5 @@ spec:
       volumes:
         - name: otel-collector-config
           configMap:
-            name: otel-collector-config
+            name: {{ include "clp.fullname" . }}-otel-collector-config
 {{- end }}
