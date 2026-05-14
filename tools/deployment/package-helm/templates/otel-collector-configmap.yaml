@@ -1,0 +1,29 @@
+{{- if not .Values.clpConfig.telemetry.disable }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 30s
+        send_batch_size: 1024
+
+    exporters:
+      otlphttp:
+        endpoint: {{ .Values.clpConfig.telemetry.endpoint | quote }}
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp]
+{{- end }}

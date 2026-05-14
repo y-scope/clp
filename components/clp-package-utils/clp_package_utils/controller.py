@@ -1122,6 +1122,8 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
+        if not self._clp_config.telemetry.disable:
+            self._emit_topology_metrics()
         logger.info("Started CLP.")
 
     def stop(self) -> None:
@@ -1169,6 +1171,88 @@ class DockerComposeController(BaseController):
         :return: The Docker Compose file name to use based on the config.
         """
         return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
+
+    def _emit_topology_metrics(self) -> None:
+        import json
+        import time
+
+        timestamp_ns = int(time.time() * 1e9)
+        metrics = []
+
+        def add_gauge(name: str, value: int):
+            metrics.append(
+                {"name": name, "dataPoints": [{"asInt": value, "timeUnixNano": str(timestamp_ns)}]}
+            )
+
+        add_gauge("clp.deployment.compression_worker_replicas", 1)
+        add_gauge(
+            "clp.deployment.compression_worker_concurrency",
+            self._clp_config.package.compression_worker_concurrency,
+        )
+        add_gauge("clp.deployment.query_worker_replicas", 1)
+        add_gauge(
+            "clp.deployment.query_worker_concurrency",
+            self._clp_config.package.query_worker_concurrency,
+        )
+        add_gauge("clp.deployment.reducer_replicas", 1)
+        add_gauge(
+            "clp.deployment.reducer_concurrency", self._clp_config.package.reducer_concurrency
+        )
+
+        payload = {
+            "resourceMetrics": [
+                {
+                    "resource": {"attributes": []},
+                    "scopeMetrics": [{"scope": {"name": "clp.controller"}, "metrics": metrics}],
+                }
+            ]
+        }
+
+        version_file_path = self._clp_home / "VERSION"
+        clp_version = (
+            version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
+        )
+        import platform
+
+        resource_attrs = {
+            "clp.deployment.id": self._instance_id,
+            "service.version": clp_version,
+            "clp.deployment.method": "docker-compose",
+            "clp.storage.engine": self._clp_config.package.storage_engine,
+            "os.type": platform.system().lower(),
+            "host.arch": platform.machine().lower(),
+            "service.name": "controller",
+        }
+        for k, v in resource_attrs.items():
+            payload["resourceMetrics"][0]["resource"]["attributes"].append(
+                {"key": k, "value": {"stringValue": str(v)}}
+            )
+
+        try:
+            payload_str = json.dumps(payload)
+            subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--network",
+                    f"{self._project_name}_default",
+                    "curlimages/curl",
+                    "-s",
+                    "-X",
+                    "POST",
+                    "-H",
+                    "Content-Type: application/json",
+                    "-d",
+                    payload_str,
+                    "http://otel-collector:4318/v1/metrics",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to emit topology metrics: {e}")
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:

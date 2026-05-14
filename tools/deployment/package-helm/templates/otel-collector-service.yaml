@@ -1,0 +1,16 @@
+{{- if not .Values.clpConfig.telemetry.disable }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  ports:
+    - port: 4318
+      protocol: TCP
+      targetPort: 4318
+  selector:
+    app: otel-collector
+  type: ClusterIP
+{{- end }}

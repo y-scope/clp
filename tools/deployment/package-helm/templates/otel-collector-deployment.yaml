@@ -1,0 +1,35 @@
+{{- if not .Values.clpConfig.telemetry.disable }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: {{ .Values.telemetry.collector.image | quote }}
+          command:
+            - "--config=/etc/otelcol-contrib/config.yaml"
+          ports:
+            - containerPort: 4318
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.telemetry.collector.resources | nindent 12 }}
+          volumeMounts:
+            - name: otel-collector-config
+              mountPath: /etc/otelcol-contrib
+      volumes:
+        - name: otel-collector-config
+          configMap:
+            name: otel-collector-config
+{{- end }}

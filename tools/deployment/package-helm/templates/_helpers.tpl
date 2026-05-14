@@ -51,6 +51,28 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
+Provides the standard OpenTelemetry resource attributes.
+*/}}
+{{- define "clp.resourceAttributes" -}}
+clp.deployment.id={{ .Values.clpConfig.instanceId | default "00000000-0000-0000-0000-000000000000" }},service.version={{ .Chart.AppVersion }},clp.deployment.method=helm,clp.storage.engine={{ .Values.clpConfig.package.storageEngine }},os.type={{ .Capabilities.KubeVersion | default "linux" }},host.arch={{ .Values.hostArch | default "amd64" }}
+{{- end -}}
+
+{{/*
+Provides environment variables for telemetry (except service.name).
+*/}}
+{{- define "clp.telemetryEnv" -}}
+{{- if .Values.clpConfig.telemetry.disable }}
+- name: CLP_DISABLE_TELEMETRY
+  value: "true"
+{{- else }}
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: "http://otel-collector:4318"
+- name: OTEL_RESOURCE_ATTRIBUTES
+  value: {{ include "clp.resourceAttributes" . | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Creates selector labels for matching resources.
 
 @return {string} YAML-formatted selector labels
