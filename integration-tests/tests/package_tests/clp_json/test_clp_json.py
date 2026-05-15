@@ -9,6 +9,7 @@ from tests.utils.asserting_utils import (
     validate_package_running,
     verify_package_compression,
 )
+from tests.utils.classes import SampleDataset
 from tests.utils.config import PackageCompressionJob, PackageInstance
 from tests.utils.package_utils import run_package_compression_script
 
@@ -38,11 +39,15 @@ def test_clp_json_startup(fixt_package_instance: PackageInstance) -> None:
 
 
 @pytest.mark.compression
-def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInstance) -> None:
+def test_clp_json_compression_json_multifile(
+    fixt_package_instance: PackageInstance,
+    json_multifile: SampleDataset,
+) -> None:
     """
     Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
 
     :param fixt_package_instance:
+    :param json_multifile:
     """
     logger.info("Starting test: 'test_clp_json_compression_json_multifile'")
 
@@ -54,22 +59,22 @@ def test_clp_json_compression_json_multifile(fixt_package_instance: PackageInsta
     package_path_config.clear_package_archives()
 
     # Compress a dataset.
+    timestamp_key = json_multifile.metadata.timestamp_key
+    assert timestamp_key is not None, "`json-multifile` dataset must define a `timestamp_key`."
     compression_job = PackageCompressionJob(
-        path_to_original_dataset=(
-            package_path_config.clp_json_test_data_path / "json-multifile" / "logs"
-        ),
+        path_to_original_dataset=json_multifile.logs_path,
         options=[
             "--timestamp-key",
-            "timestamp",
+            timestamp_key,
             "--dataset",
-            "json_multifile",
+            json_multifile.metadata.dataset_name,
         ],
         positional_args=None,
     )
     run_package_compression_script(compression_job, package_test_config)
 
     # Check the correctness of compression.
-    verify_package_compression(compression_job.path_to_original_dataset, package_test_config)
+    verify_package_compression(json_multifile.logs_path, package_test_config)
 
     # Clear archives.
     package_path_config.clear_package_archives()
