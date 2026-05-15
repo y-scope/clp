@@ -20,7 +20,7 @@
 #include <clp/LogTypeDictionaryReaderReq.hpp>
 #include <clp/Query.hpp>
 #include <clp/QueryToken.hpp>
-#include <clp/SchemaSearcher.hpp>
+// #include <clp/SchemaSearcher.hpp>
 #include <clp/VariableDictionaryReaderReq.hpp>
 
 namespace clp {
@@ -75,6 +75,11 @@ public:
             size_t& end_pos,
             bool& is_var
     );
+
+    static uint64_t m_total_messages_searched;
+    static uint64_t m_dict_id_checks;
+    static uint64_t m_wildcard_checks;
+    static uint64_t m_time_range_checks;
 
 private:
     // Types
@@ -148,8 +153,9 @@ std::optional<Query> GrepCore::process_raw_query(
 ) {
     std::vector<SubQuery> sub_queries;
     if (false == use_heuristic) {
-        sub_queries
-                = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
+        // sub_queries
+        //         = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict,
+        //         ignore_case);
     } else {
         // Split search_string into tokens with wildcards
         std::vector<QueryToken> query_tokens;

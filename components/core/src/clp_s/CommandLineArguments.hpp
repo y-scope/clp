@@ -1,14 +1,19 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/search/OutputHandler.hpp>
 
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
@@ -131,6 +136,21 @@ public:
 
     std::string const& get_dataset() const { return m_dataset; }
 
+    [[nodiscard]] auto experimental() const -> bool { return m_experimental; }
+
+    [[nodiscard]] auto get_log_surgeon_schema_path() const -> std::optional<Path> {
+        return m_log_surgeon_schema_path;
+    }
+
+    /**
+     * Create the appropriate OutputHandler based on the cli arguments supplied.
+     */
+    [[nodiscard]] auto create_output_handler() const
+            -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>>;
+
+    // Data members
+    static constexpr std::string_view cLogTypeStatsQuery{"stats.logtypes"};
+
 private:
     // Methods
     /**
@@ -193,6 +213,13 @@ private:
 
     void print_search_usage() const;
 
+    /**
+     * Validate the use of experimental features. Requires the program options to have been parsed.
+     * @throws std::invalid_argument if any experimental feature is used without setting the
+     * experimetnal flag.
+     */
+    auto validate_experimental() const -> void;
+
     // Variables
     std::string m_program_name;
     Command m_command;
@@ -247,6 +274,9 @@ private:
     int64_t m_count_by_time_bucket_size{0};  // Milliseconds
 
     OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
+
+    bool m_experimental{false};
+    std::optional<Path> m_log_surgeon_schema_path;
 };
 }  // namespace clp_s
 

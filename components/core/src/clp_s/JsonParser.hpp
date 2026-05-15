@@ -1,6 +1,6 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
-
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -12,13 +12,17 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
+#include <log_surgeon/generated_bindings.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ParsedMessage.hpp>
@@ -41,6 +45,8 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
+    bool experimental{false};
+    std::optional<Path> log_surgeon_schema_path;
 };
 
 class JsonParser {
@@ -52,11 +58,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
     explicit JsonParser(JsonParserOption const& option);
-
-    // Destructor
-    ~JsonParser() = default;
 
     /**
      * Ingests the input described by `JsonParserOption`.
@@ -104,13 +106,17 @@ private:
     ) -> bool;
 
     /**
-     * Parses a JSON line
-     * @param line the JSON line
-     * @param parent_node_id the parent node id
-     * @param key the key of the node
+     * Parses a JSON line.
+     * @param line
+     * @param parent_node_id
+     * @param parent_key
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
+    void parse_line(
+            simdjson::ondemand::value line,
+            SchemaNode::id_t parent_node_id,
+            std::string const& parent_key
+    );
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -213,7 +219,29 @@ private:
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    int32_t add_metadata_field(std::string_view const field_name, NodeType type);
+    auto add_metadata_field(std::string_view const field_name, NodeType type) -> SchemaNode::id_t;
+
+    /**
+     * Parse an unstructured log message using log surgeon and store its components in the current
+     * parsed message, clp-s schema, and dictionaries.
+     * @param log_msg The unstructured log message to parse.
+     * @param parent_node_id The parent clp-s node ID.
+     * @return A result containing an error code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if parsing fails.
+     * - Forwards `store_capture_groups`'s return values on failure.
+     * - Forwards `m_archive_writer->update_logtype_stats`'s return values on failure.
+     * - Forwards `m_archive_writer->update_var_stats`'s return values on failure.
+     */
+    auto parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
+            -> ystdlib::error_handling::Result<void>;
+
+    auto get_parent_schema_node(
+            log_surgeon::Match match,
+            SchemaNode::id_t parent_node_id,
+            absl::flat_hash_map<uint32_t, log_surgeon::Match const> const& root_matches,
+            absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> const&
+                    parent_matches
+    ) -> SchemaNode::id_t;
 
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
@@ -241,6 +269,10 @@ private:
             m_autogen_ir_node_to_archive_node_id_mapping;
 
     std::vector<ArchiveStats> m_archive_stats;
+
+    std::unique_ptr<log_surgeon::ParserHandle> m_log_surgeon_parser;
+    std::string m_log_surgeon_schema_text;
+    std::chrono::microseconds m_parse_duration{0};
 };
 }  // namespace clp_s
 

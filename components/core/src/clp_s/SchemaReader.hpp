@@ -10,7 +10,10 @@
 #include <unordered_map>
 #include <utility>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "ColumnReader.hpp"
+#include "DictionaryReader.hpp"
 #include "FileReader.hpp"
 #include "JsonSerializer.hpp"
 #include "SchemaTree.hpp"
@@ -151,6 +154,7 @@ public:
         m_global_id_to_unordered_object.clear();
         m_local_schema_tree.clear();
         m_json_serializer.clear();
+        m_typed_log_dict.reset();
         m_global_schema_tree = std::move(schema_tree);
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
@@ -278,6 +282,10 @@ public:
 
     int32_t get_schema_id() const { return m_schema_id; }
 
+    void set_typed_log_dict(std::shared_ptr<VariableDictionaryReader> dict) {
+        m_typed_log_dict = std::move(dict);
+    }
+
     /**
      * @param schema
      * @return the first column ID found in the given schema, or -1 if the schema contains no
@@ -337,6 +345,17 @@ private:
     generate_structured_object_template(int32_t id, size_t column_start, std::span<int32_t> schema);
 
     /**
+     * Generates a JSON template for a LogMessage.
+     * @param log_msg_id The LogMessage node ID.
+     * @return A result containing the index of the next reader in m_columns after those consumed by
+     * this object, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
+     * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
+     */
+    auto generate_log_message_template(int32_t log_msg_id)
+            -> ystdlib::error_handling::Result<size_t>;
+
+    /**
      * Finds the common root of the subtree containing cur_root and next_root, and adds brackets
      * and keys to m_json_serializer as necessary so that the json object is correct between the
      * previous field which is a child of cur_root, and the next field which is a child of
@@ -388,6 +407,7 @@ private:
     bool m_should_marshal_records{true};
     bool m_serializer_initialized{false};
     std::shared_ptr<search::Projection> m_projection;
+    std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
 
     std::map<int32_t, std::pair<size_t, std::span<int32_t>>> m_global_id_to_unordered_object;
 };

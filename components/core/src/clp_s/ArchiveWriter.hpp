@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -11,10 +12,13 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/Defs.h>
 #include <clp/streaming_archive/Constants.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/DictionaryWriter.hpp>
 #include <clp_s/ParsedMessage.hpp>
 #include <clp_s/RangeIndexWriter.hpp>
@@ -24,6 +28,8 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
+#include <clpp/LogTypeMetadata.hpp>
+#include <clpp/LogTypeStat.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -35,6 +41,8 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+
+    bool experimental{false};
 };
 
 class ArchiveStats {
@@ -172,7 +180,16 @@ public:
      * @param key
      * @return the node id
      */
-    int32_t add_node(int parent_node_id, NodeType type, std::string_view key);
+    auto add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key)
+            -> SchemaNode::id_t;
+
+    /**
+     * @return The root node ID of the LogType sub-tree.
+     * @return -1 if the sub-tree does not exist.
+     */
+    auto get_logtype_node() -> SchemaNode::id_t {
+        return m_schema_tree.get_subtree_node_id(constants::cDefaultNamespace, NodeType::LogType);
+    }
 
     /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.
@@ -288,6 +305,27 @@ public:
         return rc;
     }
 
+    /**
+     * Stores the log-surgeon schema text for persistence in the archive.
+     * @param schema_text The raw log-surgeon schema text.
+     */
+    void set_log_surgeon_schema(std::string schema_text) {
+        m_log_surgeon_schema_text = std::move(schema_text);
+    }
+
+    /**
+     * Update the stats for the given log type, adding it to the log type dictionary if necessary.
+     * @param logtype
+     * @return The log type ID.
+     * @return True if the log type is a new entry in the dictionary, false otherwise.
+     * @return ClppErrorCodeEnum::Unsupported if experimental stats are not enabled.
+     */
+    auto update_logtype_dict(std::string_view logtype)
+            -> ystdlib::error_handling::Result<std::tuple<logtype_id_t, bool>>;
+
+    auto update_logtype_metadata(logtype_id_t id, clpp::LogTypeMetadata& metadata)
+            -> ystdlib::error_handling::Result<void>;
+
 private:
     /**
      * Initializes the schema writer
@@ -303,6 +341,20 @@ private:
      *         - The size of the compressed tables in bytes.
      */
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
+
+    /**
+     * Compresses, stores, and clear the experimental log type statistics. The stats are not cleared
+     * if the result is an error.
+     * @return The size of the compressed statistics metadata in bytes.
+     */
+    [[nodiscard]] auto close_logtype_stats() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_logtype_metadata() -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Writes the log-surgeon schema to the archive.
+     * @return The compressed size in bytes, or 0 if no schema was set.
+     */
+    [[nodiscard]] auto store_log_surgeon_schema() -> size_t;
 
     /**
      * Writes the archive to a single file
@@ -375,6 +427,11 @@ private:
 
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
+
+    std::optional<clpp::LogTypeStatArray> m_logtype_stats;
+    std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
+    std::shared_ptr<VariableDictionaryWriter> m_typed_log_dict;
+    std::string m_log_surgeon_schema_text;
 };
 }  // namespace clp_s
 

@@ -71,16 +71,16 @@ set(
         ../clp/FileReader.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        ../clp/SchemaSearcher.cpp
-        ../clp/SchemaSearcher.hpp
+        # ../clp/SchemaSearcher.cpp
+        # ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp
+        # ../clp/LogSurgeonReader.cpp
+        # ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/networking/socket_utils.cpp
@@ -150,11 +150,13 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp_s_clp_dependencies
                 PUBLIC
                 clp::string_utils
+                log-surgeon::log-surgeon
                 log_surgeon::log_surgeon
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE
                 Boost::regex
+                clpp::core
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json

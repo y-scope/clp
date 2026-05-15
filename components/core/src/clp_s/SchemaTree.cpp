@@ -20,6 +20,10 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::FormattedFloat:
         case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
+        case NodeType::LogMessage:
+        case NodeType::ParentRule:
+        case NodeType::LogTypeID:
+            return clp_s::search::ast::LiteralType::ClppDecomposeT;
         case NodeType::ClpString:
             return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:
@@ -34,6 +38,7 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::Timestamp:
             return clp_s::search::ast::LiteralType::TimestampT;
         case NodeType::Metadata:
+        case NodeType::LogType:
         case NodeType::Unknown:
         default:
             return clp_s::search::ast::LiteralType::UnknownT;

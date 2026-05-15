@@ -169,6 +169,7 @@ tasks:
 
   core:
     cmds:
+      - task: "toolchains:rust"
       - task: "core-generate"
       - task: "core-build"
 

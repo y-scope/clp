@@ -14,7 +14,11 @@
 #include <utility>
 #include <vector>
 
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
+
+#include <clp/ReaderInterface.hpp>
+#include <clpp/DecomposedQuery.hpp>
 
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
@@ -56,6 +60,7 @@ public:
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_var_dict(m_archive_reader->get_variable_dictionary()),
               m_log_dict(m_archive_reader->get_log_type_dictionary()),
+              m_typed_log_dict(m_archive_reader->get_typed_log_type_dictionary()),
               m_array_dict(m_archive_reader->get_array_dictionary()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()) {}
@@ -85,6 +90,10 @@ public:
      * @param schema_id
      */
     auto schema_init(int32_t schema_id) -> EvaluatedValue;
+
+    static uint64_t m_int_col_checks;
+    static uint64_t m_float_col_checks;
+    static uint64_t m_str_col_checks;
 
 protected:
     // Methods inherited from FilterClass
@@ -122,6 +131,7 @@ private:
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
+    std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
@@ -154,6 +164,9 @@ private:
     std::string m_array_search_string;
     bool m_maybe_string{false};
     bool m_maybe_number{false};
+
+    std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
+    log_surgeon::Schema* m_ls_schema;
 
     /**
      * Initializes the variables. Init is called once for each schema after which filter is called

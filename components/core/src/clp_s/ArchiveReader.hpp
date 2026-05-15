@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -23,6 +24,8 @@
 #include <clp_s/search/Projection.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
+#include <clpp/LogTypeMetadata.hpp>
+#include <clpp/LogTypeStat.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -34,15 +37,26 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    struct Options {
+        Options() = default;
+
+        Options(NetworkAuthOption network_auth, bool experimental)
+                : m_network_auth{network_auth},
+                  m_experimental{experimental} {}
+
+        NetworkAuthOption m_network_auth{};
+        bool m_experimental{false};
+    };
+
     // Constructor
     ArchiveReader() : m_is_open(false) {}
 
     /**
      * Opens an archive for reading.
      * @param archive_path
-     * @param network_auth
+     * @param options
      */
-    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+    void open(Path const& archive_path, Options const& options);
 
     /**
      * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
@@ -78,11 +92,13 @@ public:
     /**
      * Reads the log type dictionary from the archive.
      * @param lazy
-     * @return the log type dictionary reader
      */
-    std::shared_ptr<LogTypeDictionaryReader> read_log_type_dictionary(bool lazy = false) {
-        m_log_dict->read_entries(lazy);
-        return m_log_dict;
+    auto read_log_type_dictionary(bool lazy = false) -> void {
+        if (nullptr != m_typed_log_dict) {
+            m_typed_log_dict->read_entries(lazy);
+        } else {
+            m_log_dict->read_entries(lazy);
+        }
     }
 
     /**
@@ -94,6 +110,25 @@ public:
         m_array_dict->read_entries(lazy);
         return m_array_dict;
     }
+
+    /**
+     * Reads the log type metadata from the archive.
+     * @return The read log type metadata array, or an error code indicating the failure:
+     * - Forwards `Array::decompress`'s return values on failure.
+     * @throws
+     */
+    auto read_logtype_metadata() -> ystdlib::error_handling::Result<clpp::LogTypeMetadataArray>;
+
+    /**
+     * Reads the log type statistics from the archive.
+     * @return
+     */
+    auto read_logtype_stats() -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Reads the log surgeon schema from the archive.
+     */
+    auto read_log_surgeon_schema() -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * Reads the metadata from the archive.
@@ -133,6 +168,10 @@ public:
 
     std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
 
+    std::shared_ptr<VariableDictionaryReader> get_typed_log_type_dictionary() {
+        return m_typed_log_dict;
+    }
+
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_archive_reader_adaptor->get_timestamp_dictionary();
     }
@@ -147,6 +186,14 @@ public:
 
     [[nodiscard]] auto get_header() const -> ArchiveHeader const& {
         return m_archive_reader_adaptor->get_header();
+    }
+
+    auto get_logtype_metadata() const -> clpp::LogTypeMetadataArray const& {
+        return m_logtype_metadata.value();
+    }
+
+    auto get_logtype_stats() const -> clpp::LogTypeStatArray const& {
+        return m_logtype_stats.value();
     }
 
     /**
@@ -284,6 +331,11 @@ private:
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
+
+    std::optional<clpp::LogTypeStatArray> m_logtype_stats;
+    std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
+    std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
+    Options m_options;
 };
 }  // namespace clp_s
 

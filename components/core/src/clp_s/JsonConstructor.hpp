@@ -29,6 +29,7 @@ struct JsonConstructorOption {
     bool print_ordered_chunk_stats{false};
     size_t target_ordered_chunk_size{};
     std::optional<MetadataDbOption> metadata_db{std::nullopt};
+    bool m_experimental{false};
 };
 
 class JsonConstructor {

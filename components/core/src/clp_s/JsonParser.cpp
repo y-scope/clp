@@ -1,22 +1,31 @@
 #include "JsonParser.hpp"
 
+#include <array>
 #include <cctype>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
+#include <log_surgeon/generated_bindings.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/EncodedVariableInterpreter.hpp>
 #include <clp/ErrorCode.hpp>
 #include <clp/ffi/EncodedTextAst.hpp>
 #include <clp/ffi/ir_stream/decoding_methods.hpp>
@@ -27,15 +36,23 @@
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
+#include <clp/StringReader.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/JsonFileIterator.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/Utils.hpp>
+#include <clpp/DecomposedQuery.hpp>
+#include <clpp/ErrorCode.hpp>
+#include <clpp/LogTypeMetadata.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -145,6 +162,40 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_retain_float_format(option.retain_float_format),
           m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
+    if (option.log_surgeon_schema_path.has_value()) {
+        auto schema_reader{
+                try_create_reader(option.log_surgeon_schema_path.value(), option.network_auth)
+        };
+        constexpr size_t cBufSize{4096};
+        std::array<char, cBufSize> buf{};
+        size_t bytes_read{};
+        while (true) {
+            auto code{schema_reader->try_read(buf.data(), buf.size(), bytes_read)};
+            if (clp::ErrorCode_EndOfFile == code) {
+                break;
+            }
+            if (clp::ErrorCode_Success != code) {
+                SPDLOG_ERROR(
+                        "Failed to read log-surgeon schema from: \"{}\"",
+                        option.log_surgeon_schema_path.value().path
+                );
+                throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+            }
+            m_log_surgeon_schema_text.append(buf.data(), bytes_read);
+        }
+
+        auto* schema{log_surgeon::log_surgeon_schema_from_definition(
+                log_surgeon::CCharArray::from_string_view(m_log_surgeon_schema_text)
+        )};
+        if (nullptr == schema) {
+            SPDLOG_ERROR(
+                    "Failed to create log surgeon parser from: \"{}\"",
+                    option.log_surgeon_schema_path.value().path
+            );
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+        m_log_surgeon_parser = std::make_unique<log_surgeon::ParserHandle>(schema);
+    }
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -181,9 +232,13 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.id = m_generator();
     m_archive_options.authoritative_timestamp = m_timestamp_column;
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
+    m_archive_options.experimental = option.experimental;
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
+    if (false == m_log_surgeon_schema_text.empty()) {
+        m_archive_writer->set_log_surgeon_schema(m_log_surgeon_schema_text);
+    }
 }
 
 void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id) {
@@ -303,13 +358,32 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
+                    if (m_archive_options.experimental) {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::LogMessage,
+                                cur_key
+                        );
+                        if (auto const result{parse_log_message(value, node_id)};
+                            result.has_error())
+                        {
+                            throw(std::runtime_error(
+                                    "parse_log_message failed with: " + result.error().message()
+                            ));
+                        }
+                    } else {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::ClpString,
+                                cur_key
+                        );
+                        m_current_parsed_message.add_unordered_value(value);
+                    }
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
+                    m_current_parsed_message.add_unordered_value(value);
                 }
-                m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
@@ -408,11 +482,25 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
+                    if (m_archive_options.experimental) {
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::LogMessage, "");
+                        if (auto const result{parse_log_message(value, node_id)};
+                            result.has_error())
+                        {
+                            throw(std::runtime_error(
+                                    "parse_log_message failed with: " + result.error().message()
+                            ));
+                        }
+                    } else {
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::ClpString, "");
+                        m_current_parsed_message.add_unordered_value(value);
+                    }
                 } else {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, "");
+                    m_current_parsed_message.add_unordered_value(value);
                 }
-                m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
@@ -435,17 +523,17 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
 
 void JsonParser::parse_line(
         simdjson::ondemand::value line,
-        int32_t parent_node_id,
-        std::string const& key
+        SchemaNode::id_t parent_node_id,
+        std::string const& parent_key
 ) {
-    int32_t node_id;
+    SchemaNode::id_t node_id{};
     std::stack<simdjson::ondemand::object> object_stack;
     std::stack<int32_t> node_id_stack;
     std::stack<simdjson::ondemand::object_iterator> object_it_stack;
 
     simdjson::ondemand::field cur_field;
 
-    std::string_view cur_key = key;
+    std::string_view cur_key = parent_key;
     node_id_stack.push(parent_node_id);
 
     do {
@@ -598,15 +686,35 @@ void JsonParser::parse_line(
 
                 std::string_view value = line.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
-                    m_current_parsed_message.add_value(node_id, value);
+                    if (m_archive_options.experimental) {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::LogMessage,
+                                cur_key
+                        );
+                        if (auto const result{parse_log_message(value, node_id)};
+                            result.has_error())
+                        {
+                            throw(std::runtime_error(
+                                    "parse_log_message failed with: " + result.error().message()
+                            ));
+                        }
+                        m_current_schema.insert_unordered(node_id);
+                    } else {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::ClpString,
+                                cur_key
+                        );
+                        m_current_parsed_message.add_value(node_id, value);
+                        m_current_schema.insert_ordered(node_id);
+                    }
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
+                    m_current_schema.insert_ordered(node_id);
                 }
-                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case simdjson::ondemand::json_type::boolean: {
@@ -721,7 +829,7 @@ auto JsonParser::ingest_json(
     size_t bytes_consumed_up_to_prev_record{0ULL};
 
     size_t file_split_number{0ULL};
-    int32_t log_event_idx_node_id{};
+    SchemaNode::id_t log_event_idx_node_id{};
     auto initialize_fields_for_archive = [&]() -> bool {
         if (false == m_record_log_order) {
             return true;
@@ -1043,7 +1151,8 @@ auto JsonParser::ingest_kvir(
     return true;
 }
 
-int32_t JsonParser::add_metadata_field(std::string_view const field_name, NodeType type) {
+auto JsonParser::add_metadata_field(std::string_view const field_name, NodeType type)
+        -> SchemaNode::id_t {
     auto metadata_subtree_id = m_archive_writer->add_node(
             constants::cRootNodeId,
             NodeType::Metadata,
@@ -1355,6 +1464,13 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
 }
 
 auto JsonParser::store() -> std::vector<ArchiveStats> {
+    if (m_archive_options.experimental) {
+        SPDLOG_INFO(
+                "total parsing time: {} ({})",
+                m_parse_duration.count(),
+                std::chrono::duration_cast<std::chrono::duration<double>>(m_parse_duration).count()
+        );
+    }
     m_archive_stats.emplace_back(m_archive_writer->close());
     return std::move(m_archive_stats);
 }
@@ -1363,5 +1479,244 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
+    if (false == m_log_surgeon_schema_text.empty()) {
+        m_archive_writer->set_log_surgeon_schema(m_log_surgeon_schema_text);
+    }
+}
+
+auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
+        -> ystdlib::error_handling::Result<void> {
+    auto const start{std::chrono::steady_clock::now()};
+    size_t parser_pos{0};
+    auto const event_opt{m_log_surgeon_parser->next_event(log_msg, &parser_pos)};
+    auto const end{std::chrono::steady_clock::now()};
+    m_parse_duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    if (false == event_opt.has_value()) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+    }
+    auto const event{event_opt.value()};
+    auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
+    auto [root_matches, parent_matches]{clpp::DecomposedQuery::create_parent_match_dicts(event)};
+
+    // This log type isn't escaped yet be careful
+    std::string log_type{};
+    log_type.reserve(log_msg.size());
+    size_t log_msg_pos{0};
+    for (size_t i{0};; ++i) {
+        auto const match{event.get_leaf_match(i)};
+        if (false == match.has_value()) {
+            break;
+        }
+
+        auto parent_node_id{log_msg_node_id};
+        if (0 != match->sub_rule_id) {
+            parent_node_id = get_parent_schema_node(
+                    match.value(),
+                    log_msg_node_id,
+                    root_matches,
+                    parent_matches
+            );
+        }
+
+        static auto const cIntSet{absl::flat_hash_set<std::string>{
+                // heuristic
+                "INT",
+                // hive 0426
+                "blk_id",
+                "blk_gen",
+                "used_memory_size",
+                "launcher_number",
+                "line_number",
+                "memory_size",
+                "num_vcores",
+                "size",
+                "port",
+                "fetcherID",
+                "reduceID",
+                "processTreeID",
+                // "durationSuffix", // regex needs better rule to use
+                // hive 0507
+                "cluster",
+                "jobSeq",
+                "task",
+                "attempt",
+                "appSeq",
+                "containerSeq",
+                "blockNum",
+                "genStamp",
+                "poolID",
+                "poolTimestamp",
+                "byteValue",
+                "portNum",
+                "port",
+                "memory",
+                "vcores",
+                "done",
+                "total",
+                "opID",
+                "counterVal",
+                "readerID",
+                "handler",
+                "retries",
+                "pid",
+                "mapOutputSize",
+                "inMemMapOutputsCount",
+                "commitMemory",
+                "usedMemory",
+                "fetcherID",
+                "decompSize",
+                "compressedLen",
+                "assignedCount",
+                "startIndex",
+                "maxEvents",
+                "processTreePID",
+                "srcLine",
+                "framesOmitted",
+                "numMapOutputs",
+                "hiveOpIdx",
+                "recordsWritten",
+                "numSegments",
+                "segmentsLeft",
+                "opChildID",
+                // hadoop
+                "blockID",
+                "serverCallId",
+                "blockInfoVal",
+                "bracketedVal",
+                "clientBytes",
+                "clientOffset",
+                "exitStatus",
+                "exitStatus_2",
+                "kvReduce",
+                "kvDownstreams",
+                "kvSeqno",
+                "javaLineNum",
+                "masterKeyId",
+                "keyId",
+                // openstack has nothing??
+                // mongodb
+                "time_int",
+                "gen_int",
+                "metric_value",
+                "size_value",
+        }};
+        static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT", "byteValue"}};
+        // TODO clpp: handle floats too
+        if (encoded_variable_t var{0};
+            cIntSet.contains(match->ffi_pointers.rule_name.as_cpp_view())
+            && clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                    match->ffi_pointers.lexeme.as_cpp_view(),
+                    var
+            ))
+        {
+            m_current_schema.insert_unordered(m_archive_writer->add_node(
+                    parent_node_id,
+                    NodeType::Integer,
+                    match->ffi_pointers.rule_name.as_cpp_view()
+            ));
+            m_current_parsed_message.add_unordered_value(var);
+        } else {
+            m_current_schema.insert_unordered(m_archive_writer->add_node(
+                    parent_node_id,
+                    NodeType::VarString,
+                    match->ffi_pointers.rule_name.as_cpp_view()
+            ));
+            m_current_parsed_message.add_unordered_value(match->ffi_pointers.lexeme.as_cpp_view());
+        }
+
+        log_type.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
+        log_type.append(
+                fmt::format("%{}%", match->ffi_pointers.fully_qualified_name.as_cpp_view())
+        );
+        log_msg_pos = match->range.end;
+    }
+    log_type.append(log_msg.substr(log_msg_pos));
+
+    auto [log_type_id, new_logtype]{
+            YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
+    };
+    m_current_schema.insert_unordered(m_archive_writer->add_node(
+            m_archive_writer
+                    ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogTypeNodeName),
+            NodeType::LogTypeID,
+            fmt::format("{}", log_type_id)
+    ));
+
+    if (new_logtype) {
+        clpp::LogTypeMetadata metadata;
+        std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
+        for (auto const& match : event.get_all_matches()) {
+            if (match.is_leaf) {
+                continue;
+            }
+            metadata.emplace_parent_match(
+                    match.ffi_pointers.fully_qualified_name.as_cpp_view(),
+                    match.range.start,
+                    match.range.end - match.range.start
+            );
+            og_parent_match_pos.emplace_back(match.range.start, match.range.end);
+        }
+        for (size_t i{0};; ++i) {
+            auto const leaf_match{event.get_leaf_match(i)};
+            if (false == leaf_match.has_value()) {
+                break;
+            }
+            auto const old_size{leaf_match->range.end - leaf_match->range.start};
+            auto const new_size{
+                    leaf_match->ffi_pointers.fully_qualified_name.as_cpp_view().size() + 2
+            };
+            // clpp TODO: this is "dangerous" and should be fixed, but if the matches are hitting
+            // the boundary of size_t we probably have bigger problems.
+            auto const diff{static_cast<int64_t>(old_size) - static_cast<int64_t>(new_size)};
+            for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
+                if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
+                    metadata.parent_match(j).m_start -= diff;
+                } else if (leaf_match->range.end <= og_parent_match_pos.at(j).second) {
+                    metadata.parent_match(j).m_size -= diff;
+                }
+            }
+        }
+        YSTDLIB_ERROR_HANDLING_TRYV(
+                m_archive_writer->update_logtype_metadata(log_type_id, metadata)
+        );
+    }
+
+    m_current_schema.end_unordered_object(msg_obj);
+    return ystdlib::error_handling::success();
+}
+
+auto JsonParser::get_parent_schema_node(
+        log_surgeon::Match const match,
+        SchemaNode::id_t root_node_id,
+        absl::flat_hash_map<uint32_t, log_surgeon::Match const> const& root_matches,
+        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> const&
+                parent_matches
+) -> SchemaNode::id_t {
+    if (0 == match.sub_rule_id) {
+        throw(std::runtime_error(
+                fmt::format(
+                        "get parent called from root {}'",
+                        match.ffi_pointers.rule_name.as_cpp_view()
+                )
+        ));
+    }
+
+    if (0 == match.parent_id) {
+        auto node_id{m_archive_writer->add_node(
+                root_node_id,
+                NodeType::ParentRule,
+                root_matches.at(match.rule_idx).ffi_pointers.rule_name.as_cpp_view()
+        )};
+        m_current_schema.insert_unordered(node_id);
+        return node_id;
+    }
+    log_surgeon::Match const parent{parent_matches.at({match.rule_idx, match.parent_id})};
+    auto node_id{m_archive_writer->add_node(
+            get_parent_schema_node(parent, root_node_id, root_matches, parent_matches),
+            NodeType::ParentRule,
+            parent.ffi_pointers.rule_name.as_cpp_view()
+    )};
+    m_current_schema.insert_unordered(node_id);
+    return node_id;
 }
 }  // namespace clp_s

@@ -2,6 +2,7 @@
 #define CLP_S_SEARCH_LITERAL_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
@@ -22,7 +23,8 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     TimestampT = 1 << 7,
-    TypesEnd = 1 << 8,
+    ClppDecomposeT = 1 << 8,
+    TypesEnd = 1 << 9,
     UnknownT = ((uint32_t)1) << 31
 };
 
@@ -106,6 +108,8 @@ public:
     virtual bool as_timestamp() { return false; }
 
     virtual bool as_any(FilterOperation op) { return false; }
+
+    [[nodiscard]] virtual bool has_wildcards() { return false; }
 };
 }  // namespace clp_s::search::ast
 

@@ -1,12 +1,17 @@
 #include "SchemaReader.hpp"
 
+#include <charconv>
 #include <stack>
+#include <stdexcept>
 #include <string>
+
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/BufferViewReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/Schema.hpp>
+#include <clpp/ErrorCode.hpp>
 
 namespace clp_s {
 void SchemaReader::append_column(BaseColumnReader* column_reader) {
@@ -77,9 +82,9 @@ SchemaReader::load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t 
 auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
     m_json_serializer.reset();
     m_json_serializer.begin_document();
-    size_t column_id_index = 0;
-    BaseColumnReader* column;
-    JsonSerializer::Op op;
+    size_t column_id_index{0};
+    BaseColumnReader* column{nullptr};
+    JsonSerializer::Op op{};
     while (m_json_serializer.get_next_op(op)) {
         switch (op) {
             case JsonSerializer::Op::BeginObject: {
@@ -195,6 +200,10 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
             }
             case JsonSerializer::Op::AddNullValue: {
                 m_json_serializer.append_value("null");
+                break;
+            }
+            case JsonSerializer::Op::AddConstantStringField: {
+                m_json_serializer.append_constant_string_field();
                 break;
             }
             case JsonSerializer::Op::AddLiteralField: {
@@ -520,6 +529,10 @@ size_t SchemaReader::generate_structured_array_template(
                 case NodeType::DeprecatedDateString:
                 case NodeType::UnstructuredArray:
                 case NodeType::Metadata:
+                case NodeType::LogMessage:
+                case NodeType::LogType:
+                case NodeType::LogTypeID:
+                case NodeType::ParentRule:
                 case NodeType::Timestamp:
                 case NodeType::Unknown:
                     break;
@@ -613,6 +626,10 @@ size_t SchemaReader::generate_structured_object_template(
                 case NodeType::DeprecatedDateString:
                 case NodeType::UnstructuredArray:
                 case NodeType::Metadata:
+                case NodeType::LogMessage:
+                case NodeType::LogType:
+                case NodeType::LogTypeID:
+                case NodeType::ParentRule:
                 case NodeType::Timestamp:
                 case NodeType::Unknown:
                     break;
@@ -693,6 +710,16 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
+            case NodeType::LogMessage: {
+                if (auto const result{generate_log_message_template(child_global_id)};
+                    result.has_error())
+                {
+                    throw(std::runtime_error(
+                            "generate_log_message_template failed with: " + result.error().message()
+                    ));
+                }
+                break;
+            }
             case NodeType::DeltaInteger:
             case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
@@ -733,9 +760,90 @@ void SchemaReader::generate_json_template(int32_t id) {
                 break;
             }
             case NodeType::Metadata:
-            case NodeType::Unknown:
+            case NodeType::LogType:
+            case NodeType::LogTypeID:
+            case NodeType::ParentRule:
+            case NodeType::Unknown: {
                 break;
+            }
         }
     }
+}
+
+auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
+        -> ystdlib::error_handling::Result<size_t> {
+    auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_id)};
+    if (m_global_id_to_unordered_object.end() == log_msg_it) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+    }
+
+    m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
+    m_json_serializer.add_special_key(m_global_schema_tree->get_node(log_msg_id).get_key_name());
+
+    auto column_idx{log_msg_it->second.first};
+    auto const schema{log_msg_it->second.second};
+    for (size_t schema_idx{0}; schema_idx < schema.size(); schema_idx++) {
+        auto const global_column_id{schema[schema_idx]};
+        auto const& node{m_global_schema_tree->get_node(global_column_id)};
+        switch (node.get_type()) {
+            case NodeType::DeltaInteger:
+            case NodeType::Integer: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                ++column_idx;
+                break;
+            }
+            case NodeType::Float: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                ++column_idx;
+                break;
+            }
+            case NodeType::FormattedFloat:
+            case NodeType::DictionaryFloat: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                ++column_idx;
+                break;
+            }
+            case NodeType::Boolean: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                ++column_idx;
+                break;
+            }
+            case NodeType::ClpString:
+            case NodeType::VarString: {
+                m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
+                m_reordered_columns.push_back(m_columns[column_idx]);
+                ++column_idx;
+                break;
+            }
+            case NodeType::LogTypeID: {
+                if (nullptr == m_typed_log_dict) {
+                    return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+                }
+                auto const& key_name = node.get_key_name();
+                clp::variable_dictionary_id_t log_type_id{};
+                auto const* key_end{key_name.data() + key_name.size()};
+                auto [ptr, ec] = std::from_chars(key_name.data(), key_end, log_type_id);
+                if (std::errc() != ec || ptr != key_end) {
+                    return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+                }
+                auto const& log_type_str = m_typed_log_dict->get_value(log_type_id);
+                m_json_serializer.add_constant_string_field("log_type", log_type_str);
+                break;
+            }
+            case NodeType::LogMessage:
+            case NodeType::LogType:
+            case NodeType::ParentRule:
+                break;
+            default: {
+                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
+            }
+        }
+    }
+    m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+    return column_idx;
 }
 }  // namespace clp_s

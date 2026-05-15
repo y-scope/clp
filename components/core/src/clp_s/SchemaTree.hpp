@@ -14,6 +14,7 @@
 #include <absl/container/flat_hash_map.h>
 
 #include "archive_constants.hpp"
+#include "clp_s/Defs.hpp"
 #include "search/ast/Literal.hpp"
 
 namespace clp_s {
@@ -29,6 +30,15 @@ namespace clp_s {
  * demarcate data needed by the implementation that is not part of the log record. In particular,
  * the implementation may create a special subtree of the MPT which contains fields used to record
  * things like original log order.
+ *
+ * The following NodeTypes are only used in the experimental prototype:
+ *
+ * `LogMessage`: Stores a structured representation of an unstructured log message. It is made up of
+ * a single `LogType` node and all `CompositeVar`s and primitive type nodes that are in the message.
+ *
+ * `LogType`: Functionally similar to a `ClpString`, but has no variable dictionary component as the
+ * variables are stored in their own nodes unlike a `ClpsString`. The logtype dictionary component
+ * is identical.
  */
 enum class NodeType : uint8_t {
     Integer,
@@ -46,6 +56,10 @@ enum class NodeType : uint8_t {
     FormattedFloat,
     DictionaryFloat,
     Timestamp,
+    LogMessage = 100,
+    LogType,
+    LogTypeID,
+    ParentRule,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
@@ -64,12 +78,15 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType;
  */
 class SchemaNode {
 public:
-    // Constructor
+    // Types
+    using id_t = int32_t;
+
+    // Constructors
     SchemaNode() : m_parent_id(-1), m_id(-1), m_type(NodeType::Integer), m_count(0) {}
 
     SchemaNode(
-            int32_t parent_id,
-            int32_t id,
+            id_t parent_id,
+            id_t id,
             std::string_view const key_name,
             NodeType type,
             int32_t depth
@@ -112,12 +129,12 @@ public:
      * Adds a child node to this node
      * @param child_id
      */
-    void add_child(int32_t child_id) { m_children_ids.push_back(child_id); }
+    void add_child(id_t child_id) { m_children_ids.push_back(child_id); }
 
 private:
-    int32_t m_parent_id;
-    int32_t m_id;
-    std::vector<int32_t> m_children_ids;
+    id_t m_parent_id;
+    id_t m_id;
+    std::vector<id_t> m_children_ids;
     // We use a buffer so that references to this key name are stable after this SchemaNode is move
     // constructed
     std::unique_ptr<char[]> m_key_name_buf;

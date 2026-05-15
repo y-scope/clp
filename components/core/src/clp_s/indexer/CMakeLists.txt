@@ -96,6 +96,7 @@ set(
         ../DictionaryReader.hpp
         ../DictionaryEntry.cpp
         ../DictionaryEntry.hpp
+        ../ErrorCode.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -146,6 +147,7 @@ if(CLP_BUILD_EXECUTABLES)
                 ${CURL_LIBRARIES}
                 clp::string_utils
                 clp_s::timestamp_parser
+                clpp::core
                 date::date
                 MariaDBClient::MariaDBClient
                 msgpack-cxx

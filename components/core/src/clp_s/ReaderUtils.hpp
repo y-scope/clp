@@ -74,6 +74,14 @@ public:
     );
 
     /**
+     * Reads the log-surgeon schema from an archive.
+     * @param adaptor
+     * @return The schema text.
+     * @throw OperationFailed if the schema is missing or corrupt.
+     */
+    static auto read_log_surgeon_schema(ArchiveReaderAdaptor& adaptor) -> std::string;
+
+    /**
      * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.
      * @param value The 64-bit value deserialized from archive metadata.
      * @return Converted `size_t` on success.
