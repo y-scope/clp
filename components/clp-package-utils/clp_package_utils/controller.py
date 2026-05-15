@@ -1243,7 +1243,7 @@ class DockerComposeController(BaseController):
                 timeout=15,
             )
         except Exception as e:
-            logger.warning(f"Failed to emit topology metrics: {e}")
+            logger.warning("Failed to emit topology metrics: %s", e)
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:
