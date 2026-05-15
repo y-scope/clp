@@ -84,6 +84,57 @@
         }
       }
     },
+    "/s3/keys": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Creates a one-time ingestion job that ingests an explicit set of S3 object URLs once by scanning their shared prefix and selecting only the requested objects.\n\nAll submitted URLs must share the same endpoint, region, bucket, and a non-empty common key prefix. Duplicate object keys are rejected.",
+        "operationId": "create_s3_keys_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateS3KeysRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The ID of the created job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The S3 URLs are invalid or a region code is not provided when using the default AWS S3 endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/s3/prefix": {
       "post": {
         "tags": [
@@ -327,6 +378,37 @@
             "description": "Time-based flush threshold in seconds.\n\nThis is a hard timeout. The buffer is flushed to create a compression job when the\noldest buffered object has remained in the buffer for at least this duration,\nregardless of the total buffered size. The timer is not reset by newly ingested\nobjects.\n\nDefaults to 300 seconds (5 minutes).",
             "default": 300,
             "minimum": 0
+          }
+        }
+      },
+      "CreateS3KeysRequest": {
+        "type": "object",
+        "required": [
+          "object_urls",
+          "dataset",
+          "timestamp_key"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "description": "The dataset to ingest into. Defaults to `None`.",
+            "minLength": 1
+          },
+          "object_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The explicit S3 object URLs to ingest."
+          },
+          "timestamp_key": {
+            "type": "string",
+            "description": "The optional key for extracting timestamps from object metadata. Defaults to `None`.",
+            "minLength": 1
+          },
+          "unstructured": {
+            "type": "boolean",
+            "description": "Whether to treat the ingested objects as unstructured logs. Defaults to `false`."
           }
         }
       },
