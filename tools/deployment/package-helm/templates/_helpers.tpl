@@ -355,6 +355,13 @@ hostPath:
 {{- end }}
 
 {{/*
+The mount path for the AWS config directory inside containers.
+
+@return {string} Path string
+*/}}
+{{- define "clp.awsConfigMountPath" -}}/opt/clp/.aws{{- end }}
+
+{{/*
 Creates a volumeMount for the AWS config directory.
 
 @param {object} . Root template context
@@ -362,21 +369,20 @@ Creates a volumeMount for the AWS config directory.
 */}}
 {{- define "clp.awsConfigVolumeMount" -}}
 name: "aws-config"
-mountPath: {{ .Values.clpConfig.aws_config_directory | quote }}
+mountPath: {{ include "clp.awsConfigMountPath" . | quote }}
 readOnly: true
 {{- end }}
 
 {{/*
-Creates a volume for the AWS config directory.
+Creates a volume for the AWS config directory backed by the chart-managed Secret.
 
 @param {object} . Root template context
 @return {string} YAML-formatted volume definition
 */}}
 {{- define "clp.awsConfigVolume" -}}
 name: "aws-config"
-hostPath:
-  path: {{ .Values.clpConfig.aws_config_directory | quote }}
-  type: "Directory"
+secret:
+  secretName: {{ include "clp.fullname" . }}-aws-config
 {{- end }}
 
 {{/*

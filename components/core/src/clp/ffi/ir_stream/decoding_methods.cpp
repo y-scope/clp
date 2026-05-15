@@ -31,42 +31,46 @@ namespace {
  * @param reader
  * @param encoded_tag
  * @param string_blob The string blob to append the deserialized logtype to.
- * @return IRErrorCode_Success on success.
- * @return IRErrorCode_Corrupted_IR if the encoded tag is invalid.
- * @return IRErrorCode_Incomplete_IR if the reader doesn't contain enough data to deserialize.
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't have enough data to
+ *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the tag doesn't correspond to any valid logtype
+ *   encoding.
  */
 [[nodiscard]] auto deserialize_and_append_logtype(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         StringBlob& string_blob
-) -> IRErrorCode;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes a dictionary variable from the given reader and appends it to the given string blob.
  * @param reader
  * @param encoded_tag
  * @param string_blob The string blob to append the deserialized logtype to.
- * @return IRErrorCode_Success on success.
- * @return IRErrorCode_Corrupted_IR if the encoded tag is invalid.
- * @return IRErrorCode_Incomplete_IR if the reader doesn't contain enough data to deserialize.
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't have enough data to
+ *   deserialize.
+ * - IrDeserializationErrorEnum::InvalidTag if the tag doesn't correspond to any valid dictionary
+ *   variable encoding.
  */
 [[nodiscard]] auto deserialize_and_append_dict_var(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         StringBlob& string_blob
-) -> IRErrorCode;
+) -> ystdlib::error_handling::Result<void>;
 
 auto deserialize_and_append_logtype(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         StringBlob& string_blob
-) -> IRErrorCode {
+) -> ystdlib::error_handling::Result<void> {
     size_t logtype_length{};
     switch (encoded_tag) {
         case cProtocol::Payload::LogtypeStrLenUByte: {
             uint8_t length{};
             if (false == deserialize_int(reader, length)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             logtype_length = length;
             break;
@@ -74,7 +78,7 @@ auto deserialize_and_append_logtype(
         case cProtocol::Payload::LogtypeStrLenUShort: {
             uint16_t length{};
             if (false == deserialize_int(reader, length)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             logtype_length = length;
             break;
@@ -83,33 +87,33 @@ auto deserialize_and_append_logtype(
             // NOTE: Using `int32_t` to match `serialize_logtype`.
             int32_t length{};
             if (false == deserialize_int(reader, length)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             logtype_length = length;
             break;
         }
         default:
-            return IRErrorCode_Corrupted_IR;
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
 
     auto const optional_error_code{string_blob.read_from(reader, logtype_length)};
     if (optional_error_code.has_value()) {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
-    return IRErrorCode_Success;
+    return ystdlib::error_handling::success();
 }
 
 auto deserialize_and_append_dict_var(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         StringBlob& string_blob
-) -> IRErrorCode {
+) -> ystdlib::error_handling::Result<void> {
     size_t dict_var_length{};
     switch (encoded_tag) {
         case cProtocol::Payload::VarStrLenUByte: {
             uint8_t length{};
             if (false == deserialize_int(reader, length)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             dict_var_length = length;
             break;
@@ -117,7 +121,7 @@ auto deserialize_and_append_dict_var(
         case cProtocol::Payload::VarStrLenUShort: {
             uint16_t length{};
             if (false == deserialize_int(reader, length)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             dict_var_length = length;
             break;
@@ -126,20 +130,20 @@ auto deserialize_and_append_dict_var(
             // NOTE: Using `int32_t` to match `DictionaryVariableHandler`.
             int32_t length{};
             if (false == deserialize_int(reader, length)) {
-                return IRErrorCode_Incomplete_IR;
+                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
             }
             dict_var_length = length;
             break;
         }
         default:
-            return IRErrorCode_Corrupted_IR;
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
     }
 
     auto const optional_error_code{string_blob.read_from(reader, dict_var_length)};
     if (optional_error_code.has_value()) {
-        return IRErrorCode_Incomplete_IR;
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
-    return IRErrorCode_Success;
+    return ystdlib::error_handling::success();
 }
 }  // namespace
 
@@ -534,34 +538,18 @@ template <ir::EncodedVariableTypeReq encoded_variable_t>
     bool is_encoded_var{};
     while (is_variable_tag<encoded_variable_t>(encoded_tag, is_encoded_var)) {
         if (is_encoded_var) {
-            encoded_variable_t encoded_variable{};
-            if (false == deserialize_int(reader, encoded_variable)) {
-                return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-            }
-            encoded_vars.push_back(encoded_variable);
+            encoded_vars.push_back(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<encoded_variable_t>(reader))
+            );
         } else {
-            if (auto const error_code{
-                        deserialize_and_append_dict_var(reader, encoded_tag, string_blob)
-                };
-                IRErrorCode_Success != error_code)
-            {
-                return IrDeserializationError{
-                        IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure
-                };
-            }
+            YSTDLIB_ERROR_HANDLING_TRYV(
+                    deserialize_and_append_dict_var(reader, encoded_tag, string_blob)
+            );
         }
-        if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-            return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
-        }
+        encoded_tag = YSTDLIB_ERROR_HANDLING_TRYX(deserialize_tag(reader));
     }
 
-    if (auto const error_code{deserialize_and_append_logtype(reader, encoded_tag, string_blob)};
-        IRErrorCode_Success != error_code)
-    {
-        return IrDeserializationError{
-                IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure
-        };
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(deserialize_and_append_logtype(reader, encoded_tag, string_blob));
 
     return EncodedTextAst<encoded_variable_t>::create(
             std::move(encoded_vars),
@@ -626,6 +614,39 @@ auto deserialize_tag(ReaderInterface& reader) -> ystdlib::error_handling::Result
         return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
     }
     return tag;
+}
+
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+auto deserialize_timestamp_or_timestamp_delta(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> ystdlib::error_handling::Result<epoch_time_ms_t> {
+    if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
+        if (cProtocol::Payload::TimestampVal != encoded_tag) {
+            return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
+        }
+        return deserialize_int<epoch_time_ms_t>(reader);
+    } else {
+        if (cProtocol::Payload::TimestampDeltaByte == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int8_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaShort == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int16_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaInt == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int32_t>(reader))
+            );
+        }
+        if (cProtocol::Payload::TimestampDeltaLong == encoded_tag) {
+            return static_cast<epoch_time_ms_t>(
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_int<int64_t>(reader))
+            );
+        }
+        return IrDeserializationError{IrDeserializationErrorEnum::InvalidTag};
+    }
 }
 
 IRErrorCode deserialize_preamble(
@@ -829,4 +850,14 @@ template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
         ReaderInterface& reader,
         encoded_tag_t encoded_tag
 ) -> ystdlib::error_handling::Result<EncodedTextAst<eight_byte_encoded_variable_t>>;
+
+template auto deserialize_timestamp_or_timestamp_delta<four_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<epoch_time_ms_t>;
+
+template auto deserialize_timestamp_or_timestamp_delta<eight_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag
+) -> ystdlib::error_handling::Result<epoch_time_ms_t>;
 }  // namespace clp::ffi::ir_stream
