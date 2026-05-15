@@ -173,7 +173,6 @@ tasks:
       - task: "core-build"
 
   core-generate:
-    internal: true
     sources: &core_source_files
       - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"

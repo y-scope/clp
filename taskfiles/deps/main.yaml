@@ -2,6 +2,7 @@ version: "3"
 
 includes:
   lock: "./lock.yaml"
+  toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
   yscope-log-viewer: "./log-viewer.yaml"
@@ -23,6 +24,7 @@ vars:
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
   G_YSTDLIB_LIB_NAME: "ystdlib"
+  G_Z_LIB_NAME: "zlib"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
@@ -63,6 +65,7 @@ tasks:
       - task: "fmt"
       - task: "liblzma"
       - task: "log-surgeon"
+      - task: "log_surgeon"
       - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
@@ -327,6 +330,56 @@ tasks:
           TARBALL_URL: "{{.TARBALL_URL}}"
 
   log-surgeon:
+    internal: true
+    run: "once"
+    deps: ["toolchains:rust"]
+    vars:
+      LIB_NAME: "log-surgeon"
+      INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
+      INSTALL_LIB_DIR: "{{.INSTALL_DIR}}/lib"
+      INSTALL_CMAKE_DIR: "{{.INSTALL_LIB_DIR}}/cmake/{{.LIB_NAME}}"
+      OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      SRC_DIR: "{{.OUTPUT_DIR}}/rust"
+      TARGET_NAME: "{{.LIB_NAME}}::{{.LIB_NAME}}"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "f5b515f38718e1e26f2bd0ce74d1fdc0be219345e8ba15dbe43c1cad82fbe8a1"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          URL: "https://github.com/y-scope/log-surgeon/archive/5696111.tar.gz"
+      - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        cd "{{.SRC_DIR}}"
+        cargo build --no-default-features --release
+        mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
+        rsync -az "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
+        rsync -az "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
+
+        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
+        if(NOT TARGET {{.TARGET_NAME}})
+            include("${CMAKE_CURRENT_LIST_DIR}/{{.LIB_NAME}}-targets.cmake")
+        endif()
+        EOF
+
+        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-targets.cmake" << 'EOF'
+        add_library({{.TARGET_NAME}} STATIC IMPORTED)
+        set_target_properties({{.TARGET_NAME}} PROPERTIES
+            IMPORTED_LOCATION "{{.INSTALL_LIB_DIR}}/liblog_surgeon.a"
+            INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
+        )
+        EOF
+
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" << 'EOF'
+        set({{.LIB_NAME}}_ROOT
+            "{{.INSTALL_DIR}}"
+            CACHE PATH
+            "Package root for log-surgeon."
+          )
+        EOF
+
+  log_surgeon:
     internal: true
     run: "once"
     deps:
