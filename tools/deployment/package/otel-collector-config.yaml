@@ -15,7 +15,7 @@ processors:
 
 exporters:
   otlphttp:
-    endpoint: "${env:TELEMETRY_ENDPOINT}"
+    endpoint: "${env:CLP_TELEMETRY_ENDPOINT}"
 
 service:
   extensions: ["health_check"]

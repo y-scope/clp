@@ -722,7 +722,7 @@ services:
       replicas: "${CLP_OTEL_COLLECTOR_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
-      TELEMETRY_ENDPOINT: "${TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
+      CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
     volumes:
       - type: "bind"
         source: "./otel-collector-config.yaml"
