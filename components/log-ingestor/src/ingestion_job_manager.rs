@@ -11,7 +11,14 @@ use clp_rust_utils::{
             credentials::Credentials as ClpCredentials,
         },
     },
-    job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
+    job_config::ingestion::s3::{
+        BaseConfig,
+        ConfigError,
+        S3IngestionJobConfig,
+        S3KeysConfig,
+        S3PrefixConfig,
+        ValidatedSqsListenerConfig,
+    },
 };
 use serde::Serialize;
 use tokio::sync::Mutex;
@@ -19,7 +26,14 @@ use utoipa::ToSchema;
 
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
+    ingestion_job::{
+        IngestionJob,
+        IngestionJobId,
+        IngestionJobState,
+        S3KeysIngestion,
+        S3PrefixIngestion,
+        S3Scanner,
+    },
 };
 
 /// Errors for ingestion job manager operations.
@@ -50,6 +64,70 @@ pub enum Error {
 pub enum TerminalStatus {
     Finished,
     Failed,
+}
+
+/// Configuration for one-time ingestion jobs.
+#[derive(Debug, Clone)]
+pub enum OneTimeIngestionJobConfig {
+    /// Configuration for a S3 prefix ingestion job.
+    S3Prefix(S3PrefixConfig),
+
+    /// Configuration for a S3 explicit-keys ingestion job.
+    S3Keys(S3KeysConfig),
+}
+
+impl OneTimeIngestionJobConfig {
+    #[must_use]
+    pub const fn job_type(&self) -> ClpIngestionJobType {
+        match self {
+            Self::S3Prefix(_) => ClpIngestionJobType::S3Prefix,
+            Self::S3Keys(_) => ClpIngestionJobType::S3Keys,
+        }
+    }
+
+    #[must_use]
+    pub const fn base_config(&self) -> &BaseConfig {
+        match self {
+            Self::S3Prefix(config) => &config.base,
+            Self::S3Keys(config) => &config.base,
+        }
+    }
+
+    /// Spawns the detached worker for this one-time ingestion job.
+    fn spawn(self, s3_client_manager: S3ClientWrapper, state: ClpOneTimeIngestionState) {
+        let job_id = state.get_job_id();
+        match self {
+            Self::S3Prefix(config) => {
+                let _detached = S3PrefixIngestion::spawn(job_id, s3_client_manager, config, state);
+            }
+            Self::S3Keys(config) => {
+                let _detached = S3KeysIngestion::spawn(job_id, s3_client_manager, config, state);
+            }
+        }
+    }
+}
+
+/// The context for recovering and spawning a one-time ingestion job.
+pub struct OneTimeIngestionJobContext {
+    config: OneTimeIngestionJobConfig,
+    state: ClpOneTimeIngestionState,
+}
+
+impl OneTimeIngestionJobContext {
+    #[must_use]
+    pub const fn new(config: OneTimeIngestionJobConfig, state: ClpOneTimeIngestionState) -> Self {
+        Self { config, state }
+    }
+
+    #[must_use]
+    pub const fn get_job_id(&self) -> IngestionJobId {
+        self.state.get_job_id()
+    }
+
+    #[must_use]
+    pub fn into_parts(self) -> (OneTimeIngestionJobConfig, ClpOneTimeIngestionState) {
+        (self.config, self.state)
+    }
 }
 
 /// An async-safe state for creating and managing ingestion jobs.
@@ -101,10 +179,16 @@ impl IngestionJobManagerState {
         let ingestion_job_manager = Self { inner };
 
         // Recover log-ingestor
-        let (unfinished_compression_jobs, recoverable_ingestion_jobs, inactive_ingestion_jobs) = (
+        let (
+            unfinished_compression_jobs,
+            recoverable_ingestion_jobs,
+            inactive_ingestion_jobs,
+            recoverable_one_time_jobs,
+        ) = (
             recovery_context.unfinished_compression_jobs,
             recovery_context.recoverable_ingestion_jobs,
             recovery_context.inactive_ingestion_jobs,
+            recovery_context.recoverable_one_time_jobs,
         );
         try_recover_waiting_coroutines_for_unfinished_compression_jobs(unfinished_compression_jobs);
         try_recover_ingestion_job_instances(
@@ -113,6 +197,7 @@ impl IngestionJobManagerState {
         )
         .await;
         try_recover_inactive_ingestion_jobs(inactive_ingestion_jobs).await;
+        try_recover_one_time_jobs(ingestion_job_manager.clone(), recoverable_one_time_jobs).await;
 
         Ok(ingestion_job_manager)
     }
@@ -128,12 +213,14 @@ impl IngestionJobManagerState {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::MissingRegionCode`] if no region is provided while using the default S3 endpoint.
     /// * Forwards [`Self::create_s3_ingestion_job_instance`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::create_ingestion_job`]'s return values on failure.
     pub async fn register_and_create_s3_ingestion_job(
         &self,
         config: S3IngestionJobConfig,
     ) -> Result<IngestionJobId, Error> {
+        Self::validate_region_for_base_config(config.as_base_config())?;
         let ingestion_job_context = self
             .inner
             .clp_db_ingestion_connector
@@ -154,12 +241,40 @@ impl IngestionJobManagerState {
         }
     }
 
+    /// Registers a one-time ingestion job in CLP DB.
+    ///
+    /// # Returns
+    ///
+    /// The newly created one-time ingestion job context on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::MissingRegionCode`] if no region is provided while using the default S3 endpoint.
+    /// * Forwards [`ClpDbIngestionConnector::create_one_time_ingestion_job_context`]'s return
+    ///   values on failure.
+    pub async fn register_one_time_ingestion_job(
+        &self,
+        config: OneTimeIngestionJobConfig,
+    ) -> Result<OneTimeIngestionJobContext, Error> {
+        Self::validate_region_for_base_config(config.base_config())?;
+        self.inner
+            .clp_db_ingestion_connector
+            .create_one_time_ingestion_job_context(config)
+            .await
+            .map_err(Into::into)
+    }
+
     /// Shuts down and removes an ingestion job instance by its ID.
     ///
     /// # NOTE
     ///
     /// This method only removes the running job instance. It does not remove the job from CLP DB.
     /// The job status and stats will still be accessible after calling this method.
+    ///
+    /// For one-time jobs, this method sets the job status to [`ClpIngestionJobStatus::Paused`]
+    /// instead of [`ClpIngestionJobStatus::Failed`].
     ///
     /// # Returns
     ///
@@ -171,7 +286,9 @@ impl IngestionJobManagerState {
     ///
     /// * [`Error::JobNotFound`] if the given job ID does not exist.
     /// * Forwards [`ClpIngestionJobContext::shutdown`]'s return values on failure.
-    /// * Forwards [`ClpDbIngestionConnector::get_job_status`]' return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::get_job_status`]'s return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::get_job_type`]'s return values on failure.
+    /// * Forwards [`ClpDbIngestionConnector::try_pause`]'s return values on failure.
     /// * Forwards [`ClpDbIngestionConnector::try_fail`]'s return values on failure.
     pub async fn shutdown_and_remove_job_instance(
         &self,
@@ -199,21 +316,75 @@ impl IngestionJobManagerState {
         else {
             return Err(Error::JobNotFound(job_id));
         };
-
+        // The job has already finished. Keep the operation idempotent by not overwriting the
+        // terminal status.
         if ClpIngestionJobStatus::Finished == status {
-            // The job has already finished. Keep the operation idempotent by not overwriting the
-            // status.
-            Ok(TerminalStatus::Finished)
-        } else {
-            self.inner
-                .clp_db_ingestion_connector
-                .try_fail(
-                    job_id,
-                    "Ingestion job instance not found on shutdown.".to_string(),
-                )
-                .await?;
-            Ok(TerminalStatus::Failed)
+            return Ok(TerminalStatus::Finished);
         }
+        if ClpIngestionJobStatus::Paused == status {
+            return Ok(TerminalStatus::Failed);
+        }
+
+        let job_type = self
+            .inner
+            .clp_db_ingestion_connector
+            .get_job_type(job_id)
+            .await?;
+        match job_type {
+            ClpIngestionJobType::S3Prefix | ClpIngestionJobType::S3Keys => {
+                self.inner
+                    .clp_db_ingestion_connector
+                    .try_pause(job_id, None)
+                    .await?;
+            }
+            ClpIngestionJobType::S3Scanner | ClpIngestionJobType::SqsListener => {
+                self.inner
+                    .clp_db_ingestion_connector
+                    .try_fail(
+                        job_id,
+                        "ingestion job instance not found on shutdown".to_string(),
+                    )
+                    .await?;
+            }
+        }
+        Ok(TerminalStatus::Failed)
+    }
+
+    /// Spawns a detached one-time ingestion task for the given one-time job context.
+    ///
+    /// # NOTE
+    ///
+    /// Prefix-conflict detection against running long-running jobs is not performed.
+    pub async fn spawn_one_time_ingestion(
+        &self,
+        one_time_ingestion_job_context: OneTimeIngestionJobContext,
+    ) {
+        let (config, state) = one_time_ingestion_job_context.into_parts();
+        let base_config = config.base_config();
+
+        let s3_client_manager = S3ClientWrapper::create(
+            base_config.region.as_ref(),
+            base_config.endpoint_url.as_ref(),
+            &self.inner.aws_authentication,
+        )
+        .await;
+
+        config.spawn(s3_client_manager, state);
+    }
+
+    /// Validates region requirements for S3-backed ingestion jobs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::MissingRegionCode`] if `base_config.region` is `None` and
+    ///   `base_config.endpoint_url` is `None`.
+    const fn validate_region_for_base_config(base_config: &BaseConfig) -> Result<(), Error> {
+        if base_config.region.is_none() && base_config.endpoint_url.is_none() {
+            return Err(Error::MissingRegionCode);
+        }
+        Ok(())
     }
 
     /// Creates a new S3 ingestion job instance and adds it to the job table with key prefix
@@ -475,4 +646,31 @@ async fn try_refill_ingestion_buffer(ingestion_job_context: &ClpIngestionJobCont
             "Failed to send buffered objects to ingestion buffer on recovery. Recovering skipped."
         );
     }
+}
+
+/// Recovers one-time ingestion jobs by re-spawning them from scratch.
+///
+/// # NOTE
+///
+/// This function is best-effort. Failures spawning individual jobs are logged and skipped.
+async fn try_recover_one_time_jobs(
+    ingestion_job_manager: IngestionJobManagerState,
+    recoverable_one_time_jobs: Vec<OneTimeIngestionJobContext>,
+) {
+    let num_jobs = recoverable_one_time_jobs.len();
+    if num_jobs == 0 {
+        return;
+    }
+
+    tracing::info!("Recovering {num_jobs} one-time ingestion job(s).");
+
+    for one_time_ingestion_job_context in recoverable_one_time_jobs {
+        let job_id = one_time_ingestion_job_context.get_job_id();
+        tracing::info!(job_id = ? job_id, "Recovering one-time ingestion job.");
+        ingestion_job_manager
+            .spawn_one_time_ingestion(one_time_ingestion_job_context)
+            .await;
+    }
+
+    tracing::info!("One-time ingestion job recovery completed. Total recovered jobs: {num_jobs}.");
 }

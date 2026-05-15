@@ -176,6 +176,24 @@ pub mod s3 {
         pub start_after: Option<NonEmptyString>,
     }
 
+    /// Configuration for a S3 prefix ingestion job.
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    pub struct S3PrefixConfig {
+        #[serde(flatten)]
+        pub base: BaseConfig,
+    }
+
+    /// Configuration for a one-time S3 keys ingestion job.
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    pub struct S3KeysConfig {
+        #[serde(flatten)]
+        pub base: BaseConfig,
+
+        /// The explicit object keys to ingest.
+        #[schema(value_type = Vec<String>)]
+        pub object_keys: Vec<NonEmptyString>,
+    }
+
     /// Configuration for buffer behavior.
     #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
     #[serde(default)]

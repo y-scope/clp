@@ -7,11 +7,17 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use clp_rust_utils::job_config::ingestion::s3::{
-    S3IngestionJobConfig,
-    S3ScannerConfig,
-    SqsListenerConfig,
+use clp_rust_utils::{
+    job_config::ingestion::s3::{
+        S3IngestionJobConfig,
+        S3KeysConfig,
+        S3PrefixConfig,
+        S3ScannerConfig,
+        SqsListenerConfig,
+    },
+    s3::normalize_s3_object_urls,
 };
+use non_empty_string::NonEmptyString;
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::{OpenApi, ToSchema};
@@ -22,6 +28,7 @@ use crate::{
     ingestion_job_manager::{
         Error as IngestionJobManagerError,
         IngestionJobManagerState,
+        OneTimeIngestionJobConfig,
         TerminalStatus,
     },
 };
@@ -41,6 +48,8 @@ use crate::{
         health,
         create_s3_scanner_job,
         create_sqs_listener_job,
+        create_s3_prefix_job,
+        create_s3_keys_job,
         terminate_ingestion_job,
     )
 )]
@@ -63,6 +72,8 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
         .routes(routes!(health))
         .routes(routes!(create_s3_scanner_job))
         .routes(routes!(create_sqs_listener_job))
+        .routes(routes!(create_s3_prefix_job))
+        .routes(routes!(create_s3_keys_job))
         .routes(routes!(terminate_ingestion_job))
         .split_for_parts();
 
@@ -80,6 +91,9 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
 enum Error {
     #[error("{0}")]
     IngestionJobManagerError(#[from] IngestionJobManagerError),
+
+    #[error("{0}")]
+    InvalidS3ObjectUrls(String),
 }
 
 impl IntoResponse for Error {
@@ -102,6 +116,7 @@ impl IntoResponse for Error {
                     (axum::http::StatusCode::BAD_REQUEST, self.to_string())
                 }
             },
+            Self::InvalidS3ObjectUrls(_) => (axum::http::StatusCode::BAD_REQUEST, self.to_string()),
         };
         let body = ErrorResponse {
             error: error_message,
@@ -129,6 +144,25 @@ struct TerminateResponse {
 struct ErrorResponse {
     /// The error message.
     error: String,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, ToSchema)]
+struct CreateS3KeysRequest {
+    /// The explicit S3 object URLs to ingest.
+    #[schema(value_type = Vec<String>)]
+    object_urls: Vec<NonEmptyString>,
+
+    /// The dataset to ingest into. Defaults to `None`.
+    #[schema(value_type = String, min_length = 1)]
+    dataset: Option<NonEmptyString>,
+
+    /// The optional key for extracting timestamps from object metadata. Defaults to `None`.
+    #[schema(value_type = String, min_length = 1)]
+    timestamp_key: Option<NonEmptyString>,
+
+    /// Whether to treat the ingested objects as unstructured logs. Defaults to `false`.
+    #[serde(default)]
+    unstructured: bool,
 }
 
 #[utoipa::path(
@@ -240,6 +274,106 @@ async fn create_sqs_listener_job(
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "Created SQS listener ingestion job.");
+    Ok(Json(CreationResponse { id: job_id }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/s3/prefix",
+    tags = ["IngestionJob"],
+    description = "Creates a one-time ingestion job that scans the specified S3 bucket and key \
+        prefix once, collects all objects, and submits a single compression job.\n\n\
+        The job ingests all objects under the prefix in a single pass and transitions to a \
+        terminal state upon completion.",
+    responses(
+        (status = OK, body = CreationResponse, description = "The ID of the created job."),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            body = ErrorResponse,
+            description = "Internal server failure."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "A region code is not provided when using the default AWS S3 endpoint."
+        )
+    )
+)]
+async fn create_s3_prefix_job(
+    State(ingestion_job_manager_state): State<IngestionJobManagerState>,
+    Json(config): Json<S3PrefixConfig>,
+) -> Result<Json<CreationResponse>, Error> {
+    tracing::info!(config = ? config, "Create S3 prefix ingestion job.");
+    let one_time_ingestion_job_context = ingestion_job_manager_state
+        .register_one_time_ingestion_job(OneTimeIngestionJobConfig::S3Prefix(config))
+        .await
+        .map_err(|err| {
+            tracing::error!(err = ? err, "Failed to register S3 prefix ingestion job.");
+            Error::IngestionJobManagerError(err)
+        })?;
+    let job_id = one_time_ingestion_job_context.get_job_id();
+    ingestion_job_manager_state
+        .spawn_one_time_ingestion(one_time_ingestion_job_context)
+        .await;
+    tracing::info!(job_id = ? job_id, "Created S3 prefix ingestion job.");
+    Ok(Json(CreationResponse { id: job_id }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/s3/keys",
+    tags = ["IngestionJob"],
+    request_body = CreateS3KeysRequest,
+    description = "Creates a one-time ingestion job that ingests an explicit set of S3 object \
+        URLs once by scanning their shared prefix and selecting only the requested objects.\n\n\
+        All submitted URLs must share the same endpoint, region, bucket, and a non-empty common \
+        key prefix. Duplicate object keys are rejected.",
+    responses(
+        (status = OK, body = CreationResponse, description = "The ID of the created job."),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            body = ErrorResponse,
+            description = "Internal server failure."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "The S3 URLs are invalid or a region code is not provided when using \
+                the default AWS S3 endpoint."
+        )
+    )
+)]
+async fn create_s3_keys_job(
+    State(ingestion_job_manager_state): State<IngestionJobManagerState>,
+    Json(request): Json<CreateS3KeysRequest>,
+) -> Result<Json<CreationResponse>, Error> {
+    tracing::info!(request = ? request, "Create S3 keys ingestion job.");
+    let normalized_urls = normalize_s3_object_urls(&request.object_urls)
+        .map_err(|err| Error::InvalidS3ObjectUrls(err.to_string()))?;
+    let config = S3KeysConfig {
+        base: clp_rust_utils::job_config::ingestion::s3::BaseConfig {
+            bucket_name: normalized_urls.bucket_name,
+            key_prefix: normalized_urls.common_key_prefix,
+            region: normalized_urls.region,
+            endpoint_url: normalized_urls.endpoint_url,
+            dataset: request.dataset,
+            timestamp_key: request.timestamp_key,
+            unstructured: request.unstructured,
+        },
+        object_keys: normalized_urls.object_keys,
+    };
+    let one_time_ingestion_job_context = ingestion_job_manager_state
+        .register_one_time_ingestion_job(OneTimeIngestionJobConfig::S3Keys(config))
+        .await
+        .map_err(|err| {
+            tracing::error!(err = ? err, "Failed to register S3 keys ingestion job.");
+            Error::IngestionJobManagerError(err)
+        })?;
+    let job_id = one_time_ingestion_job_context.get_job_id();
+    ingestion_job_manager_state
+        .spawn_one_time_ingestion(one_time_ingestion_job_context)
+        .await;
+    tracing::info!(job_id = ? job_id, "Created S3 keys ingestion job.");
     Ok(Json(CreationResponse { id: job_id }))
 }
 
