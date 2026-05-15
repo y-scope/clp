@@ -1,0 +1,12 @@
+{
+    "dataset_name": "text_singlefile",
+    "unstructured": true,
+    "timestamp_key": null,
+    "begin_ts": 1427089710122,
+    "end_ts": 1427089710122,
+    "logs_subdir": "logs",
+    "file_names": [
+        "simple.txt"
+    ],
+    "single_match_wildcard_query": "TEST1"
+}
