@@ -1184,6 +1184,7 @@ class DockerComposeController(BaseController):
 
         num_workers = self._get_num_workers()
 
+        # NOTE: Replicas are hardcoded to 1 until multi-container workers land (see #1424).
         add_gauge("clp.deployment.compression_worker_replicas", 1)
         add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
         add_gauge("clp.deployment.query_worker_replicas", 1)
