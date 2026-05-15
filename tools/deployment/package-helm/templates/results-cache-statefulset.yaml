@@ -56,6 +56,32 @@ spec:
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *results-cache-health-check
+        - name: "results-cache-init"
+          image: "{{ include "clp.image.ref" . }}"
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              until python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 27017)); s.close()" 2>/dev/null; do
+                sleep 1
+              done
+              python3 -u -m clp_py_utils.initialize-results-cache \
+                --uri "mongodb://127.0.0.1:27017/{{ .Values.clpConfig.results_cache.db_name }}" \
+                --member-host "{{ include "clp.fullname" . }}-results-cache:27017" \
+                --stream-collection {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+              touch /tmp/init-complete
+              sleep infinity
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec:
+              command:
+                - "test"
+                - "-f"
+                - "/tmp/init-complete"
       volumes:
         - name: "config"
           configMap:
