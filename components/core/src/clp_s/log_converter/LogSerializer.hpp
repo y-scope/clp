@@ -2,16 +2,20 @@
 #define CLP_S_LOG_CONVERTER_LOGSERIALIZER_HPP
 
 #include <cstddef>
+#include <memory>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../clp/ffi/ir_stream/protocol_constants.hpp"
-#include "../../clp/ffi/ir_stream/Serializer.hpp"
-#include "../../clp/ir/types.hpp"
-#include "../../clp/type_utils.hpp"
-#include "../FileWriter.hpp"
+#include <clp/ffi/ir_stream/protocol_constants.hpp>
+#include <clp/ffi/ir_stream/Serializer.hpp>
+#include <clp/FileWriter.hpp>
+#include <clp/ir/types.hpp>
+#include <clp/streaming_compression/Compressor.hpp>
+#include <clp/type_utils.hpp>
+#include <clp/WriterInterface.hpp>
 
 namespace clp_s::log_converter {
 /**
@@ -24,13 +28,15 @@ public:
      * Creates an instance of `LogSerializer`.
      * @param output_dir The destination directory for generated KV-IR.
      * @param original_file_path The original path for the file being converted to KV-IR.
+     * @param use_zstd Whether the output KV-IR should be zstd-compressed.
      * @return A result containing a `LogSerializer` on success, or an error code indicating the
      * failure:
-     * - std::errc::no_such_file_or_directory if a `clp_s::FileWriter` fails to open an output file.
+     * - std::errc::no_such_file_or_directory if a `clp::FileWriter` fails to open an output file.
+     * - std::errc::protocol_error if a `clp::zstd::Compressor` fails to open a compression stream.
      * - Forwards `clp::ffi::ir_stream::Serializer<>::create()`'s return values.
      */
     [[nodiscard]] static auto
-    create(std::string_view output_dir, std::string_view original_file_path)
+    create(std::string_view output_dir, std::string_view original_file_path, bool use_zstd)
             -> ystdlib::error_handling::Result<LogSerializer>;
 
     // Constructors
@@ -74,8 +80,18 @@ public:
      */
     void close() {
         flush_buffer();
-        m_writer.write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
-        m_writer.close();
+        m_nested_writers.back()->write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
+        for (auto it{m_nested_writers.rbegin()}; it != m_nested_writers.rend(); ++it) {
+            if (auto compressor{dynamic_cast<clp::streaming_compression::Compressor*>(it->get())};
+                nullptr != compressor)
+            {
+                compressor->close();
+            } else if (auto file_writer{dynamic_cast<clp::FileWriter*>(it->get())};
+                       nullptr != file_writer)
+            {
+                file_writer->close();
+            }
+        }
     }
 
 private:
@@ -88,10 +104,10 @@ private:
     // Constructors
     explicit LogSerializer(
             clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t>&& serializer,
-            clp_s::FileWriter&& writer
+            std::vector<std::unique_ptr<clp::WriterInterface>>&& nested_writers
     )
             : m_serializer{std::move(serializer)},
-              m_writer{std::move(writer)} {}
+              m_nested_writers{std::move(nested_writers)} {}
 
     // Methods
     /**
@@ -99,7 +115,7 @@ private:
      */
     void flush_buffer() {
         auto const buffer{m_serializer.get_ir_buf_view()};
-        m_writer.write(
+        m_nested_writers.back()->write(
                 clp::size_checked_pointer_cast<char const>(buffer.data()),
                 buffer.size_bytes()
         );
@@ -107,7 +123,9 @@ private:
     }
 
     clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t> m_serializer;
-    clp_s::FileWriter m_writer;
+    // Nested writers are ordered from closest to furthest from output sink. Typically this will
+    // look like `FileWriter` <- `Compressor`.
+    std::vector<std::unique_ptr<clp::WriterInterface>> m_nested_writers;
 };
 }  // namespace clp_s::log_converter
 

@@ -37,6 +37,10 @@ public:
 
     [[nodiscard]] auto get_max_log_event_size() const -> size_t { return m_max_log_event_size; }
 
+    [[nodiscard]] auto get_compress_converted_files() const -> bool {
+        return m_compress_converted_files;
+    }
+
 private:
     // Methods
     void print_basic_usage() const;
@@ -47,6 +51,7 @@ private:
     NetworkAuthOption m_network_auth{};
     std::string m_output_dir{"./"};
     size_t m_max_log_event_size{512ULL * 1024ULL * 1024ULL};  // 512 MiB
+    bool m_compress_converted_files{true};
 };
 }  // namespace clp_s::log_converter
 

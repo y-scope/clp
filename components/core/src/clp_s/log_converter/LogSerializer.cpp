@@ -3,11 +3,13 @@
 #include <array>
 #include <cstdint>
 #include <exception>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <vector>
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -16,17 +18,23 @@
 #include <nlohmann/json_fwd.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../clp/ffi/ir_stream/Serializer.hpp"
-#include "../../clp/ir/types.hpp"
-#include "../FileWriter.hpp"
+#include <clp/ffi/ir_stream/Serializer.hpp>
+#include <clp/FileWriter.hpp>
+#include <clp/ir/constants.hpp>
+#include <clp/ir/types.hpp>
+#include <clp/streaming_compression/zstd/Compressor.hpp>
 
 namespace clp_s::log_converter {
 namespace {
 constexpr msgpack::object_map cEmptyMap{.size = 0U, .ptr = nullptr};
+constexpr std::string_view cUncompressedFileExtension{".clp"};
 }  // namespace
 
-auto LogSerializer::create(std::string_view output_dir, std::string_view original_file_path)
-        -> ystdlib::error_handling::Result<LogSerializer> {
+auto LogSerializer::create(
+        std::string_view output_dir,
+        std::string_view original_file_path,
+        bool use_zstd
+) -> ystdlib::error_handling::Result<LogSerializer> {
     nlohmann::json metadata;
     metadata.emplace(cOriginalFileMetadataKey, original_file_path);
     auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(
@@ -36,16 +44,32 @@ auto LogSerializer::create(std::string_view output_dir, std::string_view origina
     )};
 
     boost::uuids::random_generator uuid_generator;
-    std::string const file_name{boost::uuids::to_string(uuid_generator()) + ".clp"};
+    auto file_extension{use_zstd ? clp::ir::cIrFileExtension : cUncompressedFileExtension};
+    std::string const file_name{
+            boost::uuids::to_string(uuid_generator()) + std::string{file_extension}
+    };
     auto const converted_path{std::filesystem::path{output_dir} / file_name};
-    clp_s::FileWriter writer;
+    std::vector<std::unique_ptr<clp::WriterInterface>> nested_writers;
     try {
-        writer.open(converted_path, clp_s::FileWriter::OpenMode::CreateForWriting);
+        auto writer{std::make_unique<clp::FileWriter>()};
+        writer->open(converted_path, clp::FileWriter::OpenMode::CREATE_FOR_WRITING);
+        nested_writers.emplace_back(std::move(writer));
     } catch (std::exception const&) {
         return std::errc::no_such_file_or_directory;
     }
 
-    return LogSerializer{std::move(serializer), std::move(writer)};
+    if (false == use_zstd) {
+        return LogSerializer{std::move(serializer), std::move(nested_writers)};
+    }
+
+    try {
+        auto compressor{std::make_unique<clp::streaming_compression::zstd::Compressor>()};
+        compressor->open(*nested_writers.back().get());
+        nested_writers.emplace_back(std::move(compressor));
+    } catch (std::exception const&) {
+        return std::errc::protocol_error;
+    }
+    return LogSerializer{std::move(serializer), std::move(nested_writers)};
 }
 
 auto LogSerializer::add_message(std::string_view timestamp, std::string_view message)
