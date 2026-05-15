@@ -254,7 +254,7 @@ clpConfig:
   # Telemetry config
   telemetry:
     disable: false
-    endpoint: "http://localhost:4318"
+    endpoint: "https://telemetry.yscope.io"
     collector:
       image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.119.0" # yamllint disable-line
       resources:

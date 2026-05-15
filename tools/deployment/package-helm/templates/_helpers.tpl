@@ -58,6 +58,28 @@ clp.deployment.id={{ .Values.clpConfig.instanceId | default "00000000-0000-0000-
 {{- end -}}
 
 {{/*
+Generates the OTLP JSON payload for topology metrics emission.
+
+This produces the same payload structure as DockerComposeController._emit_topology_metrics()
+in controller.py, ensuring feature parity between Docker Compose and Helm deployments.
+
+@return {string} OTLP JSON payload for topology metrics
+*/}}
+{{- define "clp.topologyMetricsPayload" -}}
+{{- $timestampNs := now.UnixNano -}}
+{{- $deploymentId := .Values.clpConfig.instanceId | default "00000000-0000-0000-0000-000000000000" -}}
+{{- $serviceVersion := .Chart.AppVersion -}}
+{{- $storageEngine := .Values.clpConfig.package.storage_engine -}}
+{{- $osType := .Values.hostOS | default "linux" -}}
+{{- $hostArch := .Values.hostArch | default "amd64" -}}
+{{- $compressionWorkerReplicas := .Values.scheduling.compressionWorker.replicas | default 1 | int -}}
+{{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
+{{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
+{{- $workerConcurrency := .Values.workerConcurrency | default 8 | int -}}
+{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"clp.deployment.id","value":{"stringValue":"%s"}},{"key":"service.version","value":{"stringValue":"%s"}},{"key":"clp.deployment.method","value":{"stringValue":"helm"}},{"key":"clp.storage.engine","value":{"stringValue":"%s"}},{"key":"os.type","value":{"stringValue":"%s"}},{"key":"host.arch","value":{"stringValue":"%s"}},{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $deploymentId $serviceVersion $storageEngine $osType $hostArch $compressionWorkerReplicas $timestampNs $workerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $workerConcurrency $timestampNs $reducerReplicas $timestampNs $workerConcurrency $timestampNs -}}
+{{- end -}}
+
+{{/*
 Provides environment variables for telemetry (except service.name).
 */}}
 {{- define "clp.telemetryEnv" -}}
