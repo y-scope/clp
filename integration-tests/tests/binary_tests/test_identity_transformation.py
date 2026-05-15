@@ -14,7 +14,6 @@ from tests.utils.fs_validation import (
     is_dir_tree_content_equal,
     is_json_file_structurally_equal,
 )
-from tests.utils.logging_utils import format_action_failure_msg
 
 pytestmark = pytest.mark.core
 
@@ -55,13 +54,11 @@ def test_clp_identity_transform(
     ]
     # fmt: on
     compression_action = ExternalAction.from_cmd(compression_cmd)
-    if compression_action.completed_proc.returncode != 0:
-        pytest.fail(format_action_failure_msg("`clp` compression failed.", compression_action))
+    compression_action.assert_returncode("`clp` compression failed.")
 
     decompression_cmd = [bin_path, "x", compression_path, decompression_path]
     decompression_action = ExternalAction.from_cmd(decompression_cmd)
-    if decompression_action.completed_proc.returncode != 0:
-        pytest.fail(format_action_failure_msg("`clp` decompression failed.", decompression_action))
+    decompression_action.assert_returncode("`clp` decompression failed.")
 
     input_path = test_paths.logs_source_dir
     output_path = test_paths.decompression_dir
@@ -130,13 +127,9 @@ def _clp_s_compress_and_decompress(
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
     compression_action = ExternalAction.from_cmd([bin_path, "c", compression_path, src_path])
-    if compression_action.completed_proc.returncode != 0:
-        pytest.fail(format_action_failure_msg("`clp-s` compression failed.", compression_action))
+    compression_action.assert_returncode("`clp-s` compression failed.")
 
     decompression_action = ExternalAction.from_cmd(
         [bin_path, "x", compression_path, decompression_path]
     )
-    if decompression_action.completed_proc.returncode != 0:
-        pytest.fail(
-            format_action_failure_msg("`clp-s` decompression failed.", decompression_action)
-        )
+    decompression_action.assert_returncode("`clp-s` decompression failed.")

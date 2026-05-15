@@ -12,7 +12,6 @@ from tests.utils.config import (
     ClpCorePathConfig,
     ConversionTestPathConfig,
 )
-from tests.utils.logging_utils import format_action_failure_msg
 
 # Matching `LogSerializer::cTimestampKey`.
 LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY = "timestamp"
@@ -63,8 +62,7 @@ def _convert_and_compress(
     conversion_action = ExternalAction.from_cmd(
         [log_converter_bin_path, src_path, "--output-dir", conversion_path]
     )
-    if conversion_action.completed_proc.returncode != 0:
-        pytest.fail(format_action_failure_msg("`log-converter` failed.", conversion_action))
+    conversion_action.assert_returncode("`log-converter` failed.")
 
     compression_action = ExternalAction.from_cmd(
         [
@@ -76,8 +74,7 @@ def _convert_and_compress(
             LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY,
         ]
     )
-    if compression_action.completed_proc.returncode != 0:
-        pytest.fail(format_action_failure_msg("`clp-s` compression failed.", compression_action))
+    compression_action.assert_returncode("`clp-s` compression failed.")
 
     if test_paths.num_log_events is None:
         return
@@ -85,8 +82,7 @@ def _convert_and_compress(
     search_action = ExternalAction.from_cmd(
         [clp_s_bin_path, "s", compression_path, "timestamp > 0"]
     )
-    if search_action.completed_proc.returncode != 0:
-        pytest.fail(format_action_failure_msg("`clp-s` search failed.", search_action))
+    search_action.assert_returncode("`clp-s` search failed.")
     lines = search_action.completed_proc.stdout.splitlines()
     if len(lines) != test_paths.num_log_events:
         pytest.fail(

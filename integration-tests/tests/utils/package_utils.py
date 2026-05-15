@@ -1,13 +1,10 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-import pytest
-
 from tests.utils.classes import ExternalAction
 from tests.utils.config import (
     PackageCompressionJob,
     PackageTestConfig,
 )
-from tests.utils.logging_utils import format_action_failure_msg
 
 
 def start_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -28,13 +25,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
     ]
     # fmt: on
     start_action = ExternalAction.from_cmd(start_cmd)
-    if start_action.completed_proc.returncode != 0:
-        pytest.fail(
-            format_action_failure_msg(
-                f"Failed to start CLP package using `{start_script_path.name}`.",
-                start_action,
-            )
-        )
+    start_action.assert_returncode(f"Failed to start CLP package using `{start_script_path.name}`.")
 
 
 def stop_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -55,13 +46,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     ]
     # fmt: on
     stop_action = ExternalAction.from_cmd(stop_cmd)
-    if stop_action.completed_proc.returncode != 0:
-        pytest.fail(
-            format_action_failure_msg(
-                f"Failed to stop CLP package using `{stop_script_path.name}`.",
-                stop_action,
-            )
-        )
+    stop_action.assert_returncode(f"Failed to stop CLP package using `{stop_script_path.name}`.")
 
 
 def run_package_compression_script(
@@ -95,10 +80,4 @@ def run_package_compression_script(
 
     # Run compression command for this job and assert that it succeeds.
     compress_action = ExternalAction.from_cmd(compress_cmd)
-    if compress_action.completed_proc.returncode != 0:
-        pytest.fail(
-            format_action_failure_msg(
-                f"Compression script `{compress_script_path.name}` failed.",
-                compress_action,
-            )
-        )
+    compress_action.assert_returncode(f"Compression script `{compress_script_path.name}` failed.")

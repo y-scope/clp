@@ -188,6 +188,40 @@ class ExternalAction:
         self.completed_proc = self._run_subprocess()
         self._log_action_summary_to_file()
 
+    def assert_returncode(
+        self,
+        reason: str,
+        expected_returncodes: tuple[int, ...] = (0,),
+    ) -> None:
+        """
+        :param reason:
+        :param expected_returncodes:
+        :raise pytest.fail: if `completed_proc.returncode` is not in `expected_returncodes`.
+        """
+        if self.completed_proc.returncode in expected_returncodes:
+            return
+        pytest.fail(self.format_failure_msg(reason))
+
+    def format_failure_msg(self, reason: str) -> str:
+        """
+        :param reason:
+        :return: A failure message that includes `reason` and a pointer to this action's log file.
+        """
+        return f"{reason} See relevant subprocess log at: '{self.log_file_path}'"
+
+    @classmethod
+    def format_combined_failure_msg(cls, reason: str, *actions: Self) -> str:
+        """
+        Formats a failure message that associates `reason` with one or more external actions by
+        including a reference to each action's subprocess log file.
+
+        :param reason:
+        :param actions:
+        :return: The failure message.
+        """
+        log_paths = ", ".join(f"'{action.log_file_path}'" for action in actions)
+        return f"{reason} See relevant subprocess logs at: {log_paths}"
+
     def get_output(self) -> str:
         """:return: The combined stdout and stderr from the completed subprocess."""
         return self.completed_proc.stdout + self.completed_proc.stderr
