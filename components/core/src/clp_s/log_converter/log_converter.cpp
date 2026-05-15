@@ -26,7 +26,7 @@ namespace {
 [[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
-    LogConverter log_converter{command_line_arguments.get_max_log_event_size()};
+    auto log_converter{LogConverter::create(command_line_arguments.get_max_log_event_size())};
 
     std::error_code ec{};
     if (false == std::filesystem::create_directory(command_line_arguments.get_output_dir(), ec)
