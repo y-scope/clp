@@ -723,6 +723,8 @@ services:
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
+    ports:
+      - "127.0.0.1:4318:4318"
     volumes:
       - type: "bind"
         source: "./otel-collector-config.yaml"

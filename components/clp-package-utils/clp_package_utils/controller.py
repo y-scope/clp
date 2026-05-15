@@ -69,6 +69,7 @@ from clp_package_utils.general import (
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
+    http_request,
     is_retention_period_configured,
     validate_db_config,
     validate_mcp_server_config,
@@ -1212,33 +1213,12 @@ class DockerComposeController(BaseController):
             )
 
         try:
-            payload_str = json.dumps(payload)
-            subprocess.run(
-                [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "--network",
-                    f"{self._project_name}_default",
-                    "curlimages/curl",
-                    "-s",
-                    "--fail",
-                    "--retry",
-                    "5",
-                    "--retry-all-errors",
-                    "--retry-delay",
-                    "1",
-                    "-X",
-                    "POST",
-                    "-H",
-                    "Content-Type: application/json",
-                    "-d",
-                    payload_str,
-                    "http://otel-collector:4318/v1/metrics",
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=15,
+            payload_bytes = json.dumps(payload).encode("utf-8")
+            http_request(
+                "http://127.0.0.1:4318/v1/metrics",
+                method="POST",
+                data=payload_bytes,
+                headers={"Content-Type": "application/json"},
             )
         except Exception as e:
             logger.warning("Failed to emit topology metrics: %s", e)
