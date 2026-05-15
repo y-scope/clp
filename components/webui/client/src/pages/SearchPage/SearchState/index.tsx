@@ -14,6 +14,7 @@ import {
     SearchResult,
 } from "../SearchResults/SearchResultsTable/Native/SearchResultsVirtualTable/typings";
 import {formatExportFilenameTimestamp} from "../SearchResults/SearchResultsTable/Native/utils";
+import {DEFAULT_SEARCH_MAX_NUM_RESULTS} from "../SearchResults/SearchResultsTable/typings";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
 import {SEARCH_UI_STATE} from "./typings";
 
@@ -23,6 +24,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    maxNumResults: DEFAULT_SEARCH_MAX_NUM_RESULTS,
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
@@ -43,6 +45,11 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * Maximum number of results to retrieve for a search query.
+     */
+    maxNumResults: number;
 
     /**
      * The number of search results from server metadata.
@@ -121,6 +128,7 @@ interface SearchState {
     handleSearchResultsExport: () => void;
 
     updateAggregationJobId: (id: string | null) => void;
+    updateMaxNumResults: (num: number) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
@@ -158,6 +166,9 @@ const useSearchStore = create<SearchState>((set, get) => ({
     },
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateMaxNumResults: (num) => {
+        set({maxNumResults: num});
     },
     updateNumSearchResultsMetadata: (num) => {
         set({numSearchResultsMetadata: num});

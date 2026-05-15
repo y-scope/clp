@@ -724,6 +724,7 @@ class BaseController(ABC):
             "ClpQueryEngine": self._clp_config.package.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
+            "MaxSearchResults": self._clp_config.webui.max_search_results,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
@@ -740,6 +741,7 @@ class BaseController(ABC):
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
+            "MaxSearchResults": self._clp_config.webui.max_search_results,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
