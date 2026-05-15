@@ -1,5 +1,5 @@
 {{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
-apiVersion: apps/v1
+apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
   name: {{ include "clp.fullname" . }}-otel-collector
