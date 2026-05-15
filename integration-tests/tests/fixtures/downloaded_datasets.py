@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.utils.classes import ExternalAction, IntegrationTestPathConfig
+from tests.utils.classes import IntegrationTestPathConfig, NonClpAction
 from tests.utils.utils import (
     get_binary_path,
     remove_path,
@@ -92,7 +92,7 @@ def _download_and_extract_gzip_dataset(
     :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
         Defaults to False to avoid an unnecessary extra directory level.
     :return: A DownloadedDataset instance providing metadata for the downloaded logs.
-    :raise pytest.fail: If `curl`, `tar`, or `chmod` returns a non-zero exit code.
+    :raise RuntimeError: If `curl`, `tar`, or `chmod` returns a non-zero exit code.
     """
     downloaded_dataset = DownloadedDataset(
         dataset_name=dataset_name,
@@ -120,8 +120,8 @@ def _download_and_extract_gzip_dataset(
         tarball_url,
     ]
     # fmt: on
-    curl_action = ExternalAction.from_cmd(curl_cmd)
-    curl_action.assert_returncode(f"`curl` failed when downloading `{tarball_url}`.")
+    curl_action = NonClpAction(cmd=curl_cmd)
+    curl_action.check_returncode()
 
     # fmt: off
     extract_cmd = [
@@ -134,16 +134,16 @@ def _download_and_extract_gzip_dataset(
     # fmt: on
     if not keep_leading_dir:
         extract_cmd.extend(["--strip-components", "1"])
-    extract_action = ExternalAction.from_cmd(extract_cmd)
-    extract_action.assert_returncode(f"`tar` failed when extracting `{tarball_path_str}`.")
+    extract_action = NonClpAction(cmd=extract_cmd)
+    extract_action.check_returncode()
 
     # Allow the downloaded and extracted contents to be deletable or overwritable by adding write
     # permissions for both the user and the group.
     chmod_bin = get_binary_path("chmod")
-    chmod_tarball_action = ExternalAction.from_cmd([chmod_bin, "gu+w", tarball_path_str])
-    chmod_tarball_action.assert_returncode(f"`chmod` failed for `{tarball_path_str}`.")
-    chmod_extract_action = ExternalAction.from_cmd([chmod_bin, "-R", "gu+w", extract_path_str])
-    chmod_extract_action.assert_returncode(f"`chmod` failed for `{extract_path_str}`.")
+    chmod_tarball_action = NonClpAction(cmd=[chmod_bin, "gu+w", tarball_path_str])
+    chmod_tarball_action.check_returncode()
+    chmod_extract_action = NonClpAction(cmd=[chmod_bin, "-R", "gu+w", extract_path_str])
+    chmod_extract_action.check_returncode()
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", dataset_name)
     request.config.cache.set(dataset_name, True)

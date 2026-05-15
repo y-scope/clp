@@ -1,6 +1,8 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-from tests.utils.classes import ExternalAction
+import pytest
+
+from tests.utils.classes import ClpAction
 from tests.utils.config import (
     PackageCompressionJob,
     PackageTestConfig,
@@ -24,8 +26,10 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    start_action = ExternalAction.from_cmd(start_cmd)
-    start_action.assert_returncode(f"Failed to start CLP package using `{start_script_path.name}`.")
+    start_action = ClpAction.from_cmd(start_cmd)
+    result = start_action.verify_returncode()
+    if not result:
+        pytest.fail(result.failure_message)
 
 
 def stop_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -45,8 +49,10 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
         "--config", str(temp_config_file_path),
     ]
     # fmt: on
-    stop_action = ExternalAction.from_cmd(stop_cmd)
-    stop_action.assert_returncode(f"Failed to stop CLP package using `{stop_script_path.name}`.")
+    stop_action = ClpAction.from_cmd(stop_cmd)
+    result = stop_action.verify_returncode()
+    if not result:
+        pytest.fail(result.failure_message)
 
 
 def run_package_compression_script(
@@ -78,6 +84,8 @@ def run_package_compression_script(
 
     compress_cmd.append(str(compression_job.path_to_original_dataset))
 
-    # Run compression command for this job and assert that it succeeds.
-    compress_action = ExternalAction.from_cmd(compress_cmd)
-    compress_action.assert_returncode(f"Compression script `{compress_script_path.name}` failed.")
+    # Run compression command for this job and fail the test if it returned a bad return code.
+    compress_action = ClpAction.from_cmd(compress_cmd)
+    result = compress_action.verify_returncode()
+    if not result:
+        pytest.fail(result.failure_message)

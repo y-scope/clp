@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from tests.utils.classes import ExternalAction, IntegrationTestPathConfig, SampleDataset
+from tests.utils.classes import ClpAction, IntegrationTestPathConfig, NonClpAction, SampleDataset
 from tests.utils.config import (
     ClpCorePathConfig,
     ConversionTestPathConfig,
@@ -59,12 +59,12 @@ def _convert_and_compress(
     src_path = str(test_paths.logs_source_dir)
     conversion_path = str(test_paths.conversion_dir)
     compression_path = str(test_paths.compression_dir)
-    conversion_action = ExternalAction.from_cmd(
-        [log_converter_bin_path, src_path, "--output-dir", conversion_path]
+    conversion_action = NonClpAction(
+        cmd=[log_converter_bin_path, src_path, "--output-dir", conversion_path]
     )
-    conversion_action.assert_returncode("`log-converter` failed.")
+    conversion_action.check_returncode()
 
-    compression_action = ExternalAction.from_cmd(
+    compression_action = ClpAction.from_cmd(
         [
             clp_s_bin_path,
             "c",
@@ -74,15 +74,17 @@ def _convert_and_compress(
             LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY,
         ]
     )
-    compression_action.assert_returncode("`clp-s` compression failed.")
+    compression_result = compression_action.verify_returncode()
+    if not compression_result:
+        pytest.fail(compression_result.failure_message)
 
     if test_paths.num_log_events is None:
         return
 
-    search_action = ExternalAction.from_cmd(
-        [clp_s_bin_path, "s", compression_path, "timestamp > 0"]
-    )
-    search_action.assert_returncode("`clp-s` search failed.")
+    search_action = ClpAction.from_cmd([clp_s_bin_path, "s", compression_path, "timestamp > 0"])
+    search_result = search_action.verify_returncode()
+    if not search_result:
+        pytest.fail(search_result.failure_message)
     lines = search_action.completed_proc.stdout.splitlines()
     if len(lines) != test_paths.num_log_events:
         pytest.fail(

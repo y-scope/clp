@@ -148,18 +148,42 @@ class CmdArgs(BaseModel, ABC):
         """:return: list of command arguments constructed from this instance's data members."""
 
 
+@dataclass(frozen=True)
+class VerificationResult:
+    """Outcome from a verification function."""
+
+    #: Whether or not the verification was successful.
+    success: bool
+
+    #: Message describing the failure, if the verification failed.
+    failure_message: str = ""
+
+    def __bool__(self) -> bool:
+        """Makes class truthy."""
+        return self.success
+
+    @classmethod
+    def ok(cls) -> Self:
+        """:return: A successful `VerificationResult`."""
+        return cls(success=True)
+
+    @classmethod
+    def fail(cls, failure_message: str) -> Self:
+        """:return: A failed `VerificationResult` carrying `failure_message`."""
+        logger.error(failure_message)
+        return cls(success=False, failure_message=failure_message)
+
+
 @dataclass
 class ExternalAction:
     """
-    Metadata for an external action executed during an integration test. Instances should be
-    constructed via the `from_args` or `from_cmd` class methods.
+    Base class for external subprocesses executed during an integration test. Not intended for
+    direct instantiation; users should instead instantiate `NonClpAction` or `ClpAction` derived
+    classes as appropriate.
     """
 
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
-
-    #: Optional structured arguments for verification purposes. Not used by `ExternalAction` itself.
-    args: CmdArgs | None = None
 
     #: The completed process returned from `subprocess.run()`.
     completed_proc: subprocess.CompletedProcess[str] = field(init=False)
@@ -167,64 +191,55 @@ class ExternalAction:
     #: Path to the file where this action's subprocess output was logged.
     log_file_path: Path = field(init=False)
 
-    @classmethod
-    def from_args(cls, args: CmdArgs) -> Self:
-        """:return: An `ExternalAction` whose `cmd` is derived from `args.to_cmd()`."""
-        return cls(cmd=args.to_cmd(), args=args)
-
-    @classmethod
-    def from_cmd(cls, cmd: list[str]) -> Self:
-        """:return: An `ExternalAction` for the given raw `cmd`, with no associated `args`."""
-        return cls(cmd=cmd, args=None)
-
     def __post_init__(self) -> None:
         """Execute the external action and log output."""
         if not self.cmd:
-            pytest.fail("Cannot create `ExternalAction` object: `cmd` list is empty.")
-        if self.args is not None and self.cmd != self.args.to_cmd():
-            pytest.fail(
-                "Cannot create `ExternalAction` object: `cmd` does not match `args.to_cmd()`."
-            )
+            pytest.fail(f"Cannot create '{type(self).__name__}' object: `cmd` list is empty.")
+
         self.completed_proc = self._run_subprocess()
         self._log_action_summary_to_file()
-
-    def assert_returncode(
-        self,
-        reason: str,
-        expected_returncodes: tuple[int, ...] = (0,),
-    ) -> None:
-        """
-        :param reason:
-        :param expected_returncodes:
-        :raise pytest.fail: if `completed_proc.returncode` is not in `expected_returncodes`.
-        """
-        if self.completed_proc.returncode in expected_returncodes:
-            return
-        pytest.fail(self.format_failure_msg(reason))
-
-    def format_failure_msg(self, reason: str) -> str:
-        """
-        :param reason:
-        :return: A failure message that includes `reason` and a pointer to this action's log file.
-        """
-        return f"{reason} See relevant subprocess log at: '{self.log_file_path}'"
-
-    @classmethod
-    def format_combined_failure_msg(cls, reason: str, *actions: Self) -> str:
-        """
-        Formats a failure message that associates `reason` with one or more external actions by
-        including a reference to each action's subprocess log file.
-
-        :param reason:
-        :param actions:
-        :return: The failure message.
-        """
-        log_paths = ", ".join(f"'{action.log_file_path}'" for action in actions)
-        return f"{reason} See relevant subprocess logs at: {log_paths}"
 
     def get_output(self) -> str:
         """:return: The combined stdout and stderr from the completed subprocess."""
         return self.completed_proc.stdout + self.completed_proc.stderr
+
+    def format_failure_msg(
+        self,
+        reason: str,
+        related_action: "ExternalAction | None" = None,
+    ) -> str:
+        """
+        Format a failure message that includes `reason` and the path to this action's log file.
+        When this action is being used to verify another action (e.g., a `grep` subprocess verifying
+        a CLP subprocess), the action whose verification is in progress should be passed in as
+        `related_action` so that the path to the log file can be included in the failure message.
+
+        :param reason: A description of the failure (no trailing log-path information).
+        :param related_action: An action whose verification is in progress and should be referenced.
+        :return: The formatted failure message.
+        """
+        msg = f"{reason} See subprocess log at: '{self.log_file_path}'."
+        if related_action is not None:
+            related_exe = Path(related_action.cmd[0]).name
+            msg += (
+                f" This occurred during verification of '{related_exe}' (subprocess log:"
+                f" '{related_action.log_file_path}')."
+            )
+        return msg
+
+    def _build_bad_returncode_msg(
+        self,
+        related_action: "ExternalAction | None" = None,
+    ) -> str:
+        """
+        :param related_action: Another action that this action is verifying.
+        :return: A failure message describing the bad return code, including log file paths.
+        """
+        reason = (
+            f"The '{Path(self.cmd[0]).name}' subprocess returned a bad return code"
+            f" ({self.completed_proc.returncode})."
+        )
+        return self.format_failure_msg(reason, related_action=related_action)
 
     def _run_subprocess(self) -> subprocess.CompletedProcess[str]:
         """
@@ -295,3 +310,78 @@ class ExternalAction:
             f"Subprocess returned. stdout and stderr written to log file: '{self.log_file_path}'"
         )
         logger.info(log_msg)
+
+
+@dataclass
+class NonClpAction(ExternalAction):
+    """
+    External action for a non-CLP subprocess (e.g., `grep`, `docker`, etc.). The testing system
+    assumes that all non-CLP programs are functioning properly, and so `check_returncode()` raises
+    `RuntimeError` if this is not the case.
+    """
+
+    def check_returncode(
+        self,
+        good_returncodes: tuple[int, ...] = (0,),
+        related_action: ExternalAction | None = None,
+    ) -> None:
+        """
+        :param good_returncodes:
+        :param related_action: Another action whose verification depends on this action being
+            verified. Its log path is included in the failure message to aid debugging.
+        :raise RuntimeError: if `completed_proc.returncode` is not in `good_returncodes`.
+        """
+        if self.completed_proc.returncode in good_returncodes:
+            return
+        err_msg = self._build_bad_returncode_msg(related_action)
+        logger.error(err_msg)
+        raise RuntimeError(err_msg)
+
+
+@dataclass
+class ClpAction(ExternalAction):
+    """
+    External action for a CLP subprocess (e.g., `compress.sh`). The testing system does not assume
+    that CLP is functioning properly, and so `verify_returncode()` returns a `VerificationResult`
+    object which should be processed at the callsite. Instances should be constructed via
+    `from_args` or `from_cmd`.
+    """
+
+    #: Optional structured arguments. Not used by `ClpAction` itself; available for verification.
+    args: CmdArgs | None = None
+
+    @classmethod
+    def from_cmd(cls, cmd: list[str]) -> Self:
+        """:return: A `ClpAction` for the given raw `cmd`, with no associated `args`."""
+        return cls(cmd=cmd)
+
+    @classmethod
+    def from_args(cls, args: CmdArgs) -> Self:
+        """:return: A `ClpAction` whose `cmd` is derived from `args.to_cmd()`."""
+        return cls(cmd=args.to_cmd(), args=args)
+
+    def __post_init__(self) -> None:
+        """
+        Validate `args`/`cmd` agreement when both are provided during construction. Then execute the
+        action.
+        """
+        if self.args is not None and self.cmd != self.args.to_cmd():
+            pytest.fail("Cannot create `ClpAction` object: `cmd` does not match `args.to_cmd()`.")
+        super().__post_init__()
+
+    def verify_returncode(
+        self,
+        good_returncodes: tuple[int, ...] = (0,),
+        related_action: ExternalAction | None = None,
+    ) -> VerificationResult:
+        """
+        :param good_returncodes:
+        :param related_action: Another action whose verification depends on this action being
+            verified. Its log path is included in the failure message to aid debugging.
+        :return: A successful `VerificationResult` if `completed_proc.returncode` is in
+            `good_returncodes`; otherwise a failed `VerificationResult` with a message describing
+            the bad return code.
+        """
+        if self.completed_proc.returncode in good_returncodes:
+            return VerificationResult.ok()
+        return VerificationResult.fail(self._build_bad_returncode_msg(related_action))

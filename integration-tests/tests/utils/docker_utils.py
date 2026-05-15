@@ -1,6 +1,6 @@
 """Provide utility functions related to the use of Docker during integration tests."""
 
-from tests.utils.classes import ExternalAction
+from tests.utils.classes import NonClpAction
 from tests.utils.utils import get_binary_path
 
 
@@ -24,13 +24,8 @@ def list_running_services_in_compose_project(project_name: str) -> list[str]:
     ]
     # fmt: on
 
-    compose_ps_action = ExternalAction.from_cmd(compose_ps_cmd)
-    if compose_ps_action.completed_proc.returncode != 0:
-        err_msg = compose_ps_action.format_failure_msg(
-            "`docker compose ps` failed with exit code"
-            f" {compose_ps_action.completed_proc.returncode} for project `{project_name}`."
-        )
-        raise RuntimeError(err_msg)
+    compose_ps_action = NonClpAction(cmd=compose_ps_cmd)
+    compose_ps_action.check_returncode()
 
     service_names: list[str] = []
     for line in compose_ps_action.completed_proc.stdout.splitlines():

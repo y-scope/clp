@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import IO
 
-from tests.utils.classes import ExternalAction
+from tests.utils.classes import NonClpAction
 from tests.utils.utils import get_binary_path
 
 
@@ -16,14 +16,9 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     :raise: RuntimeError if the diff command fails due to execution errors.
     """
     cmd = [get_binary_path("diff"), "--brief", "--recursive", str(path1), str(path2)]
-    diff_action = ExternalAction.from_cmd(cmd)
-    rc = diff_action.completed_proc.returncode
-    if rc == 0:
-        return True
-    if rc == 1:
-        return False
-    err_msg = f"Command failed {' '.join(cmd)}: {diff_action.completed_proc.stderr}"
-    raise RuntimeError(err_msg)
+    diff_action = NonClpAction(cmd=cmd)
+    diff_action.check_returncode(good_returncodes=(0, 1))
+    return diff_action.completed_proc.returncode == 0
 
 
 def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
@@ -47,15 +42,10 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     :return: A named temporary file (delete on close) that contains the sorted JSON content.
     :raise: RuntimeError if jq is missing or fails due to execution errors.
     """
-    jq_action = ExternalAction.from_cmd(
-        [get_binary_path("jq"), "--sort-keys", "--compact-output", ".", str(json_fp)],
+    jq_action = NonClpAction(
+        cmd=[get_binary_path("jq"), "--sort-keys", "--compact-output", ".", str(json_fp)],
     )
-    jq_rc = jq_action.completed_proc.returncode
-    if jq_rc != 0:
-        err_msg = (
-            f"jq failed with exit code {jq_rc} for {json_fp}: {jq_action.completed_proc.stderr}"
-        )
-        raise RuntimeError(err_msg)
+    jq_action.check_returncode()
 
     sorted_fp = NamedTemporaryFile(mode="w+")  # noqa: SIM115
     sorted_lines = sorted(jq_action.completed_proc.stdout.splitlines())

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from clp_package_utils.general import EXTRACT_FILE_CMD
 
-from tests.utils.classes import ExternalAction
+from tests.utils.classes import ClpAction, VerificationResult
 from tests.utils.config import PackageInstance, PackageTestConfig
 from tests.utils.docker_utils import list_running_services_in_compose_project
 from tests.utils.fs_validation import is_dir_tree_content_equal
@@ -21,7 +21,8 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     in the Compose project exactly matches the list of required components.
 
     :param package_instance:
-    :raise pytest.fail: if the sets of running services and required components do not match.
+    :raise pytest.fail: if the sets of running services and required components do not
+        match.
     """
     logger.info(
         "Validating the '%s' package.",
@@ -54,7 +55,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
 def verify_package_compression(
     path_to_original_dataset: Path,
     package_test_config: PackageTestConfig,
-) -> None:
+) -> VerificationResult:
     """
     Verify that compression has been executed correctly by decompressing the contents of
     `clp-package/var/data/archives` and comparing the decompressed logs to the originals stored at
@@ -62,6 +63,7 @@ def verify_package_compression(
 
     :param path_to_original_dataset:
     :param package_test_config:
+    :return: A `VerificationResult` describing the outcome.
     """
     mode = package_test_config.mode_config.mode_name
     log_msg = f"Verifying {mode} package compression."
@@ -69,8 +71,8 @@ def verify_package_compression(
 
     if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
-        assert True
-    elif mode == "clp-text":
+        return VerificationResult.ok()
+    if mode == "clp-text":
         # Decompress the contents of `clp-package/var/data/archives`.
         path_config = package_test_config.path_config
         decompress_script_path = path_config.decompress_script_path
@@ -88,11 +90,12 @@ def verify_package_compression(
             str(decompression_dir),
         ]
 
-        # Run decompression command and assert that it succeeds.
-        decompress_action = ExternalAction.from_cmd(decompress_cmd)
-        decompress_action.assert_returncode(
-            f"Decompression script `{decompress_script_path.name}` failed."
-        )
+        # Run decompression command and check that it succeeds.
+        decompress_action = ClpAction.from_cmd(decompress_cmd)
+        decompress_result = decompress_action.verify_returncode()
+        if not decompress_result:
+            clear_directory(decompression_dir)
+            return decompress_result
 
         # Verify content equality.
         output_path = decompression_dir / path_to_original_dataset.relative_to(
@@ -101,10 +104,11 @@ def verify_package_compression(
 
         try:
             if not is_dir_tree_content_equal(path_to_original_dataset, output_path):
-                err_msg = (
+                return VerificationResult.fail(
                     f"Mismatch between clp input {path_to_original_dataset} and output"
                     f" {output_path}."
                 )
-                pytest.fail(err_msg)
         finally:
             clear_directory(decompression_dir)
+
+    return VerificationResult.ok()
