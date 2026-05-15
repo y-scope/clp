@@ -16,7 +16,13 @@ use clp_rust_utils::{
         CompressionJobId,
         CompressionJobStatus,
         InputConfig,
-        ingestion::s3::{BaseConfig, S3IngestionJobConfig, S3PrefixConfig, S3ScannerConfig},
+        ingestion::s3::{
+            BaseConfig,
+            S3IngestionJobConfig,
+            S3KeysConfig,
+            S3PrefixConfig,
+            S3ScannerConfig,
+        },
     },
     s3::{ObjectMetadata, S3ObjectMetadataId},
 };
@@ -675,8 +681,8 @@ impl ClpDbIngestionConnector {
         job_type: ClpIngestionJobType,
     ) -> Option<RecoverableJob> {
         match job_type {
-            ClpIngestionJobType::S3Prefix => self
-                .load_one_time_config(job_id, config_str)
+            ClpIngestionJobType::S3Prefix | ClpIngestionJobType::S3Keys => self
+                .load_one_time_config(job_id, config_str, job_type)
                 .await
                 .map(RecoverableJob::OneTime),
             ClpIngestionJobType::S3Scanner | ClpIngestionJobType::SqsListener => self
@@ -747,13 +753,24 @@ impl ClpDbIngestionConnector {
         &self,
         job_id: IngestionJobId,
         config_str: String,
+        job_type: ClpIngestionJobType,
     ) -> Option<OneTimeIngestionJobConfig> {
-        match serde_json::from_str::<S3PrefixConfig>(&config_str) {
-            Ok(config) => Some(OneTimeIngestionJobConfig::S3Prefix(config)),
+        let loaded_config = match job_type {
+            ClpIngestionJobType::S3Prefix => serde_json::from_str::<S3PrefixConfig>(&config_str)
+                .map(OneTimeIngestionJobConfig::S3Prefix),
+            ClpIngestionJobType::S3Keys => serde_json::from_str::<S3KeysConfig>(&config_str)
+                .map(OneTimeIngestionJobConfig::S3Keys),
+            ClpIngestionJobType::S3Scanner | ClpIngestionJobType::SqsListener => {
+                panic!("non-one-time job type passed to load_one_time_config: {job_type}")
+            }
+        };
+        match loaded_config {
+            Ok(config) => Some(config),
             Err(e) => {
                 tracing::error!(
                     error = ? e,
                     job_id = ? job_id,
+                    job_type = ? job_type,
                     "Failed to parse one-time ingestion job config from CLP DB during service \
                         start. The job will be skipped."
                 );
@@ -900,6 +917,7 @@ impl ClpDbIngestionConnector {
             OneTimeIngestionJobConfig::S3Prefix(prefix_config) => {
                 serde_json::to_string(prefix_config)?
             }
+            OneTimeIngestionJobConfig::S3Keys(keys_config) => serde_json::to_string(keys_config)?,
         };
         let result = sqlx::query(INSERT_QUERY)
             .bind(config_json)
@@ -1700,6 +1718,7 @@ pub enum ClpIngestionJobType {
     S3Scanner,
     SqsListener,
     S3Prefix,
+    S3Keys,
 }
 
 impl ClpIngestionJobType {
@@ -1707,7 +1726,7 @@ impl ClpIngestionJobType {
     /// or scanner loop).
     #[must_use]
     pub const fn is_one_time(self) -> bool {
-        matches!(self, Self::S3Prefix)
+        matches!(self, Self::S3Prefix | Self::S3Keys)
     }
 }
 
@@ -2054,7 +2073,7 @@ mod tests {
     fn test_clp_ingestion_job_type_enum() {
         assert_eq!(
             ClpIngestionJobType::format_as_sql_enum(),
-            "ENUM('s3_scanner', 'sqs_listener', 's3_prefix')"
+            "ENUM('s3_scanner', 'sqs_listener', 's3_prefix', 's3_keys')"
         );
     }
 

@@ -15,6 +15,7 @@ use clp_rust_utils::{
         BaseConfig,
         ConfigError,
         S3IngestionJobConfig,
+        S3KeysConfig,
         S3PrefixConfig,
         ValidatedSqsListenerConfig,
     },
@@ -29,6 +30,7 @@ use crate::{
         IngestionJob,
         IngestionJobId,
         IngestionJobState,
+        S3KeysIngestion,
         S3PrefixIngestion,
         S3Scanner,
     },
@@ -69,6 +71,9 @@ pub enum TerminalStatus {
 pub enum OneTimeIngestionJobConfig {
     /// Configuration for a S3 prefix ingestion job.
     S3Prefix(S3PrefixConfig),
+
+    /// Configuration for a S3 explicit-keys ingestion job.
+    S3Keys(S3KeysConfig),
 }
 
 impl OneTimeIngestionJobConfig {
@@ -76,6 +81,7 @@ impl OneTimeIngestionJobConfig {
     pub const fn job_type(&self) -> ClpIngestionJobType {
         match self {
             Self::S3Prefix(_) => ClpIngestionJobType::S3Prefix,
+            Self::S3Keys(_) => ClpIngestionJobType::S3Keys,
         }
     }
 
@@ -83,6 +89,7 @@ impl OneTimeIngestionJobConfig {
     pub const fn base_config(&self) -> &BaseConfig {
         match self {
             Self::S3Prefix(config) => &config.base,
+            Self::S3Keys(config) => &config.base,
         }
     }
 
@@ -92,6 +99,9 @@ impl OneTimeIngestionJobConfig {
         match self {
             Self::S3Prefix(config) => {
                 let _detached = S3PrefixIngestion::spawn(job_id, s3_client_manager, config, state);
+            }
+            Self::S3Keys(config) => {
+                let _detached = S3KeysIngestion::spawn(job_id, s3_client_manager, config, state);
             }
         }
     }
@@ -321,7 +331,7 @@ impl IngestionJobManagerState {
             .get_job_type(job_id)
             .await?;
         match job_type {
-            ClpIngestionJobType::S3Prefix => {
+            ClpIngestionJobType::S3Prefix | ClpIngestionJobType::S3Keys => {
                 self.inner
                     .clp_db_ingestion_connector
                     .try_pause(job_id, None)
