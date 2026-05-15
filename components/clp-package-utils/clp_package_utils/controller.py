@@ -1182,9 +1182,7 @@ class DockerComposeController(BaseController):
                 {
                     "name": name,
                     "gauge": {
-                        "dataPoints": [
-                            {"asInt": str(value), "timeUnixNano": str(timestamp_ns)}
-                        ]
+                        "dataPoints": [{"asInt": str(value), "timeUnixNano": str(timestamp_ns)}]
                     },
                 }
             )
