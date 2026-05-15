@@ -1,33 +1,62 @@
-"""Session-scoped test log fixtures shared across integration tests."""
+"""Session-scoped fixtures for test datasets downloaded on-demand from external URLs."""
 
 import logging
-import pathlib
 import subprocess
+from dataclasses import dataclass, field, InitVar
+from pathlib import Path
 
 import pytest
 
-from tests.utils.config import (
-    IntegrationTestLogs,
-    IntegrationTestPathConfig,
-)
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
     get_binary_path,
     remove_path,
+    validate_dir_exists,
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class DownloadedDataset:
+    """Metadata for a dataset downloaded on-demand from an external URL."""
+
+    #:
+    dataset_name: str
+    #:
+    tarball_url: str
+    integration_test_path_config: InitVar[IntegrationTestPathConfig]
+    #:
+    tarball_path: Path = field(init=False, repr=True)
+    #:
+    extraction_dir: Path = field(init=False, repr=True)
+    #: Optional number of log events in the downloaded logs.
+    num_log_events: int | None = None
+
+    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
+        """Initialize and set tarball and extraction paths for integration test logs."""
+        dataset_name = self.dataset_name.strip()
+        if 0 == len(dataset_name):
+            err_msg = "`dataset_name` cannot be empty."
+            raise ValueError(err_msg)
+        downloaded_logs_dir = integration_test_path_config.downloaded_logs_dir
+        validate_dir_exists(downloaded_logs_dir)
+
+        object.__setattr__(self, "dataset_name", dataset_name)
+        object.__setattr__(self, "tarball_path", downloaded_logs_dir / f"{dataset_name}.tar.gz")
+        object.__setattr__(self, "extraction_dir", downloaded_logs_dir / dataset_name)
 
 
 @pytest.fixture(scope="session")
 def hive_24hr(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
-) -> IntegrationTestLogs:
+) -> DownloadedDataset:
     """Provides shared `hive_24hr` test logs."""
     return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
-        name="hive-24hr",
+        dataset_name="hive-24hr",
         tarball_url="https://zenodo.org/records/7094921/files/hive-24hr.tar.gz?download=1",
     )
 
@@ -36,87 +65,51 @@ def hive_24hr(
 def postgresql(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
-) -> IntegrationTestLogs:
+) -> DownloadedDataset:
     """Provides shared `postgresql` test logs."""
     return _download_and_extract_gzip_dataset(
         request=request,
         integration_test_path_config=integration_test_path_config,
-        name="postgresql",
+        dataset_name="postgresql",
         tarball_url="https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1",
     )
-
-
-@pytest.fixture(scope="session")
-def simple_unstructured(
-    request: pytest.FixtureRequest,
-    integration_test_path_config: IntegrationTestPathConfig,
-) -> IntegrationTestLogs:
-    """Provides a simple unstructured test log."""
-    name = "simple_unstructured"
-    integration_test_logs = IntegrationTestLogs(
-        name=name,
-        tarball_url=f"{name}.tar.gz",
-        integration_test_path_config=integration_test_path_config,
-        num_log_events=11,
-    )
-    remove_path(integration_test_logs.extraction_dir)
-    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
-
-    with pathlib.Path.open(integration_test_logs.extraction_dir / f"{name}.log", "w") as f:
-        f.write(
-            "2015-03-23 05:48:30,122 TEST1\n"
-            "2015-03-23 05:48:30,122Z TEST2\n"
-            "2015-03-23 05:48:30,122 Z TEST3\n"
-            "2015-03-23 05:48:30,122+00 TEST4\n"
-            "2015-03-23 05:48:30,122+00Z TEST5\n"
-            "2015-03-23 05:48:30,122 +00 TEST6\n"
-            "2015-03-23 05:48:30,122 +00Z TEST7\n"
-            "2015-03-23 05:48:30,122UTC+00 TEST8\n"
-            "2015-03-23 05:48:30,122UTC+00Z TEST9\n"
-            "2015-03-23 05:48:30,122 UTC+00 TEST10\n"
-            "2015-03-23 05:48:30,122 UTC+00Z TEST11\n"
-        )
-
-    logger.info("Set up logs for dataset `%s`.", name)
-    request.config.cache.set(name, True)
-    return integration_test_logs
 
 
 def _download_and_extract_gzip_dataset(
     request: pytest.FixtureRequest,
     integration_test_path_config: IntegrationTestPathConfig,
-    name: str,
+    dataset_name: str,
     tarball_url: str,
     keep_leading_dir: bool = False,
-) -> IntegrationTestLogs:
+) -> DownloadedDataset:
     """
-    Download and extract a gzip-compressed dataset tarball for setting up the `IntegrationTestLogs`
+    Download and extract a gzip-compressed dataset tarball for setting up the `DownloadedDataset`
     fixture. Adjust its file permissions for test use.
 
     :param request: Provides access to the pytest cache.
     :param integration_test_path_config: See `IntegrationTestPathConfig`.
-    :param name: Dataset name.
+    :param dataset_name: Dataset name.
     :param tarball_url: Dataset tarball URL.
     :param keep_leading_dir: Whether to preserve the top-level directory during tarball extraction.
         Defaults to False to avoid an unnecessary extra directory level.
-    :return: An IntegrationTestLogs instance providing metadata for the downloaded logs.
+    :return: A DownloadedDataset instance providing metadata for the downloaded logs.
     :raises subprocess.CalledProcessError: If `curl`, `tar`, or `chmod` fails.
     """
-    integration_test_logs = IntegrationTestLogs(
-        name=name,
+    downloaded_dataset = DownloadedDataset(
+        dataset_name=dataset_name,
         tarball_url=tarball_url,
         integration_test_path_config=integration_test_path_config,
     )
-    if request.config.cache.get(name, False):
-        logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
-        return integration_test_logs
+    if request.config.cache.get(dataset_name, False):
+        logger.info("Test logs `%s` are up-to-date. Skipping download.", dataset_name)
+        return downloaded_dataset
 
-    remove_path(integration_test_logs.tarball_path)
-    remove_path(integration_test_logs.extraction_dir)
-    integration_test_logs.extraction_dir.mkdir(parents=True, exist_ok=False)
+    remove_path(downloaded_dataset.tarball_path)
+    remove_path(downloaded_dataset.extraction_dir)
+    downloaded_dataset.extraction_dir.mkdir(parents=True, exist_ok=False)
 
-    tarball_path_str = str(integration_test_logs.tarball_path)
-    extract_path_str = str(integration_test_logs.extraction_dir)
+    tarball_path_str = str(downloaded_dataset.tarball_path)
+    extract_path_str = str(downloaded_dataset.extraction_dir)
 
     # fmt: off
     curl_cmd = [
@@ -149,6 +142,6 @@ def _download_and_extract_gzip_dataset(
     subprocess.run([chmod_bin, "gu+w", tarball_path_str], check=True)
     subprocess.run([chmod_bin, "-R", "gu+w", extract_path_str], check=True)
 
-    logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
-    request.config.cache.set(name, True)
-    return integration_test_logs
+    logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", dataset_name)
+    request.config.cache.set(dataset_name, True)
+    return downloaded_dataset
