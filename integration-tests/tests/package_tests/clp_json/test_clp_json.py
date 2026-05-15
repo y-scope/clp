@@ -1,7 +1,6 @@
 """Tests for the clp-json package."""
 
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -11,14 +10,11 @@ from tests.utils.asserting_utils import (
     validate_package_running,
     verify_package_compression,
 )
+from tests.utils.classes import SampleDataset
 from tests.utils.config import PackageCompressionJob
 from tests.utils.package_utils import run_package_compression_script
 
 logger = logging.getLogger(__name__)
-
-CLP_JSON_TEST_DATA_DIR = Path(__file__).parent / "data"
-
-
 # Pytest markers for this module.
 pytestmark = [
     pytest.mark.package,
@@ -42,11 +38,15 @@ def test_clp_json_startup(clp_package: ClpPackage) -> None:
 
 
 @pytest.mark.compression
-def test_clp_json_compression_json_multifile(clp_package: ClpPackage) -> None:
+def test_clp_json_compression_json_multifile(
+    clp_package: ClpPackage,
+    json_multifile: SampleDataset,
+) -> None:
     """
     Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
 
     :param clp_package:
+    :param json_multifile:
     """
     logger.info("Starting test: 'test_clp_json_compression_json_multifile'")
 
@@ -55,20 +55,22 @@ def test_clp_json_compression_json_multifile(clp_package: ClpPackage) -> None:
     package_path_config.clear_package_archives()
 
     # Compress a dataset.
+    timestamp_key = json_multifile.metadata.timestamp_key
+    assert timestamp_key is not None, "`json-multifile` dataset must define a `timestamp_key`."
     compression_job = PackageCompressionJob(
-        path_to_original_dataset=(CLP_JSON_TEST_DATA_DIR / "json-multifile" / "logs"),
+        path_to_original_dataset=json_multifile.logs_path,
         options=[
             "--timestamp-key",
-            "timestamp",
+            timestamp_key,
             "--dataset",
-            "json_multifile",
+            json_multifile.metadata.dataset_name,
         ],
         positional_args=None,
     )
     run_package_compression_script(compression_job, clp_package)
 
     # Check the correctness of compression.
-    verify_package_compression(compression_job.path_to_original_dataset, clp_package)
+    verify_package_compression(json_multifile.logs_path, clp_package)
 
     # Clear archives.
     package_path_config.clear_package_archives()

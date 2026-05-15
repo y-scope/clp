@@ -1,7 +1,7 @@
 """Classes used in CLP package integration tests."""
 
 import logging
-import re
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,6 +19,8 @@ from tests.utils.utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+_UUID_V4_VERSION = 4
 
 
 @dataclass
@@ -182,8 +184,8 @@ class ClpPackage:
         """
         Reads the CLP instance ID for the package and validates its format.
 
-        :return: The 4-character hexadecimal instance ID.
-        :raise ValueError: If the file cannot be read or contents are not a 4-character hex string.
+        :return: The instance ID (a UUIDv4 string).
+        :raise pytest.fail(): If the file cannot be read or contents are not a valid UUIDv4.
         """
         clp_instance_id_file_path = self.clp_instance_id_file_path
         try:
@@ -192,13 +194,18 @@ class ClpPackage:
             err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}': {err}"
             pytest.fail(err_msg)
 
-        if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):
-            err_msg = (
-                f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
-                f" hexadecimal string, but read {contents}."
+        try:
+            parsed = uuid.UUID(contents)
+        except ValueError:
+            pytest.fail(
+                f"Invalid instance ID in {clp_instance_id_file_path}: "
+                f"expect a UUIDv4, but read '{contents}'."
             )
-            pytest.fail(err_msg)
-
+        if parsed.version != _UUID_V4_VERSION:
+            pytest.fail(
+                f"Instance ID in '{clp_instance_id_file_path}' was not in UUIDv4 format; found"
+                f" UUIDv{parsed.version}: '{contents}'."
+            )
         return contents
 
     def get_running_config_from_shared_config_file(self) -> ClpConfig:

@@ -3,10 +3,13 @@
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
     remove_path,
     validate_dir_exists,
 )
+
+_UUID_V4_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -72,60 +75,6 @@ class PackageCompressionJob:
 
 
 @dataclass(frozen=True)
-class IntegrationTestPathConfig:
-    """Path configuration for CLP integration tests."""
-
-    #: Default directory for integration test output.
-    test_root_dir: Path
-
-    #: Directory to store the downloaded logs.
-    logs_download_dir: Path = field(init=False, repr=True)
-
-    #: Optional initialization value used to set `logs_download_dir`.
-    logs_download_dir_init: InitVar[Path | None] = None
-
-    def __post_init__(self, logs_download_dir_init: Path | None) -> None:
-        """Initialize and create required directories for integration tests."""
-        if logs_download_dir_init is not None:
-            object.__setattr__(self, "logs_download_dir", logs_download_dir_init)
-        else:
-            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
-
-        self.test_root_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
-
-
-@dataclass(frozen=True)
-class IntegrationTestLogs:
-    """Metadata for the downloaded logs used for integration tests."""
-
-    #:
-    name: str
-    #:
-    tarball_url: str
-    integration_test_path_config: InitVar[IntegrationTestPathConfig]
-    #:
-    tarball_path: Path = field(init=False, repr=True)
-    #:
-    extraction_dir: Path = field(init=False, repr=True)
-    #: Optional number of log events in the downloaded logs.
-    num_log_events: int | None = None
-
-    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
-        """Initialize and set tarball and extraction paths for integration test logs."""
-        name = self.name.strip()
-        if 0 == len(name):
-            err_msg = "`name` cannot be empty."
-            raise ValueError(err_msg)
-        logs_download_dir = integration_test_path_config.logs_download_dir
-        validate_dir_exists(logs_download_dir)
-
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "tarball_path", logs_download_dir / f"{name}.tar.gz")
-        object.__setattr__(self, "extraction_dir", logs_download_dir / name)
-
-
-@dataclass(frozen=True)
 class CompressionTestPathConfig:
     """Per-test path configuration for compression workflow artifacts."""
 
@@ -145,13 +94,13 @@ class CompressionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_root_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
         object.__setattr__(
-            self, "decompression_dir", test_root_dir / f"{test_name}-decompressed-logs"
+            self, "decompression_dir", test_cache_dir / f"{test_name}-decompressed-logs"
         )
 
     def clear_test_outputs(self) -> None:
@@ -182,12 +131,12 @@ class ConversionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_root_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "conversion_dir", test_root_dir / f"{test_name}-converted")
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "conversion_dir", test_cache_dir / f"{test_name}-converted")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this conversion test."""
