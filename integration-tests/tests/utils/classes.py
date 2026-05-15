@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from tests.conftest import get_test_log_dir
 from tests.utils.utils import validate_dir_exists, validate_file_exists
@@ -139,12 +140,26 @@ class SampleDataset:
         return self.dataset_root_dir / self.metadata.logs_subdir
 
 
+class CmdArgs(BaseModel, ABC):
+    """Abstract base class for all CLP command argument models."""
+
+    @abstractmethod
+    def to_cmd(self) -> list[str]:
+        """:return: list of command arguments constructed from this instance's data members."""
+
+
 @dataclass
 class ExternalAction:
-    """Metadata for an external action executed during an integration test."""
+    """
+    Metadata for an external action executed during an integration test. Instances should be
+    constructed via the `from_args` or `from_cmd` class methods.
+    """
 
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
+
+    #: Optional structured arguments for verification purposes. Not used by `ExternalAction` itself.
+    args: CmdArgs | None = None
 
     #: The completed process returned from `subprocess.run()`.
     completed_proc: subprocess.CompletedProcess[str] = field(init=False)
@@ -152,10 +167,24 @@ class ExternalAction:
     #: Path to the file where this action's subprocess output was logged.
     log_file_path: Path = field(init=False)
 
+    @classmethod
+    def from_args(cls, args: CmdArgs) -> Self:
+        """:return: An `ExternalAction` whose `cmd` is derived from `args.to_cmd()`."""
+        return cls(cmd=args.to_cmd(), args=args)
+
+    @classmethod
+    def from_cmd(cls, cmd: list[str]) -> Self:
+        """:return: An `ExternalAction` for the given raw `cmd`, with no associated `args`."""
+        return cls(cmd=cmd, args=None)
+
     def __post_init__(self) -> None:
         """Execute the external action and log output."""
         if not self.cmd:
             pytest.fail("Cannot create `ExternalAction` object: `cmd` list is empty.")
+        if self.args is not None and self.cmd != self.args.to_cmd():
+            pytest.fail(
+                "Cannot create `ExternalAction` object: `cmd` does not match `args.to_cmd()`."
+            )
         self.completed_proc = self._run_subprocess()
         self._log_action_summary_to_file()
 
@@ -230,9 +259,26 @@ class ExternalAction:
         logger.info(log_msg)
 
 
-class CmdArgs(BaseModel, ABC):
-    """Abstract base class for all CLP command argument models."""
+@dataclass(frozen=True)
+class VerificationResult:
+    """Outcome from a verification function."""
 
-    @abstractmethod
-    def to_cmd(self) -> list[str]:
-        """:return: list of command arguments constructed from this instance's data members."""
+    #: Whether or not the verification was successful.
+    success: bool
+
+    #: Message describing the failure, if the verification failed.
+    failure_message: str = ""
+
+    def __bool__(self) -> bool:
+        """Makes class truthy."""
+        return self.success
+
+    @classmethod
+    def ok(cls) -> Self:
+        """:return: A successful `VerificationResult`."""
+        return cls(success=True)
+
+    @classmethod
+    def fail(cls, failure_message: str) -> Self:
+        """:return: A failed `VerificationResult` carrying `failure_message`."""
+        return cls(success=False, failure_message=failure_message)

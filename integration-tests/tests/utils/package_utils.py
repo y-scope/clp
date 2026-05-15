@@ -1,65 +1,23 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-from tests.utils.config import (
-    PackageCompressionJob,
-    PackageTestConfig,
-)
+from tests.package_tests.classes import ClpPackage
+from tests.utils.config import PackageCompressionJob
 from tests.utils.subprocess_utils import run_and_log_subprocess
-
-
-def start_clp_package(package_test_config: PackageTestConfig) -> None:
-    """
-    Starts an instance of the CLP package.
-
-    :param package_test_config:
-    :raise: Propagates `run_and_log_subprocess`'s errors.
-    """
-    path_config = package_test_config.path_config
-    start_script_path = path_config.start_script_path
-    temp_config_file_path = package_test_config.temp_config_file_path
-
-    # fmt: off
-    start_cmd = [
-        str(start_script_path),
-        "--config", str(temp_config_file_path),
-    ]
-    # fmt: on
-    run_and_log_subprocess(start_cmd)
-
-
-def stop_clp_package(package_test_config: PackageTestConfig) -> None:
-    """
-    Stops the running instance of the CLP package.
-
-    :param package_test_config:
-    :raise: Propagates `run_and_log_subprocess`'s errors.
-    """
-    path_config = package_test_config.path_config
-    stop_script_path = path_config.stop_script_path
-    temp_config_file_path = package_test_config.temp_config_file_path
-
-    # fmt: off
-    stop_cmd = [
-        str(stop_script_path),
-        "--config", str(temp_config_file_path),
-    ]
-    # fmt: on
-    run_and_log_subprocess(stop_cmd)
 
 
 def run_package_compression_script(
     compression_job: PackageCompressionJob,
-    package_test_config: PackageTestConfig,
+    clp_package: ClpPackage,
 ) -> None:
     """
     Constructs and runs a compression command on the CLP package.
 
     :param compression_job:
-    :param package_test_config:
+    :param clp_package:
     """
-    path_config = package_test_config.path_config
-    compress_script_path = path_config.compress_script_path
-    temp_config_file_path = package_test_config.temp_config_file_path
+    path_config = clp_package.path_config
+    compress_script_path = path_config.compress_path
+    temp_config_file_path = clp_package.temp_config_file_path
 
     compress_cmd = [
         str(compress_script_path),

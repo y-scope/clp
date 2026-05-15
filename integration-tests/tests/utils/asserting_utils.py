@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from clp_package_utils.general import EXTRACT_FILE_CMD
 
-from tests.utils.config import PackageInstance, PackageTestConfig
+from tests.package_tests.classes import ClpPackage
 from tests.utils.docker_utils import list_running_services_in_compose_project
 from tests.utils.subprocess_utils import run_and_log_subprocess
 from tests.utils.utils import (
@@ -17,26 +17,23 @@ from tests.utils.utils import (
 logger = logging.getLogger(__name__)
 
 
-def validate_package_running(package_instance: PackageInstance) -> None:
+def validate_package_running(clp_package: ClpPackage) -> None:
     """
-    Validate that the given package instance is running by checking that the set of services running
-    in the Compose project exactly matches the list of required components.
+    Validate that the given CLP package is running by checking that the set of services running in
+    the Compose project exactly matches the list of required components.
 
-    :param package_instance:
+    :param clp_package:
     :raise pytest.fail: if the sets of running services and required components do not match.
     """
-    logger.info(
-        "Validating the '%s' package.",
-        package_instance.package_test_config.mode_config.mode_name,
-    )
+    logger.info("Validating the '%s' package.", clp_package.mode_name)
 
     # Get list of services currently running in the Compose project.
-    instance_id = package_instance.clp_instance_id
+    instance_id = clp_package.get_clp_instance_id()
     project_name = f"clp-package-{instance_id}"
     running_services = set(list_running_services_in_compose_project(project_name))
 
     # Compare with list of required components.
-    required_components = set(package_instance.package_test_config.mode_config.component_list)
+    required_components = set(clp_package.component_list)
     if required_components == running_services:
         return
 
@@ -55,17 +52,17 @@ def validate_package_running(package_instance: PackageInstance) -> None:
 
 def verify_package_compression(
     path_to_original_dataset: Path,
-    package_test_config: PackageTestConfig,
+    clp_package: ClpPackage,
 ) -> None:
     """
-    Verify that compression has been executed correctly by decompressing the contents of
-    `clp-package/var/data/archives` and comparing the decompressed logs to the originals stored at
+    Verify that compression has been executed correctly by decompressing the contents of the
+    package archives directory and comparing the decompressed logs to the originals stored at
     `path_to_original_dataset`.
 
     :param path_to_original_dataset:
-    :param package_test_config:
+    :param clp_package:
     """
-    mode = package_test_config.mode_config.mode_name
+    mode = clp_package.mode_name
     log_msg = f"Verifying {mode} package compression."
     logger.info(log_msg)
 
@@ -73,16 +70,15 @@ def verify_package_compression(
         # TODO: Waiting for PR 1299 to be merged.
         assert True
     elif mode == "clp-text":
-        # Decompress the contents of `clp-package/var/data/archives`.
-        path_config = package_test_config.path_config
-        decompress_script_path = path_config.decompress_script_path
+        # Decompress the contents of the package archives directory.
+        path_config = clp_package.path_config
         decompression_dir = path_config.package_decompression_dir
-        temp_config_file_path = package_test_config.temp_config_file_path
+        temp_config_file_path = clp_package.temp_config_file_path
 
         clear_directory(decompression_dir)
 
         decompress_cmd = [
-            str(decompress_script_path),
+            str(path_config.decompress_path),
             "--config",
             str(temp_config_file_path),
             EXTRACT_FILE_CMD,
