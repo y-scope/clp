@@ -45,6 +45,9 @@ class IntegrationTestPathConfig:
         # Create `test_log_dir`.
         self.test_log_dir.mkdir(parents=True, exist_ok=True)
 
+        # Create `downloaded_logs_dir`.
+        self.downloaded_logs_dir.mkdir(parents=True, exist_ok=True)
+
     @property
     def test_cache_dir(self) -> Path:
         """:return: The absolute path to the integration test cache directory."""
@@ -60,12 +63,17 @@ class IntegrationTestPathConfig:
         """:return: The absolute path to the integration test log directory."""
         return self.test_cache_dir / "test_logs"
 
+    @property
+    def downloaded_logs_dir(self) -> Path:
+        """:return: The absolute path to the directory where downloaded logs are stored."""
+        return self.test_cache_dir / "downloaded_logs"
+
     def _static_paths(self) -> list[Path]:
         """:return: List of paths that must exist on disk at construction time."""
         return [self.test_data_dir]
 
 
-class IntegrationTestDatasetMetadata(BaseModel):
+class SampleDatasetMetadata(BaseModel):
     """
     Metadata for a sample dataset. All `<dataset_name>/metadata.json` files must conform to this
     schema.
@@ -82,14 +90,14 @@ class IntegrationTestDatasetMetadata(BaseModel):
 
 
 @dataclass
-class IntegrationTestDataset:
+class SampleDataset:
     """Path layout and metadata storage for a sample dataset."""
 
     #: Absolute path to the dataset root directory.
     dataset_root_dir: Path
 
     #: Pydantic model of metadata describing the dataset.
-    metadata: IntegrationTestDatasetMetadata = field(init=False)
+    metadata: SampleDatasetMetadata = field(init=False)
 
     #: The name of the dataset (for logging purposes).
     dataset_name: str = field(init=False)
@@ -101,7 +109,7 @@ class IntegrationTestDataset:
         # Load metadata.
         validate_file_exists(self.metadata_file_path)
         raw_metadata = self.metadata_file_path.read_text()
-        self.metadata = IntegrationTestDatasetMetadata.model_validate_json(raw_metadata)
+        self.metadata = SampleDatasetMetadata.model_validate_json(raw_metadata)
 
         # Set dataset name from metadata.
         self.dataset_name = self.metadata.dataset_name
