@@ -256,7 +256,7 @@ clpConfig:
     disable: false
     endpoint: "https://telemetry.yscope.io"
     collector:
-      image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.119.0" # yamllint disable-line
+      image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.152.0" # yamllint disable-line
       resources:
         requests:
           cpu: "100m"

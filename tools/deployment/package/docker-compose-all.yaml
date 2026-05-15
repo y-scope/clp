@@ -714,7 +714,7 @@ services:
 
   otel-collector:
     <<: *service_defaults
-    image: "otel/opentelemetry-collector-contrib:0.152.0"
+    image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.152.0"
     hostname: "otel_collector"
     profiles: ["telemetry"]
     deploy:
