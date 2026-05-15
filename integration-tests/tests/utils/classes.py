@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from tests.conftest import get_test_log_dir
 from tests.utils.utils import validate_dir_exists, validate_file_exists
@@ -87,6 +88,7 @@ class SampleDatasetMetadata(BaseModel):
     logs_subdir: str
     file_names: list[str]
     single_match_wildcard_query: str
+    single_match_file: str
 
 
 @dataclass
@@ -128,6 +130,13 @@ class SampleDataset:
             file_path_abs = self.logs_path / file_path
             validate_file_exists(file_path_abs)
 
+        if self.metadata.single_match_file not in self.metadata.file_names:
+            err_msg = (
+                f"`single_match_file` '{self.metadata.single_match_file}' is not listed in"
+                " `file_names`."
+            )
+            raise ValueError(err_msg)
+
     @property
     def metadata_file_path(self) -> Path:
         """:return: The absolute path to the file containing metadata for the dataset."""
@@ -139,12 +148,23 @@ class SampleDataset:
         return self.dataset_root_dir / self.metadata.logs_subdir
 
 
+class CmdArgs(BaseModel, ABC):
+    """Abstract base class for all CLP command argument models."""
+
+    @abstractmethod
+    def to_cmd(self) -> list[str]:
+        """:return: list of command arguments constructed from this instance's data members."""
+
+
 @dataclass
 class ExternalAction:
     """Metadata for an external action executed during an integration test."""
 
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
+
+    #: Optional structured arguments for verification purposes. Not used by `ExternalAction` itself.
+    args: CmdArgs | None = None
 
     #: The completed process returned from `subprocess.run()`.
     completed_proc: subprocess.CompletedProcess[str] = field(init=False)
@@ -230,9 +250,26 @@ class ExternalAction:
         logger.info(log_msg)
 
 
-class CmdArgs(BaseModel, ABC):
-    """Abstract base class for all CLP command argument models."""
+@dataclass(frozen=True)
+class VerificationResult:
+    """Outcome from a verification function."""
 
-    @abstractmethod
-    def to_cmd(self) -> list[str]:
-        """:return: list of command arguments constructed from this instance's data members."""
+    #: Whether or not the verification was successful.
+    success: bool
+
+    #: Message describing the failure, if the verification failed.
+    failure_message: str = ""
+
+    def __bool__(self) -> bool:
+        """Makes class truthy."""
+        return self.success
+
+    @classmethod
+    def ok(cls) -> Self:
+        """:return: A successful `VerificationResult`."""
+        return cls(success=True)
+
+    @classmethod
+    def fail(cls, failure_message: str) -> Self:
+        """:return: A failed `VerificationResult` carrying `failure_message`."""
+        return cls(success=False, failure_message=failure_message)
