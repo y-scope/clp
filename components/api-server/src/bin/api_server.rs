@@ -53,6 +53,12 @@ async fn main() -> anyhow::Result<()> {
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = clp_rust_utils::logging::set_up_logging("api_server.log");
 
+    let tel_provider = clp_rust_utils::telemetry::init_telemetry(&config.telemetry);
+
+    let meter = opentelemetry::global::meter("api-server");
+    let startup_counter = meter.u64_counter("clp.service.event").build();
+    startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
+
     let api_server_config = config
         .api_server
         .as_ref()
@@ -76,5 +82,7 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+
+    clp_rust_utils::telemetry::shutdown_telemetry(tel_provider);
     Ok(())
 }

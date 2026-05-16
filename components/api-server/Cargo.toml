@@ -27,6 +27,7 @@ futures = "0.3.31"
 mongodb = "3.5.0"
 num_enum = "0.7.5"
 non-empty-string = { version = "0.2.6", features = ["serde"] }
+opentelemetry = "0.27.1"
 pin-project-lite = "0.2.16"
 rmp-serde = "1.3.1"
 secrecy = "0.10.3"
