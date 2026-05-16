@@ -62,8 +62,8 @@ async fn main() -> anyhow::Result<()> {
     let tel_provider = clp_rust_utils::telemetry::init_telemetry(&config.telemetry);
 
     let meter = opentelemetry::global::meter("log-ingestor");
-    let bytes_total = meter.u64_counter("clp.ingest.bytes_total").build();
-    let records_total = meter.u64_counter("clp.ingest.records_total").build();
+    let _bytes_total = meter.u64_counter("clp.ingest.bytes_total").build();
+    let _records_total = meter.u64_counter("clp.ingest.records_total").build();
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)
@@ -85,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, log_ingestor_router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
-        
+
     clp_rust_utils::telemetry::shutdown_telemetry(tel_provider);
     Ok(())
 }
