@@ -435,3 +435,58 @@ data:
     echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
 {{- end }}{{/* with .Values.clpConfig.presto */}}
 {{- end }}{{/* if has "presto" .Values.clpConfig.bundled */}}
+
+{{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
+  otel-collector-config.yaml: |
+    extensions:
+      health_check:
+        endpoint: "0.0.0.0:13133"
+
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: "0.0.0.0:4318"
+
+    processors:
+      # NOTE: For EKS deployments, add the "eks" detector to detect cloud-specific attributes (e.g.,
+      #cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
+      # downward API config.
+      resourcedetection:
+        detectors: ["env", "system"]
+        system:
+          hostname_sources: ["os"]
+          resource_attributes:
+            host.arch:
+              enabled: true
+            host.cpu.family:
+              enabled: true
+            host.cpu.model.id:
+              enabled: true
+            host.cpu.vendor.id:
+              enabled: true
+        override: false
+      batch:
+        timeout: "30s"
+        send_batch_size: 1024
+
+    exporters:
+      otlphttp:
+        endpoint: {{ .Values.clpConfig.telemetry.endpoint | quote }}
+
+    service:
+      extensions: ["health_check"]
+      pipelines:
+        metrics:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlphttp"]
+        traces:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlphttp"]
+        logs:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlphttp"]
+{{- end }}

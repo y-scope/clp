@@ -103,6 +103,10 @@ services:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
       SPIDER_DB_USER: "${SPIDER_DB_USER:-spider-user}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "db-table-creator"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
     depends_on:
@@ -225,6 +229,10 @@ services:
     hostname: "results_cache_indices_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "results-cache-indices-creator"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     depends_on:
       results-cache:
         condition: "service_healthy"
@@ -242,6 +250,10 @@ services:
     hostname: "spider_scheduler"
     environment:
       SPIDER_LOG_FILE: "/var/log/spider_scheduler.log"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "spider-scheduler"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -274,6 +286,10 @@ services:
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}\
         @redis:${CLP_REDIS_CONNECT_PORT:-6379}\
         /${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "compression-scheduler"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -308,6 +324,10 @@ services:
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}\
         @redis:${CLP_REDIS_CONNECT_PORT:-6379}\
         /${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "compression-worker"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -340,6 +360,10 @@ services:
       CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       SPIDER_LOG_DIR: "/var/log/compression_worker"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "spider-compression-worker"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -375,6 +399,10 @@ services:
       NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
       PORT: "4000"
       RATE_LIMIT: "${CLP_WEBUI_RATE_LIMIT:-1000}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "webui"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     ports:
       - host_ip: "${CLP_WEBUI_HOST:-127.0.0.1}"
         published: "${CLP_WEBUI_PORT:-4000}"
@@ -423,6 +451,10 @@ services:
       CLP_LOGGING_LEVEL: "${CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/garbage_collector"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "garbage-collector"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -456,6 +488,10 @@ services:
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}\
         @redis:${CLP_REDIS_CONNECT_PORT:-6379}\
         /${CLP_REDIS_BACKEND_DB_QUERY:-0}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "query-scheduler"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -496,6 +532,10 @@ services:
       RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS:?Please set a value.}\
         @redis:${CLP_REDIS_CONNECT_PORT:-6379}\
         /${CLP_REDIS_BACKEND_DB_QUERY:-0}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "query-worker"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -525,6 +565,10 @@ services:
       CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/reducer"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "reducer"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
@@ -553,6 +597,10 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "mcp-server"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     ports:
       - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
         published: "${CLP_MCP_PORT:-8000}"
@@ -592,6 +640,10 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       RUST_LOG: "INFO"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "api-server"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     ports:
       - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
         published: "${CLP_API_SERVER_PORT:-3001}"
@@ -631,6 +683,10 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
       RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      OTEL_SERVICE_NAME: "log-ingestor"
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
     ports:
       - host_ip: "${CLP_LOG_INGESTOR_HOST:-127.0.0.1}"
         published: "${CLP_LOG_INGESTOR_PORT:-3002}"
@@ -655,3 +711,28 @@ services:
         "-f",
         "http://log_ingestor:3002/health"
       ]
+
+  otel-collector:
+    # NOTE: health check cannot be done easily without a custom image with HTTP utils like curl.
+    <<: *service_defaults
+    image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.152.0" # yamllint disable-line
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the otel collector.
+      replicas: "${CLP_OTEL_COLLECTOR_ENABLED:-1}"
+    user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
+    group_add:
+      - "${CLP_DOCKER_GID:-999}"
+    environment:
+      CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
+    ports:
+      - host_ip: "127.0.0.1"
+        published: "${CLP_OTEL_COLLECTOR_PORT:-4318}"
+        target: 4318
+    volumes:
+      - type: "bind"
+        source: "${CLP_OTEL_COLLECTOR_CONF_FILE_HOST:-./etc/otel-collector/config.yaml}"
+        target: "/etc/otelcol-contrib/config.yaml"
+        read_only: true
+      - type: "bind"
+        source: "/var/run/docker.sock"
+        target: "/var/run/docker.sock"

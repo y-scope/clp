@@ -1,0 +1,50 @@
+{{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-otel-collector
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "otel-collector"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "otel-collector"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "otel-collector"
+    spec:
+      containers:
+        - name: otel-collector
+          image: {{ printf "%s:%s" .Values.image.otelCollector.repository .Values.image.otelCollector.tag | quote }}
+          imagePullPolicy: {{ .Values.image.otelCollector.pullPolicy | quote }}
+          ports:
+            - containerPort: 4318
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.clpConfig.telemetry.collector.resources | nindent 12 }}
+          volumeMounts:
+            - name: otel-collector-config
+              mountPath: /etc/otelcol-contrib
+          args:
+            - "--config=/etc/otelcol-contrib/config.yaml"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: &otel-health-check
+              path: "/"
+              port: 13133
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *otel-health-check
+      volumes:
+        - name: otel-collector-config
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: otel-collector-config.yaml
+                path: config.yaml
+{{- end }}

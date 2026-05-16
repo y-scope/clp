@@ -1,5 +1,6 @@
 import enum
 import errno
+import http.client
 import json
 import logging
 import os
@@ -8,6 +9,9 @@ import re
 import secrets
 import socket
 import subprocess
+import time
+import urllib.error
+import urllib.request
 import uuid
 from enum import auto
 
@@ -164,6 +168,41 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
+
+def http_request(
+    url: str,
+    data: bytes | None = None,
+    headers: dict[str, str] | None = None,
+    method: str = "GET",
+    max_attempts: int = 2,
+    retry_delay: float = 1.0,
+    timeout: float = 5.0,
+) -> http.client.HTTPResponse:
+    """Sends an HTTP request with retry logic.
+
+    :param url: The URL to send the request to.
+    :param data: Request body as bytes.
+    :param headers: Request headers.
+    :param method: HTTP method.
+    :param max_attempts: Number of attempts before giving up.
+    :param retry_delay: Seconds to wait between retries.
+    :param timeout: Seconds to wait for a response per attempt.
+    :return: The HTTP response.
+    :raise urllib.error.URLError: If all attempts fail due to a network-level error.
+    :raise urllib.error.HTTPError: If all attempts fail with an HTTP error status.
+    :raise OSError: If all attempts fail due to a socket-level error.
+    """
+    req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+    last_exception: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
+            last_exception = e
+            if attempt < max_attempts - 1:
+                time.sleep(retry_delay)
+    raise last_exception
 
 
 def generate_container_name(job_type: str) -> str:

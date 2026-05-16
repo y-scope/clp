@@ -1,0 +1,47 @@
+{{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
+apiVersion: "batch/v1"
+kind: "Job"
+metadata:
+  name: {{ include "clp.fullname" . }}-topology-metrics-emitter
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "topology-metrics-emitter"
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": "hook-succeeded"
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "topology-metrics-emitter"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
+      restartPolicy: "OnFailure"
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "otel-collector"
+          ) | nindent 10 }}
+      containers:
+        - name: "topology-metrics-emitter"
+          image: "curlimages/curl:8.14.1"
+          command:
+            - "curl"
+            - "-s"
+            - "--fail"
+            - "--retry"
+            - "5"
+            - "--retry-all-errors"
+            - "--retry-delay"
+            - "1"
+            - "-X"
+            - "POST"
+            - "-H"
+            - "Content-Type: application/json"
+            - "-d"
+            - {{ include "clp.topologyMetricsPayload" . | quote }}
+            - "http://{{ include "clp.fullname" . }}-otel-collector:4318/v1/metrics"
+{{- end }}

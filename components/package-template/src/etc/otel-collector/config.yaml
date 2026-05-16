@@ -1,0 +1,48 @@
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    timeout: "30s"
+    send_batch_size: 1024
+  resourcedetection:
+    detectors: ["env", "docker", "system"]
+    system:
+      hostname_sources: ["os"]
+      resource_attributes:
+        host.arch:
+          enabled: true
+        host.cpu.family:
+          enabled: true
+        host.cpu.model.id:
+          enabled: true
+        host.cpu.vendor.id:
+          enabled: true
+    override: false
+
+exporters:
+  otlphttp:
+    endpoint: "${env:CLP_TELEMETRY_ENDPOINT}"
+
+service:
+  extensions: ["health_check"]
+  pipelines:
+    metrics:
+      receivers: ["otlp"]
+      processors: ["resourcedetection", "batch"]
+      exporters: ["otlphttp"]
+    traces:
+      receivers: ["otlp"]
+      processors: ["resourcedetection", "batch"]
+      exporters: ["otlphttp"]
+    logs:
+      receivers: ["otlp"]
+      processors: ["resourcedetection", "batch"]
+      exporters: ["otlphttp"]

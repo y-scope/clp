@@ -21,6 +21,10 @@ image:
     repository: "bitnami/kubectl"
     pullPolicy: "IfNotPresent"
     digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
+  otelCollector:
+    repository: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib" # yamllint disable-line
+    pullPolicy: "IfNotPresent"
+    tag: "0.152.0"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
@@ -250,6 +254,19 @@ clpConfig:
   #     --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
   #     --set-file clpConfig.aws_config.config=$HOME/.aws/config
   aws_config: null
+
+  # Telemetry config
+  telemetry:
+    disable: false
+    endpoint: "https://telemetry.yscope.io"
+    collector:
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
 
 credentials:
   database:

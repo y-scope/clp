@@ -83,3 +83,8 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "log-ingestor"
+
+  otel-collector:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "otel-collector"

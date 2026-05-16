@@ -37,6 +37,9 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: OTEL_SERVICE_NAME
+              value: "log-ingestor"
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
