@@ -14,7 +14,7 @@ exporters:
     endpoint: tcp://clickhouse:9000
     database: clp_telemetry
     username: default
-    password: ""
+    password: "clickhouse"
     ttl: 2160h
     metrics_table_name: otel_metrics
     traces_table_name: otel_traces

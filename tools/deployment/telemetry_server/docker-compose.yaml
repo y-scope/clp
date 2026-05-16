@@ -16,6 +16,9 @@ services:
     ports:
       - "9000:9000"
       - "8123:8123"
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: clickhouse
 
   grafana:
     image: grafana/grafana:10.4.0

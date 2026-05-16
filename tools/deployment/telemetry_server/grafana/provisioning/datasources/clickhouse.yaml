@@ -6,3 +6,6 @@ datasources:
     url: http://clickhouse:8123
     jsonData:
       defaultDatabase: clp_telemetry
+      username: default
+    secureJsonData:
+      password: "clickhouse"
