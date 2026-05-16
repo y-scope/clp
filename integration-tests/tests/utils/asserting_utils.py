@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from clp_package_utils.general import EXTRACT_FILE_CMD
 
-from tests.utils.classes import ClpAction, VerificationResult
+from tests.utils.classes import ClpAction, ClpVerificationResult
 from tests.utils.config import PackageInstance, PackageTestConfig
 from tests.utils.docker_utils import list_running_services_in_compose_project
 from tests.utils.fs_validation import is_dir_tree_content_equal
@@ -55,7 +55,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
 def verify_package_compression(
     path_to_original_dataset: Path,
     package_test_config: PackageTestConfig,
-) -> VerificationResult:
+) -> ClpVerificationResult:
     """
     Verify that compression has been executed correctly by decompressing the contents of
     `clp-package/var/data/archives` and comparing the decompressed logs to the originals stored at
@@ -63,7 +63,7 @@ def verify_package_compression(
 
     :param path_to_original_dataset:
     :param package_test_config:
-    :return: A `VerificationResult` describing the outcome.
+    :return: A `ClpVerificationResult` describing the outcome.
     """
     mode = package_test_config.mode_config.mode_name
     log_msg = f"Verifying {mode} package compression."
@@ -71,7 +71,7 @@ def verify_package_compression(
 
     if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
-        return VerificationResult.ok()
+        return ClpVerificationResult.ok()
     if mode == "clp-text":
         # Decompress the contents of `clp-package/var/data/archives`.
         path_config = package_test_config.path_config
@@ -104,11 +104,12 @@ def verify_package_compression(
 
         try:
             if not is_dir_tree_content_equal(path_to_original_dataset, output_path):
-                return VerificationResult.fail(
+                return ClpVerificationResult.fail(
+                    decompress_action,
                     f"Mismatch between clp input {path_to_original_dataset} and output"
-                    f" {output_path}."
+                    f" {output_path}.",
                 )
         finally:
             clear_directory(decompression_dir)
 
-    return VerificationResult.ok()
+    return ClpVerificationResult.ok()
