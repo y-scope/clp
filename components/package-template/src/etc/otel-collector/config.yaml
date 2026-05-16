@@ -12,6 +12,20 @@ processors:
   batch:
     timeout: "30s"
     send_batch_size: 1024
+  resourcedetection:
+    detectors: ["env", "docker", "system"]
+    system:
+      hostname_sources: ["os"]
+      resource_attributes:
+        host.arch:
+          enabled: true
+        host.cpu.family:
+          enabled: true
+        host.cpu.model.id:
+          enabled: true
+        host.cpu.vendor.id:
+          enabled: true
+    override: false
 
 exporters:
   otlphttp:
@@ -22,13 +36,13 @@ service:
   pipelines:
     metrics:
       receivers: ["otlp"]
-      processors: ["batch"]
+      processors: ["resourcedetection", "batch"]
       exporters: ["otlphttp"]
     traces:
       receivers: ["otlp"]
-      processors: ["batch"]
+      processors: ["resourcedetection", "batch"]
       exporters: ["otlphttp"]
     logs:
       receivers: ["otlp"]
-      processors: ["batch"]
+      processors: ["resourcedetection", "batch"]
       exporters: ["otlphttp"]

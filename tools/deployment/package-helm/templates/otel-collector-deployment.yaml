@@ -20,9 +20,8 @@ spec:
     spec:
       containers:
         - name: otel-collector
-          image: {{ .Values.clpConfig.telemetry.collector.image | quote }}
-          args:
-            - "--config=/etc/otelcol-contrib/config.yaml"
+          image: {{ printf "%s:%s" .Values.image.otelCollector.repository .Values.image.otelCollector.tag | quote }}
+          imagePullPolicy: {{ .Values.image.otelCollector.pullPolicy | quote }}
           ports:
             - containerPort: 4318
               protocol: TCP
@@ -31,8 +30,21 @@ spec:
           volumeMounts:
             - name: otel-collector-config
               mountPath: /etc/otelcol-contrib
+          args:
+            - "--config=/etc/otelcol-contrib/config.yaml"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: &otel-health-check
+              path: "/"
+              port: 13133
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *otel-health-check
       volumes:
         - name: otel-collector-config
           configMap:
-            name: {{ include "clp.fullname" . }}-otel-collector-config
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: otel-collector-config.yaml
+                path: config.yaml
 {{- end }}

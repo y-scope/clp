@@ -716,17 +716,24 @@ services:
     <<: *service_defaults
     image: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.152.0" # yamllint disable-line
     hostname: "otel_collector"
-    profiles: ["telemetry"]
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the otel collector.
       replicas: "${CLP_OTEL_COLLECTOR_ENABLED:-1}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
+    group_add:
+      - "${CLP_DOCKER_GID:-999}"
     environment:
       CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
     ports:
-      - "127.0.0.1:4318:4318"
+      - host_ip: "127.0.0.1"
+        published: "${CLP_OTEL_COLLECTOR_PORT:-4318}"
+        target: 4318
     volumes:
       - type: "bind"
-        source: "./otel-collector-config.yaml"
+        source: "${CLP_OTEL_COLLECTOR_CONF_FILE_HOST:-./etc/otel-collector/config.yaml}"
         target: "/etc/otelcol-contrib/config.yaml"
         read_only: true
+      - type: "bind"
+        source: "/var/run/docker.sock"
+        target: "/var/run/docker.sock"
+    # NOTE: health check cannot be done easily without a custom image with HTTP access utils like curl.

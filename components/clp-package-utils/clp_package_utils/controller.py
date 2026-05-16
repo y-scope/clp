@@ -4,7 +4,7 @@ import logging
 import multiprocessing
 import os
 import pathlib
-import platform
+
 import socket
 import stat
 import subprocess
@@ -1022,7 +1022,9 @@ class DockerComposeController(BaseController):
         # Telemetry
         if self._clp_config.telemetry.disable:
             env_vars["CLP_DISABLE_TELEMETRY"] = "true"
+            env_vars["CLP_OTEL_COLLECTOR_ENABLED"] = "0"
         else:
+            env_vars["CLP_OTEL_COLLECTOR_ENABLED"] = "1"
             version_file_path = self._clp_home / "VERSION"
             clp_version = (
                 version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
@@ -1033,8 +1035,6 @@ class DockerComposeController(BaseController):
                 "service.version": clp_version,
                 "clp.deployment.method": "docker-compose",
                 "clp.storage.engine": self._clp_config.package.storage_engine,
-                "os.type": platform.system().lower(),
-                "host.arch": platform.machine().lower(),
             }
 
             resource_attrs_str = ",".join(f"{k}={v}" for k, v in self._resource_attrs.items())
@@ -1042,6 +1042,9 @@ class DockerComposeController(BaseController):
             env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://otel-collector:4318"
 
         env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
+        env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
+            self._conf_dir / "otel-collector" / "config.yaml"
+        )
 
         # Paths
         aws_config_dir = self._clp_config.aws_config_directory
@@ -1115,8 +1118,6 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
-        if not self._clp_config.telemetry.disable:
-            cmd += ["--profile", "telemetry"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
