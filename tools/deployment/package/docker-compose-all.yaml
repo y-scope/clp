@@ -736,4 +736,4 @@ services:
       - type: "bind"
         source: "/var/run/docker.sock"
         target: "/var/run/docker.sock"
-    # NOTE: health check cannot be done easily without a custom image with HTTP access utils like curl.
+    # NOTE: health check cannot be done easily without a custom image with HTTP utils like curl.
