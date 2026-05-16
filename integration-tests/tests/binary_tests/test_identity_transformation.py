@@ -5,13 +5,12 @@ compression and decompression.
 
 import pytest
 
-from tests.utils.classes import IntegrationTestPathConfig, SampleDataset
+from tests.utils.classes import ClpAction, IntegrationTestPathConfig, SampleDataset
 from tests.utils.config import (
     ClpCorePathConfig,
     CompressionTestPathConfig,
 )
-from tests.utils.subprocess_utils import run_and_log_subprocess
-from tests.utils.utils import (
+from tests.utils.fs_validation import (
     is_dir_tree_content_equal,
     is_json_file_structurally_equal,
 )
@@ -54,10 +53,16 @@ def test_clp_identity_transform(
         src_path,
     ]
     # fmt: on
-    run_and_log_subprocess(compression_cmd)
+    compression_action = ClpAction.from_cmd(compression_cmd)
+    compression_result = compression_action.verify_returncode()
+    if not compression_result:
+        pytest.fail(compression_result.failure_message)
 
     decompression_cmd = [bin_path, "x", compression_path, decompression_path]
-    run_and_log_subprocess(decompression_cmd)
+    decompression_action = ClpAction.from_cmd(decompression_cmd)
+    decompression_result = decompression_action.verify_returncode()
+    if not decompression_result:
+        pytest.fail(decompression_result.failure_message)
 
     input_path = test_paths.logs_source_dir
     output_path = test_paths.decompression_dir
@@ -125,5 +130,12 @@ def _clp_s_compress_and_decompress(
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
-    run_and_log_subprocess([bin_path, "c", compression_path, src_path])
-    run_and_log_subprocess([bin_path, "x", compression_path, decompression_path])
+    compression_action = ClpAction.from_cmd([bin_path, "c", compression_path, src_path])
+    compression_result = compression_action.verify_returncode()
+    if not compression_result:
+        pytest.fail(compression_result.failure_message)
+
+    decompression_action = ClpAction.from_cmd([bin_path, "x", compression_path, decompression_path])
+    decompression_result = decompression_action.verify_returncode()
+    if not decompression_result:
+        pytest.fail(decompression_result.failure_message)

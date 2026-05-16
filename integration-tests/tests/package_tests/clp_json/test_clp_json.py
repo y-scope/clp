@@ -74,7 +74,9 @@ def test_clp_json_compression_json_multifile(
     run_package_compression_script(compression_job, package_test_config)
 
     # Check the correctness of compression.
-    verify_package_compression(json_multifile.logs_path, package_test_config)
+    result = verify_package_compression(json_multifile.logs_path, package_test_config)
+    if not result:
+        pytest.fail(result.failure_message)
 
     # Clear archives.
     package_path_config.clear_package_archives()
