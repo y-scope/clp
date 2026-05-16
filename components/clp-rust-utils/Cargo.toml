@@ -21,6 +21,9 @@ thiserror = "2.0.18"
 tracing-appender = "0.2.4"
 tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter", "fmt", "std"] }
 utoipa = { version = "5.4.0" }
+opentelemetry = { version = "0.27" }
+opentelemetry_sdk = { version = "0.27", features = ["metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["metrics", "http-proto", "reqwest-client"] }
 
 [dev-dependencies]
 hex = "0.4.3"
