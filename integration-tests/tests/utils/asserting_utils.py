@@ -71,7 +71,7 @@ def verify_package_compression(
 
     if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
-        return ClpVerificationResult.ok()
+        return ClpVerificationResult(success=True)
     if mode == "clp-text":
         # Decompress the contents of `clp-package/var/data/archives`.
         path_config = package_test_config.path_config
@@ -104,12 +104,11 @@ def verify_package_compression(
 
         try:
             if not is_dir_tree_content_equal(path_to_original_dataset, output_path):
-                return ClpVerificationResult.fail(
-                    decompress_action,
+                return decompress_action.fail_verification(
                     f"Mismatch between clp input {path_to_original_dataset} and output"
                     f" {output_path}.",
                 )
         finally:
             clear_directory(decompression_dir)
 
-    return ClpVerificationResult.ok()
+    return ClpVerificationResult(success=True)

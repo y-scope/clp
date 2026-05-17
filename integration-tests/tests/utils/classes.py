@@ -143,7 +143,10 @@ class SampleDataset:
 
 
 class CmdArgs(BaseModel, ABC):
-    """Abstract base class for all CLP command argument models."""
+    """
+    Abstract base class for all CLP command argument models. Derived classes define typed
+    command-line options, and `to_cmd()` converts the options into a list of subprocess arguments.
+    """
 
     @abstractmethod
     def to_cmd(self) -> list[str]:
@@ -169,8 +172,13 @@ class ExternalAction:
 
     def __post_init__(self) -> None:
         """Execute the external action and log output."""
+        if type(self) is ExternalAction:
+            err_msg = "`ExternalAction` cannot be instantiated directly."
+            raise TypeError(err_msg)
+
         if not self.cmd:
-            pytest.fail(f"Cannot create '{type(self).__name__}' object: `cmd` list is empty.")
+            err_msg = f"Cannot create '{type(self).__name__}' object: `cmd` list is empty."
+            raise ValueError(err_msg)
 
         self.completed_proc = self._run_subprocess()
         self._log_action_summary_to_file()
@@ -258,37 +266,14 @@ class NonClpAction(ExternalAction):
     `RuntimeError` if this is not the case.
     """
 
-    def format_failure_msg(
-        self,
-        reason: str,
-        related_action: ExternalAction | None = None,
-    ) -> str:
-        """
-        Format a failure message that includes `reason` and the path to this action's log file.
-        When this action was being used to verify another action, `related_action` should be passed
-        in so that the path to its log file is also included in the failure message.
-
-        :param reason: A description of the failure.
-        :param related_action: An action whose verification depends on this action.
-        :return: The formatted failure message.
-        """
-        msg = f"{reason} See subprocess log at: '{self.log_file_path}'."
-        if related_action is not None:
-            related_exe = Path(related_action.cmd[0]).name
-            msg += (
-                f" This failure occurred during the verification of '{related_exe}';"
-                f" see related subprocess log at: '{related_action.log_file_path}'."
-            )
-        return msg
-
     def check_returncode(
         self,
         good_returncodes: tuple[int, ...] = (0,),
-        related_action: ExternalAction | None = None,
+        dependent_action: ExternalAction | None = None,
     ) -> None:
         """
         :param good_returncodes:
-        :param related_action: Another action whose verification depends on this action. Its log
+        :param dependent_action: Another action whose verification depends on this action. Its log
             path is included in the failure message to aid debugging.
         :raise RuntimeError: if `completed_proc.returncode` is not in `good_returncodes`.
         """
@@ -298,9 +283,33 @@ class NonClpAction(ExternalAction):
             f"The '{Path(self.cmd[0]).name}' subprocess returned a bad return code"
             f" ({self.completed_proc.returncode})."
         )
-        err_msg = self.format_failure_msg(reason, related_action=related_action)
+        err_msg = self._format_failure_msg(reason, dependent_action=dependent_action)
         logger.error(err_msg)
         raise RuntimeError(err_msg)
+
+    def _format_failure_msg(
+        self,
+        reason: str,
+        dependent_action: ExternalAction | None = None,
+    ) -> str:
+        """
+        Format a failure message that includes `reason` and the path to this action's log file.
+        When this action was being used to verify another action, `dependent_action` should be
+        passed in so that the path to its log file is also included in the failure message.
+
+        :param reason: A description of the failure.
+        :param dependent_action: An action whose verification depends on this action.
+        :return: The formatted failure message.
+        """
+        msg = f"{reason} See subprocess log at: '{self.log_file_path}'."
+        if dependent_action is not None:
+            dependent_exe = Path(dependent_action.cmd[0]).name
+            msg += (
+                " This failure occurred during the verification of dependent subprocess"
+                f" '{dependent_exe}'; see dependent subprocess log at:"
+                f" '{dependent_action.log_file_path}'."
+            )
+        return msg
 
 
 @dataclass
@@ -331,32 +340,10 @@ class ClpAction(ExternalAction):
         action.
         """
         if self.args is not None and self.cmd != self.args.to_cmd():
-            pytest.fail("Cannot create `ClpAction` object: `cmd` does not match `args.to_cmd()`.")
+            err_msg = "Cannot create `ClpAction` object: `cmd` does not match `args.to_cmd()`."
+            raise ValueError(err_msg)
+
         super().__post_init__()
-
-    def format_failure_msg(
-        self,
-        reason: str,
-        supporting_action: ClpAction | None = None,
-    ) -> str:
-        """
-        Format a failure message that includes `reason` and the path to this action's log file.
-        When this action's verification has failed as a direct result of some other `ClpAction`,
-        this other action should be passed into `supporting_action` so that the path to its log file
-        can be included in the failure message.
-
-        :param reason: A description of the failure.
-        :param supporting_action: A previous action that caused this failure.
-        :return: The formatted failure message.
-        """
-        msg = f"{reason} See subprocess log at: '{self.log_file_path}'."
-        if supporting_action is not None:
-            supporting_exe = Path(supporting_action.cmd[0]).name
-            msg += (
-                f" See supporting subprocess ({supporting_exe}) log at:"
-                f" '{supporting_action.log_file_path}'."
-            )
-        return msg
 
     def verify_returncode(
         self,
@@ -369,13 +356,50 @@ class ClpAction(ExternalAction):
             the bad return code.
         """
         if self.completed_proc.returncode in good_returncodes:
-            return ClpVerificationResult.ok()
+            return self.pass_verification()
 
         reason = (
             f"The '{Path(self.cmd[0]).name}' subprocess returned a bad return code"
             f" ({self.completed_proc.returncode})."
         )
-        return ClpVerificationResult.fail(self, reason)
+        return self.fail_verification(reason)
+
+    def pass_verification(self) -> ClpVerificationResult:
+        """:return: A successful `ClpVerificationResult`."""
+        return ClpVerificationResult(success=True)
+
+    def fail_verification(
+        self,
+        reason: str,
+        supporting_action: ExternalAction | None = None,
+    ) -> ClpVerificationResult:
+        """
+        Build a failed `ClpVerificationResult` for this action and log a warning. When this action's
+        verification has failed as a direct result of some other `ExternalAction`, that action
+        should be passed into `supporting_action` so that the path to its log file is included in
+        the failure message.
+
+        :param reason: A description of the failure.
+        :param supporting_action: A previous action that caused this failure.
+        :return: A failed `ClpVerificationResult` carrying the formatted `failure_message`.
+        """
+        failure_message = self._format_failure_msg(reason, supporting_action=supporting_action)
+        logger.warning(failure_message)
+        return ClpVerificationResult(success=False, failure_message=failure_message)
+
+    def _format_failure_msg(
+        self,
+        reason: str,
+        supporting_action: ExternalAction | None = None,
+    ) -> str:
+        msg = f"{reason} See subprocess log at: '{self.log_file_path}'."
+        if supporting_action is not None:
+            supporting_exe = Path(supporting_action.cmd[0]).name
+            msg += (
+                f" This failure occurred due to supporting subprocess '{supporting_exe}'; see"
+                f" supporting subprocess log at: '{supporting_action.log_file_path}'."
+            )
+        return msg
 
 
 @dataclass(frozen=True)
@@ -391,20 +415,3 @@ class ClpVerificationResult:
     def __bool__(self) -> bool:
         """Makes class truthy."""
         return self.success
-
-    @classmethod
-    def ok(cls) -> Self:
-        """:return: A successful `ClpVerificationResult`."""
-        return cls(success=True)
-
-    @classmethod
-    def fail(
-        cls,
-        action: ClpAction,
-        reason: str,
-        supporting_action: ClpAction | None = None,
-    ) -> Self:
-        """:return: A failed `ClpVerificationResult` carrying `failure_message`."""
-        failure_message = action.format_failure_msg(reason, supporting_action=supporting_action)
-        logger.warning(failure_message)
-        return cls(success=False, failure_message=failure_message)
