@@ -23,11 +23,6 @@ exporters:
 service:
   pipelines:
     metrics:
-<<<<<<< Updated upstream
-      receivers: ["otlp"]
-      processors: ["batch"]
-      exporters: ["clickhouse"]
-=======
       receivers: [otlp]
       processors: [batch]
       exporters: [clickhouse]
@@ -39,4 +34,3 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [clickhouse]
->>>>>>> Stashed changes
