@@ -3,37 +3,17 @@
 import logging
 
 import pytest
-from clp_py_utils.clp_config import (
-    ClpConfig,
-    Package,
-    QueryEngine,
-    StorageEngine,
-)
 
+from tests.package_tests.clp_text.utils.mode import CLP_TEXT_MODE
 from tests.utils.asserting_utils import (
-    validate_package_instance,
+    validate_package_running,
     verify_package_compression,
 )
-from tests.utils.clp_mode_utils import CLP_BASE_COMPONENTS
-from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
+from tests.utils.classes import SampleDataset
+from tests.utils.config import PackageCompressionJob, PackageInstance
 from tests.utils.package_utils import run_package_compression_script
 
 logger = logging.getLogger(__name__)
-
-
-# Mode description for this module.
-CLP_TEXT_MODE = PackageModeConfig(
-    mode_name="clp-text",
-    clp_config=ClpConfig(
-        package=Package(
-            storage_engine=StorageEngine.CLP,
-            query_engine=QueryEngine.CLP,
-        ),
-        api_server=None,
-        log_ingestor=None,
-    ),
-    component_list=(*CLP_BASE_COMPONENTS,),
-)
 
 
 # Pytest markers for this module.
@@ -49,21 +29,25 @@ def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
     """Tests package startup."""
     logger.info("Starting test: 'test_clp_text_startup'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     logger.info("Test complete: 'test_clp_text_startup'")
 
 
 @pytest.mark.compression
-def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInstance) -> None:
+def test_clp_text_compression_text_multifile(
+    fixt_package_instance: PackageInstance,
+    text_multifile: SampleDataset,
+) -> None:
     """
     Validate that the `clp-text` package successfully compresses the `text-multifile` dataset.
 
     :param fixt_package_instance:
+    :param text_multifile:
     """
     logger.info("Starting test: 'test_clp_text_compression_text_multifile'")
 
-    validate_package_instance(fixt_package_instance)
+    validate_package_running(fixt_package_instance)
 
     # Clear archives before compressing.
     package_test_config = fixt_package_instance.package_test_config
@@ -72,16 +56,14 @@ def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInsta
 
     # Compress a dataset.
     compression_job = PackageCompressionJob(
-        path_to_original_dataset=(
-            package_path_config.clp_text_test_data_path / "text-multifile" / "logs"
-        ),
+        path_to_original_dataset=text_multifile.logs_path,
         options=None,
         positional_args=None,
     )
     run_package_compression_script(compression_job, package_test_config)
 
     # Check the correctness of compression.
-    verify_package_compression(compression_job.path_to_original_dataset, package_test_config)
+    verify_package_compression(text_multifile.logs_path, package_test_config)
 
     # Clear archives.
     package_path_config.clear_package_archives()

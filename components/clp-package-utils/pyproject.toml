@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "pymongo>=4.16.0",
     "PyYAML>=6.0.3",
+    "ruamel.yaml>=0.19.1",
 ]
 
 [build-system]

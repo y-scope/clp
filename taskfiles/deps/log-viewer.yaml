@@ -1,0 +1,105 @@
+version: "3"
+
+vars:
+  G_DEPS_LOG_VIEWER_BUILD_DIR: "{{.G_DEPS_DIR}}/log-viewer-build"
+  G_DEPS_LOG_VIEWER_SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
+  G_DEPS_LOG_VIEWER_NODE_MODULES_DIR: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}/node_modules"
+
+  G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer-build.md5"
+  G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer-node-modules.md5"
+
+tasks:
+  default:
+    deps: ["build"]
+
+  # Builds the current local yscope-log-viewer working tree. This task reruns when local source
+  # files or installed npm dependencies change. If the working tree does not exist, the pinned
+  # upstream version will be downloaded and built.
+  build:
+    internal: true
+    sources:
+      - "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      - "{{.TASKFILE}}"
+      - "**/*"
+      - exclude: "dist/**/*"
+      - exclude: "node_modules/**/*"
+    dir: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}"
+    generates:
+      - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
+    run: "once"
+    deps:
+      - "::toolchains:nodejs-22"
+      - "node-modules"
+      - task: ":yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}"]
+    cmds:
+      - "rm -rf '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}'"
+      - >-
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build --
+        --emptyOutDir --outDir '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}'
+      - task: ":yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}"]
+
+  clean-node-modules:
+    internal: true
+    cmds:
+      - "rm -rf '{{.G_DEPS_LOG_VIEWER_SRC_DIR}}/node_modules'"
+
+  node-modules:
+    internal: true
+    vars:
+      # Transient caches (e.g. `node_modules/.vite-temp`) may be written during builds. Exclude them
+      # so build-only mutations do not invalidate the installed-dependency checksum.
+      NODE_MODULES_EXCLUDE_PATTERNS:
+        - ".vite-temp"
+        - ".vite-temp/**/*"
+    sources:
+      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      - "{{.TASKFILE}}"
+      - "package-lock.json"
+      - "package.json"
+    dir: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}"
+    generates:
+      - "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+    run: "once"
+    deps:
+      - "::toolchains:nodejs-22"
+      - task: ":yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+          EXCLUDE_PATTERNS:
+            ref: ".NODE_MODULES_EXCLUDE_PATTERNS"
+          INCLUDE_PATTERNS: ["{{.G_DEPS_LOG_VIEWER_NODE_MODULES_DIR}}"]
+    cmds:
+      - if: "test ! -f package.json || test ! -f package-lock.json"
+        task: "source"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
+      # This command must be last.
+      - task: ":yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+          EXCLUDE_PATTERNS:
+            ref: ".NODE_MODULES_EXCLUDE_PATTERNS"
+          INCLUDE_PATTERNS: ["{{.G_DEPS_LOG_VIEWER_NODE_MODULES_DIR}}"]
+
+  source:
+    internal: true
+    run: "once"
+    deps:
+      - ":utils:init"
+    cmds:
+      - task: ":yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_EXCLUDE_PATTERNS:
+            - "node_modules"
+            - "node_modules/**/*"
+          CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
+          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
+          OUTPUT_DIR: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}"
+          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"

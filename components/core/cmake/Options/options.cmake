@@ -42,6 +42,24 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_ENABLE_CURL
+    "Include libcurl support for clp-s."
+    ON
+)
+
+option(
+    CLP_BUILD_CLP_S_FFI_SFA
+    "Build clp_s::ffi::sfa."
+    ON
+)
+
+option(
+    CLP_BUILD_CLP_S_FILTER
+    "Build clp_s::filter."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_IO
     "Build clp_s::io."
     ON
@@ -92,18 +110,6 @@ option(
 option(
     CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     "Build clp_s::timestamp_pattern."
-    ON
-)
-
-option(
-    CLP_BUILD_CLP_S_ENABLE_CURL
-    "Include libcurl support for clp-s."
-    ON
-)
-
-option(
-    CLP_BUILD_CLP_S_FILTER
-    "Build clp_s::filter."
     ON
 )
 
@@ -173,8 +179,13 @@ function(validate_clp_tests_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_TESTING
         CLP_BUILD_CLP_REGEX_UTILS
         CLP_BUILD_CLP_STRING_UTILS
+        CLP_BUILD_CLP_S_ARCHIVEREADER
+        CLP_BUILD_CLP_S_ARCHIVEWRITER
         CLP_BUILD_CLP_S_ENABLE_CURL
+        CLP_BUILD_CLP_S_FFI_SFA
         CLP_BUILD_CLP_S_FILTER
+        CLP_BUILD_CLP_S_JSONCONSTRUCTOR
+        CLP_BUILD_CLP_S_SEARCH
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
@@ -274,6 +285,26 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_SPDLOG
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD
+    )
+endfunction()
+
+function(set_clp_s_enable_curl_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_CURL
+        CLP_NEED_OPENSSL
+    )
+endfunction()
+
+function(validate_clp_s_ffi_sfa_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_FFI_SFA
+        CLP_BUILD_CLP_S_ARCHIVEREADER
+    )
+endfunction()
+
+function(set_clp_s_ffi_sfa_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -413,13 +444,6 @@ function(set_clp_s_timestamppattern_dependencies)
     )
 endfunction()
 
-function(set_clp_s_enable_curl_dependencies)
-    set_clp_need_flags(
-        CLP_NEED_CURL
-        CLP_NEED_OPENSSL
-    )
-endfunction()
-
 # Validates that for each target whose `CLP_BUILD_` option is `ON`, the `CLP_BUILD_` options for
 # the target's dependencies are also `ON`; Sets the required `CLP_NEED_` flags for any target that
 # will be built.
@@ -454,6 +478,15 @@ function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         validate_clp_s_clp_dependencies_dependencies()
         set_clp_s_clp_dependencies_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_ENABLE_CURL)
+        set_clp_s_enable_curl_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_FFI_SFA)
+        validate_clp_s_ffi_sfa_dependencies()
+        set_clp_s_ffi_sfa_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_FILTER)
@@ -503,10 +536,6 @@ function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
         validate_clp_s_timestamppattern_dependencies()
         set_clp_s_timestamppattern_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_ENABLE_CURL)
-        set_clp_s_enable_curl_dependencies()
     endif()
 endfunction()
 

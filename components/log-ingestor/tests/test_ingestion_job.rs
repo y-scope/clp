@@ -1,10 +1,7 @@
-mod aws_config;
-
 use std::{sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use aws_config::AwsConfig;
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials},
     job_config::ingestion::s3::{
@@ -31,6 +28,11 @@ use log_ingestor::{
 use non_empty_string::NonEmptyString;
 use tokio::sync::Mutex;
 use uuid::Uuid;
+
+use super::{
+    aws_config::AwsConfig,
+    test_utils::{self, get_testing_prefix_as_non_empty_string, upload_test_objects},
+};
 
 const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
 const INGESTED_OBJECT_POLL_INTERVAL_MS: u64 = 100;
@@ -117,35 +119,27 @@ impl S3ScannerState for S3ScannerTestState {
     }
 }
 
-/// Creates S3 objects in the given bucket based on the provided metadata. The object content is
-/// filled with dummy data.
+/// Uploads noise S3 objects that do not match any testing prefix.
 ///
-/// # Returns
-///
-/// `Ok(())` on success.
+/// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
 ///
 /// # Errors
 ///
-/// Returns an error if:
-///
-/// * Forwards [`aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder::send`]'s
-///   return values on failure.
-async fn create_s3_objects(
+/// * Forwards [`test_utils::create_s3_objects`]'s return values on failure.
+pub async fn upload_noise_objects(
     s3_client: aws_sdk_s3::Client,
-    objects: Vec<ObjectMetadata>,
+    bucket: NonEmptyString,
+    num_objects_to_create: usize,
 ) -> Result<()> {
-    for object in objects {
-        let body = vec![b'0'; usize::try_from(object.size).expect("size overflow")];
+    let objects_to_create: Vec<_> = (0..num_objects_to_create)
+        .map(|_| ObjectMetadata {
+            bucket: bucket.clone(),
+            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
+            size: 16,
+        })
+        .collect();
 
-        s3_client
-            .put_object()
-            .bucket(object.bucket.as_str())
-            .key(object.key.as_str())
-            .body(body.into())
-            .send()
-            .await?;
-    }
-    Ok(())
+    test_utils::create_s3_objects(s3_client, objects_to_create).await
 }
 
 /// Waits until the shared buffer has at least `min_num_objects`.
@@ -172,52 +166,6 @@ async fn wait_for_ingested_objects(
     )
     .await
     .expect("Timed out while waiting for ingested objects")
-}
-
-/// Uploads test S3 objects.
-///
-/// Objects are created with keys formatted as `{prefix}/{i}.log` where `i` is the object index.
-///
-/// # Returns
-///
-/// A vector of created S3 object metadata.
-async fn upload_test_objects(
-    s3_client: aws_sdk_s3::Client,
-    bucket: NonEmptyString,
-    prefix: NonEmptyString,
-    num_objects_to_create: usize,
-) -> Result<Vec<ObjectMetadata>> {
-    let objects_to_create: Vec<_> = (0..num_objects_to_create)
-        .map(|idx| ObjectMetadata {
-            bucket: bucket.clone(),
-            key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
-            size: 16,
-        })
-        .collect();
-
-    create_s3_objects(s3_client, objects_to_create.clone()).await?;
-    Ok(objects_to_create)
-}
-
-/// Uploads noise S3 objects that do not match any testing prefix.
-///
-/// The keys are formatted as `{uuid}.log`, where `uuid` is a randomly generated v4 UUID.
-async fn upload_noise_objects(
-    s3_client: aws_sdk_s3::Client,
-    bucket: NonEmptyString,
-    num_objects_to_create: usize,
-) {
-    let objects_to_create: Vec<_> = (0..num_objects_to_create)
-        .map(|_| ObjectMetadata {
-            bucket: bucket.clone(),
-            key: NonEmptyString::from_string(format!("{}.log", Uuid::new_v4())),
-            size: 16,
-        })
-        .collect();
-
-    create_s3_objects(s3_client.clone(), objects_to_create)
-        .await
-        .expect("Error during S3 object creation");
 }
 
 /// Runs SQS listener test with the given job config.
@@ -272,7 +220,7 @@ async fn run_sqs_listener_test(
 
     noise_upload_handle
         .await
-        .context("Error while awaiting noise upload")?;
+        .context("Error while awaiting noise upload")??;
     let mut created_objects = upload_handle
         .await
         .context("Error while awaiting test object upload")??;
@@ -286,13 +234,6 @@ async fn run_sqs_listener_test(
     assert_eq!(received_objects, created_objects);
 
     Ok(())
-}
-
-/// # Returns
-///
-/// A unique testing prefix for S3 object keys. The prefix is formatted as `test-{job_id}`.
-fn get_testing_prefix_as_non_empty_string(job_id: IngestionJobId) -> NonEmptyString {
-    NonEmptyString::from_string(format!("test-{job_id}"))
 }
 
 #[tokio::test]
@@ -329,8 +270,8 @@ async fn test_sqs_listener() -> Result<()> {
                     dataset: None,
                     timestamp_key: None,
                     unstructured: false,
-                    buffer_config: BufferConfig::default(),
                 },
+                buffer_config: BufferConfig::default(),
             },
         )
         .await
@@ -371,8 +312,8 @@ async fn test_s3_scanner() -> Result<()> {
             dataset: None,
             timestamp_key: None,
             unstructured: false,
-            buffer_config: BufferConfig::default(),
         },
+        buffer_config: BufferConfig::default(),
         scanning_interval_sec: 1,
         start_after: None,
     };
@@ -401,7 +342,7 @@ async fn test_s3_scanner() -> Result<()> {
 
     noise_upload_handle
         .await
-        .context("Error while awaiting noise upload")?;
+        .context("Error while awaiting noise upload")??;
     let mut created_objects = test_upload_handle
         .await
         .context("Error while awaiting test object upload")??;
