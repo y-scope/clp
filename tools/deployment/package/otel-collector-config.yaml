@@ -16,6 +16,8 @@ processors:
 exporters:
   otlphttp:
     endpoint: "${TELEMETRY_ENDPOINT}"
+  debug:
+    verbosity: detailed
 
 service:
   extensions: ["health_check"]
@@ -23,12 +25,12 @@ service:
     metrics:
       receivers: ["otlp"]
       processors: ["batch"]
-      exporters: ["otlphttp"]
+      exporters: ["otlphttp", "debug"]
     traces:
       receivers: ["otlp"]
       processors: ["batch"]
-      exporters: ["otlphttp"]
+      exporters: ["otlphttp", "debug"]
     logs:
       receivers: ["otlp"]
       processors: ["batch"]
-      exporters: ["otlphttp"]
+      exporters: ["otlphttp", "debug"]
