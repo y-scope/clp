@@ -81,7 +81,8 @@ public:
      * Deserializes a schema tree node insertion IR unit from the given reader.
      * @param reader
      * @param tag
-     * @param key_name Returns the inserted node's key name.
+     * @param key_name_buffer Returns the inserted node's key name. May be empty if the
+     * implementation does not need to read the key from the stream.
      * @return A result containing a pair on success, or an error code indicating the failure:
      * - The pair:
      *   - Whether the node is for auto-generated keys schema tree.
@@ -91,7 +92,7 @@ public:
     [[nodiscard]] virtual auto deserialize_ir_unit_schema_tree_node_insertion(
             ReaderInterface& reader,
             encoded_tag_t tag,
-            std::string& key_name
+            std::string& key_name_buffer
     ) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>>
             = 0;
 };

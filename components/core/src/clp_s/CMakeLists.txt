@@ -40,6 +40,8 @@ set(
         ../clp/ffi/ir_stream/IrSerializationError.hpp
         ../clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
         ../clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
+        ../clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.cpp
+        ../clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp
