@@ -7,7 +7,12 @@ import json
 
 import pytest
 
-from tests.utils.classes import ClpAction, IntegrationTestPathConfig, NonClpAction, SampleDataset
+from tests.utils.classes import (
+    ClpAction,
+    IntegrationTestPathConfig,
+    NonClpAction,
+    SampleDataset,
+)
 from tests.utils.config import (
     ClpCorePathConfig,
     ConversionTestPathConfig,
@@ -75,16 +80,14 @@ def _convert_and_compress(
         ]
     )
     compression_result = compression_action.verify_returncode()
-    if not compression_result:
-        pytest.fail(compression_result.failure_message)
+    assert compression_result, compression_result.failure_message
 
     if test_paths.num_log_events is None:
         return
 
     search_action = ClpAction.from_cmd([clp_s_bin_path, "s", compression_path, "timestamp > 0"])
     search_result = search_action.verify_returncode()
-    if not search_result:
-        pytest.fail(search_result.failure_message)
+    assert search_result, search_result.failure_message
     lines = search_action.completed_proc.stdout.splitlines()
     if len(lines) != test_paths.num_log_events:
         pytest.fail(

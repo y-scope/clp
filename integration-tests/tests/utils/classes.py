@@ -392,6 +392,16 @@ class ClpAction(ExternalAction):
         reason: str,
         supporting_action: ExternalAction | None = None,
     ) -> str:
+        """
+        Format a failure message that includes `reason` and the path to this action's log file.
+        When this action's verification has failed as a direct result of another action,
+        `supporting_action` should be passed in so that the path to its log file is also included in
+        the failure message.
+
+        :param reason: A description of the failure.
+        :param supporting_action: A previous action that caused this failure.
+        :return: The formatted failure message.
+        """
         msg = f"{reason} See subprocess log at: '{self.log_file_path}'."
         if supporting_action is not None:
             supporting_exe = Path(supporting_action.cmd[0]).name

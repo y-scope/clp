@@ -1,7 +1,5 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
-import pytest
-
 from tests.utils.classes import ClpAction
 from tests.utils.config import (
     PackageCompressionJob,
@@ -14,7 +12,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
     Starts an instance of the CLP package.
 
     :param package_test_config:
-    :raise pytest.fail: if the start script returns a non-zero exit code.
+    :raise AssertionError: if the start script returns a non-zero exit code.
     """
     path_config = package_test_config.path_config
     start_script_path = path_config.start_script_path
@@ -28,8 +26,7 @@ def start_clp_package(package_test_config: PackageTestConfig) -> None:
     # fmt: on
     start_action = ClpAction.from_cmd(start_cmd)
     result = start_action.verify_returncode()
-    if not result:
-        pytest.fail(result.failure_message)
+    assert result, result.failure_message
 
 
 def stop_clp_package(package_test_config: PackageTestConfig) -> None:
@@ -37,7 +34,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     Stops the running instance of the CLP package.
 
     :param package_test_config:
-    :raise pytest.fail: if the stop script returns a non-zero exit code.
+    :raise AssertionError: if the stop script returns a non-zero exit code.
     """
     path_config = package_test_config.path_config
     stop_script_path = path_config.stop_script_path
@@ -51,8 +48,7 @@ def stop_clp_package(package_test_config: PackageTestConfig) -> None:
     # fmt: on
     stop_action = ClpAction.from_cmd(stop_cmd)
     result = stop_action.verify_returncode()
-    if not result:
-        pytest.fail(result.failure_message)
+    assert result, result.failure_message
 
 
 def run_package_compression_script(
@@ -64,7 +60,7 @@ def run_package_compression_script(
 
     :param compression_job:
     :param package_test_config:
-    :raise pytest.fail: if the compression script returns a non-zero exit code.
+    :raise AssertionError: if the compression script returns a non-zero exit code.
     """
     path_config = package_test_config.path_config
     compress_script_path = path_config.compress_script_path
@@ -87,5 +83,4 @@ def run_package_compression_script(
     # Run compression command for this job and fail the test if it returned a bad return code.
     compress_action = ClpAction.from_cmd(compress_cmd)
     result = compress_action.verify_returncode()
-    if not result:
-        pytest.fail(result.failure_message)
+    assert result, result.failure_message

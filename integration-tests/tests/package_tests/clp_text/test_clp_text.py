@@ -64,8 +64,7 @@ def test_clp_text_compression_text_multifile(
 
     # Check the correctness of compression.
     result = verify_package_compression(text_multifile.logs_path, package_test_config)
-    if not result:
-        pytest.fail(result.failure_message)
+    assert result, result.failure_message
 
     # Clear archives.
     package_path_config.clear_package_archives()
