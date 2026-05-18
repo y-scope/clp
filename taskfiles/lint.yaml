@@ -495,8 +495,6 @@ tasks:
             - "clp_s/search/kql/kql.hpp"
             - "clp_s/search/Output.cpp"
             - "clp_s/search/Output.hpp"
-            - "clp_s/search/Projection.cpp"
-            - "clp_s/search/Projection.hpp"
             - "clp_s/search/QueryRunner.cpp"
             - "clp_s/search/QueryRunner.hpp"
             - "clp_s/search/SchemaMatch.cpp"

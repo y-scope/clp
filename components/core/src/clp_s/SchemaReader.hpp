@@ -6,11 +6,19 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
+#include <absl/container/flat_hash_set.h>
 #include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
+#include <clpp/Defs.hpp>
+#include <clpp/LogTypeMetadata.hpp>
 
 #include "ColumnReader.hpp"
 #include "DictionaryReader.hpp"
@@ -155,6 +163,8 @@ public:
         m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_typed_log_dict.reset();
+        m_reconstruction_targets.clear();
+        m_logtype_metadata.reset();
         m_global_schema_tree = std::move(schema_tree);
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
@@ -286,6 +296,10 @@ public:
         m_typed_log_dict = std::move(dict);
     }
 
+    auto set_logtype_metadata(std::shared_ptr<clpp::LogTypeMetadataArray> metadata) -> void {
+        m_logtype_metadata = std::move(metadata);
+    }
+
     /**
      * @param schema
      * @return the first column ID found in the given schema, or -1 if the schema contains no
@@ -346,13 +360,13 @@ private:
 
     /**
      * Generates a JSON template for a LogMessage.
-     * @param log_msg_id The LogMessage node ID.
+     * @param log_msg_node_id The LogMessage node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
      * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
      */
-    auto generate_log_message_template(int32_t log_msg_id)
+    auto generate_log_message_template(SchemaNode::id_t log_msg_node_id)
             -> ystdlib::error_handling::Result<size_t>;
 
     /**
@@ -384,6 +398,116 @@ private:
             std::vector<int32_t>& path_to_intersection
     );
 
+    /**
+     * Checks whether a node (or any ancestor up to and including the LogMessage root) is
+     * projected. When Projection::Mode::ReturnAllColumns is active, this always returns true.
+     * @param node_id The global schema node ID to check.
+     * @return true if the node should be included in the output.
+     */
+    [[nodiscard]] auto is_node_projected(SchemaNode::id_t node_id) -> bool;
+
+    /**
+     * Reconstructs the text for a LogMessage or ParentRule from its shape by replacing %fqn%
+     * placeholders with the column/leaf values.
+     * @param log_msg_node_id The LogMessage node ID.
+     * @param parent_rule_fqn The FQN of a ParentRule to reconstruct, or empty for the full message.
+     * @param message_index The index of the message to reconstruct.
+     * @return The reconstructed raw log text.
+     */
+    [[nodiscard]] auto reconstruct_log_shape(
+            SchemaNode::id_t log_msg_node_id,
+            std::string_view parent_rule_fqn,
+            uint64_t message_index
+    ) -> std::string;
+
+    // LogMessage template generation helpers
+    struct LogMessageModes {
+        bool has_default{false};
+        bool has_decomposed{false};
+        bool has_shape{false};
+        bool is_return_all{false};
+        bool effective_has_default{false};
+    };
+
+    struct ChildProjectionModes {
+        bool any_child_projected{false};
+        bool any_child_decomposed{false};
+        bool any_child_shape{false};
+    };
+
+    struct LeafEntry {
+        SchemaNode::id_t global_column_id;
+        size_t column_idx;
+        std::string fqn;
+        NodeType type;
+    };
+
+    /**
+     * Computes the projection modes active for a LogMessage node.
+     * @param log_msg_node_id The LogMessage node ID.
+     * @return The computed modes.
+     */
+    [[nodiscard]] auto compute_log_message_modes(SchemaNode::id_t log_msg_node_id)
+            -> LogMessageModes;
+
+    /**
+     * Scans the schema children of a LogMessage to determine which projection modes are active.
+     * @param schema The schema span containing the LogMessage's children.
+     * @param log_msg_node_id The LogMessage node ID.
+     * @return The aggregated child projection modes.
+     */
+    [[nodiscard]] auto scan_child_projection_modes(
+            std::span<SchemaNode::id_t> schema,
+            SchemaNode::id_t log_msg_node_id
+    ) -> ChildProjectionModes;
+
+    /**
+     * Emits the default reconstruction and/or @shape field for a ParentRule node.
+     * @param log_msg_node_id The LogMessage node ID.
+     * @param global_column_id The ParentRule column ID.
+     * @param log_type_id The log type ID.
+     * @param found_log_type_id Whether the log type ID was found.
+     * @param emitted_parent_rules Set tracking already-emitted ParentRules (deduplication).
+     */
+    void emit_parent_rule_shape(
+            SchemaNode::id_t log_msg_node_id,
+            SchemaNode::id_t global_column_id,
+            clpp::log_shape_id_t log_type_id,
+            bool found_log_type_id,
+            absl::flat_hash_set<SchemaNode::id_t>& emitted_parent_rules
+    );
+
+    /**
+     * Emits the @shape constant string field for a LogTypeID node.
+     * @param log_type_id The log type ID.
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if the typed log dictionary is not available.
+     */
+    [[nodiscard]] auto emit_log_type_shape(clpp::log_shape_id_t log_type_id)
+            -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Collects leaf entries that should be emitted under a LogMessage's decomposed projection.
+     * @param schema The schema span containing the LogMessage's children.
+     * @param log_msg_node_id The LogMessage node ID.
+     * @param column_idx The current column index, updated as columns are consumed.
+     * @return The collected leaf entries.
+     */
+    [[nodiscard]] auto collect_leaf_entries(
+            std::span<SchemaNode::id_t> schema,
+            SchemaNode::id_t log_msg_node_id,
+            size_t& column_idx
+    ) -> std::vector<LeafEntry>;
+
+    /**
+     * Sorts, groups by FQN, and emits leaf entries as JSON array fields.
+     * @param entries The leaf entries to emit (sorted in-place).
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Unsupported if an unsupported column type is encountered.
+     */
+    [[nodiscard]] auto emit_grouped_leaf_entries(std::vector<LeafEntry>& entries)
+            -> ystdlib::error_handling::Result<void>;
+
     int32_t m_schema_id;
     uint64_t m_num_messages;
     uint64_t m_cur_message;
@@ -410,6 +534,8 @@ private:
     std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
 
     std::map<int32_t, std::pair<size_t, std::span<int32_t>>> m_global_id_to_unordered_object;
+    std::vector<std::pair<SchemaNode::id_t, std::string>> m_reconstruction_targets;
+    std::shared_ptr<clpp::LogTypeMetadataArray> m_logtype_metadata;
 };
 }  // namespace clp_s
 

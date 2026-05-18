@@ -45,6 +45,19 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
     }
 }
 
+auto SchemaNode::is_structural_container() const -> bool {
+    switch (m_type) {
+        case NodeType::Object:
+        case NodeType::LogMessage:
+        case NodeType::ParentRule: {
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
+}
+
 int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key) {
     auto node_it = m_node_map.find({parent_node_id, key, type});
     if (node_it != m_node_map.end()) {
@@ -123,6 +136,28 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
     size_t compressed_size = schema_tree_writer.get_pos();
     schema_tree_writer.close();
     return compressed_size;
+}
+
+auto SchemaTree::build_qualified_name(int32_t node_id) const -> std::string {
+    std::vector<std::string_view> names;
+    auto cur_id{node_id};
+    while (-1 != cur_id) {
+        auto const& node = get_node(cur_id);
+        if (NodeType::LogMessage == node.get_type()) {
+            break;
+        }
+        names.emplace_back(node.get_key_name());
+        cur_id = node.get_parent_id();
+    }
+
+    std::string qualified_name;
+    for (auto it{names.rbegin()}; names.rend() != it; ++it) {
+        if (names.rbegin() != it) {
+            qualified_name.append(".");
+        }
+        qualified_name.append(*it);
+    }
+    return qualified_name;
 }
 
 int32_t SchemaTree::find_matching_subtree_root_in_subtree(

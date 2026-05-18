@@ -19,11 +19,10 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clpp/ErrorCode.hpp>
+#include <clpp/LogTypeMetadata.hpp>
 #include <clpp/LogTypeStat.hpp>
-
-#include "clp_s/SchemaTree.hpp"
-#include "clpp/LogTypeMetadata.hpp"
 
 namespace clp_s {
 void ArchiveReader::open(Path const& archive_path, Options const& options) {
@@ -89,7 +88,7 @@ auto ArchiveReader::initialize_archive_reader() -> void {
         }
         m_logtype_metadata = metadata.value();
         m_logtype_stats = clpp::LogTypeStatArray();
-        read_logtype_stats();
+        std::ignore = read_logtype_stats();
         m_typed_log_dict->read_entries();
     }
 }
@@ -429,6 +428,11 @@ void ArchiveReader::initialize_schema_reader(
             should_marshal_records
     );
     reader.set_typed_log_dict(m_typed_log_dict);
+    if (m_logtype_metadata.has_value()) {
+        reader.set_logtype_metadata(
+                std::make_shared<clpp::LogTypeMetadataArray>(m_logtype_metadata.value())
+        );
+    }
     auto timestamp_column_ids
             = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();
     for (size_t i = 0; i < schema.size(); ++i) {

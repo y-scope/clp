@@ -101,9 +101,7 @@ public:
         std::memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
     }
 
-    /**
-     * Getters
-     */
+    // Methods
     int32_t get_id() const { return m_id; }
 
     int32_t get_parent_id() const { return m_parent_id; }
@@ -130,6 +128,13 @@ public:
      * @param child_id
      */
     void add_child(id_t child_id) { m_children_ids.push_back(child_id); }
+
+    /**
+     * Returns whether the node acts as a structural container (i.e., it can have children and be
+     * traversed during key resolution).
+     * @return true for Object, LogMessage, and ParentRule; false otherwise.
+     */
+    [[nodiscard]] auto is_structural_container() const -> bool;
 
 private:
     id_t m_parent_id;
@@ -218,6 +223,14 @@ public:
         m_node_map.clear();
         m_namespace_and_type_to_subtree_id.clear();
     }
+
+    /**
+     * Builds the fully qualified name for a node by walking up to (but not including) the
+     * LogMessage ancestor and concatenating key names with ".".
+     * @param node_id The node ID to start from.
+     * @return The dot-delimited FQN.
+     */
+    [[nodiscard]] auto build_qualified_name(SchemaNode::id_t node_id) const -> std::string;
 
     /**
      * Finds an ancestor node within a subtree that matches the given type. When multiple matching

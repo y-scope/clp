@@ -753,24 +753,6 @@ void SchemaMatch::build_logtype_id_to_schema_id_map() {
     }
 }
 
-auto SchemaMatch::build_qualified_name(SchemaNode::id_t start_node_id) -> std::string {
-    std::vector<std::string_view> names;
-    auto const* cur_node{&m_tree->get_node(start_node_id)};
-    while (NodeType::LogMessage != cur_node->get_type()) {
-        names.emplace_back(cur_node->get_key_name());
-        cur_node = &m_tree->get_node(cur_node->get_parent_id());
-    }
-
-    std::string qualified_name;
-    for (auto it{names.rbegin()}; names.rend() != it; ++it) {
-        if (names.rbegin() != it) {
-            qualified_name.append(".");
-        }
-        qualified_name.append(*it);
-    }
-    return qualified_name;
-}
-
 auto SchemaMatch::ensure_log_surgeon_parser_initialized() -> ystdlib::error_handling::Result<void> {
     if (nullptr != m_ls_parser) {
         return ystdlib::error_handling::success();
@@ -856,7 +838,7 @@ auto SchemaMatch::resolve_clpp_query(
     }
 
     auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
-    auto qualified_name{build_qualified_name(root_node_id)};
+    auto qualified_name{m_tree->build_qualified_name(root_node_id)};
 
     if (FilterOperation::EXISTS == filter->get_operation()) {
         auto matched_schema_ids{find_schemas_matching_predicate(

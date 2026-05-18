@@ -12,6 +12,8 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include <clpp/Defs.hpp>
+
 #include "clp_s/SchemaReader.hpp"
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
@@ -200,35 +202,48 @@ bool search_archive(
     // Populate projection
     auto projection = std::make_shared<Projection>(
             command_line_arguments.get_projection_columns().empty()
-                    ? ProjectionMode::ReturnAllColumns
-                    : ProjectionMode::ReturnSelectedColumns
+                    ? Projection::Mode::ReturnAllColumns
+                    : Projection::Mode::ReturnSelectedColumns
     );
     try {
         for (auto const& column : command_line_arguments.get_projection_columns()) {
+            bool is_decomposed{false};
+            bool is_shape{false};
+            std::string column_str{column};
+            if (column_str.ends_with(clpp::cDecomposedSuffix)) {
+                is_decomposed = true;
+                column_str.resize(column_str.size() - clpp::cDecomposedSuffix.size());
+            } else if (column_str.ends_with(clpp::cShapeSuffix)) {
+                is_shape = true;
+                column_str.resize(column_str.size() - clpp::cShapeSuffix.size());
+            }
+
             std::vector<std::string> descriptor_tokens;
             std::string descriptor_namespace;
             if (false
                 == clp_s::search::ast::tokenize_column_descriptor(
-                        column,
+                        column_str,
                         descriptor_tokens,
                         descriptor_namespace
                 ))
             {
-                SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+                SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column_str);
                 return false;
             }
             projection->add_column(
                     ast::ColumnDescriptor::create_from_escaped_tokens(
                             descriptor_tokens,
                             descriptor_namespace
-                    )
+                    ),
+                    is_decomposed,
+                    is_shape
             );
         }
+        projection->resolve_columns(archive_reader->get_schema_tree());
     } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());
         return false;
     }
-    projection->resolve_columns(archive_reader->get_schema_tree());
     archive_reader->set_projection(projection);
 
     std::unique_ptr<OutputHandler> output_handler;

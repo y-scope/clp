@@ -134,14 +134,6 @@ private:
     void build_logtype_id_to_schema_id_map();
 
     /**
-     * Builds a fully qualified dot-separated name from a schema node up to (but not including)
-     * the LogMessage root. The qualified name of a node that is a LogMessage is the empty string.
-     * @param start_node_id
-     * @return The qualified name.
-     */
-    auto build_qualified_name(SchemaNode::id_t start_node_id) -> std::string;
-
-    /**
      * Lazily initializes the log-surgeon parser and schema if not already done.
      * @return true on success, false on failure.
      */

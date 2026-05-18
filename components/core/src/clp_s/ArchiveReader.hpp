@@ -321,7 +321,7 @@ private:
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::SchemaMetadata> m_id_to_schema_metadata;
     std::shared_ptr<search::Projection> m_projection{
-            std::make_shared<search::Projection>(search::ProjectionMode::ReturnAllColumns)
+            std::make_shared<search::Projection>(search::Projection::Mode::ReturnAllColumns)
     };
 
     PackedStreamReader m_stream_reader;

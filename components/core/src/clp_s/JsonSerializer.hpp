@@ -33,6 +33,7 @@ public:
         BeginUnnamedArray,
         AddLiteralField,
         AddConstantStringField,
+        AddReconstructedLogShapeField,
     };
 
     static int64_t const cReservedLength = 4096;
@@ -158,6 +159,12 @@ public:
         append_key();
         m_json_string.push_back('"');
         m_json_string.append(m_constant_strings[m_constant_strings_index++]);
+        m_json_string.append("\",");
+    }
+
+    void append_quoted_value(std::string_view value) {
+        m_json_string.push_back('"');
+        StringUtils::escape_json_string(m_json_string, value);
         m_json_string.append("\",");
     }
 
