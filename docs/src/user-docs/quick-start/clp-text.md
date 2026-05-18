@@ -31,10 +31,9 @@ services instead of bundled services, see the
 ```
 
 ```{note}
-Configurations are stored in `etc/clp-config.yaml`:
-- If CLP fails to start (e.g., due to a port conflict), try adjusting the settings and restarting.
-- Configuration changes are **not** hot-reloaded. You must run `sbin/stop-clp.sh` followed by
-  `sbin/start-clp.sh` for changes to take effect.
+If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
+`etc/clp-config.yaml` and then run the start command again. For more information about configuring
+CLP, check out the [CLP environment setup][clp-environment-setup] section.
 ```
 
 ````{warning}
@@ -317,5 +316,6 @@ kind delete cluster --name clp
 :::
 ::::
 
+[clp-environment-setup]: ../guides-docker-compose-deployment.md#clp-environment-setup
 [datasets]: ../resources-datasets.md
 [text-search-syntax]: ../reference-text-search-syntax.md
