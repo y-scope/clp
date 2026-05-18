@@ -24,8 +24,10 @@ ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
-RUN userdel -r ubuntu 2>/dev/null || true \
-    && useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+RUN existing_user="$(getent passwd "${UID}" | cut --delimiter=: --fields=1)" || true; \
+    [ -z "${existing_user}" ] || userdel --remove "${existing_user}" \
+    || { echo "ERROR: Cannot delete user '${existing_user}' that occupies UID ${UID}"; exit 1; }
+RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
 
