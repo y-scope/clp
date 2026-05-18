@@ -239,7 +239,7 @@ bool search_archive(
                     is_shape
             );
         }
-        projection->resolve_columns(archive_reader->get_schema_tree());
+        projection->resolve_columns(*archive_reader->get_schema_tree());
     } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());
         return false;
