@@ -14,17 +14,14 @@ inputs:
     default: ""
     description: "Container image registry password"
     required: false
-  platform_id:
-    description: "Platform ID of the container (e.g. ubuntu)"
-    required: false
-  platform_version_id:
-    description: "Platform VERSION_ID / VERSION_CODENAME of the container
-      (e.g. jammy, focal, etc.)"
-    required: false
   arch:
     description: "Target architecture (amd64 or arm64)"
     default: "amd64"
     required: false
+  ubuntu_version_codename:
+    description: "Ubuntu version codename (e.g. jammy, noble) used as the base image for the runtime
+     container"
+    required: true
 
 runs:
   using: "composite"
@@ -94,3 +91,5 @@ runs:
         push: true
         tags: "${{steps.extract-gh-meta.outputs.tags}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
+        build-args: |
+          UBUNTU_VERSION_CODENAME=${{inputs.ubuntu_version_codename}}
