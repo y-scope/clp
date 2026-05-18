@@ -1,6 +1,6 @@
 """Define all python classes used in `integration-tests`."""
 
-import re
+import uuid
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
@@ -11,12 +11,15 @@ from clp_py_utils.clp_config import (
     ClpConfig,
 )
 
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
     clear_directory,
     remove_path,
     validate_dir_exists,
     validate_file_exists,
 )
+
+_UUID_V4_VERSION = 4
 
 
 @dataclass(frozen=True)
@@ -78,7 +81,7 @@ class PackagePathConfig:
     package_test_scripts_dir: Path
 
     #: Root directory for package tests output.
-    test_root_dir: InitVar[Path]
+    test_cache_dir: InitVar[Path]
 
     #: Directory to store temporary package config files.
     temp_config_dir: Path = field(init=False, repr=True)
@@ -89,7 +92,7 @@ class PackagePathConfig:
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self, test_root_dir: Path) -> None:
+    def __post_init__(self, test_cache_dir: Path) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the CLP package directory exists and contains required directories.
         clp_package_dir = self.clp_package_dir
@@ -108,10 +111,10 @@ class PackagePathConfig:
         validate_dir_exists(self.package_test_scripts_dir)
 
         # Initialize directory for package test output.
-        validate_dir_exists(test_root_dir)
-        object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+        validate_dir_exists(test_cache_dir)
+        object.__setattr__(self, "temp_config_dir", test_cache_dir / "temp_config_files")
         object.__setattr__(
-            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
+            self, "package_decompression_dir", test_cache_dir / "package-decompressed-logs"
         )
 
         # Initialize log directory for the package.
@@ -259,8 +262,8 @@ class PackageInstance:
         Reads the CLP instance ID from the given file and validates its format.
 
         :param clp_instance_id_file_path:
-        :return: The 4-character hexadecimal instance ID.
-        :raise ValueError: If the file cannot be read or contents are not a 4-character hex string.
+        :return: The instance ID (a UUIDv4 string).
+        :raise ValueError: If the file cannot be read or contents are not a valid UUIDv4.
         """
         try:
             contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
@@ -268,68 +271,21 @@ class PackageInstance:
             err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}'"
             raise ValueError(err_msg) from err
 
-        if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):
+        try:
+            parsed = uuid.UUID(contents)
+        except ValueError as err:
             err_msg = (
-                f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
-                f" hexadecimal string, but read {contents}."
+                f"Invalid instance ID in {clp_instance_id_file_path}: expect a UUIDv4, "
+                f"but read '{contents}'."
+            )
+            raise ValueError(err_msg) from err
+        if parsed.version != _UUID_V4_VERSION:
+            err_msg = (
+                f"Instance ID in '{clp_instance_id_file_path}' was not in UUIDv4 format; found"
+                f" UUIDv{parsed.version}: '{contents}'."
             )
             raise ValueError(err_msg)
-
         return contents
-
-
-@dataclass(frozen=True)
-class IntegrationTestPathConfig:
-    """Path configuration for CLP integration tests."""
-
-    #: Default directory for integration test output.
-    test_root_dir: Path
-
-    #: Directory to store the downloaded logs.
-    logs_download_dir: Path = field(init=False, repr=True)
-
-    #: Optional initialization value used to set `logs_download_dir`.
-    logs_download_dir_init: InitVar[Path | None] = None
-
-    def __post_init__(self, logs_download_dir_init: Path | None) -> None:
-        """Initialize and create required directories for integration tests."""
-        if logs_download_dir_init is not None:
-            object.__setattr__(self, "logs_download_dir", logs_download_dir_init)
-        else:
-            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
-
-        self.test_root_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
-
-
-@dataclass(frozen=True)
-class IntegrationTestLogs:
-    """Metadata for the downloaded logs used for integration tests."""
-
-    #:
-    name: str
-    #:
-    tarball_url: str
-    integration_test_path_config: InitVar[IntegrationTestPathConfig]
-    #:
-    tarball_path: Path = field(init=False, repr=True)
-    #:
-    extraction_dir: Path = field(init=False, repr=True)
-    #: Optional number of log events in the downloaded logs.
-    num_log_events: int | None = None
-
-    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
-        """Initialize and set tarball and extraction paths for integration test logs."""
-        name = self.name.strip()
-        if 0 == len(name):
-            err_msg = "`name` cannot be empty."
-            raise ValueError(err_msg)
-        logs_download_dir = integration_test_path_config.logs_download_dir
-        validate_dir_exists(logs_download_dir)
-
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "tarball_path", logs_download_dir / f"{name}.tar.gz")
-        object.__setattr__(self, "extraction_dir", logs_download_dir / name)
 
 
 @dataclass(frozen=True)
@@ -352,13 +308,13 @@ class CompressionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_root_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
         object.__setattr__(
-            self, "decompression_dir", test_root_dir / f"{test_name}-decompressed-logs"
+            self, "decompression_dir", test_cache_dir / f"{test_name}-decompressed-logs"
         )
 
     def clear_test_outputs(self) -> None:
@@ -389,12 +345,12 @@ class ConversionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_root_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "conversion_dir", test_root_dir / f"{test_name}-converted")
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "conversion_dir", test_cache_dir / f"{test_name}-converted")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this conversion test."""
