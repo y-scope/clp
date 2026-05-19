@@ -44,6 +44,7 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
+    Resources,
     RESULTS_CACHE_COMPONENT_NAME,
     SPIDER_DB_PASS_ENV_VAR_NAME,
     SPIDER_DB_USER_ENV_VAR_NAME,
@@ -125,6 +126,27 @@ class BaseController(ABC):
         """
         Stops the components.
         """
+
+    @staticmethod
+    def _inject_resource_limit_env_vars(
+        env_vars: EnvVarsDict,
+        component_name: str,
+        resources: Resources | None,
+    ) -> None:
+        """
+        Injects CPU and memory limit environment variables for the given component.
+
+        :param env_vars: Dictionary to inject environment variables into.
+        :param component_name: Component name used to construct env var names
+            (e.g., "database" -> "CLP_DATABASE_CPU_LIMIT").
+        :param resources: The component's resource configuration, if any.
+        """
+        if resources is None or resources.limits is None:
+            return
+        if resources.limits.cpu is not None:
+            env_vars[f"CLP_{component_name.upper()}_CPU_LIMIT"] = resources.limits.cpu
+        if resources.limits.memory is not None:
+            env_vars[f"CLP_{component_name.upper()}_MEMORY_LIMIT"] = resources.limits.memory
 
     def _set_up_env_for_database_bundling(self) -> EnvVarsDict:
         """
@@ -220,12 +242,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        database_resources = self._clp_config.database.resources
-        if database_resources and database_resources.limits:
-            if database_resources.limits.cpu is not None:
-                env_vars["CLP_DATABASE_CPU_LIMIT"] = database_resources.limits.cpu
-            if database_resources.limits.memory is not None:
-                env_vars["CLP_DATABASE_MEMORY_LIMIT"] = database_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, DB_COMPONENT_NAME, self._clp_config.resources.database
+        )
 
         return env_vars
 
@@ -301,12 +320,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        queue_resources = self._clp_config.queue.resources
-        if queue_resources and queue_resources.limits:
-            if queue_resources.limits.cpu is not None:
-                env_vars["CLP_QUEUE_CPU_LIMIT"] = queue_resources.limits.cpu
-            if queue_resources.limits.memory is not None:
-                env_vars["CLP_QUEUE_MEMORY_LIMIT"] = queue_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, QUEUE_COMPONENT_NAME, self._clp_config.resources.queue
+        )
 
         return env_vars
 
@@ -397,12 +413,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        redis_resources = self._clp_config.redis.resources
-        if redis_resources and redis_resources.limits:
-            if redis_resources.limits.cpu is not None:
-                env_vars["CLP_REDIS_CPU_LIMIT"] = redis_resources.limits.cpu
-            if redis_resources.limits.memory is not None:
-                env_vars["CLP_REDIS_MEMORY_LIMIT"] = redis_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, REDIS_COMPONENT_NAME, self._clp_config.resources.redis
+        )
 
         return env_vars
 
@@ -429,14 +442,6 @@ class BaseController(ABC):
             "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self._clp_config.spider_scheduler.host),
             "SPIDER_SCHEDULER_PORT": str(self._clp_config.spider_scheduler.port),
         }
-
-        # Resource limits
-        spider_resources = self._clp_config.spider_scheduler.resources
-        if spider_resources and spider_resources.limits:
-            if spider_resources.limits.cpu is not None:
-                env_vars["CLP_SPIDER_SCHEDULER_CPU_LIMIT"] = spider_resources.limits.cpu
-            if spider_resources.limits.memory is not None:
-                env_vars["CLP_SPIDER_SCHEDULER_MEMORY_LIMIT"] = spider_resources.limits.memory
 
         return env_vars
 
@@ -519,12 +524,9 @@ class BaseController(ABC):
             }
 
         # Resource limits
-        results_cache_resources = self._clp_config.results_cache.resources
-        if results_cache_resources and results_cache_resources.limits:
-            if results_cache_resources.limits.cpu is not None:
-                env_vars["CLP_RESULTS_CACHE_CPU_LIMIT"] = results_cache_resources.limits.cpu
-            if results_cache_resources.limits.memory is not None:
-                env_vars["CLP_RESULTS_CACHE_MEMORY_LIMIT"] = results_cache_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, RESULTS_CACHE_COMPONENT_NAME, self._clp_config.resources.resultsCache
+        )
 
         return env_vars
 
@@ -551,14 +553,11 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        comp_sched_resources = self._clp_config.compression_scheduler.resources
-        if comp_sched_resources and comp_sched_resources.limits:
-            if comp_sched_resources.limits.cpu is not None:
-                env_vars["CLP_COMPRESSION_SCHEDULER_CPU_LIMIT"] = comp_sched_resources.limits.cpu
-            if comp_sched_resources.limits.memory is not None:
-                env_vars["CLP_COMPRESSION_SCHEDULER_MEMORY_LIMIT"] = (
-                    comp_sched_resources.limits.memory
-                )
+        self._inject_resource_limit_env_vars(
+            env_vars,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            self._clp_config.resources.compressionScheduler,
+        )
 
         return env_vars
 
@@ -583,12 +582,11 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        query_sched_resources = self._clp_config.query_scheduler.resources
-        if query_sched_resources and query_sched_resources.limits:
-            if query_sched_resources.limits.cpu is not None:
-                env_vars["CLP_QUERY_SCHEDULER_CPU_LIMIT"] = query_sched_resources.limits.cpu
-            if query_sched_resources.limits.memory is not None:
-                env_vars["CLP_QUERY_SCHEDULER_MEMORY_LIMIT"] = query_sched_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars,
+            QUERY_SCHEDULER_COMPONENT_NAME,
+            self._clp_config.resources.queryScheduler,
+        )
 
         return env_vars
 
@@ -621,14 +619,11 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        comp_worker_resources = self._clp_config.compression_worker.resources
-        if comp_worker_resources and comp_worker_resources.limits:
-            if comp_worker_resources.limits.cpu is not None:
-                env_vars["CLP_COMPRESSION_WORKER_CPU_LIMIT"] = comp_worker_resources.limits.cpu
-            if comp_worker_resources.limits.memory is not None:
-                env_vars["CLP_COMPRESSION_WORKER_MEMORY_LIMIT"] = (
-                    comp_worker_resources.limits.memory
-                )
+        self._inject_resource_limit_env_vars(
+            env_vars,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            self._clp_config.resources.compressionWorker,
+        )
 
         return env_vars
 
@@ -659,12 +654,11 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        query_worker_resources = self._clp_config.query_worker.resources
-        if query_worker_resources and query_worker_resources.limits:
-            if query_worker_resources.limits.cpu is not None:
-                env_vars["CLP_QUERY_WORKER_CPU_LIMIT"] = query_worker_resources.limits.cpu
-            if query_worker_resources.limits.memory is not None:
-                env_vars["CLP_QUERY_WORKER_MEMORY_LIMIT"] = query_worker_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars,
+            QUERY_WORKER_COMPONENT_NAME,
+            self._clp_config.resources.queryWorker,
+        )
 
         return env_vars
 
@@ -696,12 +690,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        reducer_resources = self._clp_config.reducer.resources
-        if reducer_resources and reducer_resources.limits:
-            if reducer_resources.limits.cpu is not None:
-                env_vars["CLP_REDUCER_CPU_LIMIT"] = reducer_resources.limits.cpu
-            if reducer_resources.limits.memory is not None:
-                env_vars["CLP_REDUCER_MEMORY_LIMIT"] = reducer_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, REDUCER_COMPONENT_NAME, self._clp_config.resources.reducer
+        )
 
         return env_vars
 
@@ -730,12 +721,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        api_server_resources = self._clp_config.api_server.resources
-        if api_server_resources and api_server_resources.limits:
-            if api_server_resources.limits.cpu is not None:
-                env_vars["CLP_API_SERVER_CPU_LIMIT"] = api_server_resources.limits.cpu
-            if api_server_resources.limits.memory is not None:
-                env_vars["CLP_API_SERVER_MEMORY_LIMIT"] = api_server_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, API_SERVER_COMPONENT_NAME, self._clp_config.resources.apiServer
+        )
 
         return env_vars
 
@@ -775,12 +763,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        log_ingestor_resources = self._clp_config.log_ingestor.resources
-        if log_ingestor_resources and log_ingestor_resources.limits:
-            if log_ingestor_resources.limits.cpu is not None:
-                env_vars["CLP_LOG_INGESTOR_CPU_LIMIT"] = log_ingestor_resources.limits.cpu
-            if log_ingestor_resources.limits.memory is not None:
-                env_vars["CLP_LOG_INGESTOR_MEMORY_LIMIT"] = log_ingestor_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, LOG_INGESTOR_COMPONENT_NAME, self._clp_config.resources.logIngestor
+        )
 
         return env_vars
 
@@ -933,12 +918,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        webui_resources = self._clp_config.webui.resources
-        if webui_resources and webui_resources.limits:
-            if webui_resources.limits.cpu is not None:
-                env_vars["CLP_WEBUI_CPU_LIMIT"] = webui_resources.limits.cpu
-            if webui_resources.limits.memory is not None:
-                env_vars["CLP_WEBUI_MEMORY_LIMIT"] = webui_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, WEBUI_COMPONENT_NAME, self._clp_config.resources.webui
+        )
 
         return env_vars
 
@@ -979,12 +961,9 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        mcp_resources = self._clp_config.mcp_server.resources
-        if mcp_resources and mcp_resources.limits:
-            if mcp_resources.limits.cpu is not None:
-                env_vars["CLP_MCP_SERVER_CPU_LIMIT"] = mcp_resources.limits.cpu
-            if mcp_resources.limits.memory is not None:
-                env_vars["CLP_MCP_SERVER_MEMORY_LIMIT"] = mcp_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars, MCP_SERVER_COMPONENT_NAME, self._clp_config.resources.mcpServer
+        )
 
         return env_vars
 
@@ -1019,12 +998,11 @@ class BaseController(ABC):
         }
 
         # Resource limits
-        gc_resources = self._clp_config.garbage_collector.resources
-        if gc_resources and gc_resources.limits:
-            if gc_resources.limits.cpu is not None:
-                env_vars["CLP_GARBAGE_COLLECTOR_CPU_LIMIT"] = gc_resources.limits.cpu
-            if gc_resources.limits.memory is not None:
-                env_vars["CLP_GARBAGE_COLLECTOR_MEMORY_LIMIT"] = gc_resources.limits.memory
+        self._inject_resource_limit_env_vars(
+            env_vars,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
+            self._clp_config.resources.garbageCollector,
+        )
 
         return env_vars
 

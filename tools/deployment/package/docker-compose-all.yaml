@@ -61,8 +61,8 @@ services:
       replicas: "${CLP_DATABASE_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_DATABASE_CPU_LIMIT:-0}"
-          memory: "${CLP_DATABASE_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_DATABASE_CPU_LIMIT:-1}"
+          memory: "${CLP_DATABASE_MEMORY_LIMIT:-4G}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
@@ -99,11 +99,6 @@ services:
     <<: *service_defaults
     restart: "on-failure:3"
     hostname: "db_table_creator"
-    deploy:
-      resources:
-        limits:
-          cpus: "${CLP_DB_TABLE_CREATOR_CPU_LIMIT:-0}"
-          memory: "${CLP_DB_TABLE_CREATOR_MEMORY_LIMIT:-0}"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_ROOT_PASS: "${CLP_DB_ROOT_PASS:?Please set a value.}"
@@ -134,8 +129,8 @@ services:
       replicas: "${CLP_QUEUE_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_QUEUE_CPU_LIMIT:-0}"
-          memory: "${CLP_QUEUE_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_QUEUE_CPU_LIMIT:-1}"
+          memory: "${CLP_QUEUE_MEMORY_LIMIT:-4G}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS:?Please set a value.}"
@@ -165,8 +160,8 @@ services:
       replicas: "${CLP_REDIS_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_REDIS_CPU_LIMIT:-0}"
-          memory: "${CLP_REDIS_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_REDIS_CPU_LIMIT:-1}"
+          memory: "${CLP_REDIS_MEMORY_LIMIT:-4G}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
@@ -208,8 +203,8 @@ services:
       replicas: "${CLP_RESULTS_CACHE_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_RESULTS_CACHE_CPU_LIMIT:-0}"
-          memory: "${CLP_RESULTS_CACHE_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_RESULTS_CACHE_CPU_LIMIT:-1}"
+          memory: "${CLP_RESULTS_CACHE_MEMORY_LIMIT:-4G}"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}"
@@ -244,11 +239,6 @@ services:
     <<: *service_defaults
     restart: "on-failure:3"
     hostname: "results_cache_indices_creator"
-    deploy:
-      resources:
-        limits:
-          cpus: "${CLP_RESULTS_CACHE_INDICES_CREATOR_CPU_LIMIT:-0}"
-          memory: "${CLP_RESULTS_CACHE_INDICES_CREATOR_MEMORY_LIMIT:-0}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     depends_on:
@@ -269,8 +259,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_SPIDER_SCHEDULER_CPU_LIMIT:-0}"
-          memory: "${CLP_SPIDER_SCHEDULER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_SPIDER_SCHEDULER_CPU_LIMIT:-1}"
+          memory: "${CLP_SPIDER_SCHEDULER_MEMORY_LIMIT:-4G}"
     environment:
       SPIDER_LOG_FILE: "/var/log/spider_scheduler.log"
     depends_on:
@@ -296,8 +286,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_COMPRESSION_SCHEDULER_CPU_LIMIT:-0}"
-          memory: "${CLP_COMPRESSION_SCHEDULER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_COMPRESSION_SCHEDULER_CPU_LIMIT:-1}"
+          memory: "${CLP_COMPRESSION_SCHEDULER_MEMORY_LIMIT:-4G}"
     stop_grace_period: "300s"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
@@ -335,8 +325,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_COMPRESSION_WORKER_CPU_LIMIT:-0}"
-          memory: "${CLP_COMPRESSION_WORKER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_COMPRESSION_WORKER_CPU_LIMIT:-1}"
+          memory: "${CLP_COMPRESSION_WORKER_MEMORY_LIMIT:-4G}"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
@@ -376,8 +366,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_SPIDER_COMPRESSION_WORKER_CPU_LIMIT:-0}"
-          memory: "${CLP_SPIDER_COMPRESSION_WORKER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_COMPRESSION_WORKER_CPU_LIMIT:-1}"
+          memory: "${CLP_COMPRESSION_WORKER_MEMORY_LIMIT:-4G}"
     environment:
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
@@ -414,8 +404,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_WEBUI_CPU_LIMIT:-0}"
-          memory: "${CLP_WEBUI_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_WEBUI_CPU_LIMIT:-1}"
+          memory: "${CLP_WEBUI_MEMORY_LIMIT:-4G}"
     environment:
       CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: "${CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID:-}"
       CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: "${CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY:-}"
@@ -469,8 +459,8 @@ services:
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_GARBAGE_COLLECTOR_CPU_LIMIT:-0}"
-          memory: "${CLP_GARBAGE_COLLECTOR_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_GARBAGE_COLLECTOR_CPU_LIMIT:-1}"
+          memory: "${CLP_GARBAGE_COLLECTOR_MEMORY_LIMIT:-4G}"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
@@ -502,8 +492,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_QUERY_SCHEDULER_CPU_LIMIT:-0}"
-          memory: "${CLP_QUERY_SCHEDULER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_QUERY_SCHEDULER_CPU_LIMIT:-1}"
+          memory: "${CLP_QUERY_SCHEDULER_MEMORY_LIMIT:-4G}"
     stop_grace_period: "10s"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
@@ -547,8 +537,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_QUERY_WORKER_CPU_LIMIT:-0}"
-          memory: "${CLP_QUERY_WORKER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_QUERY_WORKER_CPU_LIMIT:-1}"
+          memory: "${CLP_QUERY_WORKER_MEMORY_LIMIT:-4G}"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set a value.}\
         @queue:${CLP_QUEUE_CONNECT_PORT:-5672}"
@@ -587,8 +577,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${CLP_REDUCER_CPU_LIMIT:-0}"
-          memory: "${CLP_REDUCER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_REDUCER_CPU_LIMIT:-1}"
+          memory: "${CLP_REDUCER_MEMORY_LIMIT:-4G}"
     stop_grace_period: "10s"
     environment:
       CLP_HOME: "/opt/clp"
@@ -619,8 +609,8 @@ services:
       replicas: "${CLP_MCP_SERVER_ENABLED:-0}"
       resources:
         limits:
-          cpus: "${CLP_MCP_SERVER_CPU_LIMIT:-0}"
-          memory: "${CLP_MCP_SERVER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_MCP_SERVER_CPU_LIMIT:-1}"
+          memory: "${CLP_MCP_SERVER_MEMORY_LIMIT:-4G}"
     environment:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
@@ -663,8 +653,8 @@ services:
       replicas: "${CLP_API_SERVER_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_API_SERVER_CPU_LIMIT:-0}"
-          memory: "${CLP_API_SERVER_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_API_SERVER_CPU_LIMIT:-1}"
+          memory: "${CLP_API_SERVER_MEMORY_LIMIT:-4G}"
     environment:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
@@ -706,8 +696,8 @@ services:
       replicas: "${CLP_LOG_INGESTOR_ENABLED:-1}"
       resources:
         limits:
-          cpus: "${CLP_LOG_INGESTOR_CPU_LIMIT:-0}"
-          memory: "${CLP_LOG_INGESTOR_MEMORY_LIMIT:-0}"
+          cpus: "${CLP_LOG_INGESTOR_CPU_LIMIT:-1}"
+          memory: "${CLP_LOG_INGESTOR_MEMORY_LIMIT:-4G}"
     environment:
       CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
