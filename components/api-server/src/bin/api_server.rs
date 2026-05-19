@@ -58,7 +58,6 @@ async fn main() -> anyhow::Result<()> {
 
     let meter = opentelemetry::global::meter("api-server");
     let startup_counter = meter.u64_counter("clp.service.event").build();
-    startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
     let api_server_config = config
         .api_server
@@ -78,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Cannot connect to CLP")?;
 
     let router = api_server::routes::from_client(client)?;
+    startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
     tracing::info!("Server started at {addr}");
     let serve_result = axum::serve(listener, router)
