@@ -9,6 +9,12 @@ use opentelemetry_sdk::{
 
 use crate::{Error, clp_config::package::config::Telemetry};
 
+/// Values accepted by `CLP_DISABLE_TELEMETRY` and `DO_NOT_TRACK` to disable telemetry.
+///
+/// NOTE: This must be kept consistent with the Python implementation in
+/// `clp_package_utils/scripts/start_clp.py`.
+const TELEMETRY_DISABLE_VALUES: [&str; 4] = ["1", "true", "yes", "y"];
+
 /// Initializes OpenTelemetry metrics collection with the provided configuration.
 ///
 /// Returns `Ok(None)` if telemetry is disabled, `Ok(Some(provider))` on success,
@@ -19,7 +25,12 @@ use crate::{Error, clp_config::package::config::Telemetry};
 /// Returns an error if the OTLP metric exporter fails to build (e.g., invalid
 /// endpoint configuration or missing HTTP client support).
 pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterProvider>, Error> {
-    if telemetry_config.disable || env::var("CLP_DISABLE_TELEMETRY").is_ok() {
+    if telemetry_config.disable
+        || env::var("CLP_DISABLE_TELEMETRY")
+            .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.to_lowercase().as_str()))
+        || env::var("DO_NOT_TRACK")
+            .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.to_lowercase().as_str()))
+    {
         return Ok(None);
     }
 
