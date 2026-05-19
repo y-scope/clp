@@ -2,7 +2,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use opentelemetry::global;
-use opentelemetry::KeyValue;
 use sqlx::FromRow;
 
 /// Represents an entry of a buffered object metadata.
@@ -77,11 +76,11 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         object_metadata_to_ingest: Vec<CompressionBufferEntry>,
     ) -> Result<bool> {
         let mut submission_triggered = false;
-        
+
         for entry in object_metadata_to_ingest {
             self.bytes_total.add(entry.size, &[]);
             self.records_total.add(1, &[]);
-            
+
             self.total_size += entry.size;
             self.buf.push(entry.id);
 
