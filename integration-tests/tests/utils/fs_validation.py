@@ -17,7 +17,7 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     """
     cmd = [get_binary_path("diff"), "--brief", "--recursive", str(path1), str(path2)]
     diff_action = NonClpAction(cmd=cmd)
-    diff_action.check_returncode(good_returncodes=(0, 1))
+    diff_action.check_returncode(success_returncodes=(0, 1))
     return diff_action.completed_proc.returncode == 0
 
 
