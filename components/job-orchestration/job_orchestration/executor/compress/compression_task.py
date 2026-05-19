@@ -31,6 +31,7 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry.api.metrics import get_meter
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
@@ -42,6 +43,21 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
+
+# OpenTelemetry counters for compression metrics.
+# Created at module-import time; when telemetry is disabled the meter is a
+# no-op so these counters silently accept ``add()`` calls.
+_compression_meter = get_meter("compression-worker")
+_bytes_input_counter = _compression_meter.create_counter(
+    "clp.compression.bytes_input_total",
+    description="Total bytes of uncompressed log data input for compression",
+    unit="By",
+)
+_bytes_output_counter = _compression_meter.create_counter(
+    "clp.compression.bytes_output_total",
+    description="Total bytes of compressed archive data output from compression",
+    unit="By",
+)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -627,6 +643,11 @@ def compression_entry_point(
     )
     duration = (datetime.datetime.now() - start_time).total_seconds()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+
+    # Emit telemetry counters for bytes input/output.
+    # Even on partial failure these represent actual work done.
+    _bytes_input_counter.add(worker_output["total_uncompressed_size"])
+    _bytes_output_counter.add(worker_output["total_compressed_size"])
 
     with (
         closing(sql_adapter.create_connection(True)) as db_conn,

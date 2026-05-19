@@ -9,9 +9,26 @@ from pathlib import Path
 from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
+from clp_py_utils.clp_metadata_db_utils import get_archives_table_name
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry.api.metrics import get_meter
 
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
+
+# OpenTelemetry counters for query metrics.
+# Created at module-import time; when telemetry is disabled the meter is a
+# no-op so these counters silently accept ``add()`` calls.
+_query_meter = get_meter("query-worker")
+_bytes_scanned_counter = _query_meter.create_counter(
+    "clp.query.bytes_scanned_total",
+    description="Total bytes of uncompressed log data scanned during queries",
+    unit="By",
+)
+_bytes_output_counter = _query_meter.create_counter(
+    "clp.query.bytes_output_total",
+    description="Total bytes of query results output",
+    unit="By",
+)
 
 
 def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
@@ -49,7 +66,11 @@ def run_query_task(
     job_id: str,
     task_id: int,
     start_time: datetime.datetime,
-) -> tuple[QueryTaskResult, str]:
+) -> tuple[QueryTaskResult, str, int]:
+    """Run a query subprocess and return the result, stdout string, and stdout byte count.
+
+    :return: Tuple of (task_result, stdout_str, stdout_byte_count).
+    """
     clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
@@ -113,7 +134,7 @@ def run_query_task(
     if QueryTaskStatus.FAILED == task_status:
         task_result.error_log_path = str(clo_log_path)
 
-    return task_result, stdout_data.decode("utf-8")
+    return task_result, stdout_data.decode("utf-8"), len(stdout_data)
 
 
 def update_query_task_metadata(
@@ -134,3 +155,32 @@ def update_query_task_metadata(
             WHERE id = {task_id}
         """
         db_cursor.execute(query)
+
+
+def emit_bytes_scanned(
+    sql_adapter: SqlAdapter,
+    clp_metadata_db_conn_params: dict,
+    archive_id: str,
+    dataset: str | None,
+    logger: Logger,
+) -> None:
+    """Emit the ``clp.query.bytes_scanned_total`` counter by looking up the
+    archive's ``uncompressed_size`` from the metadata database.
+    """
+    try:
+        with (
+            closing(sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as db_cursor,
+        ):
+            table_name = get_archives_table_name(
+                clp_metadata_db_conn_params["table_prefix"], dataset
+            )
+            db_cursor.execute(
+                f"SELECT uncompressed_size FROM {table_name} WHERE id = %s",
+                (archive_id,),
+            )
+            row = db_cursor.fetchone()
+            if row is not None:
+                _bytes_scanned_counter.add(row["uncompressed_size"])
+    except Exception:
+        logger.exception("Failed to emit bytes_scanned_total telemetry")
