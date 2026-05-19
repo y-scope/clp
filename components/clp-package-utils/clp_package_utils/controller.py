@@ -906,6 +906,48 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_telemetry(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the telemetry (OpenTelemetry Collector) component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        if self._clp_config.telemetry.disable:
+            logger.info(f"Telemetry is disabled, skipping otel-collector creation...")
+            return EnvVarsDict(
+                {
+                    "CLP_DISABLE_TELEMETRY": "true",
+                    "CLP_OTEL_COLLECTOR_ENABLED": "0",
+                }
+            )
+
+        logger.info(f"Setting up environment for otel-collector...")
+
+        env_vars = EnvVarsDict()
+
+        env_vars["CLP_OTEL_COLLECTOR_ENABLED"] = "1"
+        version_file_path = self._clp_home / "VERSION"
+        clp_version = (
+            version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
+        )
+
+        self._resource_attrs = {
+            "clp.deployment.id": self._instance_id,
+            "service.version": clp_version,
+            "clp.deployment.method": "docker-compose",
+            "clp.storage.engine": self._clp_config.package.storage_engine,
+        }
+
+        resource_attrs_str = ",".join(f"{k}={v}" for k, v in self._resource_attrs.items())
+        env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
+
+        env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
+        env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
+            self._conf_dir / "otel-collector" / "config.yaml"
+        )
+
+        return env_vars
+
     def _read_and_update_settings_json(
         self, settings_file_path: pathlib.Path, updates: dict[str, Any]
     ) -> dict[str, Any]:
@@ -1019,30 +1061,7 @@ class DockerComposeController(BaseController):
         }
 
         # Telemetry
-        if self._clp_config.telemetry.disable:
-            env_vars["CLP_DISABLE_TELEMETRY"] = "true"
-            env_vars["CLP_OTEL_COLLECTOR_ENABLED"] = "0"
-        else:
-            env_vars["CLP_OTEL_COLLECTOR_ENABLED"] = "1"
-            version_file_path = self._clp_home / "VERSION"
-            clp_version = (
-                version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
-            )
-
-            self._resource_attrs = {
-                "clp.deployment.id": self._instance_id,
-                "service.version": clp_version,
-                "clp.deployment.method": "docker-compose",
-                "clp.storage.engine": self._clp_config.package.storage_engine,
-            }
-
-            resource_attrs_str = ",".join(f"{k}={v}" for k, v in self._resource_attrs.items())
-            env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
-
-        env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
-        env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
-            self._conf_dir / "otel-collector" / "config.yaml"
-        )
+        env_vars |= self._set_up_env_for_telemetry()
 
         # Paths
         aws_config_dir = self._clp_config.aws_config_directory
