@@ -54,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
     let _guard = clp_rust_utils::logging::set_up_logging("api_server.log");
 
     let tel_provider = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
+    let _tel_guard = clp_rust_utils::telemetry::TelemetryGuard::new(tel_provider);
 
     let meter = opentelemetry::global::meter("api-server");
     let startup_counter = meter.u64_counter("clp.service.event").build();
@@ -83,7 +84,6 @@ async fn main() -> anyhow::Result<()> {
         .with_graceful_shutdown(shutdown_signal())
         .await;
 
-    clp_rust_utils::telemetry::shutdown_telemetry(tel_provider);
     serve_result?;
     Ok(())
 }

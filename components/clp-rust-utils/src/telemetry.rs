@@ -42,6 +42,26 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterPro
     Ok(Some(provider))
 }
 
+/// RAII guard that ensures [`shutdown_telemetry`] is called when the guard is
+/// dropped, even if the process unwinds or returns early.
+pub struct TelemetryGuard(Option<SdkMeterProvider>);
+
+impl TelemetryGuard {
+    /// Creates a new guard wrapping the given meter provider.
+    ///
+    /// When this guard is dropped, [`shutdown_telemetry`] will be called on the
+    /// inner provider, flushing any pending metric exports.
+    pub fn new(provider: Option<SdkMeterProvider>) -> Self {
+        Self(provider)
+    }
+}
+
+impl Drop for TelemetryGuard {
+    fn drop(&mut self) {
+        shutdown_telemetry(self.0.take());
+    }
+}
+
 pub fn shutdown_telemetry(provider: Option<SdkMeterProvider>) {
     if let Some(p) = provider
         && let Err(err) = p.shutdown()
