@@ -85,6 +85,8 @@ THIRD_PARTY_SERVICE_UID = 999
 THIRD_PARTY_SERVICE_GID = 999
 THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_GID}"
 
+OTEL_COLLECTOR_HOST_PORT = 14318
+
 logger = logging.getLogger(__name__)
 
 
@@ -942,6 +944,9 @@ class BaseController(ABC):
         env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
 
         env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
+        env_vars["CLP_OTEL_COLLECTOR_PORT"] = str(
+            os.environ.get("CLP_OTEL_COLLECTOR_PORT", str(OTEL_COLLECTOR_HOST_PORT))
+        )
         env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
             self._conf_dir / "otel-collector" / "config.yaml"
         )
@@ -1231,8 +1236,11 @@ class DockerComposeController(BaseController):
 
         try:
             payload_bytes = json.dumps(payload).encode("utf-8")
+            otel_collector_port = os.environ.get(
+                "CLP_OTEL_COLLECTOR_PORT", str(OTEL_COLLECTOR_HOST_PORT)
+            )
             http_request(
-                "http://127.0.0.1:4318/v1/metrics",
+                f"http://127.0.0.1:{otel_collector_port}/v1/metrics",
                 method="POST",
                 data=payload_bytes,
                 headers={"Content-Type": "application/json"},

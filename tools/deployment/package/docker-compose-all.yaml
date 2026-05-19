@@ -704,7 +704,7 @@ services:
       CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
     ports:
       - host_ip: "127.0.0.1"
-        published: "${CLP_OTEL_COLLECTOR_PORT:-4318}"
+        published: "${CLP_OTEL_COLLECTOR_PORT:-14318}"
         target: 4318
     volumes:
       - type: "bind"
