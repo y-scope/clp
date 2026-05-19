@@ -15,14 +15,14 @@
 #include <clp/type_utils.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
-#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ReaderUtils.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clpp/ErrorCode.hpp>
-#include <clpp/LogTypeMetadata.hpp>
-#include <clpp/LogTypeStat.hpp>
+#include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
 void ArchiveReader::open(Path const& archive_path, Options const& options) {
@@ -73,23 +73,17 @@ auto ArchiveReader::initialize_archive_reader() -> void {
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
     if (m_options.m_experimental) {
         // TODO clpp: inlined get_variable_dictionary_reader
-        m_typed_log_dict = std::make_shared<VariableDictionaryReader>(*m_archive_reader_adaptor);
-        m_typed_log_dict->open(constants::cArchiveLogDictFile);
+        m_log_shape_dict = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);
+        m_log_shape_dict->open(constants::cArchiveLogDictFile);
     } else {
         m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
     }
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
 
-    // TODO clpp: go back to reading metadata and stats on demand
+    // TODO clpp: cannot read on demand as the streams are left open by the time we know to read
+    // shape info.
     if (m_options.m_experimental) {
-        auto metadata{read_logtype_metadata()};
-        if (metadata.has_error()) {
-            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-        }
-        m_logtype_metadata = metadata.value();
-        m_logtype_stats = clpp::LogTypeStatArray();
-        std::ignore = read_logtype_stats();
-        m_typed_log_dict->read_entries();
+        std::ignore = get_parent_rule_shapes();
     }
 }
 
@@ -215,13 +209,34 @@ void ArchiveReader::read_dictionaries_and_metadata() {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
     m_var_dict->read_entries();
-    if (nullptr != m_typed_log_dict) {
-        m_typed_log_dict->read_entries();
+    if (m_options.m_experimental) {
+        m_log_shape_dict->read_entries();
     } else {
         m_log_dict->read_entries();
     }
     m_array_dict->read_entries();
-    std::ignore = read_logtype_stats();
+}
+
+auto ArchiveReader::get_log_shape_stats() -> clpp::LogShapeStatArray const& {
+    if (false == m_log_shape_stats.has_value()) {
+        auto result{read_log_shape_stats()};
+        if (result.has_error()) {
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        m_log_shape_stats = result.value();
+    }
+    return m_log_shape_stats.value();
+}
+
+auto ArchiveReader::get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const& {
+    if (false == m_parent_rule_shapes.has_value()) {
+        auto result{read_parent_rule_shapes()};
+        if (result.has_error()) {
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        m_parent_rule_shapes = result.value();
+    }
+    return m_parent_rule_shapes.value();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -387,8 +402,6 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::UnstructuredArray:
             case NodeType::DeprecatedDateString:
             case NodeType::Timestamp:
-                column_reader = new VariableStringColumnReader(column_id, m_typed_log_dict);
-                break;
             // No need to push columns without associated object readers into the SchemaReader.
             case NodeType::StructuredArray:
             case NodeType::Object:
@@ -425,14 +438,10 @@ void ArchiveReader::initialize_schema_reader(
             schema_id,
             schema.get_ordered_schema_view(),
             m_id_to_schema_metadata[schema_id].num_messages(),
-            should_marshal_records
+            should_marshal_records,
+            m_log_shape_dict.get(),
+            get_parent_rule_shapes()
     );
-    reader.set_typed_log_dict(m_typed_log_dict);
-    if (m_logtype_metadata.has_value()) {
-        reader.set_logtype_metadata(
-                std::make_shared<clpp::LogTypeMetadataArray>(m_logtype_metadata.value())
-        );
-    }
     auto timestamp_column_ids
             = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();
     for (size_t i = 0; i < schema.size(); ++i) {
@@ -498,18 +507,18 @@ void ArchiveReader::close() {
 
     SPDLOG_INFO("[stats] var dict size: {}", m_var_dict->get_entries().size());
     m_var_dict->close();
-    if (nullptr != m_typed_log_dict) {
-        SPDLOG_INFO("[stats] log dict size: {}", m_typed_log_dict->get_entries().size());
-        m_typed_log_dict->close();
+    if (nullptr != m_log_shape_dict) {
+        SPDLOG_INFO("[stats] log dict size: {}", m_log_shape_dict->get_entries().size());
+        m_log_shape_dict->close();
     } else {
         SPDLOG_INFO("[stats] log dict size: {}", m_log_dict->get_entries().size());
         m_log_dict->close();
     }
-    if (m_logtype_metadata.has_value()) {
-        m_logtype_metadata->clear();
+    if (m_parent_rule_shapes.has_value()) {
+        m_parent_rule_shapes->clear();
     }
-    if (m_logtype_stats.has_value()) {
-        m_logtype_stats->clear();
+    if (m_log_shape_stats.has_value()) {
+        m_log_shape_stats->clear();
     }
     m_array_dict->close();
 
@@ -539,39 +548,21 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     return m_stream_buffer;
 }
 
-auto ArchiveReader::read_logtype_metadata()
-        -> ystdlib::error_handling::Result<clpp::LogTypeMetadataArray> {
+auto ArchiveReader::read_log_shape_stats()
+        -> ystdlib::error_handling::Result<clpp::LogShapeStatArray> {
     constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
     auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
-            constants::cArchiveLogTypeMetadataFile
+            constants::cArchiveLogShapeStatsFile
     )};
     ZstdDecompressor decompressor{};
     decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
 
-    clpp::LogTypeMetadataArray metadata;
-    YSTDLIB_ERROR_HANDLING_TRYX(metadata.decompress(decompressor));
+    clpp::LogShapeStatArray stats;
+    YSTDLIB_ERROR_HANDLING_TRYX(stats.decompress(decompressor));
 
     decompressor.close();
-    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogTypeMetadataFile);
-    return metadata;
-}
-
-auto ArchiveReader::read_logtype_stats() -> ystdlib::error_handling::Result<void> {
-    if (false == m_logtype_stats.has_value()) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
-    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
-            constants::cArchiveLogTypeStatsFile
-    )};
-    ZstdDecompressor decompressor{};
-    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
-
-    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats->decompress(decompressor));
-
-    decompressor.close();
-    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogTypeStatsFile);
-    return ystdlib::error_handling::success();
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogShapeStatsFile);
+    return stats;
 }
 
 auto ArchiveReader::read_log_surgeon_schema() -> ystdlib::error_handling::Result<std::string> {
@@ -579,5 +570,22 @@ auto ArchiveReader::read_log_surgeon_schema() -> ystdlib::error_handling::Result
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
     return ReaderUtils::read_log_surgeon_schema(*m_archive_reader_adaptor);
+}
+
+auto ArchiveReader::read_parent_rule_shapes()
+        -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray> {
+    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
+    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
+            constants::cArchiveParentRuleShapesFile
+    )};
+    ZstdDecompressor decompressor{};
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    clpp::ParentRuleShapesArray shapes;
+    YSTDLIB_ERROR_HANDLING_TRYX(shapes.decompress(decompressor));
+
+    decompressor.close();
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveParentRuleShapesFile);
+    return shapes;
 }
 }  // namespace clp_s

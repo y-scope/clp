@@ -18,7 +18,7 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/TraceableException.hpp>
 #include <clpp/Defs.hpp>
-#include <clpp/LogTypeMetadata.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 #include "ColumnReader.hpp"
 #include "DictionaryReader.hpp"
@@ -136,6 +136,7 @@ public:
      * @param ordered_schema
      * @param num_messages
      * @param should_marshal_records
+     * @param parent_rule_shapes
      */
     void reset(
             std::shared_ptr<SchemaTree> schema_tree,
@@ -143,7 +144,9 @@ public:
             int32_t schema_id,
             std::span<int32_t> ordered_schema,
             uint64_t num_messages,
-            bool should_marshal_records
+            bool should_marshal_records,
+            LogShapeDictionaryReader const* log_shape_dict,
+            clpp::ParentRuleShapesArray const& parent_rule_shapes
     ) {
         m_schema_id = schema_id;
         m_num_messages = num_messages;
@@ -162,12 +165,12 @@ public:
         m_global_id_to_unordered_object.clear();
         m_local_schema_tree.clear();
         m_json_serializer.clear();
-        m_typed_log_dict.reset();
         m_reconstruction_targets.clear();
-        m_logtype_metadata.reset();
         m_global_schema_tree = std::move(schema_tree);
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
+        m_log_shape_dict = log_shape_dict;
+        m_parent_rule_shapes = &parent_rule_shapes;
     }
 
     /**
@@ -291,14 +294,6 @@ public:
     }
 
     int32_t get_schema_id() const { return m_schema_id; }
-
-    void set_typed_log_dict(std::shared_ptr<VariableDictionaryReader> dict) {
-        m_typed_log_dict = std::move(dict);
-    }
-
-    auto set_logtype_metadata(std::shared_ptr<clpp::LogTypeMetadataArray> metadata) -> void {
-        m_logtype_metadata = std::move(metadata);
-    }
 
     /**
      * @param schema
@@ -531,11 +526,13 @@ private:
     bool m_should_marshal_records{true};
     bool m_serializer_initialized{false};
     std::shared_ptr<search::Projection> m_projection;
-    std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
 
     std::map<int32_t, std::pair<size_t, std::span<int32_t>>> m_global_id_to_unordered_object;
     std::vector<std::pair<SchemaNode::id_t, std::string>> m_reconstruction_targets;
-    std::shared_ptr<clpp::LogTypeMetadataArray> m_logtype_metadata;
+    // TODO clpp: the archive reader owns the schema reader so this is safe, but the ownership
+    // between the readers is problematic.
+    LogShapeDictionaryReader const* m_log_shape_dict;
+    clpp::ParentRuleShapesArray const* m_parent_rule_shapes;
 };
 }  // namespace clp_s
 

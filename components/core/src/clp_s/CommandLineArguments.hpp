@@ -149,7 +149,7 @@ public:
             -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>>;
 
     // Data members
-    static constexpr std::string_view cLogTypeStatsQuery{"stats.logtypes"};
+    static constexpr std::string_view cLogShapeStatsQuery{"stats.log_shapes"};
 
 private:
     // Methods

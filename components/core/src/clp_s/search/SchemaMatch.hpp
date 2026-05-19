@@ -128,10 +128,10 @@ private:
     ) -> std::optional<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>>;
 
     /**
-     * Builds the reverse mapping from logtype_id to schema_id by scanning schemas
+     * Builds the reverse mapping from log_shape_id to schema_id by scanning schemas
      * for their NodeType::LogTypeID nodes.
      */
-    void build_logtype_id_to_schema_id_map();
+    void build_log_shape_id_to_schema_id_map();
 
     /**
      * Lazily initializes the log-surgeon parser and schema if not already done.
@@ -149,20 +149,20 @@ private:
             -> std::optional<SchemaNode::id_t>;
 
     /**
-     * Iterates the typed log-type dictionary and returns schema IDs whose log types match a
-     * predicate. For LogMessage nodes, the predicate receives the full log-type value. For
-     * ParentRule nodes, the predicate receives the log type substring for the parent rule match of
+     * Iterates the log shape dictionary and returns schema IDs whose log shapes match a
+     * predicate. For LogMessage nodes, the predicate receives the full log-shape value. For
+     * ParentRule nodes, the predicate receives the log shape substring for the parent rule match of
      * `qualified_name`.
      * @tparam Matcher A callable `bool(std::string_view)` returning true if the argument matches.
      * @param qualified_name The fully qualified name of the node (empty for LogMessage).
-     * @param typed_lt_dict The typed log-type dictionary to scan.
-     * @param matcher A Matcher returning true if a predicate matches a log-type.
-     * @return The set of schema IDs whose log types matched.
+     * @param log_shape_dict The log shape dictionary to scan.
+     * @param matcher A Matcher returning true if a predicate matches a log-shape.
+     * @return The set of schema IDs whose log shapes matched.
      */
     template <StringViewPredicate Matcher>
     auto find_schemas_matching_predicate(
             std::string_view qualified_name,
-            clp_s::VariableDictionaryReader& typed_lt_dict,
+            clp_s::LogShapeDictionaryReader& log_shape_dict,
             Matcher const& matcher
     ) -> std::unordered_set<int32_t>;
 
@@ -231,7 +231,7 @@ private:
     std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
     absl::flat_hash_map<std::pair<std::string, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
-    std::unordered_map<logtype_id_t, std::vector<int32_t>> m_logtype_id_to_schema_id;
+    std::unordered_map<clpp::log_shape_id_t, std::vector<int32_t>> m_log_shape_id_to_schema_id;
 
     /**
      * Populates the column mapping for a given column
@@ -324,34 +324,35 @@ private:
 template <StringViewPredicate Matcher>
 auto SchemaMatch::find_schemas_matching_predicate(
         std::string_view qualified_name,
-        clp_s::VariableDictionaryReader& typed_lt_dict,
+        clp_s::LogShapeDictionaryReader& log_shape_dict,
         Matcher const& matcher
 ) -> std::unordered_set<int32_t> {
-    std::vector<clp_s::logtype_id_t> matched_lt_ids;
-    for (auto const& log_type : typed_lt_dict.get_entries()) {
+    std::vector<clpp::log_shape_id_t> matched_shape_ids;
+    for (auto const& log_shape : log_shape_dict.get_entries()) {
         if (qualified_name.empty()) {
-            if (matcher(std::string_view{log_type.get_value()})) {
-                matched_lt_ids.emplace_back(log_type.get_id());
+            if (matcher(std::string_view{log_shape.get_value()})) {
+                matched_shape_ids.emplace_back(log_shape.get_id());
             }
         } else {
-            auto metadata{m_archive_reader->get_logtype_metadata().at(log_type.get_id())};
-            for (auto const& parent_match : metadata.get_parent_matches()) {
+            // TODO clpp: clean up
+            auto shapes{m_archive_reader->get_parent_rule_shapes().at(log_shape.get_id())};
+            for (auto const& parent_match : shapes.get_parent_rule_shapes()) {
                 if (qualified_name == parent_match.m_name
                     && matcher(
-                            std::string_view{log_type.get_value()}
+                            std::string_view{log_shape.get_value()}
                                     .substr(parent_match.m_start, parent_match.m_size)
                     ))
                 {
-                    matched_lt_ids.emplace_back(log_type.get_id());
+                    matched_shape_ids.emplace_back(log_shape.get_id());
                     break;
                 }
             }
         }
     }
     std::unordered_set<int32_t> schema_ids;
-    for (auto const id : matched_lt_ids) {
-        if (auto const it{m_logtype_id_to_schema_id.find(id)};
-            m_logtype_id_to_schema_id.end() != it)
+    for (auto const id : matched_shape_ids) {
+        if (auto const it{m_log_shape_id_to_schema_id.find(id)};
+            m_log_shape_id_to_schema_id.end() != it)
         {
             schema_ids.insert(it->second.begin(), it->second.end());
         }

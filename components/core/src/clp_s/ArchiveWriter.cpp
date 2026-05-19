@@ -28,8 +28,8 @@
 
 #include "clp_s/ColumnWriter.hpp"
 #include "clp_s/DictionaryWriter.hpp"
-#include "clpp/LogTypeMetadata.hpp"
-#include "clpp/LogTypeStat.hpp"
+#include <clpp/ParentRuleShapes.hpp>
+#include <clpp/LogShapeStat.hpp>
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -70,10 +70,10 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 
     std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
     if (option.experimental) {
-        m_typed_log_dict = std::make_shared<VariableDictionaryWriter>();
-        m_typed_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
-        m_logtype_stats = clpp::LogTypeStatArray();
-        m_logtype_metadata = clpp::LogTypeMetadataArray();
+        m_log_shape_dict = std::make_shared<VariableDictionaryWriter>();
+        m_log_shape_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
+        m_log_shape_stats = clpp::LogShapeStatArray();
+        m_parent_rule_shapes = clpp::ParentRuleShapesArray();
     } else {
         m_log_dict = std::make_shared<LogTypeDictionaryWriter>();
         m_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
@@ -93,9 +93,9 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     auto var_dict_compressed_size = m_var_dict->close();
     SPDLOG_INFO("Var count: {}", m_var_dict->get_next_id());
     size_t log_dict_compressed_size{};
-    if (nullptr != m_typed_log_dict) {
-        log_dict_compressed_size = m_typed_log_dict->close();
-        SPDLOG_INFO("Log type count: {}", m_typed_log_dict->get_next_id());
+    if (nullptr != m_log_shape_dict) {
+        log_dict_compressed_size = m_log_shape_dict->close();
+        SPDLOG_INFO("Log shape count: {}", m_log_shape_dict->get_next_id());
     } else {
         log_dict_compressed_size = m_log_dict->close();
         SPDLOG_INFO("Log type count: {}", m_log_dict->get_next_id());
@@ -115,24 +115,24 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveTablesFile, table_compressed_size}
     };
 
-    if (m_logtype_metadata) {
-        auto compressed_size{close_logtype_metadata()};
+    if (m_parent_rule_shapes) {
+        auto compressed_size{close_parent_rule_shapes()};
         if (compressed_size.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
         files.emplace_back(
-                std::string(constants::cArchiveLogTypeMetadataFile),
+                std::string(constants::cArchiveParentRuleShapesFile),
                 compressed_size.value()
         );
     }
 
-    if (m_logtype_stats) {
-        auto compressed_size{close_logtype_stats()};
+    if (m_log_shape_stats) {
+        auto compressed_size{close_log_shape_stats()};
         if (compressed_size.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
         files.emplace_back(
-                std::string(constants::cArchiveLogTypeStatsFile),
+                std::string(constants::cArchiveLogShapeStatsFile),
                 compressed_size.value()
         );
     }
@@ -356,8 +356,8 @@ bool ArchiveWriter::matches_timestamp(int parent_node_id, std::string_view key) 
 
 size_t ArchiveWriter::get_data_size() {
     size_t log_dict_size{};
-    if (nullptr != m_typed_log_dict) {
-        log_dict_size = m_typed_log_dict->get_data_size();
+    if (nullptr != m_log_shape_dict) {
+        log_dict_size = m_log_shape_dict->get_data_size();
     } else {
         log_dict_size = m_log_dict->get_data_size();
     }
@@ -539,71 +539,71 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto ArchiveWriter::update_logtype_metadata(logtype_id_t id, clpp::LogTypeMetadata& metadata)
+auto ArchiveWriter::update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
         -> ystdlib::error_handling::Result<void> {
-    if (false == m_logtype_metadata.has_value()) {
+    if (false == m_parent_rule_shapes.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
-    m_logtype_metadata->at_or_create(id, metadata);
+    m_parent_rule_shapes->at_or_create(id, shapes);
     return ystdlib::error_handling::success();
 }
 
-auto ArchiveWriter::update_logtype_dict(std::string_view logtype)
-        -> ystdlib::error_handling::Result<std::tuple<logtype_id_t, bool>> {
-    if (nullptr == m_typed_log_dict || false == m_logtype_stats.has_value()) {
+auto ArchiveWriter::update_log_shape_dict(std::string_view log_shape)
+        -> ystdlib::error_handling::Result<std::tuple<clpp::log_shape_id_t, bool>> {
+    if (nullptr == m_log_shape_dict || false == m_log_shape_stats.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
-    logtype_id_t id{};
-    bool new_entry{m_typed_log_dict->add_entry(logtype, id)};
-    m_logtype_stats->at_or_create(id).increment_count();
+    clpp::log_shape_id_t id{};
+    bool new_entry{m_log_shape_dict->add_entry(log_shape, id)};
+    m_log_shape_stats->at_or_create(id).increment_count();
     return {id, new_entry};
 }
 
-auto ArchiveWriter::close_logtype_metadata() -> ystdlib::error_handling::Result<size_t> {
-    if (false == m_logtype_metadata.has_value()) {
+auto ArchiveWriter::close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t> {
+    if (false == m_parent_rule_shapes.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
     FileWriter writer{};
     writer.open(
-            m_archive_path + std::string{constants::cArchiveLogTypeMetadataFile},
+            m_archive_path + std::string{constants::cArchiveParentRuleShapesFile},
             FileWriter::OpenMode::CreateForWriting
     );
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_metadata->compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_parent_rule_shapes->compress(compressor));
 
     compressor.close();
     auto compressed_size{writer.get_pos()};
     writer.close();
 
-    m_logtype_metadata->clear();
+    m_parent_rule_shapes->clear();
     return compressed_size;
 }
 
-auto ArchiveWriter::close_logtype_stats() -> ystdlib::error_handling::Result<size_t> {
-    if (false == m_logtype_stats.has_value()) {
+auto ArchiveWriter::close_log_shape_stats() -> ystdlib::error_handling::Result<size_t> {
+    if (false == m_log_shape_stats.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
     FileWriter writer{};
     writer.open(
-            m_archive_path + std::string{constants::cArchiveLogTypeStatsFile},
+            m_archive_path + std::string{constants::cArchiveLogShapeStatsFile},
             FileWriter::OpenMode::CreateForWriting
     );
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats->compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_log_shape_stats->compress(compressor));
 
     compressor.close();
     auto compressed_size{writer.get_pos()};
     writer.close();
 
-    m_logtype_stats->clear();
+    m_log_shape_stats->clear();
     return compressed_size;
 }
 

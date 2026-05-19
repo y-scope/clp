@@ -26,8 +26,8 @@ constexpr char cArchiveVarDictFile[] = "/var.dict";
 
 // clpp
 constexpr std::string_view cArchiveLogSurgeonSchemaFile{"/ls_schema"};
-constexpr std::string_view cArchiveLogTypeMetadataFile{"/logtype_metadata"};
-constexpr std::string_view cArchiveLogTypeStatsFile{"/logtype_stats"};
+constexpr std::string_view cArchiveParentRuleShapesFile{"/parent_rule_shapes"};
+constexpr std::string_view cArchiveLogShapeStatsFile{"/log_shape_stats"};
 
 // Schema tree constants
 constexpr char cRootNodeName[] = "";

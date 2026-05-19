@@ -229,8 +229,8 @@ private:
      * @return A result containing an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if parsing fails.
      * - Forwards `store_capture_groups`'s return values on failure.
-     * - Forwards `m_archive_writer->update_logtype_stats`'s return values on failure.
-     * - Forwards `m_archive_writer->update_var_stats`'s return values on failure.
+     * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
+     * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
      */
     auto parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
             -> ystdlib::error_handling::Result<void>;

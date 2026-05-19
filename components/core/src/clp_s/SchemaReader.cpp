@@ -28,7 +28,7 @@ namespace {
  * Finds the LogTypeID node in a schema and parses its dictionary ID.
  * @param schema
  * @param tree
- * @return A pair of (log_type_id, found).
+ * @return A pair of (log_shape_id, found).
  */
 [[nodiscard]] auto
 find_log_type_id_in_schema(std::span<SchemaNode::id_t> schema, SchemaTree const& tree)
@@ -50,14 +50,14 @@ find_log_type_id_in_schema(std::span<SchemaNode::id_t> schema, SchemaTree const&
         auto const& node = tree.get_node(global_column_id);
         if (NodeType::LogTypeID == node.get_type()) {
             auto const& key_name = node.get_key_name();
-            clpp::log_shape_id_t log_type_id{};
+            clpp::log_shape_id_t log_shape_id{};
             auto [ptr, ec] = std::from_chars(
                     key_name.data(),
                     key_name.data() + key_name.size(),
-                    log_type_id
+                    log_shape_id
             );
             if (std::errc() == ec && ptr == key_name.data() + key_name.size()) {
-                return {log_type_id, true};
+                return {log_shape_id, true};
             }
             break;
         }
@@ -976,8 +976,8 @@ auto SchemaReader::scan_child_projection_modes(
 void SchemaReader::emit_parent_rule_shape(
         SchemaNode::id_t log_msg_node_id,
         SchemaNode::id_t global_column_id,
-        clpp::log_shape_id_t log_type_id,
-        bool found_log_type_id,
+        clpp::log_shape_id_t log_shape_id,
+        bool found_log_shape_id,
         absl::flat_hash_set<SchemaNode::id_t>& emitted_schema_parent_rules
 ) {
     if (emitted_schema_parent_rules.contains(global_column_id)) {
@@ -1016,20 +1016,20 @@ void SchemaReader::emit_parent_rule_shape(
         m_reconstruction_targets.emplace_back(log_msg_node_id, parent_fqn);
     }
     if (pr_has_decomposed || pr_has_shape) {
-        if (found_log_type_id && nullptr != m_typed_log_dict && nullptr != m_logtype_metadata
-            && static_cast<logtype_id_t>(log_type_id) < m_logtype_metadata->size())
+        if (found_log_shape_id && nullptr != m_log_shape_dict && nullptr != m_parent_rule_shapes
+            && log_shape_id < m_parent_rule_shapes->size())
         {
-            auto const& metadata{m_logtype_metadata->at(static_cast<logtype_id_t>(log_type_id))};
+            auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
             auto const parent_fqn{m_global_schema_tree->build_qualified_name(global_column_id)};
-            for (auto const& match : metadata.get_parent_matches()) {
+            for (auto const& match : metadata.get_parent_rule_shapes()) {
                 if (match.m_name == parent_fqn) {
-                    auto const& log_type_template{m_typed_log_dict->get_value(log_type_id)};
-                    if (match.m_start < log_type_template.size()
-                        && match.m_start + match.m_size <= log_type_template.size())
+                    auto const& log_shape_template{m_log_shape_dict->get_value(log_shape_id)};
+                    if (match.m_start < log_shape_template.size()
+                        && match.m_start + match.m_size <= log_shape_template.size())
                     {
                         m_json_serializer.add_constant_string_field(
                                 std::string(node.get_key_name()) + std::string(clpp::cShapeSuffix),
-                                log_type_template.substr(match.m_start, match.m_size)
+                                log_shape_template.substr(match.m_start, match.m_size)
                         );
                     }
                     break;
@@ -1039,13 +1039,13 @@ void SchemaReader::emit_parent_rule_shape(
     }
 }
 
-auto SchemaReader::emit_log_type_shape(clpp::log_shape_id_t log_type_id)
+auto SchemaReader::emit_log_type_shape(clpp::log_shape_id_t log_shape_id)
         -> ystdlib::error_handling::Result<void> {
-    if (nullptr == m_typed_log_dict) {
+    if (nullptr == m_log_shape_dict) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    auto const& log_type_str{m_typed_log_dict->get_value(log_type_id)};
-    m_json_serializer.add_constant_string_field(clpp::cShapeSuffix, log_type_str);
+    auto const& log_shape_str{m_log_shape_dict->get_value(log_shape_id)};
+    m_json_serializer.add_constant_string_field(clpp::cShapeSuffix, log_shape_str);
     return ystdlib::error_handling::success();
 }
 
@@ -1182,7 +1182,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     auto column_idx{log_msg_it->second.first};
     auto const schema{log_msg_it->second.second};
 
-    auto const [log_type_id, found_log_type_id]{
+    auto const [log_shape_id, found_log_shape_id]{
             find_log_type_id_in_schema(schema, *m_global_schema_tree)
     };
 
@@ -1245,8 +1245,8 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
             emit_parent_rule_shape(
                     log_msg_node_id,
                     global_column_id,
-                    log_type_id,
-                    found_log_type_id,
+                    log_shape_id,
+                    found_log_shape_id,
                     emitted_schema_parent_rules
             );
             continue;
@@ -1263,7 +1263,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
                             search::Projection::NodeProjection::Decomposed
                     )))
             {
-                if (auto const result{emit_log_type_shape(log_type_id)}; result.has_error()) {
+                if (auto const result{emit_log_type_shape(log_shape_id)}; result.has_error()) {
                     return result.error();
                 }
             }
@@ -1291,33 +1291,33 @@ auto SchemaReader::reconstruct_log_shape(
     }
 
     auto const& schema{log_msg_it->second.second};
-    auto const [log_type_id, found_log_type_id]{
+    auto const [log_shape_id, found_log_shape_id]{
             find_log_type_id_in_schema(schema, *m_global_schema_tree)
     };
 
-    if (false == found_log_type_id || nullptr == m_typed_log_dict) {
+    if (false == found_log_shape_id || nullptr == m_log_shape_dict) {
         return {};
     }
 
-    auto const log_type_template{m_typed_log_dict->get_value(log_type_id)};
-    if (log_type_template.empty()) {
+    auto const log_shape_template{m_log_shape_dict->get_value(log_shape_id)};
+    if (log_shape_template.empty()) {
         return {};
     }
 
-    std::string_view template_to_scan{log_type_template};
+    std::string_view template_to_scan{log_shape_template};
     if (false == parent_rule_fqn.empty()) {
-        if (nullptr == m_logtype_metadata) {
+        if (nullptr == m_parent_rule_shapes) {
             return {};
         }
-        auto const& metadata{m_logtype_metadata->at(static_cast<logtype_id_t>(log_type_id))};
+        auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
         bool found_match{false};
-        for (auto const& match : metadata.get_parent_matches()) {
+        for (auto const& match : metadata.get_parent_rule_shapes()) {
             if (match.m_name == parent_rule_fqn) {
-                if (match.m_start < log_type_template.size()
-                    && match.m_start + match.m_size <= log_type_template.size())
+                if (match.m_start < log_shape_template.size()
+                    && match.m_start + match.m_size <= log_shape_template.size())
                 {
                     template_to_scan = std::string_view{
-                            log_type_template.data() + match.m_start,
+                            log_shape_template.data() + match.m_start,
                             match.m_size
                     };
                 }

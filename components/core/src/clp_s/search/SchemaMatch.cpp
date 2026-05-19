@@ -82,7 +82,7 @@ SchemaMatch::SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader)
           m_archive_reader(std::move(archive_reader)) {}
 
 std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) {
-    build_logtype_id_to_schema_id_map();
+    build_log_shape_id_to_schema_id_map();
     ConstantProp propagate_empty;
     expr = populate_column_mapping(expr);
     expr = propagate_empty.run(expr);
@@ -735,16 +735,16 @@ auto SchemaMatch::build_leaf_query_expr(
     return leaves_expr;
 }
 
-void SchemaMatch::build_logtype_id_to_schema_id_map() {
+void SchemaMatch::build_log_shape_id_to_schema_id_map() {
     for (auto const& [schema_id, schema] : *m_schemas) {
         for (auto const node_id : schema) {
             if (Schema::schema_entry_is_unordered_object(node_id)) {
                 continue;
             }
             if (NodeType::LogTypeID == m_tree->get_node(node_id).get_type()) {
-                auto logtype_id
+                auto log_shape_id
                         = std::stoull(std::string{m_tree->get_node(node_id).get_key_name()});
-                m_logtype_id_to_schema_id[static_cast<logtype_id_t>(logtype_id)].emplace_back(
+                m_log_shape_id_to_schema_id[static_cast<clpp::log_shape_id_t>(log_shape_id)].emplace_back(
                         schema_id
                 );
                 break;
@@ -832,9 +832,13 @@ auto SchemaMatch::resolve_clpp_query(
 ) -> std::shared_ptr<ast::Expression> {
     m_clpp_decomposed_query = true;
 
-    auto& typed_lt_dict{*m_archive_reader->get_typed_log_type_dictionary()};
-    if (typed_lt_dict.get_entries().empty()) {
-        typed_lt_dict.read_entries();
+    // TODO clpp: this check is dumb, but fixing it requires fixing the archive reading.
+    // This is the first place we know we need the contents of the dict (to avoid reading it
+    // unnecessarily), but it may be called multiple times and read_entries doesn't seem to track if
+    // it has been read previously or not.
+    auto& log_shape_dict{*m_archive_reader->get_log_shape_dictionary()};
+    if (log_shape_dict.get_entries().empty()) {
+        log_shape_dict.read_entries();
     }
 
     auto* filter{dynamic_cast<FilterExpr*>(expr.get())};
@@ -843,7 +847,7 @@ auto SchemaMatch::resolve_clpp_query(
     if (FilterOperation::EXISTS == filter->get_operation()) {
         auto matched_schema_ids{find_schemas_matching_predicate(
                 qualified_name,
-                typed_lt_dict,
+                log_shape_dict,
                 [](std::string_view) -> bool { return true; }
         )};
         if (matched_schema_ids.empty()) {
@@ -869,7 +873,7 @@ auto SchemaMatch::resolve_clpp_query(
     for (auto const& interpretation : dq.value()->get_interpretations()) {
         auto matched_schema_ids{find_schemas_matching_predicate(
                 qualified_name,
-                typed_lt_dict,
+                log_shape_dict,
                 [&](std::string_view value) -> bool {
                     return clp::string_utils::wildcard_match_unsafe(
                             value,

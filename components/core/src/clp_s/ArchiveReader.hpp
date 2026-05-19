@@ -24,8 +24,8 @@
 #include <clp_s/search/Projection.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
-#include <clpp/LogTypeMetadata.hpp>
-#include <clpp/LogTypeStat.hpp>
+#include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -94,8 +94,8 @@ public:
      * @param lazy
      */
     auto read_log_type_dictionary(bool lazy = false) -> void {
-        if (nullptr != m_typed_log_dict) {
-            m_typed_log_dict->read_entries(lazy);
+        if (nullptr != m_log_shape_dict) {
+            m_log_shape_dict->read_entries(lazy);
         } else {
             m_log_dict->read_entries(lazy);
         }
@@ -112,18 +112,10 @@ public:
     }
 
     /**
-     * Reads the log type metadata from the archive.
-     * @return The read log type metadata array, or an error code indicating the failure:
-     * - Forwards `Array::decompress`'s return values on failure.
-     * @throws
-     */
-    auto read_logtype_metadata() -> ystdlib::error_handling::Result<clpp::LogTypeMetadataArray>;
-
-    /**
      * Reads the log type statistics from the archive.
      * @return
      */
-    auto read_logtype_stats() -> ystdlib::error_handling::Result<void>;
+    auto read_log_shape_stats() -> ystdlib::error_handling::Result<clpp::LogShapeStatArray>;
 
     /**
      * Reads the log surgeon schema from the archive.
@@ -168,8 +160,8 @@ public:
 
     std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
 
-    std::shared_ptr<VariableDictionaryReader> get_typed_log_type_dictionary() {
-        return m_typed_log_dict;
+    auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader> {
+        return m_log_shape_dict;
     }
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
@@ -188,13 +180,9 @@ public:
         return m_archive_reader_adaptor->get_header();
     }
 
-    auto get_logtype_metadata() const -> clpp::LogTypeMetadataArray const& {
-        return m_logtype_metadata.value();
-    }
+    auto get_log_shape_stats() -> clpp::LogShapeStatArray const&;
 
-    auto get_logtype_stats() const -> clpp::LogTypeStatArray const& {
-        return m_logtype_stats.value();
-    }
+    auto get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const&;
 
     /**
      * Writes decoded messages to a file.
@@ -309,6 +297,14 @@ private:
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
 
+    /**
+     * Reads the log type metadata from the archive.
+     * @return The read log type metadata array, or an error code indicating the failure:
+     * - Forwards `Array::decompress`'s return values on failure.
+     * @throws
+     */
+    auto read_parent_rule_shapes() -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray>;
+
     bool m_is_open;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -332,9 +328,9 @@ private:
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
 
-    std::optional<clpp::LogTypeStatArray> m_logtype_stats;
-    std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
-    std::shared_ptr<VariableDictionaryReader> m_typed_log_dict;
+    std::shared_ptr<LogShapeDictionaryReader> m_log_shape_dict;
+    std::optional<clpp::LogShapeStatArray> m_log_shape_stats;
+    std::optional<clpp::ParentRuleShapesArray> m_parent_rule_shapes;
     Options m_options;
 };
 }  // namespace clp_s

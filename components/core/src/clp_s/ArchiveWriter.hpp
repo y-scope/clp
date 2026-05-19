@@ -28,8 +28,8 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
-#include <clpp/LogTypeMetadata.hpp>
-#include <clpp/LogTypeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
+#include <clpp/LogShapeStat.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -314,16 +314,17 @@ public:
     }
 
     /**
-     * Update the stats for the given log type, adding it to the log type dictionary if necessary.
-     * @param logtype
-     * @return The log type ID.
-     * @return True if the log type is a new entry in the dictionary, false otherwise.
+     * Update the log shape dictionary for the given log shape, adding it to the dictionary if
+     * necessary.
+     * @param log_shape
+     * @return The log shape ID.
+     * @return True if the log shape is a new entry in the dictionary, false otherwise.
      * @return ClppErrorCodeEnum::Unsupported if experimental stats are not enabled.
      */
-    auto update_logtype_dict(std::string_view logtype)
-            -> ystdlib::error_handling::Result<std::tuple<logtype_id_t, bool>>;
+    auto update_log_shape_dict(std::string_view log_shape)
+            -> ystdlib::error_handling::Result<std::tuple<clpp::log_shape_id_t, bool>>;
 
-    auto update_logtype_metadata(logtype_id_t id, clpp::LogTypeMetadata& metadata)
+    auto update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
             -> ystdlib::error_handling::Result<void>;
 
 private:
@@ -347,8 +348,8 @@ private:
      * if the result is an error.
      * @return The size of the compressed statistics metadata in bytes.
      */
-    [[nodiscard]] auto close_logtype_stats() -> ystdlib::error_handling::Result<size_t>;
-    [[nodiscard]] auto close_logtype_metadata() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_log_shape_stats() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t>;
 
     /**
      * Writes the log-surgeon schema to the archive.
@@ -428,9 +429,9 @@ private:
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
 
-    std::optional<clpp::LogTypeStatArray> m_logtype_stats;
-    std::optional<clpp::LogTypeMetadataArray> m_logtype_metadata;
-    std::shared_ptr<VariableDictionaryWriter> m_typed_log_dict;
+    std::optional<clpp::LogShapeStatArray> m_log_shape_stats;
+    std::optional<clpp::ParentRuleShapesArray> m_parent_rule_shapes;
+    std::shared_ptr<VariableDictionaryWriter> m_log_shape_dict;
     std::string m_log_surgeon_schema_text;
 };
 }  // namespace clp_s

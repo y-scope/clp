@@ -308,7 +308,7 @@ bool search_archive(
 
 auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     auto const& query = cli_args.get_query();
-    if (CommandLineArguments::cLogTypeStatsQuery != query) {
+    if (CommandLineArguments::cLogShapeStatsQuery != query) {
         return -1;
     }
     auto output_handler{cli_args.create_output_handler()};
@@ -330,16 +330,16 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             SPDLOG_ERROR("Failed to open archive - {}", e.what());
             return 2;
         }
-        archive_reader->read_dictionaries_and_metadata();
-        auto const logtype_stats{archive_reader->get_logtype_stats()};
-        if (CommandLineArguments::cLogTypeStatsQuery == query) {
-            auto logtype_dict{archive_reader->get_typed_log_type_dictionary()};
-            for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats.size(); ++i) {
+        auto const shape_stats{archive_reader->get_log_shape_stats()};
+        if (CommandLineArguments::cLogShapeStatsQuery == query) {
+            auto shape_dict{archive_reader->get_log_shape_dictionary()};
+            shape_dict->read_entries();
+            for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
                 auto message{fmt::format(
-                        "{{\"id\":{},\"count\":{},\"log_type\":\"{}\"}}\n",
+                        "{{\"id\":{},\"count\":{},\"@shape\":\"{}\"}}\n",
                         i,
-                        logtype_stats.at(i).get_count(),
-                        logtype_dict->get_entry(i).get_value()
+                        shape_stats.at(i).get_count(),
+                        shape_dict->get_entry(i).get_value()
                 )};
                 output_handler.value()->write(message);
             }

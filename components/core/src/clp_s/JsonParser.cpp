@@ -52,7 +52,7 @@
 #include <clp_s/Utils.hpp>
 #include <clpp/DecomposedQuery.hpp>
 #include <clpp/ErrorCode.hpp>
-#include <clpp/LogTypeMetadata.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -1498,9 +1498,9 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
     auto [root_matches, parent_matches]{clpp::DecomposedQuery::create_parent_match_dicts(event)};
 
-    // This log type isn't escaped yet be careful
-    std::string log_type{};
-    log_type.reserve(log_msg.size());
+    // This log shape isn't escaped yet be careful
+    std::string log_shape{};
+    log_shape.reserve(log_msg.size());
     size_t log_msg_pos{0};
     for (size_t i{0};; ++i) {
         auto const match{event.get_leaf_match(i)};
@@ -1624,32 +1624,32 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             m_current_parsed_message.add_unordered_value(match->ffi_pointers.lexeme.as_cpp_view());
         }
 
-        log_type.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
-        log_type.append(
+        log_shape.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
+        log_shape.append(
                 fmt::format("%{}%", match->ffi_pointers.fully_qualified_name.as_cpp_view())
         );
         log_msg_pos = match->range.end;
     }
-    log_type.append(log_msg.substr(log_msg_pos));
+    log_shape.append(log_msg.substr(log_msg_pos));
 
-    auto [log_type_id, new_logtype]{
-            YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_logtype_dict(log_type))
+    auto [log_shape_id, new_log_shape]{
+            YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_log_shape_dict(log_shape))
     };
     m_current_schema.insert_unordered(m_archive_writer->add_node(
             m_archive_writer
                     ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogTypeNodeName),
             NodeType::LogTypeID,
-            fmt::format("{}", log_type_id)
+            fmt::format("{}", log_shape_id)
     ));
 
-    if (new_logtype) {
-        clpp::LogTypeMetadata metadata;
+    if (new_log_shape) {
+        clpp::ParentRuleShapes metadata;
         std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
         for (auto const& match : event.get_all_matches()) {
             if (match.is_leaf) {
                 continue;
             }
-            metadata.emplace_parent_match(
+            metadata.emplace_parent_rule_shape(
                     match.ffi_pointers.fully_qualified_name.as_cpp_view(),
                     match.range.start,
                     match.range.end - match.range.start
@@ -1670,14 +1670,14 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             auto const diff{static_cast<int64_t>(old_size) - static_cast<int64_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
                 if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
-                    metadata.parent_match(j).m_start -= diff;
+                    metadata.parent_rule_shape(j).m_start -= diff;
                 } else if (leaf_match->range.end <= og_parent_match_pos.at(j).second) {
-                    metadata.parent_match(j).m_size -= diff;
+                    metadata.parent_rule_shape(j).m_size -= diff;
                 }
             }
         }
         YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_logtype_metadata(log_type_id, metadata)
+                m_archive_writer->update_parent_rule_shapes(log_shape_id, metadata)
         );
     }
 

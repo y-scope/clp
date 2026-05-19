@@ -2,15 +2,15 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
                 clpp_core
                 Array.hpp
+                DecomposedQuery.cpp
+                DecomposedQuery.hpp
                 Defs.hpp
                 ErrorCode.cpp
                 ErrorCode.hpp
-                LogTypeMetadata.cpp
-                LogTypeMetadata.hpp
-                LogTypeStat.cpp
-                LogTypeStat.hpp
-                DecomposedQuery.cpp
-                DecomposedQuery.hpp
+                LogShapeStat.cpp
+                LogShapeStat.hpp
+                ParentRuleShapes.cpp
+                ParentRuleShapes.hpp
         )
         add_library(clpp::core ALIAS clpp_core)
         target_compile_features(clpp_core PRIVATE cxx_std_20)
