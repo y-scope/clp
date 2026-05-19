@@ -64,8 +64,8 @@ spec:
               value: "/opt/clp/lib/python3/site-packages"
           command:
             - "/bin/sh"
-            - "-c"
             - |
+              set -e
               until python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 27017)); s.close()" 2>/dev/null; do
                 sleep 1
               done
