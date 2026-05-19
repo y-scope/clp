@@ -61,10 +61,6 @@ async fn main() -> anyhow::Result<()> {
 
     let tel_provider = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
 
-    let meter = opentelemetry::global::meter("log-ingestor");
-    let _bytes_total = meter.u64_counter("clp.ingest.bytes_total").build();
-    let _records_total = meter.u64_counter("clp.ingest.records_total").build();
-
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
