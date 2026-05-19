@@ -73,7 +73,7 @@ It ensures the exact same UUID is used across all templates during a single helm
 Provides the standard OpenTelemetry resource attributes.
 */}}
 {{- define "clp.resourceAttributes" -}}
-clp.deployment.id={{ include "clp.instanceId" . }},service.version={{ .Chart.Version }},clp.deployment.method=helm,clp.storage.engine={{ .Values.clpConfig.package.storageEngine }}
+clp.deployment.id={{ include "clp.instanceId" . }},service.version={{ .Chart.Version }},clp.deployment.method=helm,clp.storage.engine={{ .Values.clpConfig.package.storage_engine }}
 {{- end -}}
 
 {{/*
