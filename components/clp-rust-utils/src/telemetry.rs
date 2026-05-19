@@ -51,7 +51,8 @@ impl TelemetryGuard {
     ///
     /// When this guard is dropped, [`shutdown_telemetry`] will be called on the
     /// inner provider, flushing any pending metric exports.
-    pub fn new(provider: Option<SdkMeterProvider>) -> Self {
+    #[must_use]
+    pub const fn new(provider: Option<SdkMeterProvider>) -> Self {
         Self(provider)
     }
 }
