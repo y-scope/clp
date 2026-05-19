@@ -25,8 +25,6 @@ spec:
           ports:
             - containerPort: 4318
               protocol: TCP
-          resources:
-            {{- toYaml .Values.clpConfig.telemetry.collector.resources | nindent 12 }}
           volumeMounts:
             - name: otel-collector-config
               mountPath: /etc/otelcol-contrib
