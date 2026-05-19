@@ -28,8 +28,8 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
-#include <clpp/ParentRuleShapes.hpp>
 #include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {

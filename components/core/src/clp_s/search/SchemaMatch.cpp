@@ -744,9 +744,8 @@ void SchemaMatch::build_log_shape_id_to_schema_id_map() {
             if (NodeType::LogTypeID == m_tree->get_node(node_id).get_type()) {
                 auto log_shape_id
                         = std::stoull(std::string{m_tree->get_node(node_id).get_key_name()});
-                m_log_shape_id_to_schema_id[static_cast<clpp::log_shape_id_t>(log_shape_id)].emplace_back(
-                        schema_id
-                );
+                m_log_shape_id_to_schema_id[static_cast<clpp::log_shape_id_t>(log_shape_id)]
+                        .emplace_back(schema_id);
                 break;
             }
         }

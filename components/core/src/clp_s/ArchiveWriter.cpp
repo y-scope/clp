@@ -25,11 +25,11 @@
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
 #include <clpp/ErrorCode.hpp>
+#include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 #include "clp_s/ColumnWriter.hpp"
 #include "clp_s/DictionaryWriter.hpp"
-#include <clpp/ParentRuleShapes.hpp>
-#include <clpp/LogShapeStat.hpp>
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -539,7 +539,8 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto ArchiveWriter::update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
+auto
+ArchiveWriter::update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
         -> ystdlib::error_handling::Result<void> {
     if (false == m_parent_rule_shapes.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
