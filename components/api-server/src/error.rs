@@ -82,6 +82,9 @@ impl From<clp_rust_utils::Error> for ClientError {
             }
             clp_rust_utils::Error::Io(error) => error.into(),
             clp_rust_utils::Error::Sqlx(error) => error.into(),
+            clp_rust_utils::Error::TelemetryExporterBuild(msg) => {
+                Self::Io(std::io::Error::other(msg))
+            }
         }
     }
 }

@@ -7,17 +7,20 @@ use opentelemetry_sdk::{
     metrics::{PeriodicReader, SdkMeterProvider},
 };
 
-use crate::clp_config::package::config::Telemetry;
+use crate::{Error, clp_config::package::config::Telemetry};
 
 /// Initializes OpenTelemetry metrics collection with the provided configuration.
 ///
-/// # Panics
+/// Returns `Ok(None)` if telemetry is disabled, `Ok(Some(provider))` on success,
+/// or an `Err` if the metric exporter cannot be built.
 ///
-/// Panics if the HTTP metric exporter cannot be built.
-#[must_use]
-pub fn init_telemetry(telemetry_config: &Telemetry) -> Option<SdkMeterProvider> {
+/// # Errors
+///
+/// Returns an error if the OTLP metric exporter fails to build (e.g., invalid
+/// endpoint configuration or missing HTTP client support).
+pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterProvider>, Error> {
     if telemetry_config.disable || env::var("CLP_DISABLE_TELEMETRY").is_ok() {
-        return None;
+        return Ok(None);
     }
 
     let endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
@@ -27,7 +30,7 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Option<SdkMeterProvider> 
         .with_http()
         .with_endpoint(endpoint)
         .build()
-        .expect("Failed to build HTTP metric exporter");
+        .map_err(|e| Error::TelemetryExporterBuild(e.to_string()))?;
 
     let reader = PeriodicReader::builder(exporter, opentelemetry_sdk::runtime::Tokio).build();
     let provider = SdkMeterProvider::builder()
@@ -36,7 +39,7 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Option<SdkMeterProvider> 
         .build();
 
     global::set_meter_provider(provider.clone());
-    Some(provider)
+    Ok(Some(provider))
 }
 
 pub fn shutdown_telemetry(provider: Option<SdkMeterProvider>) {

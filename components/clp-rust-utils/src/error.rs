@@ -13,4 +13,7 @@ pub enum Error {
 
     #[error("`sqlx::Error`: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error("Failed to build OTLP metric exporter: {0}")]
+    TelemetryExporterBuild(String),
 }
