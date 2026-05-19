@@ -1038,7 +1038,6 @@ class DockerComposeController(BaseController):
 
             resource_attrs_str = ",".join(f"{k}={v}" for k, v in self._resource_attrs.items())
             env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
-            env_vars["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://otel-collector:4318"
 
         env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
         env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
