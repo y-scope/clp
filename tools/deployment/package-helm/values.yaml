@@ -83,6 +83,7 @@ scheduling:
   apiServer: {}
   webui: {}
   mcpServer: {}
+  otelCollector: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
