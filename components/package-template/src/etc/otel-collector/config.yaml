@@ -13,7 +13,7 @@ processors:
     timeout: "30s"
     send_batch_size: 1024
   resourcedetection:
-    detectors: ["env", "docker", "system"]
+    detectors: ["docker", "system"]
     system:
       hostname_sources: ["os"]
       resource_attributes:

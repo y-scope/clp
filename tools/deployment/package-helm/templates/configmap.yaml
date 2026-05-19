@@ -453,7 +453,7 @@ data:
       #cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
       # downward API config.
       resourcedetection:
-        detectors: ["env", "system"]
+        detectors: ["system"]
         system:
           hostname_sources: ["os"]
           resource_attributes:
