@@ -159,7 +159,7 @@
 ## Per-component resource requests and limits.
 ## Each component accepts: requests (cpu, memory) and limits (cpu, memory).
 ## Values follow Kubernetes resource format (e.g., cpu: "1", memory: "1Gi").
-## When omitted, no resource requests/limits are set.
+## When omitted, defaults to 1 CPU and 4Gi memory for limits with no requests.
 ##
 ## Example:
 ##   resources:
