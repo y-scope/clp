@@ -21,6 +21,26 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+class SimdJsonStringEscaper::Implementation {
+public:
+    void escape(std::string& destination, std::string_view const source) {
+        m_builder.clear();
+        m_builder.escape_and_append(source);
+
+        std::string_view escaped_source;
+        auto const status = m_builder.view().get(escaped_source);
+        if (simdjson::SUCCESS == status) {
+            destination.append(escaped_source);
+            return;
+        }
+
+        StringUtils::escape_json_string(destination, source);
+    }
+
+private:
+    simdjson::builder::string_builder m_builder{};
+};
+
 bool FileUtils::find_all_files_in_directory(
         std::string const& path,
         std::vector<std::string>& file_paths
@@ -197,18 +217,21 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     return true;
 }
 
-void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
-    simdjson::builtin::builder::string_builder json_string_builder{};
-    json_string_builder.clear();
-    json_string_builder.escape_and_append(source);
-    std::string_view escaped_source;
-    auto const status = json_string_builder.view().get(escaped_source);
-    if (simdjson::SUCCESS == status) {
-        destination.append(escaped_source);
-        return;
-    }
+SimdJsonStringEscaper::SimdJsonStringEscaper()
+        : m_implementation{std::make_unique<Implementation>()} {}
 
-    // Preserve the original implementation in case simdjson fails.
+SimdJsonStringEscaper::SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept = default;
+
+SimdJsonStringEscaper::~SimdJsonStringEscaper() = default;
+
+auto SimdJsonStringEscaper::operator=(SimdJsonStringEscaper&&) noexcept
+        -> SimdJsonStringEscaper& = default;
+
+void SimdJsonStringEscaper::escape(std::string& destination, std::string_view const source) {
+    m_implementation->escape(destination, source);
+}
+
+void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
     // Escaping is implemented using this `append_unescaped_slice` approach to offer a fast path
     // when strings are mostly or entirely valid escaped JSON. Benchmarking shows that this offers
     // a net decompression speedup of ~30% compared to adding every character to the destination one

@@ -483,8 +483,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "simdjson"
-          TARBALL_SHA256: "c240d4bffcccda4fe3a2bba2872718d96fc92e56d2615bfac4f9b2bad89a6386"
-          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v4.6.2.tar.gz"
+          TARBALL_SHA256: "ad238fc578a4c18d3263250d0efaacadbc6a98f9c7b6be2e70867011b627fa57"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v4.0.0.tar.gz"
 
   spdlog:
     internal: true

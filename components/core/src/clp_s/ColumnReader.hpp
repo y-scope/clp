@@ -80,6 +80,14 @@ public:
         extract_string_value_into_buffer(cur_message, buffer);
     }
 
+    virtual auto extract_escaped_string_value_into_buffer(
+            uint64_t cur_message,
+            std::string& buffer,
+            SimdJsonStringEscaper&
+    ) -> void {
+        extract_escaped_string_value_into_buffer(cur_message, buffer);
+    }
+
 private:
     int32_t m_id;
 };
@@ -258,6 +266,12 @@ public:
     auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
             -> void override;
 
+    auto extract_escaped_string_value_into_buffer(
+            uint64_t cur_message,
+            std::string& buffer,
+            SimdJsonStringEscaper& escaper
+    ) -> void override;
+
     /**
      * Gets the encoded id of the variable
      * @param cur_message
@@ -302,6 +316,12 @@ public:
 
     auto extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer)
             -> void override;
+
+    auto extract_escaped_string_value_into_buffer(
+            uint64_t cur_message,
+            std::string& buffer,
+            SimdJsonStringEscaper& escaper
+    ) -> void override;
 
     /**
      * Gets the encoded id of the variable

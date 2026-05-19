@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -126,6 +127,24 @@ private:
         auto hex = char_to_hex(c);
         destination.append(hex.data(), hex.size());
     }
+};
+
+class SimdJsonStringEscaper {
+public:
+    SimdJsonStringEscaper();
+    SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept;
+    ~SimdJsonStringEscaper();
+
+    auto operator=(SimdJsonStringEscaper&&) noexcept -> SimdJsonStringEscaper&;
+
+    SimdJsonStringEscaper(SimdJsonStringEscaper const&) = delete;
+    auto operator=(SimdJsonStringEscaper const&) -> SimdJsonStringEscaper& = delete;
+
+    void escape(std::string& destination, std::string_view const source);
+
+private:
+    class Implementation;
+    std::unique_ptr<Implementation> m_implementation;
 };
 
 enum EvaluatedValue {
