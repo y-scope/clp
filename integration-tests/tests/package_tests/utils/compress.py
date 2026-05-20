@@ -3,19 +3,13 @@
 import logging
 from pathlib import Path
 
-import pytest
 from clp_py_utils.clp_config import StorageEngine
 
 from tests.package_tests.classes import ClpPackage
 from tests.package_tests.utils.decompress import decompress_clp_package
-from tests.utils.classes import (
-    CmdArgs,
-    ExternalAction,
-    IntegrationTestDataset,
-    VerificationResult,
-)
-from tests.utils.logging_utils import format_action_failure_msg
-from tests.utils.utils import clear_directory, is_dir_tree_content_equal
+from tests.utils.classes import ClpAction, ClpVerificationResult, CmdArgs, SampleDataset
+from tests.utils.fs_validation import is_dir_tree_content_equal
+from tests.utils.utils import clear_directory
 
 logger = logging.getLogger(__name__)
 
@@ -54,14 +48,14 @@ class CompressArgs(CmdArgs):
 
 def compress_clp_package(
     clp_package: ClpPackage,
-    dataset: IntegrationTestDataset,
-) -> ExternalAction:
+    dataset: SampleDataset,
+) -> ClpAction:
     """
     Compresses the specified dataset into a CLP package.
 
     :param clp_package:
     :param dataset:
-    :return: The `ExternalAction` instance that runs the compression.
+    :return: The `ClpAction` instance that runs the compression.
     """
     logger.info(
         "Compressing the '%s' dataset with the '%s' package.",
@@ -70,12 +64,10 @@ def compress_clp_package(
     )
 
     args: CompressArgs = _construct_compress_args(clp_package, dataset)
-    return ExternalAction(cmd=args.to_cmd(), args=args)
+    return ClpAction.from_args(args)
 
 
-def _construct_compress_args(
-    clp_package: ClpPackage, dataset: IntegrationTestDataset
-) -> CompressArgs:
+def _construct_compress_args(clp_package: ClpPackage, dataset: SampleDataset) -> CompressArgs:
     """Constructs the `CompressArgs` object for compressing the specified dataset."""
     path_config = clp_package.path_config
     args = CompressArgs(
@@ -93,60 +85,54 @@ def _construct_compress_args(
 
 
 def verify_compress_action(
-    compress_action: ExternalAction,
+    compress_action: ClpAction,
     clp_package: ClpPackage,
-    original_dataset: IntegrationTestDataset,
-) -> VerificationResult:
+    original_dataset: SampleDataset,
+) -> ClpVerificationResult:
     """
     Verifies the compression action.
 
     :param compress_action:
     :param clp_package:
     :param original_dataset:
-    :return: A `VerificationResult` indicating the success or failure of the verification.
+    :return: A `ClpVerificationResult` indicating the success or failure of the verification.
     """
     logger.info("Verifying '%s' package compression.", clp_package.mode_name)
 
-    if compress_action.completed_proc.returncode != 0:
-        return VerificationResult.fail(
-            format_action_failure_msg(
-                "The compress.sh subprocess returned a non-zero exit code.",
-                compress_action,
-            )
-        )
+    returncode_result = compress_action.verify_returncode()
+    if not returncode_result:
+        return returncode_result
 
     if original_dataset.metadata.unstructured:
         return _verify_compress_action_unstructured_logs(
             compress_action, clp_package, original_dataset
         )
-    return _verify_compress_action_structured_logs()
+    return _verify_compress_action_structured_logs(compress_action)
 
 
-def _verify_compress_action_structured_logs() -> VerificationResult:
+def _verify_compress_action_structured_logs(compress_action: ClpAction) -> ClpVerificationResult:
     """Verifies the compression of structured logs."""
     # TODO: Waiting for PR 1299 (clp-json decompression) to be merged.
-    return VerificationResult.ok()
+    return compress_action.pass_verification()
 
 
 def _verify_compress_action_unstructured_logs(
-    compress_action: ExternalAction,
+    compress_action: ClpAction,
     clp_package: ClpPackage,
-    original_dataset: IntegrationTestDataset,
-) -> VerificationResult:
+    original_dataset: SampleDataset,
+) -> ClpVerificationResult:
     """Verifies the compression of unstructured logs."""
     path_config = clp_package.path_config
 
     # Decompress the contents of `clp-package/var/data/archives`.
     clear_directory(path_config.package_decompression_dir)
     decompress_action = decompress_clp_package(clp_package, path_config.package_decompression_dir)
-    if decompress_action.completed_proc.returncode != 0:
-        pytest.fail(
-            format_action_failure_msg(
-                "During compress action verification, supporting call to 'decompress.sh' returned a"
-                " non-zero exit code.",
-                compress_action,
-                decompress_action,
-            )
+    decompress_returncode_result = decompress_action.verify_returncode()
+    if not decompress_returncode_result:
+        return compress_action.fail_verification(
+            "During compress action verification, supporting call to 'decompress.sh' returned a"
+            " non-zero exit code.",
+            supporting_action=decompress_action,
         )
 
     # Verify equality between original logs and decompressed logs.
@@ -158,13 +144,10 @@ def _verify_compress_action_unstructured_logs(
     equal = is_dir_tree_content_equal(original_logs_path, decompressed_logs_path)
     clear_directory(path_config.package_decompression_dir)
     if equal:
-        return VerificationResult.ok()
+        return compress_action.pass_verification()
 
-    return VerificationResult.fail(
-        format_action_failure_msg(
-            f"Compress verification failure: mismatch between original logs at"
-            f" '{original_logs_path}' and decompressed logs at '{decompressed_logs_path}'.",
-            compress_action,
-            decompress_action,
-        )
+    return compress_action.fail_verification(
+        f"Compress verification failure: mismatch between original logs at"
+        f" '{original_logs_path}' and decompressed logs at '{decompressed_logs_path}'.",
+        supporting_action=decompress_action,
     )

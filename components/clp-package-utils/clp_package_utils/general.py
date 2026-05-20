@@ -1,6 +1,7 @@
 import enum
 import errno
 import json
+import logging
 import os
 import pathlib
 import re
@@ -11,6 +12,7 @@ import uuid
 from enum import auto
 
 import yaml
+from ruamel.yaml import YAML
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
@@ -53,6 +55,8 @@ DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 S3_KEY_PREFIX_COMPRESSION = "s3-key-prefix"
 S3_OBJECT_COMPRESSION = "s3-object"
+
+logger = logging.getLogger(__name__)
 
 
 class DockerDependencyError(OSError):
@@ -779,6 +783,49 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
         raise DockerNotAvailableError(
             "Docker Compose is not installed or not functioning properly.", e
         ) from e
+
+
+def set_yaml_key(file_path: pathlib.Path, key: str, value: str) -> None:
+    """
+    Sets a possibly nested key in a YAML file, preserving formatting and comments.
+
+    :param file_path:
+    :param key: Dot-separated key path (e.g., ``"telemetry.disable"``).
+    :param value:
+    """
+    ryaml = YAML()
+    section, _, sub_key = key.partition(".")
+    parsed_value = ryaml.load(value)
+
+    if file_path.exists():
+        content = ryaml.load(file_path)
+        if content is None:
+            # File has only comments so can't round-trip through ruamel.yaml.
+            # Append as text to preserve existing comments.
+            text = file_path.read_text().rstrip("\n")
+            if sub_key:
+                text += f"\n\n{section}:\n  {sub_key}: {value}\n"
+            else:
+                text += f"\n\n{key}: {value}\n"
+            try:
+                file_path.write_text(text)
+                logger.info("Config updated in %s", file_path)
+            except OSError:
+                logger.warning("Failed to update config %s", file_path, exc_info=True)
+            return
+    else:
+        content = {}
+
+    if sub_key:
+        content.setdefault(section, {})[sub_key] = parsed_value
+    else:
+        content[section] = parsed_value
+
+    try:
+        ryaml.dump(content, file_path)
+        logger.info("Config updated in %s", file_path)
+    except OSError:
+        logger.warning("Failed to update config %s", file_path, exc_info=True)
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
