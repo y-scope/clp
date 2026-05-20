@@ -164,24 +164,11 @@ class ExternalAction:
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
 
-    #: Optional structured arguments for verification purposes. Not used by `ExternalAction` itself.
-    args: CmdArgs | None = None
-
     #: The completed process returned from `subprocess.run()`.
     completed_proc: subprocess.CompletedProcess[str] = field(init=False)
 
     #: Path to the file where this action's subprocess output was logged.
     log_file_path: Path = field(init=False)
-
-    @classmethod
-    def from_args(cls, args: CmdArgs) -> Self:
-        """:return: An `ExternalAction` whose `cmd` is derived from `args.to_cmd()`."""
-        return cls(cmd=args.to_cmd(), args=args)
-
-    @classmethod
-    def from_cmd(cls, cmd: list[str]) -> Self:
-        """:return: An `ExternalAction` for the given raw `cmd`, with no associated `args`."""
-        return cls(cmd=cmd, args=None)
 
     def __post_init__(self) -> None:
         """Execute the external action and log output."""
