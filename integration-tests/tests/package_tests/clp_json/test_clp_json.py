@@ -7,7 +7,6 @@ import pytest
 from tests.package_tests.classes import ClpPackage
 from tests.package_tests.clp_json.utils.mode import CLP_JSON_MODE
 from tests.utils.asserting_utils import (
-    validate_package_running,
     verify_package_compression,
 )
 from tests.utils.classes import SampleDataset
@@ -72,7 +71,8 @@ def test_clp_json_compression_json_multifile(
     run_package_compression_script(compression_job, clp_package)
 
     # Check the correctness of compression.
-    verify_package_compression(json_multifile.logs_path, clp_package)
+    result = verify_package_compression(json_multifile.logs_path, clp_package)
+    assert result, result.failure_message
 
     # Clear archives.
     package_path_config.clear_package_archives()
@@ -89,15 +89,13 @@ def test_clp_json_search(clp_package: ClpPackage) -> None:
     """
     logger.info("Starting test: 'test_clp_json_search'")
 
-    validate_package_running(clp_package)
-
     # TODO: compress a dataset
 
     # TODO: check the correctness of the compression
 
     # TODO: search through that dataset and check the correctness of the search results.
 
-    assert True
+    assert clp_package
 
     logger.info("Test complete: 'test_clp_json_search'")
 

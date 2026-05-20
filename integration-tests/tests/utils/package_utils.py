@@ -1,8 +1,8 @@
 """Provides utility functions related to the CLP package used across `integration-tests`."""
 
 from tests.package_tests.classes import ClpPackage
+from tests.utils.classes import ClpAction
 from tests.utils.config import PackageCompressionJob
-from tests.utils.subprocess_utils import run_and_log_subprocess
 
 
 def run_package_compression_script(
@@ -14,15 +14,13 @@ def run_package_compression_script(
 
     :param compression_job:
     :param clp_package:
+    :raise AssertionError: if the compression script returns a non-zero exit code.
     """
     path_config = clp_package.path_config
-    compress_script_path = path_config.compress_path
-    temp_config_file_path = clp_package.temp_config_file_path
-
     compress_cmd = [
-        str(compress_script_path),
+        str(path_config.compress_path),
         "--config",
-        str(temp_config_file_path),
+        str(clp_package.temp_config_file_path),
     ]
 
     if compression_job.options is not None:
@@ -33,5 +31,7 @@ def run_package_compression_script(
 
     compress_cmd.append(str(compression_job.path_to_original_dataset))
 
-    # Run compression command for this job and assert that it succeeds.
-    run_and_log_subprocess(compress_cmd)
+    # Run compression command for this job and fail the test if it returned a bad return code.
+    compress_action = ClpAction.from_cmd(compress_cmd)
+    result = compress_action.verify_returncode()
+    assert result, result.failure_message

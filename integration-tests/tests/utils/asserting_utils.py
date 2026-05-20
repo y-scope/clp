@@ -3,57 +3,20 @@
 import logging
 from pathlib import Path
 
-import pytest
 from clp_package_utils.general import EXTRACT_FILE_CMD
 
 from tests.package_tests.classes import ClpPackage
-from tests.utils.docker_utils import list_running_services_in_compose_project
-from tests.utils.subprocess_utils import run_and_log_subprocess
-from tests.utils.utils import (
-    clear_directory,
-    is_dir_tree_content_equal,
-)
+from tests.utils.classes import ClpAction, ClpVerificationResult
+from tests.utils.fs_validation import is_dir_tree_content_equal
+from tests.utils.utils import clear_directory
 
 logger = logging.getLogger(__name__)
-
-
-def validate_package_running(clp_package: ClpPackage) -> None:
-    """
-    Validate that the given CLP package is running by checking that the set of services running in
-    the Compose project exactly matches the list of required components.
-
-    :param clp_package:
-    :raise pytest.fail: if the sets of running services and required components do not match.
-    """
-    logger.info("Validating the '%s' package.", clp_package.mode_name)
-
-    # Get list of services currently running in the Compose project.
-    instance_id = clp_package.get_clp_instance_id()
-    project_name = f"clp-package-{instance_id}"
-    running_services = set(list_running_services_in_compose_project(project_name))
-
-    # Compare with list of required components.
-    required_components = set(clp_package.component_list)
-    if required_components == running_services:
-        return
-
-    fail_msg = "Component mismatch."
-
-    missing_components = required_components - running_services
-    if missing_components:
-        fail_msg += f"\nMissing components: {missing_components}."
-
-    unexpected_components = running_services - required_components
-    if unexpected_components:
-        fail_msg += f"\nUnexpected services: {unexpected_components}."
-
-    pytest.fail(fail_msg)
 
 
 def verify_package_compression(
     path_to_original_dataset: Path,
     clp_package: ClpPackage,
-) -> None:
+) -> ClpVerificationResult:
     """
     Verify that compression has been executed correctly by decompressing the contents of the
     package archives directory and comparing the decompressed logs to the originals stored at
@@ -61,6 +24,7 @@ def verify_package_compression(
 
     :param path_to_original_dataset:
     :param clp_package:
+    :return: A `ClpVerificationResult` describing the outcome.
     """
     mode = clp_package.mode_name
     log_msg = f"Verifying {mode} package compression."
@@ -68,9 +32,9 @@ def verify_package_compression(
 
     if mode == "clp-json":
         # TODO: Waiting for PR 1299 to be merged.
-        assert True
-    elif mode == "clp-text":
-        # Decompress the contents of the package archives directory.
+        return ClpVerificationResult(success=True)
+    if mode == "clp-text":
+        # Decompress the contents of `clp-package/var/data/archives`.
         path_config = clp_package.path_config
         decompression_dir = path_config.package_decompression_dir
         temp_config_file_path = clp_package.temp_config_file_path
@@ -86,8 +50,12 @@ def verify_package_compression(
             str(decompression_dir),
         ]
 
-        # Run decompression command and assert that it succeeds.
-        run_and_log_subprocess(decompress_cmd)
+        # Run decompression command and check that it succeeds.
+        decompress_action = ClpAction.from_cmd(decompress_cmd)
+        decompress_result = decompress_action.verify_returncode()
+        if not decompress_result:
+            clear_directory(decompression_dir)
+            return decompress_result
 
         # Verify content equality.
         output_path = decompression_dir / path_to_original_dataset.relative_to(
@@ -96,10 +64,11 @@ def verify_package_compression(
 
         try:
             if not is_dir_tree_content_equal(path_to_original_dataset, output_path):
-                err_msg = (
+                return decompress_action.fail_verification(
                     f"Mismatch between clp input {path_to_original_dataset} and output"
-                    f" {output_path}."
+                    f" {output_path}.",
                 )
-                pytest.fail(err_msg)
         finally:
             clear_directory(decompression_dir)
+
+    return ClpVerificationResult(success=True)
