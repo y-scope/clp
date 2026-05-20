@@ -9,8 +9,6 @@ from tests.utils.utils import (
     validate_dir_exists,
 )
 
-_UUID_V4_VERSION = 4
-
 
 @dataclass(frozen=True)
 class ClpCorePathConfig:

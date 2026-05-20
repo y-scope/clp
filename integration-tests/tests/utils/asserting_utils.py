@@ -37,14 +37,13 @@ def verify_package_compression(
         # Decompress the contents of `clp-package/var/data/archives`.
         path_config = clp_package.path_config
         decompression_dir = path_config.package_decompression_dir
-        temp_config_file_path = clp_package.temp_config_file_path
 
         clear_directory(decompression_dir)
 
         decompress_cmd = [
             str(path_config.decompress_path),
             "--config",
-            str(temp_config_file_path),
+            str(clp_package.temp_config_file_path),
             EXTRACT_FILE_CMD,
             "--extraction-dir",
             str(decompression_dir),

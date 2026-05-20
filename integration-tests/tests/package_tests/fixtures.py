@@ -82,6 +82,7 @@ def clp_package(
         start_clp_action: ClpAction = start_clp_package(clp_package)
         start_result = verify_start_clp_action(start_clp_action, clp_package)
         assert start_result, start_result.failure_message
+
         yield clp_package
     finally:
         stop_clp_action: ClpAction = stop_clp_package(clp_package)

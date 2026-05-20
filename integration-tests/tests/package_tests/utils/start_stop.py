@@ -35,6 +35,7 @@ def start_clp_package(
     :return: The `ClpAction` instance that starts the package.
     """
     logger.info("Starting up the '%s' package.", clp_package.mode_name)
+
     args = StartStopArgs(
         script_path=clp_package.path_config.start_clp_path,
         config=clp_package.temp_config_file_path,
@@ -52,6 +53,7 @@ def stop_clp_package(
     :return: The `ClpAction` instance that stops the package.
     """
     logger.info("Stopping the '%s' package.", clp_package.mode_name)
+
     args = StartStopArgs(
         script_path=clp_package.path_config.stop_clp_path,
         config=clp_package.temp_config_file_path,
