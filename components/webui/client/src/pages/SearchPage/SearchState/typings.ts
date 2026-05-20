@@ -1,4 +1,24 @@
 /**
+ * Available options for the maximum number of search results.
+ */
+/* eslint-disable no-magic-numbers */
+const MAX_RESULTS_OPTIONS = [
+    10,
+    50,
+    100,
+    500,
+    1000,
+    5000,
+    10000,
+] as const;
+/* eslint-enable no-magic-numbers */
+
+/**
+ * Default value for the maximum number of search results.
+ */
+const DEFAULT_MAX_NUM_RESULTS: number = 1000;
+
+/**
  * Search UI states.
  */
 enum SEARCH_UI_STATE {
@@ -28,4 +48,8 @@ enum SEARCH_UI_STATE {
     FAILED,
 }
 
-export {SEARCH_UI_STATE};
+export {
+    DEFAULT_MAX_NUM_RESULTS,
+    MAX_RESULTS_OPTIONS,
+    SEARCH_UI_STATE,
+};

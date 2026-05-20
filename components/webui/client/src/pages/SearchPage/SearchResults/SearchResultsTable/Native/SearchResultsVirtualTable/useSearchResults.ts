@@ -1,7 +1,6 @@
 import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../../SearchState/index";
-import {SEARCH_MAX_NUM_RESULTS} from "../../typings";
 import {SearchResult} from "./typings";
 
 
@@ -11,7 +10,7 @@ import {SearchResult} from "./typings";
  * @return
  */
 const useSearchResults = () => {
-    const {searchJobId} = useSearchStore();
+    const {searchJobId, maxNumResults} = useSearchStore();
 
     const searchResultsCursor = useCursor<SearchResult>(
         () => {
@@ -25,7 +24,6 @@ const useSearchResults = () => {
                 `Subscribing to updates to search results with job ID: ${searchJobId}`
             );
 
-            // Retrieve 1k most recent results.
             const options = {
                 sort: [
                     [
@@ -37,13 +35,16 @@ const useSearchResults = () => {
                         "desc",
                     ],
                 ],
-                limit: SEARCH_MAX_NUM_RESULTS,
+                limit: maxNumResults,
             };
 
             const collection = new MongoSocketCollection(searchJobId);
             return collection.find({}, options);
         },
-        [searchJobId]
+        [
+            searchJobId,
+            maxNumResults,
+        ]
     );
 
     return searchResultsCursor;

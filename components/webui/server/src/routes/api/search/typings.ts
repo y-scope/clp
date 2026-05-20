@@ -12,11 +12,12 @@ import type {
 /**
  * The maximum number of results to retrieve for a search.
  */
-const SEARCH_MAX_NUM_RESULTS = 1000;
+const DEFAULT_SEARCH_MAX_NUM_RESULTS = 1000;
 
 type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
     logger: FastifyBaseLogger;
+    maxNumResults: number;
     mongoDb: Db;
     queryJobDbManager: FastifyInstance["QueryJobDbManager"];
     searchJobId: number;
@@ -32,7 +33,6 @@ type CreateMongoIndexesProps = {
 
 export {
     CreateMongoIndexesProps,
-    SEARCH_MAX_NUM_RESULTS,
-    SearchResultsMetadataDocument,
+    DEFAULT_SEARCH_MAX_NUM_RESULTS,
     UpdateSearchSignalWhenJobsFinishProps,
 };
