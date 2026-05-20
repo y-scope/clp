@@ -78,15 +78,17 @@ def clp_package(
         clp_package.temp_config_file_path,
     )
 
+    start_successful = False
     try:
         start_clp_action: ClpAction = start_clp_package(clp_package)
         start_result = verify_start_clp_action(start_clp_action, clp_package)
         assert start_result, start_result.failure_message
-
+        start_successful = True
         yield clp_package
     finally:
         stop_clp_action: ClpAction = stop_clp_package(clp_package)
-        stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
-        assert stop_result, stop_result.failure_message
+        if start_successful:
+            stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
+            assert stop_result, stop_result.failure_message
 
         clp_package.temp_config_file_path.unlink(missing_ok=True)

@@ -5,7 +5,6 @@ from pathlib import Path
 
 from tests.package_tests.classes import ClpPackage
 from tests.utils.classes import ClpAction, ClpVerificationResult, CmdArgs
-from tests.utils.docker_utils import list_running_services_in_compose_project
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +76,11 @@ def verify_start_clp_action(
     if not returncode_result:
         return returncode_result
 
-    package_running_err = _validate_clp_package_running(clp_package)
-    if package_running_err is None:
+    package_running_err_msg = _validate_clp_package_running(clp_package)
+    if package_running_err_msg is None:
         return start_clp_action.pass_verification()
 
-    return start_clp_action.fail_verification(package_running_err)
+    return start_clp_action.fail_verification(package_running_err_msg)
 
 
 def verify_stop_clp_action(
@@ -99,19 +98,16 @@ def verify_stop_clp_action(
     if not returncode_result:
         return returncode_result
 
-    package_not_running_err = _validate_clp_package_not_running(clp_package)
-    if package_not_running_err is None:
+    package_not_running_err_msg = _validate_clp_package_not_running(clp_package)
+    if package_not_running_err_msg is None:
         return stop_clp_action.pass_verification()
 
-    return stop_clp_action.fail_verification(package_not_running_err)
+    return stop_clp_action.fail_verification(package_not_running_err_msg)
 
 
 def _validate_clp_package_running(clp_package: ClpPackage) -> str | None:
     """:return: `None` on success; otherwise a string describing the failure."""
-    # Get list of services currently running in the Compose project.
-    instance_id = clp_package.get_clp_instance_id()
-    project_name = f"clp-package-{instance_id}"
-    running_services = set(list_running_services_in_compose_project(project_name))
+    running_services = clp_package.get_running_services()
 
     # Compare with list of required components.
     required_components = set(clp_package.component_list)
@@ -137,10 +133,7 @@ def _validate_clp_package_running(clp_package: ClpPackage) -> str | None:
 
 def _validate_clp_package_not_running(clp_package: ClpPackage) -> str | None:
     """:return: `None` on success; otherwise a string describing the failure."""
-    # Get list of services currently running in the Compose project.
-    instance_id = clp_package.get_clp_instance_id()
-    project_name = f"clp-package-{instance_id}"
-    running_services = set(list_running_services_in_compose_project(project_name))
+    running_services = clp_package.get_running_services()
 
     # Make sure the set is empty.
     if not running_services:
