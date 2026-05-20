@@ -208,9 +208,13 @@ class ExternalAction:
                 text=True,
             )
         except subprocess.TimeoutExpired:
-            pytest.fail(f"Subprocess '{exe_name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s.")
+            err_msg = f"Subprocess '{exe_name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s."
+            logger.exception(err_msg)
+            pytest.fail(err_msg)
         except OSError as e:
-            pytest.fail(f"Subprocess '{exe_name}' failed to start: {e}")
+            err_msg = f"Subprocess '{exe_name}' failed to start: {e}"
+            logger.exception(err_msg)
+            pytest.fail(err_msg)
 
     def _log_action_summary_to_file(self) -> None:
         """Logs a summary of the external action execution to a unique file."""
