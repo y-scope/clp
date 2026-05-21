@@ -255,12 +255,12 @@ if(CLP_BUILD_CLP_S_IO)
         target_link_libraries(
                 clp_s_io
                 PUBLIC
+                simdjson::simdjson
                 zstd::libzstd_static
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
-                simdjson::simdjson
                 spdlog::spdlog
         )
 endif()
@@ -398,6 +398,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                simdjson::simdjson
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
