@@ -58,6 +58,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         :param file: Archive sink. Must be either a filesystem path or a binary I/O object.
         :param kwargs: Compression specific keyword arguments. See `CompressionKwargs`.
         :raise ClpCoreRuntimeError: if initialization fails.
+        :raise: Propagates `_validate_archive_source`'s exceptions.
         """
         self._is_open: bool = False
 
@@ -99,7 +100,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             the CLP compression pipeline currently does not support operating on stdin.
         :raise ArchiveClosedError: If the archive writer is already closed.
         :raise BadCompressionInputError: If the input source type is not supported.
-        :raise ClpCoreRuntimeError: If the input source cannot be processed successfully.
+        :raise: Propagates `_write_stream_to_temp_file`'s exceptions.
         """
         if not self._is_open:
             err_msg = "ClpArchiveWriter already closed."
