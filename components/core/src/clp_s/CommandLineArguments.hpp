@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <boost/program_options/options_description.hpp>
@@ -28,14 +29,6 @@ public:
         Compress = 'c',
         Extract = 'x',
         Search = 's'
-    };
-
-    enum class OutputHandlerType : uint8_t {
-        File = 0,
-        Network,
-        Reducer,
-        ResultsCache,
-        Stdout,
     };
 
     enum class AggregationType : uint8_t {
@@ -67,6 +60,15 @@ public:
         AggregationType aggregation_type{AggregationType::Count};
         int64_t count_by_time_bucket_size{};  // Milliseconds
     };
+
+    struct StdoutOutputHandlerOptions {};
+
+    using OutputHandlerOptionsVariant = std::
+            variant<ResultsCacheOutputHandlerOptions,
+                    FileOutputHandlerOptions,
+                    NetworkOutputHandlerOptions,
+                    ReducerOutputHandlerOptions,
+                    StdoutOutputHandlerOptions>;
 
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
@@ -117,24 +119,9 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
-    auto get_results_cache_output_handler_options() const
-            -> ResultsCacheOutputHandlerOptions const& {
-        return m_results_cache_output_handler_options;
+    auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
+        return m_output_handler_options;
     }
-
-    auto get_file_output_handler_options() const -> FileOutputHandlerOptions const& {
-        return m_file_output_handler_options;
-    }
-
-    auto get_network_output_handler_options() const -> NetworkOutputHandlerOptions const& {
-        return m_network_output_handler_options;
-    }
-
-    auto get_reducer_output_handler_options() const -> ReducerOutputHandlerOptions const& {
-        return m_reducer_output_handler_options;
-    }
-
-    OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
 
     [[nodiscard]] auto get_retain_float_format() const -> bool {
         return false == m_no_retain_float_format;
@@ -160,44 +147,53 @@ private:
      * Validates output options related to the Network Destination output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
+     * contain options that have the unrecognized flag set.
+     * @param network_options The parsed representation of the network output handler options.
      */
     void parse_network_dest_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<std::string> const& options
+            std::vector<std::string> const& options,
+            NetworkOutputHandlerOptions& network_options
     );
 
     /**
      * Validates output options related to the Reducer output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
+     * contain options that have the unrecognized flag set.
+     * @param reducer_options The parsed representation of the reducer output handler options.
      */
     void parse_reducer_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<std::string> const& options
+            std::vector<std::string> const& options,
+            ReducerOutputHandlerOptions& reducer_options
     );
 
     /**
      * Validates output options related to the Results Cache output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
+     * contain options that have the unrecognized flag set.
+     * @param results_cache_options The parsed representation of the results cache output handler
+     * options.
      */
     void parse_results_cache_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<std::string> const& options
+            std::vector<std::string> const& options,
+            ResultsCacheOutputHandlerOptions& results_cache_options
     );
 
     /**
      * Validates output options related to the File output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
+     * contain options that have the unrecognized flag set.
+     * @param file_options The parsed representation of the file output handler options.
      */
     void parse_file_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<std::string> const& options
+            std::vector<std::string> const& options,
+            FileOutputHandlerOptions& file_options
     );
 
     void print_basic_usage() const;
@@ -235,11 +231,7 @@ private:
     std::string m_mongodb_collection;
 
     // Search output handler options
-    OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
-    ResultsCacheOutputHandlerOptions m_results_cache_output_handler_options{};
-    NetworkOutputHandlerOptions m_network_output_handler_options{};
-    FileOutputHandlerOptions m_file_output_handler_options{};
-    ReducerOutputHandlerOptions m_reducer_output_handler_options{};
+    OutputHandlerOptionsVariant m_output_handler_options{StdoutOutputHandlerOptions{}};
 
     // Search variables
     std::string m_query;
