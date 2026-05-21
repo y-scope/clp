@@ -28,22 +28,22 @@ from yscope_clp_core._utils import _validate_archive_source
 CLP_SFA_MAGIC_BYTES = b"\xfd\x2f\xc5\x30"
 
 
-def is_clp_json_single_file_archive(input: ArchiveInputSource) -> bool:
+def is_clp_json_single_file_archive(source: ArchiveInputSource) -> bool:
     """
     Detect whether the input source starts with the CLP JSON single-file archive magic bytes.
 
-    :param input: Archive source. Must be either a filesystem path or a binary I/O object.
+    :param source: Archive source. Must be either a filesystem path or a binary I/O object.
     :return: True if the input starts with the CLP SFA magic bytes.
     :raise: Propagates `_validate_archive_source`'s exceptions.
     """
     magic_len = len(CLP_SFA_MAGIC_BYTES)
-    _validate_archive_source(input)
+    _validate_archive_source(source)
 
-    if isinstance(input, (str, os.PathLike)):
-        with Path(input).open("rb") as archive_file:
+    if isinstance(source, (str, os.PathLike)):
+        with Path(source).open("rb") as archive_file:
             return archive_file.read(magic_len) == CLP_SFA_MAGIC_BYTES
 
-    return input.read(magic_len) == CLP_SFA_MAGIC_BYTES
+    return source.read(magic_len) == CLP_SFA_MAGIC_BYTES
 
 
 @overload

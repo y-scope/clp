@@ -4,7 +4,6 @@ import os
 import shutil
 import subprocess
 import sys
-import warnings
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, suppress
 from pathlib import Path
@@ -119,9 +118,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             raise BadCompressionInputError(err_msg)
 
     def flush(self) -> None:
-        """
-        Flush is a no-op since archive appending is currently no supported.
-        """
+        """Flush is a no-op since archive appending is currently no supported."""
         if not self._is_open:
             # Should throw `ArchiveClosedError` once flush is properly supported
             pass

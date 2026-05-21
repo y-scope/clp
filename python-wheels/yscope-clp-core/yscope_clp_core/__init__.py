@@ -29,9 +29,9 @@ from yscope_clp_core._except import (
 )
 
 __all__ = [
+    "CLP_SFA_MAGIC_BYTES",
     "ArchiveClosedError",
     "BadArchiveSourceError",
-    "CLP_SFA_MAGIC_BYTES",
     "BadCompressionInputError",
     "ClpArchiveReader",
     "ClpArchiveWriter",
