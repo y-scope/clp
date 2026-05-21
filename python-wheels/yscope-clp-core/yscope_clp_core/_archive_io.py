@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import warnings
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, suppress
 from pathlib import Path
@@ -119,15 +120,13 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
     def flush(self) -> None:
         """
+        Flush is a no-op since archive appending is currently no supported.
+
         :raise ArchiveClosedError: If the archive writer is already closed.
-        :raise io.UnsupportedOperation: Archive writer does not support concepts of flush or append.
         """
         if not self._is_open:
             err_msg = "ClpArchiveWriter already closed."
             raise ArchiveClosedError(err_msg)
-
-        err_msg = "ClpArchiveWriter does not support flush. Archives are finalized in one pass."
-        raise io.UnsupportedOperation(err_msg)
 
     def close(self) -> None:
         """
