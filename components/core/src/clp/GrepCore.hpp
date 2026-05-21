@@ -41,8 +41,7 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param parser Parser for determining if input is in the schema.
-     * @param use_heuristic
+     * @param parser Pointer to parser used for interpreting query. If `nullptr` use heurustic mode.
      * @return Query if it may match a message, std::nullopt otherwise
      */
     template <
@@ -56,8 +55,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            log_surgeon::ParserHandle& parser,
-            bool use_heuristic
+            log_surgeon::ParserHandle* parser
     );
 
     /**
@@ -143,14 +141,13 @@ std::optional<Query> GrepCore::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::ParserHandle& parser,
-        bool use_heuristic
+        log_surgeon::ParserHandle* parser
 ) {
     std::vector<SubQuery> sub_queries;
-    if (false == use_heuristic) {
+    if (nullptr != parser) {
         sub_queries = SchemaSearcher::search(
                 search_string,
-                parser,
+                *parser,
                 logtype_dict,
                 var_dict,
                 ignore_case

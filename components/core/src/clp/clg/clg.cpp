@@ -199,8 +199,7 @@ static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
-        log_surgeon::ParserHandle& parser,
-        bool use_heuristic
+        log_surgeon::ParserHandle* parser
 ) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
@@ -221,8 +220,7 @@ static bool search(
                     search_begin_ts,
                     search_end_ts,
                     command_line_args.ignore_case(),
-                    parser,
-                    use_heuristic
+                    parser
             );
             if (query_processing_result.has_value()) {
                 auto& query = query_processing_result.value();
@@ -579,10 +577,7 @@ int main(int argc, char const* argv[]) {
 
         // Generate lexer if schema file exists
         auto rule_set_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-        bool use_heuristic = true;
         if (std::filesystem::exists(rule_set_file_path)) {
-            use_heuristic = false;
-
             char buf[max_map_schema_length];
             FileReader file_reader{rule_set_file_path};
 
@@ -608,7 +603,7 @@ int main(int argc, char const* argv[]) {
         }
 
         // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, *parser, use_heuristic)) {
+        if (false == search(search_strings, command_line_args, archive_reader, parser)) {
             return -1;
         }
         archive_reader.close();
