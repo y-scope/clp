@@ -71,23 +71,24 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
         _validate_archive_source(self._file)
 
-        self._archive_dir: Path
-        self._temp_archive_dir: TemporaryDirectory[str] | None = None
+        # Create a temporary directory for the archive to live in, and then:
+        # - move the archive to the specified archive path, or
+        # - feed the archive into the IO[bytes] stream
+        self._temp_archive_dir: TemporaryDirectory[str] = TemporaryDirectory()
+
+        self._archive_path: Path
         if isinstance(self._file, (str, os.PathLike)):
-            self._archive_dir = Path(self._file)
+            self._archive_path = Path(self._file)
             try:
-                if self._archive_dir.is_dir():
-                    shutil.rmtree(self._archive_dir)
-                elif self._archive_dir.is_file():
-                    self._archive_dir.unlink()
+                if self._archive_path.is_dir():
+                    shutil.rmtree(self._archive_path)
+                elif self._archive_path.is_file():
+                    self._archive_path.unlink()
             except Exception as e:
-                err_msg = f"Failed to overwrite archive at {self._archive_dir}."
+                err_msg = f"Failed to overwrite archive at {self._archive_path}."
                 raise ClpCoreRuntimeError(err_msg) from e
         else:
-            # Create a temporary directory for the archive to live in, and feed
-            # the archive into the IO[bytes] stream.
-            self._temp_archive_dir = TemporaryDirectory()
-            self._archive_dir = Path(self._temp_archive_dir.name)
+            self._archive_path = Path(self._temp_archive_dir.name)
 
         self._is_open = True
 
@@ -113,7 +114,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             self._files_to_compress.append(temp_file_path)
             self._temp_files_to_compress.append(temp_file_path)
         else:
-            err_msg = f"Invalid compression input type for archive {self._archive_dir}."
+            err_msg = f"Invalid compression input type for archive {self._archive_path}."
             raise BadCompressionInputError(err_msg)
 
     def flush(self) -> None:
@@ -158,7 +159,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             raise ArchiveClosedError(err_msg)
 
         if 0 == len(self._files_to_compress):
-            err_msg = f"Nothing to compress for archive {self._archive_dir}."
+            err_msg = f"Nothing to compress for archive {self._archive_path}."
             raise BadCompressionInputError(err_msg)
 
         clp_s_bin_path = _get_clp_exe("clp-s")
@@ -167,17 +168,20 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             compress_cmd.extend(["--compression-level", str(self._compression_level)])
         if self._timestamp_key is not None:
             compress_cmd.extend(["--timestamp-key", self._timestamp_key])
-        compress_cmd.append(str(self._archive_dir))
+        compress_cmd.append(self._temp_archive_dir.name)
         compress_cmd.extend(str(p) for p in self._files_to_compress)
 
         try:
             subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE, text=True)
         except subprocess.CalledProcessError as e:
-            err_msg = f"Compression for archive {self._archive_dir} failed: {e.stderr.strip()}"
+            err_msg = f"Compression for archive {self._archive_path} failed: {e.stderr.strip()}"
             raise ClpCoreRuntimeError(err_msg) from e
 
-        if self._temp_archive_dir is not None:
-            with _get_single_file_in_dir(self._archive_dir).open("rb") as archive_file:
+        uuid_archive_path: Path = _get_single_file_in_dir(Path(self._temp_archive_dir.name))
+        if isinstance(self._file, (str, os.PathLike)):
+            shutil.move(str(uuid_archive_path), self._archive_path)
+        else:
+            with uuid_archive_path.open("rb") as archive_file:
                 shutil.copyfileobj(
                     archive_file, cast("IO[bytes]", self._file), length=FILE_OBJ_COPY_CHUNK_SIZE
                 )
@@ -191,10 +195,8 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             with suppress(OSError):
                 p.unlink()
 
-        if self._temp_archive_dir is not None:
-            with suppress(OSError):
-                self._temp_archive_dir.cleanup()
-            self._temp_archive_dir = None
+        with suppress(OSError):
+            self._temp_archive_dir.cleanup()
 
     def __enter__(self) -> Self:
         return self
