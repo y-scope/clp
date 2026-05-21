@@ -45,9 +45,9 @@ public:
         return m_parent_rule_shapes.emplace_back(std::forward<Args>(args)...);
     }
 
-    auto parent_rule_shape(size_t i) -> ParentRuleShape& { return m_parent_rule_shapes.at(i); }
+    auto at(size_t i) -> ParentRuleShape& { return m_parent_rule_shapes.at(i); }
 
-    [[nodiscard]] auto get_parent_rule_shapes() const -> std::vector<ParentRuleShape> const& {
+    [[nodiscard]] auto get() const -> std::vector<ParentRuleShape> const& {
         return m_parent_rule_shapes;
     }
 

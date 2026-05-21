@@ -31,22 +31,22 @@ auto DecomposedQuery::decompose_query(
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::DecomposeQueryFailure};
     }
 
-    DecomposedQuery decomposed_query;
+    std::vector<Interpretation> interps;
     for (auto const& sub_queries : interpretations) {
-        decomposed_query.m_interpretations.emplace_back();
-        auto& interp{decomposed_query.m_interpretations.back()};
-        interp.m_static_text.reserve(query.size());
+        std::string shape_query;
+        std::vector<LeafQuery> leaf_queries;
         for (auto const& sub_query : sub_queries) {
             if (sub_query.qualified_name.empty()) {
-                interp.m_static_text.append(sub_query.value);
+                shape_query.append(sub_query.value);
             } else {
-                interp.m_leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
-                interp.m_static_text.append(fmt::format("%{}%", sub_query.qualified_name));
+                leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
+                shape_query.append(fmt::format("%{}%", sub_query.qualified_name));
             }
         }
+        interps.emplace_back(shape_query, leaf_queries);
     }
 
-    return decomposed_query;
+    return DecomposedQuery{interps};
 }
 
 auto DecomposedQuery::create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::

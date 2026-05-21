@@ -1643,13 +1643,13 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     ));
 
     if (new_log_shape) {
-        clpp::ParentRuleShapes metadata;
+        clpp::ParentRuleShapes parent_shapes;
         std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
         for (auto const& match : event.get_all_matches()) {
             if (match.is_leaf) {
                 continue;
             }
-            metadata.emplace_parent_rule_shape(
+            parent_shapes.emplace_parent_rule_shape(
                     match.ffi_pointers.fully_qualified_name.as_cpp_view(),
                     match.range.start,
                     match.range.end - match.range.start
@@ -1670,14 +1670,14 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             auto const diff{static_cast<int64_t>(old_size) - static_cast<int64_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
                 if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
-                    metadata.parent_rule_shape(j).m_start -= diff;
+                    parent_shapes.at(j).m_start -= diff;
                 } else if (leaf_match->range.end <= og_parent_match_pos.at(j).second) {
-                    metadata.parent_rule_shape(j).m_size -= diff;
+                    parent_shapes.at(j).m_size -= diff;
                 }
             }
         }
         YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_parent_rule_shapes(log_shape_id, metadata)
+                m_archive_writer->update_parent_rule_shapes(log_shape_id, parent_shapes)
         );
     }
 

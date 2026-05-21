@@ -17,16 +17,24 @@ class DecomposedQuery {
 public:
     // Types
     struct LeafQuery {
-        LeafQuery(std::string qualified_name, std::string_view match)
-                : m_qualified_name(std::move(qualified_name)),
+        // Constructors
+        LeafQuery(std::string_view qualified_name, std::string_view match)
+                : m_qualified_name(qualified_name),
                   m_query(match) {}
 
+        // Data members
         std::string m_qualified_name;
         std::string m_query;
     };
 
     struct Interpretation {
-        std::string m_static_text;
+        // Constructors
+        Interpretation(std::string_view shape_query, std::vector<LeafQuery> leaf_queries)
+                : m_shape_query(shape_query),
+                  m_leaf_queries(std::move(leaf_queries)) {}
+
+        // Data members
+        std::string m_shape_query;
         std::vector<LeafQuery> m_leaf_queries;
     };
 
@@ -57,7 +65,8 @@ public:
 
 private:
     // Constructors
-    DecomposedQuery() = default;
+    DecomposedQuery(std::vector<Interpretation> interpretations)
+            : m_interpretations(std::move(interpretations)) {}
 
     // Data members
     std::vector<Interpretation> m_interpretations;

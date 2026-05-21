@@ -978,12 +978,12 @@ void SchemaReader::emit_parent_rule_shape(
         SchemaNode::id_t global_column_id,
         clpp::log_shape_id_t log_shape_id,
         bool found_log_shape_id,
-        absl::flat_hash_set<SchemaNode::id_t>& emitted_schema_parent_rules
+        absl::flat_hash_set<SchemaNode::id_t>& emitted_parent_rules
 ) {
-    if (emitted_schema_parent_rules.contains(global_column_id)) {
+    if (emitted_parent_rules.contains(global_column_id)) {
         return;
     }
-    emitted_schema_parent_rules.insert(global_column_id);
+    emitted_parent_rules.insert(global_column_id);
 
     auto const& node{m_global_schema_tree->get_node(global_column_id)};
 
@@ -1021,7 +1021,7 @@ void SchemaReader::emit_parent_rule_shape(
         {
             auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
             auto const parent_fqn{m_global_schema_tree->build_qualified_name(global_column_id)};
-            for (auto const& match : metadata.get_parent_rule_shapes()) {
+            for (auto const& match : metadata.get()) {
                 if (match.m_name == parent_fqn) {
                     auto const& log_shape_template{m_log_shape_dict->get_value(log_shape_id)};
                     if (match.m_start < log_shape_template.size()
@@ -1039,7 +1039,7 @@ void SchemaReader::emit_parent_rule_shape(
     }
 }
 
-auto SchemaReader::emit_log_type_shape(clpp::log_shape_id_t log_shape_id)
+auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
         -> ystdlib::error_handling::Result<void> {
     if (nullptr == m_log_shape_dict) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
@@ -1263,7 +1263,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
                             search::Projection::NodeProjection::Decomposed
                     )))
             {
-                if (auto const result{emit_log_type_shape(log_shape_id)}; result.has_error()) {
+                if (auto const result{emit_log_shape(log_shape_id)}; result.has_error()) {
                     return result.error();
                 }
             }
@@ -1311,7 +1311,7 @@ auto SchemaReader::reconstruct_log_shape(
         }
         auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
         bool found_match{false};
-        for (auto const& match : metadata.get_parent_rule_shapes()) {
+        for (auto const& match : metadata.get()) {
             if (match.m_name == parent_rule_fqn) {
                 if (match.m_start < log_shape_template.size()
                     && match.m_start + match.m_size <= log_shape_template.size())

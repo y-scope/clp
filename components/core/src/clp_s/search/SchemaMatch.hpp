@@ -334,9 +334,8 @@ auto SchemaMatch::find_schemas_matching_predicate(
                 matched_shape_ids.emplace_back(log_shape.get_id());
             }
         } else {
-            // TODO clpp: clean up
             auto shapes{m_archive_reader->get_parent_rule_shapes().at(log_shape.get_id())};
-            for (auto const& parent_match : shapes.get_parent_rule_shapes()) {
+            for (auto const& parent_match : shapes.get()) {
                 if (qualified_name == parent_match.m_name
                     && matcher(
                             std::string_view{log_shape.get_value()}

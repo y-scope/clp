@@ -460,25 +460,25 @@ private:
      * Emits the default reconstruction and/or @shape field for a ParentRule node.
      * @param log_msg_node_id The LogMessage node ID.
      * @param global_column_id The ParentRule column ID.
-     * @param log_type_id The log type ID.
-     * @param found_log_type_id Whether the log type ID was found.
+     * @param log_shape_id The log shape ID.
+     * @param found_log_shape_id Whether the log shape ID was found.
      * @param emitted_parent_rules Set tracking already-emitted ParentRules (deduplication).
      */
     void emit_parent_rule_shape(
             SchemaNode::id_t log_msg_node_id,
             SchemaNode::id_t global_column_id,
-            clpp::log_shape_id_t log_type_id,
-            bool found_log_type_id,
+            clpp::log_shape_id_t log_shape_id,
+            bool found_log_shape_id,
             absl::flat_hash_set<SchemaNode::id_t>& emitted_parent_rules
     );
 
     /**
      * Emits the @shape constant string field for a LogTypeID node.
-     * @param log_type_id The log type ID.
+     * @param log_shape_id The log shape ID.
      * @return A void result on success, or an error code indicating the failure:
-     * - ClppErrorCodeEnum::Failure if the typed log dictionary is not available.
+     * - ClppErrorCodeEnum::Failure if the shape dictionary is not available.
      */
-    [[nodiscard]] auto emit_log_type_shape(clpp::log_shape_id_t log_type_id)
+    [[nodiscard]] auto emit_log_shape(clpp::log_shape_id_t log_shape_id)
             -> ystdlib::error_handling::Result<void>;
 
     /**
