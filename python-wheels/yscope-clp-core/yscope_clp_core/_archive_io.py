@@ -176,9 +176,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             shutil.move(str(uuid_archive_path), self._archive_path)
         else:
             with uuid_archive_path.open("rb") as archive_file:
-                shutil.copyfileobj(
-                    archive_file, self._file, length=FILE_OBJ_COPY_CHUNK_SIZE
-                )
+                shutil.copyfileobj(archive_file, self._file, length=FILE_OBJ_COPY_CHUNK_SIZE)
 
         # Close the archive in case the user calls this function manually
         self._is_open = False
