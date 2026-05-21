@@ -146,11 +146,11 @@ public:
     // Constructor
     SimdJsonStringEscaper() = default;
 
-    // Delete copy constructor and assignment
+    // Delete copy constructor and assignment operator
     SimdJsonStringEscaper(SimdJsonStringEscaper const&) = delete;
     auto operator=(SimdJsonStringEscaper const&) -> SimdJsonStringEscaper& = delete;
 
-    // Define default move constructor and assignment
+    // Default move constructor and assignment operator
     SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept = default;
     auto operator=(SimdJsonStringEscaper&&) noexcept -> SimdJsonStringEscaper& = default;
 
