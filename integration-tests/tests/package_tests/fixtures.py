@@ -91,4 +91,5 @@ def clp_package(
             stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
             assert stop_result, stop_result.failure_message
 
+        clp_package_test_path_config.clear_package_archives()
         clp_package.temp_config_file_path.unlink(missing_ok=True)
