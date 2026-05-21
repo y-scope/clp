@@ -5,11 +5,12 @@
 #include <charconv>
 #include <cstdint>
 #include <cstring>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <simdjson.h>
 
 #include "../clp/ReaderInterface.hpp"
 
@@ -129,22 +130,35 @@ private:
     }
 };
 
+/**
+ * A reusable JSON string escaper backed by `simdjson::builder::string_builder`.
+ */
 class SimdJsonStringEscaper {
 public:
-    SimdJsonStringEscaper();
-    SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept;
-    ~SimdJsonStringEscaper();
+    // Constructor
+    SimdJsonStringEscaper() = default;
 
-    auto operator=(SimdJsonStringEscaper&&) noexcept -> SimdJsonStringEscaper&;
-
+    // Delete copy constructor and assignment
     SimdJsonStringEscaper(SimdJsonStringEscaper const&) = delete;
     auto operator=(SimdJsonStringEscaper const&) -> SimdJsonStringEscaper& = delete;
 
+    // Define default move constructor and assignment
+    SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept = default;
+    auto operator=(SimdJsonStringEscaper&&) noexcept -> SimdJsonStringEscaper& = default;
+
+    // Destructor
+    ~SimdJsonStringEscaper() = default;
+
+    /**
+     * Escapes a string according to JSON string escaping rules and appends the escaped string to
+     * the destination buffer.
+     * @param destination
+     * @param source
+     */
     void escape(std::string& destination, std::string_view const source);
 
 private:
-    class Implementation;
-    std::unique_ptr<Implementation> m_implementation;
+    simdjson::builder::string_builder m_builder{};
 };
 
 enum EvaluatedValue {

@@ -80,6 +80,13 @@ public:
         extract_string_value_into_buffer(cur_message, buffer);
     }
 
+    /**
+     * Extracts a value from the column, escapes it with the provided escaper, and serializes it
+     * into a provided buffer as a string.
+     * @param cur_message
+     * @param buffer
+     * @param escaper
+     */
     virtual auto extract_escaped_string_value_into_buffer(
             uint64_t cur_message,
             std::string& buffer,
