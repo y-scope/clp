@@ -116,7 +116,7 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
         po::options_description conversion_options("Conversion options");
         std::string input_path_list_file_path;
         std::string auth{cNoAuth};
-        bool no_compress_converted_files{};
+        bool no_compress_converted_files{false == m_compress_converted_files};
         // clang-format off
         conversion_options.add_options()(
                 "inputs-from,f",
