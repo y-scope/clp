@@ -18,6 +18,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "mcp-server"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "mcpServer"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       initContainers:

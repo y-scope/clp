@@ -323,7 +323,7 @@ wheels = [
 
 [[package]]
 name = "yscope-clp-core"
-version = "0.11.1.dev0"
+version = "0.12.1.dev0"
 source = { editable = "." }
 
 [package.dev-dependencies]

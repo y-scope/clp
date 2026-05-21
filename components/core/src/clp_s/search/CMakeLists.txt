@@ -4,11 +4,6 @@ add_subdirectory(sql)
 
 set(
         CLP_S_SEARCH_SOURCES
-        ../Defs.hpp
-        ../DictionaryEntry.cpp
-        ../DictionaryEntry.hpp
-        ../DictionaryWriter.cpp
-        ../DictionaryWriter.hpp
         AddTimestampConditions.cpp
         AddTimestampConditions.hpp
         EvaluateRangeIndexFilters.cpp

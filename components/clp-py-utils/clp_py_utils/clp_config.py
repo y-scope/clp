@@ -436,6 +436,7 @@ class QueryScheduler(BaseModel):
     max_datasets_per_query: PositiveInt | None = 10
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
+    scheduler_concurrency: PositiveInt = 4
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
@@ -799,6 +800,11 @@ def _get_env_var(name: str) -> str:
     return value
 
 
+class Telemetry(BaseModel):
+    disable: bool = False
+    endpoint: str = "https://telemetry.yscope.io"
+
+
 class ClpConfig(BaseModel):
     container_image_ref: NonEmptyStr | None = None
 
@@ -837,6 +843,7 @@ class ClpConfig(BaseModel):
     logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
     tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
     aws_config_directory: SerializablePath | None = None
+    telemetry: Telemetry = Telemetry()
 
     _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH

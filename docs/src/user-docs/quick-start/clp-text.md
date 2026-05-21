@@ -101,6 +101,7 @@ helm repo update clp
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.package.storage_engine=clp \
   --set clpConfig.webui.query_engine=clp \
+  --set clpConfig.telemetry.disable=false \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \

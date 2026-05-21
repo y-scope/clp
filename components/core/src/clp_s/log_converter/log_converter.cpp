@@ -41,13 +41,11 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
     }
 
     for (auto const& path : command_line_arguments.get_input_paths()) {
-        auto reader{clp_s::try_create_reader(path, command_line_arguments.get_network_auth())};
-        if (nullptr == reader) {
-            SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
-            return false;
-        }
+        auto [nested_readers, file_type] = clp_s::try_create_reader_and_deduce_type_with_retries(
+                path,
+                command_line_arguments.get_network_auth()
+        );
 
-        auto [nested_readers, file_type] = clp_s::try_deduce_reader_type(reader);
         switch (file_type) {
             case clp_s::FileType::LogText:
             case clp_s::FileType::EmptyFile:
@@ -57,7 +55,12 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
             case clp_s::FileType::Zstd:
             case clp_s::FileType::Unknown:
             default: {
-                clp_s::NetworkUtils::check_and_log_curl_error(path.path, reader.get());
+                if (false == nested_readers.empty()) {
+                    clp_s::NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    );
+                }
                 SPDLOG_ERROR("Received input that was not unstructured logtext: {}.", path.path);
                 return false;
             }

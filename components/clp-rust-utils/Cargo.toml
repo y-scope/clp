@@ -1,6 +1,6 @@
 [package]
 name = "clp-rust-utils"
-version = "0.11.1-dev"
+version = "0.12.1-dev"
 edition = "2024"
 
 [dependencies]
@@ -16,7 +16,7 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
-strum = "0.28.0"
+strum = { version = "0.28.0", features = ["derive"] }
 thiserror = "2.0.18"
 tracing-appender = "0.2.4"
 tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter", "fmt", "std"] }

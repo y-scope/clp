@@ -20,6 +20,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "log-ingestor"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "logIngestor"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       initContainers:

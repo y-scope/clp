@@ -163,9 +163,9 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
   --set credentials.redis.password="$CLP_REDIS_PASS" \
-  --set compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
-  --set queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
-  --set reducer.replicas="$CLP_REDUCER_REPLICAS"
+  --set scheduling.compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
+  --set scheduling.queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
+  --set scheduling.reducer.replicas="$CLP_REDUCER_REPLICAS"
 ```
 
 ### Multi-node deployment
@@ -176,9 +176,9 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 ```bash
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set distributedDeployment=true \
-  --set compressionWorker.replicas=3 \
-  --set queryWorker.replicas=3 \
-  --set reducer.replicas=3
+  --set scheduling.compressionWorker.replicas=3 \
+  --set scheduling.queryWorker.replicas=3 \
+  --set scheduling.reducer.replicas=3
 ```
 
 ### Installation with custom values
@@ -222,6 +222,10 @@ clpConfig:
   results_cache:
     retention_period: 120  # (in minutes) 2 hours
 
+  # Adjust query scheduler concurrency
+  query_scheduler:
+    scheduler_concurrency: 4
+
 # Override credentials (use secrets in production!)
 credentials:
   database:
@@ -256,15 +260,16 @@ helm template clp . -f custom-values.yaml
 To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
 instructions, including the Helm values file and installation steps.
 
-### Worker scheduling
+### Component scheduling
 
-You can control where workers are scheduled using standard Kubernetes scheduling primitives
-(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+You can control where any CLP component is scheduled using standard Kubernetes scheduling primitives
+(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`). All components support
+the same scheduling config under the top-level `scheduling` key.
 
 :::{note}
-When using Presto as the query engine, use `prestoWorker:` instead of `queryWorker:` and `reducer:`
-to configure Presto worker scheduling. The `prestoWorker:` key supports the same `scheduling:`
-options.
+When using Presto as the query engine, use `scheduling.prestoWorker` instead of
+`scheduling.queryWorker` and `scheduling.reducer` to configure Presto worker scheduling. Presto
+coordinator scheduling can be configured via `scheduling.prestoCoordinator`.
 :::
 
 #### Dedicated node pools
@@ -280,8 +285,11 @@ To run compression workers, query workers, and reducers in separate node pools:
    # Label query nodes
    kubectl label nodes node3 node4 yscope.io/nodeType=query
 
-   # Label Presto nodes (if using Presto as the query engine)
+   # Optional: Label Presto nodes (if using Presto as the query engine)
    kubectl label nodes node5 node6 yscope.io/nodeType=presto
+
+   # Optional: Label DB nodes (to isolate bundled data services)
+   kubectl label nodes node7 yscope.io/nodeType=db
    ```
 
 2. Configure scheduling:
@@ -291,29 +299,41 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    distributedDeployment: true
 
-   compressionWorker:
-     replicas: 2
-     scheduling:
+   scheduling:
+     compressionWorker:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "compression"
 
-   queryWorker:
-     replicas: 2
-     scheduling:
+     queryWorker:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "query"
 
-   reducer:
-     replicas: 2
-     scheduling:
+     reducer:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "query"
 
-   prestoWorker:
-     replicas: 2
-     scheduling:
+     # Optional: if using Presto as the query engine
+     prestoWorker:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "presto"
+
+     # Optional: to isolate bundled data services
+     database:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     queue:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     redis:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     resultsCache:
+       nodeSelector:
+         yscope.io/nodeType: "db"
    ```
 
 3. Install:
@@ -339,9 +359,9 @@ To run all worker types in the same node pool:
 
    distributedDeployment: true
 
-   compressionWorker:
-     replicas: 2
-     scheduling:
+   scheduling:
+     compressionWorker:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "compute"
        topologySpreadConstraints:
@@ -352,21 +372,18 @@ To run all worker types in the same node pool:
              matchLabels:
                app.kubernetes.io/component: compression-worker
 
-   queryWorker:
-     replicas: 2
-     scheduling:
+     queryWorker:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "compute"
 
-   reducer:
-     replicas: 2
-     scheduling:
+     reducer:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "compute"
 
-   prestoWorker:
-     replicas: 2
-     scheduling:
+     prestoWorker:
+       replicas: 2
        nodeSelector:
          yscope.io/nodeType: "compute"
    ```
