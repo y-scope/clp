@@ -121,12 +121,10 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
     def flush(self) -> None:
         """
         Flush is a no-op since archive appending is currently no supported.
-
-        :raise ArchiveClosedError: If the archive writer is already closed.
         """
         if not self._is_open:
-            err_msg = "ClpArchiveWriter already closed."
-            raise ArchiveClosedError(err_msg)
+            # Should throw `ArchiveClosedError` once flush is properly supported
+            pass
 
     def close(self) -> None:
         """
