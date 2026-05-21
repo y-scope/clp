@@ -3,9 +3,10 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <set>
 
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
 
@@ -29,7 +30,6 @@ using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
 using clp::Grep;
 using clp::GrepCore;
-using clp::load_lexer_from_file;
 using clp::logtype_dictionary_id_t;
 using clp::Profiler;
 using clp::Query;
@@ -199,7 +199,7 @@ static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
-        log_surgeon::lexers::ByteLexer& lexer,
+        log_surgeon::ParserHandle& parser,
         bool use_heuristic
 ) {
     ErrorCode error_code;
@@ -221,7 +221,7 @@ static bool search(
                     search_begin_ts,
                     search_end_ts,
                     command_line_args.ignore_case(),
-                    lexer,
+                    parser,
                     use_heuristic
             );
             if (query_processing_result.has_value()) {
@@ -545,9 +545,9 @@ int main(int argc, char const* argv[]) {
     // TODO: if performance is too slow, can make this more efficient by only diffing files with the
     // same checksum
     uint32_t const max_map_schema_length = 100'000;
-    std::map<std::string, log_surgeon::lexers::ByteLexer> lexer_map;
-    log_surgeon::lexers::ByteLexer one_time_use_lexer;
-    log_surgeon::lexers::ByteLexer* lexer_ptr;
+    std::map<std::string, log_surgeon::ParserHandle> parser_map;
+    std::unique_ptr<log_surgeon::ParserHandle> one_time_use_parser;
+    log_surgeon::ParserHandle* parser_ptr;
 
     string archive_id;
     Archive archive_reader;
@@ -578,35 +578,37 @@ int main(int argc, char const* argv[]) {
         }
 
         // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
+        auto rule_set_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
         bool use_heuristic = true;
-        if (std::filesystem::exists(schema_file_path)) {
+        if (std::filesystem::exists(rule_set_file_path)) {
             use_heuristic = false;
 
             char buf[max_map_schema_length];
-            FileReader file_reader{schema_file_path};
+            FileReader file_reader{rule_set_file_path};
 
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
             if (num_bytes_read < max_map_schema_length) {
-                auto lexer_map_it = lexer_map.find(buf);
-                // if there is a chance there might be a difference make a new lexer as it's pretty
-                // fast to create
-                if (lexer_map_it == lexer_map.end()) {
-                    auto insert_result = lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
-                    lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, *lexer_ptr);
+                auto parser_map_it{parser_map.find(buf)};
+                // If there's a chance there might be a difference, make a new parser as it's fast.
+                if (parser_map_it == parser_map.end()) {
+                    auto insert_result{
+                            parser_map.emplace(buf, clp::load_parser_from_file(rule_set_file_path))
+                    };
+                    parser_ptr = &insert_result.first->second;
                 } else {
-                    lexer_ptr = &lexer_map_it->second;
+                    parser_ptr = &parser_map_it->second;
                 }
             } else {
-                lexer_ptr = &one_time_use_lexer;
-                load_lexer_from_file(schema_file_path, one_time_use_lexer);
+                one_time_use_parser = std::make_unique<log_surgeon::ParserHandle>(
+                        clp::load_parser_from_file(rule_set_file_path)
+                );
+                parser_ptr = one_time_use_parser.get();
             }
         }
 
         // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, *lexer_ptr, use_heuristic)) {
+        if (!search(search_strings, command_line_args, archive_reader, *parser_ptr, use_heuristic)) {
             return -1;
         }
         archive_reader.close();
