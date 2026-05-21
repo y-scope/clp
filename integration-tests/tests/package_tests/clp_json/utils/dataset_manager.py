@@ -9,12 +9,11 @@ from strenum import StrEnum
 
 from tests.package_tests.classes import ClpPackage
 from tests.utils.classes import (
+    ClpAction,
+    ClpVerificationResult,
     CmdArgs,
-    ExternalAction,
-    IntegrationTestDataset,
-    VerificationResult,
+    SampleDataset,
 )
-from tests.utils.logging_utils import format_action_failure_msg
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +48,12 @@ class ClpPackageDatasetManagerSubcommand(StrEnum):
     DEL_COMMAND = "del"
 
 
-def dataset_manager_list(clp_package: ClpPackage) -> ExternalAction:
+def dataset_manager_list(clp_package: ClpPackage) -> ClpAction:
     """
     Lists the datasets currently stored in package archives.
 
     :param clp_package:
-    :return: The `ExternalAction` instance that runs the list operation.
+    :return: The `ClpAction` instance that runs the list operation.
     """
     logger.info("Performing 'list' operation with dataset-manager.")
 
@@ -64,21 +63,21 @@ def dataset_manager_list(clp_package: ClpPackage) -> ExternalAction:
         config=clp_package.temp_config_file_path,
         subcommand=ClpPackageDatasetManagerSubcommand.LIST_COMMAND,
     )
-    return ExternalAction(cmd=args.to_cmd(), args=args)
+    return ClpAction.from_args(args)
 
 
 def dataset_manager_del(
     clp_package: ClpPackage,
-    datasets_to_del: list[IntegrationTestDataset] | None = None,
+    datasets_to_del: list[SampleDataset] | None = None,
     del_all: bool = False,
-) -> ExternalAction:
+) -> ClpAction:
     """
     Deletes datasets from the package archives.
 
     :param clp_package:
     :param datasets_to_del:
     :param del_all:
-    :return: The `ExternalAction` instance that runs the delete operation.
+    :return: The `ClpAction` instance that runs the delete operation.
     """
     logger.info("Performing 'del' operation with dataset-manager.")
 
@@ -101,110 +100,96 @@ def dataset_manager_del(
     if datasets_to_del:
         args.datasets = [dataset.dataset_name for dataset in datasets_to_del]
 
-    return ExternalAction(cmd=args.to_cmd(), args=args)
+    return ClpAction.from_args(args)
 
 
 def verify_dataset_manager_list_action_clp_json(
-    action: ExternalAction,
+    action: ClpAction,
     expected_datasets: list[str],
-) -> VerificationResult:
+) -> ClpVerificationResult:
     """
     Verifies the dataset-manager list action by checking that the output dataset list matches the
     list of expected datasets.
 
     :param action:
     :param expected_datasets:
-    :return: A `VerificationResult` indicating the success or failure of the verification.
+    :return: A `ClpVerificationResult` indicating the success or failure of the verification.
     """
     logger.info("Verifying dataset-manager 'list'.")
 
-    if action.completed_proc.returncode != 0:
-        return VerificationResult.fail(
-            format_action_failure_msg(
-                "The 'dataset-manager.sh list' subprocess returned a non-zero exit code.",
-                action,
-            )
-        )
+    returncode_result = action.verify_returncode()
+    if not returncode_result:
+        return returncode_result
 
     dataset_list = _extract_dataset_names_from_output(action)
     expected_sorted = sorted(expected_datasets)
 
     if dataset_list == expected_sorted:
-        return VerificationResult.ok()
+        return action.pass_verification()
 
-    return VerificationResult.fail(
-        format_action_failure_msg(
-            "Dataset-manager 'list' verification failure: mismatch between output dataset list"
-            f" '{dataset_list}' and expected datasets '{expected_sorted}'",
-            action,
-        )
+    return action.fail_verification(
+        "Dataset-manager 'list' verification failure: mismatch between output dataset list"
+        f" '{dataset_list}' and expected datasets '{expected_sorted}'"
     )
 
 
 def verify_dataset_manager_del_action_clp_json(
-    action: ExternalAction,
+    action: ClpAction,
     clp_package: ClpPackage,
-) -> VerificationResult:
+) -> ClpVerificationResult:
     """
     Verifies the dataset-manager del action by checking that the datasets specified for deletion are
     no longer present in the output of a supporting dataset-manager list command.
 
     :param action:
     :param clp_package:
-    :return: A `VerificationResult` indicating the success or failure of the verification.
+    :return: A `ClpVerificationResult` indicating the success or failure of the verification.
     """
     logger.info("Verifying dataset-manager 'del'.")
 
-    if action.completed_proc.returncode != 0:
-        return VerificationResult.fail(
-            format_action_failure_msg(
-                "The 'dataset-manager.sh del' subprocess returned a non-zero exit code.",
-                action,
-            )
-        )
-
-    # Get list of all datasets currently in archives.
-    list_action = dataset_manager_list(clp_package=clp_package)
-    if list_action.completed_proc.returncode != 0:
-        pytest.fail(
-            "During dataset-manager 'del' verification, supporting call to dataset-manager 'list'"
-            f" returned a non-zero exit code. Subprocess log: '{list_action.log_file_path}'"
-        )
-
-    current_datasets = _extract_dataset_names_from_output(list_action)
+    returncode_result = action.verify_returncode()
+    if not returncode_result:
+        return returncode_result
 
     args = action.args
     if not isinstance(args, DatasetManagerArgs):
         pytest.fail(
-            "dataset-manager verification requires `ExternalAction.args` to be a DatasetManagerArgs"
+            "dataset-manager verification requires `ClpAction.args` to be a DatasetManagerArgs"
             " instance."
         )
 
-    datasets_specified_for_deletion = args.datasets or []
-    del_all_flag = args.del_all
-    if del_all_flag:
-        if len(current_datasets) > 0:
-            return VerificationResult.fail(
-                format_action_failure_msg(
-                    f"Dataset-manager 'del --all' verification failure: There are datasets still"
-                    f" present in the database: '{current_datasets}'.",
-                    action,
-                )
-            )
-    elif any(item in current_datasets for item in datasets_specified_for_deletion):
-        return VerificationResult.fail(
-            format_action_failure_msg(
-                "Dataset-manager 'del' verification failure: Some datasets that were specified for"
-                " deletion are still present in the database.",
-                action,
-            )
+    # Get list of all datasets currently in archives.
+    list_action = dataset_manager_list(clp_package=clp_package)
+    list_returncode_result = list_action.verify_returncode()
+    if not list_returncode_result:
+        return action.fail_verification(
+            "During dataset-manager 'del' verification, supporting call to dataset-manager 'list'"
+            " returned a non-zero exit code.",
+            supporting_action=list_action,
         )
 
-    return VerificationResult.ok()
+    current_datasets = _extract_dataset_names_from_output(list_action)
+
+    datasets_specified_for_deletion = args.datasets or []
+    if args.del_all:
+        if len(current_datasets) > 0:
+            return action.fail_verification(
+                "Dataset-manager 'del --all' verification failure: There are datasets still"
+                f" present in the database: '{current_datasets}'.",
+                supporting_action=list_action,
+            )
+    elif any(item in current_datasets for item in datasets_specified_for_deletion):
+        return action.fail_verification(
+            "Dataset-manager 'del' verification failure: Some datasets that were specified for"
+            " deletion are still present in the database.",
+            supporting_action=list_action,
+        )
+
+    return action.pass_verification()
 
 
 def _extract_dataset_names_from_output(
-    action: ExternalAction,
+    action: ClpAction,
 ) -> list[str]:
     """Extracts the sorted list of dataset names from a dataset-manager 'list' action's output."""
     dataset_list: list[str] = []
