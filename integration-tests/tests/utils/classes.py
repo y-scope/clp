@@ -164,9 +164,6 @@ class ExternalAction:
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
 
-    #: Optional structured arguments for verification purposes. Not used by `ExternalAction` itself.
-    args: CmdArgs | None = None
-
     #: The completed process returned from `subprocess.run()`.
     completed_proc: subprocess.CompletedProcess[str] = field(init=False)
 
