@@ -69,6 +69,8 @@ set(
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
+        ../clp/FileWriter.cpp
+        ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
         ../clp/SchemaSearcher.cpp
@@ -98,7 +100,10 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
         ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Compressor.hpp
         ../clp/streaming_compression/Decompressor.hpp
+        ../clp/streaming_compression/zstd/Compressor.cpp
+        ../clp/streaming_compression/zstd/Compressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp
