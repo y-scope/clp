@@ -53,7 +53,8 @@ auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
 auto LogConverter::convert_file(
         clp_s::Path const& path,
         clp::ReaderInterface* reader,
-        std::string_view output_dir
+        std::string_view output_dir,
+        bool compress_converted_file
 ) -> ystdlib::error_handling::Result<void> {
     m_parser.reset();
 
@@ -61,7 +62,9 @@ auto LogConverter::convert_file(
     m_parser_offset = 0ULL;
     m_num_bytes_buffered = 0ULL;
 
-    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(LogSerializer::create(output_dir, path.path))};
+    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(
+            LogSerializer::create(output_dir, path.path, compress_converted_file)
+    )};
 
     bool reached_end_of_stream{false};
     while (false == reached_end_of_stream) {
