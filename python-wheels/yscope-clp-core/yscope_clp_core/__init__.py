@@ -19,6 +19,7 @@ from yscope_clp_core._config import (
     SearchKwargs,
 )
 from yscope_clp_core._except import (
+    ArchiveClosedError,
     BadArchiveSourceError,
     BadCompressionInputError,
     ClpCoreError,
@@ -26,6 +27,7 @@ from yscope_clp_core._except import (
 )
 
 __all__ = [
+    "ArchiveClosedError",
     "BadArchiveSourceError",
     "BadCompressionInputError",
     "ClpArchiveReader",
