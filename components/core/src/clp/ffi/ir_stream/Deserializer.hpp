@@ -2,27 +2,28 @@
 #define CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 
 #include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <system_error>
 #include <utility>
-#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
 #include "DeserializerImpl.hpp"
+#include "IrDeserializationError.hpp"
 #include "IrUnitHandlerReq.hpp"
 #include "IrUnitType.hpp"
 #include "KvIrDeserializerImpl.hpp"
 #include "protocol_constants.hpp"
 #include "search/AstEvaluationResult.hpp"
 #include "search/QueryHandlerReq.hpp"
+#include "UnstructuredIrDeserializerImpl.hpp"
 #include "utils.hpp"
 
 // This include has a circular dependency with the `.inc` file.
@@ -175,14 +176,19 @@ private:
      * @param ir_unit_handler
      * @param query_handler
      * @return A result containing the deserializer or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if either:
-     *   - the IR stream contains an unsupported metadata format;
-     *   - the IR stream's version is unsupported;
-     *   - or the IR stream's user-defined metadata is not a JSON object.
+     * - IrDeserializationErrorEnum::UnsupportedMetadataFormat if:
+     *   - the IR stream's preamble metadata encoding is not JSON;
+     *   - the metadata payload cannot be parsed as JSON;
+     *   - the metadata object does not contain a string value for
+     *     `cProtocol::Metadata::VersionKey`;
+     *   - or for a supported key-value pair IR protocol version,
+     *     `cProtocol::Metadata::UserDefinedMetadataKey` is present but its value is not a JSON
+     *      object.
+     * - IrDeserializationErrorEnum::UnsupportedVersion if the protocol version is neither supported
+     *   nor backward compatible.
      * - Forwards `deserialize_preamble`'s return values on failure.
      * - Forwards `get_encoding_type`'s return values on failure.
+     * - Forwards `UnstructuredIrDeserializerImpl::create`'s return values on failure.
      */
     [[nodiscard]] static auto create_generic(
             ReaderInterface& reader,
@@ -244,38 +250,56 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
         IrUnitHandlerType ir_unit_handler,
         QueryHandlerType query_handler
 ) -> ystdlib::error_handling::Result<Deserializer> {
-    [[maybe_unused]] auto const encoding_type{
-            YSTDLIB_ERROR_HANDLING_TRYX(get_encoding_type(reader))
-    };
+    auto const encoding_type{YSTDLIB_ERROR_HANDLING_TRYX(get_encoding_type(reader))};
     auto const [metadata_type, metadata]{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_preamble(reader))};
 
     if (cProtocol::Metadata::EncodingJson != metadata_type) {
-        return std::errc::protocol_not_supported;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
 
     auto metadata_json = nlohmann::json::parse(metadata, nullptr, false);
     if (metadata_json.is_discarded()) {
-        return std::errc::protocol_error;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
     auto const version_iter{metadata_json.find(cProtocol::Metadata::VersionKey)};
     if (metadata_json.end() == version_iter || false == version_iter->is_string()) {
-        return std::errc::protocol_error;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
     }
-    auto const version = version_iter->get_ref<nlohmann::json::string_t&>();
-    if (ffi::ir_stream::IRProtocolErrorCode::Supported
-        != ffi::ir_stream::validate_protocol_version(version))
+    auto const version{version_iter->get_ref<nlohmann::json::string_t const&>()};
+    auto const protocol_version_status{ffi::ir_stream::validate_protocol_version(version)};
+    if (IRProtocolErrorCode::Supported != protocol_version_status
+        && IRProtocolErrorCode::BackwardCompatible != protocol_version_status)
     {
-        return std::errc::protocol_not_supported;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedVersion};
     }
 
     if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
         && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
     {
-        return std::errc::protocol_not_supported;
+        return IrDeserializationError{IrDeserializationErrorEnum::UnsupportedMetadataFormat};
+    }
+
+    std::unique_ptr<DeserializerImpl> deserializer_impl;
+    if (IRProtocolErrorCode::Supported == protocol_version_status) {
+        deserializer_impl = std::make_unique<KvIrDeserializerImpl>();
+    } else {
+        if (EncodingType::FourByte == encoding_type) {
+            deserializer_impl = YSTDLIB_ERROR_HANDLING_TRYX(
+                    UnstructuredIrDeserializerImpl<ir::four_byte_encoded_variable_t>::create(
+                            metadata_json
+                    )
+            );
+        } else {
+            deserializer_impl = YSTDLIB_ERROR_HANDLING_TRYX(
+                    UnstructuredIrDeserializerImpl<ir::eight_byte_encoded_variable_t>::create(
+                            metadata_json
+                    )
+            );
+        }
     }
 
     return Deserializer{
-            std::make_unique<KvIrDeserializerImpl>(),
+            std::move(deserializer_impl),
             std::move(ir_unit_handler),
             std::move(metadata_json),
             std::move(query_handler)
@@ -329,10 +353,13 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         }
 
         case IrUnitType::SchemaTreeNodeInsertion: {
-            std::string key_name;
+            std::string key_name_buffer;
             auto const [is_auto_generated, node_locator]{YSTDLIB_ERROR_HANDLING_TRYX(
-                    m_deserializer_impl
-                            ->deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
+                    m_deserializer_impl->deserialize_ir_unit_schema_tree_node_insertion(
+                            reader,
+                            tag,
+                            key_name_buffer
+                    )
             )};
             auto& schema_tree_to_insert{
                     is_auto_generated ? m_auto_gen_keys_schema_tree : m_user_gen_keys_schema_tree
