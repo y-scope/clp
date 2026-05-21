@@ -547,7 +547,7 @@ int main(int argc, char const* argv[]) {
     uint32_t const max_map_schema_length = 100'000;
     std::map<std::string, log_surgeon::ParserHandle> parser_map;
     std::unique_ptr<log_surgeon::ParserHandle> one_time_use_parser;
-    log_surgeon::ParserHandle* parser_ptr;
+    log_surgeon::ParserHandle* parser;
 
     string archive_id;
     Archive archive_reader;
@@ -595,20 +595,20 @@ int main(int argc, char const* argv[]) {
                     auto insert_result{
                             parser_map.emplace(buf, clp::load_parser_from_file(rule_set_file_path))
                     };
-                    parser_ptr = &insert_result.first->second;
+                    parser = &insert_result.first->second;
                 } else {
-                    parser_ptr = &parser_map_it->second;
+                    parser = &parser_map_it->second;
                 }
             } else {
                 one_time_use_parser = std::make_unique<log_surgeon::ParserHandle>(
                         clp::load_parser_from_file(rule_set_file_path)
                 );
-                parser_ptr = one_time_use_parser.get();
+                parser = one_time_use_parser.get();
             }
         }
 
         // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, *parser_ptr, use_heuristic)) {
+        if (!search(search_strings, command_line_args, archive_reader, *parser, use_heuristic)) {
             return -1;
         }
         archive_reader.close();

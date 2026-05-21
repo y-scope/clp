@@ -148,8 +148,13 @@ std::optional<Query> GrepCore::process_raw_query(
 ) {
     std::vector<SubQuery> sub_queries;
     if (false == use_heuristic) {
-        sub_queries
-                = SchemaSearcher::search(search_string, parser, logtype_dict, var_dict, ignore_case);
+        sub_queries = SchemaSearcher::search(
+                search_string,
+                parser,
+                logtype_dict,
+                var_dict,
+                ignore_case
+        );
     } else {
         // Split search_string into tokens with wildcards
         std::vector<QueryToken> query_tokens;
