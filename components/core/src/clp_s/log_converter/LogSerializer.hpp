@@ -28,16 +28,18 @@ public:
      * Creates an instance of `LogSerializer`.
      * @param output_dir The destination directory for generated KV-IR.
      * @param original_file_path The original path for the file being converted to KV-IR.
-     * @param use_zstd Whether the output KV-IR should be zstd-compressed.
+     * @param compress_with_zstd Whether the output KV-IR should be zstd-compressed.
      * @return A result containing a `LogSerializer` on success, or an error code indicating the
      * failure:
      * - std::errc::no_such_file_or_directory if a `clp::FileWriter` fails to open an output file.
      * - std::errc::protocol_error if a `clp::zstd::Compressor` fails to open a compression stream.
      * - Forwards `clp::ffi::ir_stream::Serializer<>::create()`'s return values.
      */
-    [[nodiscard]] static auto
-    create(std::string_view output_dir, std::string_view original_file_path, bool use_zstd)
-            -> ystdlib::error_handling::Result<LogSerializer>;
+    [[nodiscard]] static auto create(
+            std::string_view output_dir,
+            std::string_view original_file_path,
+            bool compress_with_zstd
+    ) -> ystdlib::error_handling::Result<LogSerializer>;
 
     // Constructors
     // Delete copy constructor and assignment operator
@@ -125,7 +127,8 @@ private:
     clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t> m_serializer;
     // Nested writers are ordered from closest to furthest from output sink. Typically, this will
     // look like `FileWriter` <- `Compressor`.
-    // NOTE: This class depends on there being at least one writer in `m_nested_writers` at all times.
+    // NOTE: This class depends on there being at least one writer in `m_nested_writers` at all
+    // times.
     std::vector<std::unique_ptr<clp::WriterInterface>> m_nested_writers;
 };
 }  // namespace clp_s::log_converter

@@ -33,7 +33,7 @@ constexpr std::string_view cUncompressedFileExtension{".clp"};
 auto LogSerializer::create(
         std::string_view output_dir,
         std::string_view original_file_path,
-        bool use_zstd
+        bool compress_with_zstd
 ) -> ystdlib::error_handling::Result<LogSerializer> {
     nlohmann::json metadata;
     metadata.emplace(cOriginalFileMetadataKey, original_file_path);
@@ -44,7 +44,9 @@ auto LogSerializer::create(
     )};
 
     boost::uuids::random_generator uuid_generator;
-    auto file_extension{use_zstd ? clp::ir::cIrFileExtension : cUncompressedFileExtension};
+    auto file_extension{
+            compress_with_zstd ? clp::ir::cIrFileExtension : cUncompressedFileExtension
+    };
     std::string const file_name{
             boost::uuids::to_string(uuid_generator()) + std::string{file_extension}
     };
@@ -58,7 +60,7 @@ auto LogSerializer::create(
         return std::errc::no_such_file_or_directory;
     }
 
-    if (false == use_zstd) {
+    if (false == compress_with_zstd) {
         return LogSerializer{std::move(serializer), std::move(nested_writers)};
     }
 
