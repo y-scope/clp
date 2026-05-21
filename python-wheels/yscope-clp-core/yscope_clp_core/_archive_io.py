@@ -9,7 +9,7 @@ from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import TracebackType
-from typing import Any, cast, IO
+from typing import Any, IO
 
 from typing_extensions import Unpack
 
@@ -177,7 +177,7 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         else:
             with uuid_archive_path.open("rb") as archive_file:
                 shutil.copyfileobj(
-                    archive_file, cast("IO[bytes]", self._file), length=FILE_OBJ_COPY_CHUNK_SIZE
+                    archive_file, self._file, length=FILE_OBJ_COPY_CHUNK_SIZE
                 )
 
         # Close the archive in case the user calls this function manually
