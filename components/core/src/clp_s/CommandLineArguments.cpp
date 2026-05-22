@@ -451,11 +451,16 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_network_auth(auth, m_network_auth);
 
+            if (m_experimental ^ (false == log_surgeon_schema_path.empty())) {
+                throw std::invalid_argument(
+                        "--experimental and --schema-path must both be non-empty to use "
+                        "log-surgeon for compression"
+                );
+            }
+
             if (false == log_surgeon_schema_path.empty()) {
                 m_log_surgeon_schema_path = get_path_object_for_raw_path(log_surgeon_schema_path);
             }
-
-            validate_experimental();
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
@@ -838,8 +843,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_network_auth(auth, m_network_auth);
 
-            validate_experimental();
-
             if (m_query.empty()) {
                 throw std::invalid_argument("No query specified");
             }
@@ -1072,18 +1075,6 @@ void CommandLineArguments::print_search_usage() const {
               << " s [OPTIONS] ARCHIVES_DIR KQL_QUERY"
                  " [OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS]]"
               << std::endl;
-}
-
-auto CommandLineArguments::validate_experimental() const -> void {
-    if (m_experimental) {
-        return;
-    }
-    if (m_log_surgeon_schema_path.has_value()) {
-        throw std::invalid_argument("Set --experimental to parse text with log-surgeon.");
-    }
-    if (cLogShapeStatsQuery == m_query) {
-        throw std::invalid_argument("Set --experimental to access the log shape stats.");
-    }
 }
 
 auto CommandLineArguments::create_output_handler() const

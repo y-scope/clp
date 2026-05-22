@@ -307,9 +307,12 @@ bool search_archive(
 }
 
 auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
-    auto const& query = cli_args.get_query();
+    auto const& query{cli_args.get_query()};
     if (CommandLineArguments::cLogShapeStatsQuery != query) {
         return -1;
+    }
+    if (false == cli_args.experimental()) {
+        throw std::invalid_argument(fmt::format("--experimental must be set to run {}", query));
     }
     auto output_handler{cli_args.create_output_handler()};
     if (output_handler.has_error()) {
@@ -414,7 +417,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else {
-        auto const& query = command_line_arguments.get_query();
+        auto const& query{command_line_arguments.get_query()};
         if (auto const result{handle_experimental_queries(command_line_arguments)}; -1 < result) {
             return result;
         }
