@@ -162,10 +162,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_retain_float_format(option.retain_float_format),
           m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
-    if (option.log_surgeon_schema_path.has_value()) {
-        auto schema_reader{
-                try_create_reader(option.log_surgeon_schema_path.value(), option.network_auth)
-        };
+    if (option.ruleset_path.has_value()) {
+        auto schema_reader{try_create_reader(option.ruleset_path.value(), option.network_auth)};
         constexpr size_t cBufSize{4096};
         std::array<char, cBufSize> buf{};
         size_t bytes_read{};
@@ -176,21 +174,21 @@ JsonParser::JsonParser(JsonParserOption const& option)
             }
             if (clp::ErrorCode_Success != code) {
                 SPDLOG_ERROR(
-                        "Failed to read log-surgeon schema from: \"{}\"",
-                        option.log_surgeon_schema_path.value().path
+                        "Failed to read ruleset from: \"{}\"",
+                        option.ruleset_path.value().path
                 );
                 throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
             }
-            m_log_surgeon_schema_text.append(buf.data(), bytes_read);
+            m_ruleset_text.append(buf.data(), bytes_read);
         }
 
         auto* schema{log_surgeon::log_surgeon_schema_from_definition(
-                log_surgeon::CCharArray::from_string_view(m_log_surgeon_schema_text)
+                log_surgeon::CCharArray::from_string_view(m_ruleset_text)
         )};
         if (nullptr == schema) {
             SPDLOG_ERROR(
                     "Failed to create log surgeon parser from: \"{}\"",
-                    option.log_surgeon_schema_path.value().path
+                    option.ruleset_path.value().path
             );
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
@@ -236,8 +234,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
-    if (false == m_log_surgeon_schema_text.empty()) {
-        m_archive_writer->set_log_surgeon_schema(m_log_surgeon_schema_text);
+    if (false == m_ruleset_text.empty()) {
+        m_archive_writer->set_ruleset(m_ruleset_text);
     }
 }
 
@@ -1479,8 +1477,8 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
-    if (false == m_log_surgeon_schema_text.empty()) {
-        m_archive_writer->set_log_surgeon_schema(m_log_surgeon_schema_text);
+    if (false == m_ruleset_text.empty()) {
+        m_archive_writer->set_ruleset(m_ruleset_text);
     }
 }
 

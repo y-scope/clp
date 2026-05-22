@@ -25,7 +25,7 @@ constexpr char cArchiveLogDictFile[] = "/log.dict";
 constexpr char cArchiveVarDictFile[] = "/var.dict";
 
 // clpp
-constexpr std::string_view cArchiveLogSurgeonSchemaFile{"/ls_schema"};
+constexpr std::string_view cArchiveLogSurgeonRulesetFile{"/ruleset"};
 constexpr std::string_view cArchiveParentRuleShapesFile{"/parent_rule_shapes"};
 constexpr std::string_view cArchiveLogShapeStatsFile{"/log_shape_stats"};
 

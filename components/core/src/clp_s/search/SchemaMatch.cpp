@@ -761,21 +761,20 @@ auto SchemaMatch::ensure_log_surgeon_parser_initialized() -> ystdlib::error_hand
     if (nullptr != m_ls_parser) {
         return ystdlib::error_handling::success();
     }
-    if (nullptr == m_ls_schema) {
+    if (nullptr == m_ruleset) {
         if (m_ls_schema_contents.empty()) {
-            m_ls_schema_contents
-                    = YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_log_surgeon_schema());
+            m_ls_schema_contents = YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_ruleset());
         }
-        if (m_ls_schema = log_surgeon::log_surgeon_schema_from_definition(
+        if (m_ruleset = log_surgeon::log_surgeon_schema_from_definition(
                     log_surgeon::CCharArray::from_string_view(m_ls_schema_contents)
             );
-            nullptr == m_ls_schema)
+            nullptr == m_ruleset)
         {
             return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
         }
     }
-    m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ls_schema);
-    m_ls_schema = nullptr;
+    m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_ruleset);
+    m_ruleset = nullptr;
     if (nullptr == m_ls_parser) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }

@@ -137,9 +137,9 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         );
     }
 
-    if (false == m_log_surgeon_schema_text.empty()) {
-        auto compressed_size{store_log_surgeon_schema()};
-        files.emplace_back(std::string(constants::cArchiveLogSurgeonSchemaFile), compressed_size);
+    if (false == m_ruleset_text.empty()) {
+        auto compressed_size{store_ruleset()};
+        files.emplace_back(std::string(constants::cArchiveLogSurgeonRulesetFile), compressed_size);
     }
 
     uint64_t offset = 0;
@@ -608,21 +608,21 @@ auto ArchiveWriter::close_log_shape_stats() -> ystdlib::error_handling::Result<s
     return compressed_size;
 }
 
-auto ArchiveWriter::store_log_surgeon_schema() -> size_t {
-    if (m_log_surgeon_schema_text.empty()) {
+auto ArchiveWriter::store_ruleset() -> size_t {
+    if (m_ruleset_text.empty()) {
         return 0;
     }
 
     FileWriter writer{};
     writer.open(
-            m_archive_path + std::string{constants::cArchiveLogSurgeonSchemaFile},
+            m_archive_path + std::string{constants::cArchiveLogSurgeonRulesetFile},
             FileWriter::OpenMode::CreateForWriting
     );
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    compressor.write_numeric_value(static_cast<uint64_t>(m_log_surgeon_schema_text.size()));
-    compressor.write(m_log_surgeon_schema_text.data(), m_log_surgeon_schema_text.size());
+    compressor.write_numeric_value(static_cast<uint64_t>(m_ruleset_text.size()));
+    compressor.write(m_ruleset_text.data(), m_ruleset_text.size());
 
     compressor.close();
     auto compressed_size{writer.get_pos()};

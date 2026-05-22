@@ -356,12 +356,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::bool_switch(&m_show_progress),
                     "Show progress during compression"
             )(
-                    "schema-path",
-                    po::value<string>(&m_schema_file_path)
+                    "unstructured-text-parsing-rule-set",
+                    po::value<string>(&m_ruleset_path)
                             ->value_name("FILE")
-                            ->default_value(m_schema_file_path),
-                    "Path to a schema file. If not specified, heuristics are used to determine "
-                    "dictionary variables. See README-Schema.md for details."
+                            ->default_value(m_ruleset_path),
+                    "Path to a log-surgeon ruleset. If not specified, heuristics are used to"
+                    "determine dictionary variables. See documentation for details."
             );
 
             po::options_description all_compression_options;
@@ -430,14 +430,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
             m_sort_input_files = "true" == sort_input_files_str;
 
-            if (false == m_schema_file_path.empty()) {
-                if (false == boost::filesystem::exists(m_schema_file_path)) {
+            if (false == m_ruleset_path.empty()) {
+                if (false == boost::filesystem::exists(m_ruleset_path)) {
                     throw invalid_argument("Specified schema file does not exist.");
                 }
-                if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
+                if (false == boost::filesystem::is_regular_file(m_ruleset_path)) {
                     throw invalid_argument(
-                            "Specified schema file '" + m_schema_file_path
-                            + "' is not a regular file."
+                            "Specified schema file '" + m_ruleset_path + "' is not a regular file."
                     );
                 }
             }

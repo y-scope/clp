@@ -304,11 +304,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description experimental_options("Experimental Options");
-            std::string log_surgeon_schema_path{};
+            std::string ruleset_path{};
             experimental_options.add_options()(
-                    "schema-path",
-                    po::value<std::string>(&log_surgeon_schema_path)->value_name("PATH"),
-                    "Path to a log surgeon schema. See README-Schema.md for details."
+                    "unstructured-text-parsing-rule-set",
+                    po::value<std::string>(&ruleset_path)->value_name("PATH"),
+                    "Path to a log-surgeon ruleset. See documentation for details."
             );
 
             po::positional_options_description positional_options;
@@ -451,15 +451,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_network_auth(auth, m_network_auth);
 
-            if (m_experimental ^ (false == log_surgeon_schema_path.empty())) {
+            if (m_experimental ^ (false == ruleset_path.empty())) {
                 throw std::invalid_argument(
-                        "--experimental and --schema-path must both be non-empty to use "
-                        "log-surgeon for compression"
+                        "--experimental and --unstructured-text-parsing-rule-set must both be"
+                        "non-empty to use log-surgeon for compression"
                 );
             }
 
-            if (false == log_surgeon_schema_path.empty()) {
-                m_log_surgeon_schema_path = get_path_object_for_raw_path(log_surgeon_schema_path);
+            if (false == ruleset_path.empty()) {
+                m_ruleset_path = get_path_object_for_raw_path(ruleset_path);
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;

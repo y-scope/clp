@@ -118,9 +118,9 @@ public:
     auto read_log_shape_stats() -> ystdlib::error_handling::Result<clpp::LogShapeStatArray>;
 
     /**
-     * Reads the log surgeon schema from the archive.
+     * Reads the ruleset from the archive.
      */
-    auto read_log_surgeon_schema() -> ystdlib::error_handling::Result<std::string>;
+    auto read_ruleset() -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * Reads the metadata from the archive.
