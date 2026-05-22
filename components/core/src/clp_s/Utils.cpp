@@ -8,6 +8,7 @@
 
 #include <boost/url.hpp>
 #include <fmt/format.h>
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
@@ -223,6 +224,20 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     }
     name = path_segments_view.back();
     return true;
+}
+
+void SimdJsonStringEscaper::escape(std::string& destination, std::string_view const source) {
+    m_builder.clear();
+    m_builder.escape_and_append(source);
+
+    std::string_view escaped_source;
+    auto const status = m_builder.view().get(escaped_source);
+    if (simdjson::SUCCESS == status) {
+        destination.append(escaped_source);
+        return;
+    }
+
+    StringUtils::escape_json_string(destination, source);
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
