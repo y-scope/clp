@@ -961,13 +961,12 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
              || filter->get_operation() == FilterOperation::NEXISTS))
     {
         if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-            return;
-            // std::string query_string;
-            // filter->get_operand()->as_clp_string(query_string, filter->get_operation());
+            std::string query_string;
+            filter->get_operand()->as_clp_string(query_string, filter->get_operation());
 
-            // if (m_clpp_string_query_map.contains(query_string)) {
-            //     return;
-            // }
+            if (m_string_query_map.count(query_string)) {
+                return;
+            }
 
             // search on log type dictionary
             // clp::epochtime_t placeholder_timestamp{};
@@ -1056,8 +1055,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             if (col->matches_type(node_to_literal_type(tree_node_type))) {
                 auto literal_type = node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
-                if (NodeType::ClpString != tree_node_type && NodeType::LogType != tree_node_type
-                    && NodeType::VarString != tree_node_type
+                if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
                     && NodeType::DeprecatedDateString != tree_node_type)
                 {
                     m_wildcard_to_searched_basic_columns[col].insert(node);
@@ -1222,7 +1220,6 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             }
             return EvaluatedValue::Unknown;
         } else if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-            return EvaluatedValue::Unknown;
             std::string filter_string;
             filter->get_operand()->as_clp_string(filter_string, filter->get_operation());
 

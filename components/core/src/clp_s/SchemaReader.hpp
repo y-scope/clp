@@ -146,7 +146,7 @@ public:
             uint64_t num_messages,
             bool should_marshal_records,
             LogShapeDictionaryReader const* log_shape_dict,
-            clpp::ParentRuleShapesArray const& parent_rule_shapes
+            clpp::ParentRuleShapesArray const* parent_rule_shapes
     ) {
         m_schema_id = schema_id;
         m_num_messages = num_messages;
@@ -170,7 +170,7 @@ public:
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
         m_log_shape_dict = log_shape_dict;
-        m_parent_rule_shapes = &parent_rule_shapes;
+        m_parent_rule_shapes = parent_rule_shapes;
     }
 
     /**

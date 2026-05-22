@@ -17,6 +17,7 @@
 
 #include <fmt/format.h>
 #include <log_surgeon/log_surgeon.hpp>
+#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/string_utils/string_utils.hpp>
@@ -134,7 +135,7 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
                 return EmptyExpr::create();
             }
 
-            if (nullptr != new_and_expr) {
+            if (new_and_expr != cur) {
                 return new_and_expr;
             }
 
@@ -215,10 +216,10 @@ auto SchemaMatch::populate_column_mapping(
     auto resolve_against_subtree =
             [&](SchemaNode const& root_node) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
         for (auto const child_node_id : root_node.get_children_ids()) {
-            // TODO clpp: ???
-            auto [matched, new_expr]{populate_column_mapping(column, child_node_id, expr)};
-            if (matched) {
-                return {matched, new_expr};
+            auto [child_matched, new_expr]{populate_column_mapping(column, child_node_id, expr)};
+            matched |= child_matched;
+            if (new_expr != expr) {
+                return {matched, std::move(new_expr)};
             }
         }
         return {matched, expr};
@@ -232,8 +233,10 @@ auto SchemaMatch::populate_column_mapping(
             -1 != subtree_root_node_id)
         {
             auto const& root_node = m_tree->get_node(subtree_root_node_id);
-            // TODO clpp: ???
-            return resolve_against_subtree(root_node);
+            auto [_, new_expr] = resolve_against_subtree(root_node);
+            if (new_expr != expr) {
+                return {matched, std::move(new_expr)};
+            }
         }
     } else {
         // Resolve against every subtree that has matching namespaces except for the
@@ -243,8 +246,10 @@ auto SchemaMatch::populate_column_mapping(
                 && namespace_type_pair.first == column->get_namespace())
             {
                 auto const& root_node = m_tree->get_node(subtree_root_node_id);
-                // TODO clpp: ???
-                return resolve_against_subtree(root_node);
+                auto [_, new_expr] = resolve_against_subtree(root_node);
+                if (new_expr != expr) {
+                    return {matched, std::move(new_expr)};
+                }
             }
         }
     }
@@ -892,6 +897,11 @@ auto SchemaMatch::resolve_clpp_query(
             results->add_operand(*leaves_expr);
         }
     }
+    SPDLOG_INFO(
+            "{} interpretations created {} operands.",
+            dq.value()->get_interpretations().size(),
+            results->get_op_list().size()
+    );
     if (results->get_op_list().empty()) {
         return nullptr;
     }
