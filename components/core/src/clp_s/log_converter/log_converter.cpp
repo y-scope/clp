@@ -26,7 +26,7 @@ namespace {
 [[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
-    LogConverter log_converter{command_line_arguments.get_max_log_event_size()};
+    auto log_converter{LogConverter::create(command_line_arguments.get_max_log_event_size())};
 
     std::error_code ec{};
     if (false == std::filesystem::create_directory(command_line_arguments.get_output_dir(), ec)
@@ -69,7 +69,8 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
         auto const convert_result{log_converter.convert_file(
                 path,
                 nested_readers.back().get(),
-                command_line_arguments.get_output_dir()
+                command_line_arguments.get_output_dir(),
+                command_line_arguments.get_compress_converted_files()
         )};
         if (convert_result.has_error()) {
             auto const& error{convert_result.error()};
