@@ -1,5 +1,7 @@
 """Public APIs for the yscope_clp_core python package."""
 
+import os
+from pathlib import Path
 from typing import (
     Any,
     Literal,
@@ -21,6 +23,27 @@ from yscope_clp_core._config import (
     SearchKwargs,
 )
 from yscope_clp_core._except import ClpCoreRuntimeError
+from yscope_clp_core._utils import _validate_archive_source
+
+CLP_SFA_MAGIC_BYTES = b"\xfd\x2f\xc5\x30"
+
+
+def is_clp_json_single_file_archive(source: ArchiveInputSource) -> bool:
+    """
+    Detect whether the input source starts with the CLP JSON single-file archive magic bytes.
+
+    :param source: Archive source. Must be either a filesystem path or a binary I/O object.
+    :return: True if the input starts with the CLP SFA magic bytes.
+    :raise: Propagates `_validate_archive_source`'s exceptions.
+    """
+    magic_len = len(CLP_SFA_MAGIC_BYTES)
+    _validate_archive_source(source)
+
+    if isinstance(source, (str, os.PathLike)):
+        with Path(source).open("rb") as archive_file:
+            return archive_file.read(magic_len) == CLP_SFA_MAGIC_BYTES
+
+    return source.read(magic_len) == CLP_SFA_MAGIC_BYTES
 
 
 @overload

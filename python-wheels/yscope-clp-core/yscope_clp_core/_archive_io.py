@@ -9,7 +9,7 @@ from contextlib import AbstractContextManager, suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import TracebackType
-from typing import Any, cast, IO
+from typing import Any, IO
 
 from typing_extensions import Unpack
 
@@ -24,6 +24,7 @@ from yscope_clp_core._config import (
     SearchKwargs,
 )
 from yscope_clp_core._except import (
+    ArchiveClosedError,
     BadCompressionInputError,
     ClpCoreRuntimeError,
 )
@@ -57,7 +58,10 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         :param file: Archive sink. Must be either a filesystem path or a binary I/O object.
         :param kwargs: Compression specific keyword arguments. See `CompressionKwargs`.
         :raise ClpCoreRuntimeError: if initialization fails.
+        :raise: Propagates `_validate_archive_source`'s exceptions.
         """
+        self._is_open: bool = False
+
         self._file: ArchiveInputSource = file
         self._compression_level: int | None = kwargs.get("compression_level")
         self._timestamp_key: str | None = kwargs.get("timestamp_key")
@@ -67,23 +71,26 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
 
         _validate_archive_source(self._file)
 
-        self._archive_dir: Path
-        self._temp_archive_dir: TemporaryDirectory[str] | None = None
+        # Create a temporary directory for the archive to live in, and then:
+        # - move the archive to the specified archive path, or
+        # - feed the archive into the IO[bytes] stream
+        self._temp_archive_dir: TemporaryDirectory[str] = TemporaryDirectory()
+
+        self._archive_path: Path
         if isinstance(self._file, (str, os.PathLike)):
-            self._archive_dir = Path(self._file)
+            self._archive_path = Path(self._file)
             try:
-                if self._archive_dir.is_dir():
-                    shutil.rmtree(self._archive_dir)
-                elif self._archive_dir.is_file():
-                    self._archive_dir.unlink()
+                if self._archive_path.is_dir():
+                    shutil.rmtree(self._archive_path)
+                elif self._archive_path.is_file():
+                    self._archive_path.unlink()
             except Exception as e:
-                err_msg = f"Failed to overwrite archive at {self._archive_dir}."
+                err_msg = f"Failed to overwrite archive at {self._archive_path}."
                 raise ClpCoreRuntimeError(err_msg) from e
         else:
-            # Create a temporary directory for the archive to live in, and feed
-            # the archive into the IO[bytes] stream.
-            self._temp_archive_dir = TemporaryDirectory()
-            self._archive_dir = Path(self._temp_archive_dir.name)
+            self._archive_path = Path(self._temp_archive_dir.name)
+
+        self._is_open = True
 
     def add(self, source: str | os.PathLike[str] | IO[bytes] | IO[str]) -> None:
         """
@@ -92,9 +99,14 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         :param source: Input source to add. Must be a filesystem path or an I/O stream. Filesystem
             paths are added directly. Stream inputs are first materialized into temporary files, as
             the CLP compression pipeline currently does not support operating on stdin.
+        :raise ArchiveClosedError: If the archive writer is already closed.
         :raise BadCompressionInputError: If the input source type is not supported.
-        :raise ClpCoreRuntimeError: If the input source cannot be processed successfully.
+        :raise: Propagates `_write_stream_to_temp_file`'s exceptions.
         """
+        if not self._is_open:
+            err_msg = "ClpArchiveWriter already closed."
+            raise ArchiveClosedError(err_msg)
+
         if isinstance(source, (str, os.PathLike)):
             self._files_to_compress.append(Path(source))
         elif isinstance(source, io.IOBase):
@@ -102,19 +114,46 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             self._files_to_compress.append(temp_file_path)
             self._temp_files_to_compress.append(temp_file_path)
         else:
-            err_msg = f"Invalid compression input type for archive {self._archive_dir}."
+            err_msg = f"Invalid compression input type for archive {self._archive_path}."
             raise BadCompressionInputError(err_msg)
+
+    def flush(self) -> None:
+        """Flush is a no-op since archive appending is currently no supported."""
+        if not self._is_open:
+            # Should throw `ArchiveClosedError` once flush is properly supported
+            pass
+
+    def close(self) -> None:
+        """
+        Finalize archive creation and release associated resources.
+
+        The writer is closed after this method is called, regardless of whether archive finalization
+        succeeds. Further operations on the writer will raise `ArchiveClosedError`.
+
+        :raise: Propagates `_compress`'s exceptions.
+        """
+        try:
+            if self._is_open:
+                self._compress()
+        finally:
+            self._is_open = False
+            self._cleanup()
 
     def _compress(self) -> None:
         """
         Perform compression and, if a binary I/O stream was provided at initialization, write the
         archive contents to that stream. Should not be called by the class user.
 
+        :raise ArchiveClosedError: If the archive writer is already closed.
         :raise BadCompressionInputError: If there is nothing to compress.
-        :raise subprocess.CalledProcessError: If the archive compression fails.
+        :raise ClpCoreRuntimeError: If the archive compression fails.
         """
+        if not self._is_open:
+            err_msg = "ClpArchiveWriter already closed."
+            raise ArchiveClosedError(err_msg)
+
         if 0 == len(self._files_to_compress):
-            err_msg = f"Nothing to compress for archive {self._archive_dir}."
+            err_msg = f"Nothing to compress for archive {self._archive_path}."
             raise BadCompressionInputError(err_msg)
 
         clp_s_bin_path = _get_clp_exe("clp-s")
@@ -123,31 +162,33 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
             compress_cmd.extend(["--compression-level", str(self._compression_level)])
         if self._timestamp_key is not None:
             compress_cmd.extend(["--timestamp-key", self._timestamp_key])
-        compress_cmd.append(str(self._archive_dir))
+        compress_cmd.append(self._temp_archive_dir.name)
         compress_cmd.extend(str(p) for p in self._files_to_compress)
 
         try:
             subprocess.run(compress_cmd, check=True, stderr=subprocess.PIPE, text=True)
         except subprocess.CalledProcessError as e:
-            err_msg = f"Compression for archive {self._archive_dir} failed: {e.stderr.strip()}"
+            err_msg = f"Compression for archive {self._archive_path} failed: {e.stderr.strip()}"
             raise ClpCoreRuntimeError(err_msg) from e
 
-        if self._temp_archive_dir is not None:
-            with _get_single_file_in_dir(self._archive_dir).open("rb") as archive_file:
-                shutil.copyfileobj(
-                    archive_file, cast("IO[bytes]", self._file), length=FILE_OBJ_COPY_CHUNK_SIZE
-                )
+        uuid_archive_path: Path = _get_single_file_in_dir(Path(self._temp_archive_dir.name))
+        if isinstance(self._file, (str, os.PathLike)):
+            shutil.move(str(uuid_archive_path), self._archive_path)
+        else:
+            with uuid_archive_path.open("rb") as archive_file:
+                shutil.copyfileobj(archive_file, self._file, length=FILE_OBJ_COPY_CHUNK_SIZE)
 
-    def close(self) -> None:
+        # Close the archive in case the user calls this function manually
+        self._is_open = False
+
+    def _cleanup(self) -> None:
         """Cleans up all temporary resources used by the archive writer."""
         for p in self._temp_files_to_compress:
             with suppress(OSError):
                 p.unlink()
 
-        if self._temp_archive_dir is not None:
-            with suppress(OSError):
-                self._temp_archive_dir.cleanup()
-            self._temp_archive_dir = None
+        with suppress(OSError):
+            self._temp_archive_dir.cleanup()
 
     def __enter__(self) -> Self:
         return self
@@ -166,16 +207,14 @@ class ClpArchiveWriter(AbstractContextManager["ClpArchiveWriter", None]):
         :param exc_type:
         :param exc_val:
         :param exc_tb:
-        :raise ClpCoreRuntimeError: If compression fails.
+        :raise: Propagates `_compress`'s exceptions.
         """
         try:
-            if exc_type is None:
+            if exc_type is None and self._is_open:
                 self._compress()
-        except Exception as e:
-            err_msg = f"Failed to compress archive {self._archive_dir}."
-            raise ClpCoreRuntimeError(err_msg) from e
         finally:
-            self.close()
+            self._is_open = False
+            self._cleanup()
 
 
 class ClpArchiveReader(AbstractContextManager["ClpArchiveReader", None], Iterator[LogEvent]):
