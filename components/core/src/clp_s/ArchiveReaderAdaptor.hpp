@@ -102,6 +102,17 @@ public:
     std::vector<RangeIndexEntry> const& get_range_index() const { return m_range_index; }
 
     /**
+     * @param section The section name to check.
+     * @return true if the section exists in the archive.
+     */
+    [[nodiscard]] auto has_section(std::string_view section) const -> bool;
+
+    /**
+     * @return true if the archive contains clpp-specific sections (created with --experimental).
+     */
+    [[nodiscard]] auto is_experimental_archive() const -> bool;
+
+    /**
      * @param log_event_idx
      * @return The file-level metadata associated with the record at `log_event_idx`.
      * @throws OperationFailed when `log_event_idx` cannot be mapped to any metadata.

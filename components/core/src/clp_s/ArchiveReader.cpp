@@ -65,6 +65,16 @@ auto ArchiveReader::initialize_archive_reader() -> void {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
 
+    bool const archive_is_experimental{m_archive_reader_adaptor->is_experimental_archive()};
+    if (m_options.m_experimental && !archive_is_experimental) {
+        SPDLOG_ERROR("--experimental flag set but archive was not created with --experimental");
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    if (!m_options.m_experimental && archive_is_experimental) {
+        SPDLOG_ERROR("Archive was created with --experimental but --experimental flag is not set");
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
     m_schema_tree = ReaderUtils::read_schema_tree(*m_archive_reader_adaptor);
     m_schema_map = ReaderUtils::read_schemas(*m_archive_reader_adaptor);
 
