@@ -18,19 +18,28 @@ from tests.package_tests.utils.start_stop import (
 )
 from tests.utils.classes import ClpAction  # noqa: TC001
 from tests.utils.port_utils import assign_ports_from_base
-from tests.utils.utils import resolve_path_env_var, write_dict_to_yaml
+from tests.utils.utils import clear_directory, resolve_path_env_var, write_dict_to_yaml
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def clp_package_test_path_config() -> ClpPackageTestPathConfig:
-    """Provides paths relevant to all package integration tests."""
-    return ClpPackageTestPathConfig(
+def clp_package_test_path_config() -> Iterator[ClpPackageTestPathConfig]:
+    """
+    Provides paths relevant to all package integration tests. Clears temporary directories after
+    the test session.
+    """
+    path_config = ClpPackageTestPathConfig(
         clp_build_dir=resolve_path_env_var("CLP_BUILD_DIR"),
         integration_tests_project_root=resolve_path_env_var("INTEGRATION_TESTS_PROJECT_ROOT"),
         clp_package_dir=resolve_path_env_var("CLP_PACKAGE_DIR"),
     )
+
+    try:
+        yield path_config
+    finally:
+        clear_directory(path_config.temp_config_dir)
+        clear_directory(path_config.package_decompression_dir)
 
 
 @pytest.fixture(scope="module")
@@ -78,17 +87,12 @@ def clp_package(
         clp_package.temp_config_file_path,
     )
 
-    start_successful = False
     try:
         start_clp_action: ClpAction = start_clp_package(clp_package)
         start_result = verify_start_clp_action(start_clp_action, clp_package)
         assert start_result, start_result.failure_message
-        start_successful = True
         yield clp_package
     finally:
         stop_clp_action: ClpAction = stop_clp_package(clp_package)
-        if start_successful:
-            stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
-            assert stop_result, stop_result.failure_message
-
-        clp_package.temp_config_file_path.unlink(missing_ok=True)
+        stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
+        assert stop_result, stop_result.failure_message
