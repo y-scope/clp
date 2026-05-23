@@ -723,6 +723,9 @@ auto JsonParser::ingest_json(
     size_t file_split_number{0ULL};
     int32_t log_event_idx_node_id{};
     auto initialize_fields_for_archive = [&]() -> bool {
+        if (0 == file_split_number) {
+            m_archive_writer->increment_num_files();
+        }
         if (false == m_record_log_order) {
             return true;
         }
@@ -891,6 +894,9 @@ auto JsonParser::ingest_kvir(
     size_t file_split_number{0ULL};
     int32_t log_event_idx_node_id{};
     auto initialize_fields_for_archive = [&]() -> bool {
+        if (0 == file_split_number) {
+            m_archive_writer->increment_num_files();
+        }
         if (false == m_record_log_order) {
             return true;
         }

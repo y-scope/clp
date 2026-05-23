@@ -284,7 +284,6 @@ public:
                 return rc;
             }
             m_range_open = true;
-            ++m_num_files;
         }
         return m_range_index_writer.add_value_to_range(key, value);
     }
@@ -300,6 +299,8 @@ public:
         }
         return rc;
     }
+
+    void increment_num_files() { ++m_num_files; }
 
 private:
     /**
