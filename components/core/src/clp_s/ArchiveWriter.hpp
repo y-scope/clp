@@ -47,7 +47,9 @@ public:
             size_t uncompressed_size,
             size_t compressed_size,
             nlohmann::json range_index,
-            bool is_split
+            bool is_split,
+            size_t num_messages,
+            size_t num_files
     )
             : m_id{id},
               m_begin_timestamp{begin_timestamp},
@@ -55,7 +57,9 @@ public:
               m_uncompressed_size{uncompressed_size},
               m_compressed_size{compressed_size},
               m_range_index(std::move(range_index)),  // Avoid {} to prevent wrapping in JSON array.
-              m_is_split{is_split} {}
+              m_is_split{is_split},
+              m_num_messages{num_messages},
+              m_num_files{num_files} {}
 
     // Methods
     /**
@@ -72,6 +76,8 @@ public:
                    {Archive::EndTimestamp, m_end_timestamp},
                    {Archive::UncompressedSize, m_uncompressed_size},
                    {Archive::Size, m_compressed_size},
+                   {Archive::NumMessages, m_num_messages},
+                   {Archive::NumFiles, m_num_files},
                    {File::IsSplit, m_is_split},
                    {cRangeIndex, m_range_index}};
         return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
@@ -91,6 +97,10 @@ public:
 
     [[nodiscard]] auto get_is_split() const -> bool { return m_is_split; }
 
+    [[nodiscard]] auto get_num_messages() const -> size_t { return m_num_messages; }
+
+    [[nodiscard]] auto get_num_files() const -> size_t { return m_num_files; }
+
 private:
     std::string m_id;
     epochtime_t m_begin_timestamp{};
@@ -99,6 +109,8 @@ private:
     size_t m_compressed_size{};
     nlohmann::json m_range_index;
     bool m_is_split{};
+    size_t m_num_messages{};
+    size_t m_num_files{};
 };
 
 class ArchiveWriter {
@@ -272,6 +284,7 @@ public:
                 return rc;
             }
             m_range_open = true;
+            ++m_num_files;
         }
         return m_range_index_writer.add_value_to_range(key, value);
     }
@@ -375,6 +388,7 @@ private:
 
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
+    size_t m_num_files{};
 };
 }  // namespace clp_s
 

@@ -34,6 +34,8 @@ constexpr char UncompressedSize[] = "uncompressed_size";
 constexpr char Size[] = "size";
 constexpr char CreatorId[] = "creator_id";
 constexpr char CreationIx[] = "creation_ix";
+constexpr char NumMessages[] = "num_messages";
+constexpr char NumFiles[] = "num_files";
 }  // namespace Archive
 
 namespace File {
