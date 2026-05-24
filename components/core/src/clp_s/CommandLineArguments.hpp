@@ -148,6 +148,7 @@ public:
 
     // Data members
     static constexpr std::string_view cLogShapeStatsQuery{"stats.log_shapes"};
+    static constexpr std::string_view cSchemaTreeStatsQuery{"stats.schema_tree"};
 
 private:
     // Methods

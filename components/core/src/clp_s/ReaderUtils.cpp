@@ -1,11 +1,13 @@
 #include "ReaderUtils.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
 
-#include "archive_constants.hpp"
-#include "ErrorCode.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/SchemaTree.hpp>
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {
@@ -53,7 +55,13 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        tree->add_node(parent_id, (NodeType)node_type, key);
+        uint32_t count{0};
+        error_code = schema_tree_decompressor.try_read_numeric_value(count);
+        if (ErrorCodeSuccess != error_code) {
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        }
+
+        tree->add_node(parent_id, static_cast<NodeType>(node_type), key, count);
     }
 
     schema_tree_decompressor.close();

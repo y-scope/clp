@@ -145,8 +145,8 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
                 for (auto const node_id : m_unresolved_descriptor_to_descriptor.at(column.get())) {
-                    auto const* node = &m_tree->get_node(node_id);
-                    auto literal_type = node_to_literal_type(node->get_type());
+                    auto const* node{&m_tree->get_node(node_id)};
+                    auto literal_type{SchemaNode::node_to_literal_type(node->get_type())};
                     DescriptorList descriptors;
                     // FIXME: this needs to be adjusted to handle more than JUST object subtrees
                     // TODO: consider whether fully resolving descriptors in this way is actually
@@ -200,7 +200,7 @@ auto SchemaMatch::populate_column_mapping(
     // TODO: consider removing this imprecise loop when we resolve issue #907.
     if (column->is_pure_wildcard()) {
         for (auto const& node : m_tree->get_nodes()) {
-            if (column->matches_type(node_to_literal_type(node.get_type()))) {
+            if (column->matches_type(SchemaNode::node_to_literal_type(node.get_type()))) {
                 // column_to_descriptor_[node->get_id()].insert(column);
                 //  At least some node matches; break
                 //  Don't use column_to_descriptor_ for pure wildcard columns anyway, so
@@ -343,7 +343,7 @@ auto SchemaMatch::populate_column_mapping(
             matched = true;
             continue;
         } else if ((next_at_descriptor_list_end
-                    && column->matches_type(node_to_literal_type(cur_node.get_type()))))
+                    && column->matches_type(SchemaNode::node_to_literal_type(cur_node.get_type()))))
         {
             if (false == column->is_unresolved_descriptor()) {
                 if (NodeType::LogMessage == cur_node.get_type()
@@ -438,7 +438,7 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
             literal_type_bitmask_t types = 0;
             for (int32_t schema : common_schema) {
                 if (m_descriptor_to_schema[column].contains(schema)) {
-                    types |= node_to_literal_type(
+                    types |= SchemaNode::node_to_literal_type(
                             m_tree->get_node(m_descriptor_to_schema[column][schema]).get_type()
                     );
                 }
@@ -651,7 +651,7 @@ bool SchemaMatch::has_array_search(int32_t schema_id) {
 }
 
 LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, int32_t schema) {
-    return node_to_literal_type(
+    return SchemaNode::node_to_literal_type(
             m_tree->get_node(get_column_id_for_descriptor(column, schema)).get_type()
     );
 }

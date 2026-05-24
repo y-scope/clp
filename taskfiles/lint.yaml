@@ -449,7 +449,6 @@ tasks:
             - "clp_s/SchemaReader.cpp"
             - "clp_s/SchemaReader.hpp"
             - "clp_s/SchemaTree.cpp"
-            - "clp_s/SchemaTree.hpp"
             - "clp_s/SchemaWriter.cpp"
             - "clp_s/SchemaWriter.hpp"
             - "clp_s/search/AddTimestampConditions.cpp"

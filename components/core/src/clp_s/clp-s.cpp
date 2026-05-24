@@ -1,20 +1,20 @@
-#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <utility>
 
+#include <fmt/format.h>
 #include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/ErrorCode.hpp>
 #include <clpp/Defs.hpp>
-
-#include "clp_s/SchemaReader.hpp"
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
@@ -308,7 +308,9 @@ bool search_archive(
 
 auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     auto const& query{cli_args.get_query()};
-    if (CommandLineArguments::cLogShapeStatsQuery != query) {
+    if (CommandLineArguments::cLogShapeStatsQuery != query
+        && CommandLineArguments::cSchemaTreeStatsQuery != query)
+    {
         return -1;
     }
     if (false == cli_args.experimental()) {
@@ -338,14 +340,29 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             auto shape_dict{archive_reader->get_log_shape_dictionary()};
             shape_dict->read_entries();
             for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
-                auto message{fmt::format(
-                        "{{\"id\":{},\"count\":{},\"@shape\":\"{}\"}}\n",
-                        i,
-                        shape_stats.at(i).get_count(),
-                        shape_dict->get_entry(i).get_value()
-                )};
-                output_handler.value()->write(message);
+                output_handler.value()->write(
+                        fmt::format(
+                                "{{\"id\":{},\"count\":{},\"@shape\":\"{}\"}}\n",
+                                i,
+                                shape_stats.at(i).get_count(),
+                                shape_dict->get_entry(i).get_value()
+                        )
+                );
             }
+        } else if (CommandLineArguments::cSchemaTreeStatsQuery == query) {
+            auto nodes{nlohmann::json::array()};
+            for (auto const& node : archive_reader->get_schema_tree()->get_nodes()) {
+                nodes.push_back({
+                        {"id", node.get_id()},
+                        {"parentId", node.get_parent_id()},
+                        {"key", std::string{node.get_key_name()}},
+                        {"type", static_cast<int>(node.get_type())},
+                        {"count", node.get_count()},
+                        {"children", node.get_children_ids()},
+                });
+            }
+            output_handler.value()->write(nodes.dump());
+            output_handler.value()->write("\n");
         }
         if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
             SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
@@ -522,14 +539,10 @@ int main(int argc, char const* argv[]) {
             }
             archive_reader->close();
         }
+        SPDLOG_INFO("[stats] searched messages: {}", clp::GrepCore::m_total_messages_searched);
+        SPDLOG_INFO("[stats] int filters: {}", clp_s::search::QueryRunner::m_int_col_checks);
+        SPDLOG_INFO("[stats] float filters: {}", clp_s::search::QueryRunner::m_float_col_checks);
+        SPDLOG_INFO("[stats] str filters: {}", clp_s::search::QueryRunner::m_str_col_checks);
     }
-
-    SPDLOG_INFO("[stats] total messages searched: {}", clp::GrepCore::m_total_messages_searched);
-    SPDLOG_INFO("[stats] clps int filter check: {}", clp_s::search::QueryRunner::m_int_col_checks);
-    SPDLOG_INFO(
-            "[stats] clps float filter check: {}",
-            clp_s::search::QueryRunner::m_float_col_checks
-    );
-    SPDLOG_INFO("[stats] clps str filter check: {}", clp_s::search::QueryRunner::m_str_col_checks);
     return 0;
 }

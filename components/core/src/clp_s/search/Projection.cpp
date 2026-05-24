@@ -167,7 +167,9 @@ auto Projection::resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& c
             }
 
             matched_any = true;
-            if (last_token && column.matches_type(node_to_literal_type(child_node.get_type()))) {
+            if (last_token
+                && column.matches_type(SchemaNode::node_to_literal_type(child_node.get_type())))
+            {
                 m_matching_nodes.insert(child_node_id);
                 matching_nodes_for_column.emplace_back(child_node_id);
             } else if (false == last_token) {

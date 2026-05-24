@@ -134,7 +134,7 @@ void QueryRunner::clear_readers() {
 void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
     if ((0
          != (m_wildcard_type_mask
-             & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+             & SchemaNode::node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
         if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
@@ -324,7 +324,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
             continue;
         }
         bool ret = false;
-        switch (node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
+        switch (SchemaNode::node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
                 ret = evaluate_int_filter(op, column_id, literal);
                 break;
@@ -1052,8 +1052,8 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
                 continue;
             }
             auto tree_node_type = m_schema_tree->get_node(node).get_type();
-            if (col->matches_type(node_to_literal_type(tree_node_type))) {
-                auto literal_type = node_to_literal_type(tree_node_type);
+            if (col->matches_type(SchemaNode::node_to_literal_type(tree_node_type))) {
+                auto literal_type = SchemaNode::node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
                 if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
                     && NodeType::DeprecatedDateString != tree_node_type)
