@@ -260,7 +260,6 @@ clpConfig:
   telemetry:
     disable: false
     endpoint: "https://telemetry.yscope.io"
-    collector:
 
 credentials:
   database:
