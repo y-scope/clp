@@ -1239,12 +1239,13 @@ class DockerComposeController(BaseController):
             otel_collector_port = os.environ.get(
                 "CLP_OTEL_COLLECTOR_PORT", str(OTEL_COLLECTOR_HOST_PORT)
             )
-            http_request(
+            with http_request(
                 f"http://127.0.0.1:{otel_collector_port}/v1/metrics",
                 method="POST",
                 data=payload_bytes,
                 headers={"Content-Type": "application/json"},
-            )
+            ) as response:
+                response.read()
         except Exception as e:
             logger.warning("Failed to emit topology metrics: %s", e)
 
