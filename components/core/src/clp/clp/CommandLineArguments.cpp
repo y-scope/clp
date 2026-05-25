@@ -432,11 +432,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             if (false == m_ruleset_path.empty()) {
                 if (false == boost::filesystem::exists(m_ruleset_path)) {
-                    throw invalid_argument("Specified schema file does not exist.");
+                    throw invalid_argument("Specified ruleset does not exist.");
                 }
                 if (false == boost::filesystem::is_regular_file(m_ruleset_path)) {
                     throw invalid_argument(
-                            "Specified schema file '" + m_ruleset_path + "' is not a regular file."
+                            "Specified ruleset '" + m_ruleset_path + "' is not a regular file."
                     );
                 }
             }

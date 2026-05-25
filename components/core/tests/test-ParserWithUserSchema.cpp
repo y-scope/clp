@@ -77,7 +77,7 @@ auto run_clp_compress(
     std::vector<char const*> argv{
             "clp",
             "c",
-            "--schema-path",
+            "--unstructured-text-parsing-rule-set",
             schema_path_str.data(),
             output_path_str.data(),
             input_path_str.data(),
