@@ -27,9 +27,9 @@ const TELEMETRY_DISABLE_VALUES: [&str; 4] = ["1", "true", "yes", "y"];
 pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterProvider>, Error> {
     if telemetry_config.disable
         || env::var("CLP_DISABLE_TELEMETRY")
-            .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.to_lowercase().as_str()))
+            .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.trim().to_lowercase().as_str()))
         || env::var("DO_NOT_TRACK")
-            .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.to_lowercase().as_str()))
+            .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.trim().to_lowercase().as_str()))
     {
         return Ok(None);
     }
