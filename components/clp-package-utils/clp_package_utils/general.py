@@ -185,16 +185,22 @@ def http_request(
     :param data: Request body as bytes.
     :param headers: Request headers.
     :param method: HTTP method.
-    :param max_attempts: Number of attempts before giving up.
+    :param max_attempts: Number of attempts before giving up. Must be >= 1.
     :param retry_delay: Seconds to wait between retries.
     :param timeout: Seconds to wait for a response per attempt.
     :return: The HTTP response.
+    :raise ValueError: If max_attempts < 1.
     :raise urllib.error.URLError: If all attempts fail due to a network-level error.
     :raise urllib.error.HTTPError: If all attempts fail with an HTTP error status.
     :raise OSError: If all attempts fail due to a socket-level error.
     """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
+
     req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
-    last_exception: Exception | None = None
+    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = URLError(
+        "No attempts were made"
+    )
     for attempt in range(max_attempts):
         try:
             return urllib.request.urlopen(req, timeout=timeout)
