@@ -100,7 +100,7 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 Provides environment variables for telemetry (except service.name).
 */}}
 {{- define "clp.telemetryEnv" -}}
-{{- if and .Values.clpConfig.telemetry .Values.clpConfig.telemetry.disable }}
+{{- if or (not .Values.clpConfig.telemetry) .Values.clpConfig.telemetry.disable }}
 - name: CLP_DISABLE_TELEMETRY
   value: "true"
 {{- else }}
