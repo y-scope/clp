@@ -329,18 +329,16 @@ auto SchemaMatch::find_schemas_matching_predicate(
 ) -> std::unordered_set<int32_t> {
     std::vector<clpp::log_shape_id_t> matched_shape_ids;
     for (auto const& log_shape : log_shape_dict.get_entries()) {
+        auto const log_shape_str{std::string_view{log_shape.get_value()}};
         if (qualified_name.empty()) {
-            if (matcher(std::string_view{log_shape.get_value()})) {
+            if (matcher(log_shape_str)) {
                 matched_shape_ids.emplace_back(log_shape.get_id());
             }
         } else {
             auto shapes{m_archive_reader->get_parent_rule_shapes().at(log_shape.get_id())};
             for (auto const& parent_match : shapes.get()) {
                 if (qualified_name == parent_match.m_name
-                    && matcher(
-                            std::string_view{log_shape.get_value()}
-                                    .substr(parent_match.m_start, parent_match.m_size)
-                    ))
+                    && matcher(log_shape_str.substr(parent_match.m_start, parent_match.m_size)))
                 {
                     matched_shape_ids.emplace_back(log_shape.get_id());
                     break;
