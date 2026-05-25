@@ -73,7 +73,7 @@ It ensures the exact same UUID is used across all templates during a single helm
 Provides the standard OpenTelemetry resource attributes.
 */}}
 {{- define "clp.resourceAttributes" -}}
-clp.deployment.id={{ include "clp.instanceId" . }},service.version={{ .Chart.Version }},clp.deployment.method=helm,clp.storage.engine={{ .Values.clpConfig.package.storage_engine }}
+clp.deployment.id={{ include "clp.instanceId" . }},service.version={{ .Chart.AppVersion }},clp.deployment.method=helm,clp.storage.engine={{ .Values.clpConfig.package.storage_engine }}
 {{- end -}}
 
 {{/*
@@ -87,7 +87,7 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 {{- define "clp.topologyMetricsPayload" -}}
 {{- $timestampNs := now.UnixNano -}}
 {{- $deploymentId := include "clp.instanceId" . -}}
-{{- $serviceVersion := .Chart.Version -}}
+{{- $serviceVersion := .Chart.AppVersion -}}
 {{- $storageEngine := .Values.clpConfig.package.storage_engine -}}
 {{- $compressionWorkerReplicas := .Values.scheduling.compressionWorker.replicas | default 1 | int -}}
 {{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
