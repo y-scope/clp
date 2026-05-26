@@ -192,7 +192,6 @@ if(CLP_BUILD_EXECUTABLES)
                 date::date
                 fmt::fmt
                 log_mechanic
-                log_surgeon::log_surgeon
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 LibArchive::LibArchive
