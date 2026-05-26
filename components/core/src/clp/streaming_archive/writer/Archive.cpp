@@ -315,17 +315,18 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     update_segment_indices(logtype_id, var_ids);
 }
 
-auto Archive::add_token_to_dicts(std::string_view cap_string, std::string_view cap_name) -> void {
-    if ("int" == cap_name) {
+auto Archive::add_token_to_dicts(std::string_view match_string, std::string_view match_name)
+        -> void {
+    if ("int" == match_name) {
         encoded_variable_t encoded_var{};
         if (false
             == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                    cap_string,
+                    match_string,
                     encoded_var
             ))
         {
             variable_dictionary_id_t id{};
-            m_var_dict.add_entry(cap_string, id);
+            m_var_dict.add_entry(match_string, id);
             m_var_ids.push_back(id);
             encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
             m_logtype_dict_entry.add_dictionary_var();
@@ -335,16 +336,16 @@ auto Archive::add_token_to_dicts(std::string_view cap_string, std::string_view c
         m_encoded_vars.push_back(encoded_var);
         return;
     }
-    if ("float" == cap_name) {
+    if ("float" == match_name) {
         encoded_variable_t encoded_var{};
         if (false
             == EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                    cap_string,
+                    match_string,
                     encoded_var
             ))
         {
             variable_dictionary_id_t id{};
-            m_var_dict.add_entry(cap_string, id);
+            m_var_dict.add_entry(match_string, id);
             m_var_ids.push_back(id);
             encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
             m_logtype_dict_entry.add_dictionary_var();
@@ -355,7 +356,7 @@ auto Archive::add_token_to_dicts(std::string_view cap_string, std::string_view c
         return;
     }
     variable_dictionary_id_t id{};
-    m_var_dict.add_entry(cap_string, id);
+    m_var_dict.add_entry(match_string, id);
     m_var_ids.push_back(id);
     m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
     m_logtype_dict_entry.add_dictionary_var();
@@ -391,8 +392,7 @@ auto Archive::write_msg_using_schema(
             );
             if (nullptr == timestamp_pattern) {
                 throw(std::runtime_error(
-                        "Schema contains a timestamp regex that matches "
-                        + timestamp_string
+                        "Schema contains a timestamp regex that matches " + timestamp_string
                         + " which does not match any known timestamp pattern."
                 ));
             }
@@ -442,13 +442,7 @@ auto Archive::write_msg_using_schema(
     if (false == m_logtype_dict_entry.get_value().empty()) {
         logtype_dictionary_id_t logtype_id{};
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        m_file->write_encoded_msg(
-                timestamp,
-                logtype_id,
-                m_encoded_vars,
-                m_var_ids,
-                buffer_size
-        );
+        m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, buffer_size);
         update_segment_indices(logtype_id, m_var_ids);
     }
 }

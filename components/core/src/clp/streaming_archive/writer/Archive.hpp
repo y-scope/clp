@@ -152,11 +152,9 @@ public:
      * @param event
      * @throw FileWriter::OperationFailed if any write fails
      */
-    auto write_msg_using_schema(
-            char* buf,
-            size_t buffer_size,
-            log_surgeon::EventHandle const& event
-    ) -> void;
+    auto
+    write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::EventHandle const& event)
+            -> void;
 
     /**
      * Writes an IR log event to the current encoded file
@@ -297,11 +295,11 @@ private:
     auto update_global_metadata() -> void;
 
     /**
-     * Add a capture to the logtype and variable dictionaries.
-     * @param cap_string The contents of the capture.
-     * @param cap_name The name of the capture.
+     * Add a rule match to the logtype and variable dictionaries.
+     * @param match_string The contents of the match.
+     * @param match_name The name of the match.
      */
-    auto add_token_to_dicts(std::string_view cap_string, std::string_view cap_name) -> void;
+    auto add_token_to_dicts(std::string_view match_string, std::string_view match_name) -> void;
 
     // Variables
     boost::uuids::uuid m_id;
