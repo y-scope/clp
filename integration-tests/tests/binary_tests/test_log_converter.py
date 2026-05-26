@@ -4,7 +4,6 @@ logs as expected.
 """
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -52,7 +51,7 @@ def test_log_converter_transform(
         integration_test_path_config=integration_test_path_config,
     )
     try:
-        _convert_and_compress(clp_core_path_config, test_paths, test_paths.logs_source_dir)
+        _convert_and_compress(clp_core_path_config, test_paths)
     finally:
         test_paths.clear_test_outputs()
 
@@ -84,12 +83,12 @@ def test_log_converter_tar_gz_transform(
 
     test_paths = ConversionTestPathConfig(
         test_name=f"clp-s-{text_singlefile.dataset_name}-tar-gz",
-        logs_source_dir=text_singlefile.logs_path,
+        logs_source_dir=tar_gz_path,
         num_log_events=num_log_events,
         integration_test_path_config=integration_test_path_config,
     )
     try:
-        _convert_and_compress(clp_core_path_config, test_paths, tar_gz_path)
+        _convert_and_compress(clp_core_path_config, test_paths)
     finally:
         test_paths.clear_test_outputs()
 
@@ -97,10 +96,10 @@ def test_log_converter_tar_gz_transform(
 def _convert_and_compress(
     clp_core_path_config: ClpCorePathConfig,
     test_paths: ConversionTestPathConfig,
-    src_path: Path,
 ) -> None:
     log_converter_bin_path = str(clp_core_path_config.log_converter_binary_path)
     clp_s_bin_path = str(clp_core_path_config.clp_s_binary_path)
+    src_path = str(test_paths.logs_source_dir)
     conversion_path = str(test_paths.conversion_dir)
     compression_path = str(test_paths.compression_dir)
     conversion_action = NonClpAction(
