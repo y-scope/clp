@@ -73,7 +73,9 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                             path.path,
                             nested_readers.front().get()
                     ))
-                {}
+                {
+                    return false;
+                }
 
                 auto logtext_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
                                            std::string const& file_path) -> bool {
