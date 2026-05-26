@@ -40,7 +40,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 absl::flat_hash_map
                 clp_s::archive_reader
                 clp_s::search::ast
-                log_surgeon::log_surgeon
+                log_mechanic
                 simdjson::simdjson
                 PRIVATE
                 clp::string_utils

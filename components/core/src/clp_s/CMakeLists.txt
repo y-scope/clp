@@ -77,8 +77,6 @@ set(
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/networking/socket_utils.cpp
@@ -151,7 +149,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 PUBLIC
                 clp::string_utils
                 log_mechanic
-                log_surgeon::log_surgeon
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE

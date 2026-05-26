@@ -610,8 +610,6 @@ set(SOURCE_FILES_unitTest
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
         src/clp/LibarchiveReader.hpp
-        src/clp/LogSurgeonReader.cpp
-        src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
         src/clp/LogTypeDictionaryEntryReq.hpp
@@ -794,7 +792,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::filter
             date::date
             fmt::fmt
-            log_surgeon::log_surgeon
+            log_mechanic
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
