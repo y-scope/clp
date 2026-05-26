@@ -12,7 +12,9 @@ from clp_py_utils.clp_config import (
 from pydantic import ValidationError
 
 from tests.utils.classes import IntegrationTestPathConfig
+from tests.utils.docker_utils import list_running_services_in_compose_project
 from tests.utils.utils import (
+    clear_directory,
     load_yaml_to_dict,
     validate_dir_exists,
 )
@@ -116,6 +118,12 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
             self.stop_clp_path,
         ]
 
+    def clear_package_archives(self) -> None:
+        """Removes the contents of the package archives directory."""
+        # TODO: this method will be replaced with a more robust version that uses `archive-manager`
+        # or `dataset-manager` (as appropriate) to clear archives correctly.
+        clear_directory(self.package_archives_path)
+
 
 @dataclass
 class ClpPackageModeConfig:
@@ -174,6 +182,12 @@ class ClpPackage:
     def shared_config_file_path(self) -> Path:
         """:return: The absolute path to the package shared config file."""
         return self.path_config.package_logs_path / ".clp-config.yaml"
+
+    def get_running_services(self) -> set[str]:
+        """:return: The set of services currently running in this package's Compose project."""
+        instance_id = self.get_clp_instance_id()
+        project_name = f"clp-package-{instance_id}"
+        return set(list_running_services_in_compose_project(project_name))
 
     def get_clp_instance_id(self) -> str:
         """
