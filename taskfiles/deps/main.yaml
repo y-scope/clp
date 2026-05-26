@@ -75,7 +75,7 @@ tasks:
       - task: "date"
       - task: "fmt"
       - task: "liblzma"
-      - task: "log-surgeon"
+      - task: "log-mechanic"
       - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
@@ -369,29 +369,6 @@ tasks:
             INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
         )
         EOF
-
-  log-surgeon:
-    internal: true
-    run: "once"
-    deps:
-      - "fmt"
-      - "log-mechanic"
-      - "microsoft.gsl"
-      - "ystdlib"
-    cmds:
-      - task: "utils:install-remote-cmake-lib"
-        vars:
-          CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
-            - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-Dlog_surgeon_BUILD_TESTING=OFF"
-          LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "eebf857962f8fc022bfa5de8d00e10ee4ac36bb8f126a556935a93dde1435aa2"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/193e1f9.tar.gz"
 
   lz4:
     internal: true
