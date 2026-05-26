@@ -266,6 +266,7 @@ if(CLP_BUILD_CLP_S_IO)
                 Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
+                LibArchive::LibArchive
                 spdlog::spdlog
         )
 endif()
