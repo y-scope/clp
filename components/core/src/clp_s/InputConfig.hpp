@@ -178,12 +178,12 @@ void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> con
  * content within archives.
  * @param reader The reader to open as an archive.
  * @param path The path to the archive.
- * @param default_file_path The path name to return when this is a single compressed file.
- * @param json_handler Called for each JSON member.
- * @param kvir_handler Called for each KV-IR member.
- * @param logtext_handler Called for each LogText member.
- * @param empty_file_handler Called for each empty file member.
- * @return Whether all members were processed successfully.
+ * @param default_file_path The path name to use when this is a single compressed file.
+ * @param json_handler Called for each JSON file in an archive.
+ * @param kvir_handler Called for each KV-IR file in an archive.
+ * @param logtext_handler Called for each log-text file in an archive.
+ * @param empty_file_handler Called for each empty file in an archive.
+ * @return Whether all of the files in the archive were processed successfully.
  */
 [[nodiscard]] auto try_process_archive_with_libarchive(
         std::shared_ptr<clp::ReaderInterface> reader,

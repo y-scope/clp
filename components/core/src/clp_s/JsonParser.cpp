@@ -675,18 +675,17 @@ bool JsonParser::ingest() {
                 );
                 std::ignore = m_archive_writer->close();
                 return false;
-            case FileType::Zstd:
             case FileType::Unknown: {
-                if (false == nested_readers.empty()) {
-                    if (NetworkUtils::check_and_log_curl_error(
-                                path.path,
-                                nested_readers.front().get()
-                        ))
-                    {
-                        close_nested_readers(nested_readers);
-                        std::ignore = m_archive_writer->close();
-                        return false;
-                    }
+                if (false == nested_readers.empty()
+                    && NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    ))
+                {
+                    close_nested_readers(nested_readers);
+                    SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
+                    std::ignore = m_archive_writer->close();
+                    return false;
                 }
 
                 auto json_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
@@ -709,8 +708,8 @@ bool JsonParser::ingest() {
                     return false;
                 };
 
-                if (false == nested_readers.empty() && FileType::Unknown == file_type) {
-                    ingestion_successful = try_process_archive_with_libarchive(
+                if (false == nested_readers.empty()
+                    && try_process_archive_with_libarchive(
                             nested_readers.back(),
                             path,
                             file_name_in_metadata,
@@ -718,12 +717,14 @@ bool JsonParser::ingest() {
                             kvir_handler,
                             logtext_handler,
                             json_handler
-                    );
-                    if (ingestion_successful) {
-                        break;
-                    }
+                    ))
+                {
+                    ingestion_successful = true;
+                    break;
                 }
-
+            }
+            case FileType::Zstd:
+            default: {
                 if (false == nested_readers.empty()) {
                     NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get());
                     close_nested_readers(nested_readers);

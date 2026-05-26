@@ -67,20 +67,13 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                 }
                 break;
             }
-            case clp_s::FileType::Json:
-            case clp_s::FileType::KeyValueIr:
-            case clp_s::FileType::Zstd:
-            case clp_s::FileType::Unknown:
-            default: {
-                if (false == nested_readers.empty()) {
-                    if (clp_s::NetworkUtils::check_and_log_curl_error(
-                                path.path,
-                                nested_readers.front().get()
-                        ))
-                    {
-                        return false;
-                    }
-                }
+            case clp_s::FileType::Unknown: {
+                if (false == nested_readers.empty()
+                    && clp_s::NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    ))
+                {}
 
                 auto logtext_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
                                            std::string const& file_path) -> bool {
@@ -114,27 +107,24 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                     return false;
                 };
 
-                if (false == nested_readers.empty() && clp_s::FileType::Unknown == file_type) {
-                    if (false
-                        == clp_s::try_process_archive_with_libarchive(
-                                nested_readers.back(),
-                                path,
-                                path.path,
-                                other_handler,
-                                other_handler,
-                                logtext_handler,
-                                logtext_handler
-                        ))
-                    {
-                        clp_s::NetworkUtils::check_and_log_curl_error(
-                                path.path,
-                                nested_readers.front().get()
-                        );
-                        return false;
-                    }
+                if (false == nested_readers.empty()
+                    && clp_s::try_process_archive_with_libarchive(
+                            nested_readers.back(),
+                            path,
+                            path.path,
+                            other_handler,
+                            other_handler,
+                            logtext_handler,
+                            logtext_handler
+                    ))
+                {
                     break;
                 }
-
+            }
+            case clp_s::FileType::Json:
+            case clp_s::FileType::KeyValueIr:
+            case clp_s::FileType::Zstd:
+            default: {
                 if (false == nested_readers.empty()) {
                     clp_s::NetworkUtils::check_and_log_curl_error(
                             path.path,
