@@ -64,7 +64,9 @@ def verify_start_clp_action(
     start_clp_action: ClpAction, clp_package: ClpPackage
 ) -> ClpVerificationResult:
     """
-    Verify the startup of the CLP package.
+    Verifies the startup of the CLP package by checking that the start command exited with a
+    successful return code and that the set of running services exactly matches the package's
+    required components.
 
     :param start_clp_action:
     :param clp_package:
@@ -76,18 +78,31 @@ def verify_start_clp_action(
     if not returncode_result:
         return returncode_result
 
-    package_running_err_msg = _validate_clp_package_running(clp_package)
-    if package_running_err_msg is None:
+    running_services = clp_package.get_running_services()
+    required_components = set(clp_package.component_list)
+    if required_components == running_services:
         return start_clp_action.pass_verification()
 
-    return start_clp_action.fail_verification(package_running_err_msg)
+    mode_name = clp_package.mode_name
+    fail_msg = (
+        f"'{mode_name}' package start up verification failure: components could not be validated."
+    )
+    missing_components = required_components - running_services
+    if missing_components:
+        fail_msg += f" Missing components: {missing_components}."
+    unexpected_components = running_services - required_components
+    if unexpected_components:
+        fail_msg += f" Unexpected services: {unexpected_components}."
+
+    return start_clp_action.fail_verification(fail_msg)
 
 
 def verify_stop_clp_action(
     stop_clp_action: ClpAction, clp_package: ClpPackage
 ) -> ClpVerificationResult:
     """
-    Verify the spindown of the CLP package.
+    Verifies the spindown of the CLP package by checking that the stop command exited with a
+    successful return code and that no package services remain running.
 
     :param stop_clp_action:
     :param clp_package:
@@ -98,50 +113,13 @@ def verify_stop_clp_action(
     if not returncode_result:
         return returncode_result
 
-    package_not_running_err_msg = _validate_clp_package_not_running(clp_package)
-    if package_not_running_err_msg is None:
+    running_services = clp_package.get_running_services()
+    if not running_services:
         return stop_clp_action.pass_verification()
 
-    return stop_clp_action.fail_verification(package_not_running_err_msg)
-
-
-def _validate_clp_package_running(clp_package: ClpPackage) -> str | None:
-    """:return: `None` on success; otherwise a string describing the failure."""
-    running_services = clp_package.get_running_services()
-
-    # Compare with list of required components.
-    required_components = set(clp_package.component_list)
-    if required_components == running_services:
-        return None
-
-    # Construct failure message.
     mode_name = clp_package.mode_name
     fail_msg = (
-        f"'{mode_name}' package start up verification failure: components could not be validated."
-    )
-
-    missing_components = required_components - running_services
-    if missing_components:
-        fail_msg += f" Missing components: {missing_components}."
-
-    unexpected_components = running_services - required_components
-    if unexpected_components:
-        fail_msg += f" Unexpected services: {unexpected_components}."
-
-    return fail_msg
-
-
-def _validate_clp_package_not_running(clp_package: ClpPackage) -> str | None:
-    """:return: `None` on success; otherwise a string describing the failure."""
-    running_services = clp_package.get_running_services()
-
-    # Make sure the set is empty.
-    if not running_services:
-        return None
-
-    # Construct failure message.
-    mode_name = clp_package.mode_name
-    return (
         f"'{mode_name}' package stop verification failure: there are components of the package that"
         f" are still running: '{running_services}'"
     )
+    return stop_clp_action.fail_verification(fail_msg)

@@ -4,9 +4,7 @@ import logging
 
 import pytest
 
-from tests.package_tests.classes import (
-    ClpPackage,
-)
+from tests.package_tests.classes import ClpPackage
 from tests.package_tests.clp_text.utils.mode import CLP_TEXT_MODE
 from tests.package_tests.utils.compress import (
     compress_clp_package,
