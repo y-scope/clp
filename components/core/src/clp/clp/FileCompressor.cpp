@@ -254,7 +254,7 @@ void FileCompressor::parse_and_encode_with_library(
         buffer_pos = 0;
 
         while (true) {
-            size_t buffer_start = buffer_pos;
+            size_t buffer_start{buffer_pos};
             log_surgeon::CCharArray view{buf, buffer_size};
             auto optional_event{m_parser->next_event(view, &buffer_pos)};
             // No error handling for failures?

@@ -46,6 +46,13 @@ ErrorCode create_directory_structure(std::string const& path, mode_t mode);
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
 
 /**
+ * Loads a parser from a rule set string.
+ * @param rule_set_string String of the user defined set of variable regex.
+ * @return parser The resulting parser.
+ */
+auto load_parser_from_rule_text(std::string const& rule_set_string) -> log_surgeon::ParserHandle;
+
+/**
  * Loads a parser from a file.
  * @param rule_set_file_path File path to the user defined set of variable regex.
  * @return parser The resulting parser.

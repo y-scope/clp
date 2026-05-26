@@ -23,6 +23,7 @@ if(CLP_BUILD_EXECUTABLES)
         clp_s::clp_dependencies
         clp_s::io
         fmt::fmt
+        log_mechanic
         log_surgeon::log_surgeon
         msgpack-cxx
         nlohmann_json::nlohmann_json

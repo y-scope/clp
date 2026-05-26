@@ -6,14 +6,13 @@
 #include <system_error>
 #include <utility>
 
-#include <log_surgeon/BufferParser.hpp>
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/Schema.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../../clp/ErrorCode.hpp"
 #include "../../clp/ReaderInterface.hpp"
+#include "../../clp/Utils.hpp"
 #include "../InputConfig.hpp"
 #include "LogSerializer.hpp"
 
@@ -45,11 +44,11 @@ auto LogConverter::convert_file(
         clp::ReaderInterface* reader,
         std::string_view output_dir
 ) -> ystdlib::error_handling::Result<void> {
-    log_surgeon::Schema schema;
-    schema.add_delimiters(cDelimiters);
-    schema.add_variable(cTimestampSchema, -1);
-    log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
-    parser.reset();
+    std::string rule_text{"delimiter:"};
+    rule_text += cDelimiters;
+    rule_text += "\n";
+    rule_text += cTimestampSchema;
+    log_surgeon::ParserHandle parser{clp::load_parser_from_rule_text(rule_text)};
 
     // Reset internal buffer state.
     m_parser_offset = 0ULL;
@@ -63,31 +62,40 @@ auto LogConverter::convert_file(
         reached_end_of_stream = 0ULL == num_bytes_read;
 
         while (m_parser_offset < m_num_bytes_buffered) {
-            auto const err{parser.parse_next_event(
-                    m_buffer.data(),
-                    m_num_bytes_buffered,
-                    m_parser_offset,
-                    reached_end_of_stream
-            )};
-            if (log_surgeon::ErrorCode::BufferOutOfBounds == err) {
+            log_surgeon::CCharArray view{m_buffer.data(), m_num_bytes_buffered};
+            auto optional_event{parser.next_event(view, &m_parser_offset)};
+            // No error handling for failures?
+            if (false == optional_event.has_value()) {
                 break;
             }
-            if (log_surgeon::ErrorCode::Success != err) {
-                return std::errc::no_message;
-            }
 
-            auto const& event{parser.get_log_parser().get_log_event_view()};
-            auto const message{event.to_string()};
-            if (auto timestamp{event.get_timestamp()}; timestamp.has_value()) {
-                auto const message_without_timestamp{
-                        std::string_view{message}.substr(timestamp->length())
-                };
-                YSTDLIB_ERROR_HANDLING_TRYV(
-                        serializer.add_message(timestamp.value(), message_without_timestamp)
-                );
-            } else {
-                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
+            auto const& event{optional_event.value()};;
+
+            // Ideally the event would just have its timestamp accessible as event.get_timestamp()
+            std::string message;
+            std::string timestamp;
+            size_t leaf_id{0};
+            while (true) {
+                auto optional_leaf{event.get_leaf_match(leaf_id)};
+                if (false == optional_leaf.has_value()) {
+                    break;
+                }
+                auto leaf{optional_leaf.value()};
+                size_t const leaf_len{leaf.range.end - leaf.range.start};
+                if (timestamp.empty()
+                    && "header" == leaf.ffi_pointers.root_rule_name.as_cpp_view()
+                    && "timestamp" == leaf.ffi_pointers.rule_name.as_cpp_view()) {
+                    timestamp = std::string{m_buffer.data() + leaf.range.start, leaf_len};
+                } else {
+                  message += std::string{m_buffer.data() + leaf.range.start, leaf_len};
+                }
+                ++leaf_id;
             }
+            if (false == timestamp.empty()) {
+                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(timestamp, message));
+                continue;
+            }
+            YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
         }
     }
     serializer.close();

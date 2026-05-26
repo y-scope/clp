@@ -433,7 +433,7 @@ auto Archive::write_msg_using_schema(
         add_token_to_dicts(leaf_string, leaf.ffi_pointers.rule_name.as_cpp_view());
 
         prev_pos = leaf.range.end;
-        leaf_id++;
+        ++leaf_id;
     }
     std::string static_text{buf + prev_pos, buffer_size - prev_pos};
     m_logtype_dict_entry.add_static_text(static_text);

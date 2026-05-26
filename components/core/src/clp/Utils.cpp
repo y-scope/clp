@@ -111,20 +111,24 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     return ErrorCode_Success;
 }
 
+auto load_parser_from_rule_text(std::string const& rule_set_string) -> log_surgeon::ParserHandle {
+    log_surgeon::CCharArray schema_arr{rule_set_string.data(), rule_set_string.size()};
+    auto* rule_set{log_surgeon::log_surgeon_schema_from_definition(schema_arr)};
+    if (nullptr == rule_set) {
+        throw std::invalid_argument("Failed to parse rule set:\n" + rule_set_string);
+    }
+    return log_surgeon::ParserHandle{rule_set};
+}
+
 auto load_parser_from_file(std::string const& rule_set_file_path) -> log_surgeon::ParserHandle {
     std::ifstream rule_set_file{rule_set_file_path};
     if (false == rule_set_file.good()) {
         throw std::invalid_argument("Rule set file at " + rule_set_file_path + " failed to open.");
     }
-    std::string schema_text{
+    std::string const rule_text{
             (std::istreambuf_iterator<char>(rule_set_file)),
             std::istreambuf_iterator<char>()
     };
-    log_surgeon::CCharArray schema_arr{schema_text.data(), schema_text.size()};
-    auto* rule_set{log_surgeon::log_surgeon_schema_from_definition(schema_arr)};
-    if (nullptr == rule_set) {
-        throw std::invalid_argument("Failed to parse rule set at " + rule_set_file_path);
-    }
-    return log_surgeon::ParserHandle{rule_set};
+    return load_parser_from_rule_text(rule_text);
 }
 }  // namespace clp
