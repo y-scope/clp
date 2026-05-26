@@ -3,10 +3,7 @@
 import pytest
 
 from tests.utils.classes import IntegrationTestPathConfig
-from tests.utils.config import (
-    ClpCorePathConfig,
-    PackagePathConfig,
-)
+from tests.utils.config import ClpCorePathConfig
 from tests.utils.utils import resolve_path_env_var
 
 
@@ -22,18 +19,4 @@ def integration_test_path_config() -> IntegrationTestPathConfig:
     return IntegrationTestPathConfig(
         clp_build_dir=resolve_path_env_var("CLP_BUILD_DIR"),
         integration_tests_project_root=resolve_path_env_var("INTEGRATION_TESTS_PROJECT_ROOT"),
-    )
-
-
-@pytest.fixture(scope="session")
-def fixt_package_path_config(
-    integration_test_path_config: IntegrationTestPathConfig,
-) -> PackagePathConfig:
-    """Provides paths for the clp-package directory and its contents."""
-    return PackagePathConfig(
-        clp_package_dir=resolve_path_env_var("CLP_PACKAGE_DIR"),
-        package_test_scripts_dir=(
-            resolve_path_env_var("INTEGRATION_TESTS_PROJECT_ROOT") / "tests" / "package_tests"
-        ),
-        test_cache_dir=integration_test_path_config.test_cache_dir,
     )
