@@ -106,6 +106,8 @@ set(
         ../clp/time_types.hpp
         ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
+        ../clp/Utils.cpp
+        ../clp/Utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
         ../clp/VariableDictionaryEntryReq.hpp
