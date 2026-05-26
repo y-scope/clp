@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include <simdjson.h>
+
 #include "../clp/ReaderInterface.hpp"
 
 namespace clp_s {
@@ -134,6 +136,37 @@ private:
         auto hex = char_to_hex(c);
         destination.append(hex.data(), hex.size());
     }
+};
+
+/**
+ * A reusable JSON string escaper backed by `simdjson::builder::string_builder`.
+ */
+class SimdJsonStringEscaper {
+public:
+    // Constructor
+    SimdJsonStringEscaper() = default;
+
+    // Delete copy constructor and assignment operator
+    SimdJsonStringEscaper(SimdJsonStringEscaper const&) = delete;
+    auto operator=(SimdJsonStringEscaper const&) -> SimdJsonStringEscaper& = delete;
+
+    // Default move constructor and assignment operator
+    SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept = default;
+    auto operator=(SimdJsonStringEscaper&&) noexcept -> SimdJsonStringEscaper& = default;
+
+    // Destructor
+    ~SimdJsonStringEscaper() = default;
+
+    /**
+     * Escapes a string according to JSON string escaping rules and appends the escaped string to
+     * the destination buffer.
+     * @param destination
+     * @param source
+     */
+    void escape(std::string& destination, std::string_view const source);
+
+private:
+    simdjson::builder::string_builder m_builder{};
 };
 
 enum EvaluatedValue {

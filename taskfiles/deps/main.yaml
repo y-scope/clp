@@ -415,6 +415,7 @@ tasks:
             - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DENABLE_SNAPPY=OFF"
             - "-DENABLE_UNINSTALL=OFF"
           LIB_NAME: "mongocxx"
           TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
@@ -471,8 +472,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "simdjson"
-          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
-          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"
+          TARBALL_SHA256: "b091107844fe928158c5c2265c20360fff312889ddf7ebc4528a0f0f8f2ff9cd"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v4.6.4.tar.gz"
 
   spdlog:
     internal: true
