@@ -10,9 +10,7 @@ from tests.package_tests.utils.compress import (
     compress_clp_package,
     verify_compress_action,
 )
-from tests.utils.classes import (
-    SampleDataset,
-)
+from tests.utils.classes import SampleDataset
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +40,7 @@ def test_clp_text_startup(clp_package: ClpPackage) -> None:
 
 
 @pytest.mark.compression
+@pytest.mark.usefixtures("clear_package_archives")
 def test_clp_text_compression_text_multifile(
     clp_package: ClpPackage,
     text_multifile: SampleDataset,
@@ -54,13 +53,8 @@ def test_clp_text_compression_text_multifile(
     """
     logger.info("Starting test: 'test_clp_text_compression_text_multifile'")
 
-    package_path_config = clp_package.path_config
-    package_path_config.clear_package_archives()
-
     compress_action = compress_clp_package(clp_package, text_multifile)
     result = verify_compress_action(compress_action, clp_package, text_multifile)
     assert result, result.failure_message
-
-    package_path_config.clear_package_archives()
 
     logger.info("Test complete: 'test_clp_text_compression_text_multifile'")

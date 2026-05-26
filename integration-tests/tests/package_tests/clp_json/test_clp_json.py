@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.package,
     pytest.mark.clp_json,
-    pytest.mark.parametrize("clp_package", [CLP_JSON_MODE], indirect=True),
+    pytest.mark.parametrize(
+        "clp_package", [CLP_JSON_MODE], indirect=True, ids=[CLP_JSON_MODE.mode_name]
+    ),
 ]
 
 
@@ -38,6 +40,7 @@ def test_clp_json_startup(clp_package: ClpPackage) -> None:
 
 
 @pytest.mark.compression
+@pytest.mark.usefixtures("clear_package_archives")
 def test_clp_json_compression_json_multifile(
     clp_package: ClpPackage,
     json_multifile: SampleDataset,
@@ -50,19 +53,15 @@ def test_clp_json_compression_json_multifile(
     """
     logger.info("Starting test: 'test_clp_json_compression_json_multifile'")
 
-    package_path_config = clp_package.path_config
-    package_path_config.clear_package_archives()
-
     compress_action = compress_clp_package(clp_package, json_multifile)
     result = verify_compress_action(compress_action, clp_package, json_multifile)
     assert result, result.failure_message
-
-    package_path_config.clear_package_archives()
 
     logger.info("Test complete: 'test_clp_json_compression_json_multifile'")
 
 
 @pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
 def test_clp_json_search(clp_package: ClpPackage) -> None:
     """
     Validate that the `clp-json` package successfully searches some dataset.
@@ -80,5 +79,3 @@ def test_clp_json_search(clp_package: ClpPackage) -> None:
     assert clp_package
 
     logger.info("Test complete: 'test_clp_json_search'")
-
-    # TODO: clean up clp-package/var/data, clp-package/var/log, and clp-package/var/tmp

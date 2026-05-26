@@ -118,7 +118,7 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
             self.stop_clp_path,
         ]
 
-    def clear_package_archives(self) -> None:
+    def clear_archives(self) -> None:
         """Removes the contents of the package archives directory."""
         # TODO: this method will be replaced with a more robust version that uses `archive-manager`
         # or `dataset-manager` (as appropriate) to clear archives correctly.
