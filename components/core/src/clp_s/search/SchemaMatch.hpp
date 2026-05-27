@@ -206,6 +206,26 @@ private:
             std::shared_ptr<ast::Expression> const& expr
     ) -> std::shared_ptr<ast::Expression>;
 
+    /**
+     * Handles clpp decomposition when the root node is a LogMessage. Iterates each non-LogTypeID
+     * child of the LogMessage node, attempting decomposition for each child's qualified name.
+     * Skips children where decomposition or schema matching fails. Aggregates successful results
+     * into an OrExpr.
+     * @param column The column triggering clpp decomposition.
+     * @param root_node_id The LogMessage schema-tree node.
+     * @param log_shape_dict The log shape dictionary.
+     * @param filter The FilterExpr extracted from the expression.
+     * @param query The clp-string query for non-EXISTS filters.
+     * @return The aggregated OrExpr on success, nullptr if no child produced results.
+     */
+    auto resolve_log_message_wildcard(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t root_node_id,
+            clp_s::LogShapeDictionaryReader& log_shape_dict,
+            ast::FilterExpr* filter,
+            std::string const& query
+    ) -> std::shared_ptr<ast::Expression>;
+
     // Data members
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;

@@ -147,6 +147,10 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
                 for (auto const node_id : m_unresolved_descriptor_to_descriptor.at(column.get())) {
                     auto const* node{&m_tree->get_node(node_id)};
                     auto literal_type{SchemaNode::node_to_literal_type(node->get_type())};
+                    bool const is_clpp_node{
+                            NodeType::LogMessage == node->get_type()
+                            || NodeType::ParentRule == node->get_type()
+                    };
                     DescriptorList descriptors;
                     // FIXME: this needs to be adjusted to handle more than JUST object subtrees
                     // TODO: consider whether fully resolving descriptors in this way is actually
@@ -180,8 +184,92 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
                             column->get_namespace()
                     );
                     resolved_column->set_matching_type(literal_type);
-                    *it = resolved_column;
-                    cur->copy_append(possibilities.get());
+
+                    if (is_clpp_node) {
+                        auto const& clpp_node{m_tree->get_node(node_id)};
+                        if (NodeType::LogMessage == clpp_node.get_type()) {
+                            if (auto clpp_result{resolve_clpp_query(resolved_column, node_id, cur)};
+                                nullptr != clpp_result)
+                            {
+                                possibilities->add_operand(clpp_result->copy());
+                            }
+                        } else if (NodeType::ParentRule == clpp_node.get_type()) {
+                            auto* filter_expr{dynamic_cast<FilterExpr*>(cur.get())};
+                            assert(nullptr != filter_expr && "Expected FilterExpr");
+                            auto const op{filter_expr->get_operation()};
+
+                            for (auto const child_id : clpp_node.get_children_ids()) {
+                                auto const& child_node{m_tree->get_node(child_id)};
+                                auto child_column{resolved_column->copy()};
+                                child_column->get_descriptor_list().emplace_back(
+                                        DescriptorToken::create_descriptor_from_literal_token(
+                                                child_node.get_key_name()
+                                        )
+                                );
+                                auto child_literal_type{
+                                        SchemaNode::node_to_literal_type(child_node.get_type())
+                                };
+
+                                if (NodeType::ParentRule == child_node.get_type()) {
+                                    if (auto clpp_result{
+                                                resolve_clpp_query(child_column, child_id, cur)
+                                        };
+                                        nullptr != clpp_result)
+                                    {
+                                        possibilities->add_operand(clpp_result->copy());
+                                    }
+                                } else {
+                                    child_column->set_matching_type(child_literal_type);
+                                    if (false == child_column->matches_any(ast::cAllTypes)) {
+                                        continue;
+                                    }
+                                    auto [descriptors_it, _]
+                                            = m_column_to_descriptor.try_emplace(child_id);
+                                    descriptors_it->second.emplace(child_column);
+                                    if (FilterOperation::EXISTS == op
+                                        || FilterOperation::NEXISTS == op)
+                                    {
+                                        auto child_filter{FilterExpr::create(
+                                                child_column,
+                                                op,
+                                                filter_expr->is_inverted()
+                                        )};
+                                        possibilities->add_operand(child_filter);
+                                    } else {
+                                        auto child_operand{filter_expr->get_operand()};
+                                        auto child_filter{FilterExpr::create(
+                                                child_column,
+                                                op,
+                                                child_operand,
+                                                filter_expr->is_inverted()
+                                        )};
+                                        possibilities->add_operand(child_filter);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        auto* filter_expr{dynamic_cast<FilterExpr*>(cur.get())};
+                        assert(nullptr != filter_expr && "Expected FilterExpr");
+                        auto const op{filter_expr->get_operation()};
+                        if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+                            auto resolved_filter{FilterExpr::create(
+                                    resolved_column,
+                                    op,
+                                    filter_expr->is_inverted()
+                            )};
+                            possibilities->add_operand(resolved_filter);
+                        } else {
+                            auto operand{filter_expr->get_operand()};
+                            auto resolved_filter{FilterExpr::create(
+                                    resolved_column,
+                                    op,
+                                    operand,
+                                    filter_expr->is_inverted()
+                            )};
+                            possibilities->add_operand(resolved_filter);
+                        }
+                    }
                 }
                 return possibilities;
             }
@@ -867,9 +955,14 @@ auto SchemaMatch::resolve_clpp_query(
     std::string query;
     operand->as_clp_string(query, filter->get_operation());
 
+    // LogMessage wildcard: iterate each non-LogTypeID child and attempt decomposition
+    if (NodeType::LogMessage == m_tree->get_node(root_node_id).get_type()) {
+        return resolve_log_message_wildcard(column, root_node_id, log_shape_dict, filter, query);
+    }
+
     auto dq{lookup_decomposed_query(qualified_name, query)};
     if (dq.has_error()) {
-        throw std::runtime_error(fmt::format("clpp query decomposition failed for {}", query));
+        return nullptr;
     }
 
     auto results{ast::OrExpr::create()};
@@ -901,6 +994,90 @@ auto SchemaMatch::resolve_clpp_query(
             dq.value()->get_interpretations().size(),
             results->get_op_list().size()
     );
+    if (results->get_op_list().empty()) {
+        return nullptr;
+    }
+    return results;
+}
+
+auto SchemaMatch::resolve_log_message_wildcard(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        clp_s::LogShapeDictionaryReader& log_shape_dict,
+        ast::FilterExpr* filter,
+        std::string const& query
+) -> std::shared_ptr<ast::Expression> {
+    auto results{ast::OrExpr::create()};
+    auto const op{filter->get_operation()};
+
+    for (auto const child_id : m_tree->get_node(root_node_id).get_children_ids()) {
+        auto const& child_node{m_tree->get_node(child_id)};
+        if (NodeType::LogTypeID == child_node.get_type()) {
+            continue;
+        }
+
+        auto child_column{column->copy()};
+        child_column->get_descriptor_list().emplace_back(
+                DescriptorToken::create_descriptor_from_literal_token(child_node.get_key_name())
+        );
+        auto child_literal_type{SchemaNode::node_to_literal_type(child_node.get_type())};
+
+        if (NodeType::ParentRule == child_node.get_type()) {
+            auto child_qualified_name{m_tree->build_qualified_name(child_id)};
+            auto dq{lookup_decomposed_query(child_qualified_name, query)};
+            if (dq.has_error()) {
+                continue;
+            }
+
+            for (auto const& interpretation : dq.value()->get_interpretations()) {
+                auto matched_schema_ids{find_schemas_matching_predicate(
+                        child_qualified_name,
+                        log_shape_dict,
+                        [&](std::string_view value) -> bool {
+                            return clp::string_utils::wildcard_match_unsafe(
+                                    value,
+                                    interpretation.m_shape_query
+                            );
+                        }
+                )};
+                if (matched_schema_ids.empty()) {
+                    continue;
+                }
+
+                if (auto leaves_expr{build_leaf_query_expr(
+                            child_column,
+                            child_id,
+                            interpretation,
+                            matched_schema_ids
+                    )};
+                    leaves_expr.has_value())
+                {
+                    results->add_operand(*leaves_expr);
+                }
+            }
+        } else {
+            child_column->set_matching_type(child_literal_type);
+            if (false == child_column->matches_any(ast::cAllTypes)) {
+                continue;
+            }
+            auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(child_id);
+            descriptors_it->second.emplace(child_column);
+            if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+                auto child_filter{ast::FilterExpr::create(child_column, op, filter->is_inverted())};
+                results->add_operand(child_filter);
+            } else {
+                auto child_operand{filter->get_operand()};
+                auto child_filter{ast::FilterExpr::create(
+                        child_column,
+                        op,
+                        child_operand,
+                        filter->is_inverted()
+                )};
+                results->add_operand(child_filter);
+            }
+        }
+    }
+
     if (results->get_op_list().empty()) {
         return nullptr;
     }
