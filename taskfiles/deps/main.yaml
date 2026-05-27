@@ -345,16 +345,16 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "11173955d04d806808e862f2fd4cd12239282de119b9255630d55434695deb5f"
+          FILE_SHA256: "738c31b8ea1aca0f04968b93fae416aa19a6a303f58d00090235aff8e7a7186b"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/log-surgeon/archive/4a2aaa0.tar.gz"
+          URL: "https://github.com/y-scope/log-surgeon/archive/6e5971d.tar.gz"
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
         cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
-        cp -r "{{.SRC_DIR}}/cpp_ffi/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
+        cp -r "{{.SRC_DIR}}/cxx/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
 
         cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
         if(NOT TARGET {{.TARGET_NAME}})
