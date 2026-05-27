@@ -164,6 +164,12 @@ data:
       retention_period: null
       {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+      tls: {{ .Values.clpConfig.results_cache.tls }}
+      {{- if .Values.clpConfig.results_cache.tls_ca_file }}
+      tls_ca_file: {{ .Values.clpConfig.results_cache.tls_ca_file | quote }}
+      {{- else }}
+      tls_ca_file: null
+      {{- end }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:
       {{- with .storage }}
@@ -278,6 +284,12 @@ data:
       "MongoDbHost": "{{ include "clp.resultsCacheHost" . }}",
       "MongoDbPort": {{ include "clp.resultsCachePort" . | int }},
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
+      "MongoDbTls": {{ .Values.clpConfig.results_cache.tls }},
+      {{- if .Values.clpConfig.results_cache.tls_ca_file }}
+      "MongoDbTlsCaFile": {{ .Values.clpConfig.results_cache.tls_ca_file | quote }},
+      {{- else }}
+      "MongoDbTlsCaFile": null,
+      {{- end }}
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "MongoDbStreamFilesCollectionName":
