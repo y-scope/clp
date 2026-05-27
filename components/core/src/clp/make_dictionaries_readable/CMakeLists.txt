@@ -84,7 +84,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 Boost::filesystem Boost::program_options
                 date::date
-                log_mechanic
+                log-surgeon::log-surgeon
                 nlohmann_json::nlohmann_json
                 spdlog::spdlog
                 ystdlib::containers
