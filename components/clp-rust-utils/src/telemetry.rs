@@ -1,7 +1,6 @@
 use std::env;
 
 use opentelemetry::global;
-use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
     Resource,
     metrics::{PeriodicReader, SdkMeterProvider},
@@ -34,19 +33,18 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterPro
         return Ok(None);
     }
 
-    let endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-        .unwrap_or_else(|_| telemetry_config.endpoint.clone());
-
     let exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_http()
-        .with_endpoint(endpoint)
         .build()
         .map_err(|e| Error::TelemetryExporterBuild(e.to_string()))?;
 
     let reader = PeriodicReader::builder(exporter, opentelemetry_sdk::runtime::Tokio).build();
+
+    let resource = Resource::builder().build();
+
     let provider = SdkMeterProvider::builder()
         .with_reader(reader)
-        .with_resource(Resource::default())
+        .with_resource(resource)
         .build();
 
     global::set_meter_provider(provider.clone());
