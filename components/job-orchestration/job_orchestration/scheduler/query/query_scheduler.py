@@ -77,6 +77,9 @@ from job_orchestration.scheduler.scheduler_data import (
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
 
+TASK_RESULT_GET_TIMEOUT = 10
+TASK_RESULT_GET_INTERVAL = 0.005
+
 # Setup logging
 logger = get_logger("search-job-handler")
 
@@ -837,7 +840,13 @@ def handle_pending_query_jobs(
 def try_getting_task_result(async_task_result):
     if not async_task_result.ready():
         return None
-    return async_task_result.get(interval=0.005)
+    try:
+        return async_task_result.get(
+            timeout=TASK_RESULT_GET_TIMEOUT, interval=TASK_RESULT_GET_INTERVAL
+        )
+    except celery.exceptions.TimeoutError:
+        logger.error("Timed out waiting for task result.")
+        raise
 
 
 def found_max_num_latest_results(
