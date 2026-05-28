@@ -40,7 +40,6 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -53,8 +52,6 @@ spec:
                   key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
-            - name: "OTEL_SERVICE_NAME"
-              value: "mcp-server"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
