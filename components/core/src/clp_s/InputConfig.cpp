@@ -15,8 +15,11 @@
 #include <thread>
 #include <vector>
 
-#include <archive.h>
-#include <archive_entry.h>
+#if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
+    #include <archive.h>
+    #include <archive_entry.h>
+#endif
+
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
@@ -400,6 +403,7 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
 }
 }  // namespace
 
+#if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
 auto try_process_archive_with_libarchive(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
@@ -477,6 +481,27 @@ auto try_process_archive_with_libarchive(
     libarchive_reader.close();
     return true;
 }
+#else
+auto try_process_archive_with_libarchive(
+        [[maybe_unused]] std::shared_ptr<clp::ReaderInterface> reader,
+        [[maybe_unused]] Path const& path,
+        [[maybe_unused]] std::string const& default_file_path,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > json_handler,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > kvir_handler,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > logtext_handler,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > empty_file_handler
+) -> bool {
+    return false;
+}
+#endif
 
 auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface> {

@@ -48,6 +48,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
+    "Include libarchive support for clp-s."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_FFI_SFA
     "Build clp_s::ffi::sfa."
     ON
@@ -296,6 +302,12 @@ function(set_clp_s_enable_curl_dependencies)
     )
 endfunction()
 
+function(set_clp_s_enable_libarchive_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_LIBARCHIVE
+    )
+endfunction()
+
 function(validate_clp_s_ffi_sfa_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_FFI_SFA
         CLP_BUILD_CLP_S_ARCHIVEREADER
@@ -484,6 +496,10 @@ function(validate_and_setup_all_clp_dependency_flags)
 
     if (CLP_BUILD_CLP_S_ENABLE_CURL)
         set_clp_s_enable_curl_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+        set_clp_s_enable_libarchive_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_FFI_SFA)
