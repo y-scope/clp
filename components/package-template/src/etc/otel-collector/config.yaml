@@ -35,18 +35,18 @@ processors:
     override: false
   resource/deployment:
     attributes:
-      - key: clp.deployment.id
+      - key: "clp.deployment.id"
         value: "${env:CLP_DEPLOYMENT_ID}"
-        action: insert
-      - key: service.version
+        action: "insert"
+      - key: "service.version"
         value: "${env:CLP_SERVICE_VERSION}"
-        action: insert
-      - key: clp.deployment.method
+        action: "insert"
+      - key: "clp.deployment.method"
         value: "${env:CLP_DEPLOYMENT_METHOD}"
-        action: insert
-      - key: clp.storage.engine
+        action: "insert"
+      - key: "clp.storage.engine"
         value: "${env:CLP_STORAGE_ENGINE}"
-        action: insert
+        action: "insert"
 
 exporters:
   otlphttp:
