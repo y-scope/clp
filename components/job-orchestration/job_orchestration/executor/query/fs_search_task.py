@@ -309,8 +309,5 @@ def search(
             dataset,
         )
     except SoftTimeLimitExceeded:
-        logger.error(
-            f"Search task job_id={job_id} task_id={task_id}"
-            " exceeded soft time limit."
-        )
+        logger.error(f"Search task job_id={job_id} task_id={task_id} exceeded soft time limit.")
         raise
