@@ -450,7 +450,7 @@ data:
 
     processors:
       # NOTE: For EKS deployments, add the "eks" detector to detect cloud-specific attributes (e.g.,
-      #cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
+      # cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
       # downward API config.
       resourcedetection:
         detectors: ["system"]

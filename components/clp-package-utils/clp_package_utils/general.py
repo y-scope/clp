@@ -179,7 +179,8 @@ def http_request(
     retry_delay: float = 1.0,
     timeout: float = 5.0,
 ) -> http.client.HTTPResponse:
-    """Sends an HTTP request with retry logic.
+    """
+    Sends an HTTP request with retry logic.
 
     :param url: The URL to send the request to.
     :param data: Request body as bytes.
@@ -198,7 +199,7 @@ def http_request(
         raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
 
     req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
-    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = URLError(
+    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = urllib.error.URLError(
         "No attempts were made"
     )
     for attempt in range(max_attempts):
