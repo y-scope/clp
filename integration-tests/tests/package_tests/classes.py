@@ -122,6 +122,7 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
         """Removes the contents of the package archives directory."""
         # TODO: this method will be replaced with a more robust version that uses `archive-manager`
         # or `dataset-manager` (as appropriate) to clear archives correctly.
+        logger.info("Clearing package archives.")
         clear_directory(self.package_archives_path)
 
 

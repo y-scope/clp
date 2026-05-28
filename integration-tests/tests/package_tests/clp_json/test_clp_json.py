@@ -1,7 +1,5 @@
 """Tests for the clp-json package."""
 
-import logging
-
 import pytest
 
 from tests.package_tests.classes import ClpPackage
@@ -11,9 +9,6 @@ from tests.package_tests.utils.compress import (
     verify_compress_action,
 )
 from tests.utils.classes import SampleDataset
-
-logger = logging.getLogger(__name__)
-
 
 # Pytest markers for this module.
 pytestmark = [
@@ -25,18 +20,14 @@ pytestmark = [
 ]
 
 
-@pytest.mark.startup
-def test_clp_json_startup(clp_package: ClpPackage) -> None:
+@pytest.mark.startstop
+def test_clp_json_startstop(clp_package: ClpPackage) -> None:
     """
     Validate that the `clp-json` package starts up successfully.
 
     :param clp_package:
     """
-    logger.info("Starting test: 'test_clp_json_startup'")
-
     assert clp_package
-
-    logger.info("Test complete: 'test_clp_json_startup'")
 
 
 @pytest.mark.compression
@@ -51,13 +42,9 @@ def test_clp_json_compression_json_multifile(
     :param clp_package:
     :param json_multifile:
     """
-    logger.info("Starting test: 'test_clp_json_compression_json_multifile'")
-
     compress_action = compress_clp_package(clp_package, json_multifile)
     result = verify_compress_action(compress_action, clp_package, json_multifile)
     assert result, result.failure_message
-
-    logger.info("Test complete: 'test_clp_json_compression_json_multifile'")
 
 
 @pytest.mark.search
@@ -68,8 +55,6 @@ def test_clp_json_search(clp_package: ClpPackage) -> None:
 
     :param clp_package:
     """
-    logger.info("Starting test: 'test_clp_json_search'")
-
     # TODO: compress a dataset
 
     # TODO: check the correctness of the compression
@@ -77,5 +62,3 @@ def test_clp_json_search(clp_package: ClpPackage) -> None:
     # TODO: search through that dataset and check the correctness of the search results.
 
     assert clp_package
-
-    logger.info("Test complete: 'test_clp_json_search'")
