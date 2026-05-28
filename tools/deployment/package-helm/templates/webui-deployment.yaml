@@ -29,11 +29,7 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "job"
-            "name" "results-cache-indices-creator"
-          ) | nindent 10 }}
+        - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "webui"
           image: "{{ include "clp.image.ref" . }}"
