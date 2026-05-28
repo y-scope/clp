@@ -932,15 +932,9 @@ class BaseController(ABC):
             version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
         )
 
-        self._resource_attrs = {
-            "clp.deployment.id": self._instance_id,
-            "service.version": clp_version,
-            "clp.deployment.method": "docker-compose",
-            "clp.storage.engine": self._clp_config.package.storage_engine,
-        }
-
-        resource_attrs_str = ",".join(f"{k}={v}" for k, v in self._resource_attrs.items())
-        env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
+        env_vars["CLP_DEPLOYMENT_ID"] = self._instance_id
+        env_vars["CLP_SERVICE_VERSION"] = clp_version
+        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
 
         env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
         if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
@@ -1029,7 +1023,6 @@ class DockerComposeController(BaseController):
         self._instance_id = instance_id
         self._project_name = f"clp-package-{instance_id}"
         self._restart_policy = restart_policy
-        self._resource_attrs: dict[str, Any] = {}
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
@@ -1242,10 +1235,9 @@ class DockerComposeController(BaseController):
             ]
         }
 
-        for k, v in {**self._resource_attrs, "service.name": "controller"}.items():
-            payload["resourceMetrics"][0]["resource"]["attributes"].append(
-                {"key": k, "value": {"stringValue": str(v)}}
-            )
+        payload["resourceMetrics"][0]["resource"]["attributes"].append(
+            {"key": "service.name", "value": {"stringValue": "controller"}}
+        )
 
         try:
             payload_bytes = json.dumps(payload).encode("utf-8")

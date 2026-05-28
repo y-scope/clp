@@ -42,7 +42,6 @@ x-clp-telemetry-env-defaults: &clp_telemetry_env_defaults
   CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-false}"
   OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:\
     ${CLP_OTEL_COLLECTOR_CONNECT_PORT:-4318}}"
-  OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
 
 # Common volume definitions.
 x-volume-definitions:
@@ -705,6 +704,10 @@ services:
       - "${CLP_DOCKER_GID:-999}"
     environment:
       CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
+      CLP_DEPLOYMENT_ID: "${CLP_DEPLOYMENT_ID:-unknown}"
+      CLP_SERVICE_VERSION: "${CLP_SERVICE_VERSION:-unknown}"
+      CLP_DEPLOYMENT_METHOD: "${CLP_DEPLOYMENT_METHOD:-docker-compose}"
+      CLP_STORAGE_ENGINE: "${CLP_PACKAGE_STORAGE_ENGINE:-unknown}"
     ports:
       - host_ip: "${CLP_OTEL_COLLECTOR_HOST:-127.0.0.1}"
         published: "${CLP_OTEL_COLLECTOR_PORT:-4318}"

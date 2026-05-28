@@ -33,6 +33,20 @@ processors:
         host.name:
           enabled: false
     override: false
+  resource/deployment:
+    attributes:
+      - key: clp.deployment.id
+        value: "${env:CLP_DEPLOYMENT_ID}"
+        action: insert
+      - key: service.version
+        value: "${env:CLP_SERVICE_VERSION}"
+        action: insert
+      - key: clp.deployment.method
+        value: "${env:CLP_DEPLOYMENT_METHOD}"
+        action: insert
+      - key: clp.storage.engine
+        value: "${env:CLP_STORAGE_ENGINE}"
+        action: insert
 
 exporters:
   otlphttp:
@@ -43,13 +57,13 @@ service:
   pipelines:
     metrics:
       receivers: ["otlp"]
-      processors: ["resourcedetection", "batch"]
+      processors: ["resourcedetection", "resource/deployment", "batch"]
       exporters: ["otlphttp"]
     traces:
       receivers: ["otlp"]
-      processors: ["resourcedetection", "batch"]
+      processors: ["resourcedetection", "resource/deployment", "batch"]
       exporters: ["otlphttp"]
     logs:
       receivers: ["otlp"]
-      processors: ["resourcedetection", "batch"]
+      processors: ["resourcedetection", "resource/deployment", "batch"]
       exporters: ["otlphttp"]

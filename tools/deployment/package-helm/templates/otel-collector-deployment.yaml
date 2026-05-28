@@ -40,6 +40,15 @@ spec:
           volumeMounts:
             - name: otel-collector-config
               mountPath: /etc/otelcol-contrib
+          env:
+            - name: CLP_DEPLOYMENT_ID
+              value: {{ include "clp.instanceId" . | quote }}
+            - name: CLP_SERVICE_VERSION
+              value: {{ .Chart.AppVersion | quote }}
+            - name: CLP_DEPLOYMENT_METHOD
+              value: "helm"
+            - name: CLP_STORAGE_ENGINE
+              value: {{ .Values.clpConfig.package.storage_engine | quote }}
           args:
             - "--config=/etc/otelcol-contrib/config.yaml"
           readinessProbe:
