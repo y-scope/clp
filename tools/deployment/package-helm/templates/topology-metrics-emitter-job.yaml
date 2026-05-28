@@ -27,7 +27,8 @@ spec:
           ) | nindent 10 }}
       containers:
         - name: "topology-metrics-emitter"
-          image: "curlimages/curl:8.14.1"
+          image: "{{ .Values.image.curl.repository }}:{{ .Values.image.curl.tag }}"
+          imagePullPolicy: {{ .Values.image.curl.pullPolicy }}
           command:
             - "curl"
             - "-s"

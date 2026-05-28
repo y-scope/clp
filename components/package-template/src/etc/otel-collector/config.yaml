@@ -14,8 +14,11 @@ processors:
     send_batch_size: 1024
   resourcedetection:
     detectors: ["docker", "system"]
+    docker:
+      resource_attributes:
+        host.name:
+          enabled: false
     system:
-      hostname_sources: ["os"]
       resource_attributes:
         host.arch:
           enabled: true
@@ -25,6 +28,8 @@ processors:
           enabled: true
         host.cpu.vendor.id:
           enabled: true
+        host.name:
+          enabled: false
     override: false
 
 exporters:

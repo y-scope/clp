@@ -25,6 +25,10 @@ image:
     repository: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib" # yamllint disable-line
     pullPolicy: "IfNotPresent"
     tag: "0.152.0"
+  curl:
+    repository: "curlimages/curl"
+    pullPolicy: "IfNotPresent"
+    tag: "8.14.1"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
