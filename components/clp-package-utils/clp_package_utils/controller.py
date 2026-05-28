@@ -38,6 +38,7 @@ from clp_py_utils.clp_config import (
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OrchestrationType,
+    OTEL_COLLECTOR_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -84,8 +85,6 @@ DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
 THIRD_PARTY_SERVICE_UID = 999
 THIRD_PARTY_SERVICE_GID = 999
 THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_GID}"
-
-OTEL_COLLECTOR_HOST_PORT = 14318
 
 logger = logging.getLogger(__name__)
 
@@ -944,9 +943,23 @@ class BaseController(ABC):
         env_vars["OTEL_RESOURCE_ATTRIBUTES"] = resource_attrs_str
 
         env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
-        env_vars["CLP_OTEL_COLLECTOR_PORT"] = str(
-            os.environ.get("CLP_OTEL_COLLECTOR_PORT", str(OTEL_COLLECTOR_HOST_PORT))
-        )
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_OTEL_COLLECTOR_ENABLED": "0",
+                "CLP_OTEL_COLLECTOR_CONNECT_PORT": str(self._clp_config.otel_collector.port),
+                "CLP_EXTRA_HOST_OTEL_COLLECTOR_NAME": OTEL_COLLECTOR_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_OTEL_COLLECTOR_ADDR": _resolve_external_host(
+                    self._clp_config.otel_collector.host
+                ),
+            }
+        else:
+            env_vars |= {
+                "CLP_OTEL_COLLECTOR_ENABLED": "1",
+                "CLP_OTEL_COLLECTOR_HOST": _get_ip_from_hostname(
+                    self._clp_config.otel_collector.host
+                ),
+                "CLP_OTEL_COLLECTOR_PORT": str(self._clp_config.otel_collector.port),
+            }
         env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
             self._conf_dir / "otel-collector" / "config.yaml"
         )
@@ -1236,11 +1249,11 @@ class DockerComposeController(BaseController):
 
         try:
             payload_bytes = json.dumps(payload).encode("utf-8")
-            otel_collector_port = os.environ.get(
-                "CLP_OTEL_COLLECTOR_PORT", str(OTEL_COLLECTOR_HOST_PORT)
-            )
+            otel_collector_host = self._clp_config.otel_collector.host
+            if BundledService.OTEL_COLLECTOR in self._clp_config.bundled:
+                otel_collector_host = _get_ip_from_hostname(otel_collector_host)
             with http_request(
-                f"http://127.0.0.1:{otel_collector_port}/v1/metrics",
+                f"http://{otel_collector_host}:{self._clp_config.otel_collector.port}/v1/metrics",
                 method="POST",
                 data=payload_bytes,
                 headers={"Content-Type": "application/json"},
