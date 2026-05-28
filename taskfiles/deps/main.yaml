@@ -328,7 +328,7 @@ tasks:
           TARBALL_URL: "{{.TARBALL_URL}}"
 
   log-surgeon:
-    internal: "true"
+    internal: true
     run: "once"
     deps: ["toolchains:rust"]
     vars:
