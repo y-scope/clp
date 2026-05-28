@@ -1,4 +1,6 @@
-{{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
+{{- if and
+  (not .Values.clpConfig.telemetry.disable)
+  (has "otel_collector" .Values.clpConfig.bundled) }}
 apiVersion: "v1"
 kind: "Service"
 metadata:

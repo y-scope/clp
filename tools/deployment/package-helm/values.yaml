@@ -98,6 +98,7 @@ clpConfig:
     - "queue"
     - "redis"
     - "results_cache"
+    - "otel_collector"
     - "presto"
 
   package:
@@ -169,6 +170,13 @@ clpConfig:
 
     # Retention period for search results, in minutes. Set to null to disable automatic deletion.
     retention_period: 60
+
+  otel_collector:
+    # Host and port for the OpenTelemetry Collector service. When "otel_collector" is in `bundled`,
+    # the host is automatically set to the bundled service name (ignored). When external, set these
+    # to the external service's address.
+    host: "localhost"
+    port: 4318
 
   compression_worker:
     logging_level: "INFO"

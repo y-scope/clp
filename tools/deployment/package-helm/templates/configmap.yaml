@@ -164,6 +164,9 @@ data:
       retention_period: null
       {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    otel_collector:
+      host: "{{ include "clp.otelCollectorHost" . }}"
+      port: {{ include "clp.otelCollectorPort" . | int }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:
       {{- with .storage }}
@@ -436,7 +439,9 @@ data:
 {{- end }}{{/* with .Values.clpConfig.presto */}}
 {{- end }}{{/* if has "presto" .Values.clpConfig.bundled */}}
 
-{{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
+{{- if and
+  (not .Values.clpConfig.telemetry.disable)
+  (has "otel_collector" .Values.clpConfig.bundled) }}
   otel-collector-config.yaml: |
     extensions:
       health_check:

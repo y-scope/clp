@@ -100,13 +100,13 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 Provides environment variables for telemetry (except service.name).
 */}}
 {{- define "clp.telemetryEnv" -}}
-{{- if or (not .Values.clpConfig.telemetry) .Values.clpConfig.telemetry.disable }}
-- name: CLP_DISABLE_TELEMETRY
+{{- if .Values.clpConfig.telemetry.disable }}
+- name: "CLP_DISABLE_TELEMETRY"
   value: "true"
 {{- else }}
-- name: OTEL_EXPORTER_OTLP_ENDPOINT
-  value: "http://{{ include "clp.fullname" . }}-otel-collector:4318"
-- name: OTEL_RESOURCE_ATTRIBUTES
+- name: "OTEL_EXPORTER_OTLP_ENDPOINT"
+  value: {{ include "clp.otelCollectorUrl" . | quote }}
+- name: "OTEL_RESOURCE_ATTRIBUTES"
   value: {{ include "clp.resourceAttributes" . | quote }}
 {{- end }}
 {{- end -}}
@@ -331,6 +331,47 @@ Gets the port for the results cache service.
 {{- else -}}
 {{- .Values.clpConfig.results_cache.port -}}
 {{- end -}}
+{{- end }}
+
+{{/*
+Gets the host for the OpenTelemetry Collector service.
+
+@param {object} . Root template context
+@return {string} The OpenTelemetry Collector host
+*/}}
+{{- define "clp.otelCollectorHost" -}}
+{{- if has "otel_collector" .Values.clpConfig.bundled -}}
+{{- printf "%s-otel-collector" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.otel_collector.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the OpenTelemetry Collector service.
+
+@param {object} . Root template context
+@return {string} The OpenTelemetry Collector port
+*/}}
+{{- define "clp.otelCollectorPort" -}}
+{{- if has "otel_collector" .Values.clpConfig.bundled -}}
+4318
+{{- else -}}
+{{- .Values.clpConfig.otel_collector.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the URL for the OpenTelemetry Collector service.
+
+@param {object} . Root template context
+@return {string} The OpenTelemetry Collector URL
+*/}}
+{{- define "clp.otelCollectorUrl" -}}
+{{- printf
+  "http://%s:%s"
+  (include "clp.otelCollectorHost" .)
+  (include "clp.otelCollectorPort" .) -}}
 {{- end }}
 
 {{/*

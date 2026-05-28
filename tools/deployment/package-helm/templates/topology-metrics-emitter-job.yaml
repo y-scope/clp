@@ -1,4 +1,4 @@
-{{- if and .Values.clpConfig.telemetry (not .Values.clpConfig.telemetry.disable) }}
+{{- if not .Values.clpConfig.telemetry.disable }}
 apiVersion: "batch/v1"
 kind: "Job"
 metadata:
@@ -19,12 +19,14 @@ spec:
     spec:
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       restartPolicy: "OnFailure"
+      {{- if has "otel_collector" .Values.clpConfig.bundled }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "otel-collector"
           ) | nindent 10 }}
+      {{- end }}
       containers:
         - name: "topology-metrics-emitter"
           image: "{{ .Values.image.curl.repository }}:{{ .Values.image.curl.tag }}"
@@ -44,5 +46,5 @@ spec:
             - "Content-Type: application/json"
             - "-d"
             - {{ include "clp.topologyMetricsPayload" . | quote }}
-            - "http://{{ include "clp.fullname" . }}-otel-collector:4318/v1/metrics"
+            - {{ printf "%s/v1/metrics" (include "clp.otelCollectorUrl" .) | quote }}
 {{- end }}
