@@ -453,10 +453,13 @@ data:
       # cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
       # downward API config.
       resourcedetection:
+        # Kubernetes deployments do not mount the Docker socket, so use system detection only.
         detectors: ["system"]
         system:
           hostname_sources: ["os"]
           resource_attributes:
+            host.name:
+              enabled: false
             host.arch:
               enabled: true
             host.cpu.family:

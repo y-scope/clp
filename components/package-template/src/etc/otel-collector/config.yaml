@@ -13,6 +13,8 @@ processors:
     timeout: "30s"
     send_batch_size: 1024
   resourcedetection:
+    # Use the Docker detector so the containerized collector reports Docker host metadata instead of
+    # only container metadata. This requires the /var/run/docker.sock mount in Docker Compose.
     detectors: ["docker", "system"]
     docker:
       resource_attributes:
@@ -20,6 +22,8 @@ processors:
           enabled: false
     system:
       resource_attributes:
+        host.name:
+          enabled: false
         host.arch:
           enabled: true
         host.cpu.family:
