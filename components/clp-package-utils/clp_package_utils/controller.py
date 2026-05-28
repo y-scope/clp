@@ -915,7 +915,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         if self._clp_config.telemetry.disable:
-            logger.info(f"Telemetry is disabled, skipping otel-collector creation...")
+            logger.info("Telemetry is disabled, skipping otel-collector creation...")
             return EnvVarsDict(
                 {
                     "CLP_DISABLE_TELEMETRY": "true",
@@ -923,7 +923,7 @@ class BaseController(ABC):
                 }
             )
 
-        logger.info(f"Setting up environment for otel-collector...")
+        logger.info("Setting up environment for otel-collector...")
 
         env_vars = EnvVarsDict()
 

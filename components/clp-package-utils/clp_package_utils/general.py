@@ -16,7 +16,6 @@ import uuid
 from enum import auto
 
 import yaml
-from ruamel.yaml import YAML
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
@@ -48,6 +47,7 @@ from clp_py_utils.core import (
     resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
+from ruamel.yaml import YAML
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
@@ -199,8 +199,8 @@ def http_request(
         raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
 
     req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
-    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = urllib.error.URLError(
-        "No attempts were made"
+    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = (
+        urllib.error.URLError("No attempts were made")
     )
     for attempt in range(max_attempts):
         try:
