@@ -100,13 +100,12 @@ public:
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
-    static auto search(
-            std::string const& search_string,
-            log_surgeon::ParserHandle& parser,
-            LogTypeDictionaryReaderType const& logtype_dict,
-            VariableDictionaryReaderType const& var_dict,
-            bool ignore_case
-    ) -> std::vector<SubQuery> {
+    static auto
+    search(std::string const& search_string,
+           log_surgeon::ParserHandle& parser,
+           LogTypeDictionaryReaderType const& logtype_dict,
+           VariableDictionaryReaderType const& var_dict,
+           bool ignore_case) -> std::vector<SubQuery> {
         auto const interpretations{parser.query_interpretations("", search_string)};
         // Assumes log-surgeon normalizes interpretations (e.g. ** -> *).
         return generate_schema_sub_queries(interpretations, logtype_dict, var_dict, ignore_case);
@@ -301,8 +300,8 @@ auto SchemaSearcher::process_schema_var_token(
     for (size_t j{0}; j < variable_token.value.size(); ++j) {
         if ('*' == variable_token.value[j]) {
             if (0 == j || '\\' != variable_token.value[j - 1]) {
-              contains_wildcard = true;
-              break;
+                contains_wildcard = true;
+                break;
             }
         }
     }

@@ -75,7 +75,7 @@ auto LogConverter::convert_file(
                 break;
             }
 
-            auto const& event{optional_event.value()};;
+            auto const& event{optional_event.value()};
 
             // Ideally the event would just have its timestamp accessible as event.get_timestamp()
             std::string message;
@@ -88,12 +88,12 @@ auto LogConverter::convert_file(
                 }
                 auto leaf{optional_leaf.value()};
                 size_t const leaf_len{leaf.range.end - leaf.range.start};
-                if (timestamp.empty()
-                    && "header" == leaf.ffi_pointers.root_rule_name.as_cpp_view()
-                    && "timestamp" == leaf.ffi_pointers.rule_name.as_cpp_view()) {
+                if (timestamp.empty() && "header" == leaf.ffi_pointers.root_rule_name.as_cpp_view()
+                    && "timestamp" == leaf.ffi_pointers.rule_name.as_cpp_view())
+                {
                     timestamp = std::string{m_buffer.data() + leaf.range.start, leaf_len};
                 } else {
-                  message += std::string{m_buffer.data() + leaf.range.start, leaf_len};
+                    message += std::string{m_buffer.data() + leaf.range.start, leaf_len};
                 }
                 ++leaf_id;
             }

@@ -32,8 +32,8 @@ auto SchemaSearcher::get_wildcard_encodable_positions(
             for (size_t j{0}; j < token.value.size(); ++j) {
                 if ('*' == token.value[j]) {
                     if (0 == j || '\\' != token.value[j - 1]) {
-                      contains_wildcard = true;
-                      break;
+                        contains_wildcard = true;
+                        break;
                     }
                 }
             }
