@@ -461,7 +461,6 @@ data:
         # Kubernetes deployments do not mount the Docker socket, so use system detection only.
         detectors: ["system"]
         system:
-          hostname_sources: ["os"]
           resource_attributes:
             host.name:
               enabled: false

@@ -22,8 +22,6 @@ processors:
           enabled: false
     system:
       resource_attributes:
-        host.name:
-          enabled: false
         host.arch:
           enabled: true
         host.cpu.family:
