@@ -37,8 +37,6 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: OTEL_SERVICE_NAME
-              value: "log-ingestor"
             {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
@@ -50,6 +48,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
+            - name: "OTEL_SERVICE_NAME"
+              value: "log-ingestor"
             - name: "RUST_LOG"
               value: {{ .Values.clpConfig.log_ingestor.logging_level | quote }}
           ports:

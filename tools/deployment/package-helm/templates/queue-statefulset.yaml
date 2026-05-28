@@ -28,16 +28,16 @@ spec:
           image: "rabbitmq:4.2.6"
           imagePullPolicy: "Always"
           env:
-            - name: "RABBITMQ_DEFAULT_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-queue
-                  key: "username"
             - name: "RABBITMQ_DEFAULT_PASS"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-queue
                   key: "password"
+            - name: "RABBITMQ_DEFAULT_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-queue
+                  key: "username"
             - name: "RABBITMQ_LOGS"
               value: "-"
             - name: "RABBITMQ_SASL_LOGS"

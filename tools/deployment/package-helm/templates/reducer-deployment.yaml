@@ -42,13 +42,13 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: OTEL_SERVICE_NAME
-              value: "reducer"
             {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_HOME"
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.reducer.logging_level | quote }}
+            - name: "OTEL_SERVICE_NAME"
+              value: "reducer"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:

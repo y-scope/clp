@@ -35,11 +35,6 @@ spec:
           env:
             - name: "MYSQL_DATABASE"
               value: {{ .Values.clpConfig.database.names.clp | quote }}
-            - name: "MYSQL_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "MYSQL_PASSWORD"
               valueFrom:
                 secretKeyRef:
@@ -50,6 +45,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "root_password"
+            - name: "MYSQL_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
           ports:
             - name: "database"
               containerPort: 3306

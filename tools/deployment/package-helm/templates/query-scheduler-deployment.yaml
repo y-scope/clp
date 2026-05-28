@@ -51,14 +51,12 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: OTEL_SERVICE_NAME
-              value: "query-scheduler"
-            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
                 "database" .Values.clpConfig.redis.query_backend_database
               ) | nindent 14 }}
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -71,6 +69,8 @@ spec:
                   key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+            - name: "OTEL_SERVICE_NAME"
+              value: "query-scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           ports:
