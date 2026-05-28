@@ -37,12 +37,12 @@ telemetry:
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yaml"
 #
-## Remove any bundled services below if you wish to use your own.
-#bundled:
-#  - "database"
-#  - "queue"
-#  - "redis"
-#  - "results_cache"
+# Remove any bundled services below if you wish to use your own.
+bundled:
+ - "database"
+ - "queue"
+ - "redis"
+ - "results_cache"
 #  - "otel_collector"
 #
 #database:
@@ -98,9 +98,9 @@ telemetry:
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: 60
 #
-#otel_collector:
-#  host: "localhost"
-#  port: 4318
+otel_collector:
+ host: "localhost"
+ port: 4318
 #
 #compression_worker:
 #  logging_level: "INFO"

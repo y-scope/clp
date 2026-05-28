@@ -931,10 +931,15 @@ class BaseController(ABC):
         clp_version = (
             version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
         )
-
-        env_vars["CLP_DEPLOYMENT_ID"] = self._instance_id
-        env_vars["CLP_SERVICE_VERSION"] = clp_version
-        env_vars["CLP_DEPLOYMENT_METHOD"] = "docker-compose"
+        resource_attrs = {
+            "clp.deployment.id": self._instance_id,
+            "service.version": clp_version,
+            "clp.deployment.method": "docker-compose",
+            "clp.storage.engine": self._clp_config.package.storage_engine,
+        }
+        env_vars["OTEL_RESOURCE_ATTRIBUTES"] = ",".join(
+            f"{k}={v}" for k, v in resource_attrs.items()
+        )
 
         env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
         if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
