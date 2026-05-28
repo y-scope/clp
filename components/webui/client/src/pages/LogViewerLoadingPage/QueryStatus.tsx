@@ -90,7 +90,9 @@ const QueryStatus = () => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 
                 const innerLogEventNum = parseResult.logEventIdx - data.begin_msg_ix + 1;
-                window.location.href = `/log-viewer/index.html?filePath=${data.path}` +
+                const filePath = encodeURIComponent(data.path);
+                window.location.href =
+                    `/log-viewer/index.html?filePath=${filePath}` +
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e: unknown) => {

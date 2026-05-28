@@ -19,9 +19,13 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "queue"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "queue"
+        ) | nindent 6 }}
       containers:
         - name: "queue"
-          image: "rabbitmq:3.9.8"
+          image: "rabbitmq:4.2.6"
           imagePullPolicy: "Always"
           env:
             - name: "RABBITMQ_DEFAULT_USER"

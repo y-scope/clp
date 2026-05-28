@@ -18,6 +18,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "query-scheduler"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "queryScheduler"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       hostname: {{ include "clp.fullname" . }}-query-scheduler
       subdomain: {{ include "clp.fullname" . }}-query-scheduler

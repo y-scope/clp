@@ -39,22 +39,28 @@ constexpr std::string_view cTimestampSchema{
 constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
 }  // namespace
 
-auto LogConverter::convert_file(
-        clp_s::Path const& path,
-        clp::ReaderInterface* reader,
-        std::string_view output_dir
-) -> ystdlib::error_handling::Result<void> {
+auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
     std::string rule_text{"delimiter:"};
     rule_text += cDelimiters;
     rule_text += "\n";
     rule_text += cTimestampSchema;
     log_surgeon::ParserHandle parser{clp::load_parser_from_rule_text(rule_text)};
+    return LogConverter(max_buffer_size, std::move(parser));
+}
 
+auto LogConverter::convert_file(
+        clp_s::Path const& path,
+        clp::ReaderInterface* reader,
+        std::string_view output_dir,
+        bool compress_converted_file
+) -> ystdlib::error_handling::Result<void> {
     // Reset internal buffer state.
     m_parser_offset = 0ULL;
     m_num_bytes_buffered = 0ULL;
 
-    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(LogSerializer::create(output_dir, path.path))};
+    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(
+            LogSerializer::create(output_dir, path.path, compress_converted_file)
+    )};
 
     bool reached_end_of_stream{false};
     while (false == reached_end_of_stream) {
@@ -63,7 +69,7 @@ auto LogConverter::convert_file(
 
         while (m_parser_offset < m_num_bytes_buffered) {
             log_surgeon::CCharArray view{m_buffer.data(), m_num_bytes_buffered};
-            auto optional_event{parser.next_event(view, &m_parser_offset)};
+            auto optional_event{m_parser.next_event(view, &m_parser_offset)};
             // No error handling for failures?
             if (false == optional_event.has_value()) {
                 break;

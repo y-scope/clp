@@ -114,7 +114,7 @@ class DispatchExecutor:
 
     @staticmethod
     def dispatch_job_and_update_db(
-        job_config: dict[str, any], job_type: QueryJobType, job_id: str, archives: list[dict]
+        job_config_blob: bytes, job_type: QueryJobType, job_id: str, archives: list[dict]
     ) -> tuple[str, int, str]:
         if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
             raise NotImplementedError(f"Unexpected job type: {job_type}")
@@ -128,7 +128,7 @@ class DispatchExecutor:
                 job_id=job_id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                job_config=job_config,
+                job_config_blob=job_config_blob,
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=DispatchExecutor._clp_metadata_db_conn_params,
                 results_cache_uri=DispatchExecutor._results_cache_uri,
@@ -590,7 +590,6 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: dict[str, any],
     results_cache_uri: str,
 ):
-    job_config = job.get_config().model_dump()
     job_type = job.get_type()
     if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
         return celery.group(
@@ -598,7 +597,7 @@ def get_task_group_for_job(
                 job_id=job.id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                job_config=job_config,
+                job_config_blob=job.get_cached_config_blob(),
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
@@ -611,7 +610,7 @@ def get_task_group_for_job(
                 job_id=job.id,
                 archive_id=archives[i]["archive_id"],
                 task_id=task_ids[i],
-                job_config=job_config,
+                job_config=job.get_config().model_dump(),
                 dataset=archives[i].get("dataset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
@@ -814,7 +813,7 @@ def handle_pending_query_jobs(
             futures.append(
                 process_pool.submit(
                     DispatchExecutor.dispatch_job_and_update_db,
-                    job.get_config().model_dump(),
+                    job.get_cached_config_blob(),
                     job.get_type(),
                     job_id,
                     archives_for_search,

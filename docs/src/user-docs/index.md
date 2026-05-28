@@ -214,6 +214,13 @@ Schema file syntax
 ^^^
 Syntax reference for clp's schema file for parsing unstructured text logs.
 :::
+
+:::{grid-item-card}
+:link: reference-telemetry
+Telemetry
+^^^
+Details on CLP's anonymous usage telemetry and how to disable it.
+:::
 ::::
 
 :::{toctree}
@@ -283,4 +290,5 @@ reference-json-search-syntax
 reference-text-search-syntax
 reference-sbin-scripts/index
 reference-unstructured-schema-file
+reference-telemetry
 :::

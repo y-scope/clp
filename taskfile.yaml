@@ -22,12 +22,16 @@ vars:
   G_PYTHON_WHEELS_YSCOPE_CLP_CORE_DIR: "{{.ROOT_DIR}}/python-wheels/yscope-clp-core"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
+  # Documentation paths
+  G_DOCS_DIR: "{{.ROOT_DIR}}/docs"
+  G_DOCS_SRC_DIR: "{{.G_DOCS_DIR}}/src"
+  G_DOCS_SRC_STATIC_DIR: "{{.G_DOCS_SRC_DIR}}/_static"
+  G_DOCS_SRC_STATIC_GENERATED_DIR: "{{.G_DOCS_SRC_STATIC_DIR}}/generated"
+
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CONFIG_SCHEMA_BUILD_DIR: "{{.G_BUILD_DIR}}/config-schema"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
-  G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
-  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
@@ -40,7 +44,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.11.1-dev"
+  G_PACKAGE_VERSION: "0.12.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -51,8 +55,6 @@ vars:
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
   G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
-  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
-    "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
   G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
 
 tasks:
@@ -102,11 +104,8 @@ tasks:
 
   clean-webui:
     cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
+      - task: "clean-webui-package-node-modules"
+      - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
 
   package:
     vars:
@@ -262,15 +261,17 @@ tasks:
       CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/*"
       - exclude: "**/dist/**/*"
       - exclude: "**/node_modules/**/*"
+      - exclude: "yscope-log-viewer/**/*"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
+      - "deps:yscope-log-viewer:build"
       - "init"
       - task: "utils:checksum:validate"
         vars:
@@ -284,11 +285,12 @@ tasks:
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
         rsync -a package.json dist "{{.OUTPUT_DIR}}/common/"
-      - for: ["client", "yscope-log-viewer"]
-        cmd: |-
-          cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
-          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-          --emptyOutDir --outDir '{{.OUTPUT_DIR}}/{{.ITEM}}'
+      - |-
+        cd client
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+        --emptyOutDir --outDir '{{.OUTPUT_DIR}}/client'
+      - |-
+        rsync -a "{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/" "{{.OUTPUT_DIR}}/yscope-log-viewer/"
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
@@ -303,129 +305,13 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  nodejs-22:
+  clean-webui-package-node-modules:
     internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
-    run: "once"
     cmds:
-      - task: "nodejs"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v22.20.0"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-
-  download-and-extract-tar:
-    internal: true
-    label: "{{.TASK}}-{{.TAR_NAME}}"
-    vars:
-      OUTPUT_TMP_DIR: "{{.OUTPUT_DIR}}-tmp"
-      EXTRACTED_DIR: "{{.OUTPUT_TMP_DIR}}/{{.EXTRACTED_DIR_NAME}}"
-      TAR_PATH: "{{.OUTPUT_TMP_DIR}}/{{.TAR_NAME}}"
-    requires:
-      vars: ["CHECKSUM_FILE", "EXTRACTED_DIR_NAME", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
-    sources: ["{{.TASKFILE}}"]
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_TMP_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
-      - >-
-        curl --fail --location --show-error
-        "{{trimSuffix "/" .URL_PREFIX}}/{{.TAR_NAME}}"
-        --output "{{.TAR_PATH}}"
-      - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_TMP_DIR}}'"
-      - "mv '{{.EXTRACTED_DIR}}' '{{.OUTPUT_DIR}}'"
-      - "rm -rf '{{.OUTPUT_TMP_DIR}}'"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  # NOTE: The webui has two different node_modules directories, and we generate a checksum file for
-  # each one. The directories are:
-  # * log-viewer submodule
-  # * the top-level one we call "package"
-  webui-node-modules:
-    internal: true
-    vars:
-      LOG_VIEWER_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules"
-      PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
-    sources:
-      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
-      - "{{.TASKFILE}}"
-      - "**/{,client,common,server,yscope-log-viewer}/package.json"
-      - "**/{,yscope-log-viewer}/package-lock.json"
-    dir: "{{.G_WEBUI_SRC_DIR}}"
-    generates:
-      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-    deps:
-      - "deps:log-viewer"
-      - "nodejs-22"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-    cmds:
-      - task: "clean-webui"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
-      - |-
-        cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
-
-      # Verify that npm fully hoisted all workspace packages to the root node_modules. If this
-      # fails, a peer dependency conflict is forcing npm to create a per-workspace node_modules, and
-      # you should check the npm install output and resolve any hoisting conflicts.
-      - for: ["client", "common", "server"]
-        cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
-
-      # These commands must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
-
-  nodejs:
-    internal: true
-    vars:
-      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
-      NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
-      NODEJS_FILE_BASE_NAME:
-        sh: >-
-          curl --header "Cache-Control: no-cache, no-store" --silent "{{.NODEJS_VERSION_BASE_URL}}"
-          | grep
-          --only-matching
-          --max-count 1
-          "node-v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+-{{OS}}-{{.NODEJS_ARCH}}"
-          | head --lines 1
-    requires:
-      vars: ["CHECKSUM_FILE", "NODEJS_VERSION", "OUTPUT_DIR"]
-    deps: ["init"]
-    cmds:
-      - task: "download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          TAR_NAME: "{{.NODEJS_FILE_BASE_NAME}}.tar.xz"
-          EXTRACTED_DIR_NAME: "{{.NODEJS_FILE_BASE_NAME}}"
-          URL_PREFIX: "{{.NODEJS_VERSION_BASE_URL}}"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
 
   package-tar:
     internal: true
@@ -582,3 +468,40 @@ tasks:
       - |-
         uv run --no-cache \
           auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
+
+  webui-node-modules:
+    internal: true
+    vars:
+      PACKAGE_OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/node_modules"
+    sources:
+      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      - "{{.TASKFILE}}"
+      - "client/package.json"
+      - "common/package.json"
+      - "package-lock.json"
+      - "package.json"
+      - "server/package.json"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
+    generates:
+      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+    deps:
+      - "toolchains:nodejs-22"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
+    cmds:
+      - task: "clean-webui-package-node-modules"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
+
+      # Verify that npm fully hoisted all workspace packages to the root node_modules. If this
+      # fails, a peer dependency conflict is forcing npm to create a per-workspace node_modules, and
+      # you should check the npm install output and resolve any hoisting conflicts.
+      - for: ["client", "common", "server"]
+        cmd: "test ! -d '{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}/node_modules'"
+
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]

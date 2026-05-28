@@ -28,6 +28,14 @@ pub mod s3 {
                 Self::S3Scanner(config) => &config.base,
             }
         }
+
+        #[must_use]
+        pub const fn as_buffer_config(&self) -> &BufferConfig {
+            match self {
+                Self::SqsListener(config) => &config.buffer_config,
+                Self::S3Scanner(config) => &config.buffer_config,
+            }
+        }
     }
 
     /// Base configuration for ingesting logs from S3.
@@ -65,10 +73,6 @@ pub mod s3 {
         /// Whether to treat the ingested objects as unstructured logs. Defaults to `false`.
         #[serde(default = "default_unstructured")]
         pub unstructured: bool,
-
-        /// Per-job ingestion buffer config.
-        #[serde(default)]
-        pub buffer_config: BufferConfig,
     }
 
     /// Configuration for a SQS listener job.
@@ -76,6 +80,10 @@ pub mod s3 {
     pub struct SqsListenerConfig {
         #[serde(flatten)]
         pub base: BaseConfig,
+
+        /// Per-job ingestion buffer config.
+        #[serde(default)]
+        pub buffer_config: BufferConfig,
 
         /// The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated
         /// to this ingestion job.
@@ -152,6 +160,10 @@ pub mod s3 {
     pub struct S3ScannerConfig {
         #[serde(flatten)]
         pub base: BaseConfig,
+
+        /// Per-job ingestion buffer config.
+        #[serde(default)]
+        pub buffer_config: BufferConfig,
 
         /// The scan interval in seconds. Defaults to 30 seconds.
         #[serde(default = "default_scanning_interval_sec")]
