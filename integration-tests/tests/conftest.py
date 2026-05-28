@@ -12,8 +12,7 @@ from tests.utils.utils import resolve_path_env_var
 pytest_plugins = [
     "tests.fixtures.sample_datasets",
     "tests.fixtures.path_configs",
-    "tests.fixtures.package_instance",
-    "tests.fixtures.package_test_config",
+    "tests.package_tests.fixtures",
 ]
 
 
