@@ -454,12 +454,12 @@ data:
             endpoint: "0.0.0.0:4318"
 
     processors:
-      # NOTE: For EKS deployments, add the "eks" detector to detect cloud-specific attributes (e.g.,
-      # cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
-      # downward API config.
+      batch:
+        timeout: "30s"
+        send_batch_size: 1024
       resourcedetection:
-        # Kubernetes deployments do not mount the Docker socket, so use env and system detection
-        # only.
+        # NOTE: Kubernetes deployments do not mount the Docker socket, so use env and system
+        # detection only.
         detectors: ["env", "system"]
         system:
           resource_attributes:
@@ -474,12 +474,9 @@ data:
             host.cpu.vendor.id:
               enabled: true
         override: false
-      batch:
-        timeout: "30s"
-        send_batch_size: 1024
 
     exporters:
-      otlphttp:
+      otlp_http:
         endpoint: {{ .Values.clpConfig.telemetry.endpoint | quote }}
 
     service:
@@ -488,13 +485,13 @@ data:
         metrics:
           receivers: ["otlp"]
           processors: ["resourcedetection", "batch"]
-          exporters: ["otlphttp"]
+          exporters: ["otlp_http"]
         traces:
           receivers: ["otlp"]
           processors: ["resourcedetection", "batch"]
-          exporters: ["otlphttp"]
+          exporters: ["otlp_http"]
         logs:
           receivers: ["otlp"]
           processors: ["resourcedetection", "batch"]
-          exporters: ["otlphttp"]
+          exporters: ["otlp_http"]
 {{- end }}

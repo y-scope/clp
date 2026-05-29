@@ -35,7 +35,7 @@ processors:
     override: false
 
 exporters:
-  otlphttp:
+  otlp_http:
     endpoint: "${env:CLP_TELEMETRY_ENDPOINT}"
 
 service:
@@ -44,12 +44,12 @@ service:
     metrics:
       receivers: ["otlp"]
       processors: ["resourcedetection", "batch"]
-      exporters: ["otlphttp"]
+      exporters: ["otlp_http"]
     traces:
       receivers: ["otlp"]
       processors: ["resourcedetection", "batch"]
-      exporters: ["otlphttp"]
+      exporters: ["otlp_http"]
     logs:
       receivers: ["otlp"]
       processors: ["resourcedetection", "batch"]
-      exporters: ["otlphttp"]
+      exporters: ["otlp_http"]
