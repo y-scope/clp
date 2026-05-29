@@ -33,18 +33,21 @@ spec:
           imagePullPolicy: {{ .Values.image.curl.pullPolicy | quote }}
           command:
             - "curl"
-            - "-s"
+            - "--request"
+            - "POST"
             - "--fail"
-            - "--retry"
+            - "--header"
+            - "Content-Type: application/json"
+            - "--max-time"
             - "5"
+            - "--retry"
+            - "1"
             - "--retry-all-errors"
             - "--retry-delay"
             - "1"
-            - "-X"
-            - "POST"
-            - "-H"
-            - "Content-Type: application/json"
-            - "-d"
+            - "--show-error"
+            - "--silent"
+            - "--data"
             - {{ include "clp.topologyMetricsPayload" . | quote }}
             - {{ printf "%s/v1/metrics" (include "clp.otelCollectorUrl" .) | quote }}
 {{- end }}
