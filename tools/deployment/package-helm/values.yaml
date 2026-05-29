@@ -9,14 +9,10 @@ image:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
     tag: "main"
-  prestoCoordinator:
-    repository: "ghcr.io/y-scope/presto/coordinator"
+  curl:
+    repository: "curlimages/curl"
     pullPolicy: "IfNotPresent"
-    tag: "clp-v0.10.0"
-  prestoWorker:
-    repository: "ghcr.io/y-scope/presto/prestissimo-worker"
-    pullPolicy: "IfNotPresent"
-    tag: "clp-v0.10.0-fix.1"
+    tag: "8.14.1"
   kubectl:
     repository: "bitnami/kubectl"
     pullPolicy: "IfNotPresent"
@@ -26,10 +22,14 @@ image:
       ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
     pullPolicy: "IfNotPresent"
     tag: "0.152.0"
-  curl:
-    repository: "curlimages/curl"
+  prestoCoordinator:
+    repository: "ghcr.io/y-scope/presto/coordinator"
     pullPolicy: "IfNotPresent"
-    tag: "8.14.1"
+    tag: "clp-v0.10.0"
+  prestoWorker:
+    repository: "ghcr.io/y-scope/presto/prestissimo-worker"
+    pullPolicy: "IfNotPresent"
+    tag: "clp-v0.10.0-fix.1"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
