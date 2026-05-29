@@ -907,26 +907,104 @@ class BaseController(ABC):
 
         return env_vars
 
-    def _set_up_env_for_telemetry(self) -> EnvVarsDict:
+    def _set_up_env_for_otel_collector_bundling(self) -> EnvVarsDict:
         """
-        Sets up environment variables for the telemetry (OpenTelemetry Collector) component.
+        Sets up environment variables for bundling the OpenTelemetry Collector component.
 
-        :return: Dictionary of environment variables necessary to launch the component.
+        :return: Dictionary of environment variables necessary to bundle the component.
         """
+        component_name = OTEL_COLLECTOR_COMPONENT_NAME
+
         if self._clp_config.telemetry.disable:
-            logger.info("Telemetry is disabled, skipping otel-collector creation...")
-            return EnvVarsDict(
-                {
-                    "CLP_DISABLE_TELEMETRY": "true",
-                    "CLP_OTEL_COLLECTOR_ENABLED": "0",
-                }
-            )
+            logger.info("Telemetry is disabled, skipping otel-collector service bundling...")
+            # Bundling
+            return EnvVarsDict({"CLP_OTEL_COLLECTOR_ENABLED": "0"})
 
-        logger.info("Setting up environment for otel-collector...")
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_OTEL_COLLECTOR_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        conf_file = self._conf_dir / "otel-collector" / "config.yaml"
 
         env_vars = EnvVarsDict()
 
-        env_vars["CLP_OTEL_COLLECTOR_ENABLED"] = "1"
+        # Paths
+        env_vars |= EnvVarsDict(
+            {
+                "CLP_OTEL_COLLECTOR_CONF_FILE_HOST": str(conf_file),
+            }
+        )
+
+        return env_vars
+
+    def _set_up_env_for_otel_collector(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the OpenTelemetry Collector component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = OTEL_COLLECTOR_COMPONENT_NAME
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping %s environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            env_vars |= EnvVarsDict(
+                {
+                    "CLP_OTEL_COLLECTOR_CONNECT_PORT": str(self._clp_config.otel_collector.port),
+                    "CLP_EXTRA_HOST_OTEL_COLLECTOR_NAME": OTEL_COLLECTOR_COMPONENT_NAME,
+                    "CLP_EXTRA_HOST_OTEL_COLLECTOR_ADDR": _resolve_external_host(
+                        self._clp_config.otel_collector.host
+                    ),
+                }
+            )
+        else:
+            env_vars |= EnvVarsDict(
+                {
+                    "CLP_OTEL_COLLECTOR_HOST": _get_ip_from_hostname(
+                        self._clp_config.otel_collector.host
+                    ),
+                    "CLP_OTEL_COLLECTOR_PORT": str(self._clp_config.otel_collector.port),
+                }
+            )
+
+        return env_vars
+
+    def _set_up_env_for_telemetry(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for telemetry.
+
+        :return: Dictionary of environment variables necessary to configure telemetry.
+        """
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping telemetry environment setup...")
+            # Telemetry
+            return EnvVarsDict({"CLP_DISABLE_TELEMETRY": "true"})
+
+        logger.info("Setting up environment for telemetry...")
+
+        env_vars = EnvVarsDict()
+
+        # Telemetry
+        env_vars |= EnvVarsDict(
+            {
+                "CLP_DISABLE_TELEMETRY": "false",
+                "CLP_TELEMETRY_ENDPOINT": self._clp_config.telemetry.endpoint,
+            }
+        )
+
+        # Resource attributes
         version_file_path = self._clp_home / "VERSION"
         clp_version = (
             version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
@@ -937,30 +1015,12 @@ class BaseController(ABC):
             "clp.deployment.method": "docker-compose",
             "clp.storage.engine": self._clp_config.package.storage_engine,
         }
-        env_vars["OTEL_RESOURCE_ATTRIBUTES"] = ",".join(
-            f"{k}={v}" for k, v in resource_attrs.items()
-        )
-
-        env_vars["CLP_TELEMETRY_ENDPOINT"] = self._clp_config.telemetry.endpoint
-        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
-            env_vars |= {
-                "CLP_OTEL_COLLECTOR_ENABLED": "0",
-                "CLP_OTEL_COLLECTOR_CONNECT_PORT": str(self._clp_config.otel_collector.port),
-                "CLP_EXTRA_HOST_OTEL_COLLECTOR_NAME": OTEL_COLLECTOR_COMPONENT_NAME,
-                "CLP_EXTRA_HOST_OTEL_COLLECTOR_ADDR": _resolve_external_host(
-                    self._clp_config.otel_collector.host
+        env_vars |= EnvVarsDict(
+            {
+                "OTEL_RESOURCE_ATTRIBUTES": ",".join(
+                    f"{k}={v}" for k, v in resource_attrs.items()
                 ),
             }
-        else:
-            env_vars |= {
-                "CLP_OTEL_COLLECTOR_ENABLED": "1",
-                "CLP_OTEL_COLLECTOR_HOST": _get_ip_from_hostname(
-                    self._clp_config.otel_collector.host
-                ),
-                "CLP_OTEL_COLLECTOR_PORT": str(self._clp_config.otel_collector.port),
-            }
-        env_vars["CLP_OTEL_COLLECTOR_CONF_FILE_HOST"] = str(
-            self._conf_dir / "otel-collector" / "config.yaml"
         )
 
         return env_vars
@@ -1112,11 +1172,13 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_queue_bundling()
         env_vars |= self._set_up_env_for_redis_bundling()
         env_vars |= self._set_up_env_for_results_cache_bundling()
+        env_vars |= self._set_up_env_for_otel_collector_bundling()
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
         env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
+        env_vars |= self._set_up_env_for_otel_collector()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
