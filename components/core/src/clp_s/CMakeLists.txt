@@ -13,8 +13,6 @@ set(
         ../clp/BufferedReader.hpp
         ../clp/BufferReader.cpp
         ../clp/BufferReader.hpp
-        ../clp/cli_utils.cpp
-        ../clp/cli_utils.hpp
         ../clp/Defs.h
         ../clp/EncodedVariableInterpreter.cpp
         ../clp/EncodedVariableInterpreter.hpp
@@ -69,6 +67,8 @@ set(
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
+        ../clp/FileWriter.cpp
+        ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
         ../clp/SchemaSearcher.cpp
@@ -98,7 +98,10 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
         ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Compressor.hpp
         ../clp/streaming_compression/Decompressor.hpp
+        ../clp/streaming_compression/zstd/Compressor.cpp
+        ../clp/streaming_compression/zstd/Compressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp
@@ -250,12 +253,12 @@ if(CLP_BUILD_CLP_S_IO)
         target_link_libraries(
                 clp_s_io
                 PUBLIC
+                simdjson::simdjson
                 zstd::libzstd_static
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
-                simdjson::simdjson
                 spdlog::spdlog
         )
 endif()
@@ -393,6 +396,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                simdjson::simdjson
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
