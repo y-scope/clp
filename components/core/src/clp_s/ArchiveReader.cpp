@@ -357,7 +357,7 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
 void ArchiveReader::append_unordered_reader_columns(
         SchemaReader& reader,
         int32_t mst_subtree_root_node_id,
-        std::span<int32_t> schema_ids,
+        std::span<Schema::id_t> schema_ids,
         bool should_marshal_records
 ) {
     size_t object_begin_pos = reader.get_column_size();
