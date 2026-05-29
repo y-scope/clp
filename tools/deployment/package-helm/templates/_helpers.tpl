@@ -71,6 +71,19 @@ It ensures the exact same UUID is used across all templates during a single helm
 {{- end -}}
 
 {{/*
+Creates common CLP resource attributes for telemetry.
+
+@return {string} Comma-separated OpenTelemetry resource attributes
+*/}}
+{{- define "clp.resourceAttributes" -}}
+{{- printf
+  "clp.deployment.id=%s,service.version=%s,clp.deployment.method=helm,clp.storage.engine=%s"
+  (include "clp.instanceId" .)
+  .Chart.AppVersion
+  .Values.clpConfig.package.storage_engine -}}
+{{- end -}}
+
+{{/*
 Generates the OTLP JSON payload for topology metrics emission.
 
 This produces the same payload structure as DockerComposeController._emit_topology_metrics()

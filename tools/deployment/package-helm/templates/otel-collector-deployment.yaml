@@ -42,7 +42,7 @@ spec:
               mountPath: "/etc/otelcol-contrib"
           env:
             - name: "OTEL_RESOURCE_ATTRIBUTES"
-              value: "clp.deployment.id={{ include "clp.instanceId" . }},service.version={{ .Chart.AppVersion }},clp.deployment.method=helm,clp.storage.engine={{ .Values.clpConfig.package.storage_engine }}"
+              value: {{ include "clp.resourceAttributes" . | quote }}
           args:
             - "--config=/etc/otelcol-contrib/config.yaml"
           readinessProbe:

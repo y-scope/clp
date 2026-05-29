@@ -458,8 +458,9 @@ data:
       # cloud.provider, cloud.platform, host.id). This requires additional IAM permissions and K8s
       # downward API config.
       resourcedetection:
-        # Kubernetes deployments do not mount the Docker socket, so use system detection only.
-        detectors: ["system"]
+        # Kubernetes deployments do not mount the Docker socket, so use env and system detection
+        # only.
+        detectors: ["env", "system"]
         system:
           resource_attributes:
             host.name:
@@ -473,20 +474,6 @@ data:
             host.cpu.vendor.id:
               enabled: true
         override: false
-      resource/deployment:
-        attributes:
-          - key: clp.deployment.id
-            value: "${env:CLP_DEPLOYMENT_ID}"
-            action: insert
-          - key: service.version
-            value: "${env:CLP_SERVICE_VERSION}"
-            action: insert
-          - key: clp.deployment.method
-            value: "${env:CLP_DEPLOYMENT_METHOD}"
-            action: insert
-          - key: clp.storage.engine
-            value: "${env:CLP_STORAGE_ENGINE}"
-            action: insert
       batch:
         timeout: "30s"
         send_batch_size: 1024
@@ -500,14 +487,14 @@ data:
       pipelines:
         metrics:
           receivers: ["otlp"]
-          processors: ["resourcedetection", "resource/deployment", "batch"]
+          processors: ["resourcedetection", "batch"]
           exporters: ["otlphttp"]
         traces:
           receivers: ["otlp"]
-          processors: ["resourcedetection", "resource/deployment", "batch"]
+          processors: ["resourcedetection", "batch"]
           exporters: ["otlphttp"]
         logs:
           receivers: ["otlp"]
-          processors: ["resourcedetection", "resource/deployment", "batch"]
+          processors: ["resourcedetection", "batch"]
           exporters: ["otlphttp"]
 {{- end }}
