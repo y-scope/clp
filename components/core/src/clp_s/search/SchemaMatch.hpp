@@ -28,7 +28,6 @@
 #include "ast/Transformation.hpp"
 #include "clp_s/ArchiveReader.hpp"
 #include "clp_s/SchemaTree.hpp"
-#include "clp_s/search/ast/StringLiteral.hpp"
 
 namespace clp_s::search {
 /**
@@ -95,14 +94,20 @@ public:
 private:
     // Methods
     /**
-     * Builds an AndExpr of leaf equality filters from a single interpretation of a decomposed
-     * clpp query, and registers each leaf column in m_descriptor_to_schema for the given schemas.
-     * Returns std::nullopt if any leaf column cannot be resolved in the schema tree.
+     * Builds an expression from a single interpretation of a decomposed clpp query, and registers
+     * leaf columns in m_descriptor_to_schema for the given schemas.
+     *
+     * When m_leaf_queries is non-empty, returns an AndExpr of leaf equality/existence filters.
+     * When m_leaf_queries is empty (the match is purely on static shape text), registers the column
+     * and returns an EXISTS filter — every document in the matched schemas contains the queried
+     * text.
+     *
+     * Returns std::nullopt only if a leaf column cannot be resolved in the schema tree.
      * @param column The original column descriptor triggering clpp decomposition.
-     * @param node_id The schema-tree node where decomposition is rooted.
-     * @param interpretation The single interpretation to build the leaf expression from.
+     * @param root_node_id The schema-tree node where decomposition is rooted.
+     * @param interpretation The single interpretation to build the expression from.
      * @param matched_schema_ids Schemas to register the leaf columns against.
-     * @return The leaf expression, or std::nullopt on resolution failure.
+     * @return The expression, or std::nullopt on resolution failure.
      */
     auto build_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
@@ -179,51 +184,25 @@ private:
             -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
 
     /**
-     * Registers a column descriptor in m_descriptor_to_schema and m_column_to_descriptor for
-     * every schema in matched_schema_ids, anchoring the column at the given node_id.
-     * @param column The column descriptor to register.
-     * @param node_id The schema-tree node ID to anchor the column at.
-     * @param matched_schema_ids The schemas to register the column for.
-     */
-    void register_clpp_column(
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t node_id,
-            std::unordered_set<int32_t> const& matched_schema_ids
-    );
-
-    /**
-     * Decomposes a CLP-string query at a LogMessage or ParentRule node, matches log types against
-     * the typed dictionary, and returns an AndExpr of leaf equality filters. Returns nullptr if
-     * no schemas match or a leaf column cannot be resolved in the schema tree.
+     * Decomposes a CLP-string query at a LogMessage or ParentRule node, matches log shapes against
+     * the dictionary, and returns an OrExpr of leaf filter expressions.
+     *
+     * Handles both direct LogMessage queries (message: "...") and ParentRule queries.
+     * Wildcard expansion (message.*:...) is handled by the unresolved descriptor expansion in
+     * populate_column_mapping, not here.
+     *
+     * Returns nullptr if no schemas match, decomposition fails, or a leaf column cannot be
+     * resolved in the schema tree.
      * @param column The column triggering clpp decomposition.
-     * @param root_node_id The schema node where decomposition is rooted (LogMessage or ParentRule).
-     * @param expr The original expression containing the filter.
+     * @param root_node_id The schema-tree node where decomposition is rooted (LogMessage or
+     *     ParentRule).
+     * @param filter The FilterExpr containing the operation and operand.
      * @return The transformed expression on success, nullptr otherwise.
      */
     auto resolve_clpp_query(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             SchemaNode::id_t root_node_id,
-            std::shared_ptr<ast::Expression> const& expr
-    ) -> std::shared_ptr<ast::Expression>;
-
-    /**
-     * Handles clpp decomposition when the root node is a LogMessage. Iterates each non-LogTypeID
-     * child of the LogMessage node, attempting decomposition for each child's qualified name.
-     * Skips children where decomposition or schema matching fails. Aggregates successful results
-     * into an OrExpr.
-     * @param column The column triggering clpp decomposition.
-     * @param root_node_id The LogMessage schema-tree node.
-     * @param log_shape_dict The log shape dictionary.
-     * @param filter The FilterExpr extracted from the expression.
-     * @param query The clp-string query for non-EXISTS filters.
-     * @return The aggregated OrExpr on success, nullptr if no child produced results.
-     */
-    auto resolve_log_message_wildcard(
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t root_node_id,
-            clp_s::LogShapeDictionaryReader& log_shape_dict,
-            ast::FilterExpr* filter,
-            std::string const& query
+            ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
 
     // Data members
@@ -232,8 +211,9 @@ private:
     // TODO: The value in the map can be a set of k:v pairs with a hash & comparison
     // that only considers the key since each column descriptor only has one matching
     // column id per schema
-    std::unordered_map<ast::ColumnDescriptor*, std::map<int32_t, int32_t>> m_descriptor_to_schema;
-    std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_unresolved_descriptor_to_descriptor;
+    std::unordered_map<ast::ColumnDescriptor::id_t, std::map<int32_t, int32_t>>
+            m_descriptor_to_schema;
+    std::map<ast::ColumnDescriptor::id_t, std::set<int32_t>> m_unresolved_descriptor_to_descriptor;
     std::unordered_map<ast::Expression*, std::unordered_set<int32_t>> m_expression_to_schemas;
     std::unordered_set<int32_t> m_matched_schema_ids;
     std::unordered_set<int32_t> m_array_schema_ids;
@@ -252,6 +232,23 @@ private:
     absl::flat_hash_map<std::pair<std::string, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
     std::unordered_map<clpp::log_shape_id_t, std::vector<int32_t>> m_log_shape_id_to_schema_id;
+
+    /**
+     * Expands a wildcard at a CLPP node (LogMessage or ParentRule) by iterating
+     * the node's children and dispatching each child to CLPP decomposition
+     * (for ParentRule children) or direct leaf filters.
+     *
+     * @param resolved_column The resolved column descriptor for the CLPP node.
+     * @param node The schema-tree node.
+     * @param filter The FilterExpr containing the operation and operand.
+     * @param possibilities The expression (must be an OrExpr) to add child results to.
+     */
+    void expand_clpp_node_children(
+            std::shared_ptr<ast::ColumnDescriptor> const& resolved_column,
+            SchemaNode const& node,
+            ast::FilterExpr const& filter,
+            std::shared_ptr<ast::Expression> const& possibilities
+    );
 
     /**
      * Populates the column mapping for a given column
@@ -327,18 +324,36 @@ private:
     );
 
     /**
-     * @param column
+     * @param col_id The id of the column descriptor.
      * @param schema
-     * @return The column id for a given column descriptor
+     * @return The column id for a given column descriptor id.
      */
-    int32_t get_column_id_for_descriptor(ast::ColumnDescriptor* column, int32_t schema);
+    int32_t get_column_id_for_descriptor(ast::ColumnDescriptor::id_t col_id, int32_t schema);
 
     /**
-     * @param column
-     * @param schema
-     * @return The literal type for a given column descriptor
+     * Marks a column as CLPP-resolved and registers its schema-to-node-id mappings
+     * in m_descriptor_to_schema. Must be called during the first pass so that the
+     * correct schema subset is preserved — m_descriptor_to_schema is not cleared
+     * between passes, and the is_clpp_resolved flag prevents re-registration in
+     * m_column_to_descriptor which would cause populate_schema_mapping to inflate
+     * the mappings.
+     * @param column The column descriptor to register.
+     * @param node_id The schema-tree node ID to anchor the column at.
+     * @param matched_schema_ids The schemas to register the column for.
      */
-    ast::LiteralType get_literal_type_for_column(ast::ColumnDescriptor* column, int32_t schema);
+    auto register_clpp_resolved_column(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t node_id,
+            std::unordered_set<int32_t> const& matched_schema_ids
+    ) -> void;
+
+    /**
+     * @param col_id The id of the column descriptor.
+     * @param schema
+     * @return The literal type for a given column descriptor id.
+     */
+    ast::LiteralType
+    get_literal_type_for_column(ast::ColumnDescriptor::id_t col_id, int32_t schema);
 };
 
 template <StringViewPredicate Matcher>
