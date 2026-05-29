@@ -352,8 +352,8 @@ tasks:
         cd "{{.SRC_DIR}}"
         cargo build --no-default-features --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
-        rsync -az "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
-        rsync -az "{{.SRC_DIR}}/cpp_ffi/" "{{.INSTALL_INCLUDE_DIR}}"
+        cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
+        cp -r "{{.SRC_DIR}}/cxx/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
         cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
         if(NOT TARGET {{.TARGET_NAME}})
             include("${CMAKE_CURRENT_LIST_DIR}/{{.LIB_NAME}}-targets.cmake")
@@ -366,6 +366,7 @@ tasks:
             IMPORTED_LOCATION "{{.INSTALL_LIB_DIR}}/liblog_surgeon.a"
             INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
         )
+        target_link_libraries({{.TARGET_NAME}} INTERFACE dl)
         EOF
         cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" << 'EOF'
         set({{.LIB_NAME}}_ROOT
