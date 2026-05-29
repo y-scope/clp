@@ -142,11 +142,16 @@ pub async fn upload_noise_objects(
     test_utils::create_s3_objects(s3_client, objects_to_create).await
 }
 
-/// Waits until the shared buffer has at least `min_num_objects`.
+/// Waits until at least `min_num_objects` distinct objects have been ingested.
+///
+/// SQS provides at-least-once delivery, so the same object may be ingested more than once. The
+/// ingested objects are therefore deduplicated before counting (so that redelivered messages don't
+/// cause an incomplete set to be returned) and the returned vector is sorted and free of
+/// duplicates.
 ///
 /// # Returns
 ///
-/// A vector of ingested S3 object metadata on success.
+/// A sorted, deduplicated vector of ingested S3 object metadata on success.
 async fn wait_for_ingested_objects(
     shared_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
     min_num_objects: usize,
@@ -155,11 +160,12 @@ async fn wait_for_ingested_objects(
         Duration::from_secs(WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC),
         async {
             loop {
-                let ingested_objects = shared_buffer.lock().await;
+                let mut ingested_objects = shared_buffer.lock().await.clone();
+                ingested_objects.sort();
+                ingested_objects.dedup();
                 if ingested_objects.len() >= min_num_objects {
-                    return ingested_objects.clone();
+                    return ingested_objects;
                 }
-                drop(ingested_objects);
                 tokio::time::sleep(Duration::from_millis(INGESTED_OBJECT_POLL_INTERVAL_MS)).await;
             }
         },
@@ -224,13 +230,12 @@ async fn run_sqs_listener_test(
     let mut created_objects = upload_handle
         .await
         .context("Error while awaiting test object upload")??;
-    let mut received_objects =
-        wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
+    let received_objects = wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
 
     sqs_listener.shutdown_and_join().await;
 
     created_objects.sort();
-    received_objects.sort();
+    // `received_objects` is already sorted and deduplicated by `wait_for_ingested_objects`.
     assert_eq!(received_objects, created_objects);
 
     Ok(())
@@ -346,12 +351,11 @@ async fn test_s3_scanner() -> Result<()> {
     let mut created_objects = test_upload_handle
         .await
         .context("Error while awaiting test object upload")??;
-    let mut received_objects =
-        wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
+    let received_objects = wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
     s3_scanner.shutdown_and_join().await;
 
     created_objects.sort();
-    received_objects.sort();
+    // `received_objects` is already sorted and deduplicated by `wait_for_ingested_objects`.
     assert_eq!(received_objects, created_objects);
 
     Ok(())

@@ -40,7 +40,14 @@ pub fn get_testing_prefix_as_non_empty_string(job_id: IngestionJobId) -> NonEmpt
 
 /// Uploads test S3 objects.
 ///
-/// Objects are created with keys formatted as `{prefix}/{i}.log` where `i` is the object index.
+/// Objects are created with keys formatted as `{prefix}/idx{i}{placeholder}` where:
+/// * `prefix` is the provided prefix.
+/// * `i` is the object index.
+/// * `placeholder` is one of the following to test URL encoding:
+///   * `""` if `i` % 4 == 0.
+///   * `&` if `i` % 4 == 1.
+///   * `=` if `i` % 4 == 2.
+///   * ` ` if `i` % 4 == 3.
 ///
 /// # Returns
 ///
@@ -56,10 +63,19 @@ pub async fn upload_test_objects(
     num_objects_to_create: usize,
 ) -> Result<Vec<ObjectMetadata>> {
     let objects_to_create: Vec<_> = (0..num_objects_to_create)
-        .map(|idx| ObjectMetadata {
-            bucket: bucket.clone(),
-            key: NonEmptyString::from_string(format!("{prefix}/{idx:05}.log")),
-            size: 16,
+        .map(|idx| {
+            let placeholder = match idx % 4 {
+                0 => "",
+                1 => "&",
+                2 => "=",
+                3 => " ",
+                _ => unreachable!(),
+            };
+            ObjectMetadata {
+                bucket: bucket.clone(),
+                key: NonEmptyString::from_string(format!("{prefix}/idx{idx:05}{placeholder}.log")),
+                size: 16,
+            }
         })
         .collect();
 
