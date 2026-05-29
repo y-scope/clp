@@ -30,7 +30,7 @@ spec:
       containers:
         - name: "topology-metrics-emitter"
           image: "{{ .Values.image.curl.repository }}:{{ .Values.image.curl.tag }}"
-          imagePullPolicy: {{ .Values.image.curl.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.curl.pullPolicy | quote }}
           command:
             - "curl"
             - "-s"

@@ -59,7 +59,8 @@ It ensures the exact same UUID is used across all templates during a single helm
   {{- $_ := set .Values "global" dict -}}
 {{- end }}
 {{- if not .Values.global.instanceId }}
-  {{- $existing := lookup "v1" "ConfigMap" .Release.Namespace (printf "%s-instance-id" (include "clp.fullname" .)) }}
+  {{- $existingName := printf "%s-instance-id" (include "clp.fullname" .) }}
+  {{- $existing := lookup "v1" "ConfigMap" .Release.Namespace $existingName }}
   {{- if $existing }}
     {{- $_ := set .Values.global "instanceId" (index $existing.data "instanceId") -}}
   {{- else }}
@@ -79,7 +80,8 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 */}}
 {{- define "clp.topologyMetricsPayload" -}}
 {{- $timestampNs := now.UnixNano -}}
-{{- $compressionWorkerReplicas := .Values.scheduling.compressionWorker.replicas | default 1 | int -}}
+{{- $compressionWorkerScheduling := .Values.scheduling.compressionWorker -}}
+{{- $compressionWorkerReplicas := $compressionWorkerScheduling.replicas | default 1 | int -}}
 {{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
 {{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
 {{- $workerConcurrency := .Values.workerConcurrency | default 8 | int -}}
