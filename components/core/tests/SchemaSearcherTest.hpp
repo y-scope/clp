@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include <clp/LogTypeDictionaryReaderReq.hpp>
 #include <clp/Query.hpp>
@@ -29,18 +29,12 @@
  */
 class clp::SchemaSearcherTest {
 public:
-    static auto normalize_interpretations(
-            std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interps
-    ) -> std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> {
-        return SchemaSearcher::normalize_interpretations(interps);
-    }
-
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
     static auto generate_schema_sub_queries(
-            std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interps,
+            std::vector<std::vector<log_surgeon::SubQuery>> const& interps,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict
     ) -> std::vector<SubQuery> {
@@ -48,13 +42,13 @@ public:
     }
 
     static auto get_wildcard_encodable_positions(
-            log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation
+            std::vector<log_surgeon::SubQuery> const& interpretation
     ) -> std::vector<size_t> {
         return SchemaSearcher::get_wildcard_encodable_positions(interpretation);
     }
 
     static auto generate_logtype_string(
-            log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation,
+            std::vector<log_surgeon::SubQuery> const& interpretation,
             std::vector<size_t> const& wildcard_encodable_positions,
             std::vector<bool> const& mask_encoded_flags
     ) -> std::string {
@@ -67,7 +61,7 @@ public:
 
     template <typename VariableDictionaryReaderType>
     static auto process_token(
-            log_surgeon::wildcard_query_parser::VariableQueryToken const& var_token,
+            log_surgeon::SubQuery const& var_token,
             VariableDictionaryReaderType const& var_dict,
             SubQuery& sub_query
     ) -> bool {
@@ -82,7 +76,7 @@ public:
 
     template <typename VariableDictionaryReaderType>
     static auto process_encoded_token(
-            log_surgeon::wildcard_query_parser::VariableQueryToken const& var_token,
+            log_surgeon::SubQuery const& var_token,
             VariableDictionaryReaderType const& var_dict,
             SubQuery& sub_query
     ) -> bool {

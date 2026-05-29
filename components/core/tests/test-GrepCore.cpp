@@ -6,69 +6,37 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/Schema.hpp>
-#include <log_surgeon/SchemaParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include <clp/Defs.h>
 #include <clp/GrepCore.hpp>
+#include <clp/Utils.hpp>
 
 #include "search_test_utils.hpp"
 
 using clp::epochtime_t;
 using clp::GrepCore;
-using log_surgeon::lexers::ByteLexer;
-using log_surgeon::Schema;
-using log_surgeon::SchemaVarAST;
-using log_surgeon::SymbolId::TokenFloat;
-using log_surgeon::SymbolId::TokenInt;
+using clp::load_parser_from_rule_text;
+using log_surgeon::ParserHandle;
 using std::pair;
 using std::string;
 using std::vector;
 
-constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-constexpr uint32_t cHasNumId{111};
-
 namespace {
 /**
- * Initializes a `ByteLexer` with space as a delimiter and the given `schema_rules`.
+ * Initializes a `ParserHandle` with space as a delimiter and the given `schema_rules`.
  *
  * @param schema_rules A vector of strings, each string representing a schema rule.
- * @return The initialized `ByteLexer`.
+ * @return The initialized `ParserHandle`.
  */
-auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer;
+auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle;
 
-auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
-    ByteLexer lexer;
-    lexer.m_symbol_id["int"] = cIntId;
-    lexer.m_symbol_id["float"] = cFloatId;
-    lexer.m_symbol_id["hasNumber"] = cHasNumId;
-    lexer.m_id_symbol[cIntId] = "int";
-    lexer.m_id_symbol[cFloatId] = "float";
-    lexer.m_id_symbol[cHasNumId] = "hasNumber";
-    lexer.set_delimiters({' '});
-
-    Schema schema;
+auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle {
+    std::string rule_set_string{"delimiters: \n"};
     for (auto const& schema_rule : schema_rules) {
-        schema.add_variable(schema_rule, -1);
+        rule_set_string += schema_rule + "\n";
     }
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    REQUIRE(nullptr != schema_ast);
-    REQUIRE(schema_rules.size() == schema_ast->m_schema_vars.size());
-    for (size_t i{0}; i < schema_ast->m_schema_vars.size(); ++i) {
-        REQUIRE(nullptr != schema_ast->m_schema_vars[i]);
-        auto* capture_rule_ast{dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[i].get())};
-        REQUIRE(nullptr != capture_rule_ast);
-        auto symbol_id_t{lexer.m_symbol_id.find(capture_rule_ast->m_name)};
-        REQUIRE(lexer.m_symbol_id.end() != symbol_id_t);
-        lexer.add_rule(symbol_id_t->second, std::move(capture_rule_ast->m_regex_ptr));
-    }
-
-    lexer.generate();
-    return lexer;
+    return load_parser_from_rule_text(rule_set_string);
 }
 }  // namespace
 
@@ -170,7 +138,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     constexpr bool cIgnoreCase{true};
     constexpr bool cUseHeuristic{false};
 
-    auto lexer{make_test_lexer(
+    auto parser{make_test_parser(
             {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
     )};
 
@@ -193,8 +161,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             cNoBeginTimestamp,
             cNoEndTimestamp,
             cIgnoreCase,
-            lexer,
-            cUseHeuristic
+            &parser
     )};
 
     REQUIRE(query.has_value());
