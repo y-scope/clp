@@ -680,7 +680,10 @@ services:
       - "${CLP_DOCKER_GID:-999}"
     environment:
       CLP_TELEMETRY_ENDPOINT: "${CLP_TELEMETRY_ENDPOINT:-https://telemetry.yscope.io}"
-      OTEL_RESOURCE_ATTRIBUTES: "${OTEL_RESOURCE_ATTRIBUTES:-}"
+      CLP_DEPLOYMENT_ID: "${CLP_DEPLOYMENT_ID:-unknown}"
+      CLP_SERVICE_VERSION: "${CLP_SERVICE_VERSION:-unknown}"
+      CLP_DEPLOYMENT_METHOD: "${CLP_DEPLOYMENT_METHOD:-docker-compose}"
+      CLP_STORAGE_ENGINE: "${CLP_PACKAGE_STORAGE_ENGINE:-unknown}"
     ports:
       - host_ip: "${CLP_OTEL_COLLECTOR_HOST:-127.0.0.1}"
         published: "${CLP_OTEL_COLLECTOR_PORT:-4318}"
