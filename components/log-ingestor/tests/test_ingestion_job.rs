@@ -164,8 +164,8 @@ async fn wait_for_ingested_objects(
             }
         },
     )
-        .await
-        .expect("Timed out while waiting for ingested objects")
+    .await
+    .expect("Timed out while waiting for ingested objects")
 }
 
 /// Runs SQS listener test with the given job config.
@@ -186,7 +186,7 @@ async fn run_sqs_listener_test(
         Some(&aws_config.endpoint),
         &aws_auth,
     )
-        .await;
+    .await;
 
     let state = SqsListenerTestState::new();
     let shared_buffer = state.get_shared_buffer();
@@ -204,7 +204,7 @@ async fn run_sqs_listener_test(
         Some(&aws_config.endpoint),
         &aws_auth,
     )
-        .await;
+    .await;
 
     let upload_handle = tokio::spawn(upload_test_objects(
         s3_client.clone(),
@@ -274,8 +274,8 @@ async fn test_sqs_listener() -> Result<()> {
                 buffer_config: BufferConfig::default(),
             },
         )
-            .await
-            .unwrap_or_else(|_| panic!("SQS listener test failed. Num tasks: {num_tasks}"));
+        .await
+        .unwrap_or_else(|_| panic!("SQS listener test failed. Num tasks: {num_tasks}"));
     }
 
     Ok(())
@@ -301,7 +301,7 @@ async fn test_s3_scanner() -> Result<()> {
         Some(&aws_config.endpoint),
         &aws_auth,
     )
-        .await;
+    .await;
 
     let s3_scanner_config = S3ScannerConfig {
         base: BaseConfig {
