@@ -142,16 +142,11 @@ pub async fn upload_noise_objects(
     test_utils::create_s3_objects(s3_client, objects_to_create).await
 }
 
-/// Waits until at least `min_num_objects` distinct objects have been ingested.
-///
-/// SQS provides at-least-once delivery, so the same object may be ingested more than once. The
-/// ingested objects are therefore deduplicated before counting (so that redelivered messages don't
-/// cause an incomplete set to be returned) and the returned vector is sorted and free of
-/// duplicates.
+/// Waits until the shared buffer has at least `min_num_objects`.
 ///
 /// # Returns
 ///
-/// A sorted, deduplicated vector of ingested S3 object metadata on success.
+/// A vector of ingested S3 object metadata on success.
 async fn wait_for_ingested_objects(
     shared_buffer: Arc<Mutex<Vec<ObjectMetadata>>>,
     min_num_objects: usize,
@@ -160,18 +155,17 @@ async fn wait_for_ingested_objects(
         Duration::from_secs(WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC),
         async {
             loop {
-                let mut ingested_objects = shared_buffer.lock().await.clone();
-                ingested_objects.sort();
-                ingested_objects.dedup();
+                let ingested_objects = shared_buffer.lock().await;
                 if ingested_objects.len() >= min_num_objects {
-                    return ingested_objects;
+                    return ingested_objects.clone();
                 }
+                drop(ingested_objects);
                 tokio::time::sleep(Duration::from_millis(INGESTED_OBJECT_POLL_INTERVAL_MS)).await;
             }
         },
     )
-    .await
-    .expect("Timed out while waiting for ingested objects")
+        .await
+        .expect("Timed out while waiting for ingested objects")
 }
 
 /// Runs SQS listener test with the given job config.
@@ -192,7 +186,7 @@ async fn run_sqs_listener_test(
         Some(&aws_config.endpoint),
         &aws_auth,
     )
-    .await;
+        .await;
 
     let state = SqsListenerTestState::new();
     let shared_buffer = state.get_shared_buffer();
@@ -210,7 +204,7 @@ async fn run_sqs_listener_test(
         Some(&aws_config.endpoint),
         &aws_auth,
     )
-    .await;
+        .await;
 
     let upload_handle = tokio::spawn(upload_test_objects(
         s3_client.clone(),
@@ -230,12 +224,13 @@ async fn run_sqs_listener_test(
     let mut created_objects = upload_handle
         .await
         .context("Error while awaiting test object upload")??;
-    let received_objects = wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
+    let mut received_objects =
+        wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
 
     sqs_listener.shutdown_and_join().await;
 
     created_objects.sort();
-    // `received_objects` is already sorted and deduplicated by `wait_for_ingested_objects`.
+    received_objects.sort();
     assert_eq!(received_objects, created_objects);
 
     Ok(())
@@ -279,8 +274,8 @@ async fn test_sqs_listener() -> Result<()> {
                 buffer_config: BufferConfig::default(),
             },
         )
-        .await
-        .unwrap_or_else(|_| panic!("SQS listener test failed. Num tasks: {num_tasks}"));
+            .await
+            .unwrap_or_else(|_| panic!("SQS listener test failed. Num tasks: {num_tasks}"));
     }
 
     Ok(())
@@ -306,7 +301,7 @@ async fn test_s3_scanner() -> Result<()> {
         Some(&aws_config.endpoint),
         &aws_auth,
     )
-    .await;
+        .await;
 
     let s3_scanner_config = S3ScannerConfig {
         base: BaseConfig {
@@ -351,11 +346,12 @@ async fn test_s3_scanner() -> Result<()> {
     let mut created_objects = test_upload_handle
         .await
         .context("Error while awaiting test object upload")??;
-    let received_objects = wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
+    let mut received_objects =
+        wait_for_ingested_objects(shared_buffer, created_objects.len()).await;
     s3_scanner.shutdown_and_join().await;
 
     created_objects.sort();
-    // `received_objects` is already sorted and deduplicated by `wait_for_ingested_objects`.
+    received_objects.sort();
     assert_eq!(received_objects, created_objects);
 
     Ok(())
