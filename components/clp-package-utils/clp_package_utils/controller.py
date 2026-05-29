@@ -1017,9 +1017,7 @@ class BaseController(ABC):
         }
         env_vars |= EnvVarsDict(
             {
-                "OTEL_RESOURCE_ATTRIBUTES": ",".join(
-                    f"{k}={v}" for k, v in resource_attrs.items()
-                ),
+                "OTEL_RESOURCE_ATTRIBUTES": ",".join(f"{k}={v}" for k, v in resource_attrs.items()),
             }
         )
 

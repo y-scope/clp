@@ -8,8 +8,6 @@ metadata:
     app.kubernetes.io/component: "topology-metrics-emitter"
   annotations:
     "helm.sh/hook": "post-install,post-upgrade"
-    "helm.sh/hook-weight": "0"
-    "helm.sh/hook-delete-policy": "hook-succeeded"
 spec:
   template:
     metadata:
