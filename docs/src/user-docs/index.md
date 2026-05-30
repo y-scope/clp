@@ -39,6 +39,13 @@ Deploy CLP using Docker Compose for single or multi-host setups.
 :::
 
 :::{grid-item-card}
+:link: guides-single-container-image
+Single-container image
+^^^
+Run the CLP package and bundled backing services in one local container.
+:::
+
+:::{grid-item-card}
 :link: guides-k8s-deployment
 Kubernetes deployment
 ^^^
@@ -243,6 +250,7 @@ quick-start/clp-text
 :caption: Deployment
 
 guides-docker-compose-deployment
+guides-single-container-image
 guides-k8s-deployment
 :::
 

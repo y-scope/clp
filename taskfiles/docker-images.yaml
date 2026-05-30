@@ -7,3 +7,17 @@ tasks:
       - ":package-build-deps"
     cmds:
       - "./build.sh"
+
+  package-single:
+    dir: "{{.ROOT_DIR}}/tools/deployment/package"
+    deps:
+      - "package"
+    cmds:
+      - "./build-single-image.sh"
+
+  package-single-compliance:
+    dir: "{{.ROOT_DIR}}/tools/deployment/package"
+    deps:
+      - "package-single"
+    cmds:
+      - "./generate-single-image-compliance-bundle.sh"
