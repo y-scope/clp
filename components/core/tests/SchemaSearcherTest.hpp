@@ -2,7 +2,6 @@
 #define SCHEMA_SEARCHER_TEST_HPP
 
 #include <cstddef>
-#include <set>
 #include <string>
 #include <vector>
 

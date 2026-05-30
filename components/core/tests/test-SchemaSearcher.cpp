@@ -7,8 +7,7 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include <clp/Query.hpp>
 #include <clp/SchemaSearcher.hpp>
@@ -16,11 +15,8 @@
 #include "SchemaSearcherTest.hpp"
 #include "search_test_utils.hpp"
 
-using clp::SubQuery;
-using log_surgeon::SymbolId::TokenFloat;
-using log_surgeon::SymbolId::TokenInt;
-using log_surgeon::wildcard_query_parser::QueryInterpretation;
-using log_surgeon::wildcard_query_parser::VariableQueryToken;
+#define S(s) log_surgeon::SubQuery{"", s}
+
 using std::pair;
 using std::set;
 using std::string;
@@ -28,59 +24,27 @@ using std::unordered_set;
 using std::variant;
 using std::vector;
 
-constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-constexpr uint32_t cHasNumId{111};
+std::string const c_float{"float"};
+std::string const c_has_num{"hasNum"};
+std::string const c_int{"int"};
 
 namespace {
-/**
- * Constructs a `QueryInterpretation` from a vector of tokens.
- *
- * Each token is either:
- * - a `string` representing a static substring, or
- * - a `pair<uint32_t, string>`, representing a variable placeholder and its value.
- *
- * This method automatically detects whether a variable token contains a
- * wildcard (`*` or `?`).
- *
- * @param tokens Vector of tokens to populate the `QueryInterpretation`.
- * @return A `QueryInterpretation` populated with the given tokens.
- */
-auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> const& tokens)
-        -> QueryInterpretation;
-
-auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> const& tokens)
-        -> QueryInterpretation {
-    QueryInterpretation interp;
-    for (auto const& token : tokens) {
-        if (std::holds_alternative<string>(token)) {
-            interp.append_static_token(std::get<string>(token));
-        } else {
-            auto const& [symbol, value]{std::get<pair<uint32_t, string>>(token)};
-            auto const contains_wildcard{value.find_first_of("*?") != string::npos};
-            interp.append_variable_token(symbol, value, contains_wildcard);
-        }
-    }
-    return interp;
-}
-}  //  namespace
-
 TEST_CASE("get_wildcard_encodable_positions_for_empty_interpretation", "[dfa_search]") {
-    QueryInterpretation const interpretation{};
+    std::vector<log_surgeon::SubQuery> const interpretation{};
 
     auto const positions{clp::SchemaSearcherTest::get_wildcard_encodable_positions(interpretation)};
     REQUIRE(positions.empty());
 }
 
 TEST_CASE("get_wildcard_encodable_positions_for_multi_variable_interpretation", "[dfa_search]") {
-    auto const interpretation{make_query_interpretation(
-            {"text",
-             pair{cIntId, "100"},
-             pair{cFloatId, "32.2"},
-             pair{cIntId, "10?"},
-             pair{cFloatId, "3.14*"},
-             pair{cHasNumId, "3.14*"}}
-    )};
+    std::vector<log_surgeon::SubQuery> interpretation{
+            {"", "text"},
+            {c_int, "100"},
+            {c_float, "32.2"},
+            {c_int, "10?"},
+            {c_float, "3.14*"},
+            {c_has_num, "3.14*"}
+    };
 
     auto const positions{clp::SchemaSearcherTest::get_wildcard_encodable_positions(interpretation)};
     REQUIRE(2 == positions.size());
@@ -89,7 +53,7 @@ TEST_CASE("get_wildcard_encodable_positions_for_multi_variable_interpretation", 
 }
 
 TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
-    QueryInterpretation const interpretation{};
+    std::vector<log_surgeon::SubQuery> const interpretation{};
 
     auto const wildcard_encodable_positions{
             clp::SchemaSearcherTest::get_wildcard_encodable_positions(interpretation)
@@ -107,7 +71,7 @@ TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
 TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_search]") {
     auto const expected_logtype_string{generate_expected_logtype_string({'i'})};
 
-    auto const interpretation{make_query_interpretation({pair{cIntId, "100"}})};
+    auto const interpretation{{c_int, "100"}};
 
     auto const wildcard_encodable_positions{
             clp::SchemaSearcherTest::get_wildcard_encodable_positions(interpretation)
@@ -130,14 +94,14 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
             generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})
     };
 
-    auto const interpretation{make_query_interpretation(
-            {"text",
-             pair{cIntId, "100"},
-             pair{cFloatId, "32.2"},
-             pair{cIntId, "10?"},
-             pair{cFloatId, "3.14*"},
-             pair{cHasNumId, "3.14*"}}
-    )};
+    auto const interpretation{
+            S("text"),
+            {c_int, "100"},
+            {c_float, "32.2"},
+            {c_int, "10?"},
+            {c_float, "3.14*"},
+            {c_has_num, "3.14*"}
+    };
 
     auto const wildcard_encodable_positions{
             clp::SchemaSearcherTest::get_wildcard_encodable_positions(interpretation)
@@ -165,8 +129,8 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
 TEST_CASE("process_schema_empty_token", "[dfa_search]") {
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
-    SubQuery sub_query;
-    VariableQueryToken const empty_int_token{cIntId, "", false};
+    clp::SubQuery sub_query;
+    log_surgeon::SubQuery const empty_int_token{c_int, ""};
     REQUIRE(false == clp::SchemaSearcherTest::process_token(empty_int_token, var_dict, sub_query));
     REQUIRE(sub_query.wildcard_match_required());
     REQUIRE(0 == sub_query.get_num_possible_vars());
@@ -175,8 +139,8 @@ TEST_CASE("process_schema_empty_token", "[dfa_search]") {
 TEST_CASE("process_schema_unmatched_token", "[dfa_search]") {
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
-    SubQuery sub_query;
-    VariableQueryToken const int_token{cIntId, "200", false};
+    clp::SubQuery sub_query;
+    log_surgeon::SubQuery const int_token{c_int, "200"};
     REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
     REQUIRE(sub_query.wildcard_match_required());
     REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -189,8 +153,8 @@ TEST_CASE("process_schema_unmatched_token", "[dfa_search]") {
 TEST_CASE("process_schema_int_token", "[dfa_search]") {
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "100"}})};
 
-    SubQuery sub_query;
-    VariableQueryToken const int_token{cIntId, "100", false};
+    clp::SubQuery sub_query;
+    log_surgeon::SubQuery const int_token{c_int, "100"};
     REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
     REQUIRE(sub_query.wildcard_match_required());
     REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -204,24 +168,24 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "10a0"}, pair{1, "10b0"}})};
 
     SECTION("interpret_as_int") {
-        SubQuery sub_query;
-        VariableQueryToken const int_token{cIntId, "10?0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const int_token{c_int, "10?0"};
         REQUIRE(clp::SchemaSearcherTest::process_encoded_token(int_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
     }
 
     SECTION("interpret_as_float") {
-        SubQuery sub_query;
-        VariableQueryToken const float_token{cFloatId, "10?0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const float_token{c_float, "10?0"};
         REQUIRE(clp::SchemaSearcherTest::process_encoded_token(float_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
     }
 
     SECTION("interpret_as_precise_has_number") {
-        SubQuery sub_query;
-        VariableQueryToken const has_number_token{cHasNumId, "10a?", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const has_number_token{c_has_num, "10a?"};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -233,8 +197,8 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token", "[dfa_search]") {
     }
 
     SECTION("interpret_as_imprecise_has_number") {
-        SubQuery sub_query;
-        VariableQueryToken const has_number_token{cHasNumId, "10?0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const has_number_token{c_has_num, "10?0"};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -261,8 +225,8 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
     )};
 
     SECTION("interpret_as_int") {
-        SubQuery sub_query;
-        VariableQueryToken const int_token{cIntId, "1000000000000000000000000?0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const int_token{c_int, "1000000000000000000000000?0"};
         REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -276,8 +240,8 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
     }
 
     SECTION("interpret_as_float") {
-        SubQuery sub_query;
-        VariableQueryToken const float_token{cFloatId, "1000000000000000000000000?0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const float_token{c_float, "1000000000000000000000000?0"};
         REQUIRE(clp::SchemaSearcherTest::process_token(float_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -291,9 +255,9 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token", "[dfa_search]"
     }
 
     SECTION("interpret_as_has_number") {
-        SubQuery sub_query;
-        VariableQueryToken const has_number_token{cHasNumId, "1000000000000000000000000?0", true};
-        REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const has_num_token{c_has_num, "1000000000000000000000000?0"};
+        REQUIRE(clp::SchemaSearcherTest::process_token(has_num_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
         auto const& var{sub_query.get_vars()[0]};
@@ -319,8 +283,8 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     )};
 
     SECTION("interpret_as_non_encoded_int") {
-        SubQuery sub_query;
-        VariableQueryToken const int_token{cIntId, "10*0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const int_token{c_int, "10*0"};
         REQUIRE(clp::SchemaSearcherTest::process_token(int_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -334,8 +298,8 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     }
 
     SECTION("interpret_as_non_encoded_float") {
-        SubQuery sub_query;
-        VariableQueryToken const float_token{cFloatId, "10*0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const float_token{c_float, "10*0"};
         REQUIRE(clp::SchemaSearcherTest::process_token(float_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -349,8 +313,8 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     }
 
     SECTION("interpret_as_non_encoded_imprecise_has_number") {
-        SubQuery sub_query;
-        VariableQueryToken const has_number_token{cHasNumId, "10*0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const has_number_token{c_has_num, "10*0"};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -364,8 +328,8 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     }
 
     SECTION("interpret_as_non_encoded_precise_has_number") {
-        SubQuery sub_query;
-        VariableQueryToken const has_number_token{cHasNumId, "10b*", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const has_number_token{c_has_num, "10b*"};
         REQUIRE(clp::SchemaSearcherTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -377,16 +341,16 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     }
 
     SECTION("interpret_as_encoded_int") {
-        SubQuery sub_query;
-        VariableQueryToken const int_token{cIntId, "10*0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const int_token{c_int, "10*0"};
         REQUIRE(clp::SchemaSearcherTest::process_encoded_token(int_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
     }
 
     SECTION("interpret_as_encoded_float") {
-        SubQuery sub_query;
-        VariableQueryToken const float_token{cFloatId, "10*0", true};
+        clp::SubQuery sub_query;
+        log_surgeon::SubQuery const float_token{c_float, "10*0"};
         REQUIRE(clp::SchemaSearcherTest::process_encoded_token(float_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
@@ -406,22 +370,17 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
              {"text ", 'i', " 10$ ", 'f'}}
     )};
 
-    using V = pair<uint32_t, string>;
-    vector<vector<variant<string, V>>> raw_interpretations{
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId, " 3.14*"}},
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cHasNumId, "3.14*"}},
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " 3.14*"},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId, " 3.14*"}},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cHasNumId, "3.14*"}},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " 3.14*"},
-            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId, " 3.14*"}},
-            {"text ", V{cIntId, "100"}, " 10? ", V{cHasNumId, "3.14*"}},
-            {"text ", V{cIntId, "100"}, " 10? 3.14*"}
+    std::vector<std::vector<log_surgeon::SubQuery>> interpretations{
+            {S("text "), {c_int, "100"}, S(" "), {c_int, "10?"}, S(" "), {c_float, " 3.14*"}},
+            {S("text "), {c_int, "100"}, S(" "), {c_int, "10?"}, S(" "), {c_has_num, "3.14*"}},
+            {S("text "), {c_int, "100"}, S(" "), {c_int, "10?"}, S(" 3.14*")},
+            {S("text "), {c_int, "100"}, S(" "), {c_has_num, "10?"}, S(" "), {c_float, " 3.14*"}},
+            {S("text "), {c_int, "100"}, S(" "), {c_has_num, "10?"}, S(" "), {c_has_num, "3.14*"}},
+            {S("text "), {c_int, "100"}, S(" "), {c_has_num, "10?"}, S(" 3.14*")},
+            {S("text "), {c_int, "100"}, S(" 10? "), {c_float, " 3.14*"}},
+            {S("text "), {c_int, "100"}, S(" 10? "), {c_has_num, "3.14*"}},
+            {S("text "), {c_int, "100"}, S(" 10? 3.14*")}
     };
-    set<QueryInterpretation> interpretations;
-    for (auto const& raw_interpretation : raw_interpretations) {
-        interpretations.insert(make_query_interpretation(raw_interpretation));
-    }
 
     auto const sub_queries{clp::SchemaSearcherTest::generate_schema_sub_queries(
             interpretations,
@@ -450,28 +409,21 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
              {"text ", 'i', " 10$ ", 'f'}}
     )};
 
-    using V = pair<uint32_t, string>;
-    vector<vector<variant<string, V>>> raw_interpretations{
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId, " 3.14*"}, "*"},
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cHasNumId, "3.14*"}, "*"},
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " 3.14**"},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId, " 3.14*"}, "*"},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cHasNumId, "3.14*"}, "*"},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " 3.14**"},
-            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId, " 3.14*"}, "*"},
-            {"text ", V{cIntId, "100"}, " 10? ", V{cHasNumId, "3.14*"}, "*"},
-            {"text ", V{cIntId, "100"}, " 10? 3.14**"}
-    };
-    set<QueryInterpretation> interpretations;
-    for (auto const& raw_interpretation : raw_interpretations) {
-        interpretations.insert(make_query_interpretation(raw_interpretation));
-    }
-    auto const normalized_interpretations{
-            clp::SchemaSearcherTest::normalize_interpretations(interpretations)
+    auto txt{S("text ")};
+    std::vector<std::vector<log_surgeon::SubQuery>> interpretations{
+            {txt, {c_int, "100"}, S(" "), {c_int, "10?"}, S(" "), {c_float, " 3.14*"}, S("*")},
+            {txt, {c_int, "100"}, S(" "), {c_int, "10?"}, S(" "), {c_has_num, "3.14*"}, S("*")},
+            {txt, {c_int, "100"}, S(" "), {c_int, "10?"}, S(" 3.14**")},
+            {txt, {c_int, "100"}, S(" "), {c_has_num, "10?"}, S(" "), {c_float, " 3.14*"}, S("*")},
+            {txt, {c_int, "100"}, S(" "), {c_has_num, "10?"}, S(" "), {c_has_num, "3.14*"}, S("*")},
+            {txt, {c_int, "100"}, S(" "), {c_has_num, "10?"}, S(" 3.14**")},
+            {txt, {c_int, "100"}, S(" 10? "), {c_float, " 3.14*"}, S("*")},
+            {txt, {c_int, "100"}, S(" 10? "), {c_has_num, "3.14*"}, S("*")},
+            {txt, {c_int, "100"}, S(" 10? 3.14**")}
     };
 
     auto const sub_queries{clp::SchemaSearcherTest::generate_schema_sub_queries(
-            normalized_interpretations,
+            interpretations,
             logtype_dict,
             var_dict
     )};
