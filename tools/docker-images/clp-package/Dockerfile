@@ -26,8 +26,8 @@ ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
 
 RUN existing_user="$(getent passwd "${UID}" | cut --delimiter=: --fields=1)" || true; \
     [ -z "${existing_user}" ] || userdel --remove "${existing_user}" \
-    || { echo "ERROR: Cannot delete user '${existing_user}' that occupies UID ${UID}"; exit 1; }
-RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+    || { echo "ERROR: Cannot delete user '${existing_user}' that occupies UID ${UID}"; exit 1; }; \
+    useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
 
