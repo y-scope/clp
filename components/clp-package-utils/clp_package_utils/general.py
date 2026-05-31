@@ -1,5 +1,6 @@
 import enum
 import errno
+import http.client
 import json
 import logging
 import os
@@ -8,11 +9,13 @@ import re
 import secrets
 import socket
 import subprocess
+import time
+import urllib.error
+import urllib.request
 import uuid
 from enum import auto
 
 import yaml
-from ruamel.yaml import YAML
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
@@ -44,6 +47,7 @@ from clp_py_utils.core import (
     resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
+from ruamel.yaml import YAML
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
@@ -164,6 +168,48 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
+
+def http_request(
+    url: str,
+    data: bytes | None = None,
+    headers: dict[str, str] | None = None,
+    method: str = "GET",
+    max_attempts: int = 2,
+    retry_delay: float = 1.0,
+    timeout: float = 5.0,
+) -> http.client.HTTPResponse:
+    """
+    Sends an HTTP request with retry logic.
+
+    :param url: The URL to send the request to.
+    :param data: Request body as bytes.
+    :param headers: Request headers.
+    :param method: HTTP method.
+    :param max_attempts: Number of attempts before giving up. Must be >= 1.
+    :param retry_delay: Seconds to wait between retries.
+    :param timeout: Seconds to wait for a response per attempt.
+    :return: The HTTP response.
+    :raise ValueError: If max_attempts < 1.
+    :raise urllib.error.URLError: If all attempts fail due to a network-level error.
+    :raise urllib.error.HTTPError: If all attempts fail with an HTTP error status.
+    :raise OSError: If all attempts fail due to a socket-level error.
+    """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
+
+    req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = (
+        urllib.error.URLError("No attempts were made")
+    )
+    for attempt in range(max_attempts):
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
+            last_exception = e
+            if attempt < max_attempts - 1:
+                time.sleep(retry_delay)
+    raise last_exception
 
 
 def generate_container_name(job_type: str) -> str:

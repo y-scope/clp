@@ -164,6 +164,9 @@ data:
       retention_period: null
       {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    otel_collector:
+      host: "{{ include "clp.otelCollectorHost" . }}"
+      port: {{ include "clp.otelCollectorPort" . | int }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:
       {{- with .storage }}
@@ -435,3 +438,60 @@ data:
     echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
 {{- end }}{{/* with .Values.clpConfig.presto */}}
 {{- end }}{{/* if has "presto" .Values.clpConfig.bundled */}}
+
+{{- if and
+  (not .Values.clpConfig.telemetry.disable)
+  (has "otel_collector" .Values.clpConfig.bundled) }}
+  otel-collector-config.yaml: |
+    extensions:
+      health_check:
+        endpoint: "0.0.0.0:13133"
+
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: "0.0.0.0:4318"
+
+    processors:
+      batch:
+        timeout: "30s"
+        send_batch_size: 1024
+      resourcedetection:
+        # NOTE: Kubernetes deployments do not mount the Docker socket, so use env and system
+        # detection only.
+        detectors: ["env", "system"]
+        system:
+          resource_attributes:
+            host.name:
+              enabled: false
+            host.arch:
+              enabled: true
+            host.cpu.family:
+              enabled: true
+            host.cpu.model.id:
+              enabled: true
+            host.cpu.vendor.id:
+              enabled: true
+        override: false
+
+    exporters:
+      otlp_http:
+        endpoint: {{ .Values.clpConfig.telemetry.endpoint | quote }}
+
+    service:
+      extensions: ["health_check"]
+      pipelines:
+        metrics:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlp_http"]
+        traces:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlp_http"]
+        logs:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlp_http"]
+{{- end }}
