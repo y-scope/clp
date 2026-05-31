@@ -7,7 +7,6 @@ import pathlib
 import sys
 
 import click
-
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
 from clp_py_utils.core import resolve_host_path_in_container
 
