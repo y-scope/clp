@@ -1,14 +1,16 @@
 """Tests for the clp-text package."""
 
+import logging
+
 import pytest
 
 from tests.package_tests.classes import ClpPackage
 from tests.package_tests.clp_text.utils.mode import CLP_TEXT_MODE
-from tests.package_tests.utils.compress import (
-    compress_clp_package,
-    verify_compress_action,
-)
-from tests.utils.classes import SampleDataset
+from tests.package_tests.clp_text.verification.compress import verify_compress_clp_text
+from tests.package_tests.utils.compress import CompressArgs
+from tests.utils.classes import ClpAction, SampleDataset
+
+logger = logging.getLogger(__name__)
 
 # Pytest markers for this module.
 pytestmark = [
@@ -42,6 +44,15 @@ def test_clp_text_compression_text_multifile(
     :param clp_package:
     :param text_multifile:
     """
-    compress_action = compress_clp_package(clp_package, text_multifile)
-    result = verify_compress_action(compress_action, clp_package, text_multifile)
+    args = CompressArgs(
+        script_path=clp_package.path_config.compress_path,
+        config=clp_package.temp_config_file_path,
+        paths=[text_multifile.logs_path],
+    )
+
+    logger.info("Compressing the 'text_multifile' dataset with the 'clp-text' package.")
+    action = ClpAction.from_args(args)
+
+    logger.info("Verifying the compression of the 'text_multifile' dataset.")
+    result = verify_compress_clp_text(action, clp_package, text_multifile)
     assert result, result.failure_message

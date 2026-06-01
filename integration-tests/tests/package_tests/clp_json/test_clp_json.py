@@ -1,14 +1,23 @@
 """Tests for the clp-json package."""
 
+import logging
+
 import pytest
 
 from tests.package_tests.classes import ClpPackage
 from tests.package_tests.clp_json.utils.mode import CLP_JSON_MODE
+from tests.package_tests.clp_json.verification.compress import verify_compress_structured_clp_json
 from tests.package_tests.utils.compress import (
-    compress_clp_package,
-    verify_compress_action,
+    CompressArgs,
 )
-from tests.utils.classes import SampleDataset
+from tests.utils.classes import (
+    ClpAction,
+    SampleDataset,
+    SampleDatasetMetadata,
+)
+
+logger = logging.getLogger(__name__)
+
 
 # Pytest markers for this module.
 pytestmark = [
@@ -42,8 +51,21 @@ def test_clp_json_compression_json_multifile(
     :param clp_package:
     :param json_multifile:
     """
-    compress_action = compress_clp_package(clp_package, json_multifile)
-    result = verify_compress_action(compress_action, clp_package, json_multifile)
+    metadata: SampleDatasetMetadata = json_multifile.metadata
+    args: CompressArgs = CompressArgs(
+        script_path=clp_package.path_config.compress_path,
+        config=clp_package.temp_config_file_path,
+        dataset=metadata.dataset_name,
+        timestamp_key=metadata.timestamp_key,
+        unstructured=metadata.unstructured,
+        paths=[json_multifile.logs_path],
+    )
+
+    logger.info("Compressing the 'json_multifile' dataset with the 'clp-json' package.")
+    action = ClpAction.from_args(args)
+
+    logger.info("Verifying the compression of the 'json_multifile' dataset.")
+    result = verify_compress_structured_clp_json(action, clp_package, json_multifile)
     assert result, result.failure_message
 
 
