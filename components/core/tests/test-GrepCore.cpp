@@ -139,17 +139,17 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     constexpr bool cUseHeuristic{false};
 
     auto parser{make_test_parser(
-            {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
+            {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ &]*\d+[^ &]*)"}}
     )};
 
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},
-             {"text ", 'i', " ", 'd', " 3.14ab$"},
-             {"text ", 'i', " ", 'd', " 3.14abc$"},
-             {"text ", 'i', " ", 'd', " 3.15ab$"},
-             {"text ", 'i', " 10$ ", 'f'}}
+             {"text ", 'i', " ", 'd', " 3.14ab&"},
+             {"text ", 'i', " ", 'd', " 3.14abc&"},
+             {"text ", 'i', " ", 'd', " 3.15ab&"},
+             {"text ", 'i', " 10& ", 'f'}}
     )};
 
     string const raw_query{"text 100 10? 3.14*"};

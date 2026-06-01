@@ -91,21 +91,16 @@ TEST_CASE("Test creating log parser from config schema", "[LALR1Parser][LogParse
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
     auto const schema_file_path = get_test_schema_files_dir() / "schema_without_delimiters.txt";
-    REQUIRE_THROWS(load_parser_from_file(schema_file_path.string()));
+    REQUIRE_NOTHROW(load_parser_from_file(schema_file_path.string()));
 }
 
-TEST_CASE("Verify CLP compression fails with non-header capture groups", "[Compression]") {
+TEST_CASE("Verify CLP compression passes with non-header capture groups", "[Compression]") {
     auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
     auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
     std::filesystem::create_directory(cTestArchiveDirectory);
 
-    REQUIRE_THROWS_WITH(
-            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
-            schema_file_path.string()
-                    + ": error: the schema rule 'capture' has a regex pattern containing capture "
-                      "groups.\n"
-    );
+    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
 }
 
 TEST_CASE("Succeed on header rule with no capture", "[load_lexer]") {
@@ -136,30 +131,20 @@ TEST_CASE("Verify CLP compression succeeds with timestamp capture header", "[Com
     REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
 }
 
-TEST_CASE("Verify CLP compression fails with non-timestamp capture header", "[Compression]") {
+TEST_CASE("Verify CLP compression passes with non-timestamp capture header", "[Compression]") {
     auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
     auto const schema_file_path{get_test_schema_files_dir() / "header_with_int.txt"};
     TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
     std::filesystem::create_directory(cTestArchiveDirectory);
 
-    REQUIRE_THROWS_WITH(
-            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
-            schema_file_path.string()
-                    + ": error: the schema rule 'header' has a regex pattern containing capture "
-                      "groups.\n"
-    );
+    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
 }
 
-TEST_CASE("Verify CLP compression fails with multi-capture header", "[Compression]") {
+TEST_CASE("Verify CLP compression passes with multi-capture header", "[Compression]") {
     auto const log_file_path{get_test_log_dir() / "log_with_capture.txt"};
     auto const schema_file_path{get_test_schema_files_dir() / "header_with_timestamp_and_int.txt"};
     TestOutputCleaner const cleaner{{std::string{cTestArchiveDirectory}}};
     std::filesystem::create_directory(cTestArchiveDirectory);
 
-    REQUIRE_THROWS_WITH(
-            run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path),
-            schema_file_path.string()
-                    + ": error: the schema rule 'header' has a regex pattern containing capture "
-                      "groups.\n"
-    );
+    REQUIRE(0 == run_clp_compress(schema_file_path, cTestArchiveDirectory, log_file_path));
 }

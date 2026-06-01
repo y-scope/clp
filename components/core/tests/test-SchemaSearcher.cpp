@@ -15,7 +15,7 @@
 #include "SchemaSearcherTest.hpp"
 #include "search_test_utils.hpp"
 
-#define S(X) log_surgeon::SubQuery{"", X}
+#define S(X) log_surgeon::SubQuery("", X)
 
 using std::pair;
 using std::set;
