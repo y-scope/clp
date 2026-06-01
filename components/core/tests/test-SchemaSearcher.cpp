@@ -15,7 +15,7 @@
 #include "SchemaSearcherTest.hpp"
 #include "search_test_utils.hpp"
 
-#define S(s) log_surgeon::SubQuery{"", s}
+#define S(X) log_surgeon::SubQuery{"", X}
 
 using std::pair;
 using std::set;
@@ -28,7 +28,6 @@ std::string const c_float{"float"};
 std::string const c_has_num{"hasNum"};
 std::string const c_int{"int"};
 
-namespace {
 TEST_CASE("get_wildcard_encodable_positions_for_empty_interpretation", "[dfa_search]") {
     std::vector<log_surgeon::SubQuery> const interpretation{};
 
@@ -436,5 +435,4 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
-}
 }
