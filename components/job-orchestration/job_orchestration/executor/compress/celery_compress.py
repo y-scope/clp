@@ -4,16 +4,19 @@ from celery.utils.log import get_task_logger
 
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.executor.compress.compression_task import compression_entry_point
+from job_orchestration.executor.telemetry_utils import init_worker_telemetry
 
 # Setup logging
 logger = get_task_logger(__name__)
 
 
+@signals.worker_process_init.connect
+def worker_process_init_handler(**kwargs):
+    init_worker_telemetry("compression-worker", logger)
+
 @signals.worker_shutdown.connect
 def worker_shutdown_handler(signal=None, sender=None, **kwargs):
     logger.info("Shutdown signal received.")
-
-
 @app.task(bind=True)
 def compress(
     self: Task,

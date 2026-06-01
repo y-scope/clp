@@ -42,6 +42,7 @@
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
 #include "SingleFileArchiveDefs.hpp"
+#include "../telemetry/telemetry.hpp"
 
 using namespace clp_s::search;
 using clp_s::cArchiveFormatDevelopmentVersionFlag;
@@ -77,7 +78,8 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
-        int reducer_socket_fd
+        int reducer_socket_fd,
+        uint64_t& bytes_output
 );
 
 bool compress(CommandLineArguments const& command_line_arguments) {
@@ -129,7 +131,8 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
-        int reducer_socket_fd
+        int reducer_socket_fd,
+        uint64_t& bytes_output
 ) {
     auto const& query = command_line_arguments.get_query();
 
@@ -296,7 +299,7 @@ bool search_archive(
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );
-    return output.filter();
+    return output.filter(bytes_output);
 }
 }  // namespace
 
@@ -314,6 +317,8 @@ int main(int argc, char const* argv[]) {
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     clp::CurlGlobalInstance const curl_instance{};
 #endif
+
+    clp::telemetry::init();
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
@@ -370,6 +375,9 @@ int main(int argc, char const* argv[]) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
             return 1;
         }
+
+        uint64_t bytes_scanned = 0;
+        uint64_t bytes_output = 0;
 
         int reducer_socket_fd{-1};
         if (std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
@@ -443,18 +451,23 @@ int main(int argc, char const* argv[]) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
                 return 1;
             }
+            bytes_scanned += archive_reader->get_header().uncompressed_size;
             if (false
                 == search_archive(
                         command_line_arguments,
                         archive_reader,
                         expr->copy(),
-                        reducer_socket_fd
+                        reducer_socket_fd,
+                        bytes_output
                 ))
             {
                 return 1;
             }
             archive_reader->close();
         }
+
+        clp::telemetry::record_query_metrics(bytes_scanned, bytes_output);
+        clp::telemetry::shutdown();
     }
 
     return 0;

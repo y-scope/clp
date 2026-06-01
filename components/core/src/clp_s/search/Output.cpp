@@ -32,7 +32,7 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-bool Output::filter() {
+bool Output::filter(uint64_t& bytes_output) {
     std::vector<int32_t> matched_schemas;
     bool has_array = false;
     bool has_array_search = false;
@@ -112,10 +112,12 @@ bool Output::filter() {
                     m_query_runner
             ))
             {
+                bytes_output += message.length();
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, m_query_runner)) {
+                bytes_output += message.length();
                 m_output_handler->write(message);
             }
         }

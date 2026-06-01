@@ -145,6 +145,7 @@ set(
         constants.hpp
         OutputHandler.cpp
         OutputHandler.hpp
+        ../telemetry/telemetry.cpp
 )
 
 set(
@@ -195,6 +196,9 @@ if(CLP_BUILD_EXECUTABLES)
                 ystdlib::containers
                 ystdlib::error_handling
                 zstd::libzstd_static
+                opentelemetry-cpp::api
+                opentelemetry-cpp::sdk
+                opentelemetry-cpp::otlp_http_metric_exporter
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

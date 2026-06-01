@@ -469,6 +469,7 @@ set(
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
         TraceableException.hpp
+        ../telemetry/telemetry.cpp
 )
 
 if(CLP_BUILD_EXECUTABLES)
@@ -511,6 +512,9 @@ if(CLP_BUILD_EXECUTABLES)
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
+                opentelemetry-cpp::api
+                opentelemetry-cpp::sdk
+                opentelemetry-cpp::otlp_http_metric_exporter
         )
         set_target_properties(
                 clp-s

@@ -22,6 +22,7 @@
 #include "CommandLineArguments.hpp"
 #include "constants.hpp"
 #include "OutputHandler.hpp"
+#include "../telemetry/telemetry.hpp"
 
 using clp::clo::CommandLineArguments;
 using clp::clo::CountByTimeOutputHandler;
@@ -82,7 +83,8 @@ static SearchFilesResult search_file(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        std::unique_ptr<OutputHandler>& output_handler
+        std::unique_ptr<OutputHandler>& output_handler,
+        uint64_t& bytes_output
 );
 /**
  * Searches all files referenced by a given database cursor
@@ -97,7 +99,9 @@ static void search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::unique_ptr<OutputHandler>& output_handler,
-        std::set<clp::segment_id_t> const& segments_to_search
+        std::set<clp::segment_id_t> const& segments_to_search,
+        uint64_t& bytes_scanned,
+        uint64_t& bytes_output
 );
 /**
  * Searches an archive with the given path
@@ -107,7 +111,9 @@ static void search_files(
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        std::unique_ptr<OutputHandler> output_handler
+        std::unique_ptr<OutputHandler> output_handler,
+        uint64_t& bytes_scanned,
+        uint64_t& bytes_output
 );
 
 namespace {
@@ -122,9 +128,15 @@ bool extract_ir(CommandLineArguments const& command_line_args);
 /**
  * Performs a searches acccording to the given arguments.
  * @param command_line_args
+ * @param bytes_scanned
+ * @param bytes_output
  * @return Whether the search was successful.
  */
-bool search(CommandLineArguments const& command_line_args);
+bool search(
+        CommandLineArguments const& command_line_args,
+        uint64_t& bytes_scanned,
+        uint64_t& bytes_output
+);
 
 /**
  * @param archive_path
@@ -288,7 +300,11 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
     return true;
 }
 
-bool search(CommandLineArguments const& command_line_args) {
+bool search(
+        CommandLineArguments const& command_line_args,
+        uint64_t& bytes_scanned,
+        uint64_t& bytes_output
+) {
     std::unique_ptr<OutputHandler> output_handler;
     try {
         switch (command_line_args.get_output_handler_type()) {
@@ -341,7 +357,7 @@ bool search(CommandLineArguments const& command_line_args) {
     }
 
     try {
-        return search_archive(command_line_args, std::move(output_handler));
+        return search_archive(command_line_args, std::move(output_handler), bytes_scanned, bytes_output);
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
@@ -387,7 +403,8 @@ static SearchFilesResult search_file(
         Query& query,
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
-        std::unique_ptr<OutputHandler>& output_handler
+        std::unique_ptr<OutputHandler>& output_handler,
+        uint64_t& bytes_output
 ) {
     File compressed_file;
     Message encoded_message;
@@ -415,6 +432,7 @@ static SearchFilesResult search_file(
             decompressed_message
     ))
     {
+        bytes_output += decompressed_message.length();
         if (ErrorCode_Success
             != output_handler->add_result(
                     compressed_file.get_orig_path(),
@@ -437,7 +455,9 @@ void search_files(
         Archive& archive,
         MetadataDB::FileIterator& file_metadata_ix,
         std::unique_ptr<OutputHandler>& output_handler,
-        std::set<clp::segment_id_t> const& segments_to_search
+        std::set<clp::segment_id_t> const& segments_to_search,
+        uint64_t& bytes_scanned,
+        uint64_t& bytes_output
 ) {
     if (query.contains_sub_queries()) {
         for (; file_metadata_ix.has_next(); file_metadata_ix.next()) {
@@ -449,7 +469,8 @@ void search_files(
                 continue;
             }
 
-            auto result = search_file(query, archive, file_metadata_ix, output_handler);
+            bytes_scanned += file_metadata_ix.get_num_uncompressed_bytes();
+            auto result = search_file(query, archive, file_metadata_ix, output_handler, bytes_output);
             if (SearchFilesResult::OpenFailure == result) {
                 continue;
             }
@@ -463,7 +484,8 @@ void search_files(
                 continue;
             }
 
-            auto result = search_file(query, archive, file_metadata_ix, output_handler);
+            bytes_scanned += file_metadata_ix.get_num_uncompressed_bytes();
+            auto result = search_file(query, archive, file_metadata_ix, output_handler, bytes_output);
             if (SearchFilesResult::OpenFailure == result) {
                 continue;
             }
@@ -476,7 +498,9 @@ void search_files(
 
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        std::unique_ptr<OutputHandler> output_handler
+        std::unique_ptr<OutputHandler> output_handler,
+        uint64_t& bytes_scanned,
+        uint64_t& bytes_output
 ) {
     std::filesystem::path const archive_path{command_line_args.get_archive_path()};
     if (false == validate_archive_path(archive_path)) {
@@ -554,7 +578,9 @@ static bool search_archive(
             archive_reader,
             file_metadata_ix,
             output_handler,
-            ids_of_segments_to_search
+            ids_of_segments_to_search,
+            bytes_scanned,
+            bytes_output
     );
     file_metadata_ix_ptr.reset(nullptr);
 
@@ -581,8 +607,10 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
+    }
     clp::Profiler::init();
     clp::TimestampPattern::init();
+    clp::telemetry::init();
 
     CommandLineArguments command_line_args("clo");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
@@ -599,8 +627,12 @@ int main(int argc, char const* argv[]) {
     // mongocxx static init
     mongocxx::instance mongocxx_instance{};
     auto const& command = command_line_args.get_command();
+    
+    uint64_t bytes_scanned = 0;
+    uint64_t bytes_output = 0;
+    
     if (CommandLineArguments::Command::Search == command) {
-        if (false == search(command_line_args)) {
+        if (false == search(command_line_args, bytes_scanned, bytes_output)) {
             return -1;
         }
     } else if (CommandLineArguments::Command::ExtractIr == command) {
@@ -611,6 +643,9 @@ int main(int argc, char const* argv[]) {
         SPDLOG_ERROR("Command {} not implemented.", clp::enum_to_underlying_type(command));
         return -1;
     }
+
+    clp::telemetry::record_query_metrics(bytes_scanned, bytes_output);
+    clp::telemetry::shutdown();
 
     return 0;
 }
