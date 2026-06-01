@@ -22,6 +22,18 @@ Metrics are exported via the [OpenTelemetry Protocol
 
 `https://telemetry.yscope.io`
 
+:::{note}
+With the bundled OpenTelemetry Collector, `telemetry.endpoint` is the collector's export target. To
+use your own collector, remove `otel_collector` from `bundled` and set `otel_collector.host` /
+`otel_collector.port` to its OTLP/HTTP receiver.
+
+When you use your own collector, the bundled collector's resource detection and batching are not
+applied unless your collector config includes equivalent processors; your collector also controls
+filtering, redaction, aggregation, and forwarding. For a matching baseline, start from
+`components/package-template/src/etc/otel-collector/config.yaml` (Docker Compose) or the
+`otel-collector-config.yaml` embedded in `tools/deployment/package-helm/templates/configmap.yaml`
+(Helm).
+:::
 
 ## How to disable telemetry
 
@@ -44,7 +56,7 @@ Edit `clp-config.yaml`:
 ```yaml
 telemetry:
   disable: true
-  endpoint: "https://telemetry.yscope.io"  # or "https://your-own-otel-collector"
+  endpoint: "https://telemetry.yscope.io"
 ```
 :::
 :::{tab-item} Kubernetes
@@ -77,4 +89,3 @@ to disable telemetry for your entire organization.
 | not set | `false`     | —                | **yes**         | **No** — requests fail silently at the network level                   |
 | `true`  | `true`      | —                | no              | **No** — both agree                                                    |
 | not set | not set     | Y                | **yes**         | **No** — network blocking is independent of software settings          |
-

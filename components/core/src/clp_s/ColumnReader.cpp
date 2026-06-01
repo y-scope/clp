@@ -182,6 +182,20 @@ auto ClpStringColumnReader::extract_escaped_string_value_into_buffer(
     }
 }
 
+auto ClpStringColumnReader::extract_escaped_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer,
+        SimdJsonStringEscaper& escaper
+) -> void {
+    if (false == m_is_array) {
+        std::string tmp;
+        extract_string_value_into_buffer(cur_message, tmp);
+        escaper.escape(buffer, tmp);
+    } else {
+        extract_string_value_into_buffer(cur_message, buffer);
+    }
+}
+
 auto ClpStringColumnReader::get_encoded_id(uint64_t cur_message) -> int64_t {
     auto value = m_logtypes[cur_message];
     return ClpStringColumnWriter::get_encoded_log_dict_id(value);
@@ -223,6 +237,14 @@ auto VariableStringColumnReader::extract_escaped_string_value_into_buffer(
         std::string& buffer
 ) -> void {
     StringUtils::escape_json_string(buffer, m_var_dict->get_value(m_variables[cur_message]));
+}
+
+auto VariableStringColumnReader::extract_escaped_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer,
+        SimdJsonStringEscaper& escaper
+) -> void {
+    escaper.escape(buffer, m_var_dict->get_value(m_variables[cur_message]));
 }
 
 auto VariableStringColumnReader::get_variable_id(uint64_t cur_message) -> uint64_t {
