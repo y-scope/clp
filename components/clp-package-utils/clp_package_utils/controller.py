@@ -562,6 +562,19 @@ class BaseController(ABC):
             "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
         }
 
+        if self._clp_config.compression_worker.task_soft_time_limit is not None:
+            env_vars |= {
+                "CLP_COMPRESSION_WORKER_TASK_SOFT_TIME_LIMIT": str(
+                    self._clp_config.compression_worker.task_soft_time_limit
+                )
+            }
+        if self._clp_config.compression_worker.task_time_limit is not None:
+            env_vars |= {
+                "CLP_COMPRESSION_WORKER_TASK_TIME_LIMIT": str(
+                    self._clp_config.compression_worker.task_time_limit
+                )
+            }
+
         return env_vars
 
     def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
@@ -589,6 +602,19 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
+
+        if self._clp_config.query_worker.task_soft_time_limit is not None:
+            env_vars |= {
+                "CLP_QUERY_WORKER_TASK_SOFT_TIME_LIMIT": str(
+                    self._clp_config.query_worker.task_soft_time_limit
+                )
+            }
+        if self._clp_config.query_worker.task_time_limit is not None:
+            env_vars |= {
+                "CLP_QUERY_WORKER_TASK_TIME_LIMIT": str(
+                    self._clp_config.query_worker.task_time_limit
+                )
+            }
 
         return env_vars
 

@@ -99,9 +99,15 @@ telemetry:
 #
 #compression_worker:
 #  logging_level: "INFO"
+#  # Optional Celery task time limits, in seconds; null disables each limit.
+#  task_soft_time_limit: null
+#  task_time_limit: null
 #
 #query_worker:
 #  logging_level: "INFO"
+#  # Optional Celery task time limits, in seconds; null disables each limit.
+#  task_soft_time_limit: null
+#  task_time_limit: null
 #
 #webui:
 #  host: "localhost"

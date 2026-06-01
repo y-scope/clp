@@ -445,10 +445,16 @@ class QueryScheduler(BaseModel):
 
 class CompressionWorker(BaseModel):
     logging_level: LoggingLevel = "INFO"
+    # Optional Celery task time limits, in seconds; null disables each limit.
+    task_soft_time_limit: int | None = None
+    task_time_limit: int | None = None
 
 
 class QueryWorker(BaseModel):
     logging_level: LoggingLevel = "INFO"
+    # Optional Celery task time limits, in seconds; null disables each limit.
+    task_soft_time_limit: int | None = None
+    task_time_limit: int | None = None
 
 
 class Redis(BaseModel):

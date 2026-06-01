@@ -20,9 +20,12 @@ task_create_missing_queues = True
 result_persistent = True
 result_expires = 7200
 
-# Task time limits
-task_soft_time_limit = 270
-task_time_limit = 300
-
 broker_url = os.getenv("BROKER_URL")
 result_backend = os.getenv("RESULT_BACKEND")
+
+_soft_time_limit = os.getenv("CLP_COMPRESSION_WORKER_TASK_SOFT_TIME_LIMIT")
+if _soft_time_limit is not None and _soft_time_limit != "":
+    task_soft_time_limit = int(_soft_time_limit)
+_time_limit = os.getenv("CLP_COMPRESSION_WORKER_TASK_TIME_LIMIT")
+if _time_limit is not None and _time_limit != "":
+    task_time_limit = int(_time_limit)
