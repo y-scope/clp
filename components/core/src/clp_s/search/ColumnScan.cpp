@@ -31,6 +31,91 @@ using clp_s::search::ast::OrExpr;
 
 namespace clp_s::search {
 namespace {
+/**
+ * Compares a value against an operand using the given filter operation.
+ * @param operation Comparison operation to apply.
+ * @param value Value read from a column.
+ * @param operand Operand from the filter expression.
+ * @return Whether the comparison succeeds.
+ */
+template <typename T>
+[[nodiscard]] auto compare(FilterOperation operation, T value, T operand) -> bool;
+
+/**
+ * Checks whether the given filter operation is equality-based.
+ * @param operation Operation to check.
+ * @return true for equality and inequality operations, false otherwise.
+ */
+[[nodiscard]] auto is_equality_operation(FilterOperation operation) -> bool;
+
+/**
+ * Inverts a bitmap in place.
+ * @param bitmap Bitmap to invert.
+ */
+auto invert(ColumnScan::Bitmap& bitmap) -> void;
+
+/**
+ * Builds a bitmap for a filter over a basic typed column.
+ * @param num_messages Number of messages represented by the bitmap.
+ * @param reader_map Column readers keyed by column ID.
+ * @param column_id ID of the column to scan.
+ * @param operation Filter operation to apply.
+ * @param operand Operand from the filter expression.
+ * @return A bitmap indexed by message number, with nonzero entries for matching messages.
+ */
+template <typename T>
+[[nodiscard]] auto build_basic_filter(
+        uint64_t num_messages,
+        ColumnScan::BasicReaderMap const& reader_map,
+        int32_t column_id,
+        FilterOperation operation,
+        T operand
+) -> ColumnScan::Bitmap;
+
+/**
+ * Checks whether a CLP string value matches a query.
+ * @param reader Column reader containing the value to check.
+ * @param query Query to match against.
+ * @param row Row to check.
+ * @return Whether the row's string value matches the query.
+ */
+[[nodiscard]] auto
+clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t row) -> bool;
+
+/**
+ * Builds a bitmap for a filter over a CLP string column.
+ * @param num_messages Number of messages represented by the bitmap.
+ * @param reader_map Column readers keyed by column ID.
+ * @param column_id ID of the column to scan.
+ * @param operation Equality operation to apply.
+ * @param query Query to match against.
+ * @return A bitmap indexed by message number, with nonzero entries for matching messages.
+ */
+[[nodiscard]] auto build_clp_string_filter(
+        uint64_t num_messages,
+        ColumnScan::ClpStringReaderMap const& reader_map,
+        int32_t column_id,
+        FilterOperation operation,
+        clp::Query* query
+) -> ColumnScan::Bitmap;
+
+/**
+ * Builds a bitmap for a filter over a variable string column.
+ * @param num_messages Number of messages represented by the bitmap.
+ * @param reader_map Column readers keyed by column ID.
+ * @param column_id ID of the column to scan.
+ * @param operation Equality operation to apply.
+ * @param matching_vars Set of variable IDs that match the filter.
+ * @return A bitmap indexed by message number, with nonzero entries for matching messages.
+ */
+[[nodiscard]] auto build_var_string_filter(
+        uint64_t num_messages,
+        ColumnScan::VarStringReaderMap const& reader_map,
+        int32_t column_id,
+        FilterOperation operation,
+        std::unordered_set<int64_t> const* matching_vars
+) -> ColumnScan::Bitmap;
+
 template <typename T>
 [[nodiscard]] auto compare(FilterOperation operation, T value, T operand) -> bool {
     switch (operation) {
@@ -48,7 +133,7 @@ template <typename T>
             return value >= operand;
         case FilterOperation::EXISTS:
         case FilterOperation::NEXISTS:
-            return false;
+            return true;
     }
     return false;
 }
@@ -168,7 +253,7 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
 }  // namespace
 
 auto ColumnScan::try_create(
-        std::shared_ptr<ast::Expression> expression,
+        std::shared_ptr<ast::Expression> const& expression,
         BasicReaderMap const& basic_readers,
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
@@ -176,46 +261,34 @@ auto ColumnScan::try_create(
         VarMatchMap const& var_matches,
         uint64_t num_messages
 ) -> std::optional<ColumnScan> {
-    ColumnScan scan{
-            std::move(expression),
+    ColumnScan scan{num_messages};
+
+    if (false == can_build_node(expression.get(), clp_queries, var_matches)) {
+        return std::nullopt;
+    }
+
+    scan.m_matches = scan.build_node(
+            expression.get(),
             basic_readers,
             clp_string_readers,
             var_string_readers,
             clp_queries,
-            var_matches,
-            num_messages
-    };
-
-    if (false == scan.can_build_node(scan.m_expression.get())) {
-        return std::nullopt;
-    }
-
-    scan.m_matches = scan.build_node(scan.m_expression.get());
+            var_matches
+    );
     return std::move(scan);
 }
-
-ColumnScan::ColumnScan(
-        std::shared_ptr<ast::Expression> expression,
-        BasicReaderMap const& basic_readers,
-        ClpStringReaderMap const& clp_string_readers,
-        VarStringReaderMap const& var_string_readers,
-        ClpQueryMap const& clp_queries,
-        VarMatchMap const& var_matches,
-        uint64_t num_messages
-)
-        : m_expression{std::move(expression)},
-          m_basic_readers{&basic_readers},
-          m_clp_string_readers{&clp_string_readers},
-          m_var_string_readers{&var_string_readers},
-          m_clp_queries{&clp_queries},
-          m_var_matches{&var_matches},
-          m_num_messages{num_messages} {}
 
 auto ColumnScan::filter(uint64_t cur_message) -> bool {
     return 0 != m_matches[cur_message];
 }
 
-auto ColumnScan::can_build_node(ast::Expression* expr) const -> bool {
+ColumnScan::ColumnScan(uint64_t num_messages) : m_num_messages{num_messages} {}
+
+auto ColumnScan::can_build_node(
+        ast::Expression* expr,
+        ClpQueryMap const& clp_queries,
+        VarMatchMap const& var_matches
+) -> bool {
     if (nullptr == expr) {
         return false;
     }
@@ -245,14 +318,19 @@ auto ColumnScan::can_build_node(ast::Expression* expr) const -> bool {
             }
             continue;
         }
-        if (false == can_build_filter(dynamic_cast<FilterExpr*>(cur_expr))) {
+        auto* filter = dynamic_cast<FilterExpr*>(cur_expr);
+        if (false == can_build_filter(filter, clp_queries, var_matches)) {
             return false;
         }
     }
     return true;
 }
 
-auto ColumnScan::can_build_filter(FilterExpr* filter) const -> bool {
+auto ColumnScan::can_build_filter(
+        FilterExpr* filter,
+        ClpQueryMap const& clp_queries,
+        VarMatchMap const& var_matches
+) -> bool {
     if (nullptr == filter) {
         return false;
     }
@@ -273,9 +351,9 @@ auto ColumnScan::can_build_filter(FilterExpr* filter) const -> bool {
         case LiteralType::BooleanT:
             return is_equality_operation(operation);
         case LiteralType::ClpStringT:
-            return is_equality_operation(operation) && m_clp_queries->contains(filter);
+            return is_equality_operation(operation) && clp_queries.contains(filter);
         case LiteralType::VarStringT:
-            return is_equality_operation(operation) && m_var_matches->contains(filter);
+            return is_equality_operation(operation) && var_matches.contains(filter);
         case LiteralType::ArrayT:
         case LiteralType::NullT:
         case LiteralType::TimestampT:
@@ -288,7 +366,14 @@ auto ColumnScan::can_build_filter(FilterExpr* filter) const -> bool {
 
 // can_build_node validates the AST iteratively before this recursive bitmap construction runs.
 // NOLINTBEGIN(misc-no-recursion)
-auto ColumnScan::build_node(ast::Expression* expr) const -> Bitmap {
+auto ColumnScan::build_node(
+        ast::Expression* expr,
+        BasicReaderMap const& basic_readers,
+        ClpStringReaderMap const& clp_string_readers,
+        VarStringReaderMap const& var_string_readers,
+        ClpQueryMap const& clp_queries,
+        VarMatchMap const& var_matches
+) const -> Bitmap {
     assert(nullptr != expr);
 
     Bitmap result;
@@ -297,7 +382,14 @@ auto ColumnScan::build_node(ast::Expression* expr) const -> Bitmap {
         for (auto const& operand : and_expr->get_op_list()) {
             auto* child_expr = dynamic_cast<ast::Expression*>(operand.get());
             assert(nullptr != child_expr);
-            auto child = build_node(child_expr);
+            auto child = build_node(
+                    child_expr,
+                    basic_readers,
+                    clp_string_readers,
+                    var_string_readers,
+                    clp_queries,
+                    var_matches
+            );
             uint8_t any_set{0};
             for (size_t i{0}; i < result.size(); ++i) {
                 result[i] &= child[i];
@@ -312,7 +404,14 @@ auto ColumnScan::build_node(ast::Expression* expr) const -> Bitmap {
         for (auto const& operand : or_expr->get_op_list()) {
             auto* child_expr = dynamic_cast<ast::Expression*>(operand.get());
             assert(nullptr != child_expr);
-            auto child = build_node(child_expr);
+            auto child = build_node(
+                    child_expr,
+                    basic_readers,
+                    clp_string_readers,
+                    var_string_readers,
+                    clp_queries,
+                    var_matches
+            );
             uint8_t all_set{1};
             for (size_t i{0}; i < result.size(); ++i) {
                 result[i] |= child[i];
@@ -329,7 +428,14 @@ auto ColumnScan::build_node(ast::Expression* expr) const -> Bitmap {
             Bitmap empty(m_num_messages, 0);
             return empty;
         }
-        result = build_filter(filter);
+        result = build_filter(
+                filter,
+                basic_readers,
+                clp_string_readers,
+                var_string_readers,
+                clp_queries,
+                var_matches
+        );
     }
 
     if (expr->is_inverted()) {
@@ -340,7 +446,14 @@ auto ColumnScan::build_node(ast::Expression* expr) const -> Bitmap {
 
 // NOLINTEND(misc-no-recursion)
 
-auto ColumnScan::build_filter(FilterExpr* filter) const -> Bitmap {
+auto ColumnScan::build_filter(
+        FilterExpr* filter,
+        BasicReaderMap const& basic_readers,
+        ClpStringReaderMap const& clp_string_readers,
+        VarStringReaderMap const& var_string_readers,
+        ClpQueryMap const& clp_queries,
+        VarMatchMap const& var_matches
+) const -> Bitmap {
     assert(nullptr != filter);
 
     Bitmap bitmap(m_num_messages, 0);
@@ -362,7 +475,7 @@ auto ColumnScan::build_filter(FilterExpr* filter) const -> Bitmap {
             }
             return build_basic_filter(
                     m_num_messages,
-                    *m_basic_readers,
+                    basic_readers,
                     column_id,
                     operation,
                     operand_value
@@ -375,7 +488,7 @@ auto ColumnScan::build_filter(FilterExpr* filter) const -> Bitmap {
             }
             return build_basic_filter(
                     m_num_messages,
-                    *m_basic_readers,
+                    basic_readers,
                     column_id,
                     operation,
                     operand_value
@@ -388,27 +501,27 @@ auto ColumnScan::build_filter(FilterExpr* filter) const -> Bitmap {
             }
             return build_basic_filter(
                     m_num_messages,
-                    *m_basic_readers,
+                    basic_readers,
                     column_id,
                     operation,
                     static_cast<uint8_t>(operand_value)
             );
         }
         case LiteralType::ClpStringT: {
-            auto* const query = m_clp_queries->at(filter);
+            auto* const query = clp_queries.at(filter);
             return build_clp_string_filter(
                     m_num_messages,
-                    *m_clp_string_readers,
+                    clp_string_readers,
                     column_id,
                     operation,
                     query
             );
         }
         case LiteralType::VarStringT: {
-            auto const* matching_vars = m_var_matches->at(filter);
+            auto const* matching_vars = var_matches.at(filter);
             return build_var_string_filter(
                     m_num_messages,
-                    *m_var_string_readers,
+                    var_string_readers,
                     column_id,
                     operation,
                     matching_vars
