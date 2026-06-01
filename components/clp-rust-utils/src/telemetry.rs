@@ -37,9 +37,7 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterPro
 
     let reader = PeriodicReader::builder(exporter).build();
 
-    let provider = SdkMeterProvider::builder()
-        .with_reader(reader)
-        .build();
+    let provider = SdkMeterProvider::builder().with_reader(reader).build();
 
     global::set_meter_provider(provider.clone());
     Ok(Some(provider))
