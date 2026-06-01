@@ -243,6 +243,25 @@ private:
                     parent_matches
     ) -> SchemaNode::id_t;
 
+    /**
+     * Attempts to parse a string lexeme as a float and add it to the current parsed message
+     * with the appropriate schema node type (Float, FormattedFloat, or DictionaryFloat).
+     *
+     * Respects m_retain_float_format for format preservation, falling back to plain Float
+     * when format preservation is not requested or the format can't be preserved.
+     *
+     * @param lexeme The string to parse as a float.
+     * @param parent_node_id The parent schema tree node ID.
+     * @param rule_name The rule name for the schema tree node key.
+     * @return The schema node ID of the added float node, or std::nullopt if the lexeme
+     *         cannot be parsed as a float.
+     */
+    auto try_add_float_value(
+            std::string_view lexeme,
+            SchemaNode::id_t parent_node_id,
+            std::string_view rule_name
+    ) -> std::optional<SchemaNode::id_t>;
+
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
 

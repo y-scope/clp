@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -1544,7 +1545,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 "genStamp",
                 "poolID",
                 "poolTimestamp",
-                "byteValue",
                 "portNum",
                 "port",
                 "memory",
@@ -1598,28 +1598,31 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
                 "metric_value",
                 "size_value",
         }};
-        static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT", "byteValue"}};
-        // TODO clpp: handle floats too
+        auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
+        auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
+
         if (encoded_variable_t var{0};
-            cIntSet.contains(match->ffi_pointers.rule_name.as_cpp_view())
+            cIntSet.contains(rule_name)
             && clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                    match->ffi_pointers.lexeme.as_cpp_view(),
+                    lexeme,
                     var
             ))
         {
-            m_current_schema.insert_unordered(m_archive_writer->add_node(
-                    parent_node_id,
-                    NodeType::Integer,
-                    match->ffi_pointers.rule_name.as_cpp_view()
-            ));
+            m_current_schema.insert_unordered(
+                    m_archive_writer->add_node(parent_node_id, NodeType::Integer, rule_name)
+            );
             m_current_parsed_message.add_unordered_value(var);
+        } else if (auto const float_node_id{try_add_float_value(lexeme, parent_node_id, rule_name)};
+                   float_node_id.has_value())
+        {
+            m_current_schema.insert_unordered(float_node_id.value());
         } else {
             m_current_schema.insert_unordered(m_archive_writer->add_node(
                     parent_node_id,
                     NodeType::VarString,
-                    match->ffi_pointers.rule_name.as_cpp_view()
+                    rule_name
             ));
-            m_current_parsed_message.add_unordered_value(match->ffi_pointers.lexeme.as_cpp_view());
+            m_current_parsed_message.add_unordered_value(lexeme);
         }
 
         log_shape.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
@@ -1715,6 +1718,43 @@ auto JsonParser::get_parent_schema_node(
             parent.ffi_pointers.rule_name.as_cpp_view()
     )};
     m_current_schema.insert_unordered(node_id);
+    return node_id;
+}
+auto JsonParser::try_add_float_value(
+        std::string_view lexeme,
+        SchemaNode::id_t parent_node_id,
+        std::string_view rule_name
+) -> std::optional<SchemaNode::id_t> {
+    static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT", "byteValue"}};
+    if (false == cFloatSet.contains(rule_name)) {
+        return std::nullopt;
+    }
+
+    double double_value{};
+    auto const* const lexeme_end{lexeme.data() + lexeme.size()};
+    auto const result{std::from_chars(lexeme.data(), lexeme_end, double_value)};
+    if (result.ptr != lexeme_end || std::errc{} != result.ec) {
+        return std::nullopt;
+    }
+
+    if (m_retain_float_format) {
+        auto const float_format_result{get_float_encoding(lexeme)};
+        if (false == float_format_result.has_error()
+            && round_trip_is_identical(lexeme, double_value, float_format_result.value()))
+        {
+            auto const node_id{m_archive_writer->add_node(
+                    parent_node_id, NodeType::FormattedFloat, rule_name)};
+            m_current_parsed_message.add_unordered_value(double_value, float_format_result.value());
+            return node_id;
+        }
+        auto const node_id{m_archive_writer->add_node(
+                parent_node_id, NodeType::DictionaryFloat, rule_name)};
+        m_current_parsed_message.add_unordered_value(std::string{lexeme});
+        return node_id;
+    }
+
+    auto const node_id{m_archive_writer->add_node(parent_node_id, NodeType::Float, rule_name)};
+    m_current_parsed_message.add_unordered_value(double_value);
     return node_id;
 }
 }  // namespace clp_s
