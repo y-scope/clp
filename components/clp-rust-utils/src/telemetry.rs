@@ -1,10 +1,7 @@
 use std::env;
 
 use opentelemetry::global;
-use opentelemetry_sdk::{
-    Resource,
-    metrics::{PeriodicReader, SdkMeterProvider},
-};
+use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 
 use crate::{Error, clp_config::package::config::Telemetry};
 
@@ -40,11 +37,8 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterPro
 
     let reader = PeriodicReader::builder(exporter).build();
 
-    let resource = Resource::builder().build();
-
     let provider = SdkMeterProvider::builder()
         .with_reader(reader)
-        .with_resource(resource)
         .build();
 
     global::set_meter_provider(provider.clone());
