@@ -38,7 +38,7 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<SdkMeterPro
         .build()
         .map_err(|e| Error::TelemetryExporterBuild(e.to_string()))?;
 
-    let reader = PeriodicReader::builder(exporter, opentelemetry_sdk::runtime::Tokio).build();
+    let reader = PeriodicReader::builder(exporter).build();
 
     let resource = Resource::builder().build();
 
