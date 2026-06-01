@@ -89,7 +89,12 @@ public:
     auto schema_init(int32_t schema_id) -> EvaluatedValue;
 
     /**
-     * Initializes readers for the schema table and returns the filter implementation to use.
+     * Selects a filtering implementation, and prepares a filter on a given ERT.
+     *
+     * Note: This method must be called after schema_init.
+     *
+     * @param reader A reader for an ERT.
+     * @return The filtering implementation selected by QueryRunner.
      */
     [[nodiscard]] auto prepare_filter(SchemaReader& reader) -> FilterClass&;
 
