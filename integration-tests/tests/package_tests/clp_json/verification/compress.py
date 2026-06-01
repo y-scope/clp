@@ -30,4 +30,30 @@ def verify_compress_structured_clp_json(
     return action.verify_returncode()
 
 
-# TODO: add verify_compress_unstructured_clp_json() and verify_compress_ir_clp_json().
+def verify_compress_unstructured_clp_json(
+    action: ClpAction,
+    clp_package: ClpPackage,  # noqa: ARG001
+    original_dataset: SampleDataset,
+) -> ClpVerificationResult:
+    """
+    Verifies that the clp-json `clp_package` has compressed the unstructured `original_dataset`
+    correctly by decompressing the compressed logs and comparing the decompressed logs to the
+    original dataset.
+
+    :param action:
+    :param clp_package:
+    :param original_dataset:
+    :return: A `ClpVerificationResult` indicating whether the round-trip matched the original logs.
+    """
+    if not isinstance(action.args, CompressArgs):
+        err_msg = "'verify_compress_unstructured_clp_json' requires a 'CompressArgs' action."
+        raise TypeError(err_msg)
+    if not action.args.unstructured or not original_dataset.metadata.unstructured:
+        err_msg = "'verify_compress_unstructured_clp_json' can only verify unstructured datasets."
+        raise ValueError(err_msg)
+
+    # TODO: Waiting for PR 1299 (clp-json decompression) to be merged.
+    return action.verify_returncode()
+
+
+# TODO: add verify_compress_ir_clp_json().
