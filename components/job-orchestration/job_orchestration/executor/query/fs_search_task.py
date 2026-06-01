@@ -22,8 +22,6 @@ from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
-    _bytes_output_counter,
-    emit_bytes_scanned,
     report_task_failure,
     run_query_task,
 )
@@ -264,7 +262,7 @@ def search(
             start_time=start_time,
         )
 
-    task_results, _, stdout_byte_count = run_query_task(
+    task_results, _ = run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
         clp_logs_dir=clp_logs_dir,
@@ -275,17 +273,6 @@ def search(
         task_id=task_id,
         start_time=start_time,
     )
-
-    # Emit telemetry counters.
-    # bytes_scanned: the uncompressed size of the archive that was queried.
-    emit_bytes_scanned(
-        sql_adapter=sql_adapter,
-        clp_metadata_db_conn_params=clp_metadata_db_conn_params,
-        archive_id=archive_id,
-        dataset=dataset,
-        logger=logger,
-    )
-    _bytes_output_counter.add(stdout_byte_count)
 
     storage_config = worker_config.stream_output.storage
     if (
