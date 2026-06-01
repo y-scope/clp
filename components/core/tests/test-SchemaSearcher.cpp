@@ -71,7 +71,7 @@ TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
 TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_search]") {
     auto const expected_logtype_string{generate_expected_logtype_string({'i'})};
 
-    auto const interpretation{{c_int, "100"}};
+    std::vector<log_surgeon::SubQuery> const interpretation{{c_int, "100"}};
 
     auto const wildcard_encodable_positions{
             clp::SchemaSearcherTest::get_wildcard_encodable_positions(interpretation)
@@ -94,7 +94,7 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
             generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})
     };
 
-    auto const interpretation{
+    std::vector<log_surgeon::SubQuery> const interpretation{
             S("text"),
             {c_int, "100"},
             {c_float, "32.2"},
@@ -111,7 +111,7 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
     REQUIRE(num_combos == 4);
     unordered_set<string> logtype_strings;
     for (uint64_t mask{0}; mask < num_combos; ++mask) {
-        vector<bool> mask_encoded_flags(interpretation.get_logtype().size(), false);
+        vector<bool> mask_encoded_flags(interpretation.size(), false);
         for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
             mask_encoded_flags[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
         }
@@ -436,4 +436,5 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
+}
 }
