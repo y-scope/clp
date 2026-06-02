@@ -125,22 +125,33 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Creates image reference for the CLP Package.
+Creates an image reference for a component.
 
+For components with variants (e.g., database with mariadb/mysql), pass the "variant" parameter.
+If no variant is provided, the component is looked up directly under .Values.image.
+
+For the clpPackage component, if no tag is specified, the chart's appVersion is used as a default.
+For all other components, the tag must be specified in values.yaml.
+
+@param {object} root Root template context (required)
+@param {string} component Key under .Values.image (e.g., "clpPackage", "redis", "database")
+@param {string} [variant] Sub-key for components with variants (e.g., "mariadb" or "mysql" for "database")
 @return {string} Full image reference (repository:tag)
 */}}
 {{- define "clp.image.ref" -}}
-{{- $tag := .Values.image.clpPackage.tag | default .Chart.AppVersion }}
-{{- printf "%s:%s" .Values.image.clpPackage.repository $tag }}
-{{- end }}
-
-{{/*
-Creates image reference for the kubectl image.
-
-@return {string} Full image reference (repository@digest)
-*/}}
-{{- define "clp.kubectl.image.ref" -}}
-{{- printf "%s@%s" .Values.image.kubectl.repository .Values.image.kubectl.digest }}
+{{- $img := index .root.Values.image .component -}}
+{{- if hasKey . "variant" -}}
+  {{- $img = index $img .variant -}}
+{{- end -}}
+{{- $tag := $img.tag -}}
+{{- if not $tag -}}
+  {{- if eq .component "clpPackage" -}}
+    {{- $tag = .root.Chart.AppVersion -}}
+  {{- else -}}
+    {{- fail (printf "image.%s.tag is required" .component) -}}
+  {{- end -}}
+{{- end -}}
+{{- printf "%s:%s" $img.repository $tag -}}
 {{- end }}
 
 {{/*
@@ -502,7 +513,7 @@ should be the job name suffix.
 */}}
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
-image: {{ include "clp.kubectl.image.ref" .root | quote }}
+image: {{ include "clp.image.ref" (dict "root" .root "component" "kubectl") | quote }}
 command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}

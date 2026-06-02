@@ -9,6 +9,15 @@ image:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
     tag: "main"
+  database:
+    mariadb:
+      repository: "mariadb"
+      pullPolicy: "Always"
+      tag: "10.11.16"
+    mysql:
+      repository: "mysql"
+      pullPolicy: "Always"
+      tag: "8.0.46"
   curl:
     repository: "curlimages/curl"
     pullPolicy: "IfNotPresent"
@@ -16,7 +25,7 @@ image:
   kubectl:
     repository: "bitnami/kubectl"
     pullPolicy: "IfNotPresent"
-    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
+    tag: "sha256-98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
   otelCollector:
     repository: >-
       ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
@@ -30,6 +39,18 @@ image:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
     pullPolicy: "IfNotPresent"
     tag: "clp-v0.10.0-fix.1"
+  queue:
+    repository: "rabbitmq"
+    pullPolicy: "Always"
+    tag: "4.2.6"
+  redis:
+    repository: "redis"
+    pullPolicy: "Always"
+    tag: "7.4.8"
+  resultsCache:
+    repository: "mongo"
+    pullPolicy: "Always"
+    tag: "8.0.21"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.

@@ -32,7 +32,7 @@ spec:
         - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "webui"
-          image: "{{ include "clp.image.ref" . }}"
+          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"

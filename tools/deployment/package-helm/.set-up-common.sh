@@ -45,11 +45,13 @@ prepare_environment() {
 # flags for using it. If image is not specified, returns empty string.
 #
 # @param {string} cluster_name Name of the kind cluster
+# @param {string} component Image component name (e.g., "clpPackage", "redis", "database")
 # @param {string} [image] Docker image (e.g., "clp-package:dev-junhao-a6bf")
 # @return Prints helm --set flags to stdout
 get_image_helm_args() {
     local cluster_name=$1
-    local image="${2:-}"
+    local component=$2
+    local image="${3:-}"
 
     if [[ -z "${image}" ]]; then
         return
@@ -67,9 +69,9 @@ get_image_helm_args() {
         echo "Error: '${image}' is not a valid image reference (expected repo:tag)." >&2
         return 1
     fi
-    echo "--set" "image.clpPackage.repository=${repo}" \
-         "--set" "image.clpPackage.tag=${tag}" \
-         "--set" "image.clpPackage.pullPolicy=Never"
+    echo "--set" "image.${component}.repository=${repo}" \
+         "--set" "image.${component}.tag=${tag}" \
+         "--set" "image.${component}.pullPolicy=Never"
 }
 
 # Parses common arguments shared across set-up scripts.

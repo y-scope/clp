@@ -34,7 +34,7 @@ spec:
           ) | nindent 10 }}
       containers:
         - name: "log-ingestor"
-          image: "{{ include "clp.image.ref" . }}"
+          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             {{- include "clp.telemetryEnv" . | nindent 12 }}
