@@ -32,7 +32,7 @@ namespace {
 auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle;
 
 auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle {
-    std::string rule_set_string{"delimiters: \n"};
+    std::string rule_set_string{"delimiters: \\r\\n\n"};
     for (auto const& schema_rule : schema_rules) {
         rule_set_string += schema_rule + "\n";
     }
@@ -136,7 +136,6 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     constexpr epochtime_t cNoBeginTimestamp{0};
     constexpr epochtime_t cNoEndTimestamp{0};
     constexpr bool cIgnoreCase{true};
-    constexpr bool cUseHeuristic{false};
 
     auto parser{make_test_parser(
             {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ &]*\d+[^ &]*)"}}
