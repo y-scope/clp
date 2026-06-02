@@ -389,12 +389,12 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
 
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, false, {1LL, 2LL}};
-    REQUIRE(4 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
+    REQUIRE(4 == sub_queries.size());
 }
 
 TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]") {
@@ -429,10 +429,10 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
 
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, true, {1LL}};
-    REQUIRE(4 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
+    REQUIRE(4 == sub_queries.size());
 }

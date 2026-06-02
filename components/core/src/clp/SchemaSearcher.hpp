@@ -298,7 +298,7 @@ auto SchemaSearcher::process_schema_var_token(
     bool const is_float{var_type.ends_with("float")};
     bool contains_wildcard{false};
     for (size_t j{0}; j < variable_token.value.size(); ++j) {
-        if ('*' == variable_token.value[j]) {
+        if ('*' == variable_token.value[j] || '?' == variable_token.value[j]) {
             if (0 == j || '\\' != variable_token.value[j - 1]) {
                 contains_wildcard = true;
                 break;
