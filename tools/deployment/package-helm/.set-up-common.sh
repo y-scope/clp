@@ -74,38 +74,12 @@ get_image_helm_args() {
          "--set" "image.${component}.pullPolicy=Never"
 }
 
-# Returns helm --set flags for all component images that have been specified via CLI flags.
-# Uses the global variables set by parse_common_args.
-#
-# @param {string} cluster_name Name of the kind cluster
-# @return Prints helm --set flags to stdout
-get_all_image_helm_args() {
-    local cluster_name=$1
-    local args=""
-    local component_args
-
-    component_args=$(get_image_helm_args "${cluster_name}" "clpPackage" "${CLP_PACKAGE_IMAGE}") && args="${args} ${component_args}"
-    component_args=$(get_image_helm_args "${cluster_name}" "database.mariadb" "${DATABASE_IMAGE}") && args="${args} ${component_args}"
-    component_args=$(get_image_helm_args "${cluster_name}" "redis" "${REDIS_IMAGE}") && args="${args} ${component_args}"
-    component_args=$(get_image_helm_args "${cluster_name}" "queue" "${QUEUE_IMAGE}") && args="${args} ${component_args}"
-    component_args=$(get_image_helm_args "${cluster_name}" "resultsCache" "${RESULTS_CACHE_IMAGE}") && args="${args} ${component_args}"
-    component_args=$(get_image_helm_args "${cluster_name}" "kubectl" "${KUBECTL_IMAGE}") && args="${args} ${component_args}"
-
-    echo "${args# }"
-}
-
 # Parses common arguments shared across set-up scripts.
-# Sets CLP_PACKAGE_IMAGE, DATABASE_IMAGE, REDIS_IMAGE, QUEUE_IMAGE,
-# RESULTS_CACHE_IMAGE, KUBECTL_IMAGE, and ENABLE_PRESTO global variables.
+# Sets CLP_PACKAGE_IMAGE and ENABLE_PRESTO global variables.
 #
 # @param {string[]} args Script arguments
 parse_common_args() {
     CLP_PACKAGE_IMAGE=""
-    DATABASE_IMAGE=""
-    REDIS_IMAGE=""
-    QUEUE_IMAGE=""
-    RESULTS_CACHE_IMAGE=""
-    KUBECTL_IMAGE=""
     ENABLE_PRESTO="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -115,46 +89,6 @@ parse_common_args() {
                     exit 1
                 fi
                 CLP_PACKAGE_IMAGE="$2"
-                shift 2
-                ;;
-            --database-image)
-                if [[ $# -lt 2 || "$2" == --* ]]; then
-                    echo "Error: '--database-image' requires a value." >&2
-                    exit 1
-                fi
-                DATABASE_IMAGE="$2"
-                shift 2
-                ;;
-            --redis-image)
-                if [[ $# -lt 2 || "$2" == --* ]]; then
-                    echo "Error: '--redis-image' requires a value." >&2
-                    exit 1
-                fi
-                REDIS_IMAGE="$2"
-                shift 2
-                ;;
-            --queue-image)
-                if [[ $# -lt 2 || "$2" == --* ]]; then
-                    echo "Error: '--queue-image' requires a value." >&2
-                    exit 1
-                fi
-                QUEUE_IMAGE="$2"
-                shift 2
-                ;;
-            --results-cache-image)
-                if [[ $# -lt 2 || "$2" == --* ]]; then
-                    echo "Error: '--results-cache-image' requires a value." >&2
-                    exit 1
-                fi
-                RESULTS_CACHE_IMAGE="$2"
-                shift 2
-                ;;
-            --kubectl-image)
-                if [[ $# -lt 2 || "$2" == --* ]]; then
-                    echo "Error: '--kubectl-image' requires a value." >&2
-                    exit 1
-                fi
-                KUBECTL_IMAGE="$2"
                 shift 2
                 ;;
             --presto)
