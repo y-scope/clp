@@ -161,6 +161,6 @@ helm install test "${script_dir}" \
     --set "scheduling.webui.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.mcpServer.nodeSelector.yscope\.io/nodeType=core" \
     $(get_presto_helm_args) \
-    $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
+    $(get_all_image_helm_args "${CLUSTER_NAME}")
 
 wait_for_cluster_ready
