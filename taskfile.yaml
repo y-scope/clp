@@ -171,6 +171,7 @@ tasks:
     cmds:
       - task: "core-generate"
       - task: "core-build"
+      - task: "toolchains:rust"
 
   core-generate:
     sources: &core_source_files
