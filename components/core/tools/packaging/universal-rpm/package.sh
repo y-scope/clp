@@ -54,6 +54,28 @@ PREFIX=/usr \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 
+# --- Generate SBOM sidecar ----------------------------------------------------
+#
+# The sidecar name appends `.sbom.cdx.json` to the full .rpm filename so
+# the package format is encoded in the sidecar's own filename and the
+# package-to-sidecar relationship is a fixed-string suffix:
+#   clp-core-<rpm_version>-1.<arch>.rpm
+#     -> clp-core-<rpm_version>-1.<arch>.rpm.sbom.cdx.json
+# Release: 1 is hardcoded in the spec template that follows.
+# See components/core/tools/packaging/SBOM.md for the merge model.
+
+PKG_BASENAME="clp-core-${rpm_version}-1.${PKG_ARCH}.rpm" \
+PKG_NAME="clp-core" \
+PKG_VERSION="${rpm_version}" \
+PKG_ARCH="${PKG_ARCH}" \
+PKG_FORMAT="rpm" \
+STAGING_DIR="${staging}" \
+STAGING_PREFIX="/usr" \
+BUILD_DIR="${BIN_DIR}" \
+DEPS_FAMILY="manylinux_2_28" \
+OUTPUT_DIR="${output_dir}" \
+    "${script_dir}/../common/generate-sbom.sh"
+
 # --- Build .rpm via rpmbuild --------------------------------------------------
 
 rpmbuild_dir="/tmp/clp-rpmbuild"

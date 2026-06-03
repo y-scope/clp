@@ -67,6 +67,28 @@ PREFIX=/usr \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 
+# --- Generate SBOM sidecar ----------------------------------------------------
+#
+# The sidecar name appends `.sbom.cdx.json` to the full .apk filename so
+# the package format is encoded in the sidecar's own filename and the
+# package-to-sidecar relationship is a fixed-string suffix:
+#   clp-core-<apk_version>-r0.apk
+#     -> clp-core-<apk_version>-r0.apk.sbom.cdx.json
+# pkgrel=0 is hardcoded in the APKBUILD template that follows.
+# See components/core/tools/packaging/SBOM.md for the merge model.
+
+PKG_BASENAME="clp-core-${apk_version}-r0.apk" \
+PKG_NAME="clp-core" \
+PKG_VERSION="${apk_version}" \
+PKG_ARCH="${PKG_ARCH}" \
+PKG_FORMAT="apk" \
+STAGING_DIR="${staging}" \
+STAGING_PREFIX="/usr" \
+BUILD_DIR="${BIN_DIR}" \
+DEPS_FAMILY="musllinux_1_2" \
+OUTPUT_DIR="${output_dir}" \
+    "${script_dir}/../common/generate-sbom.sh"
+
 # --- Build .apk via abuild ----------------------------------------------------
 
 abuild_dir="/tmp/clp-abuild"

@@ -55,6 +55,27 @@ PREFIX=/usr \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 
+# --- Generate SBOM sidecar --------------------------------------------------
+#
+# The sidecar name appends `.sbom.cdx.json` to the full .deb filename so
+# the package format is encoded in the sidecar's own filename and the
+# package-to-sidecar relationship is a fixed-string suffix:
+#   clp-core_<version>_<arch>.deb
+#     -> clp-core_<version>_<arch>.deb.sbom.cdx.json
+# See components/core/tools/packaging/SBOM.md for the merge model.
+
+PKG_BASENAME="clp-core_${deb_version}_${PKG_ARCH}.deb" \
+PKG_NAME="clp-core" \
+PKG_VERSION="${deb_version}" \
+PKG_ARCH="${PKG_ARCH}" \
+PKG_FORMAT="deb" \
+STAGING_DIR="${staging}" \
+STAGING_PREFIX="/usr" \
+BUILD_DIR="${BIN_DIR}" \
+DEPS_FAMILY="manylinux_2_28" \
+OUTPUT_DIR="${output_dir}" \
+    "${script_dir}/../common/generate-sbom.sh"
+
 # --- Create DEBIAN/control ----------------------------------------------------
 
 mkdir -p "${staging}/DEBIAN"

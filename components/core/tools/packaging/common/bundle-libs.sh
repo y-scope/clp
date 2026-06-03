@@ -16,6 +16,16 @@
 # After this script completes, the staging directory contains:
 #   ${DESTDIR}${PREFIX}/bin/{clg,clo,clp,clp-s,indexer,log-converter,reducer-server}
 #   ${DESTDIR}${PREFIX}/lib/clp/{bundled .so files}
+#   ${DESTDIR}/.bundled-os-packages.txt  Names of OS packages that own the
+#                                        bundled .so files (one per line,
+#                                        sorted, deduped). Consumed by
+#                                        generate-sbom.sh to force the
+#                                        corresponding syft components to
+#                                        scope: required even if the
+#                                        build-only denylist would otherwise
+#                                        mark them optional. This is the
+#                                        authoritative source of truth for
+#                                        "what ships at runtime".
 #
 # Required environment variables:
 #   DESTDIR  Staging directory — will be wiped and recreated
@@ -82,6 +92,13 @@ mkdir -p "${DESTDIR}${prefix}/bin" "${DESTDIR}${lib_install_dir}"
 
 # --- Collect shared library dependencies -------------------------------------
 
+# Per-bin ldd output is filtered by EXCLUDE_PATTERN, then each surviving
+# library path is recorded so the package-resolution step below can map
+# them back to OS package names. The file is unsorted/duplicated here;
+# uniq+sort happens once per staging dir below.
+bundled_sources_tmp="${DESTDIR}/.bundled-lib-sources.tmp"
+: > "${bundled_sources_tmp}"
+
 echo "==> Collecting shared library dependencies..."
 for bin in "${BINARIES[@]}"; do
     bin_path="${BIN_DIR}/${bin}"
@@ -109,6 +126,10 @@ for bin in "${BINARIES[@]}"; do
             cp --dereference "${lib_path}" "${DESTDIR}${lib_install_dir}/${lib_name}"
             echo "    Bundled: ${lib_name}"
         fi
+        # Record the source path even on subsequent occurrences so the
+        # package resolver sees the full set if two binaries pulled in
+        # the same lib from different paths (rare but possible).
+        echo "${lib_path}" >> "${bundled_sources_tmp}"
     done
 done
 
@@ -132,5 +153,81 @@ for bin in "${BINARIES[@]}"; do
     strip "${DESTDIR}${prefix}/bin/${bin}"
     echo "    Installed: ${bin}"
 done
+
+# --- Resolve bundled libraries to owning OS packages -------------------------
+#
+# Map each bundled .so back to the OS package that owns it, then write the
+# deduped name set to .bundled-os-packages.txt. generate-sbom.py uses this
+# file to force scope: required on the corresponding syft components,
+# overriding the build-only denylist. The structural override is what makes
+# the denylist safe to evolve: if a future iteration accidentally lists a
+# package whose .so is in /usr/lib/clp/, this file still keeps it `required`.
+#
+# Resolver per builder image:
+#   manylinux (rpm db):  rpm -qf --queryformat '%{NAME}\n' <path>
+#   musllinux (apk db):  apk info --who-owns <path>, strip "-<ver>-r<rel>"
+#                        suffix via a regex on Alpine's version grammar
+#                        (always ends in `-r<digits>`; the chunk before
+#                        starts with a digit and is .-separated).
+#   debian/ubuntu (dpkg, defensive — not the current builder set): dpkg -S
+#
+# If no recognized package manager is available, write an empty file and
+# log a warning — the SBOM merger treats an empty manifest as "no
+# structural override available" and falls back to denylist-only policy.
+
+echo "==> Resolving bundled libraries to OS packages..."
+bundled_pkgs_file="${DESTDIR}/.bundled-os-packages.txt"
+: > "${bundled_pkgs_file}"
+if [[ -s "${bundled_sources_tmp}" ]]; then
+    sort -u "${bundled_sources_tmp}" -o "${bundled_sources_tmp}"
+    n_libs=$(wc -l < "${bundled_sources_tmp}" | tr -d ' ')
+
+    if command -v rpm &>/dev/null; then
+        resolver_kind="rpm"
+        while read -r p; do
+            rpm -qf --queryformat '%{NAME}\n' "${p}" 2>/dev/null || true
+        done < "${bundled_sources_tmp}" \
+            | sort -u > "${bundled_pkgs_file}"
+    elif command -v apk &>/dev/null; then
+        resolver_kind="apk"
+        while read -r p; do
+            apk info --who-owns "${p}" 2>/dev/null || true
+        done < "${bundled_sources_tmp}" \
+            | python3 -c '
+import sys, re
+# Format: "<path> is owned by <pkgname>-<version>-r<release>"
+# <version> always starts with a digit and contains no dashes; the trailing
+# "-r<digits>" is mandatory. Strip both to recover <pkgname>.
+pat = re.compile(r"is owned by (.+?)-\d[^-\s]*-r\d+\s*$")
+for line in sys.stdin:
+    m = pat.search(line)
+    if m:
+        print(m.group(1))
+' \
+            | sort -u > "${bundled_pkgs_file}"
+    elif command -v dpkg &>/dev/null; then
+        resolver_kind="dpkg"
+        while read -r p; do
+            dpkg -S "${p}" 2>/dev/null | awk -F: '{print $1; exit}'
+        done < "${bundled_sources_tmp}" \
+            | sort -u > "${bundled_pkgs_file}"
+    else
+        echo "WARNING: no rpm/apk/dpkg available; bundled-package manifest" \
+             "will be empty (denylist override disabled)" >&2
+        resolver_kind="none"
+    fi
+
+    n_pkgs=$(wc -l < "${bundled_pkgs_file}" | tr -d ' ')
+    echo "    Resolved ${n_libs} bundled libraries → ${n_pkgs} OS packages" \
+         "via ${resolver_kind}"
+    # Warn (but do not fail) if the resolver mapped 0 packages — that
+    # indicates either an empty staging dir or a resolver bug. The SBOM
+    # build will still succeed with no structural override.
+    if [[ "${n_pkgs}" == "0" && "${resolver_kind}" != "none" ]]; then
+        echo "WARNING: ${resolver_kind} resolved 0 owning packages for" \
+             "${n_libs} bundled libraries — check the resolver output" >&2
+    fi
+fi
+rm -f "${bundled_sources_tmp}"
 
 echo "==> Bundling complete."

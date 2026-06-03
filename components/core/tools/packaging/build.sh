@@ -66,6 +66,16 @@ if ! command -v docker &>/dev/null; then
     exit 1
 fi
 
+# init.sh below populates the tools/yscope-dev-utils submodule via git or,
+# in a non-git checkout, via a tarball download performed by Python. Both
+# paths are required to work, so git and python3 are mandatory.
+for tool in git python3; do
+    if ! command -v "${tool}" &>/dev/null; then
+        echo "ERROR: ${tool} is required (used by tools/scripts/deps-download/init.sh)" >&2
+        exit 1
+    fi
+done
+
 # --- Resolve defaults --------------------------------------------------------
 
 valid_formats="deb rpm apk"
@@ -128,10 +138,29 @@ echo "    Arches:   ${arch_list[*]}"
 echo "    Output:   ${output_dir}"
 echo ""
 
-# Remove stale packages from the output directory (only for formats being built)
+# Populate the tools/yscope-dev-utils submodule before any container work.
+# taskfiles/deps/main.yaml `include`s files from this submodule, so
+# `task deps:core` inside the container fails if it is missing. init.sh
+# uses `git submodule update` in a git checkout and falls back to a
+# tarball download otherwise; both paths are idempotent. A non-zero exit
+# from init.sh aborts the build (set -o errexit is set above).
+echo "==> Initializing build dependencies (tools/yscope-dev-utils submodule)..."
+bash "${repo_root}/tools/scripts/deps-download/init.sh"
+echo ""
+
+# Remove stale packages and their SBOM sidecars from the output directory,
+# scoped to the formats being built in this invocation. The sidecar name
+# is `<package>.sbom.cdx.json` (the package format is encoded in the
+# sidecar filename), so cleanup is a fixed-string suffix append. SBOM
+# sidecars are also removed unconditionally first, so that an orphan
+# sidecar left behind by a build that crashed between SBOM generation
+# and package generation cannot survive into a later publication step.
 for _fmt in "${format_list[@]}"; do
     _fmt=$(echo "${_fmt}" | xargs)
-    rm -f "${output_dir}"/clp-core*."${_fmt}"
+    rm -f "${output_dir}"/clp-core*."${_fmt}".sbom.cdx.json
+    while IFS= read -r -d '' _pkg; do
+        rm -f "${_pkg}" "${_pkg}.sbom.cdx.json"
+    done < <(find "${output_dir}" -maxdepth 1 -name "clp-core*.${_fmt}" -print0)
 done
 
 # --- Helper: point build/ and .task/ at the right image family ---------------
@@ -303,8 +332,20 @@ for cur_format in "${format_list[@]}"; do
             echo "ERROR: No .${cur_format} package found in ${repo_root}/build" >&2
             exit 1
         fi
-        find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" \
-            -exec cp {} "${output_dir}/" \;
+        # Copy each package and its required SBOM sidecar to the output
+        # directory. The sidecar name is `<package>.sbom.cdx.json`. A
+        # missing sidecar aborts the build: the downstream Trivy gate
+        # consumes this file, so publishing a package without its SBOM
+        # would bypass that gate.
+        while IFS= read -r -d '' _pkg; do
+            cp "${_pkg}" "${output_dir}/"
+            _sbom="${_pkg}.sbom.cdx.json"
+            if [[ ! -f "${_sbom}" ]]; then
+                echo "ERROR: SBOM sidecar missing for $(basename "${_pkg}"): expected ${_sbom}" >&2
+                exit 1
+            fi
+            cp "${_sbom}" "${output_dir}/"
+        done < <(find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" -print0)
         echo ""
     done
 done
