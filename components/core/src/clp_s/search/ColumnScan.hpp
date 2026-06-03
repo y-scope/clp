@@ -26,9 +26,16 @@ public:
     using VarMatchMap = std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*>;
 
     /**
-     * Attempts to build a column scan for the given expression.
-     * @return A ColumnScan with a precomputed match bitmap when every node in the expression can
-     * be evaluated from the supplied reader/query maps, or std::nullopt otherwise.
+     * Attempts to build a column scan for the given expression over the given ERT.
+     * @param expression
+     * @param basic_readers A map of relevant primitive type readers for the given ERT.
+     * @param clp_string_readers A map of relevant clp string readers for the given ERT.
+     * @param var_string_readers A map of relevant variable string readers for the given ERT.
+     * @param clp_queries A map of precomputed clp string searches.
+     * @param var_matches A map of precomputed variable string searches.
+     * @param num_messages The number of messages in the given ERT.
+     * @return A ColumnScan with a precomputed bitmap recording every matching result on success,
+     * or std::nullopt when ColumnScan does not support the query given by `expression`.
      */
     [[nodiscard]] static auto try_create(
             std::shared_ptr<ast::Expression> const& expression,
@@ -61,8 +68,11 @@ private:
     explicit ColumnScan(uint64_t num_messages);
 
     /**
-     * Checks whether an expression tree can be evaluated by ColumnScan.
-     * @return true when every node is either a supported logical expression or a supported filter.
+     * Checks whether an expression can be evaluated by ColumnScan.
+     * @param expr
+     * @param clp_queries
+     * @param var_matches
+     * @return Whether every node including `expr` is a supported logical expression or a supported filter expression.
      */
     [[nodiscard]] static auto can_build_node(
             ast::Expression* expr,
@@ -72,8 +82,17 @@ private:
 
     /**
      * Checks whether a single filter can be evaluated by ColumnScan.
-     * @return true when the filter has a resolved column, a supported operation/literal type, and
-     * any required precomputed string query or variable-match data.
+     * 
+     * Supported filters have:
+     * - A fully resolved column
+     * - A supported operation and literal-type combination
+     * - For string predicates, a valid corresponding entry in one of the precomputed string search
+     * maps.  
+     * 
+     * @param filter
+     * @param clp_queries A map of precomputed clp string searches.
+     * @param var_matches A map of precomputed variable string searches.
+     * @return Whether `filter` is a supported filter expression.
      */
     [[nodiscard]] static auto can_build_filter(
             ast::FilterExpr* filter,
@@ -83,6 +102,12 @@ private:
 
     /**
      * Builds a bitmap for an expression tree using the supplied reader/query maps.
+     * @param expr
+     * @param basic_readers
+     * @param clp_string_readers
+     * @param var_string_readers
+     * @param clp_queries
+     * @param var_matches
      * @return A bitmap indexed by message number, with nonzero entries for matching messages.
      */
     [[nodiscard]] auto build_node(
@@ -98,6 +123,12 @@ private:
      * Builds a bitmap for a single filter using the supplied reader/query maps.
      * @pre can_build_filter has returned true for filter with the same query and variable-match
      * maps.
+     * @param filter
+     * @param basic_readers
+     * @param clp_string_readers
+     * @param var_string_readers
+     * @param clp_queries
+     * @param var_matches
      * @return A bitmap indexed by message number, with nonzero entries for matching messages.
      */
     [[nodiscard]] auto build_filter(
@@ -109,7 +140,7 @@ private:
             VarMatchMap const& var_matches
     ) const -> Bitmap;
 
-    uint64_t m_num_messages;
+    uint64_t m_num_messages{};
     Bitmap m_matches;
 };
 }  // namespace clp_s::search

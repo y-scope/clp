@@ -36,7 +36,7 @@ namespace {
  * @param operation Comparison operation to apply.
  * @param value Value read from a column.
  * @param operand Operand from the filter expression.
- * @return Whether the comparison succeeds.
+ * @return The result of the comparison.
  */
 template <typename T>
 [[nodiscard]] auto compare(FilterOperation operation, T value, T operand) -> bool;
@@ -301,9 +301,6 @@ auto ColumnScan::can_build_node(
         if (auto* and_expr = dynamic_cast<AndExpr*>(cur_expr); nullptr != and_expr) {
             for (auto const& operand : and_expr->get_op_list()) {
                 auto* child = dynamic_cast<ast::Expression*>(operand.get());
-                if (nullptr == child) {
-                    return false;
-                }
                 pending.push_back(child);
             }
             continue;
@@ -311,9 +308,6 @@ auto ColumnScan::can_build_node(
         if (auto* or_expr = dynamic_cast<OrExpr*>(cur_expr); nullptr != or_expr) {
             for (auto const& operand : or_expr->get_op_list()) {
                 auto* child = dynamic_cast<ast::Expression*>(operand.get());
-                if (nullptr == child) {
-                    return false;
-                }
                 pending.push_back(child);
             }
             continue;
@@ -374,8 +368,6 @@ auto ColumnScan::build_node(
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
 ) const -> Bitmap {
-    assert(nullptr != expr);
-
     Bitmap result;
     if (auto* and_expr = dynamic_cast<AndExpr*>(expr); nullptr != and_expr) {
         result = Bitmap(m_num_messages, 1);
@@ -454,8 +446,6 @@ auto ColumnScan::build_filter(
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
 ) const -> Bitmap {
-    assert(nullptr != filter);
-
     Bitmap bitmap(m_num_messages, 0);
     auto const column = filter->get_column();
     auto const operation = filter->get_operation();
