@@ -163,15 +163,28 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             &parser
     )};
 
+    auto const interpretations{parser.query_interpretations("", raw_query)};
+    for (auto const& interpretation : interpretations) {
+        string interp_string;
+        for (auto const& token : interpretation) {
+            if (token.qualified_name.empty()) {
+                interp_string += token.value;
+                continue;
+            }
+            interp_string += "<" + token.qualified_name + ">(" + token.value +")";
+        }
+        CAPTURE(interp_string);
+    }
+
     REQUIRE(query.has_value());
     auto const& sub_queries{query.value().get_sub_queries()};
 
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, true, {1LL}};
-    REQUIRE(4 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
+    REQUIRE(4 == sub_queries.size());
 }
