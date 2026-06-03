@@ -36,6 +36,9 @@ auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle {
     for (auto const& schema_rule : schema_rules) {
         rule_set_string += schema_rule + "\n";
     }
+
+    CAPTURE(rule_set_string);
+
     return load_parser_from_rule_text(rule_set_string);
 }
 }  // namespace
