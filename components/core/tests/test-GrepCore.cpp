@@ -169,7 +169,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     auto const interpretations{parser.query_interpretations("", raw_query)};
     CAPTURE(interpretations.size());
     for (auto const& interpretation : interpretations) {
-        string interp_string;
+        string interp_string{"interp:"};
         for (auto const& token : interpretation) {
             if (token.qualified_name.empty()) {
                 interp_string += token.value;
