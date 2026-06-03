@@ -356,6 +356,41 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
     }
 }
 
+/**
+ * Test generating vector<clp::SubQuery> for a given set of interpretations and dictionaries.
+ *
+ * Query: "text 100 10? 3.14*"
+ * Schema Vars:
+ *   int:\d+
+ *   float:\d+\.\d+
+ *   hasNum:[^ \$]*\d+[^ \$]*
+ * Archive:
+ *   Logtypes:
+ *     text <int> <int> <float>
+ *     text <int> <dict> <float>
+ *     text <int> <dict> 3.14ab$
+ *     text <int> <dict> 3.14abc$
+ *     text <int> <dict> 3.15ab$
+ *     text <int> 10$ <float>
+ *   Vars:
+ *     1a3
+ *     10a
+ *     10b
+ * Interpretations:
+ *   "text <int>(100) <int>(10?) <float)(3.14*)"
+ *   "text <int>(100) <int>(10?) <c_has_num)(3.14*)"
+ *   "text <int>(100) <int>(10?) 3.14*"
+ *   "text <int>(100) <c_has_num>(10?) <float)(3.14*)"
+ *   "text <int>(100) <c_has_num>(10?) <c_has_num)(3.14*)"
+ *   "text <int>(100) <c_has_num>(10?) 3.14*"
+ *   "text <int>(100) 10? <float)(3.14*)"
+ *   "text <int>(100) 10? <c_has_num)(3.14*)"
+ *   "text <int>(100) 10? 3.14*"
+ * Subqueries will contain interpretations 0, 3, 5, 6:
+ *   1+2 are omitted as the var sequence for "int, int" always ends with "float" in logtype dict
+ *   4 is omitted as "int hasNum" is never followed by "hasNum" in logtype dict
+ *   7+8 are omitted as static-text is always followed by "float" in the logtype dict
+ */
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     MockVariableDictionary const var_dict{
             make_var_dict({pair{0, "1a3"}, pair{1, "10a"}, pair{2, "10b"}})

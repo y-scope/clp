@@ -16,6 +16,30 @@ using std::set;
 using std::string;
 using std::vector;
 
+auto SchemaSearcher::normalize_interpretations(
+        vector<vector<log_surgeon::SubQuery>> const& interpretations
+) -> set<vector<log_surgeon::SubQuery>> {
+    set<vector<log_surgeon::SubQuery>> normalized_interpretations;
+    for (auto const& interpretation : interpretations) {
+        vector<log_surgeon::SubQuery> normalized_interpretation(interpretation.size());
+        for (size_t i{0}; i < interpretation.size(); ++i) {
+            auto const& token{interpretation[i]};
+            auto& normalized_token{normalized_interpretation[i]};
+            normalized_token.qualified_name = token.qualified_name;
+
+            auto& normalized_value{normalized_token.value};
+            normalized_value.reserve(token.value.length());
+            for (auto const c : token.value) {
+                if ('*' != c || normalized_value.empty() || '*' != normalized_value.back()) {
+                    normalized_value += c;
+                }
+            }
+        }
+        normalized_interpretations.insert(normalized_interpretation);
+    }
+    return normalized_interpretations;
+}
+
 auto SchemaSearcher::get_wildcard_encodable_positions(
         vector<log_surgeon::SubQuery> const& interpretation
 ) -> vector<size_t> {

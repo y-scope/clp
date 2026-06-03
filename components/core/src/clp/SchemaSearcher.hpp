@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -107,11 +108,22 @@ public:
            VariableDictionaryReaderType const& var_dict,
            bool ignore_case) -> std::vector<SubQuery> {
         auto const interpretations{parser.query_interpretations("", search_string)};
-        // Assumes log-surgeon normalizes interpretations (e.g. ** -> *).
-        return generate_schema_sub_queries(interpretations, logtype_dict, var_dict, ignore_case);
+        auto const normalized_interps{normalize_interpretations(interpretations)};
+        return generate_schema_sub_queries(normalized_interps, logtype_dict, var_dict, ignore_case);
     }
 
 private:
+    /** Normalizes interpretations by collapsing consecutive greedy wildcards ('*') within each
+     * token.
+     *
+     * Consecutive wildcards that span across the boundary of tokens are preserved.
+     *
+     * @param interpretations The original vector of `vector<log_surgeon::SubQuery>`s to normalize.
+     * @return The normalized set of `vector<log_surgeon::SubQuery>`s.
+     */
+    static auto normalize_interpretations(
+            std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations
+    ) -> std::set<std::vector<log_surgeon::SubQuery>>;
     /**
      * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
      * to search for within the archive. Each candidate combination becomes a useful subquery if:
@@ -140,7 +152,7 @@ private:
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
     static auto generate_schema_sub_queries(
-            std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations,
+            std::set<std::vector<log_surgeon::SubQuery>> const& interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
             bool ignore_case,
@@ -204,7 +216,7 @@ template <
         VariableDictionaryReaderReq VariableDictionaryReaderType
 >
 auto SchemaSearcher::generate_schema_sub_queries(
-        std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations,
+        std::set<std::vector<log_surgeon::SubQuery>> const& interpretations,
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
         bool const ignore_case,
