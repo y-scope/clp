@@ -321,7 +321,7 @@ def extract_stream(
             dataset,
         )
     except SoftTimeLimitExceeded:
-        logger.error(
+        logger.exception(
             f"Stream extraction task job_id={job_id} task_id={task_id} exceeded soft time limit."
         )
         raise
