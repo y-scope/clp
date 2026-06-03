@@ -22,27 +22,6 @@ using std::pair;
 using std::string;
 using std::vector;
 
-namespace {
-/**
- * Initializes a `ParserHandle` with space as a delimiter and the given `schema_rules`.
- *
- * @param schema_rules A vector of strings, each string representing a schema rule.
- * @return The initialized `ParserHandle`.
- */
-auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle;
-
-auto make_test_parser(vector<string> const& schema_rules) -> ParserHandle {
-    std::string rule_set_string{"delimiters: \\r\\n\n"};
-    for (auto const& schema_rule : schema_rules) {
-        rule_set_string += schema_rule + "\n";
-    }
-
-    CAPTURE(rule_set_string);
-
-    return load_parser_from_rule_text(rule_set_string);
-}
-}  // namespace
-
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     string str;
     size_t begin_pos{};
@@ -140,9 +119,17 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     constexpr epochtime_t cNoEndTimestamp{0};
     constexpr bool cIgnoreCase{true};
 
-    auto parser{make_test_parser(
-            {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ &]*\d+[^ &]*)"}}
-    )};
+    std::string rule_set_string{R"(delimiters: \r\n)"};
+    rule_set_string += "\n";
+    rule_set_string += R"(int:\d+)";
+    rule_set_string += "\n";
+    rule_set_string += R"(float:\d+\.\d+)";
+    rule_set_string += "\n";
+    rule_set_string += R"(hasNumber:[^ &]*\d+[^ &]*)";
+
+    CAPTURE(rule_set_string);
+
+    auto parser{load_parser_from_rule_text(rule_set_string)};
 
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
@@ -170,7 +157,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     string interpretation_strings{"interps:"};
     CAPTURE(interpretations.size());
     for (auto const& interpretation : interpretations) {
-        string interp_string{"interp:"};
+        string interp_string;
         for (auto const& token : interpretation) {
             if (token.qualified_name.empty()) {
                 interp_string += token.value;
