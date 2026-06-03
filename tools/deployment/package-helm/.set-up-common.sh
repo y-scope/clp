@@ -45,7 +45,7 @@ prepare_environment() {
 # flags for using it. If image is not specified, returns empty string.
 #
 # @param {string} cluster_name Name of the kind cluster
-# @param {string} component Image component name (e.g., "clpPackage", "redis", "database")
+# @param {string} component Flat image component name (e.g., "clpPackage", "redis", "queue")
 # @param {string} [image] Docker image (e.g., "clp-package:dev-junhao-a6bf")
 # @return Prints helm --set flags to stdout
 get_image_helm_args() {

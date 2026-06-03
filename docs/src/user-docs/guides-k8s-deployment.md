@@ -197,25 +197,24 @@ image:
 
   # Override third-party container images (useful for private registries or AWS Marketplace ECR).
   # See the chart's values.yaml for the full list of configurable images.
-  database:
-    mariadb:
-      repository: "mariadb"
-      tag: "10.11.16"
-    mysql:
-      repository: "mysql"
-      tag: "8.0.46"
-  redis:
-    repository: "redis"
-    tag: "7.4.8"
+  mariadb:
+    repository: "mariadb"
+    tag: "10.11.16"
+  mysql:
+    repository: "mysql"
+    tag: "8.0.46"
   queue:
     repository: "rabbitmq"
     tag: "4.2.6"
+  redis:
+    repository: "redis"
+    tag: "7.4.8"
   resultsCache:
     repository: "mongo"
     tag: "8.0.21"
   kubectl:
     repository: "bitnami/kubectl"
-    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"
+    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
 
 # Adjust worker concurrency
 workerConcurrency: 16
