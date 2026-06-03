@@ -41,6 +41,7 @@ pub fn get_testing_prefix_as_non_empty_string(job_id: IngestionJobId) -> NonEmpt
 /// Uploads test S3 objects.
 ///
 /// Objects are created with keys formatted as `{prefix}/idx{i}{placeholder}` where:
+///
 /// * `prefix` is the provided prefix.
 /// * `i` is the object index.
 /// * `placeholder` is one of the following to test URL encoding:
