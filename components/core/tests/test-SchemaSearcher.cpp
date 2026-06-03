@@ -393,7 +393,7 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
  *   0 (with wildcard int), 3 (with hasNum) -> 1
  *   0 (with encoded int) -> 0
  *   2 (with wildcard int), 5 (with hasNum) -> 2,3
- *   ??? (with wildcard int) -> 5
+ *   6 (with no vars), 6 (with wildcard int) -> 5
  */
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     MockVariableDictionary const var_dict{
