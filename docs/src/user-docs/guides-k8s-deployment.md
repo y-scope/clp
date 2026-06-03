@@ -196,7 +196,7 @@ image:
     tag: "latest"
 
   # Override third-party container images (useful for private registries or AWS Marketplace ECR).
-  # All images are configurable in values.yaml. See the chart's values.yaml for the full list.
+  # See the chart's values.yaml for the full list of configurable images.
   database:
     mariadb:
       repository: "mariadb"

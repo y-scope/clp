@@ -9,15 +9,14 @@ image:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
     tag: "main"
-  database:
-    mariadb:
-      repository: "mariadb"
-      pullPolicy: "Always"
-      tag: "10.11.16"
-    mysql:
-      repository: "mysql"
-      pullPolicy: "Always"
-      tag: "8.0.46"
+  mariadb:
+    repository: "mariadb"
+    pullPolicy: "Always"
+    tag: "10.11.16"
+  mysql:
+    repository: "mysql"
+    pullPolicy: "Always"
+    tag: "8.0.46"
   curl:
     repository: "curlimages/curl"
     pullPolicy: "IfNotPresent"

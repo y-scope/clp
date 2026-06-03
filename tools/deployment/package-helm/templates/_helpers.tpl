@@ -125,27 +125,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Creates an image reference for a component.
+Creates a container image reference from .Values.image.
 
-For components with variants (e.g., database with mariadb/mysql), pass the "variant" parameter.
-If no variant is provided, the component is looked up directly under .Values.image.
-
-When a "digest" field is present in the image config, the reference uses the format
-repository@digest. Otherwise, it uses repository:tag.
-
-For the clpPackage component, if no tag is specified, the chart's appVersion is used as a default.
-For all other components, the tag must be specified in values.yaml.
+Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
+defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
 
 @param {object} root Root template context (required)
-@param {string} component Key under .Values.image (e.g., "clpPackage", "redis", "database")
-@param {string} [variant] Sub-key for components with variants (e.g., "mariadb" or "mysql" for "database")
+@param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
 @return {string} Full image reference (repository@digest or repository:tag)
 */}}
-{{- define "clp.image.ref" -}}
+{{- define "clp.imageRef" -}}
 {{- $img := index .root.Values.image .component -}}
-{{- if hasKey . "variant" -}}
-  {{- $img = index $img .variant -}}
-{{- end -}}
 {{- if $img.digest -}}
 {{- printf "%s@%s" $img.repository $img.digest -}}
 {{- else -}}
@@ -520,7 +510,7 @@ should be the job name suffix.
 */}}
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
-image: {{ include "clp.image.ref" (dict "root" .root "component" "kubectl") | quote }}
+image: {{ include "clp.imageRef" (dict "root" .root "component" "kubectl") | quote }}
 imagePullPolicy: {{ .root.Values.image.kubectl.pullPolicy | quote }}
 command: [
   "kubectl", "wait",

@@ -26,7 +26,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: "query-worker"
-          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}

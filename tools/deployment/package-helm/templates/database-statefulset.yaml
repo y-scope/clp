@@ -25,8 +25,8 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "database"
-          image: {{ include "clp.image.ref" (dict "root" . "component" "database" "variant" .Values.clpConfig.database.type) }}
-          imagePullPolicy: {{ (index .Values.image.database .Values.clpConfig.database.type).pullPolicy | quote }}
+          image: {{ include "clp.imageRef" (dict "root" . "component" .Values.clpConfig.database.type) | quote }}
+          imagePullPolicy: {{ (index .Values.image .Values.clpConfig.database.type).pullPolicy | quote }}
           env:
             - name: "MYSQL_DATABASE"
               value: {{ .Values.clpConfig.database.names.clp | quote }}

@@ -25,7 +25,7 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "redis"
-          image: {{ include "clp.image.ref" (dict "root" . "component" "redis") }}
+          image: {{ include "clp.imageRef" (dict "root" . "component" "redis") | quote }}
           imagePullPolicy: {{ .Values.image.redis.pullPolicy | quote }}
           env:
             - name: "REDIS_PASSWORD"

@@ -35,7 +35,7 @@ spec:
         - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "garbage-collector"
-          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"

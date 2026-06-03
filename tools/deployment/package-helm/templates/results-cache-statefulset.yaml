@@ -25,7 +25,7 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "results-cache"
-          image: {{ include "clp.image.ref" (dict "root" . "component" "resultsCache") }}
+          image: {{ include "clp.imageRef" (dict "root" . "component" "resultsCache") | quote }}
           imagePullPolicy: {{ .Values.image.resultsCache.pullPolicy | quote }}
           ports:
             - name: "results-cache"
@@ -57,7 +57,7 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *results-cache-health-check
         - name: "results-cache-init"
-          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "PYTHONPATH"

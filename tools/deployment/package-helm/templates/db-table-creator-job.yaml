@@ -24,7 +24,7 @@ spec:
       {{- end }}
       containers:
         - name: "db-table-creator"
-          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"

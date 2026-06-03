@@ -25,7 +25,7 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "queue"
-          image: {{ include "clp.image.ref" (dict "root" . "component" "queue") }}
+          image: {{ include "clp.imageRef" (dict "root" . "component" "queue") | quote }}
           imagePullPolicy: {{ .Values.image.queue.pullPolicy | quote }}
           env:
             - name: "RABBITMQ_DEFAULT_USER"

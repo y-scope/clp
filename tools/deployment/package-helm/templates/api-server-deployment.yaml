@@ -33,7 +33,7 @@ spec:
         - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "api-server"
-          image: "{{ include "clp.image.ref" (dict "root" . "component" "clpPackage") }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             {{- include "clp.telemetryEnv" . | nindent 12 }}
