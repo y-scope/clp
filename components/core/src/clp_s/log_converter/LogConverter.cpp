@@ -36,7 +36,7 @@ constexpr std::string_view cTimestampSchema{
         R"((( Z){0,1}))"
 };
 
-constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
+constexpr std::string_view cDelimiters{R"(delimiters:\ \t\r\n[(:)"};
 }  // namespace
 
 auto LogConverter::create(size_t max_buffer_size) -> LogConverter {

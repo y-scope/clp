@@ -121,7 +121,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
 
     string const raw_query{"text 100 10? 3.14*"};
 
-    std::string rule_set_string{R"(delimiters:\r \n)"};
+    std::string rule_set_string{R"(delimiters:\ \r\n)"};
     rule_set_string += "\n";
     rule_set_string += R"(int:\d+)";
     rule_set_string += "\n";
