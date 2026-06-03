@@ -447,8 +447,8 @@ class QueryScheduler(BaseModel):
 
 class WorkerConfigBase(BaseModel):
     logging_level: LoggingLevel = "INFO"
-    task_soft_time_limit: NonNegativeInt = 0
-    task_time_limit: NonNegativeInt = 0
+    task_soft_time_limit: NonNegativeInt = 600
+    task_time_limit: NonNegativeInt = 1200
 
 
 class CompressionWorker(WorkerConfigBase):
