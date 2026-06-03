@@ -215,7 +215,7 @@ image:
     tag: "8.0.21"
   kubectl:
     repository: "bitnami/kubectl"
-    tag: "sha256-98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"
+    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"
 
 # Adjust worker concurrency
 workerConcurrency: 16

@@ -130,19 +130,25 @@ Creates an image reference for a component.
 For components with variants (e.g., database with mariadb/mysql), pass the "variant" parameter.
 If no variant is provided, the component is looked up directly under .Values.image.
 
+When a "digest" field is present in the image config, the reference uses the format
+repository@digest. Otherwise, it uses repository:tag.
+
 For the clpPackage component, if no tag is specified, the chart's appVersion is used as a default.
 For all other components, the tag must be specified in values.yaml.
 
 @param {object} root Root template context (required)
 @param {string} component Key under .Values.image (e.g., "clpPackage", "redis", "database")
 @param {string} [variant] Sub-key for components with variants (e.g., "mariadb" or "mysql" for "database")
-@return {string} Full image reference (repository:tag)
+@return {string} Full image reference (repository@digest or repository:tag)
 */}}
 {{- define "clp.image.ref" -}}
 {{- $img := index .root.Values.image .component -}}
 {{- if hasKey . "variant" -}}
   {{- $img = index $img .variant -}}
 {{- end -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
 {{- $tag := $img.tag -}}
 {{- if not $tag -}}
   {{- if eq .component "clpPackage" -}}
@@ -152,6 +158,7 @@ For all other components, the tag must be specified in values.yaml.
   {{- end -}}
 {{- end -}}
 {{- printf "%s:%s" $img.repository $tag -}}
+{{- end -}}
 {{- end }}
 
 {{/*
