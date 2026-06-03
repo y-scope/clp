@@ -31,6 +31,7 @@ runtime_config_path = pathlib.Path("/run/clp-single-container/clp-config.yaml")
 raw_config = read_yaml_config_file(input_config_path) or {}
 clp_config = ClpConfig.model_validate(raw_config)
 clp_config.make_config_paths_absolute(clp_home)
+clp_config.validate_api_server()
 
 credentials_file_path = clp_config.credentials_file_path
 if credentials_file_path.is_file():
@@ -52,6 +53,7 @@ emit("CLP_DB_CONNECT_PORT", container_config.database.port)
 emit("CLP_QUEUE_CONNECT_PORT", container_config.queue.port if container_config.queue else 5672)
 emit("CLP_REDIS_CONNECT_PORT", container_config.redis.port if container_config.redis else 6379)
 emit("CLP_REDIS_BACKEND_DB_COMPRESSION", clp_config.redis.compression_backend_database)
+emit("CLP_REDIS_BACKEND_DB_QUERY", clp_config.redis.query_backend_database)
 emit("CLP_RESULTS_CACHE_CONNECT_PORT", container_config.results_cache.port)
 emit("CLP_RESULTS_CACHE_DB_NAME", clp_config.results_cache.db_name)
 emit(
@@ -60,10 +62,19 @@ emit(
 )
 emit("CLP_PACKAGE_STORAGE_ENGINE", clp_config.package.storage_engine)
 emit("CLP_REDUCER_UPSERT_INTERVAL", clp_config.reducer.upsert_interval)
+emit("CLP_API_SERVER_ENABLED", int(clp_config.api_server is not None))
 emit(
     "CLP_LOG_INGESTOR_ENABLED",
     int(clp_config.log_ingestor is not None and clp_config.logs_input.type == StorageType.S3),
 )
+emit(
+    "CLP_GARBAGE_COLLECTOR_ENABLED",
+    int(
+        clp_config.archive_output.retention_period is not None
+        or clp_config.results_cache.retention_period is not None
+    ),
+)
+emit("CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL", clp_config.garbage_collector.logging_level)
 if clp_config.log_ingestor is not None:
     emit("CLP_LOG_INGESTOR_LOGGING_LEVEL", clp_config.log_ingestor.logging_level)
 if clp_config.mcp_server is not None:
@@ -120,6 +131,8 @@ configure_service_environment() {
     export CLP_DB_CONNECT_PORT="${CLP_DB_CONNECT_PORT:-3306}"
     export CLP_QUEUE_CONNECT_PORT="${CLP_QUEUE_CONNECT_PORT:-5672}"
     export CLP_REDIS_CONNECT_PORT="${CLP_REDIS_CONNECT_PORT:-6379}"
+    export CLP_REDIS_BACKEND_DB_COMPRESSION="${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}"
+    export CLP_REDIS_BACKEND_DB_QUERY="${CLP_REDIS_BACKEND_DB_QUERY:-0}"
     export CLP_RESULTS_CACHE_CONNECT_PORT="${CLP_RESULTS_CACHE_CONNECT_PORT:-27017}"
     export CLP_RESULTS_CACHE_DB_NAME="${CLP_RESULTS_CACHE_DB_NAME:-clp-query-results}"
     export CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME="${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}"
@@ -128,13 +141,15 @@ configure_service_environment() {
     export CLP_QUERY_WORKER_CONCURRENCY="${CLP_QUERY_WORKER_CONCURRENCY:-1}"
     export CLP_REDUCER_CONCURRENCY="${CLP_REDUCER_CONCURRENCY:-1}"
     export CLP_REDUCER_UPSERT_INTERVAL="${CLP_REDUCER_UPSERT_INTERVAL:-100}"
+    export CLP_API_SERVER_ENABLED="${CLP_API_SERVER_ENABLED:-1}"
     export CLP_LOG_INGESTOR_ENABLED="${CLP_LOG_INGESTOR_ENABLED:-0}"
     export CLP_LOG_INGESTOR_LOGGING_LEVEL="${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
+    export CLP_GARBAGE_COLLECTOR_ENABLED="${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
+    export CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL="${CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL:-INFO}"
     export CLP_MCP_SERVER_ENABLED="${CLP_MCP_SERVER_ENABLED:-0}"
     export CLP_MCP_LOGGING_LEVEL="${CLP_MCP_LOGGING_LEVEL:-INFO}"
     export CLP_LOGS_DIR="${CLP_LOGS_DIR:-/var/log}"
     export BROKER_URL="amqp://${CLP_QUEUE_USER:-clp-user}:${CLP_QUEUE_PASS:?Please set CLP_QUEUE_PASS.}@queue:${CLP_QUEUE_CONNECT_PORT}"
-    export RESULT_BACKEND="redis://default:${CLP_REDIS_PASS:?Please set CLP_REDIS_PASS.}@redis:${CLP_REDIS_CONNECT_PORT}/${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}"
     export HOST="${HOST:-0.0.0.0}"
     export NODE_ENV="${NODE_ENV:-production}"
     export NODE_PATH="${NODE_PATH:-/opt/clp/var/www/webui/server/node_modules}"
@@ -219,24 +234,26 @@ configure_webui_settings() {
         return
     fi
 
-    python3 - "$server_settings_path" "$client_settings_path" <<'PY'
-import json
+    python3 - "$CLP_CONFIG_PATH" "$server_settings_path" "$client_settings_path" <<'PY'
 import pathlib
 import sys
 
-server_settings_path = pathlib.Path(sys.argv[1])
-client_settings_path = pathlib.Path(sys.argv[2])
+from clp_package_utils.webui_settings import update_webui_settings
+from clp_py_utils.clp_config import ClpConfig
+from clp_py_utils.core import read_yaml_config_file
 
-server_settings = json.loads(server_settings_path.read_text())
-server_settings["ClientDir"] = "../client"
-server_settings["LogViewerDir"] = "../yscope-log-viewer"
-server_settings["StreamFilesDir"] = "/var/data/streams"
-server_settings_path.write_text(json.dumps(server_settings, indent=4) + "\n")
+config_path = pathlib.Path(sys.argv[1])
+server_settings_path = pathlib.Path(sys.argv[2])
+client_settings_path = pathlib.Path(sys.argv[3])
 
-if client_settings_path.is_file():
-    client_settings = json.loads(client_settings_path.read_text())
-    client_settings["LogsInputRootDir"] = server_settings["LogsInputRootDir"]
-    client_settings_path.write_text(json.dumps(client_settings, indent=4) + "\n")
+clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
+update_webui_settings(
+    clp_config=clp_config,
+    container_clp_config=clp_config,
+    client_settings_json_path=client_settings_path,
+    server_settings_json_path=server_settings_path,
+    container_webui_dir=pathlib.Path("/opt/clp/var/www/webui"),
+)
 PY
 }
 

@@ -11,7 +11,6 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from types import MappingProxyType
-from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -27,10 +26,8 @@ from clp_py_utils.clp_config import (
     ClpConfig,
     ClpDbNameType,
     ClpDbUserType,
-    COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
-    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     DeploymentType,
@@ -39,10 +36,8 @@ from clp_py_utils.clp_config import (
     MCP_SERVER_COMPONENT_NAME,
     OrchestrationType,
     OTEL_COLLECTOR_COMPONENT_NAME,
-    QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
-    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -50,14 +45,8 @@ from clp_py_utils.clp_config import (
     SPIDER_DB_PASS_ENV_VAR_NAME,
     SPIDER_DB_USER_ENV_VAR_NAME,
     SPIDER_SCHEDULER_COMPONENT_NAME,
-    StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
-)
-from clp_py_utils.clp_metadata_db_utils import (
-    get_archives_table_name,
-    get_datasets_table_name,
-    get_files_table_name,
 )
 from clp_py_utils.core import resolve_host_path_in_container
 
@@ -78,6 +67,7 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_webui_config,
 )
+from clp_package_utils.webui_settings import update_webui_settings
 
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
@@ -710,117 +700,19 @@ class BaseController(ABC):
             server_settings_json_path,
         )
 
-        # Read, update, and write back client's and server's settings.json
-        clp_db_connection_params = self._clp_config.database.get_clp_connection_params_and_type(
-            True
-        )
-        table_prefix = clp_db_connection_params["table_prefix"]
-        if StorageEngine.CLP_S == self._clp_config.package.storage_engine:
-            archives_table_name = ""
-            files_table_name = ""
-        else:
-            archives_table_name = get_archives_table_name(table_prefix, None)
-            files_table_name = get_files_table_name(table_prefix, None)
-
-        client_settings_json_updates = {
-            "ClpStorageEngine": self._clp_config.package.storage_engine,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
-            "LogsInputType": self._clp_config.logs_input.type,
-            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
-            "MongoDbSearchResultsMetadataCollectionName": (
-                self._clp_config.webui.results_metadata_collection_name
-            ),
-            "SqlDbClpArchivesTableName": archives_table_name,
-            "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
-            "SqlDbClpFilesTableName": files_table_name,
-            "SqlDbClpTablePrefix": table_prefix,
-            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-        }
-
-        server_settings_json_updates = {
-            "SqlDbHost": container_clp_config.database.host,
-            "SqlDbPort": container_clp_config.database.port,
-            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
-            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
-            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "MongoDbHost": container_clp_config.results_cache.host,
-            "MongoDbPort": container_clp_config.results_cache.port,
-            "MongoDbName": self._clp_config.results_cache.db_name,
-            "MongoDbSearchResultsMetadataCollectionName": (
-                self._clp_config.webui.results_metadata_collection_name
-            ),
-            "MongoDbStreamFilesCollectionName": (
-                self._clp_config.results_cache.stream_collection_name
-            ),
-            "ClientDir": str(container_webui_dir / "client"),
-            "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
-            "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
-            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
-            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
-            "ArchiveOutputTargetDictionariesSize": (
-                self._clp_config.archive_output.target_dictionaries_size
-            ),
-            "ArchiveOutputTargetEncodedFileSize": (
-                self._clp_config.archive_output.target_encoded_file_size
-            ),
-            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
-            "ClpStorageEngine": self._clp_config.package.storage_engine,
-        }
-
-        stream_storage = self._clp_config.stream_output.storage
-        if StorageType.S3 == stream_storage.type:
-            s3_config = stream_storage.s3_config
-            server_settings_json_updates["StreamFilesDir"] = None
-            server_settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
-            server_settings_json_updates["StreamFilesS3PathPrefix"] = (
-                f"{s3_config.bucket}/{s3_config.key_prefix}"
-            )
-            auth = s3_config.aws_authentication
-            if AwsAuthType.profile == auth.type:
-                server_settings_json_updates["StreamFilesS3Profile"] = auth.profile
-            else:
-                server_settings_json_updates["StreamFilesS3Profile"] = None
-        elif StorageType.FS == stream_storage.type:
-            server_settings_json_updates["StreamFilesDir"] = str(
-                container_clp_config.stream_output.get_directory()
-            )
-            server_settings_json_updates["StreamFilesS3Region"] = None
-            server_settings_json_updates["StreamFilesS3PathPrefix"] = None
-            server_settings_json_updates["StreamFilesS3Profile"] = None
-
-        query_engine = self._clp_config.package.query_engine
-        if QueryEngine.PRESTO == query_engine:
-            server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
-            server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
-        else:
-            server_settings_json_updates["PrestoHost"] = None
-            server_settings_json_updates["PrestoPort"] = None
-
-        if StorageType.FS == self._clp_config.logs_input.type:
-            client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
-            server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
-        else:
-            client_settings_json_updates["LogsInputRootDir"] = None
-            server_settings_json_updates["LogsInputRootDir"] = None
-
         resolved_client_settings_json_path = resolve_host_path_in_container(
             client_settings_json_path
         )
-        client_settings_json = self._read_and_update_settings_json(
-            resolved_client_settings_json_path, client_settings_json_updates
-        )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
-            client_settings_json_file.write(json.dumps(client_settings_json))
-
         resolved_server_settings_json_path = resolve_host_path_in_container(
             server_settings_json_path
         )
-        server_settings_json = self._read_and_update_settings_json(
-            resolved_server_settings_json_path, server_settings_json_updates
+        update_webui_settings(
+            self._clp_config,
+            container_clp_config,
+            resolved_client_settings_json_path,
+            resolved_server_settings_json_path,
+            container_webui_dir,
         )
-        with open(resolved_server_settings_json_path, "w") as settings_json_file:
-            settings_json_file.write(json.dumps(server_settings_json))
 
         env_vars = EnvVarsDict()
 
@@ -1022,46 +914,6 @@ class BaseController(ABC):
         )
 
         return env_vars
-
-    def _read_and_update_settings_json(
-        self, settings_file_path: pathlib.Path, updates: dict[str, Any]
-    ) -> dict[str, Any]:
-        """
-        Reads and updates a settings JSON file.
-
-        :param settings_file_path:
-        :param updates:
-        """
-        with open(settings_file_path, "r") as settings_json_file:
-            settings_object = json.loads(settings_json_file.read())
-        self._update_settings_object("", settings_object, updates)
-
-        return settings_object
-
-    def _update_settings_object(
-        self,
-        parent_key_prefix: str,
-        settings: dict[str, Any],
-        updates: dict[str, Any],
-    ) -> None:
-        """
-        Recursively updates the given settings object with the values from `updates`.
-
-        :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
-        :param settings: The settings to update.
-        :param updates: The updates.
-        :raise ValueError: If a key in `updates` doesn't exist in `settings`.
-        """
-        for key, value in updates.items():
-            if key not in settings:
-                error_msg = (
-                    f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
-                )
-                raise ValueError(error_msg)
-            if isinstance(value, dict):
-                self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
-            else:
-                settings[key] = value
 
 
 _DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
