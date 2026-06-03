@@ -210,6 +210,21 @@ private:
             bool is_mask_encoded,
             SubQuery& sub_query
     ) -> bool;
+
+    /**
+     * @param input String to check for wildcard.
+     * @return Whether the string contains a wildcard (non-escaped '*' or '?').
+     */
+    static auto contains_wildcard(std::string const& input) -> bool {
+        for (size_t j{0}; j < input.size(); ++j) {
+            if ('*' == input[j] || '?' == input[j]) {
+                if (0 == j || '\\' != input[j - 1]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 };
 
 template <
@@ -309,21 +324,12 @@ auto SchemaSearcher::process_schema_var_token(
     auto const var_type{variable_token.qualified_name};
     bool const is_int{var_type.ends_with("int")};
     bool const is_float{var_type.ends_with("float")};
-    bool contains_wildcard{false};
-    for (size_t j{0}; j < variable_token.value.size(); ++j) {
-        if ('*' == variable_token.value[j] || '?' == variable_token.value[j]) {
-            if (0 == j || '\\' != variable_token.value[j - 1]) {
-                contains_wildcard = true;
-                break;
-            }
-        }
-    }
 
     if (is_mask_encoded) {
         return true;
     }
 
-    if (contains_wildcard) {
+    if (contains_wildcard(variable_token.value)) {
         return EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
                 variable_token.value,
                 var_dict,

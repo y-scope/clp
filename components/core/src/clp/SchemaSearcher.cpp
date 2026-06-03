@@ -60,16 +60,7 @@ auto SchemaSearcher::get_wildcard_encodable_positions(
             auto const var_type{token.qualified_name};
             bool const is_int{var_type.ends_with("int")};
             bool const is_float{var_type.ends_with("float")};
-            bool contains_wildcard{false};
-            for (size_t j{0}; j < token.value.size(); ++j) {
-                if ('*' == token.value[j] || '?' == token.value[j]) {
-                    if (0 == j || '\\' != token.value[j - 1]) {
-                        contains_wildcard = true;
-                        break;
-                    }
-                }
-            }
-            if (contains_wildcard && (is_int || is_float)) {
+            if (contains_wildcard(token.value) && (is_int || is_float)) {
                 wildcard_encodable_positions.push_back(i);
             }
         }
