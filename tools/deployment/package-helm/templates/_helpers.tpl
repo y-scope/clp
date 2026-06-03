@@ -521,6 +521,7 @@ should be the job name suffix.
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
 image: {{ include "clp.image.ref" (dict "root" .root "component" "kubectl") | quote }}
+imagePullPolicy: {{ .root.Values.image.kubectl.pullPolicy | quote }}
 command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}

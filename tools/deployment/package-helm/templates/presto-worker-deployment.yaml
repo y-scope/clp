@@ -32,6 +32,7 @@ spec:
           ) | nindent 10 }}
         - name: "setup-configs"
           image: {{ include "clp.image.ref" (dict "root" . "component" "kubectl") | quote }}
+          imagePullPolicy: {{ .Values.image.kubectl.pullPolicy | quote }}
           command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
           volumeMounts:
             - name: "presto-config"
