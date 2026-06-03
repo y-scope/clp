@@ -28,6 +28,12 @@
  */
 class clp::SchemaSearcherTest {
 public:
+    static auto normalize_interpretations(
+            std::vector<std::vector<log_surgeon::SubQuery>> const& interps
+    ) -> std::vector<std::vector<log_surgeon::SubQuery>> {
+        return SchemaSearcher::normalize_interpretations(interps);
+    }
+
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType

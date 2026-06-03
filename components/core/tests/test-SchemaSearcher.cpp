@@ -460,8 +460,12 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
             {txt, {c_int, "100"}, S(" 10? 3.14**")}
     };
 
+    auto const normalized_interpretations{
+            clp::SchemaSearcherTest::normalize_interpretations(interpretations)
+    };
+
     auto const sub_queries{clp::SchemaSearcherTest::generate_schema_sub_queries(
-            interpretations,
+            normalized_interpretations,
             logtype_dict,
             var_dict
     )};
