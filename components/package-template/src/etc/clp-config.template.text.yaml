@@ -34,6 +34,7 @@ log_ingestor: null
 #  - "queue"
 #  - "redis"
 #  - "results_cache"
+#  - "otel_collector"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -86,6 +87,10 @@ log_ingestor: null
 #
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: 60
+#
+#otel_collector:
+#  host: "localhost"
+#  port: 4318
 #
 #compression_worker:
 #  logging_level: "INFO"

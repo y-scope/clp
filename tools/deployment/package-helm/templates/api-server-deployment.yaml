@@ -36,6 +36,7 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -46,6 +47,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
+            - name: "OTEL_SERVICE_NAME"
+              value: "api-server"
             - name: "RUST_LOG"
               value: "INFO"
           ports:
