@@ -845,7 +845,7 @@ def try_getting_task_result(async_task_result):
             timeout=TASK_RESULT_GET_TIMEOUT, interval=TASK_RESULT_GET_INTERVAL
         )
     except celery.exceptions.TimeoutError:
-        logger.error("Timed out waiting for task result.")
+        logger.exception("Timed out waiting for task result.")
         raise
 
 
