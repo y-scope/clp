@@ -10,6 +10,12 @@
 
 #include <clp/EncodedVariableInterpreter.hpp>
 
+namespace log_surgeon {
+auto operator==(SubQuery const& a, SubQuery const& b) -> bool {
+    return a.qualified_name == b.qualified_name && a.value == b.value;
+}
+}  // namespace log_surgeon
+
 namespace clp {
 using std::holds_alternative;
 using std::set;
