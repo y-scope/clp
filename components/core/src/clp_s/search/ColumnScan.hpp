@@ -65,14 +65,23 @@ public:
     [[nodiscard]] auto filter(uint64_t cur_message) -> bool override;
 
 private:
-    explicit ColumnScan(uint64_t num_messages);
+    ColumnScan(
+            ast::Expression* expression,
+            BasicReaderMap const& basic_readers,
+            ClpStringReaderMap const& clp_string_readers,
+            VarStringReaderMap const& var_string_readers,
+            ClpQueryMap const& clp_queries,
+            VarMatchMap const& var_matches,
+            uint64_t num_messages
+    );
 
     /**
      * Checks whether an expression can be evaluated by ColumnScan.
      * @param expr
      * @param clp_queries
      * @param var_matches
-     * @return Whether every node including `expr` is a supported logical expression or a supported filter expression.
+     * @return Whether every node including `expr` is a supported logical expression or a supported
+     * filter expression.
      */
     [[nodiscard]] static auto can_build_node(
             ast::Expression* expr,
@@ -82,13 +91,13 @@ private:
 
     /**
      * Checks whether a single filter can be evaluated by ColumnScan.
-     * 
+     *
      * Supported filters have:
      * - A fully resolved column
      * - A supported operation and literal-type combination
      * - For string predicates, a valid corresponding entry in one of the precomputed string search
-     * maps.  
-     * 
+     * maps.
+     *
      * @param filter
      * @param clp_queries A map of precomputed clp string searches.
      * @param var_matches A map of precomputed variable string searches.

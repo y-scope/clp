@@ -1,14 +1,12 @@
 #include "ColumnScan.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include <string_utils/string_utils.hpp>
@@ -76,11 +74,12 @@ template <typename T>
  * Checks whether a CLP string value matches a query.
  * @param reader Column reader containing the value to check.
  * @param query Query to match against.
- * @param row Row to check.
- * @return Whether the row's string value matches the query.
+ * @param message_index Message index to check.
+ * @return Whether the message index's string value matches the query.
  */
 [[nodiscard]] auto
-clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t row) -> bool;
+clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t message_index)
+        -> bool;
 
 /**
  * Builds a bitmap for a filter over a CLP string column.
@@ -113,7 +112,7 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
         ColumnScan::VarStringReaderMap const& reader_map,
         int32_t column_id,
         FilterOperation operation,
-        std::unordered_set<int64_t> const* matching_vars
+        std::unordered_set<int64_t> const& matching_vars
 ) -> ColumnScan::Bitmap;
 
 template <typename T>
@@ -162,42 +161,43 @@ template <typename T>
         return bitmap;
     }
     for (auto* reader : readers->second) {
-        for (uint64_t row{0}; row < num_messages; ++row) {
-            auto const value = std::get<T>(reader->extract_value(row));
-            bitmap[row] |= compare(operation, value, operand) ? 1 : 0;
+        for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
+            auto const value = std::get<T>(reader->extract_value(message_index));
+            bitmap[message_index] |= compare(operation, value, operand) ? 1 : 0;
         }
     }
     return bitmap;
 }
 
 [[nodiscard]] auto
-clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t row) -> bool {
-    auto const encoded_id = reader->get_encoded_id(row);
-    auto const encoded_vars = reader->get_encoded_vars(row);
-    if (query.contains_sub_queries()) {
-        for (auto const& subquery : query.get_sub_queries()) {
-            if (false == subquery.matches_logtype(encoded_id)
-                || false == subquery.matches_vars(encoded_vars))
-            {
-                continue;
-            }
-            if (subquery.wildcard_match_required()) {
-                return clp::string_utils::wildcard_match_unsafe(
-                        std::get<std::string>(reader->extract_value(row)),
-                        query.get_search_string(),
-                        false == query.get_ignore_case()
-                );
-            }
-            return true;
-        }
-        return false;
+clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t message_index)
+        -> bool {
+    auto const value = std::get<std::string>(reader->extract_value(message_index));
+    auto const matches_wildcard = [&query, &value]() -> bool {
+        return clp::string_utils::wildcard_match_unsafe(
+                value,
+                query.get_search_string(),
+                false == query.get_ignore_case()
+        );
+    };
+
+    if (false == query.contains_sub_queries()) {
+        return matches_wildcard();
     }
 
-    return clp::string_utils::wildcard_match_unsafe(
-            std::get<std::string>(reader->extract_value(row)),
-            query.get_search_string(),
-            false == query.get_ignore_case()
-    );
+    auto const encoded_id = reader->get_encoded_id(message_index);
+    auto const encoded_vars = reader->get_encoded_vars(message_index);
+    return std::ranges::any_of(query.get_sub_queries(), [&](auto const& subquery) {
+        if (false == subquery.matches_logtype(encoded_id)
+            || false == subquery.matches_vars(encoded_vars))
+        {
+            return false;
+        }
+        if (false == subquery.wildcard_match_required()) {
+            return true;
+        }
+        return matches_wildcard();
+    });
 }
 
 [[nodiscard]] auto build_clp_string_filter(
@@ -221,9 +221,9 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
         return bitmap;
     }
     for (auto* reader : readers->second) {
-        for (uint64_t row{0}; row < num_messages; ++row) {
-            auto const matched = clp_string_matches(reader, *query, row);
-            bitmap[row] |= ((FilterOperation::EQ == operation) == matched) ? 1 : 0;
+        for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
+            auto const matched = clp_string_matches(reader, *query, message_index);
+            bitmap[message_index] |= ((FilterOperation::EQ == operation) == matched) ? 1 : 0;
         }
     }
     return bitmap;
@@ -234,18 +234,19 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
         ColumnScan::VarStringReaderMap const& reader_map,
         int32_t column_id,
         FilterOperation operation,
-        std::unordered_set<int64_t> const* matching_vars
+        std::unordered_set<int64_t> const& matching_vars
 ) -> ColumnScan::Bitmap {
     ColumnScan::Bitmap bitmap(num_messages, 0);
     auto const readers = reader_map.find(column_id);
-    if (nullptr == matching_vars || reader_map.end() == readers) {
+    if (reader_map.end() == readers) {
         return bitmap;
     }
     for (auto* reader : readers->second) {
-        for (uint64_t row{0}; row < num_messages; ++row) {
-            auto const matched
-                    = matching_vars->contains(static_cast<int64_t>(reader->get_variable_id(row)));
-            bitmap[row] |= ((FilterOperation::EQ == operation) == matched) ? 1 : 0;
+        for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
+            auto const matched = matching_vars.contains(
+                    static_cast<int64_t>(reader->get_variable_id(message_index))
+            );
+            bitmap[message_index] |= ((FilterOperation::EQ == operation) == matched) ? 1 : 0;
         }
     }
     return bitmap;
@@ -261,28 +262,43 @@ auto ColumnScan::try_create(
         VarMatchMap const& var_matches,
         uint64_t num_messages
 ) -> std::optional<ColumnScan> {
-    ColumnScan scan{num_messages};
-
     if (false == can_build_node(expression.get(), clp_queries, var_matches)) {
         return std::nullopt;
     }
 
-    scan.m_matches = scan.build_node(
+    return ColumnScan{
             expression.get(),
             basic_readers,
             clp_string_readers,
             var_string_readers,
             clp_queries,
-            var_matches
-    );
-    return std::move(scan);
+            var_matches,
+            num_messages
+    };
 }
 
 auto ColumnScan::filter(uint64_t cur_message) -> bool {
     return 0 != m_matches[cur_message];
 }
 
-ColumnScan::ColumnScan(uint64_t num_messages) : m_num_messages{num_messages} {}
+ColumnScan::ColumnScan(
+        ast::Expression* expression,
+        BasicReaderMap const& basic_readers,
+        ClpStringReaderMap const& clp_string_readers,
+        VarStringReaderMap const& var_string_readers,
+        ClpQueryMap const& clp_queries,
+        VarMatchMap const& var_matches,
+        uint64_t num_messages
+)
+        : m_num_messages{num_messages},
+          m_matches{build_node(
+                  expression,
+                  basic_readers,
+                  clp_string_readers,
+                  var_string_readers,
+                  clp_queries,
+                  var_matches
+          )} {}
 
 auto ColumnScan::can_build_node(
         ast::Expression* expr,
@@ -312,10 +328,13 @@ auto ColumnScan::can_build_node(
             }
             continue;
         }
-        auto* filter = dynamic_cast<FilterExpr*>(cur_expr);
-        if (false == can_build_filter(filter, clp_queries, var_matches)) {
-            return false;
+        if (auto* filter = dynamic_cast<FilterExpr*>(cur_expr); nullptr != filter) {
+            if (false == can_build_filter(filter, clp_queries, var_matches)) {
+                return false;
+            }
+            continue;
         }
+        return false;
     }
     return true;
 }
@@ -325,9 +344,6 @@ auto ColumnScan::can_build_filter(
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
 ) -> bool {
-    if (nullptr == filter) {
-        return false;
-    }
     auto const column = filter->get_column();
     if (column->is_pure_wildcard() || column->is_unresolved_descriptor()
         || column->has_unresolved_tokens())
@@ -373,7 +389,6 @@ auto ColumnScan::build_node(
         result = Bitmap(m_num_messages, 1);
         for (auto const& operand : and_expr->get_op_list()) {
             auto* child_expr = dynamic_cast<ast::Expression*>(operand.get());
-            assert(nullptr != child_expr);
             auto child = build_node(
                     child_expr,
                     basic_readers,
@@ -395,7 +410,6 @@ auto ColumnScan::build_node(
         result = Bitmap(m_num_messages, 0);
         for (auto const& operand : or_expr->get_op_list()) {
             auto* child_expr = dynamic_cast<ast::Expression*>(operand.get());
-            assert(nullptr != child_expr);
             auto child = build_node(
                     child_expr,
                     basic_readers,
@@ -413,13 +427,7 @@ auto ColumnScan::build_node(
                 break;
             }
         }
-    } else {
-        auto* filter = dynamic_cast<FilterExpr*>(expr);
-        assert(nullptr != filter);
-        if (nullptr == filter) {
-            Bitmap empty(m_num_messages, 0);
-            return empty;
-        }
+    } else if (auto* filter = dynamic_cast<FilterExpr*>(expr); nullptr != filter) {
         result = build_filter(
                 filter,
                 basic_readers,
@@ -514,7 +522,7 @@ auto ColumnScan::build_filter(
                     var_string_readers,
                     column_id,
                     operation,
-                    matching_vars
+                    *matching_vars
             );
         }
         case LiteralType::ArrayT:
