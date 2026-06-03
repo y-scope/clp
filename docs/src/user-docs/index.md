@@ -25,8 +25,9 @@ searching them.
 
 ## Deployment
 
-Dive deeper into deploying CLP with Docker Compose or Kubernetes. In particular, multi-host
-deployments enable horizontal scaling and high availability for production workloads.
+Dive deeper into deploying CLP with Docker Compose, the single-container image, or Kubernetes. In
+particular, multi-host deployments enable horizontal scaling and high availability for production
+workloads.
 
 ::::{grid} 1 1 2 2
 :gutter: 2

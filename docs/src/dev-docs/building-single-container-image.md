@@ -1,6 +1,7 @@
 # Building the single-container image
 
-The single-container image is layered on top of the regular `clp-package` image. Build it with:
+The single-container image is layered on top of the regular `clp-package` image. Build the release
+artifact flow with:
 
 ```shell
 task docker-images:package-single
@@ -9,6 +10,11 @@ task docker-images:package-single
 This task first builds the package and base package image, then runs
 `tools/deployment/package/build-single-image.sh`. The resulting image is tagged as
 `clp-package-single:latest`, and its image ID is written to `build/clp-package-single-image.id`.
+It then runs `tools/deployment/package/generate-single-image-compliance-bundle.sh` to write the
+release compliance bundle under `build/clp-package-single-compliance`.
+
+Because this is the release artifact flow, `syft` must be available on `PATH` so the compliance
+bundle can include SBOM files.
 
 ## Base image reference
 
@@ -36,14 +42,8 @@ The DB and results-cache initialization steps intentionally use the existing Pyt
 
 Redis does not have a separate initialization step, matching the Docker Compose flow.
 
-## Compliance bundle
+## Compliance Bundle
 
 The image build itself runs the release-license guard and generates third-party notice files inside
-the image. The separate compliance-bundle task is for release artifact collection:
-
-```shell
-task docker-images:package-single-compliance
-```
-
-The bundle helper collects the notice files from the image and, when `syft` is installed, generates
-SBOM files for release review.
+the image. The compliance bundle is generated as part of `task docker-images:package-single`; it
+collects the notice files from the image and generates SBOM files for release review.

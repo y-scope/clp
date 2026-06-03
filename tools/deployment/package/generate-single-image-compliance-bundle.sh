@@ -55,15 +55,8 @@ if command -v syft >/dev/null 2>&1; then
     syft "$image_ref" -o spdx-json > "${output_dir}/sbom.spdx.json"
     syft "$image_ref" -o cyclonedx-json > "${output_dir}/sbom.cyclonedx.json"
 else
-    cat > "${output_dir}/SBOM_NOT_GENERATED.txt" <<'EOF'
-The `syft` command was not found, so this script could not generate SBOMs.
-Install syft and rerun this script before publishing the image.
-EOF
-    if [[ "${CLP_SINGLE_CONTAINER_ALLOW_MISSING_SYFT:-0}" == "0" ]]; then
-        echo >&2 "Error: syft is required to generate the release compliance bundle."
-        echo >&2 "Set CLP_SINGLE_CONTAINER_ALLOW_MISSING_SYFT=1 only for local dry-runs."
-        exit 1
-    fi
+    echo >&2 "Error: syft is required to generate the release compliance bundle."
+    exit 1
 fi
 
 cat > "${output_dir}/corresponding-source-notes.md" <<'EOF'

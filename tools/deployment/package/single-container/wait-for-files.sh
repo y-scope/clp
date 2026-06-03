@@ -16,7 +16,7 @@ if [[ "${#files[@]}" -eq 0 || "$#" -eq 0 ]]; then
     exit 1
 fi
 
-for _ in $(seq 1 "${CLP_SINGLE_CONTAINER_WAIT_ATTEMPTS:-120}"); do
+for _ in $(seq 1 120); do
     all_files_exist=true
     for file in "${files[@]}"; do
         if [[ ! -e "$file" ]]; then

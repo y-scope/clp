@@ -27,17 +27,12 @@ def emit(name, value):
 clp_home = pathlib.Path(os.environ.get("CLP_HOME", "/opt/clp"))
 input_config_path = pathlib.Path(os.environ["CLP_CONFIG_PATH"])
 runtime_config_path = pathlib.Path("/run/clp-single-container/clp-config.yaml")
-credentials_file_override = os.environ.get("CLP_SINGLE_CONTAINER_CREDENTIALS_FILE")
 
 raw_config = read_yaml_config_file(input_config_path) or {}
 clp_config = ClpConfig.model_validate(raw_config)
 clp_config.make_config_paths_absolute(clp_home)
 
-credentials_file_path = (
-    pathlib.Path(credentials_file_override)
-    if credentials_file_override
-    else clp_config.credentials_file_path
-)
+credentials_file_path = clp_config.credentials_file_path
 if credentials_file_path.is_file():
     clp_config.credentials_file_path = credentials_file_path
     clp_config.database.load_credentials_from_file(credentials_file_path)
@@ -95,16 +90,6 @@ PY
 
 configure_service_environment() {
     prepare_runtime_config
-
-    export CLP_SINGLE_CONTAINER_INTERNAL_BIND_ADDRESS="${CLP_SINGLE_CONTAINER_INTERNAL_BIND_ADDRESS:-127.0.0.1}"
-    case "$CLP_SINGLE_CONTAINER_INTERNAL_BIND_ADDRESS" in
-        127.0.0.1 | 0.0.0.0) ;;
-        *)
-            echo >&2 \
-                "Error: CLP_SINGLE_CONTAINER_INTERNAL_BIND_ADDRESS must be 127.0.0.1 or 0.0.0.0."
-            exit 1
-            ;;
-    esac
 
     export CLP_DB_NAME="${CLP_DB_NAME:-${MYSQL_DATABASE:-}}"
     export CLP_DB_USER="${CLP_DB_USER:-${MYSQL_USER:-}}"
@@ -215,7 +200,7 @@ configure_rabbitmq_defaults() {
 default_user = ${RABBITMQ_DEFAULT_USER}
 default_pass = ${RABBITMQ_DEFAULT_PASS}
 log.file = ${RABBITMQ_LOGS}
-listeners.tcp.1 = ${CLP_SINGLE_CONTAINER_INTERNAL_BIND_ADDRESS}:5672
+listeners.tcp.1 = 127.0.0.1:5672
 EOF
     cat > /etc/rabbitmq/rabbitmq-env.conf <<'EOF'
 NODENAME=rabbit@localhost

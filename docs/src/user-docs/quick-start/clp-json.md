@@ -35,6 +35,56 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 
 :::
 
+:::{tab-item} Single container
+:sync: single-container
+
+From the extracted `clp-json` package directory, set the filesystem log input directory in
+`etc/clp-config.yaml`:
+
+```yaml
+logs_input:
+  type: "fs"
+  directory: "/home/alice/logs"
+```
+
+Keep `logs_input.directory` as the host path. The Docker mount below maps that same host directory
+to the path CLP uses inside the container. For other custom single-container settings, see the
+[single-container image guide][single-container-image].
+
+Create local quick-start credentials and start the image:
+
+```bash
+cat > etc/credentials.yaml <<'EOF'
+database:
+  username: "clp-user"
+  password: "pass"
+  root_username: "root"
+  root_password: "root-pass"
+  spider_username: "spider-user"
+  spider_password: "spider-pass"
+queue:
+  username: "clp-user"
+  password: "pass"
+redis:
+  password: "pass"
+EOF
+
+export CLP_LOGS_INPUT_DIR="/home/alice/logs"
+
+docker run \
+  --detach \
+  --name clp-package-single \
+  --mount type=bind,src="$(realpath etc/clp-config.yaml)",dst=/etc/clp-config.yaml,readonly \
+  --mount type=bind,src="$(realpath etc/credentials.yaml)",dst=/opt/clp/etc/credentials.yaml,readonly \
+  --mount type=bind,src="${CLP_LOGS_INPUT_DIR}",dst="/mnt/logs${CLP_LOGS_INPUT_DIR}",readonly \
+  --publish 127.0.0.1:4000:4000 \
+  clp-package-single:latest
+```
+
+The command assumes the image is available locally as `clp-package-single:latest`.
+
+:::
+
 :::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
@@ -125,6 +175,9 @@ results_cache:
 
 ## Compressing JSON logs
 
+::::{tab-set}
+:::{tab-item} Docker Compose and Kubernetes
+
 To compress some JSON logs, run:
 
 ```bash
@@ -135,12 +188,9 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
   * E.g., if your log events look like
     `{"timestamp": {"iso8601": "2024-01-01 00:01:02.345", ...}}`, you should enter
     `timestamp.iso8601` as the timestamp key.
-
-  :::{caution}
-  Log events without the specified timestamp key will *not* have an assigned timestamp. Currently,
-  these events can only be searched from the command line (when you don't specify a timestamp
-  filter).
-  :::
+  * Log events without the specified timestamp key will *not* have an assigned timestamp.
+    Currently, these events can only be searched from the command line when you don't specify a
+    timestamp filter.
 
 * `<path...>` are paths to JSON log files or directories containing such files.
   * Each JSON log file should contain each log event as a [separate JSON object][clp-json-format],
@@ -153,6 +203,24 @@ Compressed logs will be stored in the directory specified by the `archive_output
 config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
 `var/data/archives`).
 
+:::
+
+:::{tab-item} Single container
+
+Open [http://localhost:4000/ingest](http://localhost:4000/ingest) and submit a compression job from
+the **Submit Compression Job** form. Select files or directories from the mounted
+`logs_input.directory`; in the example above, that is `/home/alice/logs` on the host and
+`/mnt/logs/home/alice/logs` inside the container.
+
+Set **Timestamp Key** to the field path of the kv-pair that contains the timestamp in each log
+event. If you leave **Dataset** empty, CLP uses the `default` dataset.
+
+Use the **Compression Jobs** table on the same page to monitor the job status and compression
+ratio.
+
+:::
+::::
+
 :::{tip}
 To compress logs from object storage, see [Using object storage][object-storage].
 :::
@@ -160,14 +228,30 @@ To compress logs from object storage, see [Using object storage][object-storage]
 ## Compressing unstructured text logs
 
 clp-json supports compressing unstructured text logs by converting them into JSON. To enable this
-conversion, run the compression script with the `--unstructured` flag:
+conversion, use one of the following methods:
+
+::::{tab-set}
+:::{tab-item} Docker Compose and Kubernetes
+
+Run the compression script with the `--unstructured` flag:
 
 ```bash
 sbin/compress.sh --unstructured <path1> [<path2> ...]
 ```
 
-When `--unstructured` is specified, clp-json will parse the unstructured text and convert each log
-event into a JSON object. During this conversion, it attempts to extract the timestamp and log
+:::
+
+:::{tab-item} Single container
+
+Open [http://localhost:4000/ingest](http://localhost:4000/ingest), select files or directories from
+the mounted `logs_input.directory`, and enable **Unstructured Logs** / **Convert to JSON** before
+submitting the compression job.
+
+:::
+::::
+
+When unstructured conversion is enabled, clp-json will parse the unstructured text and convert each
+log event into a JSON object. During this conversion, it attempts to extract the timestamp and log
 message from each log event and store them as separate key-value pairs. The resulting JSON object
 includes:
 
@@ -191,7 +275,8 @@ will be converted into:
 ```
 
 :::{note}
-When the `--unstructured` flag is used, clp-json will always use `"timestamp"` as the timestamp key.
+When unstructured conversion is enabled, clp-json will always use `"timestamp"` as the timestamp
+key.
 :::
 
 ### Sample logs
@@ -202,8 +287,9 @@ For some sample logs, check out the [open-source datasets][datasets].
 
 ## Searching JSON logs
 
-You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or the
-[command line](#searching-from-the-command-line).
+You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or
+[API server](#searching-via-the-api-server). Docker Compose and Kubernetes deployments also support
+[command-line search](#searching-from-the-command-line).
 
 In clp-json, queries are written as a set of conditions (predicates) on key-value pairs (kv-pairs).
 For example, [Figure 1](#figure-1) shows a query that matches the first log event in
@@ -261,6 +347,12 @@ To search your compressed logs from CLP's UI, open the following URL in your bro
 [http://localhost:4000](http://localhost:4000)
 :::
 
+:::{tab-item} Single container
+:sync: single-container
+
+[http://localhost:4000](http://localhost:4000)
+:::
+
 :::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
@@ -305,8 +397,8 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following elemen
 
 :::{note}
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
-return more results, use the [command line](#searching-from-the-command-line) or
-[API server](#searching-via-the-api-server).
+return more results, use the [API server](#searching-via-the-api-server). Docker Compose and
+Kubernetes deployments can also use the [command line](#searching-from-the-command-line).
 :::
 
 ### Searching via the API server
@@ -316,6 +408,23 @@ To search via the API server:
 ::::{tab-set}
 :::{tab-item} Docker Compose
 :sync: docker
+
+```bash
+curl -X POST "http://localhost:3001/query/submit" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query_string": "<query>",
+    "max_num_results": 1000,
+    "timestamp_begin": null,
+    "timestamp_end": null,
+    "case_sensitive": false
+  }'
+```
+
+:::
+
+:::{tab-item} Single container
+:sync: single-container
 
 ```bash
 curl -X POST "http://localhost:3001/query/submit" \
@@ -357,7 +466,8 @@ For more details on the API, see [Using the API server][api-server].
 
 ### Searching from the command line
 
-To search your compressed logs from the command line, run:
+For Docker Compose or Kubernetes deployments, search your compressed logs from the command line by
+running:
 
 ```bash
 sbin/search.sh '<query>'
@@ -396,6 +506,23 @@ sbin/stop-clp.sh
 
 :::
 
+:::{tab-item} Single container
+:sync: single-container
+
+To inspect the running container:
+
+```bash
+docker ps --filter name=clp-package-single
+```
+
+To stop CLP:
+
+```bash
+docker rm --force clp-package-single
+```
+
+:::
+
 :::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
@@ -419,3 +546,4 @@ kind delete cluster --name clp
 [datasets]: ../resources-datasets.md
 [json-search-syntax]: ../reference-json-search-syntax.md
 [object-storage]: ../guides-using-object-storage/index.md
+[single-container-image]: ../guides-single-container-image.md
