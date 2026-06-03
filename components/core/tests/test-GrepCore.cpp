@@ -10,8 +10,8 @@
 
 #include <clp/Defs.h>
 #include <clp/GrepCore.hpp>
-#include <clp/Utils.hpp>
 
+#include "../clp/Utils.hpp"
 #include "search_test_utils.hpp"
 
 using clp::epochtime_t;
@@ -119,6 +119,8 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     constexpr epochtime_t cNoEndTimestamp{0};
     constexpr bool cIgnoreCase{true};
 
+    string const raw_query{"text 100 10? 3.14*"};
+
     std::string rule_set_string{R"(delimiters: \r\n)"};
     rule_set_string += "\n";
     rule_set_string += R"(int:\d+)";
@@ -130,28 +132,6 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     CAPTURE(rule_set_string);
 
     auto parser{load_parser_from_rule_text(rule_set_string)};
-
-    MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
-    MockLogTypeDictionary const logtype_dict{make_logtype_dict(
-            {{"text ", 'i', " ", 'i', " ", 'f'},
-             {"text ", 'i', " ", 'd', " ", 'f'},
-             {"text ", 'i', " ", 'd', " 3.14ab&"},
-             {"text ", 'i', " ", 'd', " 3.14abc&"},
-             {"text ", 'i', " ", 'd', " 3.15ab&"},
-             {"text ", 'i', " 10& ", 'f'}}
-    )};
-
-    string const raw_query{"text 100 10? 3.14*"};
-
-    auto const query{GrepCore::process_raw_query(
-            logtype_dict,
-            var_dict,
-            raw_query,
-            cNoBeginTimestamp,
-            cNoEndTimestamp,
-            cIgnoreCase,
-            &parser
-    )};
 
     auto const interpretations{parser.query_interpretations("", raw_query)};
     string interpretation_strings{"interps:"};
@@ -168,6 +148,27 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
         interpretation_strings += "\n" + interp_string;
     }
     CAPTURE(interpretation_strings);
+
+    MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
+    MockLogTypeDictionary const logtype_dict{make_logtype_dict(
+            {{"text ", 'i', " ", 'i', " ", 'f'},
+             {"text ", 'i', " ", 'd', " ", 'f'},
+             {"text ", 'i', " ", 'd', " 3.14ab&"},
+             {"text ", 'i', " ", 'd', " 3.14abc&"},
+             {"text ", 'i', " ", 'd', " 3.15ab&"},
+             {"text ", 'i', " 10& ", 'f'}}
+    )};
+
+    auto const query{GrepCore::process_raw_query(
+            logtype_dict,
+            var_dict,
+            raw_query,
+            cNoBeginTimestamp,
+            cNoEndTimestamp,
+            cIgnoreCase,
+            &parser
+    )};
+
     REQUIRE(query.has_value());
     auto const& sub_queries{query.value().get_sub_queries()};
 

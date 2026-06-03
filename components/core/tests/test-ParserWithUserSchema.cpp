@@ -17,8 +17,8 @@
 #include <clp/FileReader.hpp>
 #include <clp/ir/types.hpp>
 #include <clp/streaming_archive/reader/Archive.hpp>
-#include <clp/Utils.hpp>
 
+#include "../clp/Utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 using clp::load_parser_from_file;
