@@ -386,10 +386,14 @@ TEST_CASE("process_schema_greedy_wildcard_token", "[dfa_search]") {
  *   "text <int>(100) 10? <float)(3.14*)"
  *   "text <int>(100) 10? <c_has_num)(3.14*)"
  *   "text <int>(100) 10? 3.14*"
- * Subqueries will contain interpretations 0, 3, 5, 6:
- *   1+2 are omitted as the var sequence for "int, int" always ends with "float" in logtype dict
- *   4 is omitted as "int hasNum" is never followed by "hasNum" in logtype dict
+ * Subqueries will contain interpretations 0, 2, 3, 5, 6:
+ *   1+4 are omitted as no logtype ends in hasNum
  *   7+8 are omitted as static-text is always followed by "float" in the logtype dict
+ * Mapping considering encoding (Interpretations -> Logtypes)
+ *   0 (with wildcard int), 3 (with hasNum) -> 1
+ *   0 (with encoded int) -> 0
+ *   2 (with wildcard int), 5 (with hasNum) -> 2,3
+ *   ??? (with wildcard int) -> 5
  */
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     MockVariableDictionary const var_dict{

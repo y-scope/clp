@@ -119,11 +119,12 @@ private:
      * Consecutive wildcards that span across the boundary of tokens are preserved.
      *
      * @param interpretations The original vector of `vector<log_surgeon::SubQuery>`s to normalize.
-     * @return The normalized set of `vector<log_surgeon::SubQuery>`s.
+     * @return The normalized vector of `vector<log_surgeon::SubQuery>`s.
      */
     static auto normalize_interpretations(
             std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations
-    ) -> std::set<std::vector<log_surgeon::SubQuery>>;
+    ) -> std::vector<std::vector<log_surgeon::SubQuery>>;
+
     /**
      * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
      * to search for within the archive. Each candidate combination becomes a useful subquery if:
@@ -152,7 +153,7 @@ private:
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
     static auto generate_schema_sub_queries(
-            std::set<std::vector<log_surgeon::SubQuery>> const& interpretations,
+            std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
             bool ignore_case,
@@ -216,7 +217,7 @@ template <
         VariableDictionaryReaderReq VariableDictionaryReaderType
 >
 auto SchemaSearcher::generate_schema_sub_queries(
-        std::set<std::vector<log_surgeon::SubQuery>> const& interpretations,
+        std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations,
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
         bool const ignore_case,

@@ -18,13 +18,13 @@ using std::vector;
 
 auto SchemaSearcher::normalize_interpretations(
         vector<vector<log_surgeon::SubQuery>> const& interpretations
-) -> set<vector<log_surgeon::SubQuery>> {
-    set<vector<log_surgeon::SubQuery>> normalized_interpretations;
+) -> vector<vector<log_surgeon::SubQuery>> {
+    vector<vector<log_surgeon::SubQuery>> normalized_interps;
     for (auto const& interpretation : interpretations) {
-        vector<log_surgeon::SubQuery> normalized_interpretation(interpretation.size());
+        vector<log_surgeon::SubQuery> normalized_interp(interpretation.size());
         for (size_t i{0}; i < interpretation.size(); ++i) {
             auto const& token{interpretation[i]};
-            auto& normalized_token{normalized_interpretation[i]};
+            auto& normalized_token{normalized_interp[i]};
             normalized_token.qualified_name = token.qualified_name;
 
             auto& normalized_value{normalized_token.value};
@@ -35,9 +35,11 @@ auto SchemaSearcher::normalize_interpretations(
                 }
             }
         }
-        normalized_interpretations.insert(normalized_interpretation);
+        if (normalized_interps.end() == std::ranges::find(normalized_interps, normalized_interp)) {
+            normalized_interps.push_back(std::move(normalized_interp));
+        }
     }
-    return normalized_interpretations;
+    return normalized_interps;
 }
 
 auto SchemaSearcher::get_wildcard_encodable_positions(
