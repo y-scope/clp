@@ -1,7 +1,7 @@
 {
   "name": "webui",
   "version": "0.1.0",
-  "packageManager": "pnpm@11.0.8",
+  "packageManager": "pnpm@11.5.1",
   "description": "",
   "scripts": {
     "build": "turbo build",
@@ -13,6 +13,6 @@
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "turbo": "2.9.10"
+    "turbo": "2.9.16"
   }
 }

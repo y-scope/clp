@@ -75,8 +75,8 @@ tasks:
   check-js:
     sources: &js_source_files
       - "{{.G_WEBUI_SRC_DIR}}/**/*"
-      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
-      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/node_modules/*"
+      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/**/*"
+      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/node_modules/**/*"
       - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     cmds:

@@ -261,6 +261,7 @@ tasks:
       - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/*"
+      - exclude: ".turbo/**/*"
       - exclude: "**/dist/**/*"
       - exclude: "**/node_modules/**/*"
       - exclude: "yscope-log-viewer/**/*"
@@ -275,7 +276,7 @@ tasks:
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':'{{.G_WEBUI_SRC_DIR}}'/node_modules/.bin:$PATH turbo build"
       - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
       - >-
-        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod --legacy
+        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod
         --filter=@webui/server '{{.G_WEBUI_BUILD_DIR}}/server'
       - "rsync -a packages/server/dist/ '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
       - "rsync -a packages/client/dist/ '{{.G_WEBUI_BUILD_DIR}}/client/'"
@@ -451,11 +452,12 @@ tasks:
     sources:
       - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
+      - "package.json"
       - "packages/client/package.json"
       - "packages/common/package.json"
-      - "pnpm-lock.yaml"
-      - "package.json"
       - "packages/server/package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     deps:
       - "toolchains:pnpm"

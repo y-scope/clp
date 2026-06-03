@@ -8,6 +8,7 @@ allowBuilds:
   unrs-resolver: true
 
 confirmModulesPurge: false
+injectWorkspacePackages: true
 minimumReleaseAge: 0
 nodeLinker: hoisted
 verifyDepsBeforeRun: false
