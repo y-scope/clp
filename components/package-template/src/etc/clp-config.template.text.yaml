@@ -94,15 +94,13 @@ log_ingestor: null
 #
 #compression_worker:
 #  logging_level: "INFO"
-#  # Optional Celery task time limits, in seconds; null disables each limit.
-#  task_soft_time_limit: null
-#  task_time_limit: null
+#  task_soft_time_limit: 0  # A value of 0 disables the limit
+#  task_time_limit: 0  # A value of 0 disables the limit
 #
 #query_worker:
 #  logging_level: "INFO"
-#  # Optional Celery task time limits, in seconds; null disables each limit.
-#  task_soft_time_limit: null
-#  task_time_limit: null
+#  task_soft_time_limit: 0  # A value of 0 disables the limit
+#  task_time_limit: 0  # A value of 0 disables the limit
 #
 #webui:
 #  host: "localhost"

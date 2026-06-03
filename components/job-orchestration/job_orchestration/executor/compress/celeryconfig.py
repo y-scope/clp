@@ -1,5 +1,6 @@
 import os
 
+from job_orchestration.executor.utils import load_clp_config_from_config_path_env_var
 from job_orchestration.scheduler.constants import SchedulerType, TASK_QUEUE_HIGHEST_PRIORITY
 
 # Worker settings
@@ -23,9 +24,6 @@ result_expires = 7200
 broker_url = os.getenv("BROKER_URL")
 result_backend = os.getenv("RESULT_BACKEND")
 
-_soft_time_limit = os.getenv("CLP_COMPRESSION_WORKER_TASK_SOFT_TIME_LIMIT")
-if _soft_time_limit is not None and _soft_time_limit != "":
-    task_soft_time_limit = int(_soft_time_limit)
-_time_limit = os.getenv("CLP_COMPRESSION_WORKER_TASK_TIME_LIMIT")
-if _time_limit is not None and _time_limit != "":
-    task_time_limit = int(_time_limit)
+_clp_config = load_clp_config_from_config_path_env_var()
+task_soft_time_limit = _clp_config.compression_worker.task_soft_time_limit
+task_time_limit = _clp_config.compression_worker.task_time_limit

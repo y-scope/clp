@@ -1,5 +1,6 @@
 import os
 
+from job_orchestration.executor.utils import load_clp_config_from_config_path_env_var
 from job_orchestration.scheduler.constants import SchedulerType
 
 imports = (
@@ -19,12 +20,9 @@ result_backend = os.getenv("RESULT_BACKEND")
 result_persistent = True
 result_expires = 7200
 
-_soft_time_limit = os.getenv("CLP_QUERY_WORKER_TASK_SOFT_TIME_LIMIT")
-if _soft_time_limit is not None and _soft_time_limit != "":
-    task_soft_time_limit = int(_soft_time_limit)
-_time_limit = os.getenv("CLP_QUERY_WORKER_TASK_TIME_LIMIT")
-if _time_limit is not None and _time_limit != "":
-    task_time_limit = int(_time_limit)
+_clp_config = load_clp_config_from_config_path_env_var()
+task_soft_time_limit = _clp_config.query_worker.task_soft_time_limit
+task_time_limit = _clp_config.query_worker.task_time_limit
 
 # Differentiate between tasks that have started v.s. tasks still in queue
 task_track_started = True

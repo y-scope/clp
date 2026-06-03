@@ -45,14 +45,6 @@ spec:
               value: "/dev/stdout"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
-            {{- if .Values.clpConfig.compression_worker.task_soft_time_limit }}
-            - name: "CLP_COMPRESSION_WORKER_TASK_SOFT_TIME_LIMIT"
-              value: {{ .Values.clpConfig.compression_worker.task_soft_time_limit | quote }}
-            {{- end }}
-            {{- if .Values.clpConfig.compression_worker.task_time_limit }}
-            - name: "CLP_COMPRESSION_WORKER_TASK_TIME_LIMIT"
-              value: {{ .Values.clpConfig.compression_worker.task_time_limit | quote }}
-            {{- end }}
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"

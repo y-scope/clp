@@ -445,18 +445,18 @@ class QueryScheduler(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
-class CompressionWorker(BaseModel):
+class WorkerConfigBase(BaseModel):
     logging_level: LoggingLevel = "INFO"
-    # Optional Celery task time limits, in seconds; null disables each limit.
-    task_soft_time_limit: int | None = None
-    task_time_limit: int | None = None
+    task_soft_time_limit: NonNegativeInt = 0
+    task_time_limit: NonNegativeInt = 0
 
 
-class QueryWorker(BaseModel):
-    logging_level: LoggingLevel = "INFO"
-    # Optional Celery task time limits, in seconds; null disables each limit.
-    task_soft_time_limit: int | None = None
-    task_time_limit: int | None = None
+class CompressionWorker(WorkerConfigBase):
+    pass
+
+
+class QueryWorker(WorkerConfigBase):
+    pass
 
 
 class Redis(BaseModel):
