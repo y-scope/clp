@@ -24,7 +24,7 @@ class CeleryTaskManager(TaskManager):
             except celery.exceptions.TimeoutError:
                 return None
             except celery.exceptions.SoftTimeLimitExceeded:
-                logger.error("Compression task exceeded soft time limit.")
+                logger.exception("Compression task exceeded soft time limit.")
                 raise
 
     def submit(self, task_params: list[dict[str, Any]]) -> TaskManager.ResultHandle:
