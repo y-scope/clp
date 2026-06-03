@@ -174,11 +174,11 @@ public:
 
     // Methods inherited from OutputHandler
     /**
-     * Flushes the output handler after each table that gets searched.
+     * Flushes the output handler after all tables are searched.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache
+     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache.
      */
-    ErrorCode flush() override;
+    auto finish() -> ErrorCode override;
 
     void write(
             std::string_view message,
