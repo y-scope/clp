@@ -164,6 +164,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     )};
 
     auto const interpretations{parser.query_interpretations("", raw_query)};
+    CAPTURE(interpretations.size());
     for (auto const& interpretation : interpretations) {
         string interp_string;
         for (auto const& token : interpretation) {
@@ -171,7 +172,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
                 interp_string += token.value;
                 continue;
             }
-            interp_string += "<" + token.qualified_name + ">(" + token.value +")";
+            interp_string += "<" + token.qualified_name + ">(" + token.value + ")";
         }
         CAPTURE(interp_string);
     }
