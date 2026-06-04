@@ -2227,6 +2227,7 @@ dependencies = [
  "tokio-util",
  "tower-http",
  "tracing",
+ "url",
  "utoipa",
  "utoipa-axum",
  "uuid",
