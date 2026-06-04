@@ -97,8 +97,7 @@ tasks:
           URL: >-
             https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack enable"
-      - cmd: "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack install"
-        dir: "{{.G_WEBUI_SRC_DIR}}"
+      - "cd '{{.G_WEBUI_SRC_DIR}}' && PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack install"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
