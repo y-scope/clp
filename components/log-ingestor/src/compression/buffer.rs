@@ -1,7 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::s3::S3ObjectMetadataId;
-use opentelemetry::global;
 use sqlx::FromRow;
 
 /// Represents an entry of a buffered object metadata.
@@ -37,8 +36,7 @@ pub struct Buffer<Submitter: BufferSubmitter> {
     buf: Vec<S3ObjectMetadataId>,
     total_size: u64,
     size_threshold: u64,
-    bytes_total: opentelemetry::metrics::Counter<u64>,
-    records_total: opentelemetry::metrics::Counter<u64>,
+    telemetry: TelemetryMeter,
 }
 
 impl<Submitter: BufferSubmitter> Buffer<Submitter> {
@@ -46,16 +44,14 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     ///
     /// # Returns
     ///
-    /// A newly created [`Buffer`] with the given submitter of type `T` and size threshold.
+    /// A newly created [`Buffer`] with the given submitter and size threshold.
     pub fn new(submitter: Submitter, size_threshold: u64) -> Self {
-        let meter = global::meter("log-ingestor");
         Self {
             submitter,
             buf: Vec::new(),
             total_size: 0,
             size_threshold,
-            bytes_total: meter.u64_counter("clp.ingest.bytes_total").build(),
-            records_total: meter.u64_counter("clp.ingest.records_total").build(),
+            telemetry: TelemetryMeter::new(),
         }
     }
 
@@ -78,8 +74,7 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         let mut submission_triggered = false;
 
         for entry in object_metadata_to_ingest {
-            self.bytes_total.add(entry.size, &[]);
-            self.records_total.add(1, &[]);
+            self.telemetry.ingest(entry.size);
 
             self.total_size += entry.size;
             self.buf.push(entry.id);
@@ -123,5 +118,32 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     fn clear(&mut self) {
         self.buf.clear();
         self.total_size = 0;
+    }
+}
+
+/// Telemetry counters for tracking ingested data.
+struct TelemetryMeter {
+    total_num_bytes: opentelemetry::metrics::Counter<u64>,
+    total_num_objects: opentelemetry::metrics::Counter<u64>,
+}
+
+impl TelemetryMeter {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`TelemetryMeter`] with counters registered in the global meter provider.
+    fn new() -> Self {
+        let meter = opentelemetry::global::meter("log-ingestor");
+        Self {
+            total_num_bytes: meter.u64_counter("clp.ingest.total_num_bytes").build(),
+            total_num_objects: meter.u64_counter("clp.ingest.total_num_objects").build(),
+        }
+    }
+
+    /// Records the ingestion of an object with the given number of bytes.
+    fn ingest(&self, num_bytes: u64) {
+        self.total_num_bytes.add(num_bytes, &[]);
+        self.total_num_objects.add(1, &[]);
     }
 }
