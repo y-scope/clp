@@ -175,7 +175,7 @@ public:
     // Methods inherited from OutputHandler
     /**
      * Flushes the output handler after all tables are searched.
-     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeSuccess on success.
      * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache.
      */
     auto finish() -> ErrorCode override;
