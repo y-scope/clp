@@ -9,6 +9,14 @@ image:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
     tag: "main"
+  mariadb:
+    repository: "mariadb"
+    pullPolicy: "Always"
+    tag: "10.11.16"
+  mysql:
+    repository: "mysql"
+    pullPolicy: "Always"
+    tag: "8.0.46"
   curl:
     repository: "curlimages/curl"
     pullPolicy: "IfNotPresent"
@@ -30,6 +38,18 @@ image:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
     pullPolicy: "IfNotPresent"
     tag: "clp-v0.10.0-fix.1"
+  queue:
+    repository: "rabbitmq"
+    pullPolicy: "Always"
+    tag: "4.2.6"
+  redis:
+    repository: "redis"
+    pullPolicy: "Always"
+    tag: "7.4.8"
+  resultsCache:
+    repository: "mongo"
+    pullPolicy: "Always"
+    tag: "8.0.21"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
