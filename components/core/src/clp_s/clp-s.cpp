@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
-#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -41,6 +40,8 @@
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
+#include "search/SearchTelemetry.hpp"
+#include "search/TelemetryInitializer.hpp"
 #include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
@@ -79,6 +80,11 @@ bool search_archive(
         std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 );
+
+auto populate_total_archive_records(
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        SearchTelemetry& telemetry
+) -> void;
 
 bool compress(CommandLineArguments const& command_line_arguments) {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
@@ -132,6 +138,13 @@ bool search_archive(
         int reducer_socket_fd
 ) {
     auto const& query = command_line_arguments.get_query();
+    auto telemetry{collect_query_shape_metrics(
+            expr,
+            command_line_arguments.get_search_begin_ts(),
+            command_line_arguments.get_search_end_ts()
+    )};
+    populate_query_context(telemetry, query, archive_reader->get_archive_id());
+    SearchTelemetrySpan telemetry_span;
 
     auto timestamp_dict = archive_reader->get_timestamp_dictionary();
     AddTimestampConditions add_timestamp_conditions(
@@ -148,6 +161,8 @@ bool search_archive(
                 command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
                 command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
         );
+        telemetry_span.set_error("no authoritative timestamp column");
+        telemetry_span.set_telemetry(telemetry);
         return false;
     }
 
@@ -155,6 +170,8 @@ bool search_archive(
         std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
     {
         SPDLOG_ERROR("Query '{}' is logically false", query);
+        telemetry_span.set_error("query is logically false");
+        telemetry_span.set_telemetry(telemetry);
         return false;
     }
 
@@ -163,6 +180,9 @@ bool search_archive(
             false == command_line_arguments.get_ignore_case()
     };
     if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        telemetry.termination_stage = "range_index_matching";
+        populate_total_archive_records(archive_reader, telemetry);
+        telemetry_span.set_telemetry(telemetry);
         SPDLOG_INFO("No matching metadata ranges for query '{}'", query);
         return true;
     }
@@ -171,6 +191,9 @@ bool search_archive(
     // the timestamp index
     EvaluateTimestampIndex timestamp_index(timestamp_dict);
     if (clp_s::EvaluatedValue::False == timestamp_index.run(expr)) {
+        telemetry.termination_stage = "time_range_matching";
+        populate_total_archive_records(archive_reader, telemetry);
+        telemetry_span.set_telemetry(telemetry);
         SPDLOG_INFO("No matching timestamp ranges for query '{}'", query);
         return true;
     }
@@ -188,6 +211,9 @@ bool search_archive(
             archive_reader->get_schema_map()
     );
     if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        telemetry.termination_stage = "schema_matching";
+        populate_total_archive_records(archive_reader, telemetry);
+        telemetry_span.set_telemetry(telemetry);
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
@@ -210,6 +236,8 @@ bool search_archive(
                 ))
             {
                 SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+                telemetry_span.set_error("projection column tokenization failed");
+                telemetry_span.set_telemetry(telemetry);
                 return false;
             }
             projection->add_column(
@@ -221,6 +249,8 @@ bool search_archive(
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());
+        telemetry_span.set_error("projection resolution failed");
+        telemetry_span.set_telemetry(telemetry);
         return false;
     }
     projection->resolve_columns(archive_reader->get_schema_tree());
@@ -281,10 +311,14 @@ bool search_archive(
         );
         if (nullptr == output_handler) {
             SPDLOG_ERROR("Failed to create output handler.");
+            telemetry_span.set_error("output handler creation failed");
+            telemetry_span.set_telemetry(telemetry);
             return false;
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        telemetry_span.set_error("output handler creation failed");
+        telemetry_span.set_telemetry(telemetry);
         return false;
     }
 
@@ -294,9 +328,41 @@ bool search_archive(
             expr,
             archive_reader,
             std::move(output_handler),
-            command_line_arguments.get_ignore_case()
+            command_line_arguments.get_ignore_case(),
+            &telemetry
     );
-    return output.filter();
+    auto const success{output.filter()};
+    if (false == success) {
+        telemetry_span.set_error("archive filtering failed");
+    }
+    telemetry_span.set_telemetry(telemetry);
+    return success;
+}
+
+auto populate_total_archive_records(
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        SearchTelemetry& telemetry
+) -> void {
+    if (archive_reader->get_schema_ids().empty()) {
+        try {
+            auto const result{archive_reader->read_metadata()};
+            if (result.has_error()) {
+                auto const error{result.error()};
+                SPDLOG_WARN(
+                        "Failed to read archive metadata for search telemetry: {} - {}",
+                        error.category().name(),
+                        error.message()
+                );
+                return;
+            }
+        } catch (std::exception const& e) {
+            SPDLOG_WARN("Failed to read archive metadata for search telemetry: {}", e.what());
+            return;
+        }
+    }
+    for (auto const schema_id : archive_reader->get_schema_ids()) {
+        telemetry.total_archive_records += archive_reader->get_schema_num_messages(schema_id);
+    }
 }
 }  // namespace
 
@@ -359,6 +425,11 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else {
+        // Install the OpenTelemetry tracer provider for the duration of the search command. Spans
+        // emitted while searching each archive are flushed and the provider is shut down when this
+        // guard goes out of scope.
+        TelemetryContext const telemetry_context;
+
         auto const& query = command_line_arguments.get_query();
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);

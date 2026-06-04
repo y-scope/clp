@@ -17,6 +17,7 @@
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
 #include "SchemaMatch.hpp"
+#include "SearchTelemetry.hpp"
 
 namespace clp_s::search {
 /**
@@ -30,13 +31,15 @@ public:
            std::shared_ptr<ast::Expression> const& expr,
            std::shared_ptr<ArchiveReader> const& archive_reader,
            std::unique_ptr<OutputHandler> output_handler,
-           bool ignore_case)
+           bool ignore_case,
+           SearchTelemetry* telemetry = nullptr)
             : m_query_runner(match, expr, archive_reader, ignore_case),
               m_archive_reader(archive_reader),
               m_expr(expr),
               m_match(match),
               m_output_handler(std::move(output_handler)),
-              m_should_marshal_records(m_output_handler->should_marshal_records()) {}
+              m_should_marshal_records(m_output_handler->should_marshal_records()),
+              m_telemetry(telemetry) {}
 
     /**
      * Filters messages within the archive and outputs the filtered messages to the configured
@@ -53,6 +56,7 @@ private:
     std::shared_ptr<SchemaMatch> m_match;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_should_marshal_records{true};
+    SearchTelemetry* m_telemetry{};
 };
 }  // namespace clp_s::search
 
