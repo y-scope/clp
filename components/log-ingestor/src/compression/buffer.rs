@@ -72,10 +72,8 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         object_metadata_to_ingest: Vec<CompressionBufferEntry>,
     ) -> Result<bool> {
         let mut submission_triggered = false;
-
         for entry in object_metadata_to_ingest {
             self.telemetry.ingest(entry.size);
-
             self.total_size += entry.size;
             self.buf.push(entry.id);
 
