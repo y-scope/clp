@@ -42,6 +42,7 @@ tokio-util = "0.7.18"
 tracing = "0.1.44"
 tower-http = { version = "0.6.8", features = ["cors"] }
 thiserror = "2.0.18"
+url = "2.5.8"
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 utoipa-axum = "0.2.0"
 
