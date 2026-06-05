@@ -50,6 +50,7 @@ The task will download, build, and install (within the build directory) the foll
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r4.1.1         |
 | [msgpack-cxx](https://github.com/msgpack/msgpack-c/tree/cpp_master)   | v7.0.0         |
 | [nlohmann_json](https://github.com/nlohmann/json)                     | v3.11.3        |
+| [opentelemetry-cpp](https://github.com/open-telemetry/opentelemetry-cpp) | v1.27.0        |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v4.6.4         |
 | [spdlog](https://github.com/gabime/spdlog)                            | v1.15.3        |
 | [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |

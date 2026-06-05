@@ -166,6 +166,14 @@ public:
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
 
+    /**
+     * @param schema_id
+     * @return The number of messages stored under the given schema in the archive.
+     */
+    [[nodiscard]] auto get_schema_num_messages(int32_t schema_id) const -> uint64_t {
+        return m_id_to_schema_metadata.at(schema_id).num_messages();
+    }
+
     void set_projection(std::shared_ptr<search::Projection> projection) {
         m_projection = projection;
     }

@@ -176,6 +176,10 @@ public:
 
     DescriptorList::iterator descriptor_end() { return m_descriptors.end(); }
 
+    DescriptorList::const_iterator descriptor_begin() const { return m_descriptors.cbegin(); }
+
+    DescriptorList::const_iterator descriptor_end() const { return m_descriptors.cend(); }
+
     /**
      * @return A reference to the underlying list of descriptors.
      * Useful when the descriptors need to be mutated e.g. when being resolved.

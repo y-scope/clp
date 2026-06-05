@@ -210,6 +210,13 @@ if(CLP_NEED_NLOHMANN_JSON)
     endif()
 endif()
 
+if(CLP_NEED_OPENTELEMETRY_CPP)
+    find_package(opentelemetry-cpp 1.27.0 CONFIG REQUIRED COMPONENTS api)
+    if(opentelemetry-cpp_FOUND)
+        message(STATUS "Found opentelemetry-cpp ${opentelemetry-cpp_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_SIMDJSON)
     find_package(simdjson REQUIRED)
     if(simdjson_FOUND)
