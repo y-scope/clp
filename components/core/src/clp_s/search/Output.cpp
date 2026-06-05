@@ -143,7 +143,7 @@ bool Output::filter() {
     }
 
     nlohmann::json json_msg;
-    json_msg["stats"]["bytes_scanned"] = 0;
+    json_msg["stats"] = nlohmann::json::object();
     json_msg["stats"]["bytes_output"] = total_bytes_output;
     std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
 

@@ -1,5 +1,6 @@
 """File structure validators."""
 
+import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import IO
@@ -41,15 +42,14 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     :param json_fp:
     :return: A named temporary file (delete on close) that contains the sorted JSON content.
     """
-    import json
     lines = []
-    with open(json_fp, 'r') as f:
+    with json_fp.open("r") as f:
         for line in f:
             if not line.strip():
                 continue
             try:
                 obj = json.loads(line)
-                lines.append(json.dumps(obj, separators=(',', ':'), sort_keys=True))
+                lines.append(json.dumps(obj, separators=(",", ":"), sort_keys=True))
             except json.JSONDecodeError:
                 lines.append(line.strip())
 

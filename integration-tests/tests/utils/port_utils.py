@@ -137,6 +137,7 @@ def _is_port_free(port: int, host: str) -> bool:
     :return: True if the port can be bound, otherwise False.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host, port))
         except OSError:

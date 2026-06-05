@@ -11,14 +11,12 @@ from opentelemetry import metrics
 
 meter = metrics.get_meter("clp_py_utils")
 bytes_scanned_counter = meter.create_counter(
-    "clp.query.bytes_scanned_total", 
-    unit="By", 
-    description="Total uncompressed bytes scanned by the query"
+    "clp.query.bytes_scanned_total",
+    unit="By",
+    description="Total uncompressed bytes scanned by the query",
 )
 bytes_output_counter = meter.create_counter(
-    "clp.query.bytes_output_total", 
-    unit="By", 
-    description="Total bytes output by the query"
+    "clp.query.bytes_output_total", unit="By", description="Total bytes output by the query"
 )
 
 
@@ -29,7 +27,6 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
-
 from clp_py_utils.s3_utils import (
     generate_s3_url,
     get_credential_env_vars,
@@ -307,7 +304,7 @@ def search(
     bytes_output = None
 
     if stdout_data:
-        for line in reversed(stdout_data.rsplit('\n', 10)):
+        for line in reversed(stdout_data.rsplit("\n", 10)):
             if '"stats"' not in line:
                 continue
             try:
