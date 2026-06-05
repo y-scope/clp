@@ -51,6 +51,70 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
+Gets or generates the instance ID.
+It ensures the exact same UUID is used across all templates during a single helm install/upgrade.
+*/}}
+{{- define "clp.instanceId" -}}
+{{- if not .Values.global }}
+  {{- $_ := set .Values "global" dict -}}
+{{- end }}
+{{- if not .Values.global.instanceId }}
+  {{- $existingName := printf "%s-instance-id" (include "clp.fullname" .) }}
+  {{- $existing := lookup "v1" "ConfigMap" .Release.Namespace $existingName }}
+  {{- if $existing }}
+    {{- $_ := set .Values.global "instanceId" (index $existing.data "instanceId") -}}
+  {{- else }}
+    {{- $_ := set .Values.global "instanceId" uuidv4 -}}
+  {{- end }}
+{{- end }}
+{{- .Values.global.instanceId -}}
+{{- end -}}
+
+{{/*
+Creates common CLP resource attributes for telemetry.
+
+@return {string} Comma-separated OpenTelemetry resource attributes
+*/}}
+{{- define "clp.resourceAttributes" -}}
+{{- printf
+  "clp.deployment.id=%s,service.version=%s,clp.deployment.method=helm,clp.storage.engine=%s"
+  (include "clp.instanceId" .)
+  .Chart.AppVersion
+  .Values.clpConfig.package.storage_engine -}}
+{{- end -}}
+
+{{/*
+Generates the OTLP JSON payload for topology metrics emission.
+
+This produces the same payload structure as DockerComposeController._emit_topology_metrics()
+in controller.py, ensuring feature parity between Docker Compose and Helm deployments.
+
+@return {string} OTLP JSON payload for topology metrics
+*/}}
+{{- define "clp.topologyMetricsPayload" -}}
+{{- $timestampNs := now.UnixNano -}}
+{{- $compressionWorkerScheduling := .Values.scheduling.compressionWorker -}}
+{{- $compressionWorkerReplicas := $compressionWorkerScheduling.replicas | default 1 | int -}}
+{{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
+{{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
+{{- $workerConcurrency := .Values.workerConcurrency | default 8 | int -}}
+{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $workerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $workerConcurrency $timestampNs $reducerReplicas $timestampNs $workerConcurrency $timestampNs -}}
+{{- end -}}
+
+{{/*
+Provides environment variables for telemetry (except service.name).
+*/}}
+{{- define "clp.telemetryEnv" -}}
+{{- if .Values.clpConfig.telemetry.disable }}
+- name: "CLP_DISABLE_TELEMETRY"
+  value: "true"
+{{- else }}
+- name: "OTEL_EXPORTER_OTLP_ENDPOINT"
+  value: {{ include "clp.otelCollectorUrl" . | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Creates selector labels for matching resources.
 
 @return {string} YAML-formatted selector labels
@@ -61,22 +125,30 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Creates image reference for the CLP Package.
+Creates a container image reference from .Values.image.
 
-@return {string} Full image reference (repository:tag)
+Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
+defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
+
+@param {object} root Root template context (required)
+@param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
+@return {string} Full image reference (repository@digest or repository:tag)
 */}}
-{{- define "clp.image.ref" -}}
-{{- $tag := .Values.image.clpPackage.tag | default .Chart.AppVersion }}
-{{- printf "%s:%s" .Values.image.clpPackage.repository $tag }}
-{{- end }}
-
-{{/*
-Creates image reference for the kubectl image.
-
-@return {string} Full image reference (repository@digest)
-*/}}
-{{- define "clp.kubectl.image.ref" -}}
-{{- printf "%s@%s" .Values.image.kubectl.repository .Values.image.kubectl.digest }}
+{{- define "clp.imageRef" -}}
+{{- $img := index .root.Values.image .component -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
+{{- $tag := $img.tag -}}
+{{- if not $tag -}}
+  {{- if eq .component "clpPackage" -}}
+    {{- $tag = .root.Chart.AppVersion -}}
+  {{- else -}}
+    {{- fail (printf "image.%s.tag is required" .component) -}}
+  {{- end -}}
+{{- end -}}
+{{- printf "%s:%s" $img.repository $tag -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -273,6 +345,47 @@ Gets the port for the results cache service.
 {{- end }}
 
 {{/*
+Gets the host for the OpenTelemetry Collector service.
+
+@param {object} . Root template context
+@return {string} The OpenTelemetry Collector host
+*/}}
+{{- define "clp.otelCollectorHost" -}}
+{{- if has "otel_collector" .Values.clpConfig.bundled -}}
+{{- printf "%s-otel-collector" (include "clp.fullname" .) -}}
+{{- else -}}
+{{- .Values.clpConfig.otel_collector.host -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the port for the OpenTelemetry Collector service.
+
+@param {object} . Root template context
+@return {string} The OpenTelemetry Collector port
+*/}}
+{{- define "clp.otelCollectorPort" -}}
+{{- if has "otel_collector" .Values.clpConfig.bundled -}}
+4318
+{{- else -}}
+{{- .Values.clpConfig.otel_collector.port -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Gets the URL for the OpenTelemetry Collector service.
+
+@param {object} . Root template context
+@return {string} The OpenTelemetry Collector URL
+*/}}
+{{- define "clp.otelCollectorUrl" -}}
+{{- printf
+  "http://%s:%s"
+  (include "clp.otelCollectorHost" .)
+  (include "clp.otelCollectorPort" .) -}}
+{{- end }}
+
+{{/*
 Gets the host for the Presto service.
 
 @param {object} . Root template context
@@ -397,7 +510,8 @@ should be the job name suffix.
 */}}
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
-image: {{ include "clp.kubectl.image.ref" .root | quote }}
+image: {{ include "clp.imageRef" (dict "root" .root "component" "kubectl") | quote }}
+imagePullPolicy: {{ .root.Values.image.kubectl.pullPolicy | quote }}
 command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}
@@ -409,6 +523,25 @@ command: [
   {{- end }}
   "--timeout=300s"
 ]
+{{- end }}
+
+{{/*
+Waits for the results cache to be ready for queries.
+
+When the results cache is bundled, this waits for the results-cache pod to be ready (which requires
+both mongod to be accepting connections and the init sidecar to have finished replica set
+initialization and index creation). When the results cache is external (3rd-party), this waits for
+the results-cache-indices-creator job to complete.
+
+@param {object} root Root template context
+@return {string} YAML-formatted initContainer definition
+*/}}
+{{- define "clp.waitForResultsCache" -}}
+{{- if has "results_cache" .Values.clpConfig.bundled -}}
+{{- include "clp.waitFor" (dict "root" . "type" "service" "name" "results-cache") -}}
+{{- else -}}
+{{- include "clp.waitFor" (dict "root" . "type" "job" "name" "results-cache-indices-creator") -}}
+{{- end -}}
 {{- end }}
 
 {{/*
