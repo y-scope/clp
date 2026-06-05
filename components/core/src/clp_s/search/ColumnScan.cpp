@@ -172,10 +172,13 @@ template <typename T>
 [[nodiscard]] auto
 clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint64_t message_index)
         -> bool {
-    auto const value = std::get<std::string>(reader->extract_value(message_index));
-    auto const matches_wildcard = [&query, &value]() -> bool {
+    std::optional<std::string> value;
+    auto const matches_wildcard = [&]() -> bool {
+        if (false == value.has_value()) {
+            value.emplace(std::get<std::string>(reader->extract_value(message_index)));
+        }
         return clp::string_utils::wildcard_match_unsafe(
-                value,
+                value.value(),
                 query.get_search_string(),
                 false == query.get_ignore_case()
         );
@@ -362,8 +365,13 @@ auto ColumnScan::can_build_filter(
             return is_equality_operation(operation);
         case LiteralType::ClpStringT:
             return is_equality_operation(operation) && clp_queries.contains(filter);
-        case LiteralType::VarStringT:
-            return is_equality_operation(operation) && var_matches.contains(filter);
+        case LiteralType::VarStringT: {
+            if (false == is_equality_operation(operation)) {
+                return false;
+            }
+            auto const matching_vars = var_matches.find(filter);
+            return var_matches.end() != matching_vars && nullptr != matching_vars->second;
+        }
         case LiteralType::ArrayT:
         case LiteralType::NullT:
         case LiteralType::TimestampT:
