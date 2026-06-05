@@ -88,7 +88,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
     }
 }
 
-ErrorCode ResultsCacheOutputHandler::flush() {
+ErrorCode ResultsCacheOutputHandler::finish() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());

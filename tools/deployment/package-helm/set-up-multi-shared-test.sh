@@ -51,6 +51,6 @@ helm install test "${script_dir}" \
     --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
     --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
     $(get_presto_helm_args) \
-    $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
+    $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 
 wait_for_cluster_ready
