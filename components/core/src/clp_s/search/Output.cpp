@@ -1,8 +1,10 @@
 #include "Output.hpp"
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../../clp/type_utils.hpp"
@@ -32,7 +34,7 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-bool Output::filter(uint64_t& bytes_output) {
+bool Output::filter() {
     std::vector<int32_t> matched_schemas;
     bool has_array = false;
     bool has_array_search = false;
@@ -89,6 +91,7 @@ bool Output::filter(uint64_t& bytes_output) {
     m_archive_reader->open_packed_streams();
 
     std::string message;
+    size_t total_bytes_output = 0;
     auto const archive_id = m_archive_reader->get_archive_id();
     for (int32_t schema_id : matched_schemas) {
         if (EvaluatedValue::False == m_query_runner.schema_init(schema_id)) {
@@ -112,12 +115,12 @@ bool Output::filter(uint64_t& bytes_output) {
                     m_query_runner
             ))
             {
-                bytes_output += message.length();
+                total_bytes_output += message.length();
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, m_query_runner)) {
-                bytes_output += message.length();
+                total_bytes_output += message.length();
                 m_output_handler->write(message);
             }
         }
@@ -138,6 +141,12 @@ bool Output::filter(uint64_t& bytes_output) {
         );
         return false;
     }
+
+    nlohmann::json json_msg;
+    json_msg["stats"]["bytes_scanned"] = 0;
+    json_msg["stats"]["bytes_output"] = total_bytes_output;
+    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
+
     return true;
 }
 }  // namespace clp_s::search

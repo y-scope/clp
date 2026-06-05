@@ -339,21 +339,6 @@ if(CLP_NEED_XXHASH)
     endif()
 endif()
 
-if(CLP_BUILD_EXECUTABLES)
-    include(FetchContent)
-    set(WITH_OTLP_HTTP ON CACHE BOOL "Enable OTLP HTTP exporter" FORCE)
-    set(WITH_OTLP_GRPC OFF CACHE BOOL "Disable OTLP GRPC exporter" FORCE)
-    set(WITH_PROMETHEUS OFF CACHE BOOL "Disable Prometheus exporter" FORCE)
-    set(BUILD_TESTING OFF CACHE BOOL "Disable opentelemetry tests" FORCE)
-    
-    FetchContent_Declare(
-      opentelemetry-cpp
-      GIT_REPOSITORY https://github.com/open-telemetry/opentelemetry-cpp
-      GIT_TAG        v1.14.2
-    )
-    FetchContent_MakeAvailable(opentelemetry-cpp)
-endif()
-
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 

@@ -44,7 +44,7 @@ public:
      *
      * @return true if the filtering operation completed successfully; false otherwise.
      */
-    auto filter(uint64_t& bytes_output) -> bool;
+    auto filter() -> bool;
 
 private:
     QueryRunner m_query_runner;

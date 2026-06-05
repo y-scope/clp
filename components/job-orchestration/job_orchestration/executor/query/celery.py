@@ -1,23 +1,22 @@
-from celery import Celery, signals
-from celery.utils.log import get_task_logger
+from celery import Celery
+from celery.signals import worker_process_init, worker_process_shutdown
+from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
 
 from job_orchestration.executor.query import celeryconfig
-from job_orchestration.executor.telemetry_utils import init_worker_telemetry
-
-logger = get_task_logger(__name__)
 
 app = Celery("query")
 app.config_from_object(celeryconfig)
 
-@signals.worker_process_init.connect
-def worker_process_init_handler(**kwargs):
-    init_worker_telemetry("query-worker", logger)
 
-@signals.worker_shutdown.connect
-def worker_shutdown_handler(signal=None, sender=None, **kwargs):
-    logger.info("Shutdown signal received.")
-    from clp_py_utils.telemetry import shutdown_telemetry
+@worker_process_init.connect
+def setup_telemetry(**kwargs) -> None:
+    init_telemetry()
+
+
+@worker_process_shutdown.connect
+def teardown_telemetry(**kwargs) -> None:
     shutdown_telemetry()
+
 
 if "__main__" == __name__:
     app.start()

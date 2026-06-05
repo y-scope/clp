@@ -28,6 +28,7 @@ spec:
           image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
@@ -43,6 +44,8 @@ spec:
               value: "/var/log/compression_worker"
             - name: "CLP_WORKER_LOG_PATH"
               value: "/dev/stdout"
+            - name: "OTEL_SERVICE_NAME"
+              value: "compression-worker"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
