@@ -74,6 +74,8 @@ data:
         .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
+      task_soft_time_limit: {{ .Values.clpConfig.compression_worker.task_soft_time_limit | int }}
+      task_time_limit: {{ .Values.clpConfig.compression_worker.task_time_limit | int }}
     data_directory: "/var/data"
     garbage_collector:
       logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
@@ -138,6 +140,8 @@ data:
     {{- with .Values.clpConfig.query_worker }}
     query_worker:
       logging_level: {{ .logging_level | quote }}
+      task_soft_time_limit: {{ .task_soft_time_limit | int }}
+      task_time_limit: {{ .task_time_limit | int }}
     {{- end }}
     queue:
       host: "{{ include "clp.queueHost" . }}"
