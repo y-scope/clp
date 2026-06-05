@@ -40,15 +40,21 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
 
     :param json_fp:
     :return: A named temporary file (delete on close) that contains the sorted JSON content.
-    :raise: RuntimeError if jq is missing or fails due to execution errors.
     """
-    jq_action = NonClpAction(
-        cmd=[get_binary_path("jq"), "--sort-keys", "--compact-output", ".", str(json_fp)],
-    )
-    jq_action.check_returncode()
+    import json
+    lines = []
+    with open(json_fp, 'r') as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+                lines.append(json.dumps(obj, separators=(',', ':'), sort_keys=True))
+            except json.JSONDecodeError:
+                lines.append(line.strip())
 
     sorted_fp = NamedTemporaryFile(mode="w+")  # noqa: SIM115
-    sorted_lines = sorted(jq_action.completed_proc.stdout.splitlines())
+    sorted_lines = sorted(lines)
     for line in sorted_lines:
         sorted_fp.write(f"{line}\n")
     sorted_fp.flush()

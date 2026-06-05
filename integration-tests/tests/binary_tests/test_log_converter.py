@@ -89,6 +89,8 @@ def _convert_and_compress(
     search_result = search_action.verify_returncode()
     assert search_result, search_result.failure_message
     lines = search_action.completed_proc.stdout.splitlines()
+    # clp-s now outputs a stats object at the end of its stdout for telemetry
+    lines = [line for line in lines if not line.strip().startswith('{"stats":')]
     if len(lines) != test_paths.num_log_events:
         pytest.fail(
             f"Expected {test_paths.num_log_events} log events after conversion, "
