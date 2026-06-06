@@ -8,7 +8,9 @@ brew update
 brew install \
     coreutils \
     gcc \
+    gnu-tar \
     java11 \
+    jq \
     libarchive \
     llvm@16 \
     lz4 \

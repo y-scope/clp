@@ -1,8 +1,8 @@
 add_subdirectory(ffi)
 add_subdirectory(filter)
+add_subdirectory(search)
 add_subdirectory(indexer)
 add_subdirectory(log_converter)
-add_subdirectory(search)
 add_subdirectory(timestamp_parser)
 
 set(

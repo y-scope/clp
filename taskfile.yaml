@@ -46,6 +46,20 @@ vars:
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
   G_CPP_MAX_PARALLELISM_PER_BUILD_TASK: >-
     {{default "" (env "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK")}}
+  G_OSXCROSS_BOOST_TOOLSET_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_BOOST_TOOLSET_ARG")}}
+  G_OSXCROSS_BOOST_TARGET_OS_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_BOOST_TARGET_OS_ARG")}}
+  G_OSXCROSS_BOOST_ARCHITECTURE_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_BOOST_ARCHITECTURE_ARG")}}
+  G_OSXCROSS_BOOST_ABI_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_BOOST_ABI_ARG")}}
+  G_OSXCROSS_BOOST_ADDRESS_MODEL_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_BOOST_ADDRESS_MODEL_ARG")}}
+  G_OSXCROSS_BOOST_BINARY_FORMAT_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_BOOST_BINARY_FORMAT_ARG")}}
+  G_OSXCROSS_ANTLR_BUILD_CPP_TESTS_ARG: >-
+    {{default "" (env "CLP_OSXCROSS_ANTLR_BUILD_CPP_TESTS_ARG")}}
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"

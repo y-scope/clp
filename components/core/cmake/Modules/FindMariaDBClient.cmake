@@ -20,7 +20,7 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 find_package(PkgConfig)
 pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
 
-if(NOT mariadbclient_PKGCONF_FOUND AND APPLE)
+if(NOT mariadbclient_PKGCONF_FOUND AND APPLE AND NOT CMAKE_CROSSCOMPILING)
     execute_process(
         COMMAND brew --prefix mariadb-connector-c
         RESULT_VARIABLE mariadbclient_BREW_RESULT
@@ -61,7 +61,7 @@ endif()
 find_library(MariaDBClient_LIBRARY
         NAMES ${mariadbclient_LIBNAME}
         HINTS ${mariadbclient_PKGCONF_LIBDIR}
-        PATH_SUFFIXES lib
+        PATH_SUFFIXES lib lib/mariadb
         )
 if (MariaDBClient_LIBRARY)
     # NOTE: This must be set for find_package_handle_standard_args to work

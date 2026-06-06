@@ -20,7 +20,7 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 # So it cannot be found by pkg-config and we need to manually find it.
 # For more details, see https://github.com/Homebrew/homebrew-core/issues/117642
 # Find and setup libarchive
-if(APPLE)
+if(APPLE AND NOT CMAKE_CROSSCOMPILING)
     execute_process(COMMAND brew --prefix libarchive OUTPUT_VARIABLE libarchive_MACOS_PREFIX)
     string(STRIP "${libarchive_MACOS_PREFIX}" libarchive_MACOS_PREFIX)
     set(ENV{libarchive_PREV_CMAKE_PATH} "$ENV{CMAKE_PREFIX_PATH}")  # save it so we can revert it later
@@ -115,7 +115,7 @@ if(NOT TARGET LibArchive::LibArchive)
     endif()
 endif()
 
-if(APPLE)
+if(APPLE AND NOT CMAKE_CROSSCOMPILING)
     # remove LibArchive-specific path
     set(ENV{CMAKE_PREFIX_PATH} "$ENV{libarchive_PREV_CMAKE_PATH}")
 endif()

@@ -33,6 +33,7 @@ namespace {
  * @return The serialized data.
  */
 vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIterator& record_it);
+vector<uint8_t> serialize_to_bson(nlohmann::json const& json);
 
 vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIterator& record_it) {
     nlohmann::json json;
@@ -45,6 +46,10 @@ vector<uint8_t> serialize_timeline_result(GroupTags const& tags, ConstRecordIter
     }
     json[CountOperator::cRecordElementKey] = count;
 
+    return nlohmann::json::to_bson(json);
+}
+
+vector<uint8_t> serialize_to_bson(nlohmann::json const& json) {
     return nlohmann::json::to_bson(json);
 }
 }  // namespace
@@ -215,9 +220,7 @@ bool ServerContext::publish_pipeline_results() {
     vector<bsoncxx::document::view> result_documents;
     for (auto group_it = m_pipeline->finish(); false == group_it->done(); group_it->next()) {
         auto& group = group_it->get();
-        results.push_back(
-                serialize(group.get_tags(), group.record_iter(), nlohmann::json::to_bson)
-        );
+        results.push_back(serialize(group.get_tags(), group.record_iter(), serialize_to_bson));
 
         vector<uint8_t>& encoded_result = results.back();
         result_documents.emplace_back(encoded_result.data(), encoded_result.size());

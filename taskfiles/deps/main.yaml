@@ -200,6 +200,7 @@ tasks:
           BUILD_DIR: "{{.BUILD_DIR}}"
           EXTRA_ARGS:
             - "-DANTLR4_INSTALL=ON"
+            - "{{.G_OSXCROSS_ANTLR_BUILD_CPP_TESTS_ARG}}"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
 
@@ -242,6 +243,13 @@ tasks:
             - "regex"
             - "system"
             - "url"
+          BUILD_AND_INSTALL_ARGS:
+            - "{{.G_OSXCROSS_BOOST_TOOLSET_ARG}}"
+            - "{{.G_OSXCROSS_BOOST_TARGET_OS_ARG}}"
+            - "{{.G_OSXCROSS_BOOST_ARCHITECTURE_ARG}}"
+            - "{{.G_OSXCROSS_BOOST_ABI_ARG}}"
+            - "{{.G_OSXCROSS_BOOST_ADDRESS_MODEL_ARG}}"
+            - "{{.G_OSXCROSS_BOOST_BINARY_FORMAT_ARG}}"
           URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
           boost-{{.VERSION}}-b2-nodocs.tar.gz"
           WORK_DIR: "{{.G_DEPS_CPP_DIR}}"

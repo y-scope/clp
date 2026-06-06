@@ -21,7 +21,8 @@
 #   --cores N       Parallel build jobs (default: nproc)
 #   --version VER   Package version (default: from taskfile.yaml)
 #   --output DIR    Output directory for packages (default: ./packages)
-#   --clean         Remove build artifacts before building
+#   --clean         Remove build artifacts before building; also allow replacing
+#                   existing real build/ and .task/ directories with build-family symlinks
 #   --help          Show this help message
 
 set -o errexit
@@ -30,6 +31,11 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 repo_root="$(cd "${script_dir}/../../../.." && pwd)"
+
+# shellcheck source=common/build-family.sh
+. "${script_dir}/common/build-family.sh"
+# shellcheck source=common/package-version.sh
+. "${script_dir}/common/package-version.sh"
 
 # Defaults
 format="all"
@@ -54,7 +60,7 @@ while [[ $# -gt 0 ]]; do
         --output)  [[ -n "${2:-}" ]] || { echo "ERROR: --output requires a value" >&2; exit 1; }
                    output_dir="$2";    shift 2 ;;
         --clean)   clean=true;         shift ;;
-        --help)    sed -n '/^# Usage:/,/^[^#]/{ /^#/s/^# \?//p; }' "$0"; exit 0 ;;
+        --help)    sed -nE '/^# Usage:/,/^[^#]/{ /^#/s/^# ?//p; }' "$0"; exit 0 ;;
         *)         echo "Unknown option: $1"; echo "Use --help for usage"; exit 1 ;;
     esac
 done
@@ -93,30 +99,7 @@ fi
 [[ "${target_arches}" == "all" ]] && target_arches="aarch64,x86_64"
 IFS=',' read -ra arch_list <<< "${target_arches}"
 
-if [[ -z "${version}" ]]; then
-    version=$(grep 'G_PACKAGE_VERSION:' "${repo_root}/taskfile.yaml" \
-        | head -1 \
-        | sed 's/.*"\(.*\)".*/\1/')
-    if [[ -z "${version}" ]]; then
-        echo "ERROR: Could not extract version from taskfile.yaml and --version not provided" >&2
-        exit 1
-    fi
-fi
-
-# If the version has a pre-release suffix (anything after a hyphen, e.g., "-dev",
-# "-beta", "-rc1"), replace it with a snapshot identifier for reproducibility.
-# Any existing suffix is replaced, so passing --version "0.9.1-foo" will still
-# regenerate the snapshot from the current HEAD commit.
-# E.g., "0.9.1-dev" -> "0.9.1-20260214.5f1d7ca". Each package format then maps
-# this to its own convention:
-#   deb: 0.9.1~20260214.5f1d7ca-1  (~ pre-release, -1 debian revision)
-#   rpm: 0.9.1~20260214.5f1d7ca    (~ pre-release, Release: 1 in spec)
-#   apk: 0.9.1_git20260214         (_git suffix, hash in pkgdesc — apk is digits-only)
-if [[ "${version}" == *-* ]]; then
-    git_date=$(git -C "${repo_root}" log -1 --format=%cd --date=format:%Y%m%d)
-    git_hash=$(git -C "${repo_root}" log -1 --format=%h)
-    version="${version%%-*}-${git_date}.${git_hash}"
-fi
+version="$(clp_packaging_resolve_version "${repo_root}" "${version}")"
 
 # --- Print configuration ----------------------------------------------------
 
@@ -133,38 +116,6 @@ for _fmt in "${format_list[@]}"; do
     _fmt=$(echo "${_fmt}" | xargs)
     rm -f "${output_dir}"/clp-core*."${_fmt}"
 done
-
-# --- Helper: point build/ and .task/ at the right image family ---------------
-#
-# glibc and musl binaries are incompatible, so each image family gets its own
-# build directory (build-manylinux_2_28/, build-musllinux_1_2/, etc.). The
-# task runner expects build/ and .task/, so we symlink them to the active
-# family's directories.
-
-activate_build_family() {
-    local target_family="$1"
-
-    # Create family-specific directories if they don't exist
-    mkdir -p "${repo_root}/build-${target_family}" "${repo_root}/.task-${target_family}"
-
-    # Remove any real directory at the symlink target (ln -sfn cannot atomically
-    # replace a real directory — it would create the symlink inside it instead).
-    for dir_name in build .task; do
-        local target="${repo_root}/${dir_name}"
-        if [[ -d "${target}" && ! -L "${target}" ]]; then
-            rm -rf "${target}"
-        fi
-    done
-
-    # Point build/ and .task/ at the target family
-    if [[ "$(uname)" == "Darwin" ]]; then
-        ln -sfn "build-${target_family}" "${repo_root}/build"
-        ln -sfn ".task-${target_family}" "${repo_root}/.task"
-    else
-        ln --symbolic --force --no-dereference "build-${target_family}" "${repo_root}/build"
-        ln --symbolic --force --no-dereference ".task-${target_family}" "${repo_root}/.task"
-    fi
-}
 
 # --- Build for each format and architecture ----------------------------------
 
@@ -205,7 +156,7 @@ for cur_format in "${format_list[@]}"; do
         exit 1
     fi
 
-    activate_build_family "${base_image_family}"
+    clp_packaging_activate_build_family "${repo_root}" "${base_image_family}" "${clean}"
 
     # Clean if requested (once per build family, before iterating architectures).
     # deb and rpm share manylinux_2_28 — skip if already cleaned this run.
@@ -213,7 +164,7 @@ for cur_format in "${format_list[@]}"; do
         echo "==> Cleaning build artifacts..."
         rm -rf "${repo_root}/build" "${repo_root}/.task"
         rm -rf "${repo_root}"/build-* "${repo_root}"/.task-*
-        activate_build_family "${base_image_family}"
+        clp_packaging_activate_build_family "${repo_root}" "${base_image_family}" "${clean}"
         cleaned_families="${cleaned_families:-} ${base_image_family}"
     fi
 
