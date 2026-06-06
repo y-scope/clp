@@ -7,10 +7,7 @@ use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 
 use crate::{Error, clp_config::package::config::Telemetry};
 
-/// RAII guard that ensures [`shutdown_telemetry`] is called when the guard is dropped, even if the
-/// process unwinds or returns early.
-///
-/// Use [`init_telemetry`] to create an instance.
+/// RAII guard that ensures [`shutdown_telemetry`] is called when the guard is dropped.
 pub struct TelemetryGuard {
     provider: Option<SdkMeterProvider>,
 }
@@ -70,7 +67,7 @@ pub fn shutdown_telemetry(provider: Option<SdkMeterProvider>) {
     if let Some(p) = provider
         && let Err(err) = p.shutdown()
     {
-        tracing::error!(err = ? err, "Error shutting down telemetry.");
+        tracing::error!(err = ? err, "Failed to shutdown OpenTelemetry meter provider.");
     }
 }
 
@@ -78,4 +75,4 @@ pub fn shutdown_telemetry(provider: Option<SdkMeterProvider>) {
 ///
 /// NOTE: This must be kept consistent with the Python implementation in
 /// `clp_package_utils/scripts/start_clp.py`.
-const TELEMETRY_DISABLE_VALUES: [&str; 4] = ["1", "true", "yes", "y"];
+const TELEMETRY_DISABLE_VALUES: [&'static str; 4] = ["1", "true", "yes", "y"];
