@@ -2,8 +2,10 @@ version: "3"
 
 includes:
   lock: "./lock.yaml"
+  toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+  yscope-log-viewer: "./log-viewer.yaml"
 
 vars:
   # Directories
@@ -13,7 +15,6 @@ vars:
 
   # Checksum file paths
   G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
-  G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
   # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
   G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
@@ -36,7 +37,7 @@ tasks:
   default:
     deps:
       - "core"
-      - "log-viewer"
+      - "yscope-log-viewer"
 
   core:
     deps:
@@ -49,18 +50,6 @@ tasks:
           CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
           DEP_TASK: "core-all-parallel"
       - task: "utils:combine-cpp-checksum-files"
-
-  log-viewer:
-    deps:
-      - "utils:init"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
-          OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
-          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
 
   core-all-parallel:
     internal: true
@@ -75,6 +64,7 @@ tasks:
       - task: "fmt"
       - task: "liblzma"
       - task: "log-surgeon"
+      - task: "log_surgeon"
       - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
@@ -349,6 +339,106 @@ tasks:
   log-surgeon:
     internal: true
     run: "once"
+    deps: ["toolchains:rust"]
+    vars:
+      LIB_NAME: "log-surgeon"
+      INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
+      INSTALL_LIB_DIR: "{{.INSTALL_DIR}}/lib"
+      INSTALL_CMAKE_DIR: "{{.INSTALL_LIB_DIR}}/cmake/{{.LIB_NAME}}"
+      OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      SRC_DIR: "{{.OUTPUT_DIR}}/rust"
+      TARGET_NAME: "{{.LIB_NAME}}::{{.LIB_NAME}}"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "11173955d04d806808e862f2fd4cd12239282de119b9255630d55434695deb5f"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          URL: "https://github.com/y-scope/log-surgeon/archive/4a2aaa0.tar.gz"
+      - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        cargo_target="${CARGO_BUILD_TARGET:-}"
+        if [[ -z "${cargo_target}" ]]; then
+            case "${CLP_MACOS_ARCH:-}" in
+                arm64) cargo_target="aarch64-apple-darwin" ;;
+                x86_64) cargo_target="x86_64-apple-darwin" ;;
+                *) cargo_target="" ;;
+            esac
+        fi
+        if [[ "${cargo_target}" == *"-apple-darwin"* ]]; then
+            cargo_target_upper="${cargo_target//-/_}"
+            cargo_target_upper="${cargo_target_upper^^}"
+            if [[ "${CC:-}" != *"-apple-darwin"* ]]; then
+                osxcross_triple_prefix=""
+                case "${cargo_target}" in
+                    aarch64-apple-darwin) osxcross_triple_prefix="aarch64-apple-darwin" ;;
+                    x86_64-apple-darwin) osxcross_triple_prefix="x86_64-apple-darwin" ;;
+                esac
+                if [[ -n "${osxcross_triple_prefix}" && -n "${OSXCROSS_TARGET_DIR:-}" ]]; then
+                    osxcross_clang="$(find "${OSXCROSS_TARGET_DIR}/bin" -maxdepth 1 -name "${osxcross_triple_prefix}*-clang" \
+                        | sort -V \
+                        | tail -1)"
+                    if [[ -n "${osxcross_clang}" ]]; then
+                        export CC="${osxcross_clang}"
+                        export CXX="${osxcross_clang}++"
+                        export AR="${osxcross_clang%-clang}-ar"
+                        export RANLIB="${osxcross_clang%-clang}-ranlib"
+                    fi
+                fi
+            fi
+            export "CARGO_TARGET_${cargo_target_upper}_LINKER=${CC}"
+            export "CARGO_TARGET_${cargo_target_upper}_AR=${AR}"
+            export "CARGO_TARGET_${cargo_target_upper}_RANLIB=${RANLIB}"
+        elif [[ "${CC:-}" == *"-apple-darwin"* && -z "${cargo_target}" ]]; then
+            host_cc="$(command -v cc || command -v gcc || echo cc)"
+            host_cxx="$(command -v c++ || command -v g++ || echo c++)"
+            export CC="${host_cc}"
+            export CXX="${host_cxx}"
+            export AR="$(command -v ar || echo ar)"
+            export RANLIB="$(command -v ranlib || echo ranlib)"
+        fi
+        cd "{{.SRC_DIR}}"
+        if [[ -n "${cargo_target}" ]]; then
+            rustup target add "${cargo_target}"
+            cargo build --target "${cargo_target}" --no-default-features --release
+            cargo_output_dir="{{.G_BUILD_DIR}}/rust-targets/${cargo_target}/release"
+        else
+            cargo build --no-default-features --release
+            cargo_output_dir="{{.G_BUILD_DIR}}/rust-targets/release"
+        fi
+        mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
+        cp "${cargo_output_dir}/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
+        cp -r "{{.SRC_DIR}}/cpp_ffi/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
+
+        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
+        if(NOT TARGET {{.TARGET_NAME}})
+            include("${CMAKE_CURRENT_LIST_DIR}/{{.LIB_NAME}}-targets.cmake")
+        endif()
+        EOF
+
+        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-targets.cmake" << 'EOF'
+        add_library({{.TARGET_NAME}} STATIC IMPORTED)
+        set_target_properties({{.TARGET_NAME}} PROPERTIES
+            IMPORTED_LOCATION "{{.INSTALL_LIB_DIR}}/liblog_surgeon.a"
+            INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
+        )
+        if(UNIX AND NOT APPLE)
+            target_link_libraries({{.TARGET_NAME}} INTERFACE dl)
+        endif()
+        EOF
+
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" << 'EOF'
+        set({{.LIB_NAME}}_ROOT
+            "{{.INSTALL_DIR}}"
+            CACHE PATH
+            "Package root for log-surgeon."
+          )
+        EOF
+
+  log_surgeon:
+    internal: true
+    run: "once"
     deps:
       - "fmt"
       - "microsoft.gsl"
@@ -367,6 +457,22 @@ tasks:
           LIB_NAME: "log_surgeon"
           TARBALL_SHA256: "eebf857962f8fc022bfa5de8d00e10ee4ac36bb8f126a556935a93dde1435aa2"
           TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/193e1f9.tar.gz"
+      - |-
+        for header in generated_bindings.hpp log_surgeon.hpp rust_compat.hpp; do
+            source_header=""
+            if [[ -f "{{.G_DEPS_CPP_DIR}}/log-surgeon-src/rust/cpp_ffi/log_surgeon/${header}" ]]; then
+                source_header="{{.G_DEPS_CPP_DIR}}/log-surgeon-src/rust/cpp_ffi/log_surgeon/${header}"
+            elif [[ -f "{{.G_DEPS_CPP_DIR}}/log-surgeon-install/include/log_surgeon/${header}" ]]; then
+                source_header="{{.G_DEPS_CPP_DIR}}/log-surgeon-install/include/log_surgeon/${header}"
+            elif [[ -f "{{.G_DEPS_CPP_DIR}}/log-surgeon-install/include/${header}" ]]; then
+                source_header="{{.G_DEPS_CPP_DIR}}/log-surgeon-install/include/${header}"
+            fi
+            if [[ -n "${source_header}" ]]; then
+                cp -f "${source_header}" "{{.G_DEPS_CPP_DIR}}/log_surgeon-install/include/log_surgeon/${header}"
+            else
+                echo "WARNING: Missing ${header}; log_surgeon C++ API wrappers may fail to compile" >&2
+            fi
+        done
 
   lz4:
     internal: true
@@ -491,8 +597,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "simdjson"
-          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
-          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"
+          TARBALL_SHA256: "b091107844fe928158c5c2265c20360fff312889ddf7ebc4528a0f0f8f2ff9cd"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v4.6.4.tar.gz"
 
   spdlog:
     internal: true

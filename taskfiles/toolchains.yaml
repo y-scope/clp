@@ -104,6 +104,12 @@ tasks:
 
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
+        if [[ "${CC:-}" == *"-apple-darwin"* ]]; then
+            export CC="$(command -v cc || command -v gcc || echo cc)"
+            export CXX="$(command -v c++ || command -v g++ || echo c++)"
+            export AR="$(command -v ar || echo ar)"
+            export RANLIB="$(command -v ranlib || echo ranlib)"
+        fi
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
         rustup toolchain install stable
