@@ -24,6 +24,18 @@ impl From<Option<SdkMeterProvider>> for TelemetryGuard {
     }
 }
 
+/// Shuts down the given meter provider, flushing any pending metric exports.
+///
+/// If the shutdown fails, the error is logged and not propagated, since this is typically called
+/// during teardown (e.g., in a [`Drop`] implementation) where returning an error is not useful.
+fn shutdown_telemetry(provider: Option<SdkMeterProvider>) {
+    if let Some(p) = provider
+        && let Err(err) = p.shutdown()
+    {
+        tracing::error!(err = ? err, "Failed to shutdown OpenTelemetry meter provider.");
+    }
+}
+
 /// Initializes OpenTelemetry metrics collection with the provided configuration.
 ///
 /// # Returns
@@ -59,20 +71,8 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<TelemetryGu
     Ok(Some(TelemetryGuard::from(Some(provider))))
 }
 
-/// Shuts down the given meter provider, flushing any pending metric exports.
-///
-/// If the shutdown fails, the error is logged and not propagated, since this is typically called
-/// during teardown (e.g., in a [`Drop`] implementation) where returning an error is not useful.
-pub fn shutdown_telemetry(provider: Option<SdkMeterProvider>) {
-    if let Some(p) = provider
-        && let Err(err) = p.shutdown()
-    {
-        tracing::error!(err = ? err, "Failed to shutdown OpenTelemetry meter provider.");
-    }
-}
-
 /// Values accepted by `CLP_DISABLE_TELEMETRY` and `DO_NOT_TRACK` to disable telemetry.
 ///
 /// NOTE: This must be kept consistent with the Python implementation in
 /// `clp_package_utils/scripts/start_clp.py`.
-const TELEMETRY_DISABLE_VALUES: [&'static str; 4] = ["1", "true", "yes", "y"];
+const TELEMETRY_DISABLE_VALUES: [&str; 4] = ["1", "true", "yes", "y"];

@@ -36,7 +36,7 @@ pub struct Buffer<Submitter: BufferSubmitter> {
     buf: Vec<S3ObjectMetadataId>,
     total_size: u64,
     size_threshold: u64,
-    telemetry: TelemetryMeter,
+    telemetry_meter: TelemetryMeter,
 }
 
 impl<Submitter: BufferSubmitter> Buffer<Submitter> {
@@ -51,7 +51,7 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
             buf: Vec::new(),
             total_size: 0,
             size_threshold,
-            telemetry: TelemetryMeter::new(),
+            telemetry_meter: TelemetryMeter::new(),
         }
     }
 
@@ -73,7 +73,7 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     ) -> Result<bool> {
         let mut submission_triggered = false;
         for entry in object_metadata_to_ingest {
-            self.telemetry.ingest(entry.size);
+            self.telemetry_meter.ingest(entry.size);
             self.total_size += entry.size;
             self.buf.push(entry.id);
 
