@@ -27,11 +27,13 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${script_dir}/../common/core-binaries.sh"
 # shellcheck source=../common/package-inputs.sh
 . "${script_dir}/../common/package-inputs.sh"
+# shellcheck source=../common/package-output.sh
+. "${script_dir}/../common/package-output.sh"
 
 # --- Validate inputs ----------------------------------------------------------
 
 clp_packaging_validate_package_inputs "universal-rpm"
-output_dir="$(clp_packaging_output_dir)"
+output_dir="$(clp_packaging_resolve_output_dir)"
 staging="/tmp/clp-rpm-staging"
 
 # RPM version: replace hyphen with tilde so pre-release sorts before release.

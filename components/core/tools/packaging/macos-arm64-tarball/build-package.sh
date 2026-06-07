@@ -40,6 +40,8 @@ repo_root="$(cd "${script_dir}/../../../../.." && pwd)"
 . "${script_dir}/defaults.sh"
 # shellcheck source=../common/build-family.sh
 . "${script_dir}/../common/build-family.sh"
+# shellcheck source=../common/package-output.sh
+. "${script_dir}/../common/package-output.sh"
 # shellcheck source=../common/package-version.sh
 . "${script_dir}/../common/package-version.sh"
 
@@ -77,7 +79,7 @@ fi
 
 version="$(clp_packaging_resolve_version "${repo_root}" "${version}")"
 
-output_dir="$(mkdir -p "${output_dir}" && cd "${output_dir}" && pwd)"
+output_dir="$(clp_packaging_resolve_output_dir "${output_dir}")"
 export MACOSX_DEPLOYMENT_TARGET="${deployment_target}"
 export CLP_MACOS_ARCH="${macos_arch}"
 
@@ -101,7 +103,7 @@ if [[ -n "${CLP_MACOS_BUILD_DETAILS:-}" ]]; then
 fi
 echo ""
 
-rm -f "${output_dir}"/clp-core-*-macos-"${macos_arch}".tar.gz
+clp_packaging_remove_stale_outputs "${output_dir}" "clp-core-*-macos-${macos_arch}.tar.gz"
 
 if [[ "${clean}" == "true" ]]; then
     echo "==> Cleaning ${build_dir}..."

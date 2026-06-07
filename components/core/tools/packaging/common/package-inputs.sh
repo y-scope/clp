@@ -26,7 +26,3 @@ clp_packaging_validate_package_inputs() {
         return 1
     fi
 }
-
-clp_packaging_output_dir() {
-    printf '%s\n' "${OUTPUT_DIR:-$(pwd)}"
-}

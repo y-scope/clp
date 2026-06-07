@@ -30,13 +30,14 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${script_dir}/defaults.sh"
 # shellcheck source=../common/package-inputs.sh
 . "${script_dir}/../common/package-inputs.sh"
+# shellcheck source=../common/package-output.sh
+. "${script_dir}/../common/package-output.sh"
 
 # --- Validate inputs --------------------------------------------------------
 
 clp_packaging_validate_package_inputs "macos-tarball"
 pkg_arch="$(clp_macos_normalize_arch "${PKG_ARCH}")"
-output_dir="$(clp_packaging_output_dir)"
-mkdir -p "${output_dir}"
+output_dir="$(clp_packaging_resolve_output_dir)"
 
 # Tarball convention follows the kubectl / node / go pattern: hyphens
 # throughout, lowercase OS + arch suffix. The version string passed here has

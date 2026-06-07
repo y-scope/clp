@@ -17,6 +17,8 @@ component_root="${repo_root}/components/core"
 
 # shellcheck source=defaults.sh
 . "${script_dir}/defaults.sh"
+# shellcheck source=../common/package-output.sh
+. "${script_dir}/../common/package-output.sh"
 
 base_image="${OSXCROSS_BASE_IMAGE:-ghcr.io/crazy-max/osxcross:14.5-r0-ubuntu}"
 image_tag="${CLP_MACOS_OSXCROSS_IMAGE_TAG:-}"
@@ -188,7 +190,7 @@ if [[ "${build_image}" == "true" ]]; then
 fi
 
 if [[ -n "${host_output_dir}" ]]; then
-    host_output_dir="$(mkdir -p "${host_output_dir}" && cd "${host_output_dir}" && pwd)"
+    host_output_dir="$(clp_packaging_resolve_output_dir "${host_output_dir}")"
 fi
 
 mkdir -p "${repo_root}/packages"
