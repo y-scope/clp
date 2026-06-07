@@ -6,6 +6,7 @@
 # Required environment variables:
 #   CORES        Number of parallel build jobs
 #   FORMAT_DIR   Name of the format-specific packaging directory
+#   PKG_LIBC     Target libc for tarball packages; empty for other formats
 #   HOST_UID     UID to restore file ownership after build
 #   HOST_GID     GID to restore file ownership after build
 

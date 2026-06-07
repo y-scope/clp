@@ -6,6 +6,8 @@
 #   deb  — Debian/Ubuntu package (built on manylinux_2_28, glibc >= 2.28)
 #   rpm  — RHEL/Fedora package (built on manylinux_2_28, glibc >= 2.28)
 #   apk  — Alpine package (built on musllinux_1_2, musl libc)
+#   tarball — Portable Linux tarball (built on manylinux_2_28, glibc >= 2.28)
+#   tarball-musl — Portable Linux tarball (built on musllinux_1_2, musl libc)
 #
 # The packages are "universal" — binaries are built on broad-compatibility base
 # images and bundled with their non-system shared library dependencies via
@@ -16,7 +18,8 @@
 # Usage: ./components/core/tools/packaging/build.sh [OPTIONS]
 #
 # Options:
-#   --format FMT    Package format: deb, rpm, apk, or all (default: all)
+#   --format FMT    Package format: deb, rpm, apk, tarball, tarball-musl, or all
+#                   (default: deb,rpm,apk)
 #   --arch ARCH     Target architecture: aarch64, x86_64, or all (default: host)
 #   --cores N       Parallel build jobs (default: nproc)
 #   --version VER   Package version (default: from taskfile.yaml)
@@ -42,12 +45,28 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 . "${script_dir}/common/package-version.sh"
 
 # Defaults
-format="all"
+format="deb,rpm,apk"
 cores="$(nproc 2>/dev/null || echo 4)"
 version=""
 output_dir="${repo_root}/packages"
 target_arches=""
 clean=false
+
+clp_linux_packaging_artifact_pattern_for_format() {
+    local cur_format="$1"
+
+    case "${cur_format}" in
+        deb)     printf '%s*.deb\n' "${CLP_CORE_PACKAGE_NAME}" ;;
+        rpm)     printf '%s*.rpm\n' "${CLP_CORE_PACKAGE_NAME}" ;;
+        apk)     printf '%s*.apk\n' "${CLP_CORE_PACKAGE_NAME}" ;;
+        tarball) printf '%s-*-linux-glibc-*.tar.gz\n' "${CLP_CORE_PACKAGE_NAME}" ;;
+        tarball-musl) printf '%s-*-linux-musl-*.tar.gz\n' "${CLP_CORE_PACKAGE_NAME}" ;;
+        *)
+            echo "ERROR: Unsupported format: ${cur_format} (use deb, rpm, apk, tarball, tarball-musl, or all)" >&2
+            return 1
+            ;;
+    esac
+}
 
 # --- Argument parsing --------------------------------------------------------
 
@@ -78,17 +97,19 @@ fi
 
 # --- Resolve defaults --------------------------------------------------------
 
-valid_formats="deb rpm apk"
-[[ "${format}" == "all" ]] && format="deb,rpm,apk"
-IFS=',' read -ra format_list <<< "${format}"
+valid_formats="deb rpm apk tarball tarball-musl"
+[[ "${format}" == "all" ]] && format="deb,rpm,tarball,apk,tarball-musl"
+IFS=',' read -ra raw_format_list <<< "${format}"
 
 # Validate formats early (before any side effects like stale-package cleanup)
-for _fmt in "${format_list[@]}"; do
+format_list=()
+for _fmt in "${raw_format_list[@]}"; do
     _fmt=$(echo "${_fmt}" | xargs)
     if [[ ! " ${valid_formats} " =~ \ ${_fmt}\  ]]; then
-        echo "ERROR: Unsupported format: ${_fmt} (use deb, rpm, apk, or all)" >&2
+        echo "ERROR: Unsupported format: ${_fmt} (use deb, rpm, apk, tarball, tarball-musl, or all)" >&2
         exit 1
     fi
+    format_list+=("${_fmt}")
 done
 
 output_dir="$(clp_packaging_resolve_output_dir "${output_dir}")"
@@ -117,15 +138,14 @@ echo ""
 
 # Remove stale packages from the output directory (only for formats being built)
 for _fmt in "${format_list[@]}"; do
-    _fmt=$(echo "${_fmt}" | xargs)
-    clp_packaging_remove_stale_outputs "${output_dir}" "${CLP_CORE_PACKAGE_NAME}*.${_fmt}"
+    clp_packaging_remove_stale_outputs \
+        "${output_dir}" \
+        "$(clp_linux_packaging_artifact_pattern_for_format "${_fmt}")"
 done
 
 # --- Build for each format and architecture ----------------------------------
 
 for cur_format in "${format_list[@]}"; do
-    cur_format=$(echo "${cur_format}" | xargs)
-
     # Resolve format-specific settings
     case "${cur_format}" in
         deb)
@@ -135,6 +155,7 @@ for cur_format in "${format_list[@]}"; do
             # both dpkg and rpm-build) so Docker layer caching is shared.
             dockerfile_dir="${script_dir}/universal-deb"
             builder_image_prefix="clp-manylinux-pkg-builder"
+            pkg_libc=""
             ;;
         rpm)
             format_dir="${script_dir}/universal-rpm"
@@ -142,15 +163,35 @@ for cur_format in "${format_list[@]}"; do
             # Shares the deb Dockerfile (installs both dpkg and rpm-build)
             dockerfile_dir="${script_dir}/universal-deb"
             builder_image_prefix="clp-manylinux-pkg-builder"
+            pkg_libc=""
+            ;;
+        tarball)
+            format_dir="${script_dir}/linux-tarball"
+            base_image_family="manylinux_2_28"
+            # Shares the deb/rpm Dockerfile; the tarball format only needs the
+            # common Linux bundling tools already installed there.
+            dockerfile_dir="${script_dir}/universal-deb"
+            builder_image_prefix="clp-manylinux-pkg-builder"
+            pkg_libc="glibc"
+            ;;
+        tarball-musl)
+            format_dir="${script_dir}/linux-tarball"
+            base_image_family="musllinux_1_2"
+            # Shares the apk Dockerfile; the tarball format only needs the
+            # common Linux bundling tools already installed there.
+            dockerfile_dir="${script_dir}/alpine-apk"
+            builder_image_prefix="clp-apk-builder"
+            pkg_libc="musl"
             ;;
         apk)
             format_dir="${script_dir}/alpine-apk"
             base_image_family="musllinux_1_2"
             dockerfile_dir="${script_dir}/alpine-apk"
             builder_image_prefix="clp-apk-builder"
+            pkg_libc=""
             ;;
         *)
-            echo "ERROR: Unsupported format: ${cur_format} (use deb, rpm, apk, or all)" >&2
+            echo "ERROR: Unsupported format: ${cur_format} (use deb, rpm, apk, tarball, tarball-musl, or all)" >&2
             exit 1
             ;;
     esac
@@ -197,7 +238,7 @@ for cur_format in "${format_list[@]}"; do
 
         # Package arch naming varies by format:
         #   deb: amd64, arm64          (Debian convention)
-        #   rpm/apk: x86_64, aarch64   (upstream convention)
+        #   rpm/apk/tarballs: x86_64, aarch64 (upstream convention)
         if [[ "${cur_format}" == "deb" ]]; then
             pkg_arch="${deb_arch}"
         else
@@ -243,6 +284,7 @@ for cur_format in "${format_list[@]}"; do
             -e "CORES=${cores}" \
             -e "PKG_VERSION=${version}" \
             -e "PKG_ARCH=${pkg_arch}" \
+            -e "PKG_LIBC=${pkg_libc}" \
             -e "HOST_UID=$(id -u)" \
             -e "HOST_GID=$(id -g)" \
             -e "CFLAGS=-U_FORTIFY_SOURCE" \
@@ -254,9 +296,9 @@ for cur_format in "${format_list[@]}"; do
         # Copy the package to the output directory (only the current format to
         # avoid leaking stale packages of other formats from the build directory)
         echo "==> Copying package to ${output_dir}..."
-        package_pattern="${CLP_CORE_PACKAGE_NAME}*.${cur_format}"
+        package_pattern="$(clp_linux_packaging_artifact_pattern_for_format "${cur_format}")"
         if [[ -z "$(find -L "${repo_root}/build" -maxdepth 1 -name "${package_pattern}" -print -quit)" ]]; then
-            echo "ERROR: No .${cur_format} package found in ${repo_root}/build" >&2
+            echo "ERROR: No ${cur_format} package found in ${repo_root}/build" >&2
             exit 1
         fi
         find -L "${repo_root}/build" -maxdepth 1 -name "${package_pattern}" \
@@ -269,7 +311,13 @@ echo "========================================"
 echo "All builds complete!"
 echo "========================================"
 echo ""
-ls -lh "${output_dir}/${CLP_CORE_PACKAGE_NAME}"*.{deb,rpm,apk} 2>/dev/null || true
+find "${output_dir}" -maxdepth 1 \( \
+    -name "${CLP_CORE_PACKAGE_NAME}*.deb" \
+    -o -name "${CLP_CORE_PACKAGE_NAME}*.rpm" \
+    -o -name "${CLP_CORE_PACKAGE_NAME}*.apk" \
+    -o -name "${CLP_CORE_PACKAGE_NAME}-*-linux-glibc-*.tar.gz" \
+    -o -name "${CLP_CORE_PACKAGE_NAME}-*-linux-musl-*.tar.gz" \
+\) -exec ls -lh {} + 2>/dev/null || true
 echo ""
 
 for cur_format in "${format_list[@]}"; do
@@ -289,6 +337,16 @@ for cur_format in "${format_list[@]}"; do
             echo "Test apk:"
             echo "  docker run --rm -v '${output_dir}':/pkgs alpine:3.20 sh -c \\"
             echo "    'apk add --allow-untrusted /pkgs/${CLP_CORE_PACKAGE_NAME}-*.apk && clp-s --help'"
+            ;;
+        tarball)
+            echo "Test tarball:"
+            echo "  tmpdir=\$(mktemp -d) && tar -xzf '${output_dir}'/${CLP_CORE_PACKAGE_NAME}-*-linux-glibc-*.tar.gz -C \"\${tmpdir}\""
+            echo "  \"\${tmpdir}\"/${CLP_CORE_PACKAGE_NAME}-*/bin/clp-s --help"
+            ;;
+        tarball-musl)
+            echo "Test musl tarball:"
+            echo "  docker run --rm -v '${output_dir}':/pkgs alpine:3.20 sh -c \\"
+            echo "    'tmpdir=\$(mktemp -d) && tar -xzf /pkgs/${CLP_CORE_PACKAGE_NAME}-*-linux-musl-*.tar.gz -C \"\${tmpdir}\" && \"\${tmpdir}\"/${CLP_CORE_PACKAGE_NAME}-*/bin/clp-s --help'"
             ;;
     esac
 done

@@ -22,7 +22,8 @@
 #   BIN_DIR  Path to the directory containing compiled binaries
 #
 # Optional environment variables:
-#   PREFIX  Runtime install prefix (default: /usr/local)
+#   PREFIX                 Runtime install prefix (default: /usr/local)
+#   BUNDLE_COMPILER_LIBS   Bundle libstdc++ and libgcc_s (default: false)
 
 set -o errexit
 set -o nounset
@@ -45,10 +46,19 @@ lib_install_dir="${prefix}/lib/clp"
 
 # --- Constants ---------------------------------------------------------------
 
-# Libraries provided by the base system (libc, libstdc++, libgcc).
+# Libraries provided by the base system (libc, dynamic loader, POSIX libs).
 # These must NOT be bundled — the target system's versions are used instead.
 # Covers both glibc (ld-linux, libc.so) and musl (ld-musl, libc.musl-*).
-EXCLUDE_PATTERN="linux-vdso|ld-linux|ld-musl|libc\.so|libc\.musl|libm\.so|libmvec|libanl|libutil|libnsl|libpthread|libdl|librt\.so|libresolv|libstdc\+\+|libgcc_s"
+SYSTEM_EXCLUDE_PATTERN="linux-vdso|ld-linux|ld-musl|libc\.so|libc\.musl|libm\.so|libmvec|libanl|libutil|libnsl|libpthread|libdl|librt\.so|libresolv"
+
+# Package formats should use the target distro's compiler runtime packages.
+# Tarballs do not have dependency metadata, so they can opt into bundling these.
+COMPILER_RUNTIME_PATTERN="libstdc\+\+|libgcc_s"
+if [[ "${BUNDLE_COMPILER_LIBS:-false}" == "true" ]]; then
+    EXCLUDE_PATTERN="${SYSTEM_EXCLUDE_PATTERN}"
+else
+    EXCLUDE_PATTERN="${SYSTEM_EXCLUDE_PATTERN}|${COMPILER_RUNTIME_PATTERN}"
+fi
 
 # --- Prepare staging directory -----------------------------------------------
 
