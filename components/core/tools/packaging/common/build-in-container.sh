@@ -13,20 +13,23 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+repo_root="$(cd "${script_dir}/../../../../.." && pwd)"
+
+# shellcheck source=build-steps.sh
+. "${script_dir}/build-steps.sh"
+
 git config --global --add safe.directory "*"
 
-echo "==> Building dependencies..."
-CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK="${CORES}" task deps:core
-
-echo "==> Building core binaries..."
-CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK="${CORES}" task core
+clp_packaging_build_cpp_dependencies "${repo_root}" "${CORES}"
+clp_packaging_build_core_with_task "${repo_root}" "${CORES}"
 
 # BIN_DIR must match the CMake binary output directory (task core builds into
-# /clp/build/core).
+# build/core).
 echo "==> Packaging..."
-BIN_DIR=/clp/build/core \
-OUTPUT_DIR=/clp/build \
-    "/clp/components/core/tools/packaging/${FORMAT_DIR}/package.sh"
+BIN_DIR="${repo_root}/build/core" \
+OUTPUT_DIR="${repo_root}/build" \
+    "${repo_root}/components/core/tools/packaging/${FORMAT_DIR}/package.sh"
 
 # Restore host ownership on mounted volume paths
-chown -R "${HOST_UID}:${HOST_GID}" /clp/build /clp/.task
+chown -R "${HOST_UID}:${HOST_GID}" "${repo_root}/build" "${repo_root}/.task"

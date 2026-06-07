@@ -38,6 +38,8 @@ repo_root="$(cd "${script_dir}/../../../../.." && pwd)"
 
 # shellcheck source=defaults.sh
 . "${script_dir}/defaults.sh"
+# shellcheck source=../common/build-steps.sh
+. "${script_dir}/../common/build-steps.sh"
 # shellcheck source=../common/build-family.sh
 . "${script_dir}/../common/build-family.sh"
 # shellcheck source=../common/package-output.sh
@@ -117,14 +119,8 @@ if [[ "${clean}" == "true" ]]; then
     fi
 fi
 
-echo "==> Initialising submodules..."
-"${repo_root}/tools/scripts/deps-download/init.sh"
-
-echo "==> Building C++ dependencies..."
-(
-    cd "${repo_root}"
-    CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK="${cores}" task deps:core
-)
+clp_packaging_init_dependencies "${repo_root}"
+clp_packaging_build_cpp_dependencies "${repo_root}" "${cores}"
 
 if [[ -n "${CLP_MACOS_POST_DEPS_HOOK:-}" ]]; then
     echo "==> ${CLP_MACOS_POST_DEPS_LABEL:-Running post-deps hook}..."
