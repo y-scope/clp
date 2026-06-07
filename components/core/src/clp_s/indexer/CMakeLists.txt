@@ -112,6 +112,8 @@ set(
         ../SchemaReader.hpp
         ../SchemaTree.cpp
         ../SchemaTree.hpp
+        ../search/Projection.cpp
+        ../search/Projection.hpp
         ../search/ast/SearchUtils.hpp
         ../TimestampDictionaryReader.cpp
         ../TimestampDictionaryReader.hpp
