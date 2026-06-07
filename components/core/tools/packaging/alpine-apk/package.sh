@@ -25,6 +25,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 # shellcheck source=../common/package-inputs.sh
 . "${script_dir}/../common/package-inputs.sh"
+# shellcheck source=../common/package-metadata.sh
+. "${script_dir}/../common/package-metadata.sh"
 # shellcheck source=../common/package-output.sh
 . "${script_dir}/../common/package-output.sh"
 
@@ -39,7 +41,7 @@ staging="/tmp/clp-apk-staging"
 # _git with the date; the commit hash is stored in pkgdesc since apk versions
 # don't allow hex characters.
 # E.g., "0.9.1-20260214.5f1d7ca" -> pkgver=0.9.1_git20260214, hash in pkgdesc
-apk_desc="CLP core universal binaries for log compression and search"
+apk_desc="${CLP_CORE_PACKAGE_SUMMARY}"
 if [[ "${PKG_VERSION}" == *-* ]]; then
     base_version="${PKG_VERSION%%-*}"
     snapshot_suffix="${PKG_VERSION#*-}"
@@ -72,14 +74,14 @@ cp /root/.abuild/*.rsa.pub /etc/apk/keys/
 
 # Create APKBUILD that copies our pre-bundled staging directory
 cat > "${abuild_dir}/APKBUILD" <<APKBUILD
-# Maintainer: YScope Inc. <support@yscope.com>
-pkgname=clp-core
+# Maintainer: ${CLP_CORE_PACKAGE_MAINTAINER}
+pkgname=${CLP_CORE_PACKAGE_NAME}
 pkgver=${apk_version}
 pkgrel=0
 pkgdesc="${apk_desc}"
-url="https://github.com/y-scope/clp"
+url="${CLP_CORE_PACKAGE_HOMEPAGE}"
 arch="${PKG_ARCH}"
-license="Apache-2.0"
+license="${CLP_CORE_PACKAGE_LICENSE}"
 depends="musl libstdc++"
 source=""
 options="!check !strip"

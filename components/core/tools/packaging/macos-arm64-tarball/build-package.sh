@@ -44,6 +44,8 @@ repo_root="$(cd "${script_dir}/../../../../.." && pwd)"
 . "${script_dir}/../common/build-family.sh"
 # shellcheck source=../common/package-output.sh
 . "${script_dir}/../common/package-output.sh"
+# shellcheck source=../common/package-metadata.sh
+. "${script_dir}/../common/package-metadata.sh"
 # shellcheck source=../common/package-version.sh
 . "${script_dir}/../common/package-version.sh"
 
@@ -105,7 +107,7 @@ if [[ -n "${CLP_MACOS_BUILD_DETAILS:-}" ]]; then
 fi
 echo ""
 
-clp_packaging_remove_stale_outputs "${output_dir}" "clp-core-*-macos-${macos_arch}.tar.gz"
+clp_packaging_remove_stale_outputs "${output_dir}" "${CLP_CORE_PACKAGE_NAME}-*-macos-${macos_arch}.tar.gz"
 
 if [[ "${clean}" == "true" ]]; then
     echo "==> Cleaning ${build_dir}..."
@@ -163,8 +165,8 @@ echo ""
 echo "========================================"
 echo "Build complete"
 echo "========================================"
-ls -lh "${output_dir}"/clp-core-*-macos-"${macos_arch}".tar.gz
+ls -lh "${output_dir}/${CLP_CORE_PACKAGE_NAME}"-*-macos-"${macos_arch}".tar.gz
 echo ""
 echo "Test extract:"
-echo "  mkdir -p /tmp/clp-core-test && tar -xzf '${output_dir}'/clp-core-*-macos-${macos_arch}.tar.gz -C /tmp/clp-core-test"
-echo "  /tmp/clp-core-test/clp-core-*/bin/clp --help"
+echo "  mkdir -p /tmp/${CLP_CORE_PACKAGE_NAME}-test && tar -xzf '${output_dir}'/${CLP_CORE_PACKAGE_NAME}-*-macos-${macos_arch}.tar.gz -C /tmp/${CLP_CORE_PACKAGE_NAME}-test"
+echo "  /tmp/${CLP_CORE_PACKAGE_NAME}-test/${CLP_CORE_PACKAGE_NAME}-*/bin/clp --help"

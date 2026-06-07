@@ -25,6 +25,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 # shellcheck source=../common/package-inputs.sh
 . "${script_dir}/../common/package-inputs.sh"
+# shellcheck source=../common/package-metadata.sh
+. "${script_dir}/../common/package-metadata.sh"
 # shellcheck source=../common/package-output.sh
 . "${script_dir}/../common/package-output.sh"
 
@@ -49,17 +51,17 @@ BIN_DIR="${BIN_DIR}" \
 
 mkdir -p "${staging}/DEBIAN"
 cat > "${staging}/DEBIAN/control" <<CTRL
-Package: clp-core
+Package: ${CLP_CORE_PACKAGE_NAME}
 Version: ${deb_version}
 Architecture: ${PKG_ARCH}
-Maintainer: YScope Inc. <support@yscope.com>
-Homepage: https://github.com/y-scope/clp
+Maintainer: ${CLP_CORE_PACKAGE_MAINTAINER}
+Homepage: ${CLP_CORE_PACKAGE_HOMEPAGE}
 Depends: libc6 (>= 2.28), libstdc++6
-Description: CLP core universal binaries for log compression and search
+Description: ${CLP_CORE_PACKAGE_SUMMARY}
  Portable binaries built on manylinux_2_28 (glibc >= 2.28). Compatible with
  Debian 10+, Ubuntu 20.04+, and other glibc-based Debian derivatives.
  .
- Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
+ ${CLP_CORE_PACKAGE_INCLUDED_BINARIES}
 CTRL
 
 # --- Build .deb ---------------------------------------------------------------

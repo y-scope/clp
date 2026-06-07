@@ -36,6 +36,8 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 . "${script_dir}/common/build-family.sh"
 # shellcheck source=common/package-output.sh
 . "${script_dir}/common/package-output.sh"
+# shellcheck source=common/package-metadata.sh
+. "${script_dir}/common/package-metadata.sh"
 # shellcheck source=common/package-version.sh
 . "${script_dir}/common/package-version.sh"
 
@@ -116,7 +118,7 @@ echo ""
 # Remove stale packages from the output directory (only for formats being built)
 for _fmt in "${format_list[@]}"; do
     _fmt=$(echo "${_fmt}" | xargs)
-    clp_packaging_remove_stale_outputs "${output_dir}" "clp-core*.${_fmt}"
+    clp_packaging_remove_stale_outputs "${output_dir}" "${CLP_CORE_PACKAGE_NAME}*.${_fmt}"
 done
 
 # --- Build for each format and architecture ----------------------------------
@@ -252,11 +254,12 @@ for cur_format in "${format_list[@]}"; do
         # Copy the package to the output directory (only the current format to
         # avoid leaking stale packages of other formats from the build directory)
         echo "==> Copying package to ${output_dir}..."
-        if ! find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" | grep -q .; then
+        package_pattern="${CLP_CORE_PACKAGE_NAME}*.${cur_format}"
+        if [[ -z "$(find -L "${repo_root}/build" -maxdepth 1 -name "${package_pattern}" -print -quit)" ]]; then
             echo "ERROR: No .${cur_format} package found in ${repo_root}/build" >&2
             exit 1
         fi
-        find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" \
+        find -L "${repo_root}/build" -maxdepth 1 -name "${package_pattern}" \
             -exec cp {} "${output_dir}/" \;
         echo ""
     done
@@ -266,7 +269,7 @@ echo "========================================"
 echo "All builds complete!"
 echo "========================================"
 echo ""
-ls -lh "${output_dir}"/clp-core*.{deb,rpm,apk} 2>/dev/null || true
+ls -lh "${output_dir}/${CLP_CORE_PACKAGE_NAME}"*.{deb,rpm,apk} 2>/dev/null || true
 echo ""
 
 for cur_format in "${format_list[@]}"; do
@@ -275,17 +278,17 @@ for cur_format in "${format_list[@]}"; do
         deb)
             echo "Test deb:"
             echo "  docker run --rm -v '${output_dir}':/pkgs debian:bookworm bash -c \\"
-            echo "    'dpkg -i /pkgs/clp-core_*.deb && clp-s --help'"
+            echo "    'dpkg -i /pkgs/${CLP_CORE_PACKAGE_NAME}_*.deb && clp-s --help'"
             ;;
         rpm)
             echo "Test rpm:"
             echo "  docker run --rm -v '${output_dir}':/pkgs almalinux:9 bash -c \\"
-            echo "    'rpm -i /pkgs/clp-core-*.rpm && clp-s --help'"
+            echo "    'rpm -i /pkgs/${CLP_CORE_PACKAGE_NAME}-*.rpm && clp-s --help'"
             ;;
         apk)
             echo "Test apk:"
             echo "  docker run --rm -v '${output_dir}':/pkgs alpine:3.20 sh -c \\"
-            echo "    'apk add --allow-untrusted /pkgs/clp-core-*.apk && clp-s --help'"
+            echo "    'apk add --allow-untrusted /pkgs/${CLP_CORE_PACKAGE_NAME}-*.apk && clp-s --help'"
             ;;
     esac
 done

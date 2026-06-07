@@ -25,6 +25,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 # shellcheck source=../common/core-binaries.sh
 . "${script_dir}/../common/core-binaries.sh"
+# shellcheck source=../common/package-metadata.sh
+. "${script_dir}/../common/package-metadata.sh"
 # shellcheck source=../common/package-inputs.sh
 . "${script_dir}/../common/package-inputs.sh"
 # shellcheck source=../common/package-output.sh
@@ -49,19 +51,20 @@ BIN_DIR="${BIN_DIR}" \
 # --- Build .rpm via rpmbuild --------------------------------------------------
 
 rpmbuild_dir="/tmp/clp-rpmbuild"
+spec_path="${rpmbuild_dir}/SPECS/${CLP_CORE_PACKAGE_NAME}.spec"
 rm -rf "${rpmbuild_dir}"
 mkdir -p "${rpmbuild_dir}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # Create the spec file
 {
-cat <<'SPEC'
-Name:           clp-core
+cat <<SPEC
+Name:           ${CLP_CORE_PACKAGE_NAME}
 Version:        %{pkg_version}
 Release:        1
-Summary:        CLP core universal binaries for log compression and search
-License:        Apache-2.0
-URL:            https://github.com/y-scope/clp
-Packager:       YScope Inc. <support@yscope.com>
+Summary:        ${CLP_CORE_PACKAGE_SUMMARY}
+License:        ${CLP_CORE_PACKAGE_LICENSE}
+URL:            ${CLP_CORE_PACKAGE_HOMEPAGE}
+Packager:       ${CLP_CORE_PACKAGE_MAINTAINER}
 
 AutoReqProv:    no
 Requires:       glibc >= 2.28
@@ -72,7 +75,7 @@ Portable binaries built on manylinux_2_28 (glibc >= 2.28). Compatible with
 RHEL 8+, Fedora 29+, AlmaLinux 8+, Rocky Linux 8+, and other glibc-based
 RPM distributions.
 
-Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
+${CLP_CORE_PACKAGE_INCLUDED_BINARIES}
 
 %install
 cp -a %{staging_dir}/* %{buildroot}/
@@ -85,7 +88,7 @@ done
 cat <<'SPEC'
 /usr/lib/clp/
 SPEC
-} > "${rpmbuild_dir}/SPECS/clp-core.spec"
+} > "${spec_path}"
 
 echo "==> Building rpm package..."
 rpmbuild \
@@ -93,7 +96,7 @@ rpmbuild \
     --define "pkg_version ${rpm_version}" \
     --define "staging_dir ${staging}" \
     --target "${PKG_ARCH}" \
-    --bb "${rpmbuild_dir}/SPECS/clp-core.spec"
+    --bb "${spec_path}"
 
 # Copy the built RPM to the output directory
 find "${rpmbuild_dir}/RPMS" -name "*.rpm" -exec cp {} "${output_dir}/" \;

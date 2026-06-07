@@ -30,6 +30,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 . "${script_dir}/defaults.sh"
 # shellcheck source=../common/package-inputs.sh
 . "${script_dir}/../common/package-inputs.sh"
+# shellcheck source=../common/package-metadata.sh
+. "${script_dir}/../common/package-metadata.sh"
 # shellcheck source=../common/package-output.sh
 . "${script_dir}/../common/package-output.sh"
 
@@ -44,7 +46,7 @@ output_dir="$(clp_packaging_resolve_output_dir)"
 # already been normalized by build-package.sh: release versions are kept as-is,
 # while hyphenated pre-release suffixes are replaced with a git-date/hash
 # snapshot suffix.
-pkg_basename="clp-core-${PKG_VERSION}-macos-${pkg_arch}"
+pkg_basename="${CLP_CORE_PACKAGE_NAME}-${PKG_VERSION}-macos-${pkg_arch}"
 staging_parent="${output_dir}/.staging"
 staging="${staging_parent}/${pkg_basename}"
 
