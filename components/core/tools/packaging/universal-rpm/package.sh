@@ -23,24 +23,15 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
+# shellcheck source=../common/core-binaries.sh
+. "${script_dir}/../common/core-binaries.sh"
+# shellcheck source=../common/package-inputs.sh
+. "${script_dir}/../common/package-inputs.sh"
+
 # --- Validate inputs ----------------------------------------------------------
 
-if [[ -z "${PKG_VERSION:-}" ]]; then
-    echo >&2 "ERROR: PKG_VERSION is required"
-    exit 1
-fi
-
-if [[ -z "${PKG_ARCH:-}" ]]; then
-    echo >&2 "ERROR: PKG_ARCH is required"
-    exit 1
-fi
-
-if [[ -z "${BIN_DIR:-}" ]]; then
-    echo >&2 "ERROR: BIN_DIR is required"
-    exit 1
-fi
-
-output_dir="${OUTPUT_DIR:-$(pwd)}"
+clp_packaging_validate_package_inputs "universal-rpm"
+output_dir="$(clp_packaging_output_dir)"
 staging="/tmp/clp-rpm-staging"
 
 # RPM version: replace hyphen with tilde so pre-release sorts before release.
@@ -60,7 +51,8 @@ rm -rf "${rpmbuild_dir}"
 mkdir -p "${rpmbuild_dir}"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # Create the spec file
-cat > "${rpmbuild_dir}/SPECS/clp-core.spec" <<'SPEC'
+{
+cat <<'SPEC'
 Name:           clp-core
 Version:        %{pkg_version}
 Release:        1
@@ -84,15 +76,14 @@ Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
 cp -a %{staging_dir}/* %{buildroot}/
 
 %files
-/usr/bin/clg
-/usr/bin/clo
-/usr/bin/clp
-/usr/bin/clp-s
-/usr/bin/indexer
-/usr/bin/log-converter
-/usr/bin/reducer-server
+SPEC
+for bin in "${CLP_CORE_BINARIES[@]}"; do
+    printf '/usr/bin/%s\n' "${bin}"
+done
+cat <<'SPEC'
 /usr/lib/clp/
 SPEC
+} > "${rpmbuild_dir}/SPECS/clp-core.spec"
 
 echo "==> Building rpm package..."
 rpmbuild \

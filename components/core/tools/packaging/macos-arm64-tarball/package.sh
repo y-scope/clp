@@ -28,27 +28,14 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 # shellcheck source=defaults.sh
 . "${script_dir}/defaults.sh"
+# shellcheck source=../common/package-inputs.sh
+. "${script_dir}/../common/package-inputs.sh"
 
 # --- Validate inputs --------------------------------------------------------
 
-if [[ -z "${PKG_VERSION:-}" ]]; then
-    echo "ERROR: PKG_VERSION is required" >&2
-    exit 1
-fi
-
-if [[ -z "${PKG_ARCH:-}" ]]; then
-    echo "ERROR: PKG_ARCH is required" >&2
-    exit 1
-fi
-
+clp_packaging_validate_package_inputs "macos-tarball"
 pkg_arch="$(clp_macos_normalize_arch "${PKG_ARCH}")"
-
-if [[ -z "${BIN_DIR:-}" ]]; then
-    echo "ERROR: BIN_DIR is required" >&2
-    exit 1
-fi
-
-output_dir="${OUTPUT_DIR:-$(pwd)}"
+output_dir="$(clp_packaging_output_dir)"
 mkdir -p "${output_dir}"
 
 # Tarball convention follows the kubectl / node / go pattern: hyphens

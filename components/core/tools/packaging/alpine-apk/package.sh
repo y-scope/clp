@@ -23,24 +23,13 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
+# shellcheck source=../common/package-inputs.sh
+. "${script_dir}/../common/package-inputs.sh"
+
 # --- Validate inputs ----------------------------------------------------------
 
-if [[ -z "${PKG_VERSION:-}" ]]; then
-    echo >&2 "ERROR: PKG_VERSION is required"
-    exit 1
-fi
-
-if [[ -z "${PKG_ARCH:-}" ]]; then
-    echo >&2 "ERROR: PKG_ARCH is required"
-    exit 1
-fi
-
-if [[ -z "${BIN_DIR:-}" ]]; then
-    echo >&2 "ERROR: BIN_DIR is required"
-    exit 1
-fi
-
-output_dir="${OUTPUT_DIR:-$(pwd)}"
+clp_packaging_validate_package_inputs "alpine-apk"
+output_dir="$(clp_packaging_output_dir)"
 staging="/tmp/clp-apk-staging"
 
 # APK version: hyphens are invalid and underscore suffixes must use a recognized

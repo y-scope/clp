@@ -40,40 +40,19 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# shellcheck source=../common/core-binaries.sh
+. "${script_dir}/../common/core-binaries.sh"
+# shellcheck source=../common/bundle-inputs.sh
+. "${script_dir}/../common/bundle-inputs.sh"
+
 # --- Validate inputs --------------------------------------------------------
-
-if [[ -z "${DESTDIR:-}" ]]; then
-    echo "ERROR: DESTDIR is required" >&2
-    exit 1
-fi
-
-if [[ "${DESTDIR}" != /* ]]; then
-    echo "ERROR: DESTDIR must be an absolute path, got: '${DESTDIR}'" >&2
-    exit 1
-fi
-
-if [[ "${DESTDIR}" == "/" ]]; then
-    echo "ERROR: DESTDIR must not be /" >&2
-    exit 1
-fi
-
-if [[ -z "${BIN_DIR:-}" ]]; then
-    echo "ERROR: BIN_DIR is required" >&2
-    exit 1
-fi
-
-if [[ ! -d "${BIN_DIR}" ]]; then
-    echo "ERROR: Binary directory not found: '${BIN_DIR}'" >&2
-    exit 1
-fi
 
 # PREFIX unset → "" (tarball-style layout); PREFIX="/usr/local" → typical Unix
 # install. Non-empty PREFIX must be an absolute path.
-prefix="${PREFIX-}"
-if [[ -n "${prefix}" && "${prefix}" != /* ]]; then
-    echo "ERROR: PREFIX must start with '/' or be empty, got: '${prefix}'" >&2
-    exit 1
-fi
+clp_packaging_validate_bundle_inputs
+prefix="$(clp_packaging_resolve_bundle_prefix "")"
 lib_install_dir="${prefix}/lib/clp"
 
 # Native macOS uses the standard Xcode tool names. Cross builds can override
@@ -102,9 +81,6 @@ if [[ "${codesign_tool}" == "skip" ]]; then
 fi
 
 # --- Constants ---------------------------------------------------------------
-
-# Must match common/bundle-libs.sh BINARIES list and CMake build targets.
-BINARIES=(clg clo clp clp-s indexer log-converter reducer-server)
 
 # Dylibs provided by macOS itself — locked to OS version, must NOT be bundled.
 # Mirrors the role of EXCLUDE_PATTERN in bundle-libs.sh.
@@ -226,7 +202,7 @@ _add_unique_dylib_search_root() {
 
 _collect_seed_rpaths() {
     local bin f rp seen existing
-    for bin in "${BINARIES[@]}"; do
+    for bin in "${CLP_CORE_BINARIES[@]}"; do
         f="${BIN_DIR}/${bin}"
         while read -r rp; do
             [[ -n "${rp}" ]] || continue
@@ -251,7 +227,7 @@ _collect_dylib_search_roots() {
         _add_unique_dylib_search_root "${extra_root}"
     done
 
-    for bin in "${BINARIES[@]}"; do
+    for bin in "${CLP_CORE_BINARIES[@]}"; do
         f="${BIN_DIR}/${bin}"
         for rp in ${SEED_RPATHS[@]+"${SEED_RPATHS[@]}"}; do
             expanded="${rp//@loader_path/$(dirname "${f}")}"
@@ -381,7 +357,7 @@ mkdir -p "${DESTDIR}${prefix}/bin" "${DESTDIR}${lib_install_dir}"
 # rewrite references.
 
 worklist=()
-for bin in "${BINARIES[@]}"; do
+for bin in "${CLP_CORE_BINARIES[@]}"; do
     bin_path="${BIN_DIR}/${bin}"
     if [[ ! -f "${bin_path}" ]]; then
         echo "ERROR: ${bin} not found at ${bin_path}" >&2
@@ -481,7 +457,7 @@ done < "${discovered_file}"
 # --- Phase 3: Install + rewrite binaries -------------------------------------
 
 echo "==> Installing binaries..."
-for bin in "${BINARIES[@]}"; do
+for bin in "${CLP_CORE_BINARIES[@]}"; do
     src="${BIN_DIR}/${bin}"
     dest="${DESTDIR}${prefix}/bin/${bin}"
 

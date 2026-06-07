@@ -23,24 +23,13 @@ set -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
+# shellcheck source=../common/package-inputs.sh
+. "${script_dir}/../common/package-inputs.sh"
+
 # --- Validate inputs --------------------------------------------------------
 
-if [[ -z "${PKG_VERSION:-}" ]]; then
-    echo "ERROR: PKG_VERSION is required" >&2
-    exit 1
-fi
-
-if [[ -z "${PKG_ARCH:-}" ]]; then
-    echo "ERROR: PKG_ARCH is required" >&2
-    exit 1
-fi
-
-if [[ -z "${BIN_DIR:-}" ]]; then
-    echo "ERROR: BIN_DIR is required" >&2
-    exit 1
-fi
-
-output_dir="${OUTPUT_DIR:-$(pwd)}"
+clp_packaging_validate_package_inputs "universal-deb"
+output_dir="$(clp_packaging_output_dir)"
 staging="/tmp/clp-deb-staging"
 
 # Deb version: replace hyphen with tilde so pre-release sorts before release,
