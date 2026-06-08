@@ -25,8 +25,8 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "results-cache"
-          image: "mongo:8.0.21"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "resultsCache") | quote }}
+          imagePullPolicy: {{ .Values.image.resultsCache.pullPolicy | quote }}
           ports:
             - name: "results-cache"
               containerPort: 27017
@@ -57,7 +57,7 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *results-cache-health-check
         - name: "results-cache-init"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "PYTHONPATH"
@@ -71,7 +71,7 @@ spec:
                 sleep 1
               done
               python3 -u -m clp_py_utils.initialize-results-cache \
-                --uri "mongodb://{{ include "clp.resultsCacheHost" . }}:{{ include "clp.resultsCachePort" . | int }}/{{ .Values.clpConfig.results_cache.db_name }}" \
+                --uri "mongodb://127.0.0.1:{{ include "clp.resultsCachePort" . | int }}/{{ .Values.clpConfig.results_cache.db_name }}" \
                 --stream-collection {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
               touch /tmp/init-complete
               sleep infinity
