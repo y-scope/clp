@@ -46,13 +46,13 @@ from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
 
 meter = metrics.get_meter("compression-worker")
-total_num_bytes_input = meter.create_counter(
-    "clp.compression.total_num_bytes_input",
+bytes_input_counter = meter.create_counter(
+    "clp.compression.bytes_input_total",
     unit="By",
     description="Total uncompressed bytes processed by compression",
 )
-total_num_bytes_output = meter.create_counter(
-    "clp.compression.total_num_bytes_output",
+bytes_output_counter = meter.create_counter(
+    "clp.compression.bytes_output_total",
     unit="By",
     description="Total compressed bytes output by compression",
 )
@@ -674,7 +674,7 @@ def compression_entry_point(
         "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
     )
     attributes = {"status": status_str}
-    total_num_bytes_input.add(worker_output.get("total_uncompressed_size", 0), attributes)
-    total_num_bytes_output.add(worker_output.get("total_compressed_size", 0), attributes)
+    bytes_input_counter.add(worker_output.get("total_uncompressed_size", 0), attributes)
+    bytes_output_counter.add(worker_output.get("total_compressed_size", 0), attributes)
 
     return compression_task_result.model_dump()
