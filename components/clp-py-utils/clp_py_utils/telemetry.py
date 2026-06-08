@@ -33,7 +33,7 @@ def init_telemetry() -> None:
         metrics.set_meter_provider(provider)
         logger.debug("OpenTelemetry metrics initialized successfully.")
     except Exception as e:
-        logger.warning(f"Failed to initialize OpenTelemetry metrics: {e}")
+        logger.warning(f"Failed to initialize OpenTelemetry metrics: {e}.")
 
 
 def shutdown_telemetry() -> None:
@@ -45,10 +45,10 @@ def shutdown_telemetry() -> None:
         try:
             provider.force_flush()
         except Exception as e:
-            logger.warning(f"Failed to force flush OpenTelemetry metrics: {e}")
+            logger.warning(f"Failed to force flush OpenTelemetry metrics: {e}.")
 
     if hasattr(provider, "shutdown"):
         try:
             provider.shutdown()
         except Exception as e:
-            logger.warning(f"Failed to shut down OpenTelemetry metrics: {e}")
+            logger.warning(f"Failed to shut down OpenTelemetry metrics: {e}.")

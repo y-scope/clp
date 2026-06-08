@@ -82,10 +82,10 @@ def _observe_active_jobs(options: CallbackOptions):
 
 
 def _observe_outstanding_tasks(options: CallbackOptions):
-    outstanding_tasks = sum(
+    num_outstanding_tasks = sum(
         job.num_tasks_total - job.num_tasks_completed for job in scheduled_jobs.values()
     )
-    yield Observation(outstanding_tasks)
+    yield Observation(num_outstanding_tasks)
 
 
 meter.create_observable_gauge(

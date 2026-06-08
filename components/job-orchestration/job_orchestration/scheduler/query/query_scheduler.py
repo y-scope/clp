@@ -107,13 +107,13 @@ def _observe_active_jobs(options: CallbackOptions):
 
 
 def _observe_outstanding_tasks(options: CallbackOptions):
-    outstanding_tasks = 0
+    num_outstanding_tasks = 0
     for job in active_jobs.values():
         if isinstance(job, SearchJob):
-            outstanding_tasks += job.num_archives_to_search - job.num_archives_searched
+            num_outstanding_tasks += job.num_archives_to_search - job.num_archives_searched
         else:
-            outstanding_tasks += 1
-    yield Observation(outstanding_tasks)
+            num_outstanding_tasks += 1
+    yield Observation(num_outstanding_tasks)
 
 
 meter.create_observable_gauge(
