@@ -7,6 +7,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
+    OTEL_COLLECTOR_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
@@ -37,7 +38,7 @@ CLP_BASE_COMPONENTS: tuple[str, ...] = (
     _to_docker_compose_service_name(COMPRESSION_SCHEDULER_COMPONENT_NAME),
     _to_docker_compose_service_name(COMPRESSION_WORKER_COMPONENT_NAME),
     _to_docker_compose_service_name(WEBUI_COMPONENT_NAME),
-    "otel-collector",
+    _to_docker_compose_service_name(OTEL_COLLECTOR_COMPONENT_NAME),
 )
 CLP_REDUCER_COMPONENT = _to_docker_compose_service_name(REDUCER_COMPONENT_NAME)
 CLP_QUERY_COMPONENTS: tuple[str, ...] = (

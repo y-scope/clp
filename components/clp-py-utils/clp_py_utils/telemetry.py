@@ -14,7 +14,7 @@ TELEMETRY_DISABLE_VALUES = {"1", "true", "yes", "y"}
 
 def init_telemetry() -> None:
     """
-    Initializes OpenTelemetry metrics collection with the provided configuration.
+    Initializes OpenTelemetry metrics collection.
 
     If telemetry is disabled via environment variables (CLP_DISABLE_TELEMETRY or DO_NOT_TRACK),
     this function does nothing.
