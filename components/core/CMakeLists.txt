@@ -22,7 +22,7 @@ endif()
 
 if (CMAKE_BUILD_TYPE MATCHES "Release")
     include(CheckIPOSupported)
-    check_ipo_supported(RESULT IPO_SUPPORTED)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT)
     if(IPO_SUPPORTED)
         message(STATUS "Link-time optimization enabled.")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)

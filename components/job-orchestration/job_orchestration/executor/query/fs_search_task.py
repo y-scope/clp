@@ -1,5 +1,4 @@
 import datetime
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -8,19 +7,6 @@ import msgpack
 from celery.app.task import Task
 from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
-from opentelemetry import metrics
-
-meter = metrics.get_meter("clp_py_utils")
-bytes_scanned_counter = meter.create_counter(
-    "clp.query.bytes_scanned_total",
-    unit="By",
-    description="Total uncompressed bytes scanned by the query",
-)
-bytes_output_counter = meter.create_counter(
-    "clp.query.bytes_output_total", unit="By", description="Total bytes output by the query"
-)
-
-
 from clp_py_utils.clp_config import (
     Database,
     StorageEngine,
@@ -275,7 +261,7 @@ def search_entry_point(
             start_time=start_time,
         )
 
-    task_results, stdout_data = run_query_task(
+    task_results, _ = run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
         clp_logs_dir=clp_logs_dir,
@@ -297,48 +283,6 @@ def search_entry_point(
         src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
         dest_path = f"{job_id}/{archive_id}"
         upload_results_to_s3(task_results, s3_config, src_file, dest_path)
-
-    # Telemetry
-    bytes_scanned = None
-    bytes_output = None
-
-    if stdout_data:
-        for line in reversed(stdout_data.rsplit("\n", 10)):
-            if '"stats"' not in line:
-                continue
-            try:
-                data = json.loads(line)
-                if isinstance(data, dict) and "stats" in data:
-                    stats = data["stats"]
-                    bytes_scanned = stats.get("bytes_scanned", None)
-                    bytes_output = stats.get("bytes_output", None)
-                    break
-            except json.JSONDecodeError:
-                pass
-
-    status_str = "success" if QueryTaskStatus.SUCCEEDED == task_results.status else "failure"
-
-    storage_engine_str = (
-        "clp_s" if worker_config.package.storage_engine == StorageEngine.CLP_S else "clp"
-    )
-    if search_config.aggregation_config is not None:
-        output_type = "reducer"
-    elif search_config.network_address is not None:
-        output_type = "network"
-    elif search_config.write_to_file:
-        output_type = "file"
-    else:
-        output_type = "results_cache"
-
-    attributes = {
-        "status": status_str,
-        "clp.storage.engine": storage_engine_str,
-        "clp.query.output_type": output_type,
-    }
-    if bytes_scanned is not None:
-        bytes_scanned_counter.add(bytes_scanned, attributes)
-    if bytes_output is not None:
-        bytes_output_counter.add(bytes_output, attributes)
 
     return task_results.model_dump()
 

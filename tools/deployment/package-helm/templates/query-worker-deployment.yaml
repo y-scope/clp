@@ -29,7 +29,6 @@ spec:
           image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
@@ -45,8 +44,6 @@ spec:
               value: "/var/log/query_worker"
             - name: "CLP_WORKER_LOG_PATH"
               value: "/dev/stdout"
-            - name: "OTEL_SERVICE_NAME"
-              value: "query-worker"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           volumeMounts:
