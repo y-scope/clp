@@ -99,7 +99,7 @@ active_archive_json_extractions: dict[str, list[str]] = {}
 reducer_connection_queue: asyncio.Queue | None = None
 
 # OpenTelemetry metrics
-meter = metrics.get_meter("clp_py_utils")
+meter = metrics.get_meter("query-scheduler")
 
 
 def _observe_active_jobs(options: CallbackOptions):
@@ -1170,9 +1170,6 @@ async def handle_jobs(
 async def main(argv: list[str]) -> int:
     global reducer_connection_queue
 
-    init_telemetry()
-    atexit.register(shutdown_telemetry)
-
     args_parser = argparse.ArgumentParser(description="Wait for and run query jobs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
 
@@ -1192,6 +1189,9 @@ async def main(argv: list[str]) -> int:
     except Exception:
         logger.exception(f"Failed to initialize {QUERY_SCHEDULER_COMPONENT_NAME}.")
         return -1
+
+    init_telemetry()
+    atexit.register(shutdown_telemetry)
 
     reducer_connection_queue = asyncio.Queue(32)
 

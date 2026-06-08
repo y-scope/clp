@@ -9,14 +9,14 @@ from typing import Any
 
 from opentelemetry import metrics
 
-meter = metrics.get_meter("clp_py_utils")
-bytes_input_counter = meter.create_counter(
-    "clp.compression.bytes_input_total",
+meter = metrics.get_meter("compression-worker")
+total_num_bytes_input = meter.create_counter(
+    "clp.compression.total_num_bytes_input",
     unit="By",
     description="Total uncompressed bytes processed by compression",
 )
-bytes_output_counter = meter.create_counter(
-    "clp.compression.bytes_output_total",
+total_num_bytes_output = meter.create_counter(
+    "clp.compression.total_num_bytes_output",
     unit="By",
     description="Total compressed bytes output by compression",
 )
@@ -674,7 +674,7 @@ def compression_entry_point(
         "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
     )
     attributes = {"status": status_str}
-    bytes_input_counter.add(worker_output.get("total_uncompressed_size", 0), attributes)
-    bytes_output_counter.add(worker_output.get("total_compressed_size", 0), attributes)
+    total_num_bytes_input.add(worker_output.get("total_uncompressed_size", 0), attributes)
+    total_num_bytes_output.add(worker_output.get("total_compressed_size", 0), attributes)
 
     return compression_task_result.model_dump()

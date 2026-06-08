@@ -74,14 +74,14 @@ logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
 
-meter = metrics.get_meter("clp_py_utils")
+meter = metrics.get_meter("compression-scheduler")
 
 
-def active_jobs_callback(options: CallbackOptions):
+def _observe_active_jobs(options: CallbackOptions):
     yield Observation(len(scheduled_jobs))
 
 
-def outstanding_tasks_callback(options: CallbackOptions):
+def _observe_outstanding_tasks(options: CallbackOptions):
     outstanding_tasks = sum(
         job.num_tasks_total - job.num_tasks_completed for job in scheduled_jobs.values()
     )
@@ -90,12 +90,12 @@ def outstanding_tasks_callback(options: CallbackOptions):
 
 meter.create_observable_gauge(
     "clp.compression.active_jobs",
-    callbacks=[active_jobs_callback],
+    callbacks=[_observe_active_jobs],
     description="Number of active compression jobs",
 )
 meter.create_observable_gauge(
     "clp.compression.outstanding_tasks",
-    callbacks=[outstanding_tasks_callback],
+    callbacks=[_observe_outstanding_tasks],
     description="Total number of outstanding compression tasks",
 )
 
