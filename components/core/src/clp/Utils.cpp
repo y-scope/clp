@@ -113,10 +113,15 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
 
 auto load_parser_from_rule_text(std::string const& rule_set_string) -> log_surgeon::ParserHandle {
     log_surgeon::CCharArray schema_arr{rule_set_string.data(), rule_set_string.size()};
-    auto* rule_set{log_surgeon::log_surgeon_schema_from_definition(schema_arr)};
-    if (nullptr == rule_set) {
+    auto* rule_builder{log_surgeon::log_surgeon_schema_builder_from_definition(schema_arr)};
+    if (nullptr == rule_builder) {
         throw std::invalid_argument("Failed to parse rule set:\n" + rule_set_string);
     }
+
+    log_surgeon::log_surgeon_schema_add_encoding(rule_builder, "int"_rust, R"(-?\d+)"_rust);
+    log_surgeon::log_surgeon_schema_add_encoding(rule_builder, "float"_rust,R"(-?\d+\.\d+)"_rust);
+
+    auto rule_set{log_surgeon::log_surgeon_schema_builder_build(rule_builder)};
     return log_surgeon::ParserHandle{rule_set};
 }
 

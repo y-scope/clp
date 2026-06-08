@@ -150,11 +150,15 @@ public:
      * @param buf
      * @param buffer_size
      * @param event
+     * @param parser
      * @throw FileWriter::OperationFailed if any write fails
      */
-    auto
-    write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::EventHandle const& event)
-            -> void;
+    auto write_msg_using_schema(
+            char* buf,
+            size_t buffer_size,
+            log_surgeon::EventHandle const& event,
+            log_surgeon::ParserHandle const& parser
+    ) -> void;
 
     /**
      * Writes an IR log event to the current encoded file
@@ -297,9 +301,11 @@ private:
     /**
      * Add a rule match to the logtype and variable dictionaries.
      * @param match_string The contents of the match.
-     * @param match_name The name of the match.
+     * @param encoding A vector of possible encodings for the token.
      */
-    auto add_token_to_dicts(std::string_view match_string, std::string_view match_name) -> void;
+    auto
+    add_token_to_dicts(std::string_view match_string, std::vector<std::string_view> const& encoding)
+            -> void;
 
     // Variables
     boost::uuids::uuid m_id;

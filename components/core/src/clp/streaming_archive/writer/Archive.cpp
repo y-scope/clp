@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <stdexcept>
@@ -29,6 +30,7 @@ namespace clp::streaming_archive::writer {
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
 using std::string;
+using std::string_view;
 using std::vector;
 
 Archive::~Archive() {
@@ -315,9 +317,9 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     update_segment_indices(logtype_id, var_ids);
 }
 
-auto Archive::add_token_to_dicts(std::string_view match_string, std::string_view match_name)
-        -> void {
-    if ("int" == match_name) {
+auto
+Archive::add_token_to_dicts(string_view match_string, vector<string_view> const& encoding) -> void {
+    if (std::find(encoding.begin(), encoding.end(), "int") != encoding.end()) {
         encoded_variable_t encoded_var{};
         if (false
             == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
@@ -336,7 +338,7 @@ auto Archive::add_token_to_dicts(std::string_view match_string, std::string_view
         m_encoded_vars.push_back(encoded_var);
         return;
     }
-    if ("float" == match_name) {
+    if (std::find(encoding.begin(), encoding.end(), "float") != encoding.end()) {
         encoded_variable_t encoded_var{};
         if (false
             == EncodedVariableInterpreter::convert_string_to_representable_float_var(
@@ -365,7 +367,8 @@ auto Archive::add_token_to_dicts(std::string_view match_string, std::string_view
 auto Archive::write_msg_using_schema(
         char* buf,
         size_t buffer_size,
-        log_surgeon::EventHandle const& event
+        log_surgeon::EventHandle const& event,
+        log_surgeon::ParserHandle const& parser
 ) -> void {
     epochtime_t timestamp{0};
     TimestampPattern const* timestamp_pattern{nullptr};
@@ -430,7 +433,8 @@ auto Archive::write_msg_using_schema(
         std::string_view leaf_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
 
         m_logtype_dict_entry.add_static_text(static_text);
-        add_token_to_dicts(leaf_string, leaf.ffi_pointers.rule_name.as_cpp_view());
+        auto const& encodings{parser.get_encoding(leaf.encoding_idx)};
+        add_token_to_dicts(leaf_string, encodings);
 
         prev_pos = leaf.range.end;
         ++leaf_id;
