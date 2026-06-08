@@ -23,7 +23,7 @@ def init_telemetry() -> None:
     dnt_env_var = os.environ.get("DO_NOT_TRACK", "").strip().lower()
     if disable_env_var in TELEMETRY_DISABLE_VALUES or dnt_env_var in TELEMETRY_DISABLE_VALUES:
         metrics.set_meter_provider(NoOpMeterProvider())
-        logger.debug("OpenTelemetry metrics explicitly disabled.")
+        logger.debug("OpenTelemetry metrics disabled.")
         return
 
     try:

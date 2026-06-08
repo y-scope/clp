@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import atexit
 import concurrent.futures
 import contextlib
 import datetime
@@ -46,7 +47,7 @@ from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import ConnectionPoolWrapper, SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
 from opentelemetry import metrics
-from opentelemetry.metrics import Observation
+from opentelemetry.metrics import CallbackOptions, Observation
 from pydantic import ValidationError
 
 from job_orchestration.executor.query.celery import app
@@ -101,30 +102,28 @@ reducer_connection_queue: asyncio.Queue | None = None
 meter = metrics.get_meter("clp_py_utils")
 
 
-def _observe_active_jobs(options) -> list[Observation]:
-    return [Observation(len(active_jobs), {})]
+def _observe_active_jobs(options: CallbackOptions):
+    yield Observation(len(active_jobs))
 
 
-def _observe_outstanding_tasks(options) -> list[Observation]:
-    total = 0
+def _observe_outstanding_tasks(options: CallbackOptions):
+    outstanding_tasks = 0
     for job in active_jobs.values():
         if isinstance(job, SearchJob):
-            total += job.num_archives_to_search - job.num_archives_searched
+            outstanding_tasks += job.num_archives_to_search - job.num_archives_searched
         else:
-            total += 1
-    return [Observation(total, {})]
+            outstanding_tasks += 1
+    yield Observation(outstanding_tasks)
 
 
-active_jobs_gauge = meter.create_observable_gauge(
+meter.create_observable_gauge(
     "clp.query.active_jobs",
     callbacks=[_observe_active_jobs],
-    unit="1",
     description="Number of active query jobs",
 )
-outstanding_tasks_gauge = meter.create_observable_gauge(
+meter.create_observable_gauge(
     "clp.query.outstanding_tasks",
     callbacks=[_observe_outstanding_tasks],
-    unit="1",
     description="Total number of outstanding tasks across all active query jobs",
 )
 
@@ -1172,6 +1171,7 @@ async def main(argv: list[str]) -> int:
     global reducer_connection_queue
 
     init_telemetry()
+    atexit.register(shutdown_telemetry)
 
     args_parser = argparse.ArgumentParser(description="Wait for and run query jobs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
@@ -1265,7 +1265,6 @@ async def main(argv: list[str]) -> int:
     except Exception:
         logger.exception("Uncaught exception in job handling loop.")
 
-    shutdown_telemetry()
     return 0
 
 
