@@ -7,6 +7,7 @@ import subprocess
 from contextlib import closing
 from typing import Any
 
+from opentelemetry import metrics
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -43,8 +44,6 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
-
-from opentelemetry import metrics
 
 meter = metrics.get_meter("compression-worker")
 total_num_bytes_input = meter.create_counter(
