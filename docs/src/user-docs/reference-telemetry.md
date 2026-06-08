@@ -10,6 +10,64 @@ As an open-source project, we have limited visibility into how CLP is used in th
 Anonymous metrics help us understand deployment patterns, prioritize platform support, and
 make informed build target decisions.
 
+## What we collect
+
+### Metrics
+
+The following OpenTelemetry metrics are emitted:
+
+#### Operational counters
+
+Emitted by long-running CLP services to track throughput:
+
+| Component | Metric | Type | Description |
+|-----------|--------|------|-------------|
+| log-ingestor | `clp.ingest.total_num_bytes` | Counter | Total bytes ingested |
+| log-ingestor | `clp.ingest.total_num_objects` | Counter | Total objects (log events) ingested |
+| api-server | `clp.service.event` | Counter | Service lifecycle events (e.g., startup) |
+
+#### Deployment topology gauges
+
+Emitted once at startup by the controller to record deployment sizing:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `clp.deployment.compression_worker_replicas` | Gauge | Number of compression-worker replicas |
+| `clp.deployment.compression_worker_concurrency` | Gauge | Compression-worker concurrency |
+| `clp.deployment.query_worker_replicas` | Gauge | Number of query-worker replicas |
+| `clp.deployment.query_worker_concurrency` | Gauge | Query-worker concurrency |
+| `clp.deployment.reducer_replicas` | Gauge | Number of reducer replicas |
+| `clp.deployment.reducer_concurrency` | Gauge | Reducer concurrency |
+
+### Resource attributes
+
+Every metric carries the following resource attributes to identify and contextualize the deployment:
+
+| Resource Attribute | Example | Purpose |
+|---|---|---|
+| `clp.deployment.id` | `550e8400-e29b-41d4-a716-446655440000` | Deduplicate metrics from the same deployment |
+| `service.version` | `0.9.1` | Track version adoption |
+| `clp.deployment.method` | `docker-compose` or `helm` | Understand deployment preferences |
+| `clp.storage.engine` | `clp-s` or `clp` | Track feature adoption |
+| `service.name` | `log-ingestor`, `api-server`, `controller` | Identify the emitting component |
+| `host.arch` | `x86_64`, `aarch64` | Inform build target priorities |
+| `host.cpu.family` | `6` | Inform build target priorities |
+| `host.cpu.model.id` | `142` | Inform build target priorities |
+| `host.cpu.vendor.id` | `GenuineIntel` | Inform build target priorities |
+
+`service.name` is set via the `OTEL_SERVICE_NAME` environment variable for Rust services and
+hardcoded in the controller's topology metrics payload. `clp.deployment.id`,
+`clp.deployment.method`, `clp.storage.engine`, and `service.version` are set via the
+`OTEL_RESOURCE_ATTRIBUTES` environment variable (Docker Compose) or Helm template helpers
+(Kubernetes). The `host.*` attributes are collected by the OpenTelemetry Collector's
+resourcedetection processor. `host.name` is explicitly **disabled** in the collector config and is
+not collected.
+
+The `clp.deployment.id` is a random UUIDv4 generated on first run and stored locally at
+`$CLP_HOME/var/log/instance-id`. It is never derived from hardware identifiers. One installation
+directory equals one deployment ID. Separate `$CLP_HOME` directories on the same machine produce
+separate IDs.
+
 ## What we do NOT collect
 
 Telemetry does **not** include: log content, queries, hostnames, IP addresses, or any other
