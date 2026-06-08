@@ -7,29 +7,18 @@ use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 
 use crate::{Error, clp_config::package::config::Telemetry};
 
-/// RAII guard that ensures [`TelemetryGuard::shutdown`] is called when the guard is dropped.
+/// RAII guard that shuts down the meter provider and flushes pending metric exports when dropped.
 pub struct TelemetryGuard {
     provider: Option<SdkMeterProvider>,
 }
 
-impl TelemetryGuard {
-    /// Shuts down the meter provider, flushing any pending metric exports.
-    ///
-    /// If the shutdown fails, the error is logged and not propagated, since this is typically
-    /// called during teardown (e.g., in a [`Drop`] implementation) where returning an error is
-    /// not useful.
-    fn shutdown(&mut self) {
+impl Drop for TelemetryGuard {
+    fn drop(&mut self) {
         if let Some(p) = self.provider.take()
             && let Err(err) = p.shutdown()
         {
             tracing::error!(err = ? err, "Failed to shutdown OpenTelemetry meter provider.");
         }
-    }
-}
-
-impl Drop for TelemetryGuard {
-    fn drop(&mut self) {
-        self.shutdown();
     }
 }
 
