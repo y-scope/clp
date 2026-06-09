@@ -121,7 +121,7 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
  * @param reader_map Column readers keyed by column ID.
  * @param column_id ID of the column to scan.
  * @param operation Filter operation to apply.
- * @param operand Operand from the filter expression, encoded as epoch nanoseconds.
+ * @param operand Operand from the filter expression, encoded as epoch time.
  * @return A bitmap indexed by message number, with nonzero entries for matching messages.
  */
 [[nodiscard]] auto build_timestamp_filter(
