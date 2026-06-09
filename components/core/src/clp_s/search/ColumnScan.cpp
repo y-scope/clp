@@ -115,6 +115,38 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
         std::unordered_set<int64_t> const& matching_vars
 ) -> ColumnScan::Bitmap;
 
+/**
+ * Builds a bitmap for a filter over a timestamp column.
+ * @param num_messages Number of messages represented by the bitmap.
+ * @param reader_map Column readers keyed by column ID.
+ * @param column_id ID of the column to scan.
+ * @param operation Filter operation to apply.
+ * @param operand Operand from the filter expression, encoded as epoch nanoseconds.
+ * @return A bitmap indexed by message number, with nonzero entries for matching messages.
+ */
+[[nodiscard]] auto build_timestamp_filter(
+        uint64_t num_messages,
+        ColumnScan::TimestampReaderMap const& reader_map,
+        int32_t column_id,
+        FilterOperation operation,
+        int64_t operand
+) -> ColumnScan::Bitmap;
+
+/**
+ * Builds a bitmap for a filter over a deprecated date-string column.
+ * @param num_messages Number of messages represented by the bitmap.
+ * @param reader Deprecated date-string column reader to scan.
+ * @param operation Filter operation to apply.
+ * @param operand Operand from the filter expression, encoded as epoch nanoseconds.
+ * @return A bitmap indexed by message number, with nonzero entries for matching messages.
+ */
+[[nodiscard]] auto build_deprecated_datestring_filter(
+        uint64_t num_messages,
+        DeprecatedDateStringColumnReader* reader,
+        FilterOperation operation,
+        int64_t operand
+) -> ColumnScan::Bitmap;
+
 template <typename T>
 [[nodiscard]] auto compare(FilterOperation operation, T value, T operand) -> bool {
     switch (operation) {
@@ -254,6 +286,40 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
     }
     return bitmap;
 }
+
+[[nodiscard]] auto build_timestamp_filter(
+        uint64_t num_messages,
+        ColumnScan::TimestampReaderMap const& reader_map,
+        int32_t column_id,
+        FilterOperation operation,
+        int64_t operand
+) -> ColumnScan::Bitmap {
+    ColumnScan::Bitmap bitmap(num_messages, 0);
+    auto const reader_it = reader_map.find(column_id);
+    if (reader_map.end() == reader_it) {
+        return bitmap;
+    }
+    auto* const reader = reader_it->second;
+    for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
+        auto const value = reader->get_encoded_time(message_index);
+        bitmap[message_index] = compare(operation, value, operand) ? 1 : 0;
+    }
+    return bitmap;
+}
+
+[[nodiscard]] auto build_deprecated_datestring_filter(
+        uint64_t num_messages,
+        DeprecatedDateStringColumnReader* reader,
+        FilterOperation operation,
+        int64_t operand
+) -> ColumnScan::Bitmap {
+    ColumnScan::Bitmap bitmap(num_messages, 0);
+    for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
+        auto const value = reader->get_encoded_time(message_index);
+        bitmap[message_index] = compare(operation, value, operand) ? 1 : 0;
+    }
+    return bitmap;
+}
 }  // namespace
 
 auto ColumnScan::try_create(
@@ -261,6 +327,8 @@ auto ColumnScan::try_create(
         BasicReaderMap const& basic_readers,
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
+        TimestampReaderMap const& timestamp_readers,
+        DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches,
         uint64_t num_messages
@@ -274,6 +342,8 @@ auto ColumnScan::try_create(
             basic_readers,
             clp_string_readers,
             var_string_readers,
+            timestamp_readers,
+            deprecated_datestring_reader,
             clp_queries,
             var_matches,
             num_messages
@@ -289,6 +359,8 @@ ColumnScan::ColumnScan(
         BasicReaderMap const& basic_readers,
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
+        TimestampReaderMap const& timestamp_readers,
+        DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches,
         uint64_t num_messages
@@ -299,6 +371,8 @@ ColumnScan::ColumnScan(
                   basic_readers,
                   clp_string_readers,
                   var_string_readers,
+                  timestamp_readers,
+                  deprecated_datestring_reader,
                   clp_queries,
                   var_matches
           )} {}
@@ -360,6 +434,7 @@ auto ColumnScan::can_build_filter(
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
         case LiteralType::FloatT:
+        case LiteralType::TimestampT:
             return true;
         case LiteralType::BooleanT:
             return is_equality_operation(operation);
@@ -372,9 +447,11 @@ auto ColumnScan::can_build_filter(
             auto const matching_vars = var_matches.find(filter);
             return var_matches.end() != matching_vars && nullptr != matching_vars->second;
         }
-        case LiteralType::ArrayT:
         case LiteralType::NullT:
-        case LiteralType::TimestampT:
+            // Null literal filters are rewritten into EXISTS/NEXISTS by `ConvertToExists`, so
+            // the EXISTS/NEXISTS short-circuit above already handles every reachable case.
+            return true;
+        case LiteralType::ArrayT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return false;
@@ -389,6 +466,8 @@ auto ColumnScan::build_node(
         BasicReaderMap const& basic_readers,
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
+        TimestampReaderMap const& timestamp_readers,
+        DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
 ) const -> Bitmap {
@@ -402,6 +481,8 @@ auto ColumnScan::build_node(
                     basic_readers,
                     clp_string_readers,
                     var_string_readers,
+                    timestamp_readers,
+                    deprecated_datestring_reader,
                     clp_queries,
                     var_matches
             );
@@ -423,6 +504,8 @@ auto ColumnScan::build_node(
                     basic_readers,
                     clp_string_readers,
                     var_string_readers,
+                    timestamp_readers,
+                    deprecated_datestring_reader,
                     clp_queries,
                     var_matches
             );
@@ -441,6 +524,8 @@ auto ColumnScan::build_node(
                 basic_readers,
                 clp_string_readers,
                 var_string_readers,
+                timestamp_readers,
+                deprecated_datestring_reader,
                 clp_queries,
                 var_matches
         );
@@ -459,6 +544,8 @@ auto ColumnScan::build_filter(
         BasicReaderMap const& basic_readers,
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
+        TimestampReaderMap const& timestamp_readers,
+        DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
 ) const -> Bitmap {
@@ -533,9 +620,34 @@ auto ColumnScan::build_filter(
                     *matching_vars
             );
         }
-        case LiteralType::ArrayT:
+        case LiteralType::TimestampT: {
+            int64_t operand_value{};
+            if (false == operand->as_int(operand_value, operation)) {
+                return bitmap;
+            }
+            if (nullptr != deprecated_datestring_reader
+                && column_id == deprecated_datestring_reader->get_id())
+            {
+                return build_deprecated_datestring_filter(
+                        m_num_messages,
+                        deprecated_datestring_reader,
+                        operation,
+                        operand_value
+                );
+            }
+            return build_timestamp_filter(
+                    m_num_messages,
+                    timestamp_readers,
+                    column_id,
+                    operation,
+                    operand_value
+            );
+        }
         case LiteralType::NullT:
-        case LiteralType::TimestampT:
+            // Reached only when a NullT filter slips past `ConvertToExists` with a non-existence
+            // operation; no row can satisfy it, so the empty bitmap is correct.
+            return bitmap;
+        case LiteralType::ArrayT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return bitmap;
