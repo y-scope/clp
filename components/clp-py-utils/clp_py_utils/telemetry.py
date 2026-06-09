@@ -17,7 +17,7 @@ def init_telemetry() -> None:
     Initializes OpenTelemetry metrics collection.
 
     If telemetry is disabled via environment variables (CLP_DISABLE_TELEMETRY or DO_NOT_TRACK),
-    this function does nothing.
+    this function installs a NoOpMeterProvider so that any metrics API calls become no-ops.
     """
     disable_env_var = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
     dnt_env_var = os.environ.get("DO_NOT_TRACK", "").strip().lower()
@@ -33,7 +33,7 @@ def init_telemetry() -> None:
         metrics.set_meter_provider(provider)
         logger.debug("OpenTelemetry metrics initialized successfully.")
     except Exception as e:
-        logger.warning(f"Failed to initialize OpenTelemetry metrics: {e}.")
+        logger.warning("Failed to initialize OpenTelemetry metrics: %s.", e)
 
 
 def shutdown_telemetry() -> None:
@@ -45,10 +45,10 @@ def shutdown_telemetry() -> None:
         try:
             provider.force_flush()
         except Exception as e:
-            logger.warning(f"Failed to force flush OpenTelemetry metrics: {e}.")
+            logger.warning("Failed to force flush OpenTelemetry metrics: %s.", e)
 
     if hasattr(provider, "shutdown"):
         try:
             provider.shutdown()
         except Exception as e:
-            logger.warning(f"Failed to shut down OpenTelemetry metrics: {e}.")
+            logger.warning("Failed to shut down OpenTelemetry metrics: %s.", e)
