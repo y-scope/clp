@@ -23,6 +23,9 @@
 #   --output DIR    Output directory for packages (default: ./packages)
 #   --clean         Remove build artifacts before building
 #   --help          Show this help message
+#
+# Optional env vars:
+#   DOCKER_NETWORK  Docker network mode for Docker build (e.g., `host`)
 
 set -o errexit
 set -o nounset
