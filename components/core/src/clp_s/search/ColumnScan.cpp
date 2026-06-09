@@ -453,9 +453,9 @@ auto ColumnScan::can_build_filter(
         case LiteralType::ArrayT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
-        default:
             return false;
     }
+    return false;
 }
 
 // can_build_node validates the AST iteratively before this recursive bitmap construction runs.
