@@ -285,12 +285,8 @@ tasks:
   clean-webui-package-node-modules:
     internal: true
     cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf {{.G_WEBUI_SRC_DIR}}/packages/*/node_modules"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/.turbo'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/client/.turbo'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/common/.turbo'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/server/.turbo'"
+      - "rm -rf {{.G_WEBUI_SRC_DIR}}/**/node_modules"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}'/**/.turbo"
 
   package-tar:
     internal: true
