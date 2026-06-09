@@ -448,15 +448,14 @@ auto ColumnScan::can_build_filter(
             return var_matches.end() != matching_vars && nullptr != matching_vars->second;
         }
         case LiteralType::NullT:
-            // Null literal filters are rewritten into EXISTS/NEXISTS by `ConvertToExists`, so
-            // the EXISTS/NEXISTS short-circuit above already handles every reachable case.
-            return true;
+            // null checks are always turned into existence operators --
+            // no need to evaluate here
         case LiteralType::ArrayT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
+        default:
             return false;
     }
-    return false;
 }
 
 // can_build_node validates the AST iteratively before this recursive bitmap construction runs.
@@ -644,9 +643,8 @@ auto ColumnScan::build_filter(
             );
         }
         case LiteralType::NullT:
-            // Reached only when a NullT filter slips past `ConvertToExists` with a non-existence
-            // operation; no row can satisfy it, so the empty bitmap is correct.
-            return bitmap;
+            // null checks are always turned into existence operators --
+            // no need to evaluate here
         case LiteralType::ArrayT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
