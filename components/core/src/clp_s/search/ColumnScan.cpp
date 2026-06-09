@@ -137,7 +137,7 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
  * @param num_messages Number of messages represented by the bitmap.
  * @param reader Deprecated date-string column reader to scan.
  * @param operation Filter operation to apply.
- * @param operand Operand from the filter expression, encoded as epoch nanoseconds.
+ * @param operand Operand from the filter expression, encoded as epoch time.
  * @return A bitmap indexed by message number, with nonzero entries for matching messages.
  */
 [[nodiscard]] auto build_deprecated_datestring_filter(
