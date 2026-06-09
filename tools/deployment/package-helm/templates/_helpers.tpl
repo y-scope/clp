@@ -125,22 +125,30 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Creates image reference for the CLP Package.
+Creates a container image reference from .Values.image.
 
-@return {string} Full image reference (repository:tag)
+Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
+defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
+
+@param {object} root Root template context (required)
+@param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
+@return {string} Full image reference (repository@digest or repository:tag)
 */}}
-{{- define "clp.image.ref" -}}
-{{- $tag := .Values.image.clpPackage.tag | default .Chart.AppVersion }}
-{{- printf "%s:%s" .Values.image.clpPackage.repository $tag }}
-{{- end }}
-
-{{/*
-Creates image reference for the kubectl image.
-
-@return {string} Full image reference (repository@digest)
-*/}}
-{{- define "clp.kubectl.image.ref" -}}
-{{- printf "%s@%s" .Values.image.kubectl.repository .Values.image.kubectl.digest }}
+{{- define "clp.imageRef" -}}
+{{- $img := index .root.Values.image .component -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
+{{- $tag := $img.tag -}}
+{{- if not $tag -}}
+  {{- if eq .component "clpPackage" -}}
+    {{- $tag = .root.Chart.AppVersion -}}
+  {{- else -}}
+    {{- fail (printf "image.%s.tag is required" .component) -}}
+  {{- end -}}
+{{- end -}}
+{{- printf "%s:%s" $img.repository $tag -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -502,7 +510,8 @@ should be the job name suffix.
 */}}
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
-image: {{ include "clp.kubectl.image.ref" .root | quote }}
+image: {{ include "clp.imageRef" (dict "root" .root "component" "kubectl") | quote }}
+imagePullPolicy: {{ .root.Values.image.kubectl.pullPolicy | quote }}
 command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}

@@ -23,6 +23,9 @@
 #   --output DIR    Output directory for packages (default: ./packages)
 #   --clean         Remove build artifacts before building
 #   --help          Show this help message
+#
+# Optional env vars:
+#   DOCKER_NETWORK  Docker network mode for Docker build (e.g., `host`)
 
 set -o errexit
 set -o nounset
@@ -269,6 +272,7 @@ for cur_format in "${format_list[@]}"; do
                 --platform "${docker_platform}" \
                 --build-arg "BASE_IMAGE=${base_image_tag}" \
                 --tag "${builder_image}" \
+                ${DOCKER_NETWORK:+--network "${DOCKER_NETWORK}"} \
                 "${dockerfile_dir}" \
                 --file "${dockerfile_dir}/Dockerfile"
         fi
@@ -283,6 +287,7 @@ for cur_format in "${format_list[@]}"; do
         # Safe to overwrite CFLAGS/CXXFLAGS since the container has no prior flags.
         docker run --rm \
             --platform "${docker_platform}" \
+            ${DOCKER_NETWORK:+--network "${DOCKER_NETWORK}"} \
             -v "${repo_root}:/clp" \
             -w /clp \
             -e "CORES=${cores}" \
