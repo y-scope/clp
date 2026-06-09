@@ -2,8 +2,5 @@
 node_modules/
 yscope-log-viewer/
 
-# Turborepo cache
+# Cache
 .turbo/
-
-# Client build output
-packages/client/dist/
