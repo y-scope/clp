@@ -120,24 +120,19 @@ bool Output::filter() {
                 m_output_handler->should_output_metadata(),
                 m_should_marshal_records
         );
-        reader.initialize_filter(m_query_runner);
+        auto& filter = m_query_runner.prepare_filter(reader);
 
         uint64_t schema_matched_records{};
         if (m_output_handler->should_output_metadata()) {
             epochtime_t timestamp{};
             int64_t log_event_idx{};
-            while (reader.get_next_message_with_metadata(
-                    message,
-                    timestamp,
-                    log_event_idx,
-                    m_query_runner
-            ))
+            while (reader.get_next_message_with_metadata(message, timestamp, log_event_idx, filter))
             {
                 ++schema_matched_records;
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
-            while (reader.get_next_message(message, m_query_runner)) {
+            while (reader.get_next_message(message, filter)) {
                 ++schema_matched_records;
                 m_output_handler->write(message);
             }
