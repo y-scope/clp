@@ -166,7 +166,6 @@ function(set_clp_binaries_dependencies)
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
-        CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
@@ -208,7 +207,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
-        CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
