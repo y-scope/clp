@@ -66,11 +66,11 @@ tasks:
       CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       OUTPUT_PATTERNS: &nodejs_output_patterns
         - "{{.G_NODEJS_22_BIN_DIR}}"
-    run: "once"
     sources:
       - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
+    run: "once"
     deps:
       - task: "utils:checksum:validate"
         vars:

@@ -254,7 +254,6 @@ tasks:
       - "webui"
 
   webui:
-    dir: "{{.G_WEBUI_SRC_DIR}}"
     env:
       NODE_ENV: "production"
     sources:
@@ -265,6 +264,7 @@ tasks:
       - exclude: "**/dist/**/*"
       - exclude: "**/node_modules/**/*"
       - exclude: "yscope-log-viewer/**/*"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
       - "{{.G_WEBUI_BUILD_DIR}}/client/**/*"
       - "{{.G_WEBUI_BUILD_DIR}}/server/dist/**/*"
@@ -278,8 +278,8 @@ tasks:
       - >-
         PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod
         --filter=@webui/server '{{.G_WEBUI_BUILD_DIR}}/server'
-      - "rsync -a packages/server/dist/ '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
-      - "rsync -a packages/client/dist/ '{{.G_WEBUI_BUILD_DIR}}/client/'"
+      - "rsync -a 'packages/server/dist/' '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
+      - "rsync -a 'packages/client/dist/' '{{.G_WEBUI_BUILD_DIR}}/client/'"
       - "rsync -a '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/' '{{.G_WEBUI_BUILD_DIR}}/yscope-log-viewer/'"
 
   clean-webui-package-node-modules:
