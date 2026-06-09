@@ -674,7 +674,7 @@ def compression_entry_point(
         "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
     )
     attributes = {"status": status_str}
-    bytes_input_counter.add(worker_output.get("total_uncompressed_size", 0), attributes)
-    bytes_output_counter.add(worker_output.get("total_compressed_size", 0), attributes)
+    bytes_input_counter.add(worker_output["total_uncompressed_size"], attributes)
+    bytes_output_counter.add(worker_output["total_compressed_size"], attributes)
 
     return compression_task_result.model_dump()
