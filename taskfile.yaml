@@ -290,6 +290,9 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/.turbo'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/client/.turbo'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/common/.turbo'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/server/.turbo'"
 
   package-tar:
     internal: true
