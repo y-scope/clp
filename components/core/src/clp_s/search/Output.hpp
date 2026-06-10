@@ -70,7 +70,7 @@ private:
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_should_marshal_records{true};
     SearchResultMetrics m_result_metrics;
-    std::string_view m_termination_stage{cTerminationStageRecordScan};
+    std::string_view m_termination_stage{cTerminationStageErtScan};
 };
 }  // namespace clp_s::search
 

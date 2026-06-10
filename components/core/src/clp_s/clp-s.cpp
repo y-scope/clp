@@ -160,7 +160,7 @@ bool search_archive(
             telemetry_span->set_error(message);
         }
     };
-    auto const record_termination = [&](std::string_view termination_stage) {
+    auto const record_early_termination = [&](std::string_view termination_stage) {
         if (nullptr == telemetry_span) {
             return;
         }

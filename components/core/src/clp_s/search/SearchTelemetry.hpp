@@ -10,7 +10,6 @@
 #include <clp_s/search/ast/Expression.hpp>
 
 namespace clp_s::search {
-constexpr std::string_view cTerminationStageRecordScan{"record_scan"};
 constexpr std::string_view cTerminationStageRangeIndexMatching{"range_index_matching"};
 constexpr std::string_view cTerminationStageTimeRangeMatching{"time_range_matching"};
 constexpr std::string_view cTerminationStageTimeRangeMatchingAfterColumnResolution{

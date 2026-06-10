@@ -97,7 +97,7 @@ bool Output::filter() {
 
     std::string message;
     auto const archive_id = m_archive_reader->get_archive_id();
-    bool searched_schema{false};
+    bool scanned_any_ert{false};
     for (int32_t schema_id : matched_schemas) {
         if (EvaluatedValue::False == m_query_runner.schema_init(schema_id)) {
             continue;
