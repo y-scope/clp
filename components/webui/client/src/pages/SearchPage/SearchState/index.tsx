@@ -1,3 +1,4 @@
+import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "@webui/common/schemas/search";
 import {message} from "antd";
 import {Dayjs} from "dayjs";
 import {create} from "zustand";
@@ -15,10 +16,7 @@ import {
 } from "../SearchResults/SearchResultsTable/Native/SearchResultsVirtualTable/typings";
 import {formatExportFilenameTimestamp} from "../SearchResults/SearchResultsTable/Native/utils";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
-import {
-    DEFAULT_MAX_NUM_RESULTS,
-    SEARCH_UI_STATE,
-} from "./typings";
+import {SEARCH_UI_STATE} from "./typings";
 
 
 /**
@@ -26,7 +24,7 @@ import {
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
-    maxNumResults: DEFAULT_MAX_NUM_RESULTS,
+    maxNumResults: DEFAULT_MAX_NUM_SEARCH_RESULTS,
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
@@ -37,6 +35,7 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     searchResults: null as SearchResult[] | null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     selectedDatasets: [],
+    submittedMaxNumResults: DEFAULT_MAX_NUM_SEARCH_RESULTS,
     timeRange: DEFAULT_TIME_RANGE,
     timeRangeOption: DEFAULT_TIME_RANGE_OPTION,
     timelineConfig: computeTimelineConfig(DEFAULT_TIME_RANGE),
@@ -105,6 +104,11 @@ interface SearchState {
     selectedDatasets: string[];
 
     /**
+     * Maximum number of search results submitted with the active query.
+     */
+    submittedMaxNumResults: number;
+
+    /**
      * Time range for search query.
      */
     timeRange: [Dayjs, Dayjs];
@@ -141,6 +145,7 @@ interface SearchState {
     updateSearchResults: (results: SearchResult[] | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
     updateSelectedDatasets: (datasets: string[]) => void;
+    updateSubmittedMaxNumResults: (max: number) => void;
     updateTimeRange: (range: [Dayjs, Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
@@ -201,6 +206,9 @@ const useSearchStore = create<SearchState>((set, get) => ({
     },
     updateSelectedDatasets: (datasets) => {
         set({selectedDatasets: datasets});
+    },
+    updateSubmittedMaxNumResults: (max) => {
+        set({submittedMaxNumResults: max});
     },
     updateTimeRange: (range) => {
         set({timeRange: range});

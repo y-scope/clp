@@ -1,6 +1,6 @@
 .queryBox {
   flex: 1;
-  min-width: 100px;
+  min-width: 24ch;
   position: relative;
 }
 

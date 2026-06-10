@@ -3,8 +3,7 @@
 }
 
 .maxResultsContainer :global(.ant-select) {
-    min-width: 80px;
-    max-width: 80px;
+    width: 88px;
 }
 
 .maxResultsContainer :global(.ant-select-selector) {

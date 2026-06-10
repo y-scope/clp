@@ -1,4 +1,5 @@
 import {type SearchResultsMetadataDocument} from "@webui/common/metadata";
+import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "@webui/common/schemas/search";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -8,11 +9,6 @@ import type {
     Db,
 } from "mongodb";
 
-
-/**
- * The maximum number of results to retrieve for a search.
- */
-const DEFAULT_SEARCH_MAX_NUM_RESULTS = 1000;
 
 type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
@@ -33,6 +29,6 @@ type CreateMongoIndexesProps = {
 
 export {
     CreateMongoIndexesProps,
-    DEFAULT_SEARCH_MAX_NUM_RESULTS,
+    DEFAULT_MAX_NUM_SEARCH_RESULTS,
     UpdateSearchSignalWhenJobsFinishProps,
 };

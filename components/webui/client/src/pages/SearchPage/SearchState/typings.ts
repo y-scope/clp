@@ -1,3 +1,9 @@
+import {
+    DEFAULT_MAX_NUM_SEARCH_RESULTS,
+    MAX_NUM_SEARCH_RESULTS,
+} from "@webui/common/schemas/search";
+
+
 /**
  * Available options for the maximum number of search results.
  */
@@ -7,16 +13,11 @@ const MAX_RESULTS_OPTIONS = [
     50,
     100,
     500,
-    1000,
+    DEFAULT_MAX_NUM_SEARCH_RESULTS,
     5000,
-    10000,
+    MAX_NUM_SEARCH_RESULTS,
 ] as const;
 /* eslint-enable no-magic-numbers */
-
-/**
- * Default value for the maximum number of search results.
- */
-const DEFAULT_MAX_NUM_RESULTS: number = 1000;
 
 /**
  * Search UI states.
@@ -49,7 +50,6 @@ enum SEARCH_UI_STATE {
 }
 
 export {
-    DEFAULT_MAX_NUM_RESULTS,
     MAX_RESULTS_OPTIONS,
     SEARCH_UI_STATE,
 };

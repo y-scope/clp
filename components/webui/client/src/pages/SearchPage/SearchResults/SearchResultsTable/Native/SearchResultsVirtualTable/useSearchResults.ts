@@ -10,7 +10,8 @@ import {SearchResult} from "./typings";
  * @return
  */
 const useSearchResults = () => {
-    const {searchJobId, maxNumResults} = useSearchStore();
+    const searchJobId = useSearchStore((state) => state.searchJobId);
+    const submittedMaxNumResults = useSearchStore((state) => state.submittedMaxNumResults);
 
     const searchResultsCursor = useCursor<SearchResult>(
         () => {
@@ -35,7 +36,7 @@ const useSearchResults = () => {
                         "desc",
                     ],
                 ],
-                limit: maxNumResults,
+                limit: submittedMaxNumResults,
             };
 
             const collection = new MongoSocketCollection(searchJobId);
@@ -43,7 +44,7 @@ const useSearchResults = () => {
         },
         [
             searchJobId,
-            maxNumResults,
+            submittedMaxNumResults,
         ]
     );
 
