@@ -85,11 +85,70 @@ def update_job_metadata(
     )
 
 
+def _clamp_archive_timestamps(
+    archive_stats: dict[str, Any],
+    logger,
+) -> None:
+    """
+    Validates and clamps begin_timestamp/end_timestamp to prevent archives with bogus time ranges
+    from poisoning query performance. Archives with extremely wide time spans (caused by malformed
+    log timestamps) match virtually every time-bounded query, leading to unnecessary searches.
+
+    Clamping rules:
+    - begin_timestamp before 2020-01-01 is considered invalid and clamped to end_timestamp.
+    - end_timestamp more than 1 year in the future is considered invalid and clamped to
+      begin_timestamp.
+    - If both are invalid, both are set to 0 (treated as an open archive).
+    """
+    import time
+
+    # 2020-01-01 00:00:00 UTC in milliseconds
+    MIN_VALID_TIMESTAMP_MS = 1577836800000
+    # 1 year from now in milliseconds
+    max_valid_timestamp_ms = int((time.time() + 365 * 86400) * 1000)
+
+    begin_ts = archive_stats.get("begin_timestamp", 0)
+    end_ts = archive_stats.get("end_timestamp", 0)
+
+    bad_begin = begin_ts < MIN_VALID_TIMESTAMP_MS and begin_ts != 0
+    bad_end = end_ts > max_valid_timestamp_ms
+
+    if bad_begin and bad_end:
+        logger.warning(
+            "Archive %s has both invalid begin_timestamp=%s and end_timestamp=%s, "
+            "setting both to 0.",
+            archive_stats.get("id", "unknown"),
+            begin_ts,
+            end_ts,
+        )
+        archive_stats["begin_timestamp"] = 0
+        archive_stats["end_timestamp"] = 0
+    elif bad_begin:
+        logger.warning(
+            "Archive %s has invalid begin_timestamp=%s (before 2020), clamping to "
+            "end_timestamp=%s.",
+            archive_stats.get("id", "unknown"),
+            begin_ts,
+            end_ts,
+        )
+        archive_stats["begin_timestamp"] = end_ts
+    elif bad_end:
+        logger.warning(
+            "Archive %s has invalid end_timestamp=%s (>1 year in future), clamping to "
+            "begin_timestamp=%s.",
+            archive_stats.get("id", "unknown"),
+            end_ts,
+            begin_ts,
+        )
+        archive_stats["end_timestamp"] = begin_ts
+
+
 def update_archive_metadata(
     db_cursor,
     table_prefix: str,
     dataset: str | None,
     archive_stats: dict[str, Any],
+    logger=None,
 ) -> None:
     stats_to_update = {
         # Use defaults for values clp-s doesn't output
@@ -111,6 +170,10 @@ def update_archive_metadata(
     ]
     for stat_name in required_stat_names:
         stats_to_update[stat_name] = archive_stats[stat_name]
+
+    # Clamp bogus timestamps to prevent wide time-range archives from matching every query
+    if logger is not None:
+        _clamp_archive_timestamps(stats_to_update, logger)
 
     keys = ", ".join(stats_to_update.keys())
     value_placeholders = ", ".join(["%s"] * len(stats_to_update))
@@ -506,7 +569,7 @@ def run_clp(
                         table_prefix = clp_metadata_db_connection_config["table_prefix"]
                         if StorageEngine.CLP_S == clp_storage_engine:
                             update_archive_metadata(
-                                db_cursor, table_prefix, dataset, last_archive_stats
+                                db_cursor, table_prefix, dataset, last_archive_stats, logger
                             )
                         update_job_metadata(
                             db_cursor,
