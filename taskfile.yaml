@@ -255,19 +255,6 @@ tasks:
       - "rust"
       - "webui"
 
-  webui:dist:
-    internal: true
-    env:
-      NODE_ENV: "production"
-    dir: "{{.G_WEBUI_SRC_DIR}}"
-    deps:
-      - "init"
-      - "deps:yscope-log-viewer:source"
-      - "toolchains:nodejs-22"
-    cmds:
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run build"
-
   webui:
     vars:
       CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
@@ -450,3 +437,16 @@ tasks:
       - |-
         uv run --no-cache \
           auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
+
+  webui:dist:
+    internal: true
+    env:
+      NODE_ENV: "production"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
+    deps:
+      - "init"
+      - "deps:yscope-log-viewer:source"
+      - "toolchains:nodejs-22"
+    cmds:
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run build"
