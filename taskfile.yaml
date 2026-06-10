@@ -246,9 +246,10 @@ tasks:
       - "init"
       - "python-libs"
       - "rust"
-      - "webui:bundle"
+      - "webui"
 
   webui:dist:
+    internal: true
     env:
       NODE_ENV: "production"
     dir: "{{.G_WEBUI_SRC_DIR}}"
@@ -267,9 +268,9 @@ tasks:
     sources:
       - "{{.G_WEBUI_SRC_DIR}}/packages/*/dist/**/*"
       - "{{.TASKFILE}}"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
       - "{{.CHECKSUM_FILE}}"
-    dir: "{{.G_WEBUI_SRC_DIR}}"
     deps:
       - "webui:dist"
       - task: "utils:checksum:validate"
@@ -290,8 +291,8 @@ tasks:
   clean-webui-package-node-modules:
     internal: true
     cmds:
-      - "rm -rf {{.G_WEBUI_SRC_DIR}}/**/node_modules"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}'/**/.turbo"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/.turbo'"
 
   package-tar:
     internal: true
