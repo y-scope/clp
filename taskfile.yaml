@@ -115,7 +115,8 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/clp-package-image.id"
       - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
-      - "{{.G_WEBUI_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
+      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
       - "{{.TASKFILE}}"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
