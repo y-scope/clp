@@ -10,7 +10,8 @@ allowBuilds:
   unrs-resolver: true
 
 confirmModulesPurge: false
-injectWorkspacePackages: true
 minimumReleaseAge: 0
 nodeLinker: hoisted
+# Required for pnpm deploy on v10+ when deploying workspace packages.
+injectWorkspacePackages: true
 verifyDepsBeforeRun: false
