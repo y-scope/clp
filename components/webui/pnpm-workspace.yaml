@@ -11,4 +11,6 @@ allowBuilds:
 
 # Required for pnpm deploy on v10+ when deploying workspace packages.
 injectWorkspacePackages: true
+
+# To preserve the effects of `pnpm install --frozen-lockfile` in `task webui`.
 verifyDepsBeforeRun: false
