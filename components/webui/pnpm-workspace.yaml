@@ -9,7 +9,6 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 
-confirmModulesPurge: false
 # Required for pnpm deploy on v10+ when deploying workspace packages.
 injectWorkspacePackages: true
 verifyDepsBeforeRun: false
