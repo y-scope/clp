@@ -36,7 +36,6 @@ pub struct Buffer<Submitter: BufferSubmitter> {
     buf: Vec<S3ObjectMetadataId>,
     total_size: u64,
     size_threshold: u64,
-    telemetry_meter: TelemetryMeter,
 }
 
 impl<Submitter: BufferSubmitter> Buffer<Submitter> {
@@ -44,14 +43,13 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     ///
     /// # Returns
     ///
-    /// A newly created [`Buffer`] with the given submitter and size threshold.
-    pub fn new(submitter: Submitter, size_threshold: u64) -> Self {
+    /// A newly created [`Buffer`] with the given submitter of type `T` and size threshold.
+    pub const fn new(submitter: Submitter, size_threshold: u64) -> Self {
         Self {
             submitter,
             buf: Vec::new(),
             total_size: 0,
             size_threshold,
-            telemetry_meter: TelemetryMeter::new(),
         }
     }
 
@@ -73,7 +71,6 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     ) -> Result<bool> {
         let mut submission_triggered = false;
         for entry in object_metadata_to_ingest {
-            self.telemetry_meter.ingest(entry.size);
             self.total_size += entry.size;
             self.buf.push(entry.id);
 
@@ -116,32 +113,5 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     fn clear(&mut self) {
         self.buf.clear();
         self.total_size = 0;
-    }
-}
-
-/// Telemetry counters for tracking ingested data.
-struct TelemetryMeter {
-    total_num_bytes: opentelemetry::metrics::Counter<u64>,
-    total_num_objects: opentelemetry::metrics::Counter<u64>,
-}
-
-impl TelemetryMeter {
-    /// Factory function.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`TelemetryMeter`] with counters registered in the global meter provider.
-    fn new() -> Self {
-        let meter = opentelemetry::global::meter("log-ingestor");
-        Self {
-            total_num_bytes: meter.u64_counter("clp.ingest.total_num_bytes").build(),
-            total_num_objects: meter.u64_counter("clp.ingest.total_num_objects").build(),
-        }
-    }
-
-    /// Records the ingestion of an object with the given number of bytes.
-    fn ingest(&self, num_bytes: u64) {
-        self.total_num_bytes.add(num_bytes, &[]);
-        self.total_num_objects.add(1, &[]);
     }
 }

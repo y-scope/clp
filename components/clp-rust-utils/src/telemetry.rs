@@ -2,7 +2,6 @@
 
 use std::env;
 
-use opentelemetry::global;
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 
 use crate::{Error, clp_config::package::config::Telemetry};
@@ -10,6 +9,18 @@ use crate::{Error, clp_config::package::config::Telemetry};
 /// RAII guard that shuts down the meter provider and flushes pending metric exports when dropped.
 pub struct TelemetryGuard {
     provider: Option<SdkMeterProvider>,
+}
+
+impl TelemetryGuard {
+    /// Returns the meter provider for setting the global meter provider.
+    ///
+    /// # Returns
+    ///
+    /// The meter provider.
+    #[must_use]
+    pub fn provider(&self) -> Option<SdkMeterProvider> {
+        self.provider.clone()
+    }
 }
 
 impl Drop for TelemetryGuard {
@@ -59,7 +70,6 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<TelemetryGu
 
     let provider = SdkMeterProvider::builder().with_reader(reader).build();
 
-    global::set_meter_provider(provider.clone());
     Ok(Some(TelemetryGuard::from(Some(provider))))
 }
 
