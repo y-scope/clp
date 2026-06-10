@@ -76,10 +76,7 @@ tasks:
         vars:
           COMPONENT: "job-orchestration"
       - task: "clean-rust"
-      - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/.turbo'"
-      - "rm -f '{{.G_WEBUI_CHECKSUM_FILE}}'"
+      - task: "clean-webui"
       - task: "tests:integration:cache-clear"
 
   clean-core:
@@ -103,6 +100,13 @@ tasks:
   clean-rust:
     cmds:
       - "rm -rf '{{.G_RUST_BUILD_DIR}}'"
+
+  clean-webui:
+    cmds:
+      - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/.turbo'"
+      - "rm -f '{{.G_WEBUI_CHECKSUM_FILE}}'"
 
   package:
     vars:
