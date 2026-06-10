@@ -102,7 +102,7 @@ bool Output::filter() {
         if (EvaluatedValue::False == m_query_runner.schema_init(schema_id)) {
             continue;
         }
-        searched_schema = true;
+        scanned_any_ert = true;
 
         auto& reader = m_archive_reader->read_schema_table(
                 schema_id,
@@ -111,23 +111,24 @@ bool Output::filter() {
         );
         auto& filter = m_query_runner.prepare_filter(reader);
 
-        uint64_t schema_matched_records{};
+        bool schema_has_match{false};
         if (m_output_handler->should_output_metadata()) {
             epochtime_t timestamp{};
             int64_t log_event_idx{};
             while (reader.get_next_message_with_metadata(message, timestamp, log_event_idx, filter))
             {
-                ++schema_matched_records;
+                schema_has_match = true;
+                ++m_result_metrics.records_matching_query;
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, filter)) {
-                ++schema_matched_records;
+                schema_has_match = true;
+                ++m_result_metrics.records_matching_query;
                 m_output_handler->write(message);
             }
         }
-        m_result_metrics.records_matching_query += schema_matched_records;
-        if (0 != schema_matched_records) {
+        if (schema_has_match) {
             ++m_result_metrics.num_schemas_with_matches;
         }
         auto ecode = m_output_handler->flush();
@@ -140,7 +141,7 @@ bool Output::filter() {
         }
     }
     m_termination_stage
-            = searched_schema ? cTerminationStageErtScan : cTerminationStageDictionarySearch;
+            = scanned_any_ert ? cTerminationStageErtScan : cTerminationStageDictionarySearch;
     auto ecode = m_output_handler->finish();
     if (ErrorCode::ErrorCodeSuccess != ecode) {
         SPDLOG_ERROR(

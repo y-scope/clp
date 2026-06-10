@@ -1,8 +1,5 @@
 #include "SearchTelemetry.hpp"
 
-#include <algorithm>
-#include <array>
-#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -40,30 +37,32 @@ namespace {
 constexpr std::string_view cTracerName{"clp_s.search"};
 constexpr std::string_view cSearchArchiveSpanName{"clp_s.search.archive"};
 
-constexpr std::array<std::string_view, 4> cTruthyEnvValues{"1", "true", "yes", "y"};
-
 constexpr std::string_view cAttrSuccess{"clp.search.success"};
 constexpr std::string_view cAttrError{"clp.search.error"};
 constexpr std::string_view cAttrQueryHash{"clp.search.query_hash"};
 constexpr std::string_view cAttrQueryId{"clp.search.query_id"};
 constexpr std::string_view cAttrTaskId{"clp.search.task_id"};
-constexpr std::string_view cQueryShapeAttrPrefix{"clp.query_shape."};
-constexpr std::string_view cPreprocessedQueryShapeAttrPrefix{"clp.query_shape.preprocessed."};
-constexpr std::string_view cAttrSuffixColumnTypesPureWildcard{"column_types.pure_wildcard"};
-constexpr std::string_view cAttrSuffixColumnTypesSomeWildcard{"column_types.some_wildcard"};
-constexpr std::string_view cAttrSuffixColumnTypesNoWildcard{"column_types.no_wildcard"};
-constexpr std::string_view cAttrSuffixPredicateTypesString{"predicate_types.string"};
-constexpr std::string_view cAttrSuffixPredicateTypesStringWithWildcard{
-        "predicate_types.string_with_wildcard"
+constexpr std::string_view cAttrColumnTypesPureWildcard{
+        "clp.query_shape.column_types.pure_wildcard"
 };
-constexpr std::string_view cAttrSuffixPredicateTypesInt{"predicate_types.int"};
-constexpr std::string_view cAttrSuffixPredicateTypesFloat{"predicate_types.float"};
-constexpr std::string_view cAttrSuffixPredicateTypesNull{"predicate_types.null"};
-constexpr std::string_view cAttrSuffixPredicateTypesExactMatch{"predicate_types.exact_match"};
-constexpr std::string_view cAttrSuffixPredicateTypesRange{"predicate_types.range"};
-constexpr std::string_view cAttrSuffixPredicateTypesExists{"predicate_types.exists"};
-constexpr std::string_view cAttrSuffixNumPredicates{"num_predicates"};
-constexpr std::string_view cAttrSuffixContainsOrClause{"contains_or_clause"};
+constexpr std::string_view cAttrColumnTypesSomeWildcard{
+        "clp.query_shape.column_types.some_wildcard"
+};
+constexpr std::string_view cAttrColumnTypesNoWildcard{"clp.query_shape.column_types.no_wildcard"};
+constexpr std::string_view cAttrPredicateTypesString{"clp.query_shape.predicate_types.string"};
+constexpr std::string_view cAttrPredicateTypesStringWithWildcard{
+        "clp.query_shape.predicate_types.string_with_wildcard"
+};
+constexpr std::string_view cAttrPredicateTypesInt{"clp.query_shape.predicate_types.int"};
+constexpr std::string_view cAttrPredicateTypesFloat{"clp.query_shape.predicate_types.float"};
+constexpr std::string_view cAttrPredicateTypesNull{"clp.query_shape.predicate_types.null"};
+constexpr std::string_view cAttrPredicateTypesExactMatch{
+        "clp.query_shape.predicate_types.exact_match"
+};
+constexpr std::string_view cAttrPredicateTypesRange{"clp.query_shape.predicate_types.range"};
+constexpr std::string_view cAttrPredicateTypesExists{"clp.query_shape.predicate_types.exists"};
+constexpr std::string_view cAttrNumPredicates{"clp.query_shape.num_predicates"};
+constexpr std::string_view cAttrContainsOrClause{"clp.query_shape.contains_or_clause"};
 constexpr std::string_view cAttrTimeRangeMillis{"clp.query_shape.time_range_millis"};
 constexpr std::string_view cAttrTotalArchiveRecords{"clp.search.total_archive_records"};
 constexpr std::string_view cAttrCandidateRecordsAfterSchemaMatching{
@@ -89,25 +88,6 @@ constexpr std::string_view cAttrTerminationStage{"clp.search.termination_stage"}
 [[nodiscard]] auto to_int64_attribute(uint64_t value) -> int64_t {
     constexpr auto cMaxInt64{static_cast<uint64_t>(std::numeric_limits<int64_t>::max())};
     return value > cMaxInt64 ? std::numeric_limits<int64_t>::max() : static_cast<int64_t>(value);
-}
-
-/**
- * @param name
- * @return Whether the given environment variable is set to a truthy value (one of
- * `cTruthyEnvValues`).
- */
-[[nodiscard]] auto is_env_var_enabled(char const* name) -> bool {
-    // The environment is only read during single-threaded search setup.
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    char const* const raw{std::getenv(name)};
-    if (nullptr == raw) {
-        return false;
-    }
-    std::string value{raw};
-    std::ranges::transform(value, value.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-    return std::ranges::find(cTruthyEnvValues, value) != cTruthyEnvValues.end();
 }
 
 /**
@@ -246,17 +226,64 @@ public:
     }
 
     auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
-        set_query_shape_attributes(cQueryShapeAttrPrefix, metrics);
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrColumnTypesPureWildcard),
+                to_int64_attribute(metrics.column_shape_metrics.pure_wildcard)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrColumnTypesSomeWildcard),
+                to_int64_attribute(metrics.column_shape_metrics.some_wildcard)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrColumnTypesNoWildcard),
+                to_int64_attribute(metrics.column_shape_metrics.no_wildcard)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesString),
+                to_int64_attribute(metrics.predicate_type_metrics.string)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesStringWithWildcard),
+                to_int64_attribute(metrics.predicate_type_metrics.string_with_wildcard)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesInt),
+                to_int64_attribute(metrics.predicate_type_metrics.integer)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesFloat),
+                to_int64_attribute(metrics.predicate_type_metrics.floating_point)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesNull),
+                to_int64_attribute(metrics.predicate_type_metrics.null)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesExactMatch),
+                to_int64_attribute(metrics.predicate_type_metrics.exact_match)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesRange),
+                to_int64_attribute(metrics.predicate_type_metrics.range)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrPredicateTypesExists),
+                to_int64_attribute(metrics.predicate_type_metrics.exists)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumPredicates),
+                to_int64_attribute(metrics.num_predicates)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrContainsOrClause),
+                metrics.contains_or_clause
+        );
         if (metrics.time_range_millis.has_value()) {
             m_span->SetAttribute(
                     to_nostd_string_view(cAttrTimeRangeMillis),
                     to_int64_attribute(*metrics.time_range_millis)
             );
         }
-    }
-
-    auto set_preprocessed_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
-        set_query_shape_attributes(cPreprocessedQueryShapeAttrPrefix, metrics);
     }
 
     auto set_search_result_metrics(SearchResultMetrics const& metrics) -> void {
@@ -296,46 +323,6 @@ public:
     }
 
 private:
-    /**
-     * Records the query-shape counters as attributes whose keys are `key_prefix` followed by the
-     * counter's `cAttrSuffix*` constant.
-     * @param key_prefix
-     * @param metrics
-     */
-    auto set_query_shape_attributes(std::string_view key_prefix, QueryShapeMetrics const& metrics)
-            -> void {
-        auto const set_counter = [&](std::string_view key_suffix, uint64_t value) {
-            std::string key{key_prefix};
-            key += key_suffix;
-            m_span->SetAttribute(to_nostd_string_view(key), to_int64_attribute(value));
-        };
-        set_counter(cAttrSuffixColumnTypesPureWildcard, metrics.column_shape_metrics.pure_wildcard);
-        set_counter(cAttrSuffixColumnTypesSomeWildcard, metrics.column_shape_metrics.some_wildcard);
-        set_counter(cAttrSuffixColumnTypesNoWildcard, metrics.column_shape_metrics.no_wildcard);
-        set_counter(cAttrSuffixPredicateTypesString, metrics.predicate_type_metrics.string);
-        set_counter(
-                cAttrSuffixPredicateTypesStringWithWildcard,
-                metrics.predicate_type_metrics.string_with_wildcard
-        );
-        set_counter(cAttrSuffixPredicateTypesInt, metrics.predicate_type_metrics.integer);
-        set_counter(cAttrSuffixPredicateTypesFloat, metrics.predicate_type_metrics.floating_point);
-        set_counter(cAttrSuffixPredicateTypesNull, metrics.predicate_type_metrics.null);
-        set_counter(
-                cAttrSuffixPredicateTypesExactMatch,
-                metrics.predicate_type_metrics.exact_match
-        );
-        set_counter(cAttrSuffixPredicateTypesRange, metrics.predicate_type_metrics.range);
-        set_counter(cAttrSuffixPredicateTypesExists, metrics.predicate_type_metrics.exists);
-        set_counter(cAttrSuffixNumPredicates, metrics.num_predicates);
-
-        std::string contains_or_clause_key{key_prefix};
-        contains_or_clause_key += cAttrSuffixContainsOrClause;
-        m_span->SetAttribute(
-                to_nostd_string_view(contains_or_clause_key),
-                metrics.contains_or_clause
-        );
-    }
-
     opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> m_span;
     std::unique_ptr<opentelemetry::trace::Scope> m_scope;
 };
@@ -350,11 +337,6 @@ auto SearchTelemetrySpan::set_query_context(std::string_view query) -> void {
 
 auto SearchTelemetrySpan::set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
     m_impl->set_query_shape_metrics(metrics);
-}
-
-auto SearchTelemetrySpan::set_preprocessed_query_shape_metrics(QueryShapeMetrics const& metrics)
-        -> void {
-    m_impl->set_preprocessed_query_shape_metrics(metrics);
 }
 
 auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const& metrics) -> void {
@@ -383,12 +365,5 @@ auto create_query_shape_metrics(
         }
     }
     return metrics;
-}
-
-auto is_search_telemetry_enabled(bool enable_telemetry) -> bool {
-    if (false == enable_telemetry) {
-        return false;
-    }
-    return false == is_env_var_enabled("CLP_DISABLE_TELEMETRY");
 }
 }  // namespace clp_s::search
