@@ -119,6 +119,8 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
+    bool get_enable_telemetry() const { return m_enable_telemetry; }
+
     auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
         return m_output_handler_options;
     }
@@ -238,6 +240,7 @@ private:
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
+    bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 };
 }  // namespace clp_s

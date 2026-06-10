@@ -211,7 +211,7 @@ if(CLP_NEED_NLOHMANN_JSON)
 endif()
 
 if(CLP_NEED_OPENTELEMETRY_CPP)
-    find_package(opentelemetry-cpp 1.27.0 CONFIG REQUIRED COMPONENTS api)
+    find_package(opentelemetry-cpp CONFIG REQUIRED COMPONENTS api)
     if(opentelemetry-cpp_FOUND)
         message(STATUS "Found opentelemetry-cpp ${opentelemetry-cpp_VERSION}")
     endif()
