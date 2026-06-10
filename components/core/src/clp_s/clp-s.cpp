@@ -360,7 +360,6 @@ bool search_archive(
     }
     return success;
 }
-
 }  // namespace
 
 int main(int argc, char const* argv[]) {
