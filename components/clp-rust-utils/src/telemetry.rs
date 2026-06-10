@@ -43,23 +43,24 @@ impl From<Option<SdkMeterProvider>> for TelemetryGuard {
 ///
 /// # Returns
 ///
-/// An optional [`TelemetryGuard`] on success (`None` if telemetry is disabled). The guard will shut
-/// down the meter provider and flush pending metric exports when dropped. Callers should bind it to
-/// a variable (e.g., `let _guard = ...`) to keep it alive for the desired scope.
+/// A [`TelemetryGuard`] on success. If telemetry is disabled, the guard's provider will be `None`.
+/// The guard will shut down the meter provider and flush pending metric exports when dropped.
+/// Callers should bind it to a variable (e.g., `let _guard = ...`) to keep it alive for the desired
+/// scope.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * Forwards [`opentelemetry_otlp::MetricExporterBuilder::build`]'s return values on failure.
-pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<TelemetryGuard>, Error> {
+pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<TelemetryGuard, Error> {
     if telemetry_config.disable
         || env::var("CLP_DISABLE_TELEMETRY")
             .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.trim().to_lowercase().as_str()))
         || env::var("DO_NOT_TRACK")
             .is_ok_and(|v| TELEMETRY_DISABLE_VALUES.contains(&v.trim().to_lowercase().as_str()))
     {
-        return Ok(None);
+        return Ok(TelemetryGuard::from(None));
     }
 
     let exporter = opentelemetry_otlp::MetricExporter::builder()
@@ -70,7 +71,7 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<Option<TelemetryGu
 
     let provider = SdkMeterProvider::builder().with_reader(reader).build();
 
-    Ok(Some(TelemetryGuard::from(Some(provider))))
+    Ok(TelemetryGuard::from(Some(provider)))
 }
 
 /// Values accepted by `CLP_DISABLE_TELEMETRY` and `DO_NOT_TRACK` to disable telemetry.

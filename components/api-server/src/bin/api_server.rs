@@ -54,9 +54,7 @@ async fn main() -> anyhow::Result<()> {
     let _guard = clp_rust_utils::logging::set_up_logging("api_server.log");
 
     let tel_guard = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
-    if let Some(guard) = &tel_guard
-        && let Some(provider) = guard.provider()
-    {
+    if let Some(provider) = tel_guard.provider() {
         opentelemetry::global::set_meter_provider(provider);
     }
 
