@@ -5,8 +5,8 @@
   "description": "",
   "scripts": {
     "build": "turbo build",
-    "lint:check": "turbo lint:check",
-    "lint:fix": "turbo lint:fix",
+    "lint:check": "turbo lint:check --filter=!yscope-log-viewer",
+    "lint:fix": "turbo lint:fix --filter=!yscope-log-viewer",
     "dev": "turbo dev",
     "test": "turbo test"
   },

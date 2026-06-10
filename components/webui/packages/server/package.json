@@ -11,7 +11,7 @@
     "start": "pnpm run build && fastify start -l info dist/src/app.js",
     "standalone": "pnpm run build && node --env-file=.env dist/src/main.js",
     "lint:check": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --max-warnings 0 --fix",
+    "lint:fix": "pnpm run lint:check --fix",
     "test": "tap --include='**/*test.ts'"
   },
   "author": "YScope Inc. <dev@yscope.com>",

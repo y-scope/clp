@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "lint:check": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --max-warnings 0 --fix",
+    "lint:fix": "pnpm run lint:check --fix",
     "dev": "vite"
   },
   "author": "YScope Inc. <dev@yscope.com>",
