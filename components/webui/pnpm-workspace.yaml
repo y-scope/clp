@@ -13,11 +13,3 @@ confirmModulesPurge: false
 # Required for pnpm deploy on v10+ when deploying workspace packages.
 injectWorkspacePackages: true
 verifyDepsBeforeRun: false
-minimumReleaseAgeExclude:
-  - '@turbo/darwin-64@2.9.17'
-  - '@turbo/darwin-arm64@2.9.17'
-  - '@turbo/linux-64@2.9.17'
-  - '@turbo/linux-arm64@2.9.17'
-  - '@turbo/windows-64@2.9.17'
-  - '@turbo/windows-arm64@2.9.17'
-  - turbo@2.9.17
