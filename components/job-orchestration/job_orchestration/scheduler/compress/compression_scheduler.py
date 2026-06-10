@@ -11,10 +11,6 @@ from typing import Any
 
 import brotli
 import msgpack
-from opentelemetry import metrics
-from opentelemetry.metrics import CallbackOptions, Observation
-from pydantic import ValidationError
-
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -38,6 +34,9 @@ from clp_py_utils.core import (
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
+from opentelemetry import metrics
+from opentelemetry.metrics import CallbackOptions, Observation
+from pydantic import ValidationError
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager

@@ -29,10 +29,6 @@ from typing import Any
 import celery
 import msgpack
 import pymongo
-from opentelemetry import metrics
-from opentelemetry.metrics import CallbackOptions, Observation
-from pydantic import ValidationError
-
 from clp_py_utils.clp_config import (
     ClpConfig,
     Database,
@@ -50,6 +46,9 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import ConnectionPoolWrapper, SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
+from opentelemetry import metrics
+from opentelemetry.metrics import CallbackOptions, Observation
+from pydantic import ValidationError
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.extract_stream_task import extract_stream
