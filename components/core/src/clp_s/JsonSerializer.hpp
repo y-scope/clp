@@ -139,7 +139,11 @@ public:
     void
     append_value_from_column_with_quotes(clp_s::BaseColumnReader* column, uint64_t cur_message) {
         m_json_string += "\"";
-        column->extract_escaped_string_value_into_buffer(cur_message, m_json_string);
+        column->extract_escaped_string_value_into_buffer(
+                cur_message,
+                m_json_string,
+                m_string_value_escaper
+        );
         m_json_string += "\",";
     }
 
@@ -153,6 +157,7 @@ private:
     std::string m_json_string;
     std::vector<Op> m_op_list;
     std::vector<std::string> m_special_keys;
+    SimdJsonStringEscaper m_string_value_escaper;
 
     size_t m_op_list_index{0};
     size_t m_special_keys_index{0};

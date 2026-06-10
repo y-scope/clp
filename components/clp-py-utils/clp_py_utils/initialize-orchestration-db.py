@@ -11,6 +11,7 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
+from mysql.connector.errorcode import ER_DUP_KEYNAME
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import (
@@ -22,7 +23,6 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SqlAdapter
-from mysql.connector.errorcode import ER_DUP_KEYNAME
 
 # Setup logging
 # Create logger
