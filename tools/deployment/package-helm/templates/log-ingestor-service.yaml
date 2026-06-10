@@ -9,12 +9,14 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "log-ingestor"
 spec:
-  type: "NodePort"
+  type: {{ .Values.clpConfig.log_ingestor.serviceType | quote }}
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "log-ingestor"
   ports:
     - port: 3002
       targetPort: "log-ingestor"
+      {{- if and (eq .Values.clpConfig.log_ingestor.serviceType "NodePort") .Values.clpConfig.log_ingestor.port }}
       nodePort: {{ .Values.clpConfig.log_ingestor.port }}
+      {{- end }}
 {{- end }}
