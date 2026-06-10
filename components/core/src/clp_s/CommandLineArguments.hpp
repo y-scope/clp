@@ -119,7 +119,7 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
-    bool get_enable_telemetry() const { return m_enable_telemetry; }
+    [[nodiscard]] auto get_enable_telemetry() const -> bool { return m_enable_telemetry; }
 
     auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
         return m_output_handler_options;

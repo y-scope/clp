@@ -74,10 +74,12 @@ public:
     // Constructors
     SearchTelemetrySpan();
 
-    // Disable copy/move constructors and assignment operators
+    // Delete copy constructor and assignment operator
     SearchTelemetrySpan(SearchTelemetrySpan const&) = delete;
-    SearchTelemetrySpan(SearchTelemetrySpan&&) = delete;
     auto operator=(SearchTelemetrySpan const&) -> SearchTelemetrySpan& = delete;
+
+    // Delete move constructor and assignment operator
+    SearchTelemetrySpan(SearchTelemetrySpan&&) = delete;
     auto operator=(SearchTelemetrySpan&&) -> SearchTelemetrySpan& = delete;
 
     // Destructor
@@ -87,37 +89,36 @@ public:
     /**
      * Records the query-identity attributes: a non-reversible hash of the query and, when present
      * in the environment, the scheduler's `query_id`/`task_id`.
+     *
      * @param query The raw query string.
      */
     auto set_query_context(std::string_view query) -> void;
 
     /**
-     * Records the query-shape metrics of the query as written.
+     * Records the query-shape metrics. These are collected from the preprocessed query (the form
+     * that gets evaluated, in which e.g. EXISTS predicates appear).
+     *
      * @param metrics
      */
     auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void;
 
     /**
-     * Records the query-shape metrics of the preprocessed form of the query (the form that gets
-     * evaluated, in which e.g. EXISTS predicates appear).
-     * @param metrics
-     */
-    auto set_preprocessed_query_shape_metrics(QueryShapeMetrics const& metrics) -> void;
-
-    /**
      * Records the record-count metrics gathered while searching the archive.
+     *
      * @param metrics
      */
     auto set_search_result_metrics(SearchResultMetrics const& metrics) -> void;
 
     /**
      * Records the stage at which the search stopped processing the archive.
+     *
      * @param termination_stage One of the `cTerminationStage*` constants.
      */
     auto set_termination_stage(std::string_view termination_stage) -> void;
 
     /**
      * Marks the span as failed and records the error.
+     *
      * @param message
      */
     auto set_error(std::string_view message) -> void;
@@ -129,6 +130,7 @@ private:
 
 /**
  * Walks the parsed query and accumulates its shape metrics.
+ *
  * @param expr The parsed query AST.
  * @param search_begin_ts The lower bound of the search time range, if any.
  * @param search_end_ts The upper bound of the search time range, if any.
@@ -139,13 +141,6 @@ private:
         std::optional<epochtime_t> search_begin_ts,
         std::optional<epochtime_t> search_end_ts
 ) -> QueryShapeMetrics;
-
-/**
- * @param enable_telemetry Whether telemetry was requested (e.g. via a command-line flag).
- * @return Whether search telemetry should be recorded, accounting for the `CLP_DISABLE_TELEMETRY`
- * environment kill-switch.
- */
-[[nodiscard]] auto is_search_telemetry_enabled(bool enable_telemetry) -> bool;
 }  // namespace clp_s::search
 
 #endif  // CLP_S_SEARCH_SEARCHTELEMETRY_HPP

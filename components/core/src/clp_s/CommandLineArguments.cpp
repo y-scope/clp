@@ -746,7 +746,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "enable-telemetry",
                 po::bool_switch(&m_enable_telemetry),
                 "Publish search telemetry to the OpenTelemetry endpoint specified in the"
-                "CLP_TELEMETRY_ENDPOINT environment variable."
+                " CLP_TELEMETRY_ENDPOINT environment variable"
             )(
                 "archive-id",
                 po::value<std::string>(&archive_id)->value_name("ID"),
