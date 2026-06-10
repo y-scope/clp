@@ -73,19 +73,12 @@ tasks:
           --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
-    sources: &js_source_files
-      - "{{.G_WEBUI_SRC_DIR}}/**/*"
-      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/**/*"
-      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/node_modules/**/*"
-      - "{{.ROOT_TASKFILE}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "js"
         vars:
           LINT_CMD: "check"
 
   fix-js:
-    sources: *js_source_files
     cmds:
       - task: "js"
         vars:
