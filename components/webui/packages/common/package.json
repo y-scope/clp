@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
+    "eslint": "^9.39.4",
     "eslint-config-yscope": "1.1.2",
     "typescript": "^5.9.3"
   }
