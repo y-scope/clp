@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <string>
 #include <string_view>
 
 #include <clp_s/Defs.hpp>
@@ -22,52 +21,54 @@ constexpr std::string_view cTerminationStageErtScan{"ert_scan"};
 constexpr std::string_view cTerminationStageDictionarySearch{"dictionary_search"};
 
 /**
- * Telemetry collected while searching a single archive, recorded onto an OpenTelemetry span by
- * `SearchTelemetrySpan::set_telemetry`.
+ * Counts of how the columns referenced by a query's predicates use wildcards.
  */
-struct SearchTelemetry {
-    struct ColumnShapeMetrics {
-        uint64_t pure_wildcard{};
-        uint64_t some_wildcard{};
-        uint64_t no_wildcard{};
-    };
+struct ColumnShapeMetrics {
+    uint64_t pure_wildcard{};
+    uint64_t some_wildcard{};
+    uint64_t no_wildcard{};
+};
 
-    struct PredicateTypeMetrics {
-        uint64_t string{};
-        uint64_t string_with_wildcard{};
-        uint64_t integer{};
-        uint64_t floating_point{};
-        uint64_t null{};
-        uint64_t exact_match{};
-        uint64_t range{};
-        uint64_t exists{};
-    };
+/**
+ * Counts of the predicate operations and operand types referenced by a query.
+ */
+struct PredicateTypeMetrics {
+    uint64_t string{};
+    uint64_t string_with_wildcard{};
+    uint64_t integer{};
+    uint64_t floating_point{};
+    uint64_t null{};
+    uint64_t exact_match{};
+    uint64_t range{};
+    uint64_t exists{};
+};
 
-    std::string archive_id;
-    std::string query_id;
-    std::string task_id;
-    uint64_t query_hash{};
-    std::optional<std::string> query;
-
+/**
+ * Query-shape metrics derivable from the parsed query before any archive is searched.
+ */
+struct QueryShapeMetrics {
     ColumnShapeMetrics column_shape_metrics;
     PredicateTypeMetrics predicate_type_metrics;
     uint64_t num_predicates{};
     bool contains_or_clause{};
     std::optional<uint64_t> time_range_millis;
-
-    uint64_t total_archive_records{};
-    uint64_t candidate_records_after_schema_matching{};
-    uint64_t records_matching_query{};
-
-    uint64_t num_matched_schemas{};
-    uint64_t num_schemas_with_matches{};
-
-    std::string_view termination_stage{cTerminationStageRecordScan};
 };
 
 /**
- * Records the telemetry for one archive search as an OpenTelemetry span: the span starts on
- * construction and ends on destruction, and is populated via `set_telemetry` or `set_error`.
+ * Record counts produced while searching a single archive.
+ */
+struct SearchResultMetrics {
+    uint64_t total_archive_records{};
+    uint64_t candidate_records_after_schema_matching{};
+    uint64_t records_matching_query{};
+    uint64_t num_matched_schemas{};
+    uint64_t num_schemas_with_matches{};
+};
+
+/**
+ * An OpenTelemetry span recording the telemetry for one archive search. The span starts on
+ * construction and ends on destruction; each group of metrics is recorded as it becomes available
+ * via the corresponding setter.
  */
 class SearchTelemetrySpan {
 public:
@@ -84,33 +85,68 @@ public:
     ~SearchTelemetrySpan();
 
     // Methods
+    /**
+     * Records the query-identity attributes: a non-reversible hash of the query and, when present
+     * in the environment, the scheduler's `query_id`/`task_id`.
+     * @param query The raw query string.
+     */
+    auto set_query_context(std::string_view query) -> void;
+
+    /**
+     * Records the query-shape metrics of the query as written.
+     * @param metrics
+     */
+    auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void;
+
+    /**
+     * Records the query-shape metrics of the preprocessed form of the query (the form that gets
+     * evaluated, in which e.g. EXISTS predicates appear).
+     * @param metrics
+     */
+    auto set_preprocessed_query_shape_metrics(QueryShapeMetrics const& metrics) -> void;
+
+    /**
+     * Records the record-count metrics gathered while searching the archive.
+     * @param metrics
+     */
+    auto set_search_result_metrics(SearchResultMetrics const& metrics) -> void;
+
+    /**
+     * Records the stage at which the search stopped processing the archive.
+     * @param termination_stage One of the `cTerminationStage*` constants.
+     */
+    auto set_termination_stage(std::string_view termination_stage) -> void;
+
+    /**
+     * Marks the span as failed and records the error.
+     * @param message
+     */
     auto set_error(std::string_view message) -> void;
-    auto set_telemetry(SearchTelemetry const& telemetry) -> void;
 
 private:
     class Impl;
     std::unique_ptr<Impl> m_impl;
 };
 
-[[nodiscard]] auto collect_query_shape_metrics(
+/**
+ * Walks the parsed query and accumulates its shape metrics.
+ * @param expr The parsed query AST.
+ * @param search_begin_ts The lower bound of the search time range, if any.
+ * @param search_end_ts The upper bound of the search time range, if any.
+ * @return The query-shape metrics.
+ */
+[[nodiscard]] auto create_query_shape_metrics(
         std::shared_ptr<ast::Expression> const& expr,
         std::optional<epochtime_t> search_begin_ts,
         std::optional<epochtime_t> search_end_ts
-) -> SearchTelemetry;
+) -> QueryShapeMetrics;
 
 /**
- * Populates the query identity/context fields of `telemetry`: the archive id, a non-reversible hash
- * of the query, and (from the environment) the scheduler's `query_id`/`task_id`. The raw query text
- * is included only when `CLP_TELEMETRY_INCLUDE_QUERY` is set to a truthy value.
- * @param telemetry
- * @param query The raw query string.
- * @param archive_id The id of the archive being searched.
+ * @param enable_telemetry Whether telemetry was requested (e.g. via a command-line flag).
+ * @return Whether search telemetry should be recorded, accounting for the `CLP_DISABLE_TELEMETRY`
+ * environment kill-switch.
  */
-auto populate_query_context(
-        SearchTelemetry& telemetry,
-        std::string_view query,
-        std::string_view archive_id
-) -> void;
+[[nodiscard]] auto is_search_telemetry_enabled(bool enable_telemetry) -> bool;
 }  // namespace clp_s::search
 
 #endif  // CLP_S_SEARCH_SEARCHTELEMETRY_HPP

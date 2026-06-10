@@ -10,7 +10,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include <opentelemetry/nostd/shared_ptr.h>
@@ -43,98 +42,64 @@ constexpr std::string_view cSearchArchiveSpanName{"clp_s.search.archive"};
 
 constexpr std::array<std::string_view, 4> cTruthyEnvValues{"1", "true", "yes", "y"};
 
+constexpr std::string_view cAttrSuccess{"clp.search.success"};
+constexpr std::string_view cAttrError{"clp.search.error"};
+constexpr std::string_view cAttrQueryHash{"clp.search.query_hash"};
+constexpr std::string_view cAttrQueryId{"clp.search.query_id"};
+constexpr std::string_view cAttrTaskId{"clp.search.task_id"};
+constexpr std::string_view cQueryShapeAttrPrefix{"clp.query_shape."};
+constexpr std::string_view cPreprocessedQueryShapeAttrPrefix{"clp.query_shape.preprocessed."};
+constexpr std::string_view cAttrSuffixColumnTypesPureWildcard{"column_types.pure_wildcard"};
+constexpr std::string_view cAttrSuffixColumnTypesSomeWildcard{"column_types.some_wildcard"};
+constexpr std::string_view cAttrSuffixColumnTypesNoWildcard{"column_types.no_wildcard"};
+constexpr std::string_view cAttrSuffixPredicateTypesString{"predicate_types.string"};
+constexpr std::string_view cAttrSuffixPredicateTypesStringWithWildcard{
+        "predicate_types.string_with_wildcard"
+};
+constexpr std::string_view cAttrSuffixPredicateTypesInt{"predicate_types.int"};
+constexpr std::string_view cAttrSuffixPredicateTypesFloat{"predicate_types.float"};
+constexpr std::string_view cAttrSuffixPredicateTypesNull{"predicate_types.null"};
+constexpr std::string_view cAttrSuffixPredicateTypesExactMatch{"predicate_types.exact_match"};
+constexpr std::string_view cAttrSuffixPredicateTypesRange{"predicate_types.range"};
+constexpr std::string_view cAttrSuffixPredicateTypesExists{"predicate_types.exists"};
+constexpr std::string_view cAttrSuffixNumPredicates{"num_predicates"};
+constexpr std::string_view cAttrSuffixContainsOrClause{"contains_or_clause"};
+constexpr std::string_view cAttrTimeRangeMillis{"clp.query_shape.time_range_millis"};
+constexpr std::string_view cAttrTotalArchiveRecords{"clp.search.total_archive_records"};
+constexpr std::string_view cAttrCandidateRecordsAfterSchemaMatching{
+        "clp.search.candidate_records_after_schema_matching"
+};
+constexpr std::string_view cAttrRecordsMatchingQuery{"clp.search.records_matching_query"};
+constexpr std::string_view cAttrNumMatchedSchemas{"clp.search.num_matched_schemas"};
+constexpr std::string_view cAttrNumSchemasWithMatches{"clp.search.num_schemas_with_matches"};
+constexpr std::string_view cAttrTerminationStage{"clp.search.termination_stage"};
+
 /**
  * @param sv
  * @return `sv` as an OpenTelemetry `nostd::string_view`.
  */
-[[nodiscard]] auto to_nostd_string_view(std::string_view sv) -> opentelemetry::nostd::string_view;
+[[nodiscard]] auto to_nostd_string_view(std::string_view sv) -> opentelemetry::nostd::string_view {
+    return opentelemetry::nostd::string_view{sv.data(), sv.size()};
+}
 
 /**
- * @param name
- * @return The value of the given environment variable, or `nullptr` if it is unset.
+ * @param value
+ * @return `value` clamped to the maximum `int64_t`, since OpenTelemetry span attributes are signed.
  */
-[[nodiscard]] auto get_env(char const* name) -> char const*;
+[[nodiscard]] auto to_int64_attribute(uint64_t value) -> int64_t {
+    constexpr auto cMaxInt64{static_cast<uint64_t>(std::numeric_limits<int64_t>::max())};
+    return value > cMaxInt64 ? std::numeric_limits<int64_t>::max() : static_cast<int64_t>(value);
+}
 
 /**
  * @param name
  * @return Whether the given environment variable is set to a truthy value (one of
  * `cTruthyEnvValues`).
  */
-[[nodiscard]] auto is_env_var_enabled(char const* name) -> bool;
-
-/**
- * Sets a string-valued attribute on `span`.
- * @param span
- * @param key
- * @param value
- */
-auto set_string_attribute(
-        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> const& span,
-        opentelemetry::nostd::string_view key,
-        std::string_view value
-) -> void;
-
-/**
- * @param value
- * @return `value` clamped to the maximum `int64_t`, since OpenTelemetry span attributes are signed.
- */
-[[nodiscard]] auto to_int64_attribute(uint64_t value) -> int64_t;
-
-/**
- * @param column
- * @return Whether any descriptor in the column is a wildcard.
- */
-[[nodiscard]] auto descriptor_has_wildcard(ColumnDescriptor const& column) -> bool;
-
-/**
- * Increments the column-shape counter in `telemetry` corresponding to `column`'s wildcard usage.
- * @param telemetry
- * @param column
- */
-auto add_column_shape(SearchTelemetry& telemetry, ColumnDescriptor const& column) -> void;
-
-/**
- * Increments the predicate-type counters in `telemetry` for `filter`'s operation and operand type.
- * @param telemetry
- * @param filter
- */
-auto add_predicate_type(SearchTelemetry& telemetry, FilterExpr const& filter) -> void;
-
-/**
- * Walks `expr` and its descendants, accumulating query-shape metrics (column shapes, predicate
- * types, predicate count, and whether an OR clause is present) into `telemetry`.
- * @param telemetry
- * @param expr
- */
-auto
-collect_query_shape_metrics(SearchTelemetry& telemetry, std::shared_ptr<Expression> const& expr)
-        -> void;
-
-/**
- * Sets a `uint64_t`-valued attribute on `span`, clamping the value to the signed range expected by
- * OpenTelemetry span attributes.
- * @param span
- * @param key
- * @param value
- */
-auto set_uint64_attribute(
-        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> const& span,
-        opentelemetry::nostd::string_view key,
-        uint64_t value
-) -> void;
-
-auto to_nostd_string_view(std::string_view sv) -> opentelemetry::nostd::string_view {
-    return opentelemetry::nostd::string_view{sv.data(), sv.size()};
-}
-
-auto get_env(char const* name) -> char const* {
+[[nodiscard]] auto is_env_var_enabled(char const* name) -> bool {
     // The environment is only read during single-threaded search setup.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    return std::getenv(name);
-}
-
-auto is_env_var_enabled(char const* name) -> bool {
-    char const* const raw{get_env(name)};
+    char const* const raw{std::getenv(name)};
     if (nullptr == raw) {
         return false;
     }
@@ -145,53 +110,42 @@ auto is_env_var_enabled(char const* name) -> bool {
     return std::ranges::find(cTruthyEnvValues, value) != cTruthyEnvValues.end();
 }
 
-auto set_string_attribute(
-        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> const& span,
-        opentelemetry::nostd::string_view key,
-        std::string_view value
-) -> void {
-    span->SetAttribute(key, to_nostd_string_view(value));
-}
-
-auto to_int64_attribute(uint64_t value) -> int64_t {
-    constexpr auto cMaxInt64{static_cast<uint64_t>(std::numeric_limits<int64_t>::max())};
-    return value > cMaxInt64 ? std::numeric_limits<int64_t>::max() : static_cast<int64_t>(value);
-}
-
-auto descriptor_has_wildcard(ColumnDescriptor const& column) -> bool {
-    return std::ranges::any_of(
-            column.descriptor_begin(),
-            column.descriptor_end(),
-            [](auto const& descriptor) { return descriptor.wildcard(); }
-    );
-}
-
-auto add_column_shape(SearchTelemetry& telemetry, ColumnDescriptor const& column) -> void {
+/**
+ * Increments the column-shape counter in `metrics` corresponding to `column`'s wildcard usage.
+ * @param metrics
+ * @param column
+ */
+auto add_column_shape(QueryShapeMetrics& metrics, ColumnDescriptor const& column) -> void {
     if (column.is_pure_wildcard()) {
-        ++telemetry.column_shape_metrics.pure_wildcard;
-    } else if (descriptor_has_wildcard(column)) {
-        ++telemetry.column_shape_metrics.some_wildcard;
+        ++metrics.column_shape_metrics.pure_wildcard;
+    } else if (column.is_unresolved_descriptor()) {
+        ++metrics.column_shape_metrics.some_wildcard;
     } else {
-        ++telemetry.column_shape_metrics.no_wildcard;
+        ++metrics.column_shape_metrics.no_wildcard;
     }
 }
 
-auto add_predicate_type(SearchTelemetry& telemetry, FilterExpr const& filter) -> void {
+/**
+ * Increments the predicate-type counters in `metrics` for `filter`'s operation and operand type.
+ * @param metrics
+ * @param filter
+ */
+auto add_predicate_type(QueryShapeMetrics& metrics, FilterExpr const& filter) -> void {
     auto const op{filter.get_operation()};
     switch (op) {
         case FilterOperation::EXISTS:
         case FilterOperation::NEXISTS:
-            ++telemetry.predicate_type_metrics.exists;
+            ++metrics.predicate_type_metrics.exists;
             return;
         case FilterOperation::EQ:
         case FilterOperation::NEQ:
-            ++telemetry.predicate_type_metrics.exact_match;
+            ++metrics.predicate_type_metrics.exact_match;
             break;
         case FilterOperation::LT:
         case FilterOperation::GT:
         case FilterOperation::LTE:
         case FilterOperation::GTE:
-            ++telemetry.predicate_type_metrics.range;
+            ++metrics.predicate_type_metrics.range;
             break;
     }
 
@@ -206,25 +160,31 @@ auto add_predicate_type(SearchTelemetry& telemetry, FilterExpr const& filter) ->
     bool bool_value{};
     if (operand->as_clp_string(string_value, op) || operand->as_var_string(string_value, op)) {
         if (string_value.find('*') == std::string::npos) {
-            ++telemetry.predicate_type_metrics.string;
+            ++metrics.predicate_type_metrics.string;
         } else {
-            ++telemetry.predicate_type_metrics.string_with_wildcard;
+            ++metrics.predicate_type_metrics.string_with_wildcard;
         }
     }
     if (operand->as_int(int_value, op) || operand->as_timestamp()) {
-        ++telemetry.predicate_type_metrics.integer;
+        ++metrics.predicate_type_metrics.integer;
     }
     if (operand->as_float(float_value, op)) {
-        ++telemetry.predicate_type_metrics.floating_point;
+        ++metrics.predicate_type_metrics.floating_point;
     }
     if (operand->as_null(op)) {
-        ++telemetry.predicate_type_metrics.null;
+        ++metrics.predicate_type_metrics.null;
     }
     static_cast<void>(operand->as_bool(bool_value, op));
 }
 
+/**
+ * Walks `expr` and its descendants, accumulating query-shape metrics (column shapes, predicate
+ * types, predicate count, and whether an OR clause is present) into `metrics`.
+ * @param metrics
+ * @param expr
+ */
 auto
-collect_query_shape_metrics(SearchTelemetry& telemetry, std::shared_ptr<Expression> const& expr)
+collect_query_shape_metrics(QueryShapeMetrics& metrics, std::shared_ptr<Expression> const& expr)
         -> void {
     std::vector<std::shared_ptr<Expression>> to_visit;
     if (nullptr != expr) {
@@ -234,12 +194,12 @@ collect_query_shape_metrics(SearchTelemetry& telemetry, std::shared_ptr<Expressi
         auto const node{to_visit.back()};
         to_visit.pop_back();
         if (nullptr != std::dynamic_pointer_cast<OrExpr>(node)) {
-            telemetry.contains_or_clause = true;
+            metrics.contains_or_clause = true;
         }
         if (auto const filter{std::dynamic_pointer_cast<FilterExpr>(node)}; nullptr != filter) {
-            ++telemetry.num_predicates;
-            add_column_shape(telemetry, *filter->get_column());
-            add_predicate_type(telemetry, *filter);
+            ++metrics.num_predicates;
+            add_column_shape(metrics, *filter->get_column());
+            add_predicate_type(metrics, *filter);
             continue;
         }
         for (auto it{node->op_begin()}; it != node->op_end(); ++it) {
@@ -248,14 +208,6 @@ collect_query_shape_metrics(SearchTelemetry& telemetry, std::shared_ptr<Expressi
             }
         }
     }
-}
-
-auto set_uint64_attribute(
-        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> const& span,
-        opentelemetry::nostd::string_view key,
-        uint64_t value
-) -> void {
-    span->SetAttribute(key, to_int64_attribute(value));
 }
 }  // namespace
 
@@ -266,7 +218,7 @@ public:
                              ->GetTracer(to_nostd_string_view(cTracerName))
                              ->StartSpan(to_nostd_string_view(cSearchArchiveSpanName))},
               m_scope{std::make_unique<opentelemetry::trace::Scope>(m_span)} {
-        m_span->SetAttribute("clp.search.success", true);
+        m_span->SetAttribute(to_nostd_string_view(cAttrSuccess), true);
     }
 
     ~Impl() { m_span->End(); }
@@ -277,82 +229,113 @@ public:
     Impl(Impl&&) = delete;
     auto operator=(Impl&&) -> Impl& = delete;
 
-    auto set_error(std::string_view message) -> void {
-        m_span->SetAttribute("clp.search.success", false);
+    auto set_query_context(std::string_view query) -> void {
         m_span->SetAttribute(
-                "clp.search.error",
-                opentelemetry::nostd::string_view{message.data(), message.size()}
+                to_nostd_string_view(cAttrQueryHash),
+                static_cast<int64_t>(XXH3_64bits(query.data(), query.size()))
         );
-        m_span->SetStatus(
-                StatusCode::kError,
-                opentelemetry::nostd::string_view{message.data(), message.size()}
+        // The environment is only read during single-threaded search setup.
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
+        if (char const* const query_id{std::getenv("CLP_QUERY_ID")}; nullptr != query_id) {
+            m_span->SetAttribute(to_nostd_string_view(cAttrQueryId), query_id);
+        }
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
+        if (char const* const task_id{std::getenv("CLP_TASK_ID")}; nullptr != task_id) {
+            m_span->SetAttribute(to_nostd_string_view(cAttrTaskId), task_id);
+        }
+    }
+
+    auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
+        set_query_shape_attributes(cQueryShapeAttrPrefix, metrics);
+        if (metrics.time_range_millis.has_value()) {
+            m_span->SetAttribute(
+                    to_nostd_string_view(cAttrTimeRangeMillis),
+                    to_int64_attribute(*metrics.time_range_millis)
+            );
+        }
+    }
+
+    auto set_preprocessed_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
+        set_query_shape_attributes(cPreprocessedQueryShapeAttrPrefix, metrics);
+    }
+
+    auto set_search_result_metrics(SearchResultMetrics const& metrics) -> void {
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrTotalArchiveRecords),
+                to_int64_attribute(metrics.total_archive_records)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrCandidateRecordsAfterSchemaMatching),
+                to_int64_attribute(metrics.candidate_records_after_schema_matching)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrRecordsMatchingQuery),
+                to_int64_attribute(metrics.records_matching_query)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumMatchedSchemas),
+                to_int64_attribute(metrics.num_matched_schemas)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumSchemasWithMatches),
+                to_int64_attribute(metrics.num_schemas_with_matches)
         );
     }
 
-    auto set_telemetry(SearchTelemetry const& telemetry) -> void {
-        if (false == telemetry.archive_id.empty()) {
-            set_string_attribute(m_span, "clp.search.archive_id", telemetry.archive_id);
-        }
-        if (false == telemetry.query_id.empty()) {
-            set_string_attribute(m_span, "clp.search.query_id", telemetry.query_id);
-        }
-        if (false == telemetry.task_id.empty()) {
-            set_string_attribute(m_span, "clp.search.task_id", telemetry.task_id);
-        }
-        m_span->SetAttribute("clp.search.query_hash", static_cast<int64_t>(telemetry.query_hash));
-        if (telemetry.query.has_value()) {
-            set_string_attribute(m_span, "clp.search.query", *telemetry.query);
-        }
+    auto set_termination_stage(std::string_view termination_stage) -> void {
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrTerminationStage),
+                to_nostd_string_view(termination_stage)
+        );
+    }
 
-        std::array<std::pair<opentelemetry::nostd::string_view, uint64_t>, 17> const
-                uint64_attributes{
-                        {{"clp.query_shape.column_types.pure_wildcard",
-                          telemetry.column_shape_metrics.pure_wildcard},
-                         {"clp.query_shape.column_types.some_wildcard",
-                          telemetry.column_shape_metrics.some_wildcard},
-                         {"clp.query_shape.column_types.no_wildcard",
-                          telemetry.column_shape_metrics.no_wildcard},
-                         {"clp.query_shape.predicate_types.string",
-                          telemetry.predicate_type_metrics.string},
-                         {"clp.query_shape.predicate_types.string_with_wildcard",
-                          telemetry.predicate_type_metrics.string_with_wildcard},
-                         {"clp.query_shape.predicate_types.int",
-                          telemetry.predicate_type_metrics.integer},
-                         {"clp.query_shape.predicate_types.float",
-                          telemetry.predicate_type_metrics.floating_point},
-                         {"clp.query_shape.predicate_types.null",
-                          telemetry.predicate_type_metrics.null},
-                         {"clp.query_shape.predicate_types.exact_match",
-                          telemetry.predicate_type_metrics.exact_match},
-                         {"clp.query_shape.predicate_types.range",
-                          telemetry.predicate_type_metrics.range},
-                         {"clp.query_shape.predicate_types.exists",
-                          telemetry.predicate_type_metrics.exists},
-                         {"clp.query_shape.num_predicates", telemetry.num_predicates},
-                         {"clp.search.total_archive_records", telemetry.total_archive_records},
-                         {"clp.search.candidate_records_after_schema_matching",
-                          telemetry.candidate_records_after_schema_matching},
-                         {"clp.search.records_matching_query", telemetry.records_matching_query},
-                         {"clp.search.num_matched_schemas", telemetry.num_matched_schemas},
-                         {"clp.search.num_schemas_with_matches",
-                          telemetry.num_schemas_with_matches}}
-                };
-        for (auto const& [key, value] : uint64_attributes) {
-            set_uint64_attribute(m_span, key, value);
-        }
-
-        m_span->SetAttribute("clp.query_shape.contains_or_clause", telemetry.contains_or_clause);
-        if (telemetry.time_range_millis.has_value()) {
-            set_uint64_attribute(
-                    m_span,
-                    "clp.query_shape.time_range_millis",
-                    *telemetry.time_range_millis
-            );
-        }
-        set_string_attribute(m_span, "clp.search.termination_stage", telemetry.termination_stage);
+    auto set_error(std::string_view message) -> void {
+        m_span->SetAttribute(to_nostd_string_view(cAttrSuccess), false);
+        m_span->SetAttribute(to_nostd_string_view(cAttrError), to_nostd_string_view(message));
+        m_span->SetStatus(StatusCode::kError, to_nostd_string_view(message));
     }
 
 private:
+    /**
+     * Records the query-shape counters as attributes whose keys are `key_prefix` followed by the
+     * counter's `cAttrSuffix*` constant.
+     * @param key_prefix
+     * @param metrics
+     */
+    auto set_query_shape_attributes(std::string_view key_prefix, QueryShapeMetrics const& metrics)
+            -> void {
+        auto const set_counter = [&](std::string_view key_suffix, uint64_t value) {
+            std::string key{key_prefix};
+            key += key_suffix;
+            m_span->SetAttribute(to_nostd_string_view(key), to_int64_attribute(value));
+        };
+        set_counter(cAttrSuffixColumnTypesPureWildcard, metrics.column_shape_metrics.pure_wildcard);
+        set_counter(cAttrSuffixColumnTypesSomeWildcard, metrics.column_shape_metrics.some_wildcard);
+        set_counter(cAttrSuffixColumnTypesNoWildcard, metrics.column_shape_metrics.no_wildcard);
+        set_counter(cAttrSuffixPredicateTypesString, metrics.predicate_type_metrics.string);
+        set_counter(
+                cAttrSuffixPredicateTypesStringWithWildcard,
+                metrics.predicate_type_metrics.string_with_wildcard
+        );
+        set_counter(cAttrSuffixPredicateTypesInt, metrics.predicate_type_metrics.integer);
+        set_counter(cAttrSuffixPredicateTypesFloat, metrics.predicate_type_metrics.floating_point);
+        set_counter(cAttrSuffixPredicateTypesNull, metrics.predicate_type_metrics.null);
+        set_counter(
+                cAttrSuffixPredicateTypesExactMatch,
+                metrics.predicate_type_metrics.exact_match
+        );
+        set_counter(cAttrSuffixPredicateTypesRange, metrics.predicate_type_metrics.range);
+        set_counter(cAttrSuffixPredicateTypesExists, metrics.predicate_type_metrics.exists);
+        set_counter(cAttrSuffixNumPredicates, metrics.num_predicates);
+
+        std::string contains_or_clause_key{key_prefix};
+        contains_or_clause_key += cAttrSuffixContainsOrClause;
+        m_span->SetAttribute(
+                to_nostd_string_view(contains_or_clause_key),
+                metrics.contains_or_clause
+        );
+    }
+
     opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> m_span;
     std::unique_ptr<opentelemetry::trace::Scope> m_scope;
 };
@@ -361,45 +344,51 @@ SearchTelemetrySpan::SearchTelemetrySpan() : m_impl{std::make_unique<Impl>()} {}
 
 SearchTelemetrySpan::~SearchTelemetrySpan() = default;
 
+auto SearchTelemetrySpan::set_query_context(std::string_view query) -> void {
+    m_impl->set_query_context(query);
+}
+
+auto SearchTelemetrySpan::set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
+    m_impl->set_query_shape_metrics(metrics);
+}
+
+auto SearchTelemetrySpan::set_preprocessed_query_shape_metrics(QueryShapeMetrics const& metrics)
+        -> void {
+    m_impl->set_preprocessed_query_shape_metrics(metrics);
+}
+
+auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const& metrics) -> void {
+    m_impl->set_search_result_metrics(metrics);
+}
+
+auto SearchTelemetrySpan::set_termination_stage(std::string_view termination_stage) -> void {
+    m_impl->set_termination_stage(termination_stage);
+}
+
 auto SearchTelemetrySpan::set_error(std::string_view message) -> void {
     m_impl->set_error(message);
 }
 
-auto SearchTelemetrySpan::set_telemetry(SearchTelemetry const& telemetry) -> void {
-    m_impl->set_telemetry(telemetry);
-}
-
-auto collect_query_shape_metrics(
+auto create_query_shape_metrics(
         std::shared_ptr<ast::Expression> const& expr,
         std::optional<epochtime_t> search_begin_ts,
         std::optional<epochtime_t> search_end_ts
-) -> SearchTelemetry {
-    SearchTelemetry telemetry;
-    collect_query_shape_metrics(telemetry, expr);
+) -> QueryShapeMetrics {
+    QueryShapeMetrics metrics;
+    collect_query_shape_metrics(metrics, expr);
     if (search_begin_ts.has_value() && search_end_ts.has_value()) {
         auto const time_range_millis{*search_end_ts - *search_begin_ts};
         if (0 <= time_range_millis) {
-            telemetry.time_range_millis = static_cast<uint64_t>(time_range_millis);
+            metrics.time_range_millis = static_cast<uint64_t>(time_range_millis);
         }
     }
-    return telemetry;
+    return metrics;
 }
 
-auto populate_query_context(
-        SearchTelemetry& telemetry,
-        std::string_view query,
-        std::string_view archive_id
-) -> void {
-    telemetry.archive_id = std::string{archive_id};
-    telemetry.query_hash = static_cast<uint64_t>(XXH3_64bits(query.data(), query.size()));
-    if (char const* const query_id{get_env("CLP_QUERY_ID")}; nullptr != query_id) {
-        telemetry.query_id = query_id;
+auto is_search_telemetry_enabled(bool enable_telemetry) -> bool {
+    if (false == enable_telemetry) {
+        return false;
     }
-    if (char const* const task_id{get_env("CLP_TASK_ID")}; nullptr != task_id) {
-        telemetry.task_id = task_id;
-    }
-    if (is_env_var_enabled("CLP_TELEMETRY_INCLUDE_QUERY")) {
-        telemetry.query = std::string{query};
-    }
+    return false == is_env_var_enabled("CLP_DISABLE_TELEMETRY");
 }
 }  // namespace clp_s::search

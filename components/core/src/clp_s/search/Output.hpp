@@ -5,6 +5,7 @@
 #include <set>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -31,15 +32,13 @@ public:
            std::shared_ptr<ast::Expression> const& expr,
            std::shared_ptr<ArchiveReader> const& archive_reader,
            std::unique_ptr<OutputHandler> output_handler,
-           bool ignore_case,
-           SearchTelemetry* telemetry = nullptr)
+           bool ignore_case)
             : m_query_runner(match, expr, archive_reader, ignore_case),
               m_archive_reader(archive_reader),
               m_expr(expr),
               m_match(match),
               m_output_handler(std::move(output_handler)),
-              m_should_marshal_records(m_output_handler->should_marshal_records()),
-              m_telemetry(telemetry) {}
+              m_should_marshal_records(m_output_handler->should_marshal_records()) {}
 
     /**
      * Filters messages within the archive and outputs the filtered messages to the configured
@@ -49,6 +48,20 @@ public:
      */
     auto filter() -> bool;
 
+    /**
+     * @return The record-count metrics gathered during the last call to `filter`.
+     */
+    [[nodiscard]] auto get_result_metrics() const -> SearchResultMetrics const& {
+        return m_result_metrics;
+    }
+
+    /**
+     * @return The stage at which the last call to `filter` stopped processing the archive.
+     */
+    [[nodiscard]] auto get_termination_stage() const -> std::string_view {
+        return m_termination_stage;
+    }
+
 private:
     QueryRunner m_query_runner;
     std::shared_ptr<ArchiveReader> m_archive_reader;
@@ -56,7 +69,8 @@ private:
     std::shared_ptr<SchemaMatch> m_match;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_should_marshal_records{true};
-    SearchTelemetry* m_telemetry{};
+    SearchResultMetrics m_result_metrics;
+    std::string_view m_termination_stage{cTerminationStageRecordScan};
 };
 }  // namespace clp_s::search
 
