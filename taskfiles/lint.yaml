@@ -757,7 +757,7 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: [":webui-node-modules"]
+    deps: [":webui:dist"]
     dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
       - |-

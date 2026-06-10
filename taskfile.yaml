@@ -76,7 +76,10 @@ tasks:
         vars:
           COMPONENT: "job-orchestration"
       - task: "clean-rust"
-      - task: "clean-webui"
+      - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/.turbo'"
+      - "rm -f '{{.G_WEBUI_CHECKSUM_FILE}}'"
       - task: "tests:integration:cache-clear"
 
   clean-core:
@@ -288,12 +291,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  clean-webui-package-node-modules:
-    internal: true
-    cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/.turbo'"
-
   package-tar:
     internal: true
     vars:
@@ -449,18 +446,3 @@ tasks:
       - |-
         uv run --no-cache \
           auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
-
-  webui-node-modules:
-    internal: true
-    sources:
-      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
-      - "{{.TASKFILE}}"
-      - "package.json"
-      - "packages/**/package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-    dir: "{{.G_WEBUI_SRC_DIR}}"
-    deps:
-    cmds:
-      - task: "clean-webui-package-node-modules"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
