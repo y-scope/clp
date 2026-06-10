@@ -277,7 +277,12 @@ tasks:
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - "rsync -a 'packages/client/dist/' '{{.OUTPUT_DIR}}/client/'"
       - "rsync -a 'packages/yscope-log-viewer/dist/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod --filter=@webui/server '{{.OUTPUT_DIR}}/server'"
+      - >-
+        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH
+        pnpm deploy
+        --prod
+        --filter=@webui/server
+        '{{.OUTPUT_DIR}}/server'
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
