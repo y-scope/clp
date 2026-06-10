@@ -513,6 +513,13 @@ class BaseController(ABC):
             ),
         }
 
+        # Telemetry config
+        env_vars |= {
+            "CLP_COMPRESSION_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.compression_scheduler.telemetry_update_interval_ms
+            ),
+        }
+
         return env_vars
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
@@ -533,6 +540,13 @@ class BaseController(ABC):
         # Logging config
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_QUERY_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.query_scheduler.telemetry_update_interval_ms
+            ),
         }
 
         return env_vars
@@ -563,6 +577,13 @@ class BaseController(ABC):
         # Resources
         env_vars |= {
             "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_COMPRESSION_WORKER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.compression_worker.telemetry_update_interval_ms
+            ),
         }
 
         return env_vars
@@ -648,6 +669,13 @@ class BaseController(ABC):
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
 
+        # Telemetry config
+        env_vars |= {
+            "CLP_API_SERVER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.api_server.telemetry_update_interval_ms
+            ),
+        }
+
         return env_vars
 
     def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
@@ -683,6 +711,13 @@ class BaseController(ABC):
         # Logging config
         env_vars |= {
             "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.log_ingestor.telemetry_update_interval_ms
+            ),
         }
 
         return env_vars

@@ -48,6 +48,8 @@ spec:
           image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: "OTEL_METRIC_EXPORT_INTERVAL"
+              value: {{ .Values.clpConfig.compression_scheduler.telemetry_update_interval_ms | quote }}
             {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict

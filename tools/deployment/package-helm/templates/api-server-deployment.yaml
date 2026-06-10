@@ -36,6 +36,8 @@ spec:
           image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: "OTEL_METRIC_EXPORT_INTERVAL"
+              value: {{ .Values.clpConfig.api_server.telemetry_update_interval_ms | quote }}
             {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:

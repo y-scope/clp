@@ -35,6 +35,31 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 (Helm).
 :::
 
+## Configuration Settings
+
+You can configure the interval at which metrics are exported for each instrumented component. The `telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds) and defaults to `60000` (60 seconds).
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+Edit `clp-config.yaml` to set the interval per component:
+```yaml
+compression_scheduler:
+  telemetry_update_interval_ms: 60000
+
+api_server:
+  telemetry_update_interval_ms: 60000
+```
+:::
+:::{tab-item} Kubernetes
+:sync: k8s
+Pass the config via `--set`:
+```bash
+helm install clp clp/clp --set clpConfig.compression_scheduler.telemetry_update_interval_ms=60000
+```
+:::
+::::
+
 ## How to disable telemetry
 
 Any **one** of the following methods is sufficient:
