@@ -32,21 +32,21 @@ server. It also serves the [log-viewer].
 
     ```shell
     cd components/webui
-    pnpm dev
+    pnpm run dev
     ```
 
 2. Or run only the client:
 
     ```shell
     cd components/webui
-    pnpm --filter @webui/client dev
+    pnpm --filter @webui/client run dev
     ```
 
 3. Or run only the server:
 
     ```shell
     cd components/webui
-    pnpm --filter @webui/server dev
+    pnpm --filter @webui/server run dev
     ```
 
     If you want to customize what host and port the server binds to, you can copy `.env` to
