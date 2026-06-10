@@ -92,10 +92,11 @@ constexpr std::string_view cAttrTerminationStage{"clp.search.termination_stage"}
 
 /**
  * Increments the column-shape counter in `metrics` corresponding to `column`'s wildcard usage.
- * @param metrics
+ *
  * @param column
+ * @param metrics
  */
-auto add_column_shape(QueryShapeMetrics& metrics, ColumnDescriptor const& column) -> void {
+auto add_column_shape(ColumnDescriptor const& column, QueryShapeMetrics& metrics) -> void {
     if (column.is_pure_wildcard()) {
         ++metrics.column_shape_metrics.pure_wildcard;
     } else if (column.is_unresolved_descriptor()) {
@@ -107,10 +108,11 @@ auto add_column_shape(QueryShapeMetrics& metrics, ColumnDescriptor const& column
 
 /**
  * Increments the predicate-type counters in `metrics` for `filter`'s operation and operand type.
- * @param metrics
+ *
  * @param filter
+ * @param metrics
  */
-auto add_predicate_type(QueryShapeMetrics& metrics, FilterExpr const& filter) -> void {
+auto add_predicate_type(FilterExpr const& filter, QueryShapeMetrics& metrics) -> void {
     auto const op{filter.get_operation()};
     switch (op) {
         case FilterOperation::EXISTS:
@@ -137,9 +139,8 @@ auto add_predicate_type(QueryShapeMetrics& metrics, FilterExpr const& filter) ->
     std::string string_value;
     int64_t int_value{};
     double float_value{};
-    bool bool_value{};
     if (operand->as_clp_string(string_value, op) || operand->as_var_string(string_value, op)) {
-        if (string_value.find('*') == std::string::npos) {
+        if (std::string::npos == string_value.find('*')) {
             ++metrics.predicate_type_metrics.string;
         } else {
             ++metrics.predicate_type_metrics.string_with_wildcard;
@@ -154,21 +155,21 @@ auto add_predicate_type(QueryShapeMetrics& metrics, FilterExpr const& filter) ->
     if (operand->as_null(op)) {
         ++metrics.predicate_type_metrics.null;
     }
-    static_cast<void>(operand->as_bool(bool_value, op));
 }
 
 /**
  * Walks `expr` and its descendants, accumulating query-shape metrics (column shapes, predicate
  * types, predicate count, and whether an OR clause is present) into `metrics`.
- * @param metrics
+ *
  * @param expr
+ * @param metrics
  */
 auto
-collect_query_shape_metrics(QueryShapeMetrics& metrics, std::shared_ptr<Expression> const& expr)
+collect_query_shape_metrics(std::shared_ptr<Expression> const& expr, QueryShapeMetrics& metrics)
         -> void {
     std::vector<std::shared_ptr<Expression>> to_visit;
     if (nullptr != expr) {
-        to_visit.push_back(expr);
+        to_visit.emplace_back(expr);
     }
     while (false == to_visit.empty()) {
         auto const node{to_visit.back()};
@@ -178,13 +179,13 @@ collect_query_shape_metrics(QueryShapeMetrics& metrics, std::shared_ptr<Expressi
         }
         if (auto const filter{std::dynamic_pointer_cast<FilterExpr>(node)}; nullptr != filter) {
             ++metrics.num_predicates;
-            add_column_shape(metrics, *filter->get_column());
-            add_predicate_type(metrics, *filter);
+            add_column_shape(*filter->get_column(), metrics);
+            add_predicate_type(*filter, metrics);
             continue;
         }
         for (auto it{node->op_begin()}; it != node->op_end(); ++it) {
             if (auto const child{std::dynamic_pointer_cast<Expression>(*it)}; nullptr != child) {
-                to_visit.push_back(child);
+                to_visit.emplace_back(child);
             }
         }
     }
@@ -201,13 +202,16 @@ public:
         m_span->SetAttribute(to_nostd_string_view(cAttrSuccess), true);
     }
 
-    ~Impl() { m_span->End(); }
-
+    // Delete copy constructor and assignment operator
     Impl(Impl const&) = delete;
     auto operator=(Impl const&) -> Impl& = delete;
 
+    // Delete move constructor and assignment operator
     Impl(Impl&&) = delete;
     auto operator=(Impl&&) -> Impl& = delete;
+
+    // Destructor
+    ~Impl() { m_span->End(); }
 
     auto set_query_context(std::string_view query) -> void {
         m_span->SetAttribute(
@@ -357,7 +361,7 @@ auto create_query_shape_metrics(
         std::optional<epochtime_t> search_end_ts
 ) -> QueryShapeMetrics {
     QueryShapeMetrics metrics;
-    collect_query_shape_metrics(metrics, expr);
+    collect_query_shape_metrics(expr, metrics);
     if (search_begin_ts.has_value() && search_end_ts.has_value()) {
         auto const time_range_millis{*search_end_ts - *search_begin_ts};
         if (0 <= time_range_millis) {

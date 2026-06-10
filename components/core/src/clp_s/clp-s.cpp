@@ -68,12 +68,13 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 
 /**
  * Searches the given archive.
+ *
  * @param command_line_arguments
  * @param archive_reader
- * @param expr A copy of the search AST which may be modified
+ * @param expr A copy of the search AST which may be modified.
  * @param reducer_socket_fd
  * @param telemetry_span The span to record search telemetry onto, or null if telemetry is disabled.
- * @return Whether the search succeeded
+ * @return Whether the search succeeded.
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
@@ -154,13 +155,13 @@ bool search_archive(
                 if (auto const result{archive_reader->read_metadata()}; result.has_error()) {
                     auto const error{result.error()};
                     SPDLOG_WARN(
-                            "Failed to read archive metadata for search telemetry: {} - {}",
+                            "Failed to read archive metadata for search telemetry - ({}) {}",
                             error.category().name(),
                             error.message()
                     );
                 }
             } catch (std::exception const& e) {
-                SPDLOG_WARN("Failed to read archive metadata for search telemetry: {}", e.what());
+                SPDLOG_WARN("Failed to read archive metadata for search telemetry - {}", e.what());
             }
         }
         for (auto const schema_id : archive_reader->get_schema_ids()) {
