@@ -219,6 +219,9 @@ importers:
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4
       eslint-config-yscope:
         specifier: 1.1.2
         version: 1.1.2(@stylistic/eslint-plugin@5.10.0(eslint@9.39.4))(eslint-import-resolver-typescript@4.4.5)(eslint-plugin-import-newlines@1.4.1(eslint@9.39.4))(eslint-plugin-import@2.32.0)(eslint-plugin-jsdoc@60.8.3(eslint@9.39.4))(eslint-plugin-no-autofix@2.1.0(eslint@9.39.4))(eslint-plugin-react-hooks@6.1.1(eslint@9.39.4))(eslint-plugin-react@7.37.5(eslint@9.39.4))(eslint-plugin-simple-import-sort@12.1.1(eslint@9.39.4))(eslint@9.39.4)(globals@16.5.0)(typescript-eslint@8.61.0(eslint@9.39.4)(typescript@5.9.3))
@@ -5516,10 +5519,6 @@ packages:
 
   shell-quote@1.8.3:
     resolution: {integrity: sha512-ObmnIF4hXNg1BqhnHmgbDETF8dLPCggZWBjkQfhZpbszZnYur5DUljTcCHii5LC3J5E0yeO/1LIMyH+UvHQgyw==}
-    engines: {node: '>= 0.4'}
-
-  shell-quote@1.8.4:
-    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
     engines: {node: '>= 0.4'}
 
   side-channel-list@1.0.1:
@@ -11710,7 +11709,7 @@ snapshots:
       minimatch: 3.1.5
       pidtree: 0.3.1
       read-pkg: 3.0.0
-      shell-quote: 1.8.4
+      shell-quote: 1.8.3
       string.prototype.padend: 3.1.6
 
   npm-run-path@4.0.1:
@@ -12363,8 +12362,6 @@ snapshots:
   shebang-regex@3.0.0: {}
 
   shell-quote@1.8.3: {}
-
-  shell-quote@1.8.4: {}
 
   side-channel-list@1.0.1:
     dependencies:

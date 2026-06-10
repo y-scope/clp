@@ -5,8 +5,8 @@
   "description": "",
   "scripts": {
     "build": "turbo build",
-    "lint:check": "turbo lint:check --filter=!yscope-log-viewer",
-    "lint:fix": "turbo lint:fix --filter=!yscope-log-viewer",
+    "lint:check": "turbo lint:check --filter='@webui/*'",
+    "lint:fix": "turbo lint:fix --filter='@webui/*'",
     "dev": "turbo dev",
     "test": "turbo test"
   },
