@@ -1105,6 +1105,30 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
     }
 }
 
+auto CommandLineArguments::parse_aggregation_options(
+        po::variables_map const& parsed_options,
+        int64_t count_by_time_bucket_size
+) -> std::optional<AggregationType> {
+    std::optional<AggregationType> aggregation_type;
+    if (parsed_options.count("count")) {
+        aggregation_type = AggregationType::Count;
+    }
+    if (parsed_options.count("count-by-time")) {
+        if (aggregation_type.has_value()) {
+            throw std::invalid_argument(
+                    "The --count-by-time and --count options are mutually exclusive."
+            );
+        }
+
+        if (count_by_time_bucket_size <= 0) {
+            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
+        }
+
+        aggregation_type = AggregationType::CountByTime;
+    }
+    return aggregation_type;
+}
+
 void CommandLineArguments::parse_reducer_output_handler_options(
         po::options_description const& options_description,
         std::vector<std::string> const& options,
@@ -1145,30 +1169,6 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         );
     }
     reducer_options.aggregation_type = aggregation_type.value();
-}
-
-auto CommandLineArguments::parse_aggregation_options(
-        po::variables_map const& parsed_options,
-        int64_t count_by_time_bucket_size
-) -> std::optional<AggregationType> {
-    std::optional<AggregationType> aggregation_type;
-    if (parsed_options.count("count")) {
-        aggregation_type = AggregationType::Count;
-    }
-    if (parsed_options.count("count-by-time")) {
-        if (aggregation_type.has_value()) {
-            throw std::invalid_argument(
-                    "The --count-by-time and --count options are mutually exclusive."
-            );
-        }
-
-        if (count_by_time_bucket_size <= 0) {
-            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
-        }
-
-        aggregation_type = AggregationType::CountByTime;
-    }
-    return aggregation_type;
 }
 
 void CommandLineArguments::parse_results_cache_output_handler_options(

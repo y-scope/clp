@@ -159,10 +159,11 @@ private:
     );
 
     /**
-     * Parses and validates the aggregation options (count and count-by-time) supported by some
-     * output handlers.
+     * Validates the aggregation options (count and count-by-time) for output handlers that
+     * support aggregations.
      * @param parsed_options
-     * @param count_by_time_bucket_size
+     * @param count_by_time_bucket_size The parsed value of the count-by-time option; only
+     * validated when that option was specified.
      * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
      */
     [[nodiscard]] static auto parse_aggregation_options(

@@ -1,4 +1,3 @@
-
 #include "kv_ir_search.hpp"
 
 #include <cerrno>

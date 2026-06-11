@@ -319,8 +319,6 @@ ErrorCode CountByTimeToResultsCacheOutputHandler::finish() {
                     bsoncxx::builder::basic::kvp("$setOnInsert", set_timestamp_on_insert)
             );
 
-            // The documents are moved into the operation so that they outlive this loop
-            // iteration.
             mongocxx::model::update_one update_op{std::move(filter), std::move(update)};
             update_op.upsert(true);
             bulk_write.append(update_op);
