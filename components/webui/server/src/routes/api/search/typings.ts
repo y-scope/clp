@@ -8,11 +8,13 @@ import type {
     Db,
 } from "mongodb";
 
+import settings from "../../../../settings.json" with {type: "json"};
+
 
 /**
  * The maximum number of results to retrieve for a search.
  */
-const SEARCH_MAX_NUM_RESULTS = 1000;
+const SEARCH_MAX_NUM_RESULTS: number = settings.MaxSearchResults;
 
 type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;

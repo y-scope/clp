@@ -1,7 +1,7 @@
 import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../../SearchState/index";
-import {SEARCH_MAX_NUM_RESULTS} from "../../typings";
+import {DEFAULT_SEARCH_MAX_NUM_RESULTS} from "../../typings";
 import {SearchResult} from "./typings";
 
 
@@ -37,7 +37,7 @@ const useSearchResults = () => {
                         "desc",
                     ],
                 ],
-                limit: SEARCH_MAX_NUM_RESULTS,
+                limit: DEFAULT_SEARCH_MAX_NUM_RESULTS,
             };
 
             const collection = new MongoSocketCollection(searchJobId);

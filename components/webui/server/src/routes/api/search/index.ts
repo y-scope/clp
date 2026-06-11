@@ -65,12 +65,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         async (request, reply) => {
             const {
                 datasets,
+                maxNumResults,
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
                 timeRangeBucketSizeMillis,
                 queryString,
             } = request.body;
+
+            const clampedMaxNumResults = Math.min(maxNumResults, SEARCH_MAX_NUM_RESULTS);
 
             const args = {
                 begin_timestamp: timestampBegin,
@@ -79,7 +82,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     null,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
-                max_num_results: SEARCH_MAX_NUM_RESULTS,
+                max_num_results: clampedMaxNumResults,
                 query_string: queryString,
             };
 

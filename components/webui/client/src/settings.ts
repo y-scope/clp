@@ -7,6 +7,7 @@ type Settings = {
     LogsInputType: string;
     LogsInputRootDir: string | null;
     MaxDatasetsPerQuery: number | null;
+    MaxSearchResults: number;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
     SqlDbClpDatasetsTableName: string;

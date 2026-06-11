@@ -1,0 +1,9 @@
+.label {
+    align-self: center;
+    margin-right: 4px;
+    white-space: nowrap;
+}
+
+.input {
+    width: 100px;
+}
