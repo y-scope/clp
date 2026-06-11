@@ -21,7 +21,7 @@ The following OpenTelemetry metrics are emitted:
 Emitted by long-running CLP services to track throughput:
 
 | Component | Metric | Type | Description |
-|-----------|--------|------|-------------|
+| --- | --- | --- | --- |
 | log-ingestor | `clp.ingest.total_num_bytes` | Counter | Total bytes ingested |
 | log-ingestor | `clp.ingest.total_num_objects` | Counter | Total objects (log events) ingested |
 | api-server | `clp.service.event` | Counter | Service lifecycle events (e.g., startup) |
@@ -31,7 +31,7 @@ Emitted by long-running CLP services to track throughput:
 Emitted once at startup by the controller to record deployment sizing:
 
 | Metric | Type | Description |
-|--------|------|-------------|
+| --- | --- | ----------- |
 | `clp.deployment.compression_worker_replicas` | Gauge | Number of compression-worker replicas |
 | `clp.deployment.compression_worker_concurrency` | Gauge | Compression-worker concurrency |
 | `clp.deployment.query_worker_replicas` | Gauge | Number of query-worker replicas |
@@ -44,7 +44,7 @@ Emitted once at startup by the controller to record deployment sizing:
 Every metric carries the following resource attributes to identify and contextualize the deployment:
 
 | Resource Attribute | Example | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `clp.deployment.id` | `550e8400-e29b-41d4-a716-446655440000` | Deduplicate metrics from the same deployment |
 | `service.version` | `0.9.1` | Track version adoption |
 | `clp.deployment.method` | `docker-compose` or `helm` | Understand deployment preferences |
@@ -144,7 +144,7 @@ to disable telemetry for your entire organization.
 ### Interaction when multiple opt-out mechanisms are set
 
 | Env var | Config file | First-run prompt | Network blocked | Telemetry sent?                                                        |
-|---------|-------------|------------------|-----------------|------------------------------------------------------------------------|
+| --------- | ----------- | ---------------- | --------------- | ---------------------------------------------------------------------- |
 | not set | not set     | Y (or default)   | no              | **Yes**                                                                |
 | not set | not set     | N                | no              | **No** — prompt wrote `telemetry.disable: true` to config              |
 | `true`  | `false`     | —                | no              | **No** — env var overrides config                                      |
