@@ -229,6 +229,7 @@ pub struct LogIngestor {
     pub host: String,
     pub port: u16,
     pub logging_level: String,
+    pub realtime_logs: RealtimeLogs,
 }
 
 impl Default for LogIngestor {
@@ -237,8 +238,109 @@ impl Default for LogIngestor {
             host: "localhost".to_owned(),
             port: 3002,
             logging_level: "INFO".to_owned(),
+            realtime_logs: RealtimeLogs::default(),
         }
     }
+}
+
+/// Mirror of `clp_py_utils.clp_config.RealtimeLogs`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+#[derive(Default)]
+pub struct RealtimeLogs {
+    pub enabled: bool,
+    pub hot_storage: RealtimeLogsHotStorage,
+    pub otlp: RealtimeLogsOtlp,
+    pub segment: RealtimeLogsSegment,
+    pub compaction: RealtimeLogsCompaction,
+}
+
+/// Mirror of `clp_py_utils.clp_config.RealtimeLogsHotStorage`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct RealtimeLogsHotStorage {
+    #[serde(rename = "type")]
+    pub storage_type: String,
+    pub directory: String,
+}
+
+impl Default for RealtimeLogsHotStorage {
+    fn default() -> Self {
+        Self {
+            storage_type: "fs".to_owned(),
+            directory: "var/data/realtime-logs".to_owned(),
+        }
+    }
+}
+
+/// Mirror of `clp_py_utils.clp_config.RealtimeLogsOtlp`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct RealtimeLogsOtlp {
+    pub enabled: bool,
+    pub max_request_bytes: u64,
+}
+
+impl Default for RealtimeLogsOtlp {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_request_bytes: 10 * 1024 * 1024,
+        }
+    }
+}
+
+/// Mirror of `clp_py_utils.clp_config.RealtimeLogsSegment`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct RealtimeLogsSegment {
+    pub seal_threshold_bytes: u64,
+    pub seal_timeout_sec: u64,
+    pub file_flush_interval_ms: u64,
+    pub watermark_publish_interval_ms: u64,
+    pub watermark_publish_threshold_bytes: u64,
+    pub channel_capacity: usize,
+}
+
+impl Default for RealtimeLogsSegment {
+    fn default() -> Self {
+        Self {
+            seal_threshold_bytes: 128 * 1024 * 1024,
+            seal_timeout_sec: 15 * 60,
+            file_flush_interval_ms: 1000,
+            watermark_publish_interval_ms: 1000,
+            watermark_publish_threshold_bytes: 4 * 1024 * 1024,
+            channel_capacity: 1024,
+        }
+    }
+}
+
+/// Mirror of `clp_py_utils.clp_config.RealtimeLogsCompaction`.
+///
+/// # NOTE
+///
+/// * The default values must be kept in sync with the Python definition.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+#[derive(Default)]
+pub struct RealtimeLogsCompaction {
+    pub raw_retention_after_compaction_sec: u64,
 }
 
 /// Mirror of `clp_py_utils.clp_config.ArchiveOutput`.

@@ -59,7 +59,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
     get_files_table_name,
 )
-from clp_py_utils.core import resolve_host_path_in_container
+from clp_py_utils.core import resolve_host_path, resolve_host_path_in_container
 
 from clp_package_utils.general import (
     check_docker_dependencies,
@@ -660,19 +660,29 @@ class BaseController(ABC):
         if self._clp_config.log_ingestor is None:
             logger.info("%s is not configured, skipping environment setup...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
-        if self._clp_config.logs_input.type != StorageType.S3:
+        realtime_logs_config = self._clp_config.log_ingestor.realtime_logs
+        if self._clp_config.logs_input.type != StorageType.S3 and not realtime_logs_config.enabled:
             logger.info(
-                "%s is only applicable for S3 logs input type, skipping environment setup...",
+                "%s is only applicable for S3 logs input or realtime logs, skipping environment "
+                "setup...",
                 component_name,
             )
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
         logger.info("Setting up environment for %s...", component_name)
 
+        env_vars = EnvVarsDict()
+
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        env_vars = EnvVarsDict()
+        if realtime_logs_config.enabled:
+            hot_storage_dir = realtime_logs_config.hot_storage.directory
+            resolved_hot_storage_dir_in_container = resolve_host_path_in_container(hot_storage_dir)
+            resolved_hot_storage_dir_in_container.mkdir(parents=True, exist_ok=True)
+            resolved_hot_storage_dir = resolve_host_path(hot_storage_dir)
+            env_vars |= {
+                "CLP_REALTIME_LOGS_DIR_HOST": str(resolved_hot_storage_dir),
+            }
 
         # Connection config
         env_vars |= {

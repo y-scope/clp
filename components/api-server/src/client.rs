@@ -199,6 +199,10 @@ pub struct QueryConfig {
     /// will be stored in `MongoDB` instead.
     #[serde(default)]
     pub buffer_results_in_mongodb: bool,
+
+    /// Whether to include realtime hot log segments in the search.
+    #[serde(default = "default_include_hot_segments")]
+    pub include_hot_segments: bool,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -211,9 +215,14 @@ impl From<QueryConfig> for SearchJobConfig {
             end_timestamp: value.time_range_end_millisecs,
             ignore_case: value.ignore_case,
             write_to_file: !value.buffer_results_in_mongodb,
+            include_hot_segments: value.include_hot_segments,
             ..Default::default()
         }
     }
+}
+
+const fn default_include_hot_segments() -> bool {
+    true
 }
 
 #[derive(Clone)]

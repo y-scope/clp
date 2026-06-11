@@ -47,6 +47,15 @@ class CompressionTaskStatus(StatusIntEnum):
     KILLED = auto()
 
 
+class HotLogSegmentStatus(StatusIntEnum):
+    OPEN = 0
+    SEALED = auto()
+    COMPACTING = auto()
+    COMPACTED = auto()
+    FAILED = auto()
+    DELETED = auto()
+
+
 # When adding new states always add them to the end of this enum
 # and make necessary changes in the UI, Query Scheduler, and Reducer
 class QueryJobStatus(StatusIntEnum):

@@ -19,11 +19,28 @@ telemetry:
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
 
-## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+## log-ingestor config.
 #log_ingestor:
 #  host: "localhost"
 #  port: 3002
 #  logging_level: "INFO"
+#  realtime_logs:
+#    enabled: false
+#    hot_storage:
+#      type: "fs"
+#      directory: "var/data/realtime-logs"
+#    otlp:
+#      enabled: true
+#      max_request_bytes: 10485760
+#    segment:
+#      seal_threshold_bytes: 134217728
+#      seal_timeout_sec: 900
+#      file_flush_interval_ms: 1000
+#      watermark_publish_interval_ms: 1000
+#      watermark_publish_threshold_bytes: 4194304
+#      channel_capacity: 1024
+#    compaction:
+#      raw_retention_after_compaction_sec: 0
 
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.

@@ -1,6 +1,9 @@
 {{- if and
   (.Values.clpConfig.log_ingestor)
-  (eq .Values.clpConfig.logs_input.type "s3") }}
+  (or
+    (eq .Values.clpConfig.logs_input.type "s3")
+    .Values.clpConfig.log_ingestor.realtime_logs.enabled
+  ) }}
 apiVersion: "v1"
 kind: "Service"
 metadata:

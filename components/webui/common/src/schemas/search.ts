@@ -15,6 +15,7 @@ import {
 const QueryJobCreationSchema = Type.Object({
     datasets: Type.Array(Type.String()),
     ignoreCase: Type.Boolean(),
+    includeHotSegments: Type.Optional(Type.Boolean()),
     queryString: StringSchema,
     timeRangeBucketSizeMillis: Type.Integer(),
     timestampBegin: Type.Union([Type.Null(),

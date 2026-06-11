@@ -113,6 +113,7 @@ class SearchJobConfig(QueryJobConfig):
     network_address: tuple[str, int] | None = None
     aggregation_config: AggregationConfig | None = None
     write_to_file: bool = False
+    include_hot_segments: bool = True
 
     @field_validator("network_address")
     @classmethod

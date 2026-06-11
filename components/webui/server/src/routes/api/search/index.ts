@@ -68,6 +68,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
+                includeHotSegments = true,
                 timeRangeBucketSizeMillis,
                 queryString,
             } = request.body;
@@ -79,6 +80,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     null,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
+                include_hot_segments: includeHotSegments,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,
                 query_string: queryString,
             };
@@ -97,6 +99,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 aggregationJobId = await QueryJobDbManager.submitJob(
                     {
                         ...args,
+                        include_hot_segments: false,
                         aggregation_config: {
                             count_by_time_bucket_size: timeRangeBucketSizeMillis,
                         },

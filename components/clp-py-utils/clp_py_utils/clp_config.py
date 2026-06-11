@@ -55,6 +55,7 @@ QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
+HOT_LOG_SEGMENTS_TABLE_NAME = "hot_log_segments"
 
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
@@ -65,6 +66,7 @@ CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yaml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
 CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+CLP_DEFAULT_REALTIME_LOGS_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "realtime-logs"
 CLP_DEFAULT_STREAMS_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 CLP_DEFAULT_LOG_DIRECTORY_PATH = pathlib.Path("var") / "log"
@@ -693,6 +695,13 @@ class StreamFsStorage(FsStorage):
         self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_DIRECTORY_PATH
 
 
+class RealtimeLogsHotStorage(FsStorage):
+    directory: SerializablePath = CLP_DEFAULT_REALTIME_LOGS_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_REALTIME_LOGS_DIRECTORY_PATH
+
+
 class ArchiveS3Storage(S3Storage):
     staging_directory: SerializablePath = CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
 
@@ -796,10 +805,43 @@ class ApiServer(BaseModel):
     default_max_num_query_results: int = 1000
 
 
+class RealtimeLogsOtlp(BaseModel):
+    enabled: bool = True
+    max_request_bytes: PositiveInt = 10 * 1024 * 1024
+
+
+class RealtimeLogsSegment(BaseModel):
+    seal_threshold_bytes: PositiveInt = 128 * 1024 * 1024
+    seal_timeout_sec: PositiveInt = 15 * 60
+    file_flush_interval_ms: PositiveInt = 1000
+    watermark_publish_interval_ms: PositiveInt = 1000
+    watermark_publish_threshold_bytes: PositiveInt = 4 * 1024 * 1024
+    channel_capacity: PositiveInt = 1024
+
+
+class RealtimeLogsCompaction(BaseModel):
+    raw_retention_after_compaction_sec: NonNegativeInt = 0
+
+
+class RealtimeLogs(BaseModel):
+    enabled: bool = False
+    hot_storage: RealtimeLogsHotStorage = RealtimeLogsHotStorage()
+    otlp: RealtimeLogsOtlp = RealtimeLogsOtlp()
+    segment: RealtimeLogsSegment = RealtimeLogsSegment()
+    compaction: RealtimeLogsCompaction = RealtimeLogsCompaction()
+
+    def make_config_paths_absolute(self, clp_home: pathlib.Path):
+        self.hot_storage.make_config_paths_absolute(clp_home)
+
+    def transform_for_container(self):
+        self.hot_storage.transform_for_container()
+
+
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
     logging_level: LoggingLevelRust = "INFO"
+    realtime_logs: RealtimeLogs = RealtimeLogs()
 
 
 class Presto(BaseModel):
@@ -882,6 +924,8 @@ class ClpConfig(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         if StorageType.FS == self.logs_input.type:
             self.logs_input.make_config_paths_absolute(clp_home)
+        if self.log_ingestor is not None:
+            self.log_ingestor.realtime_logs.make_config_paths_absolute(clp_home)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.storage.make_config_paths_absolute(clp_home)
         self.stream_output.storage.make_config_paths_absolute(clp_home)
@@ -1107,6 +1151,8 @@ class ClpConfig(BaseModel):
         if self.aws_config_directory is not None:
             self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
         self.logs_input.transform_for_container()
+        if self.log_ingestor is not None:
+            self.log_ingestor.realtime_logs.transform_for_container()
         self.archive_output.storage.transform_for_container()
         self.stream_output.storage.transform_for_container()
 

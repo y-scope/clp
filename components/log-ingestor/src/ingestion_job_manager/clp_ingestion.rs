@@ -156,11 +156,16 @@ impl ClpIngestionJobContext {
 /// Connector for managing ingestion jobs in CLP DB.
 pub struct ClpDbIngestionConnector {
     db_pool: MySqlPool,
-    aws_authentication: AwsAuthentication,
+    aws_authentication: Option<AwsAuthentication>,
     archive_output_config: ArchiveOutput,
 }
 
 impl ClpDbIngestionConnector {
+    #[must_use]
+    pub fn db_pool(&self) -> MySqlPool {
+        self.db_pool.clone()
+    }
+
     /// Creates a connection to CLP DB for ingestion.
     ///
     /// # Returns
@@ -181,22 +186,13 @@ impl ClpDbIngestionConnector {
     /// * Forwards [`Self::create_tables`]'s return values on failure.
     /// * Forwards [`Self::get_unfinished_compression_jobs`]'s return values on failure.
     /// * Forwards [`Self::load_ingestion_jobs`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the logs input type is unsupported ([`LogsInput::Fs`]).
     pub async fn connect(
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<(Self, LogIngestorRecoveryContext)> {
         let aws_authentication = match clp_config.logs_input {
-            LogsInput::S3 { config } => config.aws_authentication,
-            LogsInput::Fs { .. } => {
-                panic!(
-                    "Invalid CLP config: Unsupported logs input type. The current implementation \
-                     only supports S3 input."
-                );
-            }
+            LogsInput::S3 { config } => Some(config.aws_authentication),
+            LogsInput::Fs { .. } => None,
         };
 
         let mysql_pool = clp_rust_utils::database::mysql::create_clp_db_mysql_pool(
@@ -384,6 +380,7 @@ impl ClpDbIngestionConnector {
     ///   * [`INGESTION_JOB_TABLE_NAME`] table creation query execution fails.
     ///   * [`INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME`] table creation query execution fails.
     ///   * [`INGESTED_S3_OBJECT_METADATA_TABLE_NAME`] table creation query execution fails.
+    ///   * [`HOT_LOG_SEGMENTS_TABLE_NAME`] table creation query execution fails.
     async fn create_tables(db_pool: &MySqlPool) -> anyhow::Result<()> {
         sqlx::query(ingestion_job_table_creation_query().as_str())
             .execute(db_pool)
@@ -394,6 +391,10 @@ impl ClpDbIngestionConnector {
             .await?;
 
         sqlx::query(ingested_s3_object_metadata_table_creation_query().as_str())
+            .execute(db_pool)
+            .await?;
+
+        sqlx::query(hot_log_segments_table_creation_query().as_str())
             .execute(db_pool)
             .await?;
 
@@ -423,10 +424,13 @@ impl ClpDbIngestionConnector {
         };
         let base_config = config.as_base_config();
         let buffer_config = config.as_buffer_config();
+        let Some(aws_authentication) = self.aws_authentication.clone() else {
+            anyhow::bail!("Cannot create an S3 ingestion context without S3 logs input config.");
+        };
 
         let submitter = CompressionJobSubmitter::new(
             compression_state.clone(),
-            self.aws_authentication.clone(),
+            aws_authentication,
             &self.archive_output_config,
             base_config,
         );
@@ -1084,6 +1088,12 @@ impl ClpCompressionState {
 
         let object_metadata_ids: &[S3ObjectMetadataId] = match &io_config.input {
             InputConfig::S3ObjectMetadataInputConfig { config } => &config.s3_object_metadata_ids,
+            InputConfig::FsInputConfig { .. } => {
+                unreachable!(
+                    "S3 ingestion compression submission only supports \
+                     `S3ObjectMetadataInputConfig`"
+                )
+            }
             InputConfig::S3InputConfig { .. } => {
                 unreachable!("compression submission only supports `S3ObjectMetadataInputConfig`")
             }
@@ -1355,6 +1365,7 @@ impl_sqlx_type!(IngestedS3ObjectMetadataStatus => str);
 const INGESTION_JOB_TABLE_NAME: &str = "ingestion_job";
 const INGESTION_JOB_S3_SCANNER_STATE_TABLE_NAME: &str = "ingestion_job_s3_scanner_state";
 const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
+pub const HOT_LOG_SEGMENTS_TABLE_NAME: &str = "hot_log_segments";
 
 /// The query to create the table for CLP ingestion jobs.
 #[must_use]
@@ -1425,6 +1436,37 @@ CREATE TABLE IF NOT EXISTS `{table}` (
         status_enum = IngestedS3ObjectMetadataStatus::format_as_sql_enum(),
         default_status = IngestedS3ObjectMetadataStatus::Buffered,
         compression_job_table = crate::compression::CLP_COMPRESSION_JOB_TABLE_NAME,
+    )
+}
+
+/// The query to create the table for realtime hot log segments.
+#[must_use]
+fn hot_log_segments_table_creation_query() -> String {
+    format!(
+        r"
+CREATE TABLE IF NOT EXISTS `{HOT_LOG_SEGMENTS_TABLE_NAME}` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `dataset` VARCHAR(255) NOT NULL,
+    `status` INT NOT NULL DEFAULT '0',
+    `storage_type` VARCHAR(32) NOT NULL,
+    `locator` TEXT NOT NULL,
+    `begin_timestamp` BIGINT NULL DEFAULT NULL,
+    `end_timestamp` BIGINT NULL DEFAULT NULL,
+    `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `update_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `sealed_time` DATETIME(3) NULL DEFAULT NULL,
+    `compacted_time` DATETIME(3) NULL DEFAULT NULL,
+    `size_bytes` BIGINT NOT NULL DEFAULT '0',
+    `record_count` BIGINT NOT NULL DEFAULT '0',
+    `committed_end_offset` BIGINT NOT NULL DEFAULT '0',
+    `generation` BIGINT NOT NULL DEFAULT '0',
+    `compression_job_id` INT NULL DEFAULT NULL,
+    `compressed_archive_id` VARCHAR(255) NULL DEFAULT NULL,
+    `error` TEXT NULL DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `HOT_LOG_SEGMENTS_SEARCH` (`dataset`, `status`, `end_timestamp`) USING BTREE,
+    INDEX `HOT_LOG_SEGMENTS_STATUS` (`status`) USING BTREE
+);",
     )
 }
 

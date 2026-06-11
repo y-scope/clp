@@ -1,5 +1,7 @@
 import datetime
 import os
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -209,6 +211,132 @@ def upload_results_to_s3(
     return
 
 
+def _copy_hot_segment_snapshot(
+    locator: str,
+    snapshot_end_offset: int,
+    output_path: Path,
+) -> None:
+    remaining = snapshot_end_offset
+    with open(locator, "rb") as src_file, open(output_path, "wb") as dst_file:
+        while remaining > 0:
+            chunk = src_file.read(min(1024 * 1024, remaining))
+            if len(chunk) == 0:
+                break
+            dst_file.write(chunk)
+            remaining -= len(chunk)
+
+
+def _append_search_options(
+    command: list[str],
+    search_config: SearchJobConfig,
+    results_cache_uri: str,
+    results_collection: str,
+    dataset: str | None,
+) -> None:
+    command.append(search_config.query_string)
+    if search_config.begin_timestamp is not None:
+        command.append("--tge")
+        command.append(str(search_config.begin_timestamp))
+    if search_config.end_timestamp is not None:
+        command.append("--tle")
+        command.append(str(search_config.end_timestamp))
+    if search_config.ignore_case:
+        command.append("--ignore-case")
+    command.extend(
+        (
+            "results-cache",
+            "--uri",
+            results_cache_uri,
+            "--collection",
+            results_collection,
+            "--max-num-results",
+            str(search_config.max_num_results),
+        )
+    )
+    if dataset is not None:
+        command.extend(("--dataset", dataset))
+
+
+def _run_hot_jsonl_search_task(
+    sql_adapter: SqlAdapter,
+    logger,
+    clp_logs_dir: Path,
+    clp_home: Path,
+    worker_config: WorkerConfig,
+    search_config: SearchJobConfig,
+    results_cache_uri: str,
+    job_id: str,
+    task_id: int,
+    start_time: datetime.datetime,
+    dataset: str | None,
+    locator: str | None,
+    snapshot_end_offset: int | None,
+) -> dict[str, Any]:
+    if StorageEngine.CLP_S != worker_config.package.storage_engine:
+        logger.error("Hot JSONL search is only supported for the clp-s storage engine.")
+        return report_task_failure(sql_adapter=sql_adapter, task_id=task_id, start_time=start_time)
+    if locator is None or snapshot_end_offset is None:
+        logger.error("Hot JSONL search target is missing locator or snapshot_end_offset.")
+        return report_task_failure(sql_adapter=sql_adapter, task_id=task_id, start_time=start_time)
+
+    with tempfile.TemporaryDirectory(prefix=f"clp-hot-search-{job_id}-{task_id}-") as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        hot_snapshot_path = tmp_path / "hot-segment.jsonl"
+        temp_archives_dir = tmp_path / "archives"
+        temp_archives_dir.mkdir()
+        _copy_hot_segment_snapshot(locator, snapshot_end_offset, hot_snapshot_path)
+
+        compress_command = [
+            str(clp_home / "bin" / "clp-s"),
+            "c",
+            str(temp_archives_dir),
+            str(hot_snapshot_path),
+            "--timestamp-key",
+            "timestamp",
+        ]
+        logger.info(f"Running hot JSONL snapshot compression: {' '.join(compress_command)}")
+        compress_result = subprocess.run(
+            compress_command,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if compress_result.returncode != 0:
+            logger.error(
+                "Hot JSONL snapshot compression failed with return_code=%s, stderr=%s",
+                compress_result.returncode,
+                compress_result.stderr,
+            )
+            return report_task_failure(
+                sql_adapter=sql_adapter, task_id=task_id, start_time=start_time
+            )
+
+        task_command = [
+            str(clp_home / "bin" / "clp-s"),
+            "s",
+            str(temp_archives_dir),
+        ]
+        _append_search_options(
+            task_command,
+            search_config,
+            results_cache_uri,
+            job_id,
+            dataset,
+        )
+        task_results, _ = run_query_task(
+            sql_adapter=sql_adapter,
+            logger=logger,
+            clp_logs_dir=clp_logs_dir,
+            task_command=task_command,
+            env_vars=None,
+            task_name="hot-jsonl-search",
+            job_id=job_id,
+            task_id=task_id,
+            start_time=start_time,
+        )
+        return task_results.model_dump()
+
+
 def search_entry_point(
     job_id: str,
     task_id: int,
@@ -217,6 +345,10 @@ def search_entry_point(
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
     dataset: str | None = None,
+    target_type: str = "archive",
+    hot_segment_id: int | None = None,
+    locator: str | None = None,
+    snapshot_end_offset: int | None = None,
 ) -> dict[str, Any]:
     task_name = "search"
 
@@ -243,6 +375,23 @@ def search_entry_point(
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
     search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
+
+    if "hot_jsonl_segment" == target_type:
+        return _run_hot_jsonl_search_task(
+            sql_adapter=sql_adapter,
+            logger=logger,
+            clp_logs_dir=clp_logs_dir,
+            clp_home=clp_home,
+            worker_config=worker_config,
+            search_config=search_config,
+            results_cache_uri=results_cache_uri,
+            job_id=job_id,
+            task_id=task_id,
+            start_time=start_time,
+            dataset=dataset,
+            locator=locator,
+            snapshot_end_offset=snapshot_end_offset,
+        )
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
@@ -297,6 +446,10 @@ def search(
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
     dataset: str | None = None,
+    target_type: str = "archive",
+    hot_segment_id: int | None = None,
+    locator: str | None = None,
+    snapshot_end_offset: int | None = None,
 ) -> dict[str, Any]:
     try:
         return search_entry_point(
@@ -307,6 +460,10 @@ def search(
             clp_metadata_db_conn_params,
             results_cache_uri,
             dataset,
+            target_type,
+            hot_segment_id,
+            locator,
+            snapshot_end_offset,
         )
     except SoftTimeLimitExceeded:
         logger.exception(f"Search task job_id={job_id} task_id={task_id} exceeded soft time limit.")

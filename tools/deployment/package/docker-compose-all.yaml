@@ -323,6 +323,7 @@ services:
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
+      - "${CLP_REALTIME_LOGS_DIR_HOST:-empty}:/var/data/realtime-logs"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
     command: [
       "python3",
@@ -509,6 +510,7 @@ services:
       - *volume_clp_logs
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives:ro"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
+      - "${CLP_REALTIME_LOGS_DIR_HOST:-empty}:/var/data/realtime-logs:ro"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     command: [
@@ -536,6 +538,7 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - "${CLP_REALTIME_LOGS_DIR_HOST:-empty}:/var/data/realtime-logs"
     depends_on:
       query-scheduler:
         condition: "service_healthy"
@@ -650,6 +653,7 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - "${CLP_REALTIME_LOGS_DIR_HOST:-empty}:/var/data/realtime-logs"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"

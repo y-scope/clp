@@ -31,6 +31,7 @@ import pymongo
 from clp_py_utils.clp_config import (
     ClpConfig,
     Database,
+    HOT_LOG_SEGMENTS_TABLE_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
@@ -51,6 +52,7 @@ from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
 from job_orchestration.scheduler.constants import (
+    HotLogSegmentStatus,
     QueryJobStatus,
     QueryJobType,
     QueryTaskStatus,
@@ -122,9 +124,8 @@ class DispatchExecutor:
         if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
             raise NotImplementedError(f"Unexpected job type: {job_type}")
 
-        archive_ids = [a["archive_id"] for a in archives]
         with contextlib.closing(DispatchExecutor._db_conn_pool.connect()) as db_conn:
-            task_ids = insert_query_tasks_into_db(db_conn, job_id, archive_ids)
+            task_ids = insert_query_tasks_into_db(db_conn, job_id, archives)
 
         celery_task_group = celery.group(
             search.s(
@@ -133,6 +134,10 @@ class DispatchExecutor:
                 task_id=task_ids[i],
                 job_config_blob=job_config_blob,
                 dataset=archives[i].get("dataset"),
+                target_type=archives[i].get("target_type", "archive"),
+                hot_segment_id=archives[i].get("hot_segment_id"),
+                locator=archives[i].get("locator"),
+                snapshot_end_offset=archives[i].get("snapshot_end_offset"),
                 clp_metadata_db_conn_params=DispatchExecutor._clp_metadata_db_conn_params,
                 results_cache_uri=DispatchExecutor._results_cache_uri,
             )
@@ -437,16 +442,31 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 logger.error(f"Failed to cancel job {job_id}.")
 
 
-def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[int]:
+def insert_query_tasks_into_db(db_conn, job_id, targets: list[dict]) -> list[int]:
     task_ids = []
     with contextlib.closing(db_conn.cursor()) as cursor:
-        for archive_id in archive_ids:
+        for target in targets:
             cursor.execute(
                 f"""
                 INSERT INTO {QUERY_TASKS_TABLE_NAME}
-                (job_id, archive_id)
-                VALUES({job_id}, '{archive_id}')
-                """
+                (
+                    job_id,
+                    archive_id,
+                    target_type,
+                    target_id,
+                    hot_segment_id,
+                    snapshot_end_offset
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    job_id,
+                    target.get("archive_id"),
+                    target.get("target_type", "archive"),
+                    target.get("target_id", target.get("archive_id")),
+                    target.get("hot_segment_id"),
+                    target.get("snapshot_end_offset"),
+                ),
             )
             task_ids.append(cursor.lastrowid)
     db_conn.commit()
@@ -474,7 +494,10 @@ def _get_archives_for_search_without_datasets(
         where_clause = " WHERE " + " AND ".join(filter_clauses)
 
     table = get_archives_table_name(table_prefix, None)
-    query = f"SELECT id AS archive_id, end_timestamp FROM {table}{where_clause}"
+    query = (
+        f"SELECT id AS archive_id, id AS target_id, 'archive' AS target_type, end_timestamp "
+        f"FROM {table}{where_clause}"
+    )
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
@@ -507,13 +530,102 @@ def get_archives_for_search(
     for ds in datasets:
         table = get_archives_table_name(table_prefix, ds)
         union_parts.append(
-            f"SELECT id AS archive_id, end_timestamp, '{ds}' AS dataset FROM {table}{where_clause}"
+            "SELECT id AS archive_id, id AS target_id, 'archive' AS target_type, "
+            f"end_timestamp, '{ds}' AS dataset FROM {table}{where_clause}"
         )
     query = " UNION ALL ".join(union_parts) + " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query)
         return cursor.fetchall()
+
+
+@exception_default_value(default=[])
+def get_hot_segments_for_search(
+    db_conn,
+    search_config: SearchJobConfig,
+    archive_end_ts_lower_bound: int | None,
+    datasets: list[str],
+):
+    filter_clauses = [
+        "status IN (%s, %s, %s)",
+        "committed_end_offset > 0",
+    ]
+    params: list[Any] = [
+        int(HotLogSegmentStatus.OPEN),
+        int(HotLogSegmentStatus.SEALED),
+        int(HotLogSegmentStatus.COMPACTING),
+    ]
+    if search_config.end_timestamp is not None:
+        filter_clauses.append("(begin_timestamp IS NULL OR begin_timestamp <= %s)")
+        params.append(search_config.end_timestamp)
+    if search_config.begin_timestamp is not None:
+        filter_clauses.append("(end_timestamp IS NULL OR end_timestamp >= %s)")
+        params.append(search_config.begin_timestamp)
+    if archive_end_ts_lower_bound is not None:
+        filter_clauses.append("(end_timestamp IS NULL OR end_timestamp >= %s)")
+        params.append(archive_end_ts_lower_bound)
+    if len(datasets) > 0:
+        placeholders = ", ".join(["%s"] * len(datasets))
+        filter_clauses.append(f"dataset IN ({placeholders})")
+        params.extend(datasets)
+
+    where_clause = " WHERE " + " AND ".join(filter_clauses)
+    query = f"""
+        SELECT
+            CONCAT('hot:', id) AS archive_id,
+            CAST(id AS CHAR) AS target_id,
+            'hot_jsonl_segment' AS target_type,
+            id AS hot_segment_id,
+            locator,
+            committed_end_offset AS snapshot_end_offset,
+            dataset,
+            COALESCE(end_timestamp, 0) AS end_timestamp
+        FROM {HOT_LOG_SEGMENTS_TABLE_NAME}
+        {where_clause}
+        ORDER BY end_timestamp DESC
+    """
+
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        cursor.execute(query, params)
+        return cursor.fetchall()
+
+
+@exception_default_value(default=set())
+def fetch_existing_hot_datasets(db_cursor) -> set[str]:
+    db_cursor.execute(
+        f"""
+        SELECT DISTINCT `dataset`
+        FROM `{HOT_LOG_SEGMENTS_TABLE_NAME}`
+        WHERE `committed_end_offset` > 0
+        """
+    )
+    return {row["dataset"] for row in db_cursor.fetchall()}
+
+
+def get_search_targets_for_search(
+    db_conn,
+    table_prefix: str,
+    search_config: SearchJobConfig,
+    archive_end_ts_lower_bound: int | None,
+    datasets: list[str] | None,
+):
+    if datasets is None:
+        return _get_archives_for_search_without_datasets(
+            db_conn, table_prefix, search_config, archive_end_ts_lower_bound
+        )
+
+    targets = get_archives_for_search(
+        db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
+    )
+    if search_config.include_hot_segments and search_config.aggregation_config is None:
+        targets.extend(
+            get_hot_segments_for_search(
+                db_conn, search_config, archive_end_ts_lower_bound, datasets
+            )
+        )
+        targets.sort(key=lambda target: target["end_timestamp"], reverse=True)
+    return targets
 
 
 def get_archive_and_file_split_ids_for_ir_extraction(
@@ -602,6 +714,10 @@ def get_task_group_for_job(
                 task_id=task_ids[i],
                 job_config_blob=job.get_cached_config_blob(),
                 dataset=archives[i].get("dataset"),
+                target_type=archives[i].get("target_type", "archive"),
+                hot_segment_id=archives[i].get("hot_segment_id"),
+                locator=archives[i].get("locator"),
+                snapshot_end_offset=archives[i].get("snapshot_end_offset"),
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
             )
@@ -633,8 +749,7 @@ def dispatch_query_job(
     results_cache_uri: str,
 ) -> None:
     global active_jobs
-    archive_ids = [a["archive_id"] for a in archives]
-    task_ids = insert_query_tasks_into_db(db_conn, job.id, archive_ids)
+    task_ids = insert_query_tasks_into_db(db_conn, job.id, archives)
 
     task_group = get_task_group_for_job(
         archives,
@@ -1317,6 +1432,13 @@ def _handle_new_search_job(
         if len(missing) > 0:
             existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
             missing = set(datasets) - existing_datasets
+            if (
+                search_config.include_hot_segments
+                and search_config.aggregation_config is None
+                and len(missing) > 0
+            ):
+                hot_datasets = fetch_existing_hot_datasets(db_cursor)
+                missing -= hot_datasets
             if len(missing) > 0:
                 logger.error("Datasets %s don't exist.", missing)
                 if not set_job_or_task_status(
@@ -1337,15 +1459,13 @@ def _handle_new_search_job(
             job_creation_time - archive_retention_period * MIN_TO_SECONDS
         )
 
-    if datasets is None:
-        # CLP-Text does not support datasets.
-        archives_for_search = _get_archives_for_search_without_datasets(
-            db_conn, table_prefix, search_config, archive_end_ts_lower_bound
-        )
-    else:
-        archives_for_search = get_archives_for_search(
-            db_conn, table_prefix, search_config, archive_end_ts_lower_bound, datasets
-        )
+    archives_for_search = get_search_targets_for_search(
+        db_conn,
+        table_prefix,
+        search_config,
+        archive_end_ts_lower_bound,
+        datasets,
+    )
     if len(archives_for_search) == 0:
         if set_job_or_task_status(
             db_conn,

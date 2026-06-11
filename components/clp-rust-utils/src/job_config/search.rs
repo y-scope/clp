@@ -8,7 +8,7 @@ pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 /// # NOTE
 ///
 /// `aggregation_config` is currently unused and thus uses a placeholder unit type.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
     pub datasets: Option<Vec<String>>,
@@ -21,6 +21,25 @@ pub struct SearchJobConfig {
     pub network_address: Option<(String, u16)>,
     pub aggregation_config: Option<()>,
     pub write_to_file: bool,
+    pub include_hot_segments: bool,
+}
+
+impl Default for SearchJobConfig {
+    fn default() -> Self {
+        Self {
+            datasets: None,
+            query_string: String::new(),
+            max_num_results: 0,
+            begin_timestamp: None,
+            end_timestamp: None,
+            ignore_case: false,
+            path_filter: None,
+            network_address: None,
+            aggregation_config: None,
+            write_to_file: false,
+            include_hot_segments: true,
+        }
+    }
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.

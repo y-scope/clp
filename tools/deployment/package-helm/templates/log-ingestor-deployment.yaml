@@ -1,6 +1,9 @@
 {{- if and
   (.Values.clpConfig.log_ingestor)
-  (eq .Values.clpConfig.logs_input.type "s3") }}
+  (or
+    (eq .Values.clpConfig.logs_input.type "s3")
+    .Values.clpConfig.log_ingestor.realtime_logs.enabled
+  ) }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -60,6 +63,13 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if .Values.clpConfig.log_ingestor.realtime_logs.enabled }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "realtime-logs"
+              ) | quote }}
+              mountPath: "/var/data/realtime-logs"
+            {{- end }}
           command: [
             "/opt/clp/bin/log-ingestor",
             "--config", "/etc/clp-config.yaml",
@@ -78,4 +88,11 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if .Values.clpConfig.log_ingestor.realtime_logs.enabled }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "realtime-logs"
+          ) | nindent 10 }}
+        {{- end }}
 {{- end }}

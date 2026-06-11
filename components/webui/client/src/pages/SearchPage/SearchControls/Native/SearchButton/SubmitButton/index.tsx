@@ -79,6 +79,7 @@ const SubmitButton = () => {
         handleQuerySubmit({
             datasets: selectedDatasets,
             ignoreCase: false === queryIsCaseSensitive,
+            includeHotSegments: true,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             ...(
