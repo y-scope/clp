@@ -139,6 +139,7 @@ bool search_archive(
     auto const& query = command_line_arguments.get_query();
     if (nullptr != telemetry_span) {
         telemetry_span->set_query_context(query);
+        telemetry_span->set_archive_context(archive_reader->get_archive_id());
     }
     auto const record_error = [&](std::string_view message) {
         if (nullptr != telemetry_span) {
