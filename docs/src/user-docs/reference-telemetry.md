@@ -43,6 +43,7 @@ You can configure the interval at which metrics are exported for each instrument
 :::{tab-item} Docker Compose
 :sync: docker
 Edit `clp-config.yaml` to set the interval per component:
+
 ```yaml
 compression_scheduler:
   telemetry_update_interval_ms: 60000
@@ -50,13 +51,16 @@ compression_scheduler:
 api_server:
   telemetry_update_interval_ms: 60000
 ```
+
 :::
 :::{tab-item} Kubernetes
 :sync: k8s
 Pass the config via `--set`:
+
 ```bash
 helm install clp clp/clp --set clpConfig.compression_scheduler.telemetry_update_interval_ms=60000
 ```
+
 :::
 ::::
 
