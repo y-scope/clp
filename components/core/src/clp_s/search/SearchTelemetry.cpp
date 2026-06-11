@@ -42,6 +42,7 @@ constexpr std::string_view cAttrError{"clp.search.error"};
 constexpr std::string_view cAttrQueryHash{"clp.search.query_hash"};
 constexpr std::string_view cAttrQueryId{"clp.search.query_id"};
 constexpr std::string_view cAttrTaskId{"clp.search.task_id"};
+constexpr std::string_view cAttrArchiveIdHash{"clp.search.archive_id_hash"};
 constexpr std::string_view cAttrColumnTypesPureWildcard{
         "clp.query_shape.column_types.pure_wildcard"
 };
@@ -88,6 +89,14 @@ constexpr std::string_view cAttrTerminationStage{"clp.search.termination_stage"}
 [[nodiscard]] auto to_int64_attribute(uint64_t value) -> int64_t {
     constexpr auto cMaxInt64{static_cast<uint64_t>(std::numeric_limits<int64_t>::max())};
     return value > cMaxInt64 ? std::numeric_limits<int64_t>::max() : static_cast<int64_t>(value);
+}
+
+/**
+ * @param value
+ * @return A non-reversible 64-bit hash of `value` as a signed span attribute.
+ */
+[[nodiscard]] auto to_hash_attribute(std::string_view value) -> int64_t {
+    return static_cast<int64_t>(XXH3_64bits(value.data(), value.size()));
 }
 
 /**
@@ -214,10 +223,7 @@ public:
     ~Impl() { m_span->End(); }
 
     auto set_query_context(std::string_view query) -> void {
-        m_span->SetAttribute(
-                to_nostd_string_view(cAttrQueryHash),
-                static_cast<int64_t>(XXH3_64bits(query.data(), query.size()))
-        );
+        m_span->SetAttribute(to_nostd_string_view(cAttrQueryHash), to_hash_attribute(query));
         // The environment is only read during single-threaded search setup.
         // NOLINTNEXTLINE(concurrency-mt-unsafe)
         if (char const* const query_id{std::getenv("CLP_QUERY_ID")}; nullptr != query_id) {
@@ -227,6 +233,13 @@ public:
         if (char const* const task_id{std::getenv("CLP_TASK_ID")}; nullptr != task_id) {
             m_span->SetAttribute(to_nostd_string_view(cAttrTaskId), task_id);
         }
+    }
+
+    auto set_archive_context(std::string_view archive_id) -> void {
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrArchiveIdHash),
+                to_hash_attribute(archive_id)
+        );
     }
 
     auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
@@ -337,6 +350,10 @@ SearchTelemetrySpan::~SearchTelemetrySpan() = default;
 
 auto SearchTelemetrySpan::set_query_context(std::string_view query) -> void {
     m_impl->set_query_context(query);
+}
+
+auto SearchTelemetrySpan::set_archive_context(std::string_view archive_id) -> void {
+    m_impl->set_archive_context(archive_id);
 }
 
 auto SearchTelemetrySpan::set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {

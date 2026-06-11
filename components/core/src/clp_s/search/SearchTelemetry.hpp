@@ -95,6 +95,13 @@ public:
     auto set_query_context(std::string_view query) -> void;
 
     /**
+     * Records the archive-identity attributes: a non-reversible hash of the archive ID.
+     *
+     * @param archive_id The ID of the archive being searched.
+     */
+    auto set_archive_context(std::string_view archive_id) -> void;
+
+    /**
      * Records the query-shape metrics. These are collected from the preprocessed query (the form
      * that gets evaluated, in which e.g. EXISTS predicates appear).
      *
