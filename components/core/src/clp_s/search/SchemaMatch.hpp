@@ -117,20 +117,26 @@ private:
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
     /**
-     * Given a column and a list of rule names from a log-surgeon fully qualified name,
-     * appends only the non-common suffix (the part not already covered by the schema path
-     * from root_node_id up to LogMessage) to the column's descriptor list.
-     * @param column The original column descriptor.
+     * Resolves a CLPP leaf's rule-name path against the schema tree and produces column
+     * descriptors for each matching schema-tree node at the leaf position.
+     * Computes the common prefix between the column's existing descriptor tokens and the
+     * rule names, then resolves the remaining (non-overlapping) segments through the schema
+     * tree.
+     *
+     * @param column The original column descriptor triggering clpp decomposition.
      * @param root_node_id The schema node where decomposition is rooted.
      * @param rule_names The split rule names from the log-surgeon FQN.
-     * @return The new column with appended descriptors and the final schema node ID, or
-     * std::nullopt if any rule name cannot be resolved in the schema tree.
+     * @return A vector of (column, node_id) pairs, or std::nullopt if any rule name cannot be
+     * resolved in the schema tree.
      */
-    auto append_noncommon_rule_names(
+    auto resolve_leaf_rule_descriptors(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             SchemaNode::id_t root_node_id,
             std::vector<std::string_view> const& rule_names
-    ) -> std::optional<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>>;
+    )
+            -> std::optional<
+                    std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>>
+            >;
 
     /**
      * Builds the reverse mapping from log_shape_id to schema_id by scanning schemas
@@ -145,13 +151,13 @@ private:
     auto ensure_log_surgeon_parser_initialized() -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Finds a child schema node whose key name matches the given name.
+     * Finds all child schema nodes whose key name matches the given name.
      * @param parent_id The parent schema node ID.
      * @param key_name The key name to match.
-     * @return The child node ID, or std::nullopt if no child matches.
+     * @return A vector of matching child node IDs (may be empty).
      */
-    auto find_child_node_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
-            -> std::optional<SchemaNode::id_t>;
+    auto find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
+            -> std::vector<SchemaNode::id_t>;
 
     /**
      * Iterates the log shape dictionary and returns schema IDs whose log shapes match a

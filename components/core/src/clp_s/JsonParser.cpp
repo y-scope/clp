@@ -52,6 +52,7 @@
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/Utils.hpp>
 #include <clpp/DecomposedQuery.hpp>
+#include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 
@@ -183,16 +184,40 @@ JsonParser::JsonParser(JsonParserOption const& option)
             m_ruleset_text.append(buf.data(), bytes_read);
         }
 
-        auto* schema{log_surgeon::log_surgeon_schema_from_definition(
+        auto* builder{log_surgeon::log_surgeon_schema_builder_from_definition(
                 log_surgeon::CCharArray::from_string_view(m_ruleset_text)
         )};
-        if (nullptr == schema) {
+        if (nullptr == builder) {
             SPDLOG_ERROR(
-                    "Failed to create log surgeon parser from: \"{}\"",
+                    "Failed to create log surgeon specification builder from: \"{}\"",
                     option.ruleset_path.value().path
             );
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
+
+        for (auto const& encoding : clpp::cEncodingPatterns) {
+            if (nullptr
+                != log_surgeon::log_surgeon_schema_add_encoding(
+                        builder,
+                        log_surgeon::CCharArray::from_string_view(encoding.name),
+                        log_surgeon::CCharArray::from_string_view(encoding.pattern)
+                ))
+            {
+                SPDLOG_ERROR(
+                        "Failed to add log surgeon specification encoding: {} - \"{}\"",
+                        encoding.name,
+                        encoding.pattern
+                );
+                throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+            }
+        }
+
+        auto* schema{log_surgeon::log_surgeon_schema_builder_build(builder)};
+        if (nullptr == schema) {
+            SPDLOG_ERROR("Failed to build log surgeon specification.");
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+
         m_log_surgeon_parser = std::make_unique<log_surgeon::ParserHandle>(schema);
     }
     if (false == m_timestamp_key.empty()) {
@@ -207,8 +232,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
 
-        // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards in
-        // the timestamp column.
+        // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards
+        // in the timestamp column.
         auto column = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
                 m_timestamp_column,
                 m_timestamp_namespace
@@ -777,7 +802,8 @@ bool JsonParser::ingest() {
                 break;
             case FileType::LogText:
                 SPDLOG_ERROR(
-                        "Direct ingestion of unstructured logtext is not supported from input {}",
+                        "Direct ingestion of unstructured logtext is not supported from input "
+                        "{}",
                         path.path
                 );
                 std::ignore = m_archive_writer->close();
@@ -1216,8 +1242,8 @@ auto JsonParser::add_node_to_archive_and_translations(
 
     auto key_name = ir_node_to_add.get_key_name();
     if (autogen && constants::cRootNodeId == parent_node_id) {
-        // We adjust the name of the root of the auto-gen subtree to "@" in order to namespace the
-        // auto-gen subtree within the archive's schema tree.
+        // We adjust the name of the root of the auto-gen subtree to "@" in order to namespace
+        // the auto-gen subtree within the archive's schema tree.
         key_name = constants::cAutogenNamespace;
     }
     int const curr_node_archive_id
@@ -1517,113 +1543,39 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             );
         }
 
-        static auto const cIntSet{absl::flat_hash_set<std::string>{
-                // heuristic
-                "INT",
-                // hive 0426
-                "blk_id",
-                "blk_gen",
-                "used_memory_size",
-                "launcher_number",
-                "line_number",
-                "memory_size",
-                "num_vcores",
-                "size",
-                "port",
-                "fetcherID",
-                "reduceID",
-                "processTreeID",
-                // "durationSuffix", // regex needs better rule to use
-                // hive 0507
-                "cluster",
-                "jobSeq",
-                "task",
-                "attempt",
-                "appSeq",
-                "containerSeq",
-                "blockNum",
-                "genStamp",
-                "poolID",
-                "poolTimestamp",
-                "portNum",
-                "port",
-                "memory",
-                "vcores",
-                "done",
-                "total",
-                "opID",
-                "counterVal",
-                "readerID",
-                "handler",
-                "retries",
-                "pid",
-                "mapOutputSize",
-                "inMemMapOutputsCount",
-                "commitMemory",
-                "usedMemory",
-                "fetcherID",
-                "decompSize",
-                "compressedLen",
-                "assignedCount",
-                "startIndex",
-                "maxEvents",
-                "processTreePID",
-                "srcLine",
-                "framesOmitted",
-                "numMapOutputs",
-                "hiveOpIdx",
-                "recordsWritten",
-                "numSegments",
-                "segmentsLeft",
-                "opChildID",
-                // hadoop
-                "blockID",
-                "serverCallId",
-                "blockInfoVal",
-                "bracketedVal",
-                "clientBytes",
-                "clientOffset",
-                "exitStatus",
-                "exitStatus_2",
-                "kvReduce",
-                "kvDownstreams",
-                "kvSeqno",
-                "javaLineNum",
-                "masterKeyId",
-                "keyId",
-                // openstack has nothing??
-                // mongodb
-                "time_int",
-                "gen_int",
-                "metric_value",
-                "size_value",
-        }};
         auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
         auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
 
-        if (encoded_variable_t var{0};
-            cIntSet.contains(rule_name)
-            && clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                    lexeme,
-                    var
-            ))
-        {
-            m_current_schema.insert_unordered(
-                    m_archive_writer->add_node(parent_node_id, NodeType::Integer, rule_name)
-            );
-            m_current_parsed_message.add_unordered_value(var);
-        } else if (auto const float_node_id{try_add_float_value(lexeme, parent_node_id, rule_name)};
-                   float_node_id.has_value())
-        {
-            m_current_schema.insert_unordered(float_node_id.value());
-        } else {
-            m_current_schema.insert_unordered(m_archive_writer->add_node(
-                    parent_node_id,
-                    NodeType::VarString,
-                    rule_name
-            ));
+        SchemaNode::id_t node_id{0};
+        if (0 < match->encoding_idx) {
+            auto const matched_encodings{m_log_surgeon_parser->get_encoding(match->encoding_idx)};
+            for (auto const& encoding : matched_encodings) {
+                if (clpp::cFloatEncodingName == encoding) {
+                    if (auto const float_node_id{
+                                try_add_float_value(lexeme, parent_node_id, rule_name)
+                        };
+                        float_node_id.has_value())
+                    {
+                        node_id = float_node_id.value();
+                        break;
+                    }
+                } else if (clpp::cIntEncodingName == encoding) {
+                    if (encoded_variable_t var{0}; clp::EncodedVariableInterpreter::
+                                convert_string_to_representable_integer_var(lexeme, var))
+                    {
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::Integer, rule_name);
+                        m_current_parsed_message.add_unordered_value(var);
+                        break;
+                    }
+                }
+            }
+        }
+        if (0 == node_id) {
+            node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, rule_name);
             m_current_parsed_message.add_unordered_value(lexeme);
         }
+        m_current_schema.insert_unordered(node_id);
 
         log_shape.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
         log_shape.append(
@@ -1666,8 +1618,8 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             auto const new_size{
                     leaf_match->ffi_pointers.fully_qualified_name.as_cpp_view().size() + 2
             };
-            // clpp TODO: this is "dangerous" and should be fixed, but if the matches are hitting
-            // the boundary of size_t we probably have bigger problems.
+            // clpp TODO: this is "dangerous" and should be fixed, but if the matches are
+            // hitting the boundary of size_t we probably have bigger problems.
             auto const diff{static_cast<int64_t>(old_size) - static_cast<int64_t>(new_size)};
             for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
                 if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
@@ -1720,16 +1672,12 @@ auto JsonParser::get_parent_schema_node(
     m_current_schema.insert_unordered(node_id);
     return node_id;
 }
+
 auto JsonParser::try_add_float_value(
         std::string_view lexeme,
         SchemaNode::id_t parent_node_id,
         std::string_view rule_name
 ) -> std::optional<SchemaNode::id_t> {
-    static auto const cFloatSet{absl::flat_hash_set<std::string>{"FLOAT", "byteValue"}};
-    if (false == cFloatSet.contains(rule_name)) {
-        return std::nullopt;
-    }
-
     double double_value{};
     auto const* const lexeme_end{lexeme.data() + lexeme.size()};
     auto const result{std::from_chars(lexeme.data(), lexeme_end, double_value)};
@@ -1742,13 +1690,15 @@ auto JsonParser::try_add_float_value(
         if (false == float_format_result.has_error()
             && round_trip_is_identical(lexeme, double_value, float_format_result.value()))
         {
-            auto const node_id{m_archive_writer->add_node(
-                    parent_node_id, NodeType::FormattedFloat, rule_name)};
+            auto const node_id{
+                    m_archive_writer->add_node(parent_node_id, NodeType::FormattedFloat, rule_name)
+            };
             m_current_parsed_message.add_unordered_value(double_value, float_format_result.value());
             return node_id;
         }
-        auto const node_id{m_archive_writer->add_node(
-                parent_node_id, NodeType::DictionaryFloat, rule_name)};
+        auto const node_id{
+                m_archive_writer->add_node(parent_node_id, NodeType::DictionaryFloat, rule_name)
+        };
         m_current_parsed_message.add_unordered_value(std::string{lexeme});
         return node_id;
     }
