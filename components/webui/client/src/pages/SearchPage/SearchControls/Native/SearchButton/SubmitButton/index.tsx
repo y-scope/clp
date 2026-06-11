@@ -134,10 +134,7 @@ const SubmitButton = () => {
                     handleSubmitButtonClick().catch((err: unknown) => {
                         throw err;
                     });
-                }}
-            >
-                Search
-            </Button>
+                }}/>
         </Tooltip>
     );
 };
