@@ -95,13 +95,12 @@ def main(argv: list[str]) -> int:
         logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
     for i, reducer_log_file in enumerate(reducer_log_files):
         reducer_log_file.close()
-        # Dump the reducer log to sys.stderr so it's visible in container logs
+        # Dump the reducer log so it's visible in container logs
         log_file_path = logs_dir / f"reducer-{i}.log"
         if log_file_path.stat().st_size > 0:
-            sys.stderr.write(
-                f"--- Contents of {log_file_path.name} ---\n"
+            logger.info(
+                f"Contents of {log_file_path.name}:\n"
                 f"{log_file_path.read_text()}"
-                f"--- End of {log_file_path.name} ---\n"
             )
 
     logger.error("All reducers terminated")

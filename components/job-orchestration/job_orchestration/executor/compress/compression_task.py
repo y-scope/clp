@@ -4,7 +4,6 @@ import os
 import pathlib
 import shutil
 import subprocess
-import sys
 from contextlib import closing
 from typing import Any
 
@@ -560,12 +559,11 @@ def run_clp(
     finally:
         cleanup_temporary_files()
         stderr_log_file.close()
-        # Dump the stderr log to sys.stderr so it's visible in container logs
+        # Dump the stderr log so it's visible in container logs
         if stderr_log_path.stat().st_size > 0:
-            sys.stderr.write(
-                f"--- Contents of {stderr_log_path.name} ---\n"
+            logger.error(
+                f"Contents of {stderr_log_path.name}:\n"
                 f"{stderr_log_path.read_text()}"
-                f"--- End of {stderr_log_path.name} ---\n"
             )
 
     worker_output = {

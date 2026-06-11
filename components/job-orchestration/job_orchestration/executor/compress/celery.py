@@ -1,18 +1,9 @@
-import logging
-
-from celery import Celery, signals
+from celery import Celery
 
 from job_orchestration.executor.compress import celeryconfig
-from job_orchestration.executor.utils import add_container_log_handler
 
 app = Celery("compress")
 app.config_from_object(celeryconfig)
-
-
-@signals.after_setup_logger.connect
-def _on_after_setup_logger(logger: logging.Logger, **_kwargs: object) -> None:
-    add_container_log_handler(logger)
-
 
 if "__main__" == __name__:
     app.start()

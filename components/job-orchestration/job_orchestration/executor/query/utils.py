@@ -89,12 +89,11 @@ def run_query_task(
     stdout_data, _ = task_proc.communicate()
     return_code = task_proc.returncode
 
-    # Dump the stderr log to sys.stderr so it's visible in container logs
+    # Dump the stderr log so it's visible in container logs
     if clo_log_path.stat().st_size > 0:
-        sys.stderr.write(
-            f"--- Contents of {clo_log_path.name} ---\n"
+        logger.error(
+            f"Contents of {clo_log_path.name}:\n"
             f"{clo_log_path.read_text()}"
-            f"--- End of {clo_log_path.name} ---\n"
         )
 
     if 0 != return_code:
