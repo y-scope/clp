@@ -86,10 +86,13 @@ scheduling:
   # Worker
   compressionWorker:
     replicas: 1
+    # slotsPerPod: 8
   queryWorker:
     replicas: 1
+    # slotsPerPod: 2
   reducer:
     replicas: 1
+    # slotsPerPod: 2
   prestoWorker:
     replicas: 1
 

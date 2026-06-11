@@ -97,9 +97,41 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 {{- $compressionWorkerReplicas := $compressionWorkerScheduling.replicas | default 1 | int -}}
 {{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
 {{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
-{{- $workerConcurrency := .Values.workerConcurrency | default 8 | int -}}
-{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $workerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $workerConcurrency $timestampNs $reducerReplicas $timestampNs $workerConcurrency $timestampNs -}}
+{{- $compressionWorkerConcurrency := include "clp.compressionWorkerConcurrency" . | default 8 | int -}}
+{{- $queryWorkerConcurrency := include "clp.queryWorkerConcurrency" . | default 8 | int -}}
+{{- $reducerConcurrency := include "clp.reducerConcurrency" . | default 8 | int -}}
+{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $compressionWorkerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $queryWorkerConcurrency $timestampNs $reducerReplicas $timestampNs $reducerConcurrency $timestampNs -}}
 {{- end -}}
+
+{{/*
+Gets the effective concurrency for the compression worker.
+
+@param {object} . Root template context
+@return {string} The effective concurrency
+*/}}
+{{- define "clp.compressionWorkerConcurrency" -}}
+{{- coalesce .Values.scheduling.compressionWorker.slotsPerPod .Values.workerConcurrency -}}
+{{- end }}
+
+{{/*
+Gets the effective concurrency for the query worker.
+
+@param {object} . Root template context
+@return {string} The effective concurrency
+*/}}
+{{- define "clp.queryWorkerConcurrency" -}}
+{{- coalesce .Values.scheduling.queryWorker.slotsPerPod .Values.workerConcurrency -}}
+{{- end }}
+
+{{/*
+Gets the effective concurrency for the reducer.
+
+@param {object} . Root template context
+@return {string} The effective concurrency
+*/}}
+{{- define "clp.reducerConcurrency" -}}
+{{- coalesce .Values.scheduling.reducer.slotsPerPod .Values.workerConcurrency -}}
+{{- end }}
 
 {{/*
 Provides environment variables for telemetry (except service.name).

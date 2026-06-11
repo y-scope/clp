@@ -53,7 +53,7 @@ spec:
             "python3", "-u",
             "-m", "job_orchestration.reducer.reducer",
             "--config", "/etc/clp-config.yaml",
-            "--concurrency", "{{ .Values.workerConcurrency }}",
+            "--concurrency", "{{ include "clp.reducerConcurrency" . }}",
             "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
           ]
       volumes:
