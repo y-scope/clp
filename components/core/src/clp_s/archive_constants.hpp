@@ -44,6 +44,11 @@ constexpr std::string_view cFileSplitNumber{"_file_split_number"};
 constexpr std::string_view cArchiveCreatorId{"_archive_creator_id"};
 }  // namespace range_index
 
+namespace results_cache {
+// MongoDB's primary-key field, which is backed by a built-in unique index.
+constexpr char cDocId[]{"_id"};
+}  // namespace results_cache
+
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};
 constexpr char cStreamId[]{"stream_id"};
@@ -59,6 +64,10 @@ constexpr char cTimestamp[]{"timestamp"};
 constexpr char cMessage[]{"message"};
 constexpr char cArchiveId[]{"archive_id"};
 constexpr std::string_view cDataset{"dataset"};
+// Must match reducer::CountOperator::cRecordElementKey (enforced by a static_assert in
+// OutputHandlerImpl.cpp, which also documents how the two count-writing paths' document shapes
+// differ).
+constexpr char cCount[]{"count"};
 }  // namespace results_cache::search
 }  // namespace clp_s::constants
 #endif  // CLP_S_ARCHIVE_CONSTANTS_HPP

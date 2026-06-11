@@ -1,3 +1,4 @@
+
 #include "kv_ir_search.hpp"
 
 #include <cerrno>
@@ -246,10 +247,18 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
-    if (std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
-                command_line_arguments.get_output_handler_options()
-        ))
-    {
+    auto const& output_handler_options{command_line_arguments.get_output_handler_options()};
+    auto const* results_cache_options
+            = std::get_if<CommandLineArguments::ResultsCacheOutputHandlerOptions>(
+                    &output_handler_options
+            );
+    bool const aggregation_was_requested
+            = std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
+                      output_handler_options
+              )
+              || (nullptr != results_cache_options
+                  && results_cache_options->aggregation_type.has_value());
+    if (aggregation_was_requested) {
         SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
     }

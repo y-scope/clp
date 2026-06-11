@@ -42,6 +42,8 @@ public:
         std::string dataset;
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
+        std::optional<AggregationType> aggregation_type;
+        int64_t count_by_time_bucket_size{};  // Milliseconds
     };
 
     struct FileOutputHandlerOptions {
@@ -155,6 +157,18 @@ private:
             std::vector<std::string> const& options,
             NetworkOutputHandlerOptions& network_options
     );
+
+    /**
+     * Parses and validates the aggregation options (count and count-by-time) supported by some
+     * output handlers.
+     * @param parsed_options
+     * @param count_by_time_bucket_size
+     * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
+     */
+    [[nodiscard]] static auto parse_aggregation_options(
+            boost::program_options::variables_map const& parsed_options,
+            int64_t count_by_time_bucket_size
+    ) -> std::optional<AggregationType>;
 
     /**
      * Validates output options related to the Reducer output handler.

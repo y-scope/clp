@@ -8,6 +8,8 @@
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
+#include <mongocxx/model/update_one.hpp>
+#include <mongocxx/options/update.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
@@ -24,6 +26,39 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+// The two count-writing paths (direct-to-results-cache and via the reducer) must use the same
+// field name for the count value. NOTE: only the field name is shared. Count-by-time documents
+// ({timestamp, count}) have the same shape on both paths, but for plain count the reducer writes
+// a nested record-group document ({group_tags, records: [{count}]}) while
+// CountToResultsCacheOutputHandler writes a flat {count} document, so consumers of the two paths
+// differ.
+static_assert(
+        string_view{constants::results_cache::search::cCount}
+        == string_view{reducer::CountOperator::cRecordElementKey}
+);
+
+namespace {
+/**
+ * Connects to the results cache and returns the requested collection.
+ * @tparam OperationFailedT The handler-specific exception type to throw on failure.
+ * @param uri
+ * @param collection
+ * @param client Returns the connected client, which must outlive the returned collection.
+ * @return The collection.
+ */
+template <typename OperationFailedT>
+auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
+        -> mongocxx::collection {
+    try {
+        auto mongo_uri = mongocxx::uri(uri);
+        client = mongocxx::client(mongo_uri);
+        return client[mongo_uri.database()][collection];
+    } catch (mongocxx::exception const& e) {
+        throw OperationFailedT(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
+    }
+}
+}  // namespace
+
 void FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
@@ -78,14 +113,8 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
           m_batch_size{batch_size},
           m_max_num_results{max_num_results},
           m_dataset{std::move(dataset)} {
-    try {
-        auto mongo_uri = mongocxx::uri(uri);
-        m_client = mongocxx::client(mongo_uri);
-        m_collection = m_client[mongo_uri.database()][collection];
-        m_results.reserve(m_batch_size);
-    } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-    }
+    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+    m_results.reserve(m_batch_size);
 }
 
 ErrorCode ResultsCacheOutputHandler::finish() {
@@ -211,6 +240,94 @@ ErrorCode CountByTimeOutputHandler::finish() {
         ))
     {
         return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+CountToResultsCacheOutputHandler::CountToResultsCacheOutputHandler(
+        string const& uri,
+        string const& collection
+)
+        : ::clp_s::search::OutputHandler(false, false) {
+    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+}
+
+ErrorCode CountToResultsCacheOutputHandler::finish() {
+    if (0 == m_count) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    // Filtering on _id makes the upsert safe under concurrent writers: _id's built-in unique
+    // index guarantees that racing upserts resolve to a single document.
+    try {
+        auto const filter = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp(
+                        constants::results_cache::cDocId,
+                        constants::results_cache::search::cCount
+                )
+        );
+        auto const inc_count = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp(constants::results_cache::search::cCount, m_count)
+        );
+        auto const update = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("$inc", inc_count)
+        );
+        m_collection
+                .update_one(filter.view(), update.view(), mongocxx::options::update{}.upsert(true));
+    } catch (mongocxx::exception const& e) {
+        return ErrorCode::ErrorCodeFailureDbBulkWrite;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+CountByTimeToResultsCacheOutputHandler::CountByTimeToResultsCacheOutputHandler(
+        string const& uri,
+        string const& collection,
+        int64_t count_by_time_bucket_size
+)
+        : ::clp_s::search::OutputHandler(true, false),
+          m_count_by_time_bucket_size(count_by_time_bucket_size) {
+    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+}
+
+ErrorCode CountByTimeToResultsCacheOutputHandler::finish() {
+    if (m_bucket_counts.empty()) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    // Each bucket document is keyed by its bucket timestamp via _id, whose built-in unique index
+    // makes concurrent upserts from multiple writers resolve to a single document per bucket. The
+    // timestamp is duplicated into a regular field on first insert so that readers don't need to
+    // inspect _id.
+    try {
+        auto bulk_write = m_collection.create_bulk_write();
+        for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
+            auto filter = bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp(constants::results_cache::cDocId, bucket_timestamp)
+            );
+            auto const inc_count = bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp(constants::results_cache::search::cCount, count)
+            );
+            auto const set_timestamp_on_insert = bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp(
+                            constants::results_cache::search::cTimestamp,
+                            bucket_timestamp
+                    )
+            );
+            auto update = bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("$inc", inc_count),
+                    bsoncxx::builder::basic::kvp("$setOnInsert", set_timestamp_on_insert)
+            );
+
+            // The documents are moved into the operation so that they outlive this loop
+            // iteration.
+            mongocxx::model::update_one update_op{std::move(filter), std::move(update)};
+            update_op.upsert(true);
+            bulk_write.append(update_op);
+        }
+        bulk_write.execute();
+    } catch (mongocxx::exception const& e) {
+        return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
 }
