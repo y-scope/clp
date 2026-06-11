@@ -97,9 +97,9 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 {{- $compressionWorkerReplicas := $compressionWorkerScheduling.replicas | default 1 | int -}}
 {{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
 {{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
-{{- $compressionWorkerConcurrency := include "clp.compressionWorkerConcurrency" . | default 8 | int -}}
-{{- $queryWorkerConcurrency := include "clp.queryWorkerConcurrency" . | default 8 | int -}}
-{{- $reducerConcurrency := include "clp.reducerConcurrency" . | default 8 | int -}}
+{{- $compressionWorkerConcurrency := include "clp.compressionWorkerConcurrency" . | int -}}
+{{- $queryWorkerConcurrency := include "clp.queryWorkerConcurrency" . | int -}}
+{{- $reducerConcurrency := include "clp.reducerConcurrency" . | int -}}
 {{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $compressionWorkerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $queryWorkerConcurrency $timestampNs $reducerReplicas $timestampNs $reducerConcurrency $timestampNs -}}
 {{- end -}}
 
@@ -110,7 +110,12 @@ Gets the effective concurrency for the compression worker.
 @return {string} The effective concurrency
 */}}
 {{- define "clp.compressionWorkerConcurrency" -}}
-{{- coalesce .Values.scheduling.compressionWorker.slotsPerPod .Values.workerConcurrency -}}
+{{- $slots := .Values.scheduling.compressionWorker.slotsPerPod -}}
+{{- if eq (typeOf $slots) "<nil>" -}}
+{{- .Values.workerConcurrency | default 8 -}}
+{{- else -}}
+{{- $slots -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -120,7 +125,12 @@ Gets the effective concurrency for the query worker.
 @return {string} The effective concurrency
 */}}
 {{- define "clp.queryWorkerConcurrency" -}}
-{{- coalesce .Values.scheduling.queryWorker.slotsPerPod .Values.workerConcurrency -}}
+{{- $slots := .Values.scheduling.queryWorker.slotsPerPod -}}
+{{- if eq (typeOf $slots) "<nil>" -}}
+{{- .Values.workerConcurrency | default 8 -}}
+{{- else -}}
+{{- $slots -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -130,7 +140,12 @@ Gets the effective concurrency for the reducer.
 @return {string} The effective concurrency
 */}}
 {{- define "clp.reducerConcurrency" -}}
-{{- coalesce .Values.scheduling.reducer.slotsPerPod .Values.workerConcurrency -}}
+{{- $slots := .Values.scheduling.reducer.slotsPerPod -}}
+{{- if eq (typeOf $slots) "<nil>" -}}
+{{- .Values.workerConcurrency | default 8 -}}
+{{- else -}}
+{{- $slots -}}
+{{- end -}}
 {{- end }}
 
 {{/*
