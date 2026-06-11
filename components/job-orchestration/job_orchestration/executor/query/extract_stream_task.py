@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from celery.app.task import Task
+from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     Database,
@@ -181,9 +182,7 @@ def _make_command_and_env_vars(
     return command, env_vars
 
 
-@app.task(bind=True)
-def extract_stream(
-    self: Task,
+def extract_stream_entry_point(
     job_id: str,
     task_id: int,
     job_config: dict,
@@ -298,3 +297,31 @@ def extract_stream(
             logger.info("Finished uploading streams.")
 
     return task_results.model_dump()
+
+
+@app.task(bind=True)
+def extract_stream(
+    self: Task,
+    job_id: str,
+    task_id: int,
+    job_config: dict,
+    archive_id: str,
+    clp_metadata_db_conn_params: dict,
+    results_cache_uri: str,
+    dataset: str | None = None,
+) -> dict[str, Any]:
+    try:
+        return extract_stream_entry_point(
+            job_id,
+            task_id,
+            job_config,
+            archive_id,
+            clp_metadata_db_conn_params,
+            results_cache_uri,
+            dataset,
+        )
+    except SoftTimeLimitExceeded:
+        logger.exception(
+            f"Stream extraction task job_id={job_id} task_id={task_id} exceeded soft time limit."
+        )
+        raise

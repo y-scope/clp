@@ -6,6 +6,8 @@ set(
         CLP_S_SEARCH_SOURCES
         AddTimestampConditions.cpp
         AddTimestampConditions.hpp
+        ColumnScan.cpp
+        ColumnScan.hpp
         EvaluateRangeIndexFilters.cpp
         EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
