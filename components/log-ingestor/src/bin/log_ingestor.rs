@@ -59,10 +59,7 @@ async fn main() -> anyhow::Result<()> {
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = clp_rust_utils::logging::set_up_logging("log_ingestor.log");
 
-    let tel_guard = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
-    if let Some(provider) = tel_guard.provider() {
-        opentelemetry::global::set_meter_provider(provider);
-    }
+    let _tel_guard = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)

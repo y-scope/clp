@@ -41,6 +41,8 @@ impl From<Option<SdkMeterProvider>> for TelemetryGuard {
 
 /// Initializes OpenTelemetry metrics collection with the provided configuration.
 ///
+/// This function is intended for application startup code and should be called exactly once during process initialization.
+///
 /// # Returns
 ///
 /// A [`TelemetryGuard`] on success. If telemetry is disabled, the guard's provider will be `None`.
@@ -70,6 +72,8 @@ pub fn init_telemetry(telemetry_config: &Telemetry) -> Result<TelemetryGuard, Er
     let reader = PeriodicReader::builder(exporter).build();
 
     let provider = SdkMeterProvider::builder().with_reader(reader).build();
+
+    opentelemetry::global::set_meter_provider(provider.clone());
 
     Ok(TelemetryGuard::from(Some(provider)))
 }
