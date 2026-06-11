@@ -41,7 +41,8 @@ impl From<Option<SdkMeterProvider>> for TelemetryGuard {
 
 /// Initializes OpenTelemetry metrics collection with the provided configuration.
 ///
-/// This function is intended for application startup code and should be called exactly once during process initialization.
+/// This function is intended for application startup code and should be called exactly once during
+/// process initialization.
 ///
 /// # Returns
 ///
