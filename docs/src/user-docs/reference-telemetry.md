@@ -55,10 +55,12 @@ api_server:
 :::
 :::{tab-item} Kubernetes
 :sync: k8s
-Pass the config via `--set`:
+Edit `values.yaml` to set the interval per component:
 
-```bash
-helm install clp clp/clp --set clpConfig.compression_scheduler.telemetry_update_interval_ms=60000
+```yaml
+clpConfig:
+  compression_scheduler:
+    telemetry_update_interval_ms: 60000
 ```
 
 :::
