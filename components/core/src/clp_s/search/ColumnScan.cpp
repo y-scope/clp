@@ -142,7 +142,7 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
  */
 [[nodiscard]] auto build_deprecated_datestring_filter(
         uint64_t num_messages,
-        DeprecatedDateStringColumnReader* reader,
+        DeprecatedDateStringColumnReader& reader,
         FilterOperation operation,
         int64_t operand
 ) -> ColumnScan::Bitmap;
@@ -309,13 +309,13 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
 
 [[nodiscard]] auto build_deprecated_datestring_filter(
         uint64_t num_messages,
-        DeprecatedDateStringColumnReader* reader,
+        DeprecatedDateStringColumnReader& reader,
         FilterOperation operation,
         int64_t operand
 ) -> ColumnScan::Bitmap {
     ColumnScan::Bitmap bitmap(num_messages, 0);
     for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
-        auto const value = reader->get_encoded_time(message_index);
+        auto const value = reader.get_encoded_time(message_index);
         bitmap[message_index] = compare(operation, value, operand) ? 1 : 0;
     }
     return bitmap;
@@ -629,7 +629,7 @@ auto ColumnScan::build_filter(
             {
                 return build_deprecated_datestring_filter(
                         m_num_messages,
-                        deprecated_datestring_reader,
+                        *deprecated_datestring_reader,
                         operation,
                         operand_value
                 );
