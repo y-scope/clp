@@ -10,7 +10,7 @@ app.config_from_object(celeryconfig)
 
 
 @signals.after_setup_logger.connect
-def _on_after_setup_logger(logger: logging.Logger, **kwargs) -> None:
+def _on_after_setup_logger(logger: logging.Logger, **_kwargs: object) -> None:
     add_container_log_handler(logger)
 
 

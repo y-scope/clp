@@ -11,7 +11,8 @@ from clp_py_utils.core import read_yaml_config_file
 
 
 def add_container_log_handler(logger: logging.Logger) -> None:
-    """Adds a StreamHandler that writes to the container's real stderr (fd 2).
+    """
+    Add a StreamHandler that writes to the container's real stderr (fd 2).
 
     In Celery workers, ``-f`` redirects ``sys.stdout`` and ``sys.stderr`` to
     the log file, so regular ``StreamHandler(sys.stderr)`` would write to the
