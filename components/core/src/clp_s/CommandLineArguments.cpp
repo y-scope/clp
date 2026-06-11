@@ -927,7 +927,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << std::endl;
 
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output perform a count aggregation)"
+                             R"( "level: INFO" and output a count aggregation to the reducer)"
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << " " << cReducerOutputHandlerName << " --count"
