@@ -145,10 +145,10 @@ to disable telemetry for your entire organization.
 
 | Env var | Config file | First-run prompt | Network blocked | Telemetry sent?                                                        |
 | ------- | ----------- | ---------------- | --------------- | ---------------------------------------------------------------------- |
-| not set | not set     | Y (or default)   | no              | **Yes** |
+| not set | not set     | Y (or default)   | no              | **Yes**                                                                |
 | not set | not set     | N                | no              | **No** — prompt wrote `telemetry.disable: true` to config              |
 | `true`  | `false`     | —                | no              | **No** — env var overrides config                                      |
 | `false` | `true`      | —                | no              | **No** — `false` is not a recognized disable value; config disables it |
-| not set | `false`     | —                | **yes** | **No** — requests fail silently at the network level                   |
+| not set | `false`     | —                | **yes**         | **No** — requests fail silently at the network level                   |
 | `true`  | `true`      | —                | no              | **No** — both agree                                                    |
-| not set | not set     | Y                | **yes** | **No** — network blocking is independent of software settings          |
+| not set | not set     | Y                | **yes**         | **No** — network blocking is independent of software settings          |
