@@ -7,6 +7,7 @@ import pathlib
 import socket
 import stat
 import subprocess
+import time
 import uuid
 from abc import ABC, abstractmethod
 from types import MappingProxyType
@@ -37,6 +38,7 @@ from clp_py_utils.clp_config import (
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OrchestrationType,
+    OTEL_COLLECTOR_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -67,6 +69,7 @@ from clp_package_utils.general import (
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
+    http_request,
     is_retention_period_configured,
     validate_db_config,
     validate_mcp_server_config,
@@ -904,6 +907,122 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_otel_collector_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for bundling the OpenTelemetry Collector component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = OTEL_COLLECTOR_COMPONENT_NAME
+
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping otel-collector service bundling...")
+            # Bundling
+            return EnvVarsDict({"CLP_OTEL_COLLECTOR_ENABLED": "0"})
+
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_OTEL_COLLECTOR_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        conf_file = self._conf_dir / "otel-collector" / "config.yaml"
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= EnvVarsDict(
+            {
+                "CLP_OTEL_COLLECTOR_CONF_FILE_HOST": str(conf_file),
+            }
+        )
+
+        return env_vars
+
+    def _set_up_env_for_otel_collector(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the OpenTelemetry Collector component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = OTEL_COLLECTOR_COMPONENT_NAME
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping %s environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info(f"Setting up environment for {component_name}...")
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            env_vars |= EnvVarsDict(
+                {
+                    "CLP_OTEL_COLLECTOR_CONNECT_PORT": str(self._clp_config.otel_collector.port),
+                    "CLP_EXTRA_HOST_OTEL_COLLECTOR_NAME": OTEL_COLLECTOR_COMPONENT_NAME,
+                    "CLP_EXTRA_HOST_OTEL_COLLECTOR_ADDR": _resolve_external_host(
+                        self._clp_config.otel_collector.host
+                    ),
+                }
+            )
+        else:
+            env_vars |= EnvVarsDict(
+                {
+                    "CLP_OTEL_COLLECTOR_HOST": _get_ip_from_hostname(
+                        self._clp_config.otel_collector.host
+                    ),
+                    "CLP_OTEL_COLLECTOR_PORT": str(self._clp_config.otel_collector.port),
+                }
+            )
+
+        return env_vars
+
+    def _set_up_env_for_telemetry(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for telemetry.
+
+        :return: Dictionary of environment variables necessary to configure telemetry.
+        """
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping telemetry environment setup...")
+            # Telemetry
+            return EnvVarsDict({"CLP_DISABLE_TELEMETRY": "true"})
+
+        logger.info("Setting up environment for telemetry...")
+
+        env_vars = EnvVarsDict()
+
+        # Telemetry
+        env_vars |= EnvVarsDict(
+            {
+                "CLP_DISABLE_TELEMETRY": "false",
+                "CLP_TELEMETRY_ENDPOINT": self._clp_config.telemetry.endpoint,
+            }
+        )
+
+        # Resource attributes
+        version_file_path = self._clp_home / "VERSION"
+        clp_version = (
+            version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
+        )
+        resource_attrs = {
+            "clp.deployment.id": self._instance_id,
+            "service.version": clp_version,
+            "clp.deployment.method": "docker-compose",
+            "clp.storage.engine": self._clp_config.package.storage_engine,
+        }
+        env_vars |= EnvVarsDict(
+            {
+                "OTEL_RESOURCE_ATTRIBUTES": ",".join(f"{k}={v}" for k, v in resource_attrs.items()),
+            }
+        )
+
+        return env_vars
+
     def _read_and_update_settings_json(
         self, settings_file_path: pathlib.Path, updates: dict[str, Any]
     ) -> dict[str, Any]:
@@ -964,6 +1083,7 @@ class DockerComposeController(BaseController):
         self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
     ) -> None:
         """Initializes the DockerComposeController."""
+        self._instance_id = instance_id
         self._project_name = f"clp-package-{instance_id}"
         self._restart_policy = restart_policy
         super().__init__(clp_config)
@@ -1014,6 +1134,9 @@ class DockerComposeController(BaseController):
             "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
         }
 
+        # Telemetry
+        env_vars |= self._set_up_env_for_telemetry()
+
         # Paths
         aws_config_dir = self._clp_config.aws_config_directory
         env_vars |= {
@@ -1047,11 +1170,13 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_queue_bundling()
         env_vars |= self._set_up_env_for_redis_bundling()
         env_vars |= self._set_up_env_for_results_cache_bundling()
+        env_vars |= self._set_up_env_for_otel_collector_bundling()
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
         env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
+        env_vars |= self._set_up_env_for_otel_collector()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
@@ -1092,6 +1217,8 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
+        if not self._clp_config.telemetry.disable:
+            self._emit_topology_metrics()
         logger.info("Started CLP.")
 
     def stop(self) -> None:
@@ -1139,6 +1266,58 @@ class DockerComposeController(BaseController):
         :return: The Docker Compose file name to use based on the config.
         """
         return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
+
+    def _emit_topology_metrics(self) -> None:
+        timestamp_ns = int(time.time() * 1e9)
+        metrics = []
+
+        def add_gauge(name: str, value: int):
+            metrics.append(
+                {
+                    "name": name,
+                    "gauge": {
+                        "dataPoints": [{"asInt": str(value), "timeUnixNano": str(timestamp_ns)}]
+                    },
+                }
+            )
+
+        num_workers = self._get_num_workers()
+
+        # NOTE: Replicas are hardcoded to 1 until multi-container workers land (see #1424).
+        add_gauge("clp.deployment.compression_worker_replicas", 1)
+        add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
+        add_gauge("clp.deployment.query_worker_replicas", 1)
+        add_gauge("clp.deployment.query_worker_concurrency", num_workers)
+        add_gauge("clp.deployment.reducer_replicas", 1)
+        add_gauge("clp.deployment.reducer_concurrency", num_workers)
+
+        payload = {
+            "resourceMetrics": [
+                {
+                    "resource": {"attributes": []},
+                    "scopeMetrics": [{"scope": {"name": "clp.controller"}, "metrics": metrics}],
+                }
+            ]
+        }
+
+        payload["resourceMetrics"][0]["resource"]["attributes"].append(
+            {"key": "service.name", "value": {"stringValue": "controller"}}
+        )
+
+        try:
+            payload_bytes = json.dumps(payload).encode("utf-8")
+            otel_collector_host = self._clp_config.otel_collector.host
+            if BundledService.OTEL_COLLECTOR in self._clp_config.bundled:
+                otel_collector_host = _get_ip_from_hostname(otel_collector_host)
+            with http_request(
+                f"http://{otel_collector_host}:{self._clp_config.otel_collector.port}/v1/metrics",
+                method="POST",
+                data=payload_bytes,
+                headers={"Content-Type": "application/json"},
+            ) as response:
+                response.read()
+        except Exception as e:
+            logger.warning("Failed to emit topology metrics: %s", e)
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:
