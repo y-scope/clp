@@ -1,6 +1,7 @@
 .queryBox {
+  flex: 1;
+  min-width: 24ch;
   position: relative;
-  width: 100%;
 }
 
 .progressBarMask {

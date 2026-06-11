@@ -28,6 +28,7 @@ const NativeResultsTimeline = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const selectedDatasets = useSearchStore((state) => state.selectedDatasets);
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
+    const maxNumResults = useSearchStore((state) => state.maxNumResults);
 
     const aggregationResults = useAggregationResults();
 
@@ -64,12 +65,14 @@ const NativeResultsTimeline = () => {
             datasets: selectedDatasets,
             ignoreCase: false === queryIsCaseSensitive,
             includeHotSegments: false,
+            maxNumResults: maxNumResults,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: newTimeRange[0].valueOf(),
             timestampEnd: newTimeRange[1].valueOf(),
         });
     }, [
+        maxNumResults,
         queryIsCaseSensitive,
         queryString,
         selectedDatasets,
