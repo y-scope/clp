@@ -149,21 +149,19 @@ bool search_archive(
         if (nullptr == telemetry_span) {
             return;
         }
-        SearchResultMetrics metrics;
-        if (archive_reader->get_schema_ids().empty()) {
-            try {
-                if (auto const result{archive_reader->read_metadata()}; result.has_error()) {
-                    auto const error{result.error()};
-                    SPDLOG_WARN(
-                            "Failed to read archive metadata for search telemetry - ({}) {}",
-                            error.category().name(),
-                            error.message()
-                    );
-                }
-            } catch (std::exception const& e) {
-                SPDLOG_WARN("Failed to read archive metadata for search telemetry - {}", e.what());
+        try {
+            if (auto const result{archive_reader->read_metadata()}; result.has_error()) {
+                auto const error{result.error()};
+                SPDLOG_WARN(
+                        "Failed to read archive metadata for search telemetry - ({}) {}",
+                        error.category().name(),
+                        error.message()
+                );
             }
+        } catch (std::exception const& e) {
+            SPDLOG_WARN("Failed to read archive metadata for search telemetry - {}", e.what());
         }
+        SearchResultMetrics metrics;
         for (auto const schema_id : archive_reader->get_schema_ids()) {
             metrics.total_archive_records += archive_reader->get_num_messages_for_schema(schema_id);
         }
