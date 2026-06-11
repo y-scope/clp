@@ -101,6 +101,7 @@ Any **one** of the following methods is sufficient:
 
 Set `CLP_DISABLE_TELEMETRY`, or `DO_NOT_TRACK` per the
 [Console Do Not Track](https://consoledonottrack.com/) standard, before launching `start-clp.sh`.
+
 ```bash
 export CLP_DISABLE_TELEMETRY=true
 ```
@@ -111,18 +112,22 @@ export CLP_DISABLE_TELEMETRY=true
 :::{tab-item} Docker Compose
 :sync: docker
 Edit `clp-config.yaml`:
+
 ```yaml
 telemetry:
   disable: true
   endpoint: "https://telemetry.yscope.io"
 ```
+
 :::
 :::{tab-item} Kubernetes
 :sync: k8s
 Pass the config via `--set` (see the [quick-start guide](quick-start/index.md) for setup details):
+
 ```bash
 helm install clp clp/clp --set clpConfig.telemetry.disable=true
 ```
+
 :::
 ::::
 
