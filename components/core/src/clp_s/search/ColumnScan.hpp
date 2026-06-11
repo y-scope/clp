@@ -22,6 +22,7 @@ public:
     using ClpStringReaderMap = std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>>;
     using VarStringReaderMap
             = std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>>;
+    using TimestampReaderMap = std::unordered_map<int32_t, TimestampColumnReader*>;
     using ClpQueryMap = std::unordered_map<ast::Expression*, clp::Query*>;
     using VarMatchMap = std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*>;
 
@@ -31,6 +32,9 @@ public:
      * @param basic_readers A map of relevant primitive type readers for the given ERT.
      * @param clp_string_readers A map of relevant clp string readers for the given ERT.
      * @param var_string_readers A map of relevant variable string readers for the given ERT.
+     * @param timestamp_readers A map of relevant timestamp readers for the given ERT.
+     * @param deprecated_datestring_reader The deprecated date-string reader for the given ERT, or
+     * nullptr if the ERT has none.
      * @param clp_queries A map of precomputed clp string searches.
      * @param var_matches A map of precomputed variable string searches.
      * @param num_messages The number of messages in the given ERT.
@@ -42,6 +46,8 @@ public:
             BasicReaderMap const& basic_readers,
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
+            TimestampReaderMap const& timestamp_readers,
+            DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches,
             uint64_t num_messages
@@ -70,6 +76,8 @@ private:
             BasicReaderMap const& basic_readers,
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
+            TimestampReaderMap const& timestamp_readers,
+            DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches,
             uint64_t num_messages
@@ -115,6 +123,8 @@ private:
      * @param basic_readers
      * @param clp_string_readers
      * @param var_string_readers
+     * @param timestamp_readers
+     * @param deprecated_datestring_reader
      * @param clp_queries
      * @param var_matches
      * @return A bitmap indexed by message number, with nonzero entries for matching messages.
@@ -124,6 +134,8 @@ private:
             BasicReaderMap const& basic_readers,
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
+            TimestampReaderMap const& timestamp_readers,
+            DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches
     ) const -> Bitmap;
@@ -136,6 +148,8 @@ private:
      * @param basic_readers
      * @param clp_string_readers
      * @param var_string_readers
+     * @param timestamp_readers
+     * @param deprecated_datestring_reader
      * @param clp_queries
      * @param var_matches
      * @return A bitmap indexed by message number, with nonzero entries for matching messages.
@@ -145,6 +159,8 @@ private:
             BasicReaderMap const& basic_readers,
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
+            TimestampReaderMap const& timestamp_readers,
+            DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches
     ) const -> Bitmap;
