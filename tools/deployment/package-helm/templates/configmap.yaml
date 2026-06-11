@@ -14,7 +14,6 @@ data:
       query_job_polling:
         initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
         max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
-      telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
     {{- else }}
     api_server: null
     {{- end }}
@@ -125,7 +124,6 @@ data:
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002
-      telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
     {{- else }}
     log_ingestor: null
     {{- end }}

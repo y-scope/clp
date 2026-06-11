@@ -796,14 +796,12 @@ class ApiServer(BaseModel):
     port: Port = 3001
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
-    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
     logging_level: LoggingLevelRust = "INFO"
-    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class Presto(BaseModel):

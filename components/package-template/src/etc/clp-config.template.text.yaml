@@ -11,13 +11,9 @@ package:
   query_engine: "clp"
 
 # API server config
-#api_server:
-#  telemetry_update_interval_ms: 60000
 api_server: null
 
 # log-ingestor is not supported in clp-text
-#log_ingestor:
-#  telemetry_update_interval_ms: 60000
 log_ingestor: null
 
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all

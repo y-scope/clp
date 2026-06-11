@@ -609,7 +609,6 @@ services:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
-      OTEL_METRIC_EXPORT_INTERVAL: "${CLP_API_SERVER_METRIC_EXPORT_INTERVAL:-60000}"
       OTEL_SERVICE_NAME: "api-server"
       RUST_LOG: "INFO"
     ports:
@@ -651,7 +650,6 @@ services:
       CLP_LOGS_DIR: "/var/log/log_ingestor"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
-      OTEL_METRIC_EXPORT_INTERVAL: "${CLP_LOG_INGESTOR_METRIC_EXPORT_INTERVAL:-60000}"
       OTEL_SERVICE_NAME: "log-ingestor"
       RUST_LOG: "${CLP_LOG_INGESTOR_LOGGING_LEVEL:-INFO}"
     ports:

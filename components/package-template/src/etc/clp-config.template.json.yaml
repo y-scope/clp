@@ -18,14 +18,12 @@ telemetry:
 #  query_job_polling:
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
-#  telemetry_update_interval_ms: 60000
 
 ## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
 #log_ingestor:
 #  host: "localhost"
 #  port: 3002
 #  logging_level: "INFO"
-#  telemetry_update_interval_ms: 60000
 
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.

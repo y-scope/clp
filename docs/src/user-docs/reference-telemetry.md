@@ -47,9 +47,6 @@ Edit `clp-config.yaml` to set the interval per component:
 ```yaml
 compression_scheduler:
   telemetry_update_interval_ms: 60000
-
-api_server:
-  telemetry_update_interval_ms: 60000
 ```
 
 :::
