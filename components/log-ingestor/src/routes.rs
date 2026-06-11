@@ -9,6 +9,7 @@ use axum::{
 };
 use clp_rust_utils::job_config::ingestion::s3::{
     S3IngestionJobConfig,
+    S3PrefixConfig,
     S3ScannerConfig,
     SqsListenerConfig,
 };
@@ -22,6 +23,7 @@ use crate::{
     ingestion_job_manager::{
         Error as IngestionJobManagerError,
         IngestionJobManagerState,
+        OneTimeIngestionJobConfig,
         TerminalStatus,
     },
 };
@@ -41,6 +43,7 @@ use crate::{
         health,
         create_s3_scanner_job,
         create_sqs_listener_job,
+        create_s3_prefix_job,
         terminate_ingestion_job,
     )
 )]
@@ -63,6 +66,7 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
         .routes(routes!(health))
         .routes(routes!(create_s3_scanner_job))
         .routes(routes!(create_sqs_listener_job))
+        .routes(routes!(create_s3_prefix_job))
         .routes(routes!(terminate_ingestion_job))
         .split_for_parts();
 
@@ -240,6 +244,48 @@ async fn create_sqs_listener_job(
             Error::IngestionJobManagerError(err)
         })?;
     tracing::info!(job_id = ? job_id, "Created SQS listener ingestion job.");
+    Ok(Json(CreationResponse { id: job_id }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/s3/prefix",
+    tags = ["IngestionJob"],
+    description = "Creates a one-time ingestion job that scans the specified S3 bucket and key \
+        prefix once, collects all objects, and submits a single compression job.\n\n\
+        The job ingests all objects under the prefix in a single pass and transitions to a \
+        terminal state upon completion.",
+    responses(
+        (status = OK, body = CreationResponse, description = "The ID of the created job."),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            body = ErrorResponse,
+            description = "Internal server failure."
+        ),
+        (
+            status = BAD_REQUEST,
+            body = ErrorResponse,
+            description = "A region code is not provided when using the default AWS S3 endpoint."
+        )
+    )
+)]
+async fn create_s3_prefix_job(
+    State(ingestion_job_manager_state): State<IngestionJobManagerState>,
+    Json(config): Json<S3PrefixConfig>,
+) -> Result<Json<CreationResponse>, Error> {
+    tracing::info!(config = ? config, "Create S3 prefix ingestion job.");
+    let one_time_ingestion_job_context = ingestion_job_manager_state
+        .register_one_time_ingestion_job(OneTimeIngestionJobConfig::S3Prefix(config))
+        .await
+        .map_err(|err| {
+            tracing::error!(err = ? err, "Failed to register S3 prefix ingestion job.");
+            Error::IngestionJobManagerError(err)
+        })?;
+    let job_id = one_time_ingestion_job_context.get_job_id();
+    ingestion_job_manager_state
+        .spawn_one_time_ingestion(one_time_ingestion_job_context)
+        .await;
+    tracing::info!(job_id = ? job_id, "Created S3 prefix ingestion job.");
     Ok(Json(CreationResponse { id: job_id }))
 }
 

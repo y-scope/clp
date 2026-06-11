@@ -84,6 +84,57 @@
         }
       }
     },
+    "/s3/prefix": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Creates a one-time ingestion job that scans the specified S3 bucket and key prefix once, collects all objects, and submits a single compression job.\n\nThe job ingests all objects under the prefix in a single pass and transitions to a terminal state upon completion.",
+        "operationId": "create_s3_prefix_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/S3PrefixConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The ID of the created job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A region code is not provided when using the default AWS S3 endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/s3_scanner": {
       "post": {
         "tags": [
@@ -302,6 +353,14 @@
             "description": "The error message."
           }
         }
+      },
+      "S3PrefixConfig": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseConfig"
+          }
+        ],
+        "description": "Configuration for a S3 prefix ingestion job."
       },
       "S3ScannerConfig": {
         "allOf": [
