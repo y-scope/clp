@@ -34,6 +34,10 @@ spec:
           image: {{ include "clp.imageRef" (dict "root" . "component" "kubectl") | quote }}
           imagePullPolicy: {{ .Values.image.kubectl.pullPolicy | quote }}
           command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoWorker"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "presto-config"
               mountPath: "/etc/presto-config"

@@ -622,13 +622,15 @@ Creates resource requests and limits configuration for a component.
 */}}
 {{- define "clp.createResourceLimits" -}}
 {{- $resourcesConfig := index .root.Values.resources .component | default dict -}}
-{{- $defaultLimits := dict "cpu" "1" "memory" "4Gi" -}}
-{{- $limits := $resourcesConfig.limits | default $defaultLimits -}}
+{{- if or $resourcesConfig.requests $resourcesConfig.limits }}
 resources:
 {{- with $resourcesConfig.requests }}
   requests:
 {{- toYaml . | nindent 4 }}
 {{- end }}
+{{- with $resourcesConfig.limits }}
   limits:
-{{- toYaml $limits | nindent 4 }}
+{{- toYaml . | nindent 4 }}
+{{- end }}
+{{- end }}
 {{- end }}{{/* define "clp.createResourceLimits" */}}
