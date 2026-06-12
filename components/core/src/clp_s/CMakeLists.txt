@@ -71,16 +71,14 @@ set(
         ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        # ../clp/SchemaSearcher.cpp
-        # ../clp/SchemaSearcher.hpp
+        ../clp/SchemaSearcher.cpp
+        ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        # ../clp/LogSurgeonReader.cpp
-        # ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/networking/socket_utils.cpp
@@ -111,6 +109,8 @@ set(
         ../clp/time_types.hpp
         ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
+        ../clp/Utils.cpp
+        ../clp/Utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
         ../clp/VariableDictionaryEntryReq.hpp
@@ -154,7 +154,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 PUBLIC
                 clp::string_utils
                 log-surgeon::log-surgeon
-                log_surgeon::log_surgeon
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE

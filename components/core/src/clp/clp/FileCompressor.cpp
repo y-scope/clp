@@ -18,7 +18,6 @@
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/types.hpp"
 #include "../ir/utils.hpp"
-#include "../LogSurgeonReader.hpp"
 #include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
 #include "../utf8_utils.hpp"
@@ -254,9 +253,9 @@ void FileCompressor::parse_and_encode_with_library(
         buffer_pos = 0;
 
         while (true) {
-            size_t buffer_start = buffer_pos;
+            size_t buffer_start{buffer_pos};
             log_surgeon::CCharArray view{buf, buffer_size};
-            auto optional_event{m_parser.next_event(view, &buffer_pos)};
+            auto optional_event{m_parser->next_event(view, &buffer_pos)};
             // No error handling for failures?
             if (false == optional_event.has_value()) {
                 break;

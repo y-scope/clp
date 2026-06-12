@@ -3,6 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #include <archive_entry.h>
 #include <boost/filesystem/operations.hpp>
@@ -61,7 +62,7 @@ bool compress(
         vector<string> const& empty_directory_paths,
         vector<FileToCompress>& grouped_files_to_compress,
         size_t target_encoded_file_size,
-        log_surgeon::ParserHandle parser,
+        std::optional<log_surgeon::ParserHandle> parser,
         bool use_heuristic
 ) {
     auto output_dir = std::filesystem::path(command_line_args.get_output_dir());

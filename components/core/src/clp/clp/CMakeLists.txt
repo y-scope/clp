@@ -68,8 +68,6 @@ set(
         ../LibarchiveFileReader.hpp
         ../LibarchiveReader.cpp
         ../LibarchiveReader.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryEntryReq.hpp
@@ -194,7 +192,6 @@ if(CLP_BUILD_EXECUTABLES)
                 date::date
                 fmt::fmt
                 log-surgeon::log-surgeon
-                log_surgeon::log_surgeon
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 LibArchive::LibArchive
