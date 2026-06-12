@@ -1,13 +1,24 @@
+mod s3_keys;
+mod s3_prefix;
 mod s3_scanner;
 mod scan;
 mod sqs_listener;
 mod state;
 
 pub use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
-pub use s3_scanner::*;
+pub use s3_keys::S3KeysIngestion;
+pub use s3_prefix::S3PrefixIngestion;
+pub use s3_scanner::S3Scanner;
 pub use scan::scan_prefix;
-pub use sqs_listener::*;
-pub use state::*;
+pub use sqs_listener::SqsListener;
+pub use state::{
+    FinalizeOutcome,
+    IngestionJobState,
+    OneTimeIngestionState,
+    S3ScannerState,
+    SqsListenerState,
+    ZeroFaultToleranceIngestionJobState,
+};
 
 /// Enum for different types of ingestion jobs.
 ///

@@ -7,6 +7,8 @@ use clp_rust_utils::{
     job_config::ingestion::s3::{
         BaseConfig,
         BufferConfig,
+        S3KeysConfig,
+        S3PrefixConfig,
         S3ScannerConfig,
         SqsListenerConfig,
         ValidatedSqsListenerConfig,
@@ -17,8 +19,12 @@ use clp_rust_utils::{
 use log_ingestor::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     ingestion_job::{
+        FinalizeOutcome,
         IngestionJobId,
         IngestionJobState,
+        OneTimeIngestionState,
+        S3KeysIngestion,
+        S3PrefixIngestion,
         S3Scanner,
         S3ScannerState,
         SqsListener,
@@ -26,7 +32,7 @@ use log_ingestor::{
     },
 };
 use non_empty_string::NonEmptyString;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, oneshot};
 use uuid::Uuid;
 
 use super::{
@@ -116,6 +122,90 @@ impl S3ScannerState for S3ScannerTestState {
     ) -> anyhow::Result<()> {
         self.shared_ingested_buffer.lock().await.extend(objects);
         Ok(())
+    }
+}
+
+#[derive(Clone, Default)]
+struct S3PrefixTestState {
+    finalize_sender: Arc<Mutex<Option<oneshot::Sender<Vec<ObjectMetadata>>>>>,
+}
+
+impl S3PrefixTestState {
+    fn new(finalize_sender: oneshot::Sender<Vec<ObjectMetadata>>) -> Self {
+        Self {
+            finalize_sender: Arc::new(Mutex::new(Some(finalize_sender))),
+        }
+    }
+}
+
+#[async_trait]
+impl IngestionJobState for S3PrefixTestState {
+    async fn start(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn end(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn fail(&self, msg: String) {
+        panic!("S3PrefixTestState::fail should be unreachable: {msg}");
+    }
+}
+
+#[async_trait]
+impl OneTimeIngestionState for S3PrefixTestState {
+    async fn finalize(&self, objects: Vec<ObjectMetadata>) -> Result<FinalizeOutcome> {
+        self.finalize_sender
+            .lock()
+            .await
+            .take()
+            .expect("finalize sender should only be used once")
+            .send(objects)
+            .expect("finalize receiver should remain alive until the assertion");
+        Ok(FinalizeOutcome::Finished)
+    }
+}
+
+#[derive(Clone, Default)]
+struct S3KeysTestState {
+    finalize_sender: Arc<Mutex<Option<oneshot::Sender<Vec<ObjectMetadata>>>>>,
+}
+
+impl S3KeysTestState {
+    fn new(finalize_sender: oneshot::Sender<Vec<ObjectMetadata>>) -> Self {
+        Self {
+            finalize_sender: Arc::new(Mutex::new(Some(finalize_sender))),
+        }
+    }
+}
+
+#[async_trait]
+impl IngestionJobState for S3KeysTestState {
+    async fn start(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn end(&self) -> Result<()> {
+        Ok(())
+    }
+
+    async fn fail(&self, msg: String) {
+        panic!("S3KeysTestState::fail should be unreachable: {msg}");
+    }
+}
+
+#[async_trait]
+impl OneTimeIngestionState for S3KeysTestState {
+    async fn finalize(&self, objects: Vec<ObjectMetadata>) -> Result<FinalizeOutcome> {
+        self.finalize_sender
+            .lock()
+            .await
+            .take()
+            .expect("finalize sender should only be used once")
+            .send(objects)
+            .expect("finalize receiver should remain alive until the assertion");
+        Ok(FinalizeOutcome::Finished)
     }
 }
 
@@ -353,6 +443,165 @@ async fn test_s3_scanner() -> Result<()> {
     created_objects.sort();
     received_objects.sort();
     assert_eq!(received_objects, created_objects);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+#[ignore = "Requires LocalStack or AWS environment"]
+async fn test_s3_prefix_ingestion() -> Result<()> {
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
+
+    let aws_config = AwsConfig::from_env()?;
+
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.clone(),
+            secret_access_key: aws_config.secret_access_key.clone(),
+        },
+    };
+    let s3_client = clp_rust_utils::s3::create_new_client(
+        aws_config.region.as_str(),
+        Some(&aws_config.endpoint),
+        &aws_auth,
+    )
+    .await;
+
+    let test_upload_handle = tokio::spawn(upload_test_objects(
+        s3_client.clone(),
+        aws_config.bucket_name.clone(),
+        prefix.clone(),
+        NUM_TEST_OBJECTS,
+    ));
+    let noise_upload_handle = tokio::spawn(upload_noise_objects(
+        s3_client.clone(),
+        aws_config.bucket_name.clone(),
+        NUM_NOISE_OBJECTS,
+    ));
+
+    noise_upload_handle
+        .await
+        .context("Error while awaiting noise upload")??;
+    let mut created_objects = test_upload_handle
+        .await
+        .context("Error while awaiting test object upload")??;
+
+    let (finalize_sender, finalize_receiver) = oneshot::channel();
+    let state = S3PrefixTestState::new(finalize_sender);
+    let _job = S3PrefixIngestion::spawn(
+        job_id,
+        S3ClientWrapper::from(s3_client),
+        S3PrefixConfig {
+            base: BaseConfig {
+                region: Some(aws_config.region.clone()),
+                bucket_name: aws_config.bucket_name.clone(),
+                key_prefix: prefix,
+                endpoint_url: Some(aws_config.endpoint.clone()),
+                dataset: None,
+                timestamp_key: None,
+                unstructured: false,
+            },
+        },
+        state,
+    );
+
+    let mut received_objects = tokio::time::timeout(
+        Duration::from_secs(WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC),
+        finalize_receiver,
+    )
+    .await
+    .expect("timed out while waiting for one-time ingestion finalization")
+    .expect("finalize sender should not be dropped before sending objects");
+    created_objects.sort();
+    received_objects.sort();
+    assert_eq!(received_objects, created_objects);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+#[ignore = "Requires LocalStack or AWS environment"]
+async fn test_s3_keys_ingestion() -> Result<()> {
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
+
+    let aws_config = AwsConfig::from_env()?;
+
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.clone(),
+            secret_access_key: aws_config.secret_access_key.clone(),
+        },
+    };
+    let s3_client = clp_rust_utils::s3::create_new_client(
+        aws_config.region.as_str(),
+        Some(&aws_config.endpoint),
+        &aws_auth,
+    )
+    .await;
+
+    let test_upload_handle = tokio::spawn(upload_test_objects(
+        s3_client.clone(),
+        aws_config.bucket_name.clone(),
+        prefix.clone(),
+        NUM_TEST_OBJECTS,
+    ));
+    let noise_upload_handle = tokio::spawn(upload_noise_objects(
+        s3_client.clone(),
+        aws_config.bucket_name.clone(),
+        NUM_NOISE_OBJECTS,
+    ));
+
+    noise_upload_handle
+        .await
+        .context("Error while awaiting noise upload")??;
+    let created_objects = test_upload_handle
+        .await
+        .context("Error while awaiting test object upload")??;
+
+    let requested_indices = [1_usize, 10, 50];
+    let mut expected_objects: Vec<ObjectMetadata> = requested_indices
+        .iter()
+        .map(|idx| created_objects[*idx].clone())
+        .collect();
+    let object_keys = expected_objects
+        .iter()
+        .map(|object| object.key.clone())
+        .collect();
+
+    let (finalize_sender, finalize_receiver) = oneshot::channel();
+    let state = S3KeysTestState::new(finalize_sender);
+    let _job = S3KeysIngestion::spawn(
+        job_id,
+        S3ClientWrapper::from(s3_client),
+        S3KeysConfig {
+            base: BaseConfig {
+                region: Some(aws_config.region.clone()),
+                bucket_name: aws_config.bucket_name.clone(),
+                key_prefix: NonEmptyString::from_string(format!("{prefix}/0")),
+                endpoint_url: Some(aws_config.endpoint.clone()),
+                dataset: None,
+                timestamp_key: None,
+                unstructured: false,
+            },
+            object_keys,
+        },
+        state,
+    );
+
+    let mut received_objects = tokio::time::timeout(
+        Duration::from_secs(WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC),
+        finalize_receiver,
+    )
+    .await
+    .expect("timed out while waiting for one-time S3 keys ingestion finalization")
+    .expect("finalize sender should not be dropped before sending objects");
+    expected_objects.sort();
+    received_objects.sort();
+    assert_eq!(received_objects, expected_objects);
 
     Ok(())
 }

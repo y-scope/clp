@@ -84,6 +84,108 @@
         }
       }
     },
+    "/s3/keys": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Creates a one-time ingestion job that ingests an explicit set of S3 object URLs once by scanning their shared prefix and selecting only the requested objects.\n\nAll submitted URLs must share the same endpoint, region, bucket, and a non-empty common key prefix. Duplicate object keys are rejected.",
+        "operationId": "create_s3_keys_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateS3KeysRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The ID of the created job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The S3 URLs are invalid or a region code is not provided when using the default AWS S3 endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/s3/prefix": {
+      "post": {
+        "tags": [
+          "IngestionJob"
+        ],
+        "description": "Creates a one-time ingestion job that scans the specified S3 bucket and key prefix once, collects all objects, and submits a single compression job.\n\nThe job ingests all objects under the prefix in a single pass and transitions to a terminal state upon completion.",
+        "operationId": "create_s3_prefix_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/S3PrefixConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The ID of the created job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A region code is not provided when using the default AWS S3 endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/s3_scanner": {
       "post": {
         "tags": [
@@ -279,6 +381,37 @@
           }
         }
       },
+      "CreateS3KeysRequest": {
+        "type": "object",
+        "required": [
+          "object_urls",
+          "dataset",
+          "timestamp_key"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "description": "The dataset to ingest into. Defaults to `None`.",
+            "minLength": 1
+          },
+          "object_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The explicit S3 object URLs to ingest."
+          },
+          "timestamp_key": {
+            "type": "string",
+            "description": "The optional key for extracting timestamps from object metadata. Defaults to `None`.",
+            "minLength": 1
+          },
+          "unstructured": {
+            "type": "boolean",
+            "description": "Whether to treat the ingested objects as unstructured logs. Defaults to `false`."
+          }
+        }
+      },
       "CreationResponse": {
         "type": "object",
         "required": [
@@ -302,6 +435,14 @@
             "description": "The error message."
           }
         }
+      },
+      "S3PrefixConfig": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseConfig"
+          }
+        ],
+        "description": "Configuration for a S3 prefix ingestion job."
       },
       "S3ScannerConfig": {
         "allOf": [

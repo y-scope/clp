@@ -88,6 +88,37 @@ pub trait S3ScannerState: Send + Sync + Clone + 'static {
     ) -> anyhow::Result<()>;
 }
 
+/// Outcome of a one-time ingestion job's `finalize` step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FinalizeOutcome {
+    /// The `finalize` step completed successfully.
+    Finished,
+    /// The `finalize` step was cancelled.
+    Cancelled,
+}
+
+/// An abstract layer for managing one-time ingestion job states.
+#[async_trait]
+pub trait OneTimeIngestionState: IngestionJobState {
+    /// Persists the collected object metadata, submits a single compression job, and
+    /// transitions the ingestion job to a terminal state.
+    ///
+    /// # Parameters
+    ///
+    /// * `objects`: The collected object metadata to persist.
+    ///
+    /// # Returns
+    ///
+    /// [`FinalizeOutcome::Finished`] if all steps have been completed successfully, or
+    /// [`FinalizeOutcome::Cancelled`] if the job was cancelled before all steps were completed.
+    ///
+    /// # Errors
+    ///
+    /// Implementations **must document** the specific error variants they may return and the
+    /// conditions under which those errors occur.
+    async fn finalize(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<FinalizeOutcome>;
+}
+
 /// An ingestion job state implementation that has no fault-tolerance.
 #[derive(Clone)]
 pub struct ZeroFaultToleranceIngestionJobState {
@@ -141,5 +172,18 @@ impl S3ScannerState for ZeroFaultToleranceIngestionJobState {
     ) -> anyhow::Result<()> {
         self.sender.send(objects).await?;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl OneTimeIngestionState for ZeroFaultToleranceIngestionJobState {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
+    async fn finalize(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<FinalizeOutcome> {
+        self.sender.send(objects).await?;
+        Ok(FinalizeOutcome::Finished)
     }
 }

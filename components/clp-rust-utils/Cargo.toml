@@ -4,6 +4,7 @@ version = "0.12.1-dev"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.100"
 aws-config = "1.8.12"
 aws-sdk-s3 = "1.121.0"
 aws-sdk-sqs = "1.92.0"

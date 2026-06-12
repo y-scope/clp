@@ -16,7 +16,13 @@ use clp_rust_utils::{
         CompressionJobId,
         CompressionJobStatus,
         InputConfig,
-        ingestion::s3::{S3IngestionJobConfig, S3ScannerConfig},
+        ingestion::s3::{
+            BaseConfig,
+            S3IngestionJobConfig,
+            S3KeysConfig,
+            S3PrefixConfig,
+            S3ScannerConfig,
+        },
     },
     s3::{ObjectMetadata, S3ObjectMetadataId},
 };
@@ -35,8 +41,19 @@ use crate::{
         Listener,
         wait_for_compression_job_completion_and_update_metadata,
     },
-    ingestion_job::{IngestionJobState, S3ScannerState, SqsListenerState},
-    ingestion_job_manager::{IngestionJobId, TerminalStatus},
+    ingestion_job::{
+        FinalizeOutcome,
+        IngestionJobState,
+        OneTimeIngestionState,
+        S3ScannerState,
+        SqsListenerState,
+    },
+    ingestion_job_manager::{
+        IngestionJobId,
+        OneTimeIngestionJobConfig,
+        OneTimeIngestionJobContext,
+        TerminalStatus,
+    },
 };
 
 /// A bundle of objects for log-ingestor to recovery from a restart.
@@ -53,6 +70,14 @@ pub struct LogIngestorRecoveryContext {
     /// have active ingestion job instances, but for any already-ingested but still buffered object
     /// metadata, there should be a compression listener to re-submit them for compression.
     pub inactive_ingestion_jobs: Vec<ClpIngestionJobContext>,
+
+    /// A vector of recoverable one-time ingestion jobs that are re-spawned from scratch.
+    pub recoverable_one_time_jobs: Vec<OneTimeIngestionJobContext>,
+}
+
+enum RecoverableJob {
+    LongRunning(S3IngestionJobConfig),
+    OneTime(OneTimeIngestionJobConfig),
 }
 
 /// A bundle of objects to manage an already-submitted CLP compression job.
@@ -68,8 +93,8 @@ impl ClpCompressionJobContext {
         self.compression_job_id
     }
 
-    /// Creates a detached coroutine to wait for the compression job to complete, and updates the
-    /// status of all ingested
+    /// Creates a detached coroutine to wait for the compression job to complete and updates the
+    /// status of all ingested object metadata rows linked to that job.
     pub fn detach_and_wait_for_completion_and_update_metadata(self) {
         tokio::spawn(async move {
             wait_for_compression_job_completion_and_update_metadata(
@@ -215,12 +240,13 @@ impl ClpDbIngestionConnector {
         };
 
         let unfinished_compression_jobs = connector.get_unfinished_compression_jobs().await?;
-        let (recoverable_ingestion_jobs, inactive_ingestion_jobs) =
+        let (recoverable_ingestion_jobs, inactive_ingestion_jobs, recoverable_one_time_jobs) =
             connector.load_ingestion_jobs().await?;
         let recovery_context = LogIngestorRecoveryContext {
             unfinished_compression_jobs,
             recoverable_ingestion_jobs,
             inactive_ingestion_jobs,
+            recoverable_one_time_jobs,
         };
         Ok((connector, recovery_context))
     }
@@ -320,6 +346,36 @@ impl ClpDbIngestionConnector {
             job_id,
             ClpIngestionJobStatus::Failed,
             Some(&error_msg),
+        )
+        .await
+    }
+
+    /// Attempts to pause an ingestion job with the given ID.
+    ///
+    /// # NOTE
+    ///
+    /// This method doesn't perform any validation on the job ID before attempting to pause it,
+    /// which means the job ID may not exist in the CLP DB.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`update_job_status`]'s return values on failure.
+    pub async fn try_pause(
+        &self,
+        job_id: IngestionJobId,
+        error_msg: Option<String>,
+    ) -> anyhow::Result<()> {
+        update_job_status(
+            self.db_pool.clone(),
+            job_id,
+            ClpIngestionJobStatus::Paused,
+            error_msg.as_deref(),
         )
         .await
     }
@@ -450,6 +506,22 @@ impl ClpDbIngestionConnector {
         })
     }
 
+    /// Creates a one-time ingestion job context for the given job ID and config.
+    fn create_one_time_ingestion_job_context_from_parts(
+        &self,
+        job_id: IngestionJobId,
+        config: OneTimeIngestionJobConfig,
+    ) -> OneTimeIngestionJobContext {
+        let state = ClpOneTimeIngestionState::new(
+            job_id,
+            self.db_pool.clone(),
+            self.aws_authentication.clone(),
+            self.archive_output_config.clone(),
+            config.base_config().clone(),
+        );
+        OneTimeIngestionJobContext::new(config, state)
+    }
+
     /// Loads ingestion contexts for all ingestion jobs from CLP DB.
     ///
     /// # NOTE
@@ -461,9 +533,10 @@ impl ClpDbIngestionConnector {
     ///
     /// A tuple on success, containing:
     ///
-    /// * A vector of [`ClpIngestionJobContext`] instances representing all recoverable ingestion
-    ///   jobs
+    /// * A vector of [`ClpIngestionJobContext`] instances representing all recoverable long-running
+    ///   ingestion jobs.
     /// * A vector of [`ClpIngestionJobContext`] instances representing all inactive ingestion jobs.
+    /// * A vector of [`OneTimeIngestionJobContext`] values for recoverable one-time jobs.
     ///
     /// # Errors
     ///
@@ -473,94 +546,76 @@ impl ClpDbIngestionConnector {
     ///   metadata.
     async fn load_ingestion_jobs(
         &self,
-    ) -> anyhow::Result<(Vec<ClpIngestionJobContext>, Vec<ClpIngestionJobContext>)> {
-        // Load recoverable ingestion jobs.
+    ) -> anyhow::Result<(
+        Vec<ClpIngestionJobContext>,
+        Vec<ClpIngestionJobContext>,
+        Vec<OneTimeIngestionJobContext>,
+    )> {
         let mut recoverable_ingestion_jobs: Vec<ClpIngestionJobContext> = Vec::new();
-        let requested_jod_id_and_config: Vec<(IngestionJobId, String)> = sqlx::query_as(formatcp!(
-            "SELECT `id`, `config` FROM `{table}` WHERE `status` = ?;",
-            table = INGESTION_JOB_TABLE_NAME,
-        ))
-        .bind(ClpIngestionJobStatus::Requested)
-        .fetch_all(&self.db_pool)
-        .await
-        .inspect_err(|e| {
-            tracing::error!(
-                error = ? e,
-                "Failed to fetch requested ingestion jobs from CLP DB during service start."
-            );
-        })?;
-        for (job_id, config_str) in requested_jod_id_and_config {
-            let Some(config) = self.load_config(job_id, config_str).await else {
+        let mut recoverable_one_time_jobs: Vec<OneTimeIngestionJobContext> = Vec::new();
+
+        let requested_jobs = self
+            .fetch_jobs_with_status(ClpIngestionJobStatus::Requested)
+            .await?;
+        for (job_id, config_str, job_type) in requested_jobs {
+            let Some(job) = self
+                .parse_recoverable_job(job_id, config_str, job_type)
+                .await
+            else {
+                continue;
+            };
+            self.recover_recoverable_job(
+                job_id,
+                job,
+                false,
+                &mut recoverable_ingestion_jobs,
+                &mut recoverable_one_time_jobs,
+            )
+            .await;
+        }
+
+        let running_jobs = self
+            .fetch_jobs_with_status(ClpIngestionJobStatus::Running)
+            .await?;
+        for (job_id, config_str, job_type) in running_jobs {
+            let Some(job) = self
+                .parse_recoverable_job(job_id, config_str, job_type)
+                .await
+            else {
+                continue;
+            };
+            self.recover_recoverable_job(
+                job_id,
+                job,
+                true,
+                &mut recoverable_ingestion_jobs,
+                &mut recoverable_one_time_jobs,
+            )
+            .await;
+        }
+
+        let inactive_jobs: Vec<(IngestionJobId, String, ClpIngestionJobType)> =
+            sqlx::query_as(formatcp!(
+                "SELECT `id`, `config`, `job_type` FROM `{table}` WHERE `status` NOT in (?, ?);",
+                table = INGESTION_JOB_TABLE_NAME,
+            ))
+            .bind(ClpIngestionJobStatus::Requested)
+            .bind(ClpIngestionJobStatus::Running)
+            .fetch_all(&self.db_pool)
+            .await
+            .inspect_err(|e| {
                 tracing::error!(
-                    job_id = ? job_id,
-                    "Failed to load config for a requested ingestion job at service start. The job \
-                        will be skipped."
+                    error = ? e,
+                    "Failed to fetch inactive ingestion jobs from CLP DB during service start."
                 );
-                continue;
-            };
-            self.try_add_ingestion_job_context(job_id, config, &mut recoverable_ingestion_jobs);
-        }
-
-        let running_jod_id_and_config: Vec<(IngestionJobId, String)> = sqlx::query_as(formatcp!(
-            "SELECT `id`, `config` FROM `{table}` WHERE `status` = ?;",
-            table = INGESTION_JOB_TABLE_NAME,
-        ))
-        .bind(ClpIngestionJobStatus::Running)
-        .fetch_all(&self.db_pool)
-        .await
-        .inspect_err(|e| {
-            tracing::error!(
-                error = ? e,
-                "Failed to fetch running ingestion jobs from CLP DB during service start."
-            );
-        })?;
-
-        for (job_id, config_str) in running_jod_id_and_config {
-            let Some(config) = self.load_config(job_id, config_str).await else {
-                continue;
-            };
-            let config = match config {
-                S3IngestionJobConfig::S3Scanner(config) => {
-                    let updated_config = match self.update_start_after(job_id, config).await {
-                        Ok(updated_config) => updated_config,
-                        Err(e) => {
-                            if let Err(e) = self.try_fail(job_id, e.to_string()).await {
-                                tracing::error!(
-                                    error = ? e,
-                                    job_id = ? job_id,
-                                    "Failed to update ingestion job status to `failed` for a S3 \
-                                        scanner ingestion job with invalid last ingested key \
-                                        during service start."
-                                );
-                            }
-                            continue;
-                        }
-                    };
-                    S3IngestionJobConfig::S3Scanner(updated_config)
-                }
-                other @ S3IngestionJobConfig::SqsListener(_) => other,
-            };
-            self.try_add_ingestion_job_context(job_id, config, &mut recoverable_ingestion_jobs);
-        }
-
-        // Load inactive ingestion jobs.
-        let inactive_jod_id_and_config: Vec<(IngestionJobId, String)> = sqlx::query_as(formatcp!(
-            "SELECT `id`, `config` FROM `{table}` WHERE `status` NOT in (?, ?);",
-            table = INGESTION_JOB_TABLE_NAME,
-        ))
-        .bind(ClpIngestionJobStatus::Requested)
-        .bind(ClpIngestionJobStatus::Running)
-        .fetch_all(&self.db_pool)
-        .await
-        .inspect_err(|e| {
-            tracing::error!(
-            error = ? e,
-            "Failed to fetch inactive ingestion jobs from CLP DB during service start."
-            );
-        })?;
+            })?;
         let mut inactive_ingestion_jobs: Vec<ClpIngestionJobContext> =
-            Vec::with_capacity(inactive_jod_id_and_config.len());
-        for (job_id, config_str) in inactive_jod_id_and_config {
+            Vec::with_capacity(inactive_jobs.len());
+        for (job_id, config_str, job_type) in inactive_jobs {
+            // One-time jobs don't have buffered objects that need resubmission.
+            if job_type.is_one_time() {
+                continue;
+            }
             let Some(config) = self.load_config(job_id, config_str).await else {
                 tracing::error!(
                     job_id = ? job_id,
@@ -572,7 +627,165 @@ impl ClpDbIngestionConnector {
             self.try_add_ingestion_job_context(job_id, config, &mut inactive_ingestion_jobs);
         }
 
-        Ok((recoverable_ingestion_jobs, inactive_ingestion_jobs))
+        Ok((
+            recoverable_ingestion_jobs,
+            inactive_ingestion_jobs,
+            recoverable_one_time_jobs,
+        ))
+    }
+
+    /// Fetches the IDs, configs, and types of all ingestion jobs in the given status.
+    ///
+    /// # Returns
+    ///
+    /// The matching `(job_id, config_str, job_type)` triples on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    async fn fetch_jobs_with_status(
+        &self,
+        status: ClpIngestionJobStatus,
+    ) -> anyhow::Result<Vec<(IngestionJobId, String, ClpIngestionJobType)>> {
+        const QUERY: &str = formatcp!(
+            "SELECT `id`, `config`, `job_type` FROM `{table}` WHERE `status` = ?;",
+            table = INGESTION_JOB_TABLE_NAME,
+        );
+        sqlx::query_as(QUERY)
+            .bind(status)
+            .fetch_all(&self.db_pool)
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    error = ? e,
+                    status = ? status,
+                    "Failed to fetch ingestion jobs from CLP DB during service start."
+                );
+                e.into()
+            })
+    }
+
+    /// Parses a recoverable ingestion job from its persisted job type and config string.
+    ///
+    /// # Returns
+    ///
+    /// The parsed recoverable job on success, or `None` if the config cannot be deserialized. On
+    /// failure, the errors will be logged and the ingestion job will be marked as failed in CLP
+    /// DB.
+    async fn parse_recoverable_job(
+        &self,
+        job_id: IngestionJobId,
+        config_str: String,
+        job_type: ClpIngestionJobType,
+    ) -> Option<RecoverableJob> {
+        match job_type {
+            ClpIngestionJobType::S3Prefix | ClpIngestionJobType::S3Keys => self
+                .load_one_time_config(job_id, config_str, job_type)
+                .await
+                .map(RecoverableJob::OneTime),
+            ClpIngestionJobType::S3Scanner | ClpIngestionJobType::SqsListener => self
+                .load_config(job_id, config_str)
+                .await
+                .map(RecoverableJob::LongRunning),
+        }
+    }
+
+    /// Adds a parsed recoverable job to the appropriate recovery list.
+    ///
+    /// When `update_start_after` is true and the job is an S3 scanner, refreshes `start_after`
+    /// from the last persisted ingested key before recovery.
+    async fn recover_recoverable_job(
+        &self,
+        job_id: IngestionJobId,
+        job: RecoverableJob,
+        update_start_after: bool,
+        recoverable_ingestion_jobs: &mut Vec<ClpIngestionJobContext>,
+        recoverable_one_time_jobs: &mut Vec<OneTimeIngestionJobContext>,
+    ) {
+        match job {
+            RecoverableJob::OneTime(config) => {
+                recoverable_one_time_jobs
+                    .push(self.create_one_time_ingestion_job_context_from_parts(job_id, config));
+            }
+            RecoverableJob::LongRunning(config) => {
+                let config = if update_start_after {
+                    match config {
+                        S3IngestionJobConfig::S3Scanner(scanner_config) => {
+                            match self.update_start_after(job_id, scanner_config).await {
+                                Ok(updated_config) => {
+                                    S3IngestionJobConfig::S3Scanner(updated_config)
+                                }
+                                Err(e) => {
+                                    let status_msg = e.to_string();
+                                    if let Err(e) = self.try_fail(job_id, status_msg).await {
+                                        tracing::error!(
+                                            error = ? e,
+                                            job_id = ? job_id,
+                                            "Failed to update ingestion job status to `failed` \
+                                                for a S3 scanner ingestion job with invalid last \
+                                                ingested key during service start."
+                                        );
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                        other @ S3IngestionJobConfig::SqsListener(_) => other,
+                    }
+                } else {
+                    config
+                };
+                self.try_add_ingestion_job_context(job_id, config, recoverable_ingestion_jobs);
+            }
+        }
+    }
+
+    /// Loads the configuration of a one-time ingestion job with the given ID from CLP DB.
+    ///
+    /// # Returns
+    ///
+    /// The one-time ingestion job configuration on success, or `None` if the config cannot be
+    /// deserialized. On failure, the errors will be logged and the ingestion job will be marked as
+    /// failed in CLP DB.
+    async fn load_one_time_config(
+        &self,
+        job_id: IngestionJobId,
+        config_str: String,
+        job_type: ClpIngestionJobType,
+    ) -> Option<OneTimeIngestionJobConfig> {
+        let loaded_config = match job_type {
+            ClpIngestionJobType::S3Prefix => serde_json::from_str::<S3PrefixConfig>(&config_str)
+                .map(OneTimeIngestionJobConfig::S3Prefix),
+            ClpIngestionJobType::S3Keys => serde_json::from_str::<S3KeysConfig>(&config_str)
+                .map(OneTimeIngestionJobConfig::S3Keys),
+            ClpIngestionJobType::S3Scanner | ClpIngestionJobType::SqsListener => {
+                panic!("non-one-time job type passed to load_one_time_config: {job_type}")
+            }
+        };
+        match loaded_config {
+            Ok(config) => Some(config),
+            Err(e) => {
+                tracing::error!(
+                    error = ? e,
+                    job_id = ? job_id,
+                    job_type = ? job_type,
+                    "Failed to parse one-time ingestion job config from CLP DB during service \
+                        start. The job will be skipped."
+                );
+                let status_msg = format!("failed to parse one-time ingestion job config: {e}");
+                if let Err(e) = self.try_fail(job_id, status_msg).await {
+                    tracing::error!(
+                        error = ? e,
+                        job_id = ? job_id,
+                        "Failed to update job status to `failed` for a one-time job with invalid \
+                            config during service start."
+                    );
+                }
+                None
+            }
+        }
     }
 
     /// Loads the configuration of an ingestion job with the given ID from CLP DB.
@@ -596,10 +809,8 @@ impl ClpDbIngestionConnector {
                     "Failed to parse ingestion job config from CLP DB during service start. \
                         The job will be skipped."
                 );
-                if let Err(e) = self
-                    .try_fail(job_id, format!("Failed to parse ingestion job config: {e}"))
-                    .await
-                {
+                let status_msg = format!("failed to parse ingestion job config: {e}");
+                if let Err(e) = self.try_fail(job_id, status_msg).await {
                     tracing::error!(
                         error = ? e,
                         job_id = ? job_id,
@@ -679,6 +890,77 @@ impl ClpDbIngestionConnector {
                     The job will be skipped."
             ),
         }
+    }
+
+    /// Creates and registers a one-time ingestion job context in the database.
+    ///
+    /// # Returns
+    ///
+    /// The newly created one-time ingestion job context on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`serde_json::to_string`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    pub async fn create_one_time_ingestion_job_context(
+        &self,
+        config: OneTimeIngestionJobConfig,
+    ) -> anyhow::Result<OneTimeIngestionJobContext> {
+        const INSERT_QUERY: &str = formatcp!(
+            r"INSERT INTO `{table}` (`config`, `job_type`) VALUES (?, ?);",
+            table = INGESTION_JOB_TABLE_NAME,
+        );
+
+        let config_json = match &config {
+            OneTimeIngestionJobConfig::S3Prefix(prefix_config) => {
+                serde_json::to_string(prefix_config)?
+            }
+            OneTimeIngestionJobConfig::S3Keys(keys_config) => serde_json::to_string(keys_config)?,
+        };
+        let result = sqlx::query(INSERT_QUERY)
+            .bind(config_json)
+            .bind(config.job_type())
+            .execute(&self.db_pool)
+            .await?;
+
+        Ok(self.create_one_time_ingestion_job_context_from_parts(result.last_insert_id(), config))
+    }
+
+    /// Retrieves the job type for the given ingestion job ID.
+    ///
+    /// # Returns
+    ///
+    /// The job type on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`anyhow::Error`] if the job is not found.
+    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    pub async fn get_job_type(
+        &self,
+        job_id: IngestionJobId,
+    ) -> anyhow::Result<ClpIngestionJobType> {
+        const QUERY: &str = formatcp!(
+            r"SELECT `job_type` FROM `{table}` WHERE `id` = ?;",
+            table = INGESTION_JOB_TABLE_NAME,
+        );
+
+        let job_type: ClpIngestionJobType = sqlx::query_scalar(QUERY)
+            .bind(job_id)
+            .fetch_one(&self.db_pool)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => {
+                    anyhow::anyhow!("ingestion job with ID {job_id} not found")
+                }
+                other => other.into(),
+            })?;
+
+        Ok(job_type)
     }
 }
 
@@ -763,7 +1045,7 @@ impl ClpIngestionState {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`insert_object_metadata_rows`]'s return values on failure.
     ///
     /// # Panics
     ///
@@ -775,52 +1057,15 @@ impl ClpIngestionState {
         tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
         objects: Vec<ObjectMetadata>,
     ) -> anyhow::Result<Vec<CompressionBufferEntry>> {
-        const BASE_INGESTION_QUERY: &str = formatcp!(
-            r"INSERT INTO `{table}` (`bucket`, `key`, `size`, `ingestion_job_id`) VALUES ",
-            table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
-        );
-
-        const CHUNK_SIZE: usize = 10000;
-
-        assert!(
-            !objects.is_empty(),
-            "Cannot build S3 object metadata ingestion query with empty objects"
-        );
-
-        let mut buffer_entries = Vec::with_capacity(objects.len());
-
-        // Ingest object metadata
-        // NOTE: MySQL has a maximum placeholder limit of 65535. We need to batch the ingestion to
-        // avoid hitting this limit. If the number of placeholders per insert changes, we may need
-        // to adjust the chunk size accordingly.
-        for chunk in objects.chunks(CHUNK_SIZE) {
-            let query_string = format!(
-                "{}{}",
-                BASE_INGESTION_QUERY,
-                std::iter::repeat_n("(?, ?, ?, ?)", chunk.len())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-
-            let mut query = sqlx::query(&query_string);
-            for object in chunk {
-                query = query
-                    .bind(object.bucket.as_str())
-                    .bind(object.key.as_str())
-                    .bind(object.size)
-                    .bind(self.job_id);
-            }
-
-            let first_metadata_id: S3ObjectMetadataId =
-                query.execute(&mut **tx).await?.last_insert_id();
-            for (next_metadata_id, object) in (first_metadata_id..).zip(chunk.iter()) {
-                buffer_entries.push(CompressionBufferEntry {
-                    id: next_metadata_id,
-                    size: object.size,
-                });
-            }
-        }
-
+        let metadata_ids = insert_object_metadata_rows(tx, self.job_id, &objects).await?;
+        let buffer_entries = metadata_ids
+            .into_iter()
+            .zip(objects.iter())
+            .map(|(id, object)| CompressionBufferEntry {
+                id,
+                size: object.size,
+            })
+            .collect();
         Ok(buffer_entries)
     }
 
@@ -1032,6 +1277,189 @@ impl SqsListenerState for ClpIngestionState {
     }
 }
 
+/// A CLP-DB-backed state for one-time ingestion jobs.
+#[derive(Clone)]
+pub struct ClpOneTimeIngestionState {
+    job_id: IngestionJobId,
+    db_pool: MySqlPool,
+    aws_authentication: AwsAuthentication,
+    archive_output_config: ArchiveOutput,
+    base_config: BaseConfig,
+}
+
+impl ClpOneTimeIngestionState {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`ClpOneTimeIngestionState`].
+    #[must_use]
+    pub const fn new(
+        job_id: IngestionJobId,
+        db_pool: MySqlPool,
+        aws_authentication: AwsAuthentication,
+        archive_output_config: ArchiveOutput,
+        base_config: BaseConfig,
+    ) -> Self {
+        Self {
+            job_id,
+            db_pool,
+            aws_authentication,
+            archive_output_config,
+            base_config,
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The ID of the underlying ingestion job.
+    #[must_use]
+    pub const fn get_job_id(&self) -> IngestionJobId {
+        self.job_id
+    }
+}
+
+#[async_trait]
+impl IngestionJobState for ClpOneTimeIngestionState {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`update_job_status`]'s return values on failure.
+    async fn start(&self) -> anyhow::Result<()> {
+        update_job_status(
+            self.db_pool.clone(),
+            self.job_id,
+            ClpIngestionJobStatus::Running,
+            None,
+        )
+        .await
+    }
+
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`update_job_status`]'s return values on failure.
+    async fn end(&self) -> anyhow::Result<()> {
+        update_job_status(
+            self.db_pool.clone(),
+            self.job_id,
+            ClpIngestionJobStatus::Finished,
+            None,
+        )
+        .await
+    }
+
+    async fn fail(&self, msg: String) {
+        match update_job_status(
+            self.db_pool.clone(),
+            self.job_id,
+            ClpIngestionJobStatus::Failed,
+            Some(&msg),
+        )
+        .await
+        {
+            Ok(()) => {}
+            Err(err) => {
+                tracing::error!(
+                    error = ? err,
+                    status_msg = ? msg,
+                    job_id = ? self.job_id,
+                    "Failed to update job status to `failed`."
+                );
+            }
+        }
+    }
+}
+
+#[async_trait]
+impl OneTimeIngestionState for ClpOneTimeIngestionState {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`anyhow::Error`] if the underlying ingestion job is not in
+    ///   [`ClpIngestionJobStatus::Running`] or [`ClpIngestionJobStatus::Paused`] status.
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`insert_object_metadata_rows`]'s return values on failure.
+    /// * Forwards [`insert_compression_job_and_link_metadata`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    async fn finalize(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<FinalizeOutcome> {
+        const SELECT_STATUS_QUERY: &str = formatcp!(
+            r"SELECT `status` FROM `{table}` WHERE `id` = ? FOR UPDATE;",
+            table = INGESTION_JOB_TABLE_NAME,
+        );
+        const UPDATE_STATUS_QUERY: &str = formatcp!(
+            r"UPDATE `{table}` SET `status` = ? WHERE `id` = ?;",
+            table = INGESTION_JOB_TABLE_NAME,
+        );
+
+        let mut tx = self.db_pool.begin().await?;
+
+        let status: ClpIngestionJobStatus = sqlx::query_scalar(SELECT_STATUS_QUERY)
+            .bind(self.job_id)
+            .fetch_one(&mut *tx)
+            .await?;
+        match status {
+            ClpIngestionJobStatus::Paused => {
+                tx.commit().await?;
+                return Ok(FinalizeOutcome::Cancelled);
+            }
+            ClpIngestionJobStatus::Running => {}
+            other => {
+                return Err(anyhow::anyhow!(
+                    "unexpected job status for finalization: {other}"
+                ));
+            }
+        }
+
+        if objects.is_empty() {
+            sqlx::query(UPDATE_STATUS_QUERY)
+                .bind(ClpIngestionJobStatus::Finished)
+                .bind(self.job_id)
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            return Ok(FinalizeOutcome::Finished);
+        }
+
+        let object_metadata_ids =
+            insert_object_metadata_rows(&mut tx, self.job_id, &objects).await?;
+        let io_config = ClpIoConfig::from_ingested_s3_object_metadata(
+            self.aws_authentication.clone(),
+            &self.archive_output_config,
+            &self.base_config,
+            self.job_id,
+            object_metadata_ids.clone(),
+        );
+        let compression_job_id =
+            insert_compression_job_and_link_metadata(&mut tx, &io_config, &object_metadata_ids)
+                .await?;
+
+        sqlx::query(UPDATE_STATUS_QUERY)
+            .bind(ClpIngestionJobStatus::Finished)
+            .bind(self.job_id)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+
+        let compression_state = ClpCompressionState {
+            ingestion_job_id: self.job_id,
+            db_pool: self.db_pool.clone(),
+        };
+        tokio::spawn(wait_for_compression_job_completion_and_update_metadata(
+            compression_state,
+            compression_job_id,
+            object_metadata_ids.len(),
+        ));
+
+        Ok(FinalizeOutcome::Finished)
+    }
+}
+
 /// A CLP-DB-backed implementation of compression job state.
 ///
 /// This state manages the submission of compression jobs to CLP and the corresponding updates to
@@ -1063,25 +1491,13 @@ impl ClpCompressionState {
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if the submitted compression job ID overflows.
-    /// * [`anyhow::Error`] if one or more object metadata rows fail to be updated in the DB.
-    /// * Forwards [`clp_rust_utils::serde::BrotliMsgpack::serialize`]'s return values on failure.
-    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`insert_compression_job_and_link_metadata`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the length of a chunk cannot be converted to `u64`.
     pub async fn submit_for_compression(
         &self,
         io_config: ClpIoConfig,
     ) -> anyhow::Result<CompressionJobId> {
-        const COMPRESSION_JOB_SUBMISSION_QUERY: &str = formatcp!(
-            r"INSERT INTO {table} (`clp_config`) VALUES (?)",
-            table = CLP_COMPRESSION_JOB_TABLE_NAME
-        );
-
         let object_metadata_ids: &[S3ObjectMetadataId] = match &io_config.input {
             InputConfig::S3ObjectMetadataInputConfig { config } => &config.s3_object_metadata_ids,
             InputConfig::S3InputConfig { .. } => {
@@ -1090,54 +1506,11 @@ impl ClpCompressionState {
         };
 
         let mut tx = self.db_pool.begin().await?;
-
-        // Submit compression job
-        let result = sqlx::query(COMPRESSION_JOB_SUBMISSION_QUERY)
-            .bind(clp_rust_utils::serde::BrotliMsgpack::serialize(&io_config)?)
-            .execute(&mut *tx)
-            .await?;
         let compression_job_id =
-            CompressionJobId::try_from(result.last_insert_id()).map_err(|_| {
-                anyhow::anyhow!("The retrieved ID overflows: {}", result.last_insert_id())
-            })?;
-
-        // Update compression job ID for ingested objects.
-        // NOTE: We batch the update to avoid hitting the maximum placeholder limit of MySQL. The
-        // batch size is chosen to be 10000, which is conservative enough to avoid hitting the limit
-        // while also minimizing the number of batches for typical use cases. If the number of
-        // placeholders per update changes, we may need to adjust the batch size accordingly.
-        for chunk in object_metadata_ids.chunks(10000) {
-            let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
-                r"UPDATE `{table}` ",
-                table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
-            ));
-            query_builder
-                .push("SET `compression_job_id` = ")
-                .push_bind(compression_job_id);
-            query_builder
-                .push(", `status` = ")
-                .push_bind(IngestedS3ObjectMetadataStatus::Submitted);
-            query_builder.push(" WHERE `id` IN (");
-            let mut separated_ids = query_builder.separated(", ");
-            for id in chunk {
-                separated_ids.push_bind(id);
-            }
-            query_builder.push(")");
-            query_builder
-                .push(" AND `status` = ")
-                .push_bind(IngestedS3ObjectMetadataStatus::Buffered);
-
-            let result = query_builder.build().execute(&mut *tx).await?;
-            if result.rows_affected()
-                != u64::try_from(chunk.len()).expect("size conversion should always succeed")
-            {
-                return Err(anyhow::anyhow!(
-                    "Failed to update compression job ID for some objects."
-                ));
-            }
-        }
-
+            insert_compression_job_and_link_metadata(&mut tx, &io_config, object_metadata_ids)
+                .await?;
         tx.commit().await?;
+
         Ok(compression_job_id)
     }
 
@@ -1325,6 +1698,42 @@ impl MySqlEnumFormat for ClpIngestionJobStatus {}
 
 impl_sqlx_type!(ClpIngestionJobStatus => str);
 
+/// Enum for CLP ingestion job types.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    sqlx::Encode,
+    sqlx::Decode,
+    EnumIter,
+    AsRefStr,
+    Display,
+    EnumString,
+)]
+#[sqlx(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum ClpIngestionJobType {
+    S3Scanner,
+    SqsListener,
+    S3Prefix,
+    S3Keys,
+}
+
+impl ClpIngestionJobType {
+    /// Returns whether this job type runs as a single bounded task (not a long-running listener
+    /// or scanner loop).
+    #[must_use]
+    pub const fn is_one_time(self) -> bool {
+        matches!(self, Self::S3Prefix | Self::S3Keys)
+    }
+}
+
+impl MySqlEnumFormat for ClpIngestionJobType {}
+
+impl_sqlx_type!(ClpIngestionJobType => str);
+
 /// Enum for CLP ingestion S3 object metadata status.
 #[derive(
     Debug,
@@ -1364,6 +1773,7 @@ fn ingestion_job_table_creation_query() -> String {
 CREATE TABLE IF NOT EXISTS `{table}` (
     `id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
     `config` TEXT NOT NULL,
+    `job_type` {job_type_enum} NOT NULL DEFAULT '{default_job_type}',
     `status` {status_enum} NOT NULL DEFAULT '{default_status}',
     `status_msg` TEXT NULL DEFAULT NULL,
     `num_files_compressed` BIGINT unsigned NOT NULL DEFAULT '0',
@@ -1373,9 +1783,151 @@ CREATE TABLE IF NOT EXISTS `{table}` (
     PRIMARY KEY (`id`)
 );",
         table = INGESTION_JOB_TABLE_NAME,
+        job_type_enum = ClpIngestionJobType::format_as_sql_enum(),
+        default_job_type = ClpIngestionJobType::S3Scanner,
         status_enum = ClpIngestionJobStatus::format_as_sql_enum(),
         default_status = ClpIngestionJobStatus::Requested,
     )
+}
+
+/// Inserts S3 object metadata rows into the database and returns the generated IDs.
+///
+/// # Returns
+///
+/// A vector of [`S3ObjectMetadataId`] values for the inserted rows on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if `objects` is empty, as it cannot build a valid ingestion query in that case.
+async fn insert_object_metadata_rows(
+    tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
+    job_id: IngestionJobId,
+    objects: &[ObjectMetadata],
+) -> anyhow::Result<Vec<S3ObjectMetadataId>> {
+    const BASE_INGESTION_QUERY: &str = formatcp!(
+        r"INSERT INTO `{table}` (`bucket`, `key`, `size`, `ingestion_job_id`) VALUES ",
+        table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
+    );
+    const CHUNK_SIZE: usize = 10000;
+
+    assert!(
+        !objects.is_empty(),
+        "cannot build S3 object metadata ingestion query with empty objects"
+    );
+
+    let mut metadata_ids = Vec::with_capacity(objects.len());
+
+    // NOTE: MySQL has a maximum placeholder limit of 65535. We need to batch the ingestion to
+    // avoid hitting this limit. If the number of placeholders per insert changes, we may need
+    // to adjust the chunk size accordingly.
+    for chunk in objects.chunks(CHUNK_SIZE) {
+        let query_string = format!(
+            "{}{}",
+            BASE_INGESTION_QUERY,
+            std::iter::repeat_n("(?, ?, ?, ?)", chunk.len())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+
+        let mut query = sqlx::query(&query_string);
+        for object in chunk {
+            query = query
+                .bind(object.bucket.as_str())
+                .bind(object.key.as_str())
+                .bind(object.size)
+                .bind(job_id);
+        }
+
+        let first_metadata_id: S3ObjectMetadataId =
+            query.execute(&mut **tx).await?.last_insert_id();
+        for next_metadata_id in first_metadata_id..(first_metadata_id + chunk.len() as u64) {
+            metadata_ids.push(next_metadata_id);
+        }
+    }
+
+    Ok(metadata_ids)
+}
+
+/// Inserts a compression job row and links the provided object metadata IDs to it.
+///
+/// # Returns
+///
+/// The ID of the inserted compression job on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if the submitted compression job ID overflows.
+/// * [`anyhow::Error`] if one or more object metadata rows fail to be updated in the DB.
+/// * Forwards [`clp_rust_utils::serde::BrotliMsgpack::serialize`]'s return values on failure.
+/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if the length of a chunk cannot be converted to `u64`.
+async fn insert_compression_job_and_link_metadata(
+    tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
+    io_config: &ClpIoConfig,
+    object_metadata_ids: &[S3ObjectMetadataId],
+) -> anyhow::Result<CompressionJobId> {
+    const COMPRESSION_JOB_SUBMISSION_QUERY: &str = formatcp!(
+        r"INSERT INTO {table} (`clp_config`) VALUES (?)",
+        table = CLP_COMPRESSION_JOB_TABLE_NAME
+    );
+    const CHUNK_SIZE: usize = 10000;
+
+    // Submit compression job
+    let result = sqlx::query(COMPRESSION_JOB_SUBMISSION_QUERY)
+        .bind(clp_rust_utils::serde::BrotliMsgpack::serialize(io_config)?)
+        .execute(&mut **tx)
+        .await?;
+    let compression_job_id = CompressionJobId::try_from(result.last_insert_id())
+        .map_err(|_| anyhow::anyhow!("the retrieved ID overflows: {}", result.last_insert_id()))?;
+
+    // Update compression job ID for ingested objects.
+    // NOTE: We batch the update to avoid hitting the maximum placeholder limit of MySQL. The
+    // batch size is chosen to be 10000, which is conservative enough to avoid hitting the limit
+    // while also minimizing the number of batches for typical use cases. If the number of
+    // placeholders per update changes, we may need to adjust the batch size accordingly.
+    for chunk in object_metadata_ids.chunks(CHUNK_SIZE) {
+        let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
+            r"UPDATE `{table}` ",
+            table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
+        ));
+        query_builder
+            .push("SET `compression_job_id` = ")
+            .push_bind(compression_job_id);
+        query_builder
+            .push(", `status` = ")
+            .push_bind(IngestedS3ObjectMetadataStatus::Submitted);
+        query_builder.push(" WHERE `id` IN (");
+        let mut separated_ids = query_builder.separated(", ");
+        for id in chunk {
+            separated_ids.push_bind(id);
+        }
+        query_builder.push(")");
+        query_builder
+            .push(" AND `status` = ")
+            .push_bind(IngestedS3ObjectMetadataStatus::Buffered);
+
+        let result = query_builder.build().execute(&mut **tx).await?;
+        if result.rows_affected()
+            != u64::try_from(chunk.len()).expect("size conversion should always succeed")
+        {
+            return Err(anyhow::anyhow!(
+                "failed to update compression job ID for some objects"
+            ));
+        }
+    }
+
+    Ok(compression_job_id)
 }
 
 /// The query to create the table for S3 scanner job state tracking.
@@ -1514,6 +2066,14 @@ mod tests {
         assert_eq!(
             ClpIngestionJobStatus::format_as_sql_enum(),
             "ENUM('requested', 'running', 'paused', 'failed', 'finished')"
+        );
+    }
+
+    #[test]
+    fn test_clp_ingestion_job_type_enum() {
+        assert_eq!(
+            ClpIngestionJobType::format_as_sql_enum(),
+            "ENUM('s3_scanner', 'sqs_listener', 's3_prefix', 's3_keys')"
         );
     }
 
