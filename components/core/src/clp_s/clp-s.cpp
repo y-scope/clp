@@ -247,16 +247,16 @@ bool search_archive(
                                 -> void {
                             if (CommandLineArguments::AggregationType::Count
                                 == options.aggregation_type) {
-                                output_handler = std::make_unique<clp_s::CountOutputHandler>(
-                                        reducer_socket_fd
-                                );
+                                output_handler
+                                        = std::make_unique<clp_s::CountToReducerOutputHandler>(
+                                                reducer_socket_fd
+                                        );
                             } else if (CommandLineArguments::AggregationType::CountByTime
                                        == options.aggregation_type)
                             {
-                                output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
-                                        reducer_socket_fd,
-                                        options.count_by_time_bucket_size
-                                );
+                                output_handler = std::make_unique<
+                                        clp_s::CountByTimeToReducerOutputHandler
+                                >(reducer_socket_fd, options.count_by_time_bucket_size);
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");
                                 output_handler = nullptr;
@@ -264,13 +264,34 @@ bool search_archive(
                         },
                         [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
                                 -> void {
-                            output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                                    options.uri,
-                                    options.collection,
-                                    options.batch_size,
-                                    options.max_num_results,
-                                    options.dataset
-                            );
+                            if (false == options.aggregation_type.has_value()) {
+                                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
+                                        options.uri,
+                                        options.collection,
+                                        options.batch_size,
+                                        options.max_num_results,
+                                        options.dataset
+                                );
+                            } else if (CommandLineArguments::AggregationType::Count
+                                       == options.aggregation_type.value())
+                            {
+                                output_handler
+                                        = std::make_unique<clp_s::CountToResultsCacheOutputHandler>(
+                                                options.uri,
+                                                options.collection
+                                        );
+                            } else if (CommandLineArguments::AggregationType::CountByTime
+                                       == options.aggregation_type.value())
+                            {
+                                output_handler = std::make_unique<
+                                        clp_s::CountByTimeToResultsCacheOutputHandler
+                                >(options.uri,
+                                  options.collection,
+                                  options.count_by_time_bucket_size);
+                            } else {
+                                SPDLOG_ERROR("Unhandled aggregation type.");
+                                output_handler = nullptr;
+                            }
                         },
                         [&](CommandLineArguments::StdoutOutputHandlerOptions const& options)
                                 -> void {

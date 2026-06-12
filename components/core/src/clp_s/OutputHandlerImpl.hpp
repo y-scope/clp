@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <map>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -214,10 +215,10 @@ private:
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.
  */
-class CountOutputHandler : public ::clp_s::search::OutputHandler {
+class CountToReducerOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Constructors
-    CountOutputHandler(int reducer_socket_fd);
+    CountToReducerOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
     void write(
@@ -245,10 +246,10 @@ private:
  * Output handler that performs a count aggregation bucketed by time and sends the results to a
  * reducer.
  */
-class CountByTimeOutputHandler : public ::clp_s::search::OutputHandler {
+class CountByTimeToReducerOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Constructors
-    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+    CountByTimeToReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
             : search::OutputHandler{true, false},
               m_reducer_socket_fd{reducer_socket_fd},
               m_count_by_time_bucket_size{count_by_time_bucket_size} {}
@@ -275,6 +276,93 @@ public:
 
 private:
     int m_reducer_socket_fd;
+    std::map<int64_t, int64_t> m_bucket_counts;
+    int64_t m_count_by_time_bucket_size;
+};
+
+/**
+ * Output handler that performs a count aggregation and writes the results to the results cache.
+ */
+class CountToResultsCacheOutputHandler : public ::clp_s::search::OutputHandler {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
+    // Constructors
+    CountToResultsCacheOutputHandler(std::string const& uri, std::string const& collection);
+
+    // Methods inherited from OutputHandler
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override {}
+
+    void write(std::string_view message) override { m_count += 1; }
+
+    /**
+     * Flushes the count.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on database error
+     */
+    ErrorCode finish() override;
+
+private:
+    mongocxx::client m_client;
+    mongocxx::collection m_collection;
+    int64_t m_count{};
+};
+
+/**
+ * Output handler that performs a count aggregation bucketed by time and writes the results to the
+ * results cache.
+ */
+class CountByTimeToResultsCacheOutputHandler : public ::clp_s::search::OutputHandler {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
+    // Constructors
+    CountByTimeToResultsCacheOutputHandler(
+            std::string const& uri,
+            std::string const& collection,
+            int64_t count_by_time_bucket_size
+    );
+
+    // Methods inherited from OutputHandler
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override {
+        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        m_bucket_counts[bucket] += 1;
+    }
+
+    void write(std::string_view message) override {}
+
+    /**
+     * Flushes the counts.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on database error
+     */
+    ErrorCode finish() override;
+
+private:
+    mongocxx::client m_client;
+    mongocxx::collection m_collection;
     std::map<int64_t, int64_t> m_bucket_counts;
     int64_t m_count_by_time_bucket_size;
 };
