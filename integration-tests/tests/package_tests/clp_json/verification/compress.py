@@ -20,14 +20,14 @@ def verify_compress_structured_clp_json(
     :return: A `ClpVerificationResult` indicating whether the round-trip matched the original logs.
     """
     if not isinstance(action.args, CompressArgs):
-        err_msg = "'verify_compress_structured_clp_json' requires a 'CompressArgs' action."
+        err_msg = "Verification expects a 'CompressArgs' action."
         raise TypeError(err_msg)
     if action.args.unstructured or original_dataset.metadata.unstructured:
-        err_msg = "'verify_compress_structured_clp_json' cannot verify unstructured datasets."
+        err_msg = "Verification expects a structured dataset workflow."
         raise ValueError(err_msg)
 
     # TODO: Waiting for PR 1299 (clp-json decompression) to be merged.
-    return action.verify_returncode()
+    return action.pass_verification()
 
 
 def verify_compress_unstructured_clp_json(
@@ -46,14 +46,14 @@ def verify_compress_unstructured_clp_json(
     :return: A `ClpVerificationResult` indicating whether the round-trip matched the original logs.
     """
     if not isinstance(action.args, CompressArgs):
-        err_msg = "'verify_compress_unstructured_clp_json' requires a 'CompressArgs' action."
+        err_msg = "Verification expects a 'CompressArgs' action."
         raise TypeError(err_msg)
     if not action.args.unstructured or not original_dataset.metadata.unstructured:
-        err_msg = "'verify_compress_unstructured_clp_json' can only verify unstructured datasets."
+        err_msg = "Verification expects an unstructured dataset workflow."
         raise ValueError(err_msg)
 
     # TODO: Waiting for PR 1299 (clp-json decompression) to be merged.
-    return action.verify_returncode()
+    return action.pass_verification()
 
 
 # TODO: add verify_compress_ir_clp_json().

@@ -1,6 +1,7 @@
 """Compression verification helpers specific to the clp-text package."""
 
 from tests.package_tests.classes import ClpPackage
+from tests.package_tests.utils.compress import CompressArgs
 from tests.package_tests.utils.decompress import DecompressArgs
 from tests.utils.classes import ClpAction, ClpVerificationResult, SampleDataset
 from tests.utils.fs_validation import is_dir_tree_content_equal
@@ -21,9 +22,9 @@ def verify_compress_clp_text(
     :param original_dataset:
     :return: A `ClpVerificationResult` indicating whether the round-trip matched the original logs.
     """
-    result = action.verify_returncode()
-    if not result:
-        return result
+    if not isinstance(action.args, CompressArgs):
+        err_msg = "Verification expects a 'CompressArgs' action."
+        raise TypeError(err_msg)
 
     path_config = clp_package.path_config
     clear_directory(path_config.package_decompression_dir)
@@ -49,14 +50,12 @@ def verify_compress_clp_text(
     decompressed_logs_path = path_config.package_decompression_dir / original_logs_path.relative_to(
         original_logs_path.anchor
     )
-    equal = is_dir_tree_content_equal(original_logs_path, decompressed_logs_path)
+    if not is_dir_tree_content_equal(original_logs_path, decompressed_logs_path):
+        return action.fail_verification(
+            f"Compress verification failure: mismatch between original logs at"
+            f" '{original_logs_path}' and decompressed logs at '{decompressed_logs_path}'.",
+            supporting_action=decompress_action,
+        )
+
     clear_directory(path_config.package_decompression_dir)
-
-    if equal:
-        return action.pass_verification()
-
-    return action.fail_verification(
-        f"Compress verification failure: mismatch between original logs at"
-        f" '{original_logs_path}' and decompressed logs at '{decompressed_logs_path}'.",
-        supporting_action=decompress_action,
-    )
+    return action.pass_verification()
