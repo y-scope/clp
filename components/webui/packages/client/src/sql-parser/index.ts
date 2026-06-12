@@ -157,9 +157,9 @@ const buildSearchQuery = ({
     timestampKey,
 }: BuildSearchQueryProps): string => {
     let queryString = `SELECT ${selectItemList} FROM ${databaseName}
-WHERE to_unixtime(${timestampKey}) BETWEEN
-${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
-AND ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND}`;
+WHERE ${timestampKey} BETWEEN
+from_unixtime(${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND})
+AND from_unixtime(${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND})`;
 
     if ("undefined" !== typeof booleanExpression) {
         queryString += ` AND (${booleanExpression})`;
@@ -214,9 +214,9 @@ const buildTimelineQuery = ({
             ${bucketCount}) AS idx,
         COUNT(*) AS cnt
     FROM ${databaseName}
-    WHERE to_unixtime(${timestampKey}) BETWEEN
-        ${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
-        AND ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
+    WHERE ${timestampKey} BETWEEN
+        from_unixtime(${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND})
+        AND from_unixtime(${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND})
         ${booleanExpressionQuery}
     GROUP BY 1
     ORDER BY 1
