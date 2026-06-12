@@ -215,10 +215,10 @@ private:
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.
  */
-class CountOutputHandler : public ::clp_s::search::OutputHandler {
+class CountToReducerOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Constructors
-    CountOutputHandler(int reducer_socket_fd);
+    CountToReducerOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
     void write(
@@ -246,10 +246,10 @@ private:
  * Output handler that performs a count aggregation bucketed by time and sends the results to a
  * reducer.
  */
-class CountByTimeOutputHandler : public ::clp_s::search::OutputHandler {
+class CountByTimeToReducerOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Constructors
-    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+    CountByTimeToReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
             : search::OutputHandler{true, false},
               m_reducer_socket_fd{reducer_socket_fd},
               m_count_by_time_bucket_size{count_by_time_bucket_size} {}
@@ -281,9 +281,7 @@ private:
 };
 
 /**
- * Output handler that performs a count aggregation and writes the result to the results cache
- * (MongoDB). The count is written with an atomic upsert that increments the stored count, so
- * results from multiple search processes writing to the same collection merge correctly.
+ * Output handler that performs a count aggregation and writes the results to the results cache.
  */
 class CountToResultsCacheOutputHandler : public ::clp_s::search::OutputHandler {
 public:
@@ -309,9 +307,9 @@ public:
     void write(std::string_view message) override { m_count += 1; }
 
     /**
-     * Upserts the count to the results cache.
+     * Flushes the count.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on failure to write to the results cache
+     * @return ErrorCodeFailureDbBulkWrite on database error
      */
     ErrorCode finish() override;
 
@@ -323,9 +321,7 @@ private:
 
 /**
  * Output handler that performs a count aggregation bucketed by time and writes the results to the
- * results cache (MongoDB). Each bucket's count is written with an atomic upsert that increments
- * the stored count, so results from multiple search processes writing to the same collection merge
- * correctly.
+ * results cache.
  */
 class CountByTimeToResultsCacheOutputHandler : public ::clp_s::search::OutputHandler {
 public:
@@ -358,9 +354,9 @@ public:
     void write(std::string_view message) override {}
 
     /**
-     * Upserts the bucket counts to the results cache.
+     * Flushes the counts.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on failure to write to the results cache
+     * @return ErrorCodeFailureDbBulkWrite on database error
      */
     ErrorCode finish() override;
 

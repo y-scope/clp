@@ -26,24 +26,13 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
-// The two count-writing paths (direct-to-results-cache and via the reducer) must use the same
-// field name for the count value. NOTE: only the field name is shared. Count-by-time documents
-// ({timestamp, count}) have the same shape on both paths, but for plain count the reducer writes
-// a nested record-group document ({group_tags, records: [{count}]}) while
-// CountToResultsCacheOutputHandler writes a flat {count} document, so consumers of the two paths
-// differ.
-static_assert(
-        string_view{constants::results_cache::search::cCount}
-        == string_view{reducer::CountOperator::cRecordElementKey}
-);
-
 namespace {
 /**
  * Connects to the results cache and returns the requested collection.
- * @tparam OperationFailedT The handler-specific exception type to throw on failure.
+ * @tparam OperationFailedT The type of exception to throw on failure.
  * @param uri
  * @param collection
- * @param client Returns the connected client, which must outlive the returned collection.
+ * @param client Returns the connected client.
  * @return The collection.
  */
 template <typename OperationFailedT>
@@ -209,18 +198,18 @@ void ResultsCacheOutputHandler::write(
     }
 }
 
-CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
+CountToReducerOutputHandler::CountToReducerOutputHandler(int reducer_socket_fd)
         : ::clp_s::search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void CountOutputHandler::write(string_view message) {
+void CountToReducerOutputHandler::write(string_view message) {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-ErrorCode CountOutputHandler::finish() {
+ErrorCode CountToReducerOutputHandler::finish() {
     if (false
         == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
     {
@@ -229,7 +218,7 @@ ErrorCode CountOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-ErrorCode CountByTimeOutputHandler::finish() {
+ErrorCode CountByTimeToReducerOutputHandler::finish() {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,
@@ -257,8 +246,6 @@ ErrorCode CountToResultsCacheOutputHandler::finish() {
         return ErrorCode::ErrorCodeSuccess;
     }
 
-    // Filtering on _id makes the upsert safe under concurrent writers: _id's built-in unique
-    // index guarantees that racing upserts resolve to a single document.
     try {
         auto const filter = bsoncxx::builder::basic::make_document(
                 bsoncxx::builder::basic::kvp(
@@ -295,10 +282,8 @@ ErrorCode CountByTimeToResultsCacheOutputHandler::finish() {
         return ErrorCode::ErrorCodeSuccess;
     }
 
-    // Each bucket document is keyed by its bucket timestamp via _id, whose built-in unique index
-    // makes concurrent upserts from multiple writers resolve to a single document per bucket. The
-    // timestamp is duplicated into a regular field on first insert so that readers don't need to
-    // inspect _id.
+    // The bucket timestamp is also stored in a `timestamp` field so that the documents match the
+    // `{timestamp, count}` shape the reducer writes.
     try {
         auto bulk_write = m_collection.create_bulk_write();
         for (auto const& [bucket_timestamp, count] : m_bucket_counts) {

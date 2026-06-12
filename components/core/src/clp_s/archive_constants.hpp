@@ -64,9 +64,6 @@ constexpr char cTimestamp[]{"timestamp"};
 constexpr char cMessage[]{"message"};
 constexpr char cArchiveId[]{"archive_id"};
 constexpr std::string_view cDataset{"dataset"};
-// Must match reducer::CountOperator::cRecordElementKey (enforced by a static_assert in
-// OutputHandlerImpl.cpp, which also documents how the two count-writing paths' document shapes
-// differ).
 constexpr char cCount[]{"count"};
 }  // namespace results_cache::search
 }  // namespace clp_s::constants
