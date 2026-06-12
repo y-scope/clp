@@ -84,7 +84,10 @@ spec:
             "/opt/clp/lib/python3/site-packages/bin/celery",
             "-A", "job_orchestration.executor.query",
             "worker",
-            "--concurrency", "{{ .Values.scheduling.queryWorker.slotsPerPod }}",
+            "--concurrency", "{{ include "clp.schedulingSlotsPerPod" (dict
+              "root" .
+              "component" "queryWorker"
+            ) }}",
             "--loglevel", "WARNING",
             "-Q", "query",
             "-n", "query-worker@%h"
