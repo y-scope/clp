@@ -410,6 +410,10 @@
     {
       "name": "IngestionJob",
       "description": "Ingestion job orchestration endpoints"
+    },
+    {
+      "name": "RealtimeLogs",
+      "description": "Realtime log ingestion endpoints"
     }
   ]
 }
