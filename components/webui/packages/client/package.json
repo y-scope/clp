@@ -6,13 +6,14 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "lint:check": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --max-warnings 0 --fix",
+    "lint:fix": "pnpm run lint:check --fix",
     "dev": "vite"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
+    "@ant-design/icons": "^6.2.5",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@monaco-editor/react": "^4.7.0",
@@ -44,6 +45,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^5.1.2",
+    "eslint": "^9.39.4",
     "eslint-config-yscope": "1.1.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"

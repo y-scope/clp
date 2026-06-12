@@ -1,12 +1,12 @@
 {
   "name": "webui",
   "version": "0.1.0",
-  "packageManager": "pnpm@11.5.1",
+  "packageManager": "pnpm@11.5.2",
   "description": "",
   "scripts": {
     "build": "turbo build",
-    "lint:check": "turbo lint:check",
-    "lint:fix": "turbo lint:fix",
+    "lint:check": "turbo lint:check --filter='@webui/*'",
+    "lint:fix": "turbo lint:fix --filter='@webui/*'",
     "dev": "turbo dev",
     "test": "turbo test"
   },

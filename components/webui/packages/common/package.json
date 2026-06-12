@@ -9,10 +9,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "build:watch": "tsc -w --preserveWatchOutput",
     "dev": "tsc -w --preserveWatchOutput",
     "lint:check": "eslint . --max-warnings 0",
-    "lint:fix": "eslint . --max-warnings 0 --fix"
+    "lint:fix": "pnpm run lint:check --fix"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
@@ -21,6 +20,8 @@
     "@sinclair/typebox": "^0.34.41"
   },
   "devDependencies": {
+    "@types/node": "^25.9.2",
+    "eslint": "^9.39.4",
     "eslint-config-yscope": "1.1.2",
     "typescript": "^5.9.3"
   }

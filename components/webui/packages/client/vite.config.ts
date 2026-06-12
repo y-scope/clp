@@ -28,6 +28,14 @@ export default defineConfig({
                 target: "http://localhost:3000/",
                 changeOrigin: true,
             },
+            "/streams": {
+                target: "http://localhost:3000/",
+                changeOrigin: true,
+            },
+            "/log-viewer": {
+                target: "http://localhost:3000/",
+                changeOrigin: true,
+            },
             "/socket.io/": {
                 target: "ws://localhost:3000/",
                 changeOrigin: true,

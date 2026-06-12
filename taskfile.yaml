@@ -54,6 +54,7 @@ vars:
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
+  G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
 
 tasks:
   default:
@@ -102,8 +103,10 @@ tasks:
 
   clean-webui:
     cmds:
-      - task: "clean-webui-package-node-modules"
       - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/**/.turbo'"
+      - "rm -f '{{.G_WEBUI_CHECKSUM_FILE}}'"
 
   package:
     vars:
@@ -254,42 +257,36 @@ tasks:
       - "webui"
 
   webui:
-    dir: "{{.G_WEBUI_SRC_DIR}}"
-    env:
-      NODE_ENV: "production"
+    vars:
+      CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
+      OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_DEPS_LOG_VIEWER_BUILD_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_SRC_DIR}}/packages/*/dist/**/*"
       - "{{.TASKFILE}}"
-      - "**/*"
-      - exclude: ".turbo/**/*"
-      - exclude: "**/dist/**/*"
-      - exclude: "**/node_modules/**/*"
-      - exclude: "yscope-log-viewer/**/*"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
-      - "{{.G_WEBUI_BUILD_DIR}}/client/**/*"
-      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/**/*"
+      - "{{.CHECKSUM_FILE}}"
     deps:
-      - "deps:yscope-log-viewer:build"
-      - "init"
-      - "webui-node-modules"
+      - "webui:dist"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':'{{.G_WEBUI_SRC_DIR}}'/node_modules/.bin:$PATH turbo build"
-      - "rm -rf '{{.G_WEBUI_BUILD_DIR}}'"
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - "rsync -a 'packages/client/dist/' '{{.OUTPUT_DIR}}/client/'"
+      - "rsync -a 'packages/yscope-log-viewer/dist/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
       - >-
-        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm deploy --prod
-        --filter=@webui/server '{{.G_WEBUI_BUILD_DIR}}/server'
-      - "rsync -a packages/server/dist/ '{{.G_WEBUI_BUILD_DIR}}/server/dist/'"
-      - "rsync -a packages/client/dist/ '{{.G_WEBUI_BUILD_DIR}}/client/'"
-      - "rsync -a '{{.G_DEPS_LOG_VIEWER_BUILD_DIR}}/' '{{.G_WEBUI_BUILD_DIR}}/yscope-log-viewer/'"
-
-  clean-webui-package-node-modules:
-    internal: true
-    cmds:
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/client/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/common/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/packages/server/node_modules'"
-      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/.turbo'"
+        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH
+        pnpm deploy
+        --prod
+        --filter=@webui/server
+        '{{.OUTPUT_DIR}}/server'
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   package-tar:
     internal: true
@@ -447,20 +444,15 @@ tasks:
         uv run --no-cache \
           auditwheel repair "{{.TMP_DIR}}"/*.whl --wheel-dir "{{.G_PYTHON_WHEELS_BUILD_DIR}}"
 
-  webui-node-modules:
+  webui:dist:
     internal: true
-    sources:
-      - "{{.G_NODEJS_22_CHECKSUM_FILE}}"
-      - "{{.TASKFILE}}"
-      - "package.json"
-      - "packages/client/package.json"
-      - "packages/common/package.json"
-      - "packages/server/package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
+    env:
+      NODE_ENV: "production"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     deps:
-      - "toolchains:pnpm"
+      - "init"
+      - "deps:yscope-log-viewer:source"
+      - "toolchains:nodejs-22"
     cmds:
-      - task: "clean-webui-package-node-modules"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run build"
