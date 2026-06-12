@@ -20,7 +20,7 @@
     "@sinclair/typebox": "^0.34.41"
   },
   "devDependencies": {
-    "@types/node": "^25.9.2",
+    "@types/node": "22.19.21",
     "eslint": "^9.39.4",
     "eslint-config-yscope": "1.1.2",
     "typescript": "^5.9.3"
