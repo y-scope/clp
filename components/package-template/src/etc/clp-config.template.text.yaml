@@ -1,5 +1,11 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 
+# Anonymous usage telemetry.
+# See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+telemetry:
+  disable: false
+  endpoint: "https://telemetry.yscope.io"
+
 package:
   storage_engine: "clp"
   query_engine: "clp"
@@ -28,6 +34,7 @@ log_ingestor: null
 #  - "queue"
 #  - "redis"
 #  - "results_cache"
+#  - "otel_collector"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -81,11 +88,19 @@ log_ingestor: null
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: 60
 #
+#otel_collector:
+#  host: "localhost"
+#  port: 4318
+#
 #compression_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
 #
 #query_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
 #
 #webui:
 #  host: "localhost"

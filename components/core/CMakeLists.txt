@@ -213,6 +213,9 @@ endif()
 if(CLP_NEED_SIMDJSON)
     find_package(simdjson REQUIRED)
     if(simdjson_FOUND)
+        if(simdjson_VERSION VERSION_LESS 4.0.0)
+            message(FATAL_ERROR "simdjson >= 4.0.0 is required, found ${simdjson_VERSION}")
+        endif()
         message(STATUS "Found simdjson ${simdjson_VERSION}")
     endif()
 endif()
@@ -439,6 +442,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
         src/clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
+        src/clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.cpp
+        src/clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp

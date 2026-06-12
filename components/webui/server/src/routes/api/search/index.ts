@@ -16,7 +16,7 @@ import {
 import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
+import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,
     updateSearchSignalWhenJobsFinish,
@@ -68,6 +68,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
+                maxNumResults,
                 timeRangeBucketSizeMillis,
                 queryString,
             } = request.body;
@@ -79,7 +80,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     null,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
-                max_num_results: SEARCH_MAX_NUM_RESULTS,
+                max_num_results: maxNumResults ?? DEFAULT_MAX_NUM_SEARCH_RESULTS,
                 query_string: queryString,
             };
 
@@ -126,6 +127,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 updateSearchSignalWhenJobsFinish({
                     aggregationJobId: aggregationJobId,
                     logger: request.log,
+                    maxNumResults: maxNumResults ?? DEFAULT_MAX_NUM_SEARCH_RESULTS,
                     mongoDb: mongoDb,
                     queryJobDbManager: QueryJobDbManager,
                     searchJobId: searchJobId,

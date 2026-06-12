@@ -7,6 +7,7 @@
 #include <string>
 #include <system_error>
 #include <utility>
+#include <variant>
 
 #include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
@@ -16,6 +17,8 @@
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
+#include <clp/type_utils.hpp>
+
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
@@ -225,47 +228,60 @@ bool search_archive(
 
     std::unique_ptr<OutputHandler> output_handler;
     try {
-        switch (command_line_arguments.get_output_handler_type()) {
-            case CommandLineArguments::OutputHandlerType::File:
-                output_handler = std::make_unique<clp_s::FileOutputHandler>(
-                        command_line_arguments.get_file_output_path(),
-                        true
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
-                        command_line_arguments.get_network_dest_host(),
-                        command_line_arguments.get_network_dest_port()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Reducer:
-                if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
-                } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
-                            reducer_socket_fd,
-                            command_line_arguments.get_count_by_time_bucket_size()
-                    );
-                } else {
-                    SPDLOG_ERROR("Unhandled aggregation type.");
-                    return false;
-                }
-                break;
-            case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                        command_line_arguments.get_mongodb_uri(),
-                        command_line_arguments.get_mongodb_collection(),
-                        command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results(),
-                        command_line_arguments.get_dataset()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
-                break;
-            default:
-                SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                return false;
+        std::visit(
+                clp::overloaded{
+                        [&](CommandLineArguments::FileOutputHandlerOptions const& options) -> void {
+                            output_handler = std::make_unique<clp_s::FileOutputHandler>(
+                                    options.output_path,
+                                    true
+                            );
+                        },
+                        [&](CommandLineArguments::NetworkOutputHandlerOptions const& options)
+                                -> void {
+                            output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
+                                    options.host,
+                                    options.port
+                            );
+                        },
+                        [&](CommandLineArguments::ReducerOutputHandlerOptions const& options)
+                                -> void {
+                            if (CommandLineArguments::AggregationType::Count
+                                == options.aggregation_type) {
+                                output_handler = std::make_unique<clp_s::CountOutputHandler>(
+                                        reducer_socket_fd
+                                );
+                            } else if (CommandLineArguments::AggregationType::CountByTime
+                                       == options.aggregation_type)
+                            {
+                                output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
+                                        reducer_socket_fd,
+                                        options.count_by_time_bucket_size
+                                );
+                            } else {
+                                SPDLOG_ERROR("Unhandled aggregation type.");
+                                output_handler = nullptr;
+                            }
+                        },
+                        [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
+                                -> void {
+                            output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
+                                    options.uri,
+                                    options.collection,
+                                    options.batch_size,
+                                    options.max_num_results,
+                                    options.dataset
+                            );
+                        },
+                        [&](CommandLineArguments::StdoutOutputHandlerOptions const& options)
+                                -> void {
+                            output_handler = std::make_unique<clp_s::StandardOutputHandler>();
+                        }
+                },
+                command_line_arguments.get_output_handler_options()
+        );
+        if (nullptr == output_handler) {
+            SPDLOG_ERROR("Failed to create output handler.");
+            return false;
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("Failed to create output handler - {}", e.what());
@@ -356,14 +372,15 @@ int main(int argc, char const* argv[]) {
         }
 
         int reducer_socket_fd{-1};
-        if (command_line_arguments.get_output_handler_type()
-            == CommandLineArguments::OutputHandlerType::Reducer)
+        if (std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
+                    command_line_arguments.get_output_handler_options()
+            ))
         {
-            reducer_socket_fd = reducer::connect_to_reducer(
-                    command_line_arguments.get_reducer_host(),
-                    command_line_arguments.get_reducer_port(),
-                    command_line_arguments.get_job_id()
-            );
+            auto const& options{std::get<CommandLineArguments::ReducerOutputHandlerOptions>(
+                    command_line_arguments.get_output_handler_options()
+            )};
+            reducer_socket_fd
+                    = reducer::connect_to_reducer(options.host, options.port, options.job_id);
             if (-1 == reducer_socket_fd) {
                 SPDLOG_ERROR("Failed to connect to reducer");
                 return 1;

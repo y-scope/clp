@@ -32,14 +32,10 @@ spec:
             "type" "service"
             "name" "query-scheduler"
           ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "job"
-            "name" "results-cache-indices-creator"
-          ) | nindent 10 }}
+        - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "reducer"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_HOME"
@@ -61,7 +57,10 @@ spec:
             "python3", "-u",
             "-m", "job_orchestration.reducer.reducer",
             "--config", "/etc/clp-config.yaml",
-            "--concurrency", "{{ .Values.workerConcurrency }}",
+            "--concurrency", "{{ include "clp.schedulingSlotsPerPod" (dict
+              "root" .
+              "component" "reducer"
+            ) }}",
             "--upsert-interval", "{{ .Values.clpConfig.reducer.upsert_interval }}"
           ]
       volumes:

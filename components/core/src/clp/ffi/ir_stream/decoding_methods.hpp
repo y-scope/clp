@@ -97,6 +97,24 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
         -> ystdlib::error_handling::Result<encoded_tag_t>;
 
 /**
+ * Deserializes a timestamp or a timestamp delta from the given reader.
+ * @tparam encoded_variable_t Type of the encoded variable
+ * @param reader
+ * @param encoded_tag
+ * @return A result containing the timestamp delta if `encoded_variable_t` is
+ * `four_byte_encoded_variable_t` or the actual timestamp if `encoded_variable_t` is
+ * `eight_byte_encoded_variable_t` on success, or an error code indicating the failure:
+ * - IrDeserializationErrorEnum::InvalidTag if the tag does not correspond to a timestamp encoding.
+ * - IrDeserializationErrorEnum::IncompleteStream if reader doesn't contain enough data to
+ *   deserialize.
+ * - Forwards `deserialize_int`'s return values on failure.
+ */
+template <ir::EncodedVariableTypeReq encoded_variable_t>
+[[nodiscard]] auto
+deserialize_timestamp_or_timestamp_delta(ReaderInterface& reader, encoded_tag_t encoded_tag)
+        -> ystdlib::error_handling::Result<ir::epoch_time_ms_t>;
+
+/**
  * Deserializes a log event from the given stream
  * @tparam encoded_variable_t
  * @param reader
@@ -148,9 +166,10 @@ auto deserialize_encoded_text_ast(
  * @param encoded_tag
  * @return A result containing the deserialized encoded text AST on success, or an error code
  * indicating the failure:
- * - IrDeserializationErrorEnum::EncodedTextAstDeserializationFailure if the encoded text AST
- *   cannot be deserialized.
- * - IrDeserializationErrorEnum::IncompleteStream if the IR stream is incomplete.
+ * - Forwards `deserialize_int`'s return values on failure.
+ * - Forwards `deserialize_and_append_dict_var`'s return values on failure.
+ * - Forwards `deserialize_and_append_logtype`'s return values on failure.
+ * - Forwards `deserialize_tag`'s return values on failure.
  */
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 [[nodiscard]] auto deserialize_encoded_text_ast(ReaderInterface& reader, encoded_tag_t encoded_tag)

@@ -1,4 +1,5 @@
 import {type SearchResultsMetadataDocument} from "@webui/common/metadata";
+import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "@webui/common/schemas/search";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -9,14 +10,10 @@ import type {
 } from "mongodb";
 
 
-/**
- * The maximum number of results to retrieve for a search.
- */
-const SEARCH_MAX_NUM_RESULTS = 1000;
-
 type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
     logger: FastifyBaseLogger;
+    maxNumResults: number;
     mongoDb: Db;
     queryJobDbManager: FastifyInstance["QueryJobDbManager"];
     searchJobId: number;
@@ -32,7 +29,6 @@ type CreateMongoIndexesProps = {
 
 export {
     CreateMongoIndexesProps,
-    SEARCH_MAX_NUM_RESULTS,
-    SearchResultsMetadataDocument,
+    DEFAULT_MAX_NUM_SEARCH_RESULTS,
     UpdateSearchSignalWhenJobsFinishProps,
 };
