@@ -1,9 +1,9 @@
 import type {PrestoSearchResult} from "@webui/common/presto";
+import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "@webui/common/schemas/search";
 
 import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../../SearchState/index";
-import {SEARCH_MAX_NUM_RESULTS} from "../../typings";
 
 
 /**
@@ -34,7 +34,7 @@ const usePrestoSearchResults = () => {
                         "desc",
                     ],
                 ],
-                limit: SEARCH_MAX_NUM_RESULTS,
+                limit: DEFAULT_MAX_NUM_SEARCH_RESULTS,
             };
 
             const collection = new MongoSocketCollection(searchJobId);
