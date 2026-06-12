@@ -25,7 +25,7 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 # One hour timeout to prevent changes with infinite loops from running forever
-UNIT_TEST_TIMEOUT = 60 * 60
+UNIT_TEST_TIMEOUT_SECONDS = 60 * 60
 
 
 def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> None:
@@ -67,7 +67,7 @@ def _run_unit_tests(build_dir: Path, test_spec: str | None) -> None:
     ]
     if test_spec is not None:
         cmd.append(test_spec)
-    subprocess.run(cmd, cwd=build_dir, check=True, timeout=UNIT_TEST_TIMEOUT)
+    subprocess.run(cmd, cwd=build_dir, check=True, timeout=UNIT_TEST_TIMEOUT_SECONDS)
 
 
 def main(argv: list[str]) -> int:
