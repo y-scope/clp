@@ -3,7 +3,6 @@ import type {Db} from "mongodb";
 
 import {
     CreateMongoIndexesProps,
-    SEARCH_MAX_NUM_RESULTS,
     UpdateSearchSignalWhenJobsFinishProps,
 } from "./typings.js";
 
@@ -26,14 +25,16 @@ const hasCollection = async (mongoDb: Db, collectionName: string): Promise<boole
  * @param props
  * @param props.aggregationJobId
  * @param props.logger
+ * @param props.maxNumResults
+ * @param props.mongoDb
  * @param props.queryJobDbManager
  * @param props.searchJobId
  * @param props.searchResultsMetadataCollection
- * @param props.mongoDb
  */
 const updateSearchSignalWhenJobsFinish = async ({
     aggregationJobId,
     logger,
+    maxNumResults,
     mongoDb,
     queryJobDbManager,
     searchJobId,
@@ -82,7 +83,7 @@ const updateSearchSignalWhenJobsFinish = async ({
             errorMsg: errorMsg,
             numTotalResults: Math.min(
                 numResultsInCollection,
-                SEARCH_MAX_NUM_RESULTS
+                maxNumResults
             ),
         },
     };

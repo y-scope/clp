@@ -74,6 +74,8 @@ data:
         .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
+      task_soft_time_limit: {{ .Values.clpConfig.compression_worker.task_soft_time_limit | int }}
+      task_time_limit: {{ .Values.clpConfig.compression_worker.task_time_limit | int }}
     data_directory: "/var/data"
     garbage_collector:
       logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
@@ -138,6 +140,8 @@ data:
     {{- with .Values.clpConfig.query_worker }}
     query_worker:
       logging_level: {{ .logging_level | quote }}
+      task_soft_time_limit: {{ .task_soft_time_limit | int }}
+      task_time_limit: {{ .task_time_limit | int }}
     {{- end }}
     queue:
       host: "{{ include "clp.queueHost" . }}"
@@ -164,6 +168,9 @@ data:
       retention_period: null
       {{- end }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    otel_collector:
+      host: "{{ include "clp.otelCollectorHost" . }}"
+      port: {{ include "clp.otelCollectorPort" . | int }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:
       {{- with .storage }}
@@ -205,8 +212,8 @@ data:
       target_uncompressed_size: {{ .target_uncompressed_size | int }}
     {{- end }}{{/* with .Values.clpConfig.stream_output */}}
     tmp_directory: "/var/tmp"
-    {{- if .Values.clpConfig.aws_config_directory }}
-    aws_config_directory: {{ .Values.clpConfig.aws_config_directory | quote }}
+    {{- if .Values.clpConfig.aws_config }}
+    aws_config_directory: {{ include "clp.awsConfigMountPath" . | quote }}
     {{- end }}
     webui:
       host: "localhost"
@@ -435,3 +442,60 @@ data:
     echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
 {{- end }}{{/* with .Values.clpConfig.presto */}}
 {{- end }}{{/* if has "presto" .Values.clpConfig.bundled */}}
+
+{{- if and
+  (not .Values.clpConfig.telemetry.disable)
+  (has "otel_collector" .Values.clpConfig.bundled) }}
+  otel-collector-config.yaml: |
+    extensions:
+      health_check:
+        endpoint: "0.0.0.0:13133"
+
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: "0.0.0.0:4318"
+
+    processors:
+      batch:
+        timeout: "30s"
+        send_batch_size: 1024
+      resourcedetection:
+        # NOTE: Kubernetes deployments do not mount the Docker socket, so use env and system
+        # detection only.
+        detectors: ["env", "system"]
+        system:
+          resource_attributes:
+            host.name:
+              enabled: false
+            host.arch:
+              enabled: true
+            host.cpu.family:
+              enabled: true
+            host.cpu.model.id:
+              enabled: true
+            host.cpu.vendor.id:
+              enabled: true
+        override: false
+
+    exporters:
+      otlp_http:
+        endpoint: {{ .Values.clpConfig.telemetry.endpoint | quote }}
+
+    service:
+      extensions: ["health_check"]
+      pipelines:
+        metrics:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlp_http"]
+        traces:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlp_http"]
+        logs:
+          receivers: ["otlp"]
+          processors: ["resourcedetection", "batch"]
+          exporters: ["otlp_http"]
+{{- end }}

@@ -9,6 +9,27 @@ image:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
     tag: "main"
+  mariadb:
+    repository: "mariadb"
+    pullPolicy: "Always"
+    tag: "10.11.16"
+  mysql:
+    repository: "mysql"
+    pullPolicy: "Always"
+    tag: "8.0.46"
+  curl:
+    repository: "curlimages/curl"
+    pullPolicy: "IfNotPresent"
+    tag: "8.14.1"
+  kubectl:
+    repository: "bitnami/kubectl"
+    pullPolicy: "IfNotPresent"
+    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
+  otelCollector:
+    repository: >-
+      ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
+    pullPolicy: "IfNotPresent"
+    tag: "0.152.0"
   prestoCoordinator:
     repository: "ghcr.io/y-scope/presto/coordinator"
     pullPolicy: "IfNotPresent"
@@ -17,6 +38,18 @@ image:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
     pullPolicy: "IfNotPresent"
     tag: "clp-v0.10.0-fix.1"
+  queue:
+    repository: "rabbitmq"
+    pullPolicy: "Always"
+    tag: "4.2.6"
+  redis:
+    repository: "redis"
+    pullPolicy: "Always"
+    tag: "7.4.8"
+  resultsCache:
+    repository: "mongo"
+    pullPolicy: "Always"
+    tag: "8.0.21"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
@@ -75,6 +108,7 @@ scheduling:
   apiServer: {}
   webui: {}
   mcpServer: {}
+  otelCollector: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
@@ -85,6 +119,7 @@ clpConfig:
     - "queue"
     - "redis"
     - "results_cache"
+    - "otel_collector"
     - "presto"
 
   package:
@@ -157,11 +192,22 @@ clpConfig:
     # Retention period for search results, in minutes. Set to null to disable automatic deletion.
     retention_period: 60
 
+  otel_collector:
+    # Host and port for the OpenTelemetry Collector service. When "otel_collector" is in `bundled`,
+    # the host is automatically set to the bundled service name (ignored). When external, set these
+    # to the external service's address.
+    host: "localhost"
+    port: 4318
+
   compression_worker:
     logging_level: "INFO"
+    task_soft_time_limit: 0  # A value of 0 disables the limit
+    task_time_limit: 0  # A value of 0 disables the limit
 
   query_worker:
     logging_level: "INFO"
+    task_soft_time_limit: 0  # A value of 0 disables the limit
+    task_time_limit: 0  # A value of 0 disables the limit
 
   reducer:
     logging_level: "INFO"
@@ -239,8 +285,18 @@ clpConfig:
       archive: 60
       search_result: 30
 
-  # Location of the AWS tools' config files (e.g., `~/.aws`). Set to null to disable.
-  aws_config_directory: null
+  # AWS config content (e.g., `~/.aws/config`). Provide file contents via `--set-file` to create a
+  # chart-managed Secret that is mounted into pods. Set to null to disable.
+  # Usage:
+  #   helm install <release> <chart> \
+  #     --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
+  #     --set-file clpConfig.aws_config.config=$HOME/.aws/config
+  aws_config: null
+
+  # Telemetry config
+  telemetry:
+    disable: false
+    endpoint: "https://telemetry.yscope.io"
 
 credentials:
   database:

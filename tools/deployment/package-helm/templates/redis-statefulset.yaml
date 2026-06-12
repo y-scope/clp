@@ -25,8 +25,8 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "redis"
-          image: "redis:7.2.4"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "redis") | quote }}
+          imagePullPolicy: {{ .Values.image.redis.pullPolicy | quote }}
           env:
             - name: "REDIS_PASSWORD"
               valueFrom:

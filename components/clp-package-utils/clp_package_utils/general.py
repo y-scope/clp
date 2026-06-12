@@ -1,12 +1,17 @@
 import enum
 import errno
+import http.client
 import json
+import logging
 import os
 import pathlib
 import re
 import secrets
 import socket
 import subprocess
+import time
+import urllib.error
+import urllib.request
 import uuid
 from enum import auto
 
@@ -42,6 +47,7 @@ from clp_py_utils.core import (
     resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
+from ruamel.yaml import YAML
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
@@ -53,6 +59,8 @@ DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 S3_KEY_PREFIX_COMPRESSION = "s3-key-prefix"
 S3_OBJECT_COMPRESSION = "s3-object"
+
+logger = logging.getLogger(__name__)
 
 
 class DockerDependencyError(OSError):
@@ -160,6 +168,48 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
+
+def http_request(
+    url: str,
+    data: bytes | None = None,
+    headers: dict[str, str] | None = None,
+    method: str = "GET",
+    max_attempts: int = 2,
+    retry_delay: float = 1.0,
+    timeout: float = 5.0,
+) -> http.client.HTTPResponse:
+    """
+    Sends an HTTP request with retry logic.
+
+    :param url: The URL to send the request to.
+    :param data: Request body as bytes.
+    :param headers: Request headers.
+    :param method: HTTP method.
+    :param max_attempts: Number of attempts before giving up. Must be >= 1.
+    :param retry_delay: Seconds to wait between retries.
+    :param timeout: Seconds to wait for a response per attempt.
+    :return: The HTTP response.
+    :raise ValueError: If max_attempts < 1.
+    :raise urllib.error.URLError: If all attempts fail due to a network-level error.
+    :raise urllib.error.HTTPError: If all attempts fail with an HTTP error status.
+    :raise OSError: If all attempts fail due to a socket-level error.
+    """
+    if max_attempts < 1:
+        raise ValueError(f"max_attempts must be >= 1, got {max_attempts}")
+
+    req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
+    last_exception: urllib.error.URLError | urllib.error.HTTPError | OSError = (
+        urllib.error.URLError("No attempts were made")
+    )
+    for attempt in range(max_attempts):
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
+            last_exception = e
+            if attempt < max_attempts - 1:
+                time.sleep(retry_delay)
+    raise last_exception
 
 
 def generate_container_name(job_type: str) -> str:
@@ -779,6 +829,49 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
         raise DockerNotAvailableError(
             "Docker Compose is not installed or not functioning properly.", e
         ) from e
+
+
+def set_yaml_key(file_path: pathlib.Path, key: str, value: str) -> None:
+    """
+    Sets a possibly nested key in a YAML file, preserving formatting and comments.
+
+    :param file_path:
+    :param key: Dot-separated key path (e.g., ``"telemetry.disable"``).
+    :param value:
+    """
+    ryaml = YAML()
+    section, _, sub_key = key.partition(".")
+    parsed_value = ryaml.load(value)
+
+    if file_path.exists():
+        content = ryaml.load(file_path)
+        if content is None:
+            # File has only comments so can't round-trip through ruamel.yaml.
+            # Append as text to preserve existing comments.
+            text = file_path.read_text().rstrip("\n")
+            if sub_key:
+                text += f"\n\n{section}:\n  {sub_key}: {value}\n"
+            else:
+                text += f"\n\n{key}: {value}\n"
+            try:
+                file_path.write_text(text)
+                logger.info("Config updated in %s", file_path)
+            except OSError:
+                logger.warning("Failed to update config %s", file_path, exc_info=True)
+            return
+    else:
+        content = {}
+
+    if sub_key:
+        content.setdefault(section, {})[sub_key] = parsed_value
+    else:
+        content[section] = parsed_value
+
+    try:
+        ryaml.dump(content, file_path)
+        logger.info("Config updated in %s", file_path)
+    except OSError:
+        logger.warning("Failed to update config %s", file_path, exc_info=True)
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:

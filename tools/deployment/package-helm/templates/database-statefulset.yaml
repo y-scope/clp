@@ -25,13 +25,8 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "database"
-          image: >-
-            {{- if eq .Values.clpConfig.database.type "mysql" }}
-              mysql:8.0.23
-            {{- else }}
-              mariadb:10-jammy
-            {{- end }}
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" .Values.clpConfig.database.type) | quote }}
+          imagePullPolicy: {{ (index .Values.image .Values.clpConfig.database.type).pullPolicy | quote }}
           env:
             - name: "MYSQL_DATABASE"
               value: {{ .Values.clpConfig.database.names.clp | quote }}
