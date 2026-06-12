@@ -2,14 +2,19 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <vector>
 
-#include "archive_constants.hpp"
-#include "FileWriter.hpp"
-#include "search/ast/Literal.hpp"
-#include "ZstdCompressor.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/FileWriter.hpp>
+#include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/ZstdCompressor.hpp>
 
 namespace clp_s {
-auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
+auto SchemaNode::node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
     // TODO: properly support NodeType::Object once we add LiteralType::ObjectT when implementing
     // type-per-token support.
     switch (type) {
@@ -20,6 +25,10 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::FormattedFloat:
         case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
+        case NodeType::LogMessage:
+        case NodeType::ParentRule:
+        case NodeType::LogTypeID:
+            return clp_s::search::ast::LiteralType::ClppDecomposeT;
         case NodeType::ClpString:
             return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:
@@ -34,34 +43,61 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
         case NodeType::Timestamp:
             return clp_s::search::ast::LiteralType::TimestampT;
         case NodeType::Metadata:
+        case NodeType::LogType:
         case NodeType::Unknown:
         default:
             return clp_s::search::ast::LiteralType::UnknownT;
     }
 }
 
-int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key) {
-    auto node_it = m_node_map.find({parent_node_id, key, type});
+auto SchemaNode::is_structural_container() const -> bool {
+    switch (m_type) {
+        case NodeType::Object:
+        case NodeType::LogMessage:
+        case NodeType::ParentRule: {
+            return true;
+        }
+        default: {
+            return false;
+        }
+    }
+}
+
+auto SchemaTree::add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key_name)
+        -> SchemaNode::id_t {
+    auto node_id{add_node(parent_node_id, type, key_name, 0)};
+    m_nodes[node_id].increase_count();
+    return node_id;
+}
+
+auto SchemaTree::add_node(
+        SchemaNode::id_t parent_node_id,
+        NodeType type,
+        std::string_view key_name,
+        uint32_t initial_count
+) -> SchemaNode::id_t {
+    auto node_it{m_node_map.find({parent_node_id, key_name, type})};
     if (node_it != m_node_map.end()) {
-        auto node_id = node_it->second;
-        m_nodes[node_id].increase_count();
-        return node_id;
+        return node_it->second;
     }
 
-    int32_t node_id = m_nodes.size();
-    auto& node = m_nodes.emplace_back(parent_node_id, node_id, std::string{key}, type, 0);
-    node.increase_count();
+    if (INT32_MAX < m_nodes.size()) {
+        throw std::overflow_error("SchemaNode allocation reached INT32_MAX.");
+    }
+
+    auto node_id{static_cast<int32_t>(m_nodes.size())};
+    int32_t depth{0};
+    if (constants::cRootNodeId != parent_node_id) {
+        auto& parent_node{m_nodes[parent_node_id]};
+        parent_node.add_child(node_id);
+        depth = parent_node.get_depth() + 1;
+    }
+    auto& node{m_nodes.emplace_back(parent_node_id, node_id, key_name, type, initial_count, depth)};
     if (constants::cRootNodeId == parent_node_id) {
         m_namespace_and_type_to_subtree_id.emplace(
                 std::make_pair(node.get_key_name(), type),
                 node_id
         );
-    }
-
-    if (constants::cRootNodeId != parent_node_id) {
-        auto& parent_node = m_nodes[parent_node_id];
-        node.set_depth(parent_node.get_depth() + 1);
-        parent_node.add_child(node_id);
     }
     m_node_map.emplace(std::make_tuple(parent_node_id, node.get_key_name(), type), node_id);
 
@@ -77,15 +113,16 @@ auto SchemaTree::get_subtree_node_id(std::string_view subtree_namespace, NodeTyp
     return -1;
 }
 
-int32_t SchemaTree::get_metadata_field_id(std::string_view const field_name) const {
+auto SchemaTree::get_metadata_field_id(std::string_view const field_name) const
+        -> SchemaNode::id_t {
     auto const metadata_subtree_id = get_metadata_subtree_node_id();
     if (metadata_subtree_id < 0) {
         return -1;
     }
 
-    auto& metadata_subtree_node = m_nodes.at(metadata_subtree_id);
+    auto const& metadata_subtree_node{m_nodes.at(metadata_subtree_id)};
     for (auto child_id : metadata_subtree_node.get_children_ids()) {
-        auto& child_node = m_nodes.at(child_id);
+        auto const& child_node{m_nodes.at(child_id)};
         if (child_node.get_key_name() == field_name) {
             return child_id;
         }
@@ -112,6 +149,7 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
         schema_tree_compressor.write_numeric_value(static_cast<uint64_t>(key.size()));
         schema_tree_compressor.write(key.data(), key.size());
         schema_tree_compressor.write_numeric_value(node.get_type());
+        schema_tree_compressor.write_numeric_value(node.get_count());
     }
 
     schema_tree_compressor.close();
@@ -120,14 +158,36 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
     return compressed_size;
 }
 
-int32_t SchemaTree::find_matching_subtree_root_in_subtree(
-        int32_t const subtree_root_node,
-        int32_t node,
-        NodeType type
-) const {
-    int32_t earliest_match = -1;
+auto SchemaTree::build_qualified_name(int32_t node_id) const -> std::string {
+    std::vector<std::string_view> names;
+    auto cur_id{node_id};
+    while (-1 != cur_id) {
+        auto const& node = get_node(cur_id);
+        if (NodeType::LogMessage == node.get_type()) {
+            break;
+        }
+        names.emplace_back(node.get_key_name());
+        cur_id = node.get_parent_id();
+    }
+
+    std::string qualified_name;
+    for (auto it{names.rbegin()}; names.rend() != it; ++it) {
+        if (names.rbegin() != it) {
+            qualified_name.append(".");
+        }
+        qualified_name.append(*it);
+    }
+    return qualified_name;
+}
+
+auto SchemaTree::find_matching_subtree_root_in_subtree(
+        SchemaNode::id_t const subtree_root_node,
+        SchemaNode::id_t node,
+        NodeType const type
+) const -> SchemaNode::id_t {
+    SchemaNode::id_t earliest_match{-1};
     while (subtree_root_node != node) {
-        auto const& schema_node = get_node(node);
+        auto const& schema_node{get_node(node)};
         if (schema_node.get_type() == type) {
             earliest_match = node;
         }

@@ -3,19 +3,16 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <algorithm>
+#include <fstream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/SchemaParser.hpp>
-#include <spdlog/spdlog.h>
+#include <log_surgeon/log_surgeon.hpp>
 
-#include "spdlog_with_specializations.hpp"
+#include "FileReader.hpp"
 
 namespace clp {
-using log_surgeon::finite_automata::ByteNfaState;
-using log_surgeon::finite_automata::RegexASTLiteral;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -114,87 +111,24 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     return ErrorCode_Success;
 }
 
-// TODO: duplicates code in log_surgeon/parser.tpp, should implement a
-// SearchParser in log_surgeon instead and use it here. Specifically, initialization of
-// lexer.m_symbol_id, contains_delimiter error, and add_rule logic.
-void
-load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::ByteLexer& lexer) {
-    std::unique_ptr<log_surgeon::SchemaAST> schema_ast
-            = log_surgeon::SchemaParser::try_schema_file(schema_file_path);
-    if (!lexer.m_symbol_id.empty()) {
-        throw std::runtime_error("Error: symbol_ids initialized before setting enum symbol_ids");
+auto load_parser_from_rule_text(std::string const& rule_set_string) -> log_surgeon::ParserHandle {
+    log_surgeon::CCharArray schema_arr{rule_set_string.data(), rule_set_string.size()};
+    auto* rule_set{log_surgeon::log_surgeon_schema_from_definition(schema_arr)};
+    if (nullptr == rule_set) {
+        throw std::invalid_argument("Failed to parse rule set:\n" + rule_set_string);
     }
+    return log_surgeon::ParserHandle{rule_set};
+}
 
-    // cTokenEnd and cTokenUncaughtString never need to be added as a rule to the lexer as they are
-    // not parsed
-    lexer.m_symbol_id[log_surgeon::cTokenEnd] = static_cast<int>(log_surgeon::SymbolId::TokenEnd);
-    lexer.m_symbol_id[log_surgeon::cTokenUncaughtString]
-            = static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString);
-    // cTokenInt, cTokenFloat, and cTokenHeader each have unknown rule(s) until specified by the
-    // user so can't be explicitly added and are done by looping over schema_vars (user schema)
-    lexer.m_symbol_id[log_surgeon::cTokenInt] = static_cast<int>(log_surgeon::SymbolId::TokenInt);
-    lexer.m_symbol_id[log_surgeon::cTokenFloat]
-            = static_cast<int>(log_surgeon::SymbolId::TokenFloat);
-    lexer.m_symbol_id[log_surgeon::cTokenHeader]
-            = static_cast<int>(log_surgeon::SymbolId::TokenHeader);
-    // cTokenNewline is not added in schema_vars and can be explicitly added as '\n' to catch the
-    // end of non-timestamped log messages
-    lexer.m_symbol_id[log_surgeon::cTokenNewline]
-            = static_cast<int>(log_surgeon::SymbolId::TokenNewline);
-
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenEnd)] = log_surgeon::cTokenEnd;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)]
-            = log_surgeon::cTokenUncaughtString;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenInt)] = log_surgeon::cTokenInt;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenFloat)]
-            = log_surgeon::cTokenFloat;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenHeader)]
-            = log_surgeon::cTokenHeader;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenNewline)]
-            = log_surgeon::cTokenNewline;
-
-    lexer.add_rule(lexer.m_symbol_id["newLine"], make_unique<RegexASTLiteral<ByteNfaState>>('\n'));
-
-    for (auto const& delimiters_ast : schema_ast->m_delimiters) {
-        auto* delimiters_ptr = dynamic_cast<log_surgeon::DelimiterStringAST*>(delimiters_ast.get());
-        if (delimiters_ptr != nullptr) {
-            lexer.set_delimiters(delimiters_ptr->m_delimiters);
-        }
+auto load_parser_from_file(std::string const& rule_set_file_path) -> log_surgeon::ParserHandle {
+    std::ifstream rule_set_file{rule_set_file_path};
+    if (false == rule_set_file.good()) {
+        throw std::invalid_argument("Rule set file at " + rule_set_file_path + " failed to open.");
     }
-    vector<uint32_t> delimiters;
-    for (uint32_t i = 0; i < log_surgeon::cSizeOfByte; i++) {
-        if (lexer.is_delimiter(i)) {
-            delimiters.push_back(i);
-        }
-    }
-    for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
-        auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
-
-        // Capture groups are temporarily disabled, until NFA intersection supports for search.
-        auto const& captures{rule->m_regex_ptr->get_subtree_positive_captures()};
-        auto const num_captures{captures.size()};
-        if ("header" == rule->m_name && 1 == num_captures && "timestamp" == captures[0]->get_name())
-        {
-            continue;
-        }
-        if (0 < num_captures) {
-            throw std::runtime_error(
-                    schema_file_path + ":" + std::to_string(rule->m_line_num + 1)
-                    + ": error: the schema rule '" + rule->m_name
-                    + "' has a regex pattern containing capture groups (found "
-                    + std::to_string(num_captures) + ").\n"
-            );
-        }
-
-        // transform '.' from any-character into any non-delimiter character
-        rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
-
-        if (lexer.m_symbol_id.find(rule->m_name) == lexer.m_symbol_id.end()) {
-            lexer.m_symbol_id[rule->m_name] = lexer.m_symbol_id.size();
-            lexer.m_id_symbol[lexer.m_symbol_id[rule->m_name]] = rule->m_name;
-        }
-        lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
-    }
-    lexer.generate();
+    std::string const rule_text{
+            (std::istreambuf_iterator<char>(rule_set_file)),
+            std::istreambuf_iterator<char>()
+    };
+    return load_parser_from_rule_text(rule_text);
 }
 }  // namespace clp

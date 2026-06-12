@@ -3,11 +3,22 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <string_view>
+#include <variant>
 
+#include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/OutputHandlerImpl.hpp>
+#include <clp_s/search/OutputHandler.hpp>
+#include <clpp/ErrorCode.hpp>
+#include <reducer/network_utils.hpp>
 
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
@@ -260,7 +271,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     }
 
     po::options_description general_options("General options");
-    general_options.add_options()("help,h", "Print help");
+    general_options.add_options()("help,h", "Print help")(
+            "experimental",
+            po::bool_switch(&m_experimental),
+            "Enable experimental features to be used."
+    );
 
     char command_input;
     po::options_description general_positional_options("General positional options");
@@ -426,12 +441,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description experimental_options("Experimental Options");
+            std::string ruleset_path{};
+            experimental_options.add_options()(
+                    "unstructured-text-parsing-rule-set",
+                    po::value<std::string>(&ruleset_path)->value_name("PATH"),
+                    "Path to a log-surgeon ruleset. See documentation for details."
+            );
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
             all_compression_options.add(compression_options);
+            all_compression_options.add(experimental_options);
             all_compression_options.add(compression_positional_options);
 
             std::vector<std::string> unrecognized_options
@@ -457,6 +481,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(compression_options);
+                visible_options.add(experimental_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -563,6 +588,17 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            if (m_experimental ^ (false == ruleset_path.empty())) {
+                throw std::invalid_argument(
+                        "--experimental and --unstructured-text-parsing-rule-set must both be"
+                        "non-empty to use log-surgeon for compression"
+                );
+            }
+
+            if (false == ruleset_path.empty()) {
+                m_ruleset_path = get_path_object_for_raw_path(ruleset_path);
+            }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
@@ -1207,5 +1243,85 @@ void CommandLineArguments::print_search_usage() const {
               << " s [OPTIONS] ARCHIVES_DIR KQL_QUERY"
                  " [OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS]]"
               << std::endl;
+}
+
+auto CommandLineArguments::create_output_handler() const
+        -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>> {
+    try {
+        return std::visit(
+                clp::overloaded{
+                        [&](CommandLineArguments::FileOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::
+                                        Result<std::unique_ptr<search::OutputHandler>> {
+                                            return std::make_unique<clp_s::FileOutputHandler>(
+                                                    options.output_path,
+                                                    true
+                                            );
+                                        },
+                        [&](CommandLineArguments::NetworkOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::
+                                        Result<std::unique_ptr<search::OutputHandler>> {
+                                            return std::make_unique<clp_s::NetworkOutputHandler>(
+                                                    options.host,
+                                                    options.port
+                                            );
+                                        },
+                        [&](
+                                CommandLineArguments::ReducerOutputHandlerOptions const& options
+                        ) -> ystdlib::error_handling::
+                                  Result<std::unique_ptr<search::OutputHandler>> {
+                                      auto const reducer_socket_fd{reducer::connect_to_reducer(
+                                              options.host,
+                                              options.port,
+                                              options.job_id
+                                      )};
+                                      if (-1 == reducer_socket_fd) {
+                                          SPDLOG_ERROR("Failed to connect to reducer");
+                                          return clpp::ClppErrorCode{
+                                                  clpp::ClppErrorCodeEnum::BadParam
+                                          };
+                                      }
+
+                                      if (CommandLineArguments::AggregationType::Count
+                                          == options.aggregation_type) {
+                                          return std::make_unique<clp_s::CountOutputHandler>(
+                                                  reducer_socket_fd
+                                          );
+                                      }
+                                      if (CommandLineArguments::AggregationType::CountByTime
+                                          == options.aggregation_type) {
+                                          return std::make_unique<clp_s::CountByTimeOutputHandler>(
+                                                  reducer_socket_fd,
+                                                  options.count_by_time_bucket_size
+                                          );
+                                      }
+                                      SPDLOG_ERROR("Unhandled aggregation type.");
+                                      return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                                  },
+                        [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::Result<
+                                        std::unique_ptr<search::OutputHandler>
+                                > {
+                            return std::make_unique<clp_s::ResultsCacheOutputHandler>(
+                                    options.uri,
+                                    options.collection,
+                                    options.batch_size,
+                                    options.max_num_results,
+                                    options.dataset
+                            );
+                        },
+                        [&](CommandLineArguments::StdoutOutputHandlerOptions const& /*options*/)
+                                -> ystdlib::error_handling::
+                                        Result<std::unique_ptr<search::OutputHandler>> {
+                                            return std::make_unique<clp_s::StandardOutputHandler>();
+                                        }
+                },
+                get_output_handler_options()
+
+        );
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+    }
 }
 }  // namespace clp_s

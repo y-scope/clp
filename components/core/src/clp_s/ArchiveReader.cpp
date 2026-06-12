@@ -15,23 +15,29 @@
 #include <clp/type_utils.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
-#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clpp/ErrorCode.hpp>
+#include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
-void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
+void ArchiveReader::open(Path const& archive_path, Options const& options) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
+    m_options = options;
 
     if (false == get_archive_id_from_path(archive_path, m_archive_id)) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+    m_archive_reader_adaptor
+            = std::make_shared<ArchiveReaderAdaptor>(archive_path, options.m_network_auth);
     initialize_archive_reader();
 }
 
@@ -59,14 +65,36 @@ auto ArchiveReader::initialize_archive_reader() -> void {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
 
+    bool const archive_is_experimental{m_archive_reader_adaptor->is_experimental_archive()};
+    if (m_options.m_experimental && !archive_is_experimental) {
+        SPDLOG_ERROR("--experimental flag set but archive was not created with --experimental");
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    if (!m_options.m_experimental && archive_is_experimental) {
+        SPDLOG_ERROR("Archive was created with --experimental but --experimental flag is not set");
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
     m_schema_tree = ReaderUtils::read_schema_tree(*m_archive_reader_adaptor);
     m_schema_map = ReaderUtils::read_schemas(*m_archive_reader_adaptor);
 
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
-    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
+    if (m_options.m_experimental) {
+        // TODO clpp: inlined get_variable_dictionary_reader
+        m_log_shape_dict = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);
+        m_log_shape_dict->open(constants::cArchiveLogDictFile);
+    } else {
+        m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
+    }
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
+
+    // TODO clpp: cannot read on demand as the streams are left open by the time we know to read
+    // shape info.
+    if (m_options.m_experimental) {
+        std::ignore = get_parent_rule_shapes();
+    }
 }
 
 auto ArchiveReader::read_single_schema_metadata()
@@ -191,8 +219,34 @@ void ArchiveReader::read_dictionaries_and_metadata() {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
     m_var_dict->read_entries();
-    m_log_dict->read_entries();
+    if (m_options.m_experimental) {
+        m_log_shape_dict->read_entries();
+    } else {
+        m_log_dict->read_entries();
+    }
     m_array_dict->read_entries();
+}
+
+auto ArchiveReader::get_log_shape_stats() -> clpp::LogShapeStatArray const& {
+    if (false == m_log_shape_stats.has_value()) {
+        auto result{read_log_shape_stats()};
+        if (result.has_error()) {
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        m_log_shape_stats = result.value();
+    }
+    return m_log_shape_stats.value();
+}
+
+auto ArchiveReader::get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const& {
+    if (false == m_parent_rule_shapes.has_value()) {
+        auto result{read_parent_rule_shapes()};
+        if (result.has_error()) {
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        }
+        m_parent_rule_shapes = result.value();
+    }
+    return m_parent_rule_shapes.value();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -286,6 +340,10 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::NullValue:
         case NodeType::Object:
         case NodeType::StructuredArray:
+        case NodeType::LogMessage:
+        case NodeType::LogType:
+        case NodeType::LogTypeID:
+        case NodeType::ParentRule:
         case NodeType::Unknown:
             break;
     }
@@ -299,12 +357,27 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
 void ArchiveReader::append_unordered_reader_columns(
         SchemaReader& reader,
         int32_t mst_subtree_root_node_id,
-        std::span<int32_t> schema_ids,
+        std::span<Schema::id_t> schema_ids,
         bool should_marshal_records
 ) {
     size_t object_begin_pos = reader.get_column_size();
-    for (int32_t column_id : schema_ids) {
+    for (size_t i = 0; i < schema_ids.size(); ++i) {
+        auto const column_id{schema_ids[i]};
         if (Schema::schema_entry_is_unordered_object(column_id)) {
+            auto length{Schema::get_unordered_object_length(column_id)};
+            auto sub_schema{schema_ids.subspan(i + 1, length)};
+            auto subtree_root_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+                    mst_subtree_root_node_id,
+                    SchemaReader::get_first_column_in_span(sub_schema),
+                    Schema::get_unordered_object_type(column_id)
+            )};
+            append_unordered_reader_columns(
+                    reader,
+                    subtree_root_node_id,
+                    sub_schema,
+                    should_marshal_records
+            );
+            i += length;
             continue;
         }
         BaseColumnReader* column_reader = nullptr;
@@ -344,6 +417,10 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Object:
             case NodeType::Metadata:
             case NodeType::NullValue:
+            case NodeType::LogMessage:
+            case NodeType::LogType:
+            case NodeType::LogTypeID:
+            case NodeType::ParentRule:
             case NodeType::Unknown:
                 break;
         }
@@ -371,7 +448,9 @@ void ArchiveReader::initialize_schema_reader(
             schema_id,
             schema.get_ordered_schema_view(),
             m_id_to_schema_metadata[schema_id].num_messages(),
-            should_marshal_records
+            should_marshal_records,
+            m_options.m_experimental ? m_log_shape_dict.get() : nullptr,
+            m_options.m_experimental ? &get_parent_rule_shapes() : nullptr
     );
     auto timestamp_column_ids
             = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();
@@ -436,8 +515,21 @@ void ArchiveReader::close() {
     }
     m_is_open = false;
 
+    SPDLOG_INFO("[stats] var dict size: {}", m_var_dict->get_entries().size());
     m_var_dict->close();
-    m_log_dict->close();
+    if (nullptr != m_log_shape_dict) {
+        SPDLOG_INFO("[stats] log dict size: {}", m_log_shape_dict->get_entries().size());
+        m_log_shape_dict->close();
+    } else {
+        SPDLOG_INFO("[stats] log dict size: {}", m_log_dict->get_entries().size());
+        m_log_dict->close();
+    }
+    if (m_parent_rule_shapes.has_value()) {
+        m_parent_rule_shapes->clear();
+    }
+    if (m_log_shape_stats.has_value()) {
+        m_log_shape_stats->clear();
+    }
     m_array_dict->close();
 
     m_stream_reader.close();
@@ -464,5 +556,46 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     m_stream_reader.read_stream(stream_id, m_stream_buffer, m_stream_buffer_size);
     m_cur_stream_id = stream_id;
     return m_stream_buffer;
+}
+
+auto ArchiveReader::read_log_shape_stats()
+        -> ystdlib::error_handling::Result<clpp::LogShapeStatArray> {
+    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
+    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
+            constants::cArchiveLogShapeStatsFile
+    )};
+    ZstdDecompressor decompressor{};
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    clpp::LogShapeStatArray stats;
+    YSTDLIB_ERROR_HANDLING_TRYX(stats.decompress(decompressor));
+
+    decompressor.close();
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogShapeStatsFile);
+    return stats;
+}
+
+auto ArchiveReader::read_ruleset() -> ystdlib::error_handling::Result<std::string> {
+    if (false == m_options.m_experimental) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+    }
+    return ReaderUtils::read_ruleset(*m_archive_reader_adaptor);
+}
+
+auto ArchiveReader::read_parent_rule_shapes()
+        -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray> {
+    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
+    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
+            constants::cArchiveParentRuleShapesFile
+    )};
+    ZstdDecompressor decompressor{};
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    clpp::ParentRuleShapesArray shapes;
+    YSTDLIB_ERROR_HANDLING_TRYX(shapes.decompress(decompressor));
+
+    decompressor.close();
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveParentRuleShapesFile);
+    return shapes;
 }
 }  // namespace clp_s

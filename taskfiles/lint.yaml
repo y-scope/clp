@@ -117,7 +117,6 @@ tasks:
           --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
           ".github" \
           "components/core/.clang-format" \
-          "components/core/config" \
           "components/core/tools/" \
           "components/package-template/src/etc" \
           "docs" \
@@ -449,7 +448,6 @@ tasks:
             - "clp_s/SchemaReader.cpp"
             - "clp_s/SchemaReader.hpp"
             - "clp_s/SchemaTree.cpp"
-            - "clp_s/SchemaTree.hpp"
             - "clp_s/SchemaWriter.cpp"
             - "clp_s/SchemaWriter.hpp"
             - "clp_s/search/AddTimestampConditions.cpp"
@@ -495,8 +493,6 @@ tasks:
             - "clp_s/search/kql/kql.hpp"
             - "clp_s/search/Output.cpp"
             - "clp_s/search/Output.hpp"
-            - "clp_s/search/Projection.cpp"
-            - "clp_s/search/Projection.hpp"
             - "clp_s/search/QueryRunner.cpp"
             - "clp_s/search/QueryRunner.hpp"
             - "clp_s/search/SchemaMatch.cpp"

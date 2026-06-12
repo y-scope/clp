@@ -14,9 +14,12 @@
 #include <utility>
 #include <vector>
 
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 
+#include <clp/ReaderInterface.hpp>
 #include <clp_s/search/ColumnScan.hpp>
+#include <clpp/DecomposedQuery.hpp>
 
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
@@ -58,6 +61,7 @@ public:
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_var_dict(m_archive_reader->get_variable_dictionary()),
               m_log_dict(m_archive_reader->get_log_type_dictionary()),
+              m_log_shape_dict(m_archive_reader->get_log_shape_dictionary()),
               m_array_dict(m_archive_reader->get_array_dictionary()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()) {}
@@ -71,6 +75,12 @@ public:
     QueryRunner(QueryRunner&&) = delete;
     auto operator=(QueryRunner&&) -> QueryRunner& = delete;
 
+    // Static data members
+    static uint64_t m_int_col_checks;
+    static uint64_t m_float_col_checks;
+    static uint64_t m_str_col_checks;
+
+    // Methods
     /**
      * Initializes the query processing context that is common to all schemas.
      */
@@ -134,6 +144,7 @@ private:
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
+    std::shared_ptr<LogShapeDictionaryReader> m_log_shape_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
@@ -167,6 +178,9 @@ private:
     bool m_maybe_string{false};
     bool m_maybe_number{false};
     std::unique_ptr<ColumnScan> m_column_scan;
+
+    std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
+    log_surgeon::Schema* m_ls_schema;
 
     /**
      * Initializes the variables. Init is called once for each schema after which filter is called

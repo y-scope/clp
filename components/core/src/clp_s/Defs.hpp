@@ -31,5 +31,7 @@ constexpr archive_format_version_t cArchiveFormatDevelopmentVersionFlag{0x8000};
 using file_id_t = uint64_t;
 using segment_id_t = uint64_t;
 using encoded_variable_t = int64_t;
+
+using logtype_id_t = uint64_t;
 }  // namespace clp_s
 #endif  // CLP_S_DEFS_HPP

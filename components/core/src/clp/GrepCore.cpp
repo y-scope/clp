@@ -133,4 +133,9 @@ bool GrepCore::get_bounds_of_next_potential_var(
 
     return (value_length != begin_pos);
 }
+
+uint64_t GrepCore::m_total_messages_searched{0};
+uint64_t GrepCore::m_dict_id_checks{0};
+uint64_t GrepCore::m_wildcard_checks{0};
+uint64_t GrepCore::m_time_range_checks{0};
 }  // namespace clp
