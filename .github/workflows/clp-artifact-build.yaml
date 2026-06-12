@@ -739,6 +739,7 @@ jobs:
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
+          platform_version_codename: "jammy"
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
