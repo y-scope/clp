@@ -18,8 +18,8 @@
 #include <simdjson.h>
 
 #include <clp/ReaderInterface.hpp>
-#include <clpp/DecomposedQuery.hpp>
 #include <clp_s/search/ColumnScan.hpp>
+#include <clpp/DecomposedQuery.hpp>
 
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
