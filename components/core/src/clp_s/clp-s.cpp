@@ -6,6 +6,7 @@
 #include <string>
 #include <system_error>
 #include <utility>
+#include <variant>
 
 #include <fmt/format.h>
 #include <mongocxx/instance.hpp>
@@ -20,6 +21,7 @@
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
 #include <clp/GrepCore.hpp>
+#include <clp/type_utils.hpp>
 
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
@@ -73,14 +75,12 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
  * @param command_line_arguments
  * @param archive_reader
  * @param expr A copy of the search AST which may be modified
- * @param reducer_socket_fd
  * @return Whether the search succeeded
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<ast::Expression> expr,
-        int reducer_socket_fd
+        std::shared_ptr<ast::Expression> expr
 );
 
 /**
@@ -138,8 +138,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<ast::Expression> expr,
-        int reducer_socket_fd
+        std::shared_ptr<ast::Expression> expr
 ) {
     auto const& query = command_line_arguments.get_query();
 
@@ -246,52 +245,13 @@ bool search_archive(
     }
     archive_reader->set_projection(projection);
 
-    std::unique_ptr<OutputHandler> output_handler;
-    try {
-        switch (command_line_arguments.get_output_handler_type()) {
-            case CommandLineArguments::OutputHandlerType::File:
-                output_handler = std::make_unique<clp_s::FileOutputHandler>(
-                        command_line_arguments.get_file_output_path(),
-                        true
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
-                        command_line_arguments.get_network_dest_host(),
-                        command_line_arguments.get_network_dest_port()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Reducer:
-                if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
-                } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
-                            reducer_socket_fd,
-                            command_line_arguments.get_count_by_time_bucket_size()
-                    );
-                } else {
-                    SPDLOG_ERROR("Unhandled aggregation type.");
-                    return false;
-                }
-                break;
-            case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                        command_line_arguments.get_mongodb_uri(),
-                        command_line_arguments.get_mongodb_collection(),
-                        command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results(),
-                        command_line_arguments.get_dataset()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
-                break;
-            default:
-                SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                return false;
-        }
-    } catch (std::exception const& e) {
-        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+    auto output_handler{command_line_arguments.create_output_handler()};
+    if (output_handler.has_error()) {
+        SPDLOG_ERROR(
+                "Failed to create output handler: {} - {}.",
+                output_handler.error().category().name(),
+                output_handler.error().message()
+        );
         return false;
     }
 
@@ -300,7 +260,7 @@ bool search_archive(
             match_pass,
             expr,
             archive_reader,
-            std::move(output_handler),
+            std::move(output_handler.value()),
             command_line_arguments.get_ignore_case()
     );
     return output.filter();
@@ -451,14 +411,15 @@ int main(int argc, char const* argv[]) {
         }
 
         int reducer_socket_fd{-1};
-        if (command_line_arguments.get_output_handler_type()
-            == CommandLineArguments::OutputHandlerType::Reducer)
+        if (std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
+                    command_line_arguments.get_output_handler_options()
+            ))
         {
-            reducer_socket_fd = reducer::connect_to_reducer(
-                    command_line_arguments.get_reducer_host(),
-                    command_line_arguments.get_reducer_port(),
-                    command_line_arguments.get_job_id()
-            );
+            auto const& options{std::get<CommandLineArguments::ReducerOutputHandlerOptions>(
+                    command_line_arguments.get_output_handler_options()
+            )};
+            reducer_socket_fd
+                    = reducer::connect_to_reducer(options.host, options.port, options.job_id);
             if (-1 == reducer_socket_fd) {
                 SPDLOG_ERROR("Failed to connect to reducer");
                 return 1;
@@ -527,14 +488,7 @@ int main(int argc, char const* argv[]) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
                 return 1;
             }
-            if (false
-                == search_archive(
-                        command_line_arguments,
-                        archive_reader,
-                        expr->copy(),
-                        reducer_socket_fd
-                ))
-            {
+            if (false == search_archive(command_line_arguments, archive_reader, expr->copy())) {
                 return 1;
             }
             archive_reader->close();

@@ -1,0 +1,63 @@
+{{- if and
+  (not .Values.clpConfig.telemetry.disable)
+  (has "otel_collector" .Values.clpConfig.bundled) }}
+{{- $otelCollectorImage := printf
+  "%s:%s"
+  .Values.image.otelCollector.repository
+  .Values.image.otelCollector.tag }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-otel-collector
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "otel-collector"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "otel-collector"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "otel-collector"
+    spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "otelCollector"
+        ) | nindent 6 }}
+      containers:
+        - name: "otel-collector"
+          image: {{ $otelCollectorImage | quote }}
+          imagePullPolicy: {{ .Values.image.otelCollector.pullPolicy | quote }}
+          ports:
+            - name: "otel-collector"
+              containerPort: 4318
+            - name: "otel-health"
+              containerPort: 13133
+          volumeMounts:
+            - name: "otel-collector-config"
+              mountPath: "/etc/otelcol-contrib"
+          env:
+            - name: "OTEL_RESOURCE_ATTRIBUTES"
+              value: {{ include "clp.resourceAttributes" . | quote }}
+          args:
+            - "--config=/etc/otelcol-contrib/config.yaml"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: &otel-health-check
+              path: "/"
+              port: "otel-health"
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            httpGet: *otel-health-check
+      volumes:
+        - name: "otel-collector-config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+            items:
+              - key: "otel-collector-config.yaml"
+                path: "config.yaml"
+{{- end }}

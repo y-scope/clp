@@ -19,6 +19,7 @@
 
 #include <clp/ReaderInterface.hpp>
 #include <clpp/DecomposedQuery.hpp>
+#include <clp_s/search/ColumnScan.hpp>
 
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
@@ -74,6 +75,12 @@ public:
     QueryRunner(QueryRunner&&) = delete;
     auto operator=(QueryRunner&&) -> QueryRunner& = delete;
 
+    // Static data members
+    static uint64_t m_int_col_checks;
+    static uint64_t m_float_col_checks;
+    static uint64_t m_str_col_checks;
+
+    // Methods
     /**
      * Initializes the query processing context that is common to all schemas.
      */
@@ -91,9 +98,15 @@ public:
      */
     auto schema_init(int32_t schema_id) -> EvaluatedValue;
 
-    static uint64_t m_int_col_checks;
-    static uint64_t m_float_col_checks;
-    static uint64_t m_str_col_checks;
+    /**
+     * Selects a filtering implementation, and prepares a filter on a given ERT.
+     *
+     * Note: This method must be called after schema_init.
+     *
+     * @param reader A reader for an ERT.
+     * @return The filtering implementation selected by QueryRunner.
+     */
+    [[nodiscard]] auto prepare_filter(SchemaReader& reader) -> FilterClass&;
 
 protected:
     // Methods inherited from FilterClass
@@ -164,6 +177,7 @@ private:
     std::string m_array_search_string;
     bool m_maybe_string{false};
     bool m_maybe_number{false};
+    std::unique_ptr<ColumnScan> m_column_scan;
 
     std::shared_ptr<clp::ReaderInterface> m_ls_schema_reader;
     log_surgeon::Schema* m_ls_schema;

@@ -13,8 +13,6 @@ set(
         ../clp/BufferedReader.hpp
         ../clp/BufferReader.cpp
         ../clp/BufferReader.hpp
-        ../clp/cli_utils.cpp
-        ../clp/cli_utils.hpp
         ../clp/Defs.h
         ../clp/EncodedVariableInterpreter.cpp
         ../clp/EncodedVariableInterpreter.hpp
