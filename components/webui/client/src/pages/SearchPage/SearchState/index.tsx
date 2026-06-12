@@ -1,3 +1,4 @@
+import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "@webui/common/schemas/search";
 import {message} from "antd";
 import {Dayjs} from "dayjs";
 import {create} from "zustand";
@@ -23,6 +24,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    maxNumResults: DEFAULT_MAX_NUM_SEARCH_RESULTS,
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
@@ -33,6 +35,7 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     searchResults: null as SearchResult[] | null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     selectedDatasets: [],
+    submittedMaxNumResults: DEFAULT_MAX_NUM_SEARCH_RESULTS,
     timeRange: DEFAULT_TIME_RANGE,
     timeRangeOption: DEFAULT_TIME_RANGE_OPTION,
     timelineConfig: computeTimelineConfig(DEFAULT_TIME_RANGE),
@@ -43,6 +46,11 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * Maximum number of search results to retrieve.
+     */
+    maxNumResults: number;
 
     /**
      * The number of search results from server metadata.
@@ -96,6 +104,11 @@ interface SearchState {
     selectedDatasets: string[];
 
     /**
+     * Maximum number of search results submitted with the active query.
+     */
+    submittedMaxNumResults: number;
+
+    /**
      * Time range for search query.
      */
     timeRange: [Dayjs, Dayjs];
@@ -121,6 +134,7 @@ interface SearchState {
     handleSearchResultsExport: () => void;
 
     updateAggregationJobId: (id: string | null) => void;
+    updateMaxNumResults: (max: number) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
@@ -131,6 +145,7 @@ interface SearchState {
     updateSearchResults: (results: SearchResult[] | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
     updateSelectedDatasets: (datasets: string[]) => void;
+    updateSubmittedMaxNumResults: (max: number) => void;
     updateTimeRange: (range: [Dayjs, Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
@@ -158,6 +173,9 @@ const useSearchStore = create<SearchState>((set, get) => ({
     },
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateMaxNumResults: (max) => {
+        set({maxNumResults: max});
     },
     updateNumSearchResultsMetadata: (num) => {
         set({numSearchResultsMetadata: num});
@@ -188,6 +206,9 @@ const useSearchStore = create<SearchState>((set, get) => ({
     },
     updateSelectedDatasets: (datasets) => {
         set({selectedDatasets: datasets});
+    },
+    updateSubmittedMaxNumResults: (max) => {
+        set({submittedMaxNumResults: max});
     },
     updateTimeRange: (range) => {
         set({timeRange: range});

@@ -125,6 +125,8 @@ auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
             m_basic_readers,
             m_clp_string_readers,
             m_var_string_readers,
+            m_timestamp_readers,
+            m_deprecated_datestring_reader,
             m_expr_clp_query,
             m_expr_var_match_map,
             reader.get_num_messages()
