@@ -238,32 +238,6 @@ class DbUserCredentials(BaseModel):
     password: NonEmptyStr
 
 
-class ResourceRequirements(BaseModel):
-    cpu: NonEmptyStr | None = None
-    memory: NonEmptyStr | None = None
-
-
-class Resources(BaseModel):
-    requests: ResourceRequirements | None = None
-    limits: ResourceRequirements | None = None
-
-
-class ComponentResources(BaseModel):
-    database: Resources | None = None
-    queue: Resources | None = None
-    redis: Resources | None = None
-    resultsCache: Resources | None = None
-    compressionScheduler: Resources | None = None
-    queryScheduler: Resources | None = None
-    compressionWorker: Resources | None = None
-    queryWorker: Resources | None = None
-    reducer: Resources | None = None
-    apiServer: Resources | None = None
-    logIngestor: Resources | None = None
-    webui: Resources | None = None
-    mcpServer: Resources | None = None
-    garbageCollector: Resources | None = None
-
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
@@ -864,8 +838,6 @@ class ClpConfig(BaseModel):
     logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
     tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
     aws_config_directory: SerializablePath | None = None
-
-    resources: ComponentResources = ComponentResources()
 
     _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH

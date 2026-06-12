@@ -156,37 +156,6 @@
 ## Presto client config
 #presto: null
 #
-## Per-component resource requests and limits.
-## Each component accepts: requests (cpu, memory) and limits (cpu, memory).
-## Values follow Kubernetes resource format (e.g., cpu: "1", memory: "1Gi").
-## When omitted, defaults to 1 CPU and 4Gi memory for limits with no requests.
-##
-## Example:
-##   resources:
-##     compressionWorker:
-##       requests:
-##         cpu: "1"
-##         memory: "1Gi"
-##       limits:
-##         cpu: "2"
-##         memory: "2Gi"
-#resources:
-#  compressionWorker: {}
-#  queryWorker: {}
-#  reducer: {}
-#  database: {}
-#  queue: {}
-#  redis: {}
-#  resultsCache: {}
-#  compressionScheduler: {}
-#  queryScheduler: {}
-#  garbageCollector: {}
-#  apiServer: {}
-#  webui: {}
-#  mcpServer: {}
-#  logIngestor: {}
-#  spiderScheduler: {}
-#
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
 ## NOTE: This directory must not overlap with any path used in CLP's execution container. An error

@@ -44,7 +44,6 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
-    Resources,
     RESULTS_CACHE_COMPONENT_NAME,
     SPIDER_DB_PASS_ENV_VAR_NAME,
     SPIDER_DB_USER_ENV_VAR_NAME,
@@ -126,27 +125,6 @@ class BaseController(ABC):
         """
         Stops the components.
         """
-
-    @staticmethod
-    def _inject_resource_limit_env_vars(
-        env_vars: EnvVarsDict,
-        component_name: str,
-        resources: Resources | None,
-    ) -> None:
-        """
-        Injects CPU and memory limit environment variables for the given component.
-
-        :param env_vars: Dictionary to inject environment variables into.
-        :param component_name: Component name used to construct env var names
-            (e.g., "database" -> "CLP_DATABASE_CPU_LIMIT").
-        :param resources: The component's resource configuration, if any.
-        """
-        if resources is None or resources.limits is None:
-            return
-        if resources.limits.cpu is not None:
-            env_vars[f"CLP_{component_name.upper()}_CPU_LIMIT"] = resources.limits.cpu
-        if resources.limits.memory is not None:
-            env_vars[f"CLP_{component_name.upper()}_MEMORY_LIMIT"] = resources.limits.memory
 
     def _set_up_env_for_database_bundling(self) -> EnvVarsDict:
         """
@@ -241,11 +219,6 @@ class BaseController(ABC):
             SPIDER_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].username,
         }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, DB_COMPONENT_NAME, self._clp_config.resources.database
-        )
-
         return env_vars
 
     def _set_up_env_for_queue_bundling(self) -> EnvVarsDict:
@@ -318,11 +291,6 @@ class BaseController(ABC):
             CLP_QUEUE_PASS_ENV_VAR_NAME: self._clp_config.queue.password,
             CLP_QUEUE_USER_ENV_VAR_NAME: self._clp_config.queue.username,
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, QUEUE_COMPONENT_NAME, self._clp_config.resources.queue
-        )
 
         return env_vars
 
@@ -411,11 +379,6 @@ class BaseController(ABC):
         env_vars |= {
             CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, REDIS_COMPONENT_NAME, self._clp_config.resources.redis
-        )
 
         return env_vars
 
@@ -523,11 +486,6 @@ class BaseController(ABC):
                 "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
             }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, RESULTS_CACHE_COMPONENT_NAME, self._clp_config.resources.resultsCache
-        )
-
         return env_vars
 
     def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
@@ -552,13 +510,6 @@ class BaseController(ABC):
             ),
         }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            self._clp_config.resources.compressionScheduler,
-        )
-
         return env_vars
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
@@ -580,13 +531,6 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars,
-            QUERY_SCHEDULER_COMPONENT_NAME,
-            self._clp_config.resources.queryScheduler,
-        )
 
         return env_vars
 
@@ -618,13 +562,6 @@ class BaseController(ABC):
             "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
         }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars,
-            COMPRESSION_WORKER_COMPONENT_NAME,
-            self._clp_config.resources.compressionWorker,
-        )
-
         return env_vars
 
     def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
@@ -652,13 +589,6 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars,
-            QUERY_WORKER_COMPONENT_NAME,
-            self._clp_config.resources.queryWorker,
-        )
 
         return env_vars
 
@@ -689,11 +619,6 @@ class BaseController(ABC):
             "CLP_REDUCER_UPSERT_INTERVAL": str(self._clp_config.reducer.upsert_interval),
         }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, REDUCER_COMPONENT_NAME, self._clp_config.resources.reducer
-        )
-
         return env_vars
 
     def _set_up_env_for_api_server(self) -> EnvVarsDict:
@@ -719,11 +644,6 @@ class BaseController(ABC):
             "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
             "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, API_SERVER_COMPONENT_NAME, self._clp_config.resources.apiServer
-        )
 
         return env_vars
 
@@ -761,11 +681,6 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, LOG_INGESTOR_COMPONENT_NAME, self._clp_config.resources.logIngestor
-        )
 
         return env_vars
 
@@ -917,11 +832,6 @@ class BaseController(ABC):
             "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
         }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, WEBUI_COMPONENT_NAME, self._clp_config.resources.webui
-        )
-
         return env_vars
 
     def _set_up_env_for_mcp_server(self) -> EnvVarsDict:
@@ -960,11 +870,6 @@ class BaseController(ABC):
             "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
         }
 
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars, MCP_SERVER_COMPONENT_NAME, self._clp_config.resources.mcpServer
-        )
-
         return env_vars
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
@@ -996,13 +901,6 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level
         }
-
-        # Resource limits
-        self._inject_resource_limit_env_vars(
-            env_vars,
-            GARBAGE_COLLECTOR_COMPONENT_NAME,
-            self._clp_config.resources.garbageCollector,
-        )
 
         return env_vars
 
