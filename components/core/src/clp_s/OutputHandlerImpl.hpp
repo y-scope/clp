@@ -174,11 +174,18 @@ public:
 
     // Methods inherited from OutputHandler
     /**
-     * Flushes the output handler after each table that gets searched.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache
+     * No-op for this handler. The results heap is drained in `finish()` so that
+     * `max_num_results` is enforced across all ERTs in the archive.
+     * @return ErrorCodeSuccess
      */
-    ErrorCode flush() override;
+    [[nodiscard]] auto flush() -> ErrorCode override { return ErrorCode::ErrorCodeSuccess; }
+
+    /**
+     * Flushes the output handler after all tables are searched.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache.
+     */
+    auto finish() -> ErrorCode override;
 
     void write(
             std::string_view message,

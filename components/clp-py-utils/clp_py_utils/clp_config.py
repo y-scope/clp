@@ -36,6 +36,7 @@ REDIS_COMPONENT_NAME = "redis"
 SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
+OTEL_COLLECTOR_COMPONENT_NAME = "otel-collector"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
@@ -129,6 +130,7 @@ class BundledService(LowercaseStrEnum):
     QUEUE = auto()
     REDIS = auto()
     RESULTS_CACHE = auto()
+    OTEL_COLLECTOR = auto()
 
 
 BundledServiceStr = Annotated[BundledService, StrEnumSerializer]
@@ -443,12 +445,18 @@ class QueryScheduler(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
-class CompressionWorker(BaseModel):
+class WorkerConfigBase(BaseModel):
     logging_level: LoggingLevel = "INFO"
+    task_soft_time_limit: NonNegativeInt = 600
+    task_time_limit: NonNegativeInt = 1200
 
 
-class QueryWorker(BaseModel):
-    logging_level: LoggingLevel = "INFO"
+class CompressionWorker(WorkerConfigBase):
+    pass
+
+
+class QueryWorker(WorkerConfigBase):
+    pass
 
 
 class Redis(BaseModel):
@@ -514,6 +522,18 @@ class ResultsCache(BaseModel):
 
     def transform_for_container(self, is_bundled: bool):
         self.host = RESULTS_CACHE_COMPONENT_NAME
+        if is_bundled:
+            self.port = self.DEFAULT_PORT
+
+
+class OtelCollector(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 4318
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+
+    def transform_for_container(self, is_bundled: bool):
+        self.host = OTEL_COLLECTOR_COMPONENT_NAME
         if is_bundled:
             self.port = self.DEFAULT_PORT
 
@@ -814,6 +834,7 @@ class ClpConfig(BaseModel):
         BundledService.QUEUE,
         BundledService.REDIS,
         BundledService.RESULTS_CACHE,
+        BundledService.OTEL_COLLECTOR,
     ]
 
     package: Package = Package()
@@ -823,6 +844,7 @@ class ClpConfig(BaseModel):
     redis: Redis | None = Redis()
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
+    otel_collector: OtelCollector = OtelCollector()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     spider_scheduler: SpiderScheduler | None = None
     query_scheduler: QueryScheduler = QueryScheduler()
@@ -1096,6 +1118,7 @@ class ClpConfig(BaseModel):
         if self.spider_scheduler is not None:
             self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
+        self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
         if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:

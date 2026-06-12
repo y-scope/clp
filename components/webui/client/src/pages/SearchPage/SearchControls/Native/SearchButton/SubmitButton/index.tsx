@@ -36,6 +36,7 @@ const SubmitButton = () => {
     );
     const queryString = useSearchStore((state) => state.queryString);
     const selectedDatasets = useSearchStore((state) => state.selectedDatasets);
+    const maxNumResults = useSearchStore((state) => state.maxNumResults);
     const updateQueriedDatasets = useSearchStore((state) => state.updateQueriedDatasets);
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -79,6 +80,7 @@ const SubmitButton = () => {
         handleQuerySubmit({
             datasets: selectedDatasets,
             ignoreCase: false === queryIsCaseSensitive,
+            maxNumResults: maxNumResults,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             ...(
@@ -102,6 +104,7 @@ const SubmitButton = () => {
         messageApi,
         selectedDatasets,
         updateQueriedDatasets,
+        maxNumResults,
     ]);
 
     const isQueryStringEmpty = "" === queryString;
