@@ -20,40 +20,40 @@ The following OpenTelemetry metrics are emitted:
 
 Emitted by long-running CLP services to track throughput:
 
-| Component | Metric | Type | Description |
-| --- | --- | --- | --- |
-| log-ingestor | `clp.ingest.total_num_bytes` | Counter | Total bytes ingested |
-| log-ingestor | `clp.ingest.total_num_objects` | Counter | Total objects (log events) ingested |
-| api-server | `clp.service.event` | Counter | Service lifecycle events (e.g., startup) |
+| Component    | Metric                         | Type    | Description                              |
+| ------------ | ------------------------------ | ------- | ---------------------------------------- |
+| log-ingestor | `clp.ingest.total_num_bytes`   | Counter | Total bytes ingested                     |
+| log-ingestor | `clp.ingest.total_num_objects` | Counter | Total objects (log events) ingested      |
+| api-server   | `clp.service.event`            | Counter | Service lifecycle events (e.g., startup) |
 
 #### Deployment topology gauges
 
 Emitted once at startup by the controller to record deployment sizing:
 
-| Metric | Type | Description |
-| --- | --- | ----------- |
-| `clp.deployment.compression_worker_replicas` | Gauge | Number of compression-worker replicas |
-| `clp.deployment.compression_worker_concurrency` | Gauge | Compression-worker concurrency |
-| `clp.deployment.query_worker_replicas` | Gauge | Number of query-worker replicas |
-| `clp.deployment.query_worker_concurrency` | Gauge | Query-worker concurrency |
-| `clp.deployment.reducer_replicas` | Gauge | Number of reducer replicas |
-| `clp.deployment.reducer_concurrency` | Gauge | Reducer concurrency |
+| Metric                                          | Type  | Description                           |
+| ----------------------------------------------- | ----- | ------------------------------------- |
+| `clp.deployment.compression_worker_replicas`    | Gauge | Number of compression-worker replicas |
+| `clp.deployment.compression_worker_concurrency` | Gauge | Compression-worker concurrency        |
+| `clp.deployment.query_worker_replicas`          | Gauge | Number of query-worker replicas       |
+| `clp.deployment.query_worker_concurrency`       | Gauge | Query-worker concurrency              |
+| `clp.deployment.reducer_replicas`               | Gauge | Number of reducer replicas            |
+| `clp.deployment.reducer_concurrency`            | Gauge | Reducer concurrency                   |
 
 ### Resource attributes
 
 Every metric carries the following resource attributes to identify and contextualize the deployment:
 
-| Resource Attribute | Example | Purpose |
-| --- | --- | --- |
-| `clp.deployment.id` | `550e8400-e29b-41d4-a716-446655440000` | Deduplicate metrics from the same deployment |
-| `service.version` | `0.9.1` | Track version adoption |
-| `clp.deployment.method` | `docker-compose` or `helm` | Understand deployment preferences |
-| `clp.storage.engine` | `clp-s` or `clp` | Track feature adoption |
-| `service.name` | `log-ingestor`, `api-server`, `controller` | Identify the emitting component |
-| `host.arch` | `x86_64`, `aarch64` | Inform build target priorities |
-| `host.cpu.family` | `6` | Inform build target priorities |
-| `host.cpu.model.id` | `142` | Inform build target priorities |
-| `host.cpu.vendor.id` | `GenuineIntel` | Inform build target priorities |
+| Resource Attribute      | Example                                    | Purpose                                      |
+| ----------------------- | ------------------------------------------ | -------------------------------------------- |
+| `clp.deployment.id`     | `550e8400-e29b-41d4-a716-446655440000`     | Deduplicate metrics from the same deployment |
+| `service.version`       | `0.9.1`                                    | Track version adoption                       |
+| `clp.deployment.method` | `docker-compose` or `helm`                 | Understand deployment preferences            |
+| `clp.storage.engine`    | `clp-s` or `clp`                           | Track feature adoption                       |
+| `service.name`          | `log-ingestor`, `api-server`, `controller` | Identify the emitting component              |
+| `host.arch`             | `x86_64`, `aarch64`                        | Inform build target priorities               |
+| `host.cpu.family`       | `6`                                        | Inform build target priorities               |
+| `host.cpu.model.id`     | `142`                                      | Inform build target priorities               |
+| `host.cpu.vendor.id`    | `GenuineIntel`                             | Inform build target priorities               |
 
 `service.name` is set via the `OTEL_SERVICE_NAME` environment variable for Rust services and
 hardcoded in the controller's topology metrics payload. `clp.deployment.id`,
