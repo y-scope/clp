@@ -1,6 +1,11 @@
-import {Nullable} from "@webui/common/utility-types";
 import {create} from "zustand";
+import {message} from "antd";
+import type {PrestoSearchResult} from "@webui/common/presto";
+import {Nullable} from "@webui/common/utility-types";
 
+import {downloadTextFile} from "../../../../utils/download";
+import {formatExportFilenameTimestamp} from "../../SearchResults/SearchResultsTable/Native/utils";
+import {formatPrestoResultAsJsonl} from "../../SearchResults/SearchResultsTable/Presto/PrestoResultsVirtualTable/utils";
 import {PRESTO_SQL_INTERFACE} from "./typings";
 
 
@@ -12,6 +17,7 @@ const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
     errorMsg: null,
     errorName: null,
     orderBy: "",
+    prestoSearchResults: null as Nullable<PrestoSearchResult[]>,
     queryDrawerOpen: false,
     select: "*",
     sqlInterface: PRESTO_SQL_INTERFACE.GUIDED,
@@ -36,9 +42,19 @@ interface PrestoSearchState {
     errorName: Nullable<string>;
 
     /**
+     * Exports all Presto search results as a JSONL file download.
+     */
+    handlePrestoSearchResultsExport: () => void;
+
+    /**
      * ORDER BY input.
      */
     orderBy: string;
+
+    /**
+     * Current Presto search results for export.
+     */
+    prestoSearchResults: Nullable<PrestoSearchResult[]>;
 
     /**
      * Whether the query preview drawer is open.
@@ -70,14 +86,34 @@ interface PrestoSearchState {
     updateErrorMsg: (msg: Nullable<string>) => void;
     updateErrorName: (name: Nullable<string>) => void;
     updateOrderBy: (items: string) => void;
+    updatePrestoSearchResults: (results: Nullable<PrestoSearchResult[]>) => void;
     updateQueryDrawerOpen: (open: boolean) => void;
     updateSelect: (items: string) => void;
     updateTimestampKey: (key: Nullable<string>) => void;
     updateWhere: (expression: string) => void;
 }
 
-const usePrestoSearchState = create<PrestoSearchState>((set) => ({
+const usePrestoSearchState = create<PrestoSearchState>((set, get) => ({
     ...PRESTO_SEARCH_STATE_DEFAULT,
+    handlePrestoSearchResultsExport: () => {
+        const {prestoSearchResults} = get();
+        if (null === prestoSearchResults || 0 === prestoSearchResults.length) {
+            return;
+        }
+
+        try {
+            downloadTextFile(
+                prestoSearchResults.map(
+                    (r) => `${formatPrestoResultAsJsonl(r)}\n`
+                ),
+                `presto-search-results-${formatExportFilenameTimestamp()}.jsonl`
+            );
+            message.success(`Exported ${prestoSearchResults.length} results`);
+        } catch (e) {
+            message.error("Failed to export results");
+            console.error(e);
+        }
+    },
     setSqlInterface: (iface) => {
         set({sqlInterface: iface});
     },
@@ -92,6 +128,9 @@ const usePrestoSearchState = create<PrestoSearchState>((set) => ({
     },
     updateOrderBy: (items) => {
         set({orderBy: items});
+    },
+    updatePrestoSearchResults: (results) => {
+        set({prestoSearchResults: results});
     },
     updateQueryDrawerOpen: (open) => {
         set({queryDrawerOpen: open});
