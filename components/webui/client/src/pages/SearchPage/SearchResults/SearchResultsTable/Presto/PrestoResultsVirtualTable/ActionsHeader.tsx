@@ -11,8 +11,6 @@ import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 
 /**
  * Column header component with an export-all button for Presto results.
- *
- * @return
  */
 const ActionsHeader = () => {
     const handlePrestoSearchResultsExport = usePrestoSearchState(

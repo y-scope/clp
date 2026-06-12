@@ -39,7 +39,10 @@ const getPrestoSearchResultsTableColumns = (
  * @return A single JSON line (without trailing newline)
  */
 const formatPrestoResultAsJsonl = (result: PrestoSearchResult): string => {
-    return JSON.stringify(result.row);
+    if ("undefined" === typeof result.row) {
+        return JSON.stringify({_id: result._id});
+    }
+    return JSON.stringify({...result.row, _id: result._id});
 };
 
 export {
