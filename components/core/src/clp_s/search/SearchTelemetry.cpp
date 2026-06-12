@@ -203,6 +203,7 @@ collect_query_shape_metrics(std::shared_ptr<Expression> const& expr, QueryShapeM
 
 class SearchTelemetrySpan::Impl {
 public:
+    // Constructors
     Impl()
             : m_span{opentelemetry::trace::Provider::GetTracerProvider()
                              ->GetTracer(to_nostd_string_view(cTracerName))
@@ -211,16 +212,29 @@ public:
         m_span->SetAttribute(to_nostd_string_view(cAttrSuccess), true);
     }
 
-    // Delete copy constructor and assignment operator
     Impl(Impl const&) = delete;
-    auto operator=(Impl const&) -> Impl& = delete;
-
-    // Delete move constructor and assignment operator
     Impl(Impl&&) = delete;
+
+    // Operators
+    auto operator=(Impl const&) -> Impl& = delete;
     auto operator=(Impl&&) -> Impl& = delete;
 
     // Destructor
     ~Impl() { m_span->End(); }
+
+    // Methods
+    auto set_archive_context(std::string_view archive_id) -> void {
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrArchiveIdHash),
+                to_hash_attribute(archive_id)
+        );
+    }
+
+    auto set_error(std::string_view message) -> void {
+        m_span->SetAttribute(to_nostd_string_view(cAttrSuccess), false);
+        m_span->SetAttribute(to_nostd_string_view(cAttrError), to_nostd_string_view(message));
+        m_span->SetStatus(StatusCode::kError, to_nostd_string_view(message));
+    }
 
     auto set_query_context(std::string_view query) -> void {
         m_span->SetAttribute(to_nostd_string_view(cAttrQueryHash), to_hash_attribute(query));
@@ -233,13 +247,6 @@ public:
         if (char const* const task_id{std::getenv("CLP_TASK_ID")}; nullptr != task_id) {
             m_span->SetAttribute(to_nostd_string_view(cAttrTaskId), task_id);
         }
-    }
-
-    auto set_archive_context(std::string_view archive_id) -> void {
-        m_span->SetAttribute(
-                to_nostd_string_view(cAttrArchiveIdHash),
-                to_hash_attribute(archive_id)
-        );
     }
 
     auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
@@ -333,13 +340,8 @@ public:
         );
     }
 
-    auto set_error(std::string_view message) -> void {
-        m_span->SetAttribute(to_nostd_string_view(cAttrSuccess), false);
-        m_span->SetAttribute(to_nostd_string_view(cAttrError), to_nostd_string_view(message));
-        m_span->SetStatus(StatusCode::kError, to_nostd_string_view(message));
-    }
-
 private:
+    // Variables
     opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> m_span;
     std::unique_ptr<opentelemetry::trace::Scope> m_scope;
 };
@@ -348,12 +350,16 @@ SearchTelemetrySpan::SearchTelemetrySpan() : m_impl{std::make_unique<Impl>()} {}
 
 SearchTelemetrySpan::~SearchTelemetrySpan() = default;
 
-auto SearchTelemetrySpan::set_query_context(std::string_view query) -> void {
-    m_impl->set_query_context(query);
-}
-
 auto SearchTelemetrySpan::set_archive_context(std::string_view archive_id) -> void {
     m_impl->set_archive_context(archive_id);
+}
+
+auto SearchTelemetrySpan::set_error(std::string_view message) -> void {
+    m_impl->set_error(message);
+}
+
+auto SearchTelemetrySpan::set_query_context(std::string_view query) -> void {
+    m_impl->set_query_context(query);
 }
 
 auto SearchTelemetrySpan::set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
@@ -366,10 +372,6 @@ auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const& m
 
 auto SearchTelemetrySpan::set_termination_stage(std::string_view termination_stage) -> void {
     m_impl->set_termination_stage(termination_stage);
-}
-
-auto SearchTelemetrySpan::set_error(std::string_view message) -> void {
-    m_impl->set_error(message);
 }
 
 auto create_query_shape_metrics(

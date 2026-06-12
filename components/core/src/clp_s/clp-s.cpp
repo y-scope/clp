@@ -9,6 +9,7 @@
 #include <utility>
 #include <variant>
 
+#include <fmt/format.h>
 #include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -141,11 +142,13 @@ bool search_archive(
         telemetry_span->set_query_context(query);
         telemetry_span->set_archive_context(archive_reader->get_archive_id());
     }
-    auto const record_error = [&](std::string_view message) {
-        if (nullptr != telemetry_span) {
-            telemetry_span->set_error(message);
-        }
-    };
+    auto const record_error_and_log
+            = [&](std::string_view error_message, std::string_view log_message) {
+                  SPDLOG_ERROR("{}", log_message);
+                  if (nullptr != telemetry_span) {
+                      telemetry_span->set_error(error_message);
+                  }
+              };
     auto const record_early_termination = [&](std::string_view termination_stage) {
         if (nullptr == telemetry_span) {
             return;
@@ -178,22 +181,26 @@ bool search_archive(
     );
     if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
     {
-        SPDLOG_ERROR(
-                "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
-                "timestamp column was found for this archive",
-                query,
-                command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
-                command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
+        record_error_and_log(
+                "no authoritative timestamp column",
+                fmt::format(
+                        "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative"
+                        " timestamp column was found for this archive",
+                        query,
+                        command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
+                        command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
+                )
         );
-        record_error("no authoritative timestamp column");
         return false;
     }
 
     if (expr = clp_s::search::ast::preprocess_query(expr);
         std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
     {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
-        record_error("query is logically false");
+        record_error_and_log(
+                "query is logically false",
+                fmt::format("Query '{}' is logically false", query)
+        );
         return false;
     }
     if (nullptr != telemetry_span) {
@@ -258,8 +265,10 @@ bool search_archive(
                         descriptor_namespace
                 ))
             {
-                SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
-                record_error("projection column tokenization failed");
+                record_error_and_log(
+                        "projection column tokenization failed",
+                        fmt::format("Can not tokenize invalid column: \"{}\"", column)
+                );
                 return false;
             }
             projection->add_column(
@@ -270,8 +279,7 @@ bool search_archive(
             );
         }
     } catch (std::exception const& e) {
-        SPDLOG_ERROR("{}", e.what());
-        record_error("projection resolution failed");
+        record_error_and_log("projection resolution failed", e.what());
         return false;
     }
     projection->resolve_columns(archive_reader->get_schema_tree());
@@ -331,13 +339,17 @@ bool search_archive(
                 command_line_arguments.get_output_handler_options()
         );
         if (nullptr == output_handler) {
-            SPDLOG_ERROR("Failed to create output handler.");
-            record_error("output handler creation failed");
+            record_error_and_log(
+                    "output handler creation failed",
+                    "Failed to create output handler."
+            );
             return false;
         }
     } catch (std::exception const& e) {
-        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
-        record_error("output handler creation failed");
+        record_error_and_log(
+                "output handler creation failed",
+                fmt::format("Failed to create output handler - {}", e.what())
+        );
         return false;
     }
 

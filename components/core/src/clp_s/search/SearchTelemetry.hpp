@@ -73,13 +73,11 @@ class SearchTelemetrySpan {
 public:
     // Constructors
     SearchTelemetrySpan();
-
-    // Delete copy constructor and assignment operator
     SearchTelemetrySpan(SearchTelemetrySpan const&) = delete;
-    auto operator=(SearchTelemetrySpan const&) -> SearchTelemetrySpan& = delete;
-
-    // Delete move constructor and assignment operator
     SearchTelemetrySpan(SearchTelemetrySpan&&) = delete;
+
+    // Operators
+    auto operator=(SearchTelemetrySpan const&) -> SearchTelemetrySpan& = delete;
     auto operator=(SearchTelemetrySpan&&) -> SearchTelemetrySpan& = delete;
 
     // Destructor
@@ -87,19 +85,26 @@ public:
 
     // Methods
     /**
+     * Records the archive-identity attributes: a non-reversible hash of the archive ID.
+     *
+     * @param archive_id The ID of the archive being searched.
+     */
+    auto set_archive_context(std::string_view archive_id) -> void;
+
+    /**
+     * Marks the span as failed and records the error.
+     *
+     * @param message
+     */
+    auto set_error(std::string_view message) -> void;
+
+    /**
      * Records the query-identity attributes: a non-reversible hash of the query and, when present
      * in the environment, the scheduler's `query_id`/`task_id`.
      *
      * @param query The raw query string.
      */
     auto set_query_context(std::string_view query) -> void;
-
-    /**
-     * Records the archive-identity attributes: a non-reversible hash of the archive ID.
-     *
-     * @param archive_id The ID of the archive being searched.
-     */
-    auto set_archive_context(std::string_view archive_id) -> void;
 
     /**
      * Records the query-shape metrics. These are collected from the preprocessed query (the form
@@ -123,15 +128,11 @@ public:
      */
     auto set_termination_stage(std::string_view termination_stage) -> void;
 
-    /**
-     * Marks the span as failed and records the error.
-     *
-     * @param message
-     */
-    auto set_error(std::string_view message) -> void;
-
 private:
+    // Types
     class Impl;
+
+    // Variables
     std::unique_ptr<Impl> m_impl;
 };
 
