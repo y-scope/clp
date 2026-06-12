@@ -356,3 +356,71 @@ async fn test_s3_scanner() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+#[serial_test::serial]
+#[ignore = "Requires LocalStack or AWS environment"]
+async fn test_s3_scanner_single_object() -> Result<()> {
+    const SCANNING_INTERVAL_SEC: u64 = 1;
+
+    let job_id = Uuid::new_v4().as_u64_pair().0;
+    let prefix = get_testing_prefix_as_non_empty_string(job_id);
+
+    let aws_config = AwsConfig::from_env()?;
+
+    let aws_auth = AwsAuthentication::Credentials {
+        credentials: AwsCredentials {
+            access_key_id: aws_config.access_key_id.clone(),
+            secret_access_key: aws_config.secret_access_key.clone(),
+        },
+    };
+    let s3_client = clp_rust_utils::s3::create_new_client(
+        aws_config.region.as_str(),
+        Some(&aws_config.endpoint),
+        &aws_auth,
+    )
+    .await;
+
+    let s3_scanner_config = S3ScannerConfig {
+        base: BaseConfig {
+            region: Some(aws_config.region.clone()),
+            bucket_name: aws_config.bucket_name.clone(),
+            key_prefix: prefix.clone(),
+            endpoint_url: Some(aws_config.endpoint.clone()),
+            dataset: None,
+            timestamp_key: None,
+            unstructured: false,
+        },
+        buffer_config: BufferConfig::default(),
+        scanning_interval_sec: 1,
+        start_after: None,
+    };
+
+    let state = S3ScannerTestState::new();
+    let shared_buffer = state.get_shared_buffer();
+
+    let created_objects = upload_test_objects(
+        s3_client.clone(),
+        aws_config.bucket_name.clone(),
+        prefix.clone(),
+        1,
+    )
+    .await?;
+
+    let s3_scanner = S3Scanner::spawn(
+        job_id,
+        S3ClientWrapper::from(s3_client.clone()),
+        s3_scanner_config,
+        state,
+    );
+
+    // Wait for 10 scanning intervals
+    tokio::time::sleep(Duration::from_secs(10 * SCANNING_INTERVAL_SEC)).await;
+
+    s3_scanner.shutdown_and_join().await;
+
+    let received_objects = shared_buffer.lock().await.clone();
+    assert_eq!(received_objects, created_objects);
+
+    Ok(())
+}
