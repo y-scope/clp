@@ -16,6 +16,11 @@ const GET_DATASETS_SQL = `
     SELECT
         ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME} AS name
     FROM ${settings.SqlDbClpDatasetsTableName}
+    UNION
+    SELECT DISTINCT
+        dataset AS name
+    FROM hot_log_segments
+    WHERE 0 < committed_end_offset
     ORDER BY ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME};
 `;
 

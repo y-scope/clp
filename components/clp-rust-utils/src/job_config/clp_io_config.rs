@@ -18,6 +18,12 @@ pub struct ClpIoConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "type")]
 pub enum InputConfig {
+    #[serde(rename = "fs")]
+    FsInputConfig {
+        #[serde(flatten)]
+        config: FsInputConfig,
+    },
+
     #[serde(rename = "s3")]
     S3InputConfig {
         #[serde(flatten)]
@@ -29,6 +35,16 @@ pub enum InputConfig {
         #[serde(flatten)]
         config: S3ObjectMetadataInputConfig,
     },
+}
+
+/// Represents filesystem input config.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct FsInputConfig {
+    pub dataset: Option<NonEmptyString>,
+    pub paths_to_compress: Vec<String>,
+    pub path_prefix_to_remove: Option<String>,
+    pub timestamp_key: Option<NonEmptyString>,
+    pub unstructured: bool,
 }
 
 /// Represents S3 input config.

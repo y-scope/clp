@@ -1,0 +1,9 @@
+{{- if .Values.clpConfig.log_ingestor.realtime_logs.enabled }}
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component_category" "shared-data"
+  "name" "realtime-logs"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteMany")
+) }}
+{{- end }}

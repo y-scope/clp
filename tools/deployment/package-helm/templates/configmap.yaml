@@ -122,6 +122,25 @@ data:
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002
+      {{ with .realtime_logs }}
+      realtime_logs:
+        enabled: {{ .enabled }}
+        hot_storage:
+          type: {{ .hot_storage.type | quote }}
+          directory: {{ .hot_storage.directory | quote }}
+        otlp:
+          enabled: {{ .otlp.enabled }}
+          max_request_bytes: {{ .otlp.max_request_bytes }}
+        segment:
+          seal_threshold_bytes: {{ .segment.seal_threshold_bytes }}
+          seal_timeout_sec: {{ .segment.seal_timeout_sec }}
+          file_flush_interval_ms: {{ .segment.file_flush_interval_ms }}
+          watermark_publish_interval_ms: {{ .segment.watermark_publish_interval_ms }}
+          watermark_publish_threshold_bytes: {{ .segment.watermark_publish_threshold_bytes }}
+          channel_capacity: {{ .segment.channel_capacity }}
+        compaction:
+          raw_retention_after_compaction_sec: {{ .compaction.raw_retention_after_compaction_sec }}
+      {{ end }}
     {{- else }}
     log_ingestor: null
     {{- end }}

@@ -8,16 +8,18 @@ from contextlib import closing
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
+    HotLogSegmentStatus,
     QueryJobStatus,
     QueryTaskStatus,
 )
-from mysql.connector.errorcode import ER_DUP_KEYNAME
+from mysql.connector.errorcode import ER_DUP_FIELDNAME, ER_DUP_KEYNAME
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import (
     ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
+    HOT_LOG_SEGMENTS_TABLE_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
@@ -153,6 +155,10 @@ def main(argv):
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_id` INT NOT NULL,
                     `archive_id` VARCHAR(255) NULL DEFAULT NULL,
+                    `target_type` VARCHAR(32) NOT NULL DEFAULT 'archive',
+                    `target_id` VARCHAR(255) NULL DEFAULT NULL,
+                    `hot_segment_id` BIGINT NULL DEFAULT NULL,
+                    `snapshot_end_offset` BIGINT NULL DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `job_id` (`job_id`) USING BTREE,
                     INDEX `TASK_STATUS` (`status`) USING BTREE,
@@ -160,6 +166,52 @@ def main(argv):
                     CONSTRAINT `{QUERY_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`) 
                     REFERENCES `{QUERY_JOBS_TABLE_NAME}` (`id`)
                     ON UPDATE NO ACTION ON DELETE NO ACTION
+                ) ROW_FORMAT=DYNAMIC
+                """
+            )
+
+            for column_name, column_definition in (
+                ("target_type", "VARCHAR(32) NOT NULL DEFAULT 'archive'"),
+                ("target_id", "VARCHAR(255) NULL DEFAULT NULL"),
+                ("hot_segment_id", "BIGINT NULL DEFAULT NULL"),
+                ("snapshot_end_offset", "BIGINT NULL DEFAULT NULL"),
+            ):
+                try:
+                    scheduling_db_cursor.execute(
+                        f"""
+                        ALTER TABLE `{QUERY_TASKS_TABLE_NAME}`
+                        ADD COLUMN `{column_name}` {column_definition}
+                        """
+                    )
+                except Exception as err:
+                    if not (hasattr(err, "errno") and err.errno == ER_DUP_FIELDNAME):
+                        raise
+
+            scheduling_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{HOT_LOG_SEGMENTS_TABLE_NAME}` (
+                    `id` BIGINT NOT NULL AUTO_INCREMENT,
+                    `dataset` VARCHAR(255) NOT NULL,
+                    `status` INT NOT NULL DEFAULT '{HotLogSegmentStatus.OPEN}',
+                    `storage_type` VARCHAR(32) NOT NULL,
+                    `locator` TEXT NOT NULL,
+                    `begin_timestamp` BIGINT NULL DEFAULT NULL,
+                    `end_timestamp` BIGINT NULL DEFAULT NULL,
+                    `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `update_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `sealed_time` DATETIME(3) NULL DEFAULT NULL,
+                    `compacted_time` DATETIME(3) NULL DEFAULT NULL,
+                    `size_bytes` BIGINT NOT NULL DEFAULT '0',
+                    `record_count` BIGINT NOT NULL DEFAULT '0',
+                    `committed_end_offset` BIGINT NOT NULL DEFAULT '0',
+                    `generation` BIGINT NOT NULL DEFAULT '0',
+                    `compression_job_id` INT NULL DEFAULT NULL,
+                    `compressed_archive_id` VARCHAR(255) NULL DEFAULT NULL,
+                    `error` TEXT NULL DEFAULT NULL,
+                    PRIMARY KEY (`id`) USING BTREE,
+                    INDEX `HOT_LOG_SEGMENTS_SEARCH` (`dataset`, `status`, `end_timestamp`)
+                        USING BTREE,
+                    INDEX `HOT_LOG_SEGMENTS_STATUS` (`status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )

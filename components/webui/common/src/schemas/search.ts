@@ -21,6 +21,7 @@ const DEFAULT_MAX_NUM_SEARCH_RESULTS = 1000;
 const QueryJobCreationSchema = Type.Object({
     datasets: Type.Array(Type.String()),
     ignoreCase: Type.Boolean(),
+    includeHotSegments: Type.Optional(Type.Boolean()),
     maxNumResults: Type.Optional(Type.Integer({
         maximum: MAX_NUM_SEARCH_RESULTS,
         minimum: MIN_NUM_SEARCH_RESULTS,

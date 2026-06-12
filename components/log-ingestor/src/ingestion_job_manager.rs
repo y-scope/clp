@@ -13,6 +13,7 @@ use clp_rust_utils::{
     },
     job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
 };
+use opentelemetry_proto::tonic::collector::logs::v1::ExportLogsServiceRequest;
 use serde::Serialize;
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
@@ -20,6 +21,7 @@ use utoipa::ToSchema;
 use crate::{
     aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
     ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
+    realtime_logs::{Error as RealtimeLogsError, IngestSummary, RealtimeLogManager},
 };
 
 /// Errors for ingestion job manager operations.
@@ -82,21 +84,44 @@ impl IngestionJobManagerState {
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<Self> {
         let aws_authentication = match &clp_config.logs_input {
-            LogsInput::S3 { config } => config.aws_authentication.clone(),
-            LogsInput::Fs { .. } => {
-                return Err(anyhow::anyhow!(
-                    "Invalid CLP config: Unsupported logs input type. The current implementation \
-                     only supports S3 input."
-                ));
-            }
+            LogsInput::S3 { config } => Some(config.aws_authentication.clone()),
+            LogsInput::Fs { .. } => None,
         };
+        let realtime_logs_enabled = clp_config
+            .log_ingestor
+            .as_ref()
+            .is_some_and(|log_ingestor| log_ingestor.realtime_logs.enabled);
+        let realtime_logs_config = clp_config
+            .log_ingestor
+            .as_ref()
+            .map(|log_ingestor| log_ingestor.realtime_logs.clone());
+        let archive_output_config = clp_config.archive_output.clone();
+        if aws_authentication.is_none() && !realtime_logs_enabled {
+            return Err(anyhow::anyhow!(
+                "Invalid CLP config: Unsupported logs input type. The current implementation only \
+                 supports S3 input unless realtime logs are enabled."
+            ));
+        }
 
         let (clp_db_ingestion_connector, recovery_context) =
             ClpDbIngestionConnector::connect(clp_config, clp_credentials).await?;
+        let realtime_log_manager = if realtime_logs_enabled {
+            Some(
+                RealtimeLogManager::new(
+                    clp_db_ingestion_connector.db_pool(),
+                    realtime_logs_config.expect("realtime logs require log-ingestor config"),
+                    archive_output_config,
+                )
+                .await?,
+            )
+        } else {
+            None
+        };
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
             clp_db_ingestion_connector,
             aws_authentication,
+            realtime_log_manager,
         });
         let ingestion_job_manager = Self { inner };
 
@@ -152,6 +177,30 @@ impl IngestionJobManagerState {
                 Err(e)
             }
         }
+    }
+
+    #[must_use]
+    pub fn realtime_logs_max_request_bytes(&self) -> Option<u64> {
+        self.inner
+            .realtime_log_manager
+            .as_ref()
+            .map(RealtimeLogManager::max_request_bytes)
+    }
+
+    /// Ingests a batch of realtime OTLP logs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if realtime log ingestion is disabled or the realtime log manager rejects
+    /// the request.
+    pub async fn ingest_realtime_otlp_logs(
+        &self,
+        request: ExportLogsServiceRequest,
+    ) -> Result<IngestSummary, RealtimeLogsError> {
+        let Some(manager) = self.inner.realtime_log_manager.as_ref() else {
+            return Err(RealtimeLogsError::Disabled);
+        };
+        manager.ingest_otlp_logs(request).await
     }
 
     /// Shuts down and removes an ingestion job instance by its ID.
@@ -286,14 +335,16 @@ impl IngestionJobManagerState {
         }
 
         let ingestion_state = ingestion_job_context.get_ingestion_state();
+        let Some(aws_authentication) = self.inner.aws_authentication.as_ref() else {
+            return Err(Error::InternalError(anyhow::anyhow!(
+                "Cannot create an S3 ingestion job when S3 logs input is not configured."
+            )));
+        };
         let ingestion_job_instance = match ingestion_job_context.get_ingestion_job_config().clone()
         {
             S3IngestionJobConfig::SqsListener(config) => {
-                let sqs_client_manager = SqsClientWrapper::create(
-                    config.base.region.as_ref(),
-                    &self.inner.aws_authentication,
-                )
-                .await;
+                let sqs_client_manager =
+                    SqsClientWrapper::create(config.base.region.as_ref(), aws_authentication).await;
                 let validated_config = ValidatedSqsListenerConfig::validate_and_create(config)?;
                 ingestion_state.start().await?;
                 IngestionJob::SqsListener(crate::ingestion_job::SqsListener::spawn(
@@ -307,7 +358,7 @@ impl IngestionJobManagerState {
                 let s3_client_manager = S3ClientWrapper::create(
                     config.base.region.as_ref(),
                     config.base.endpoint_url.as_ref(),
-                    &self.inner.aws_authentication,
+                    aws_authentication,
                 )
                 .await;
                 ingestion_state.start().await?;
@@ -338,7 +389,8 @@ impl IngestionJobManagerState {
 struct IngestionJobManager {
     job_table: Mutex<HashMap<IngestionJobId, IngestionJobTableEntry>>,
     clp_db_ingestion_connector: ClpDbIngestionConnector,
-    aws_authentication: AwsAuthentication,
+    aws_authentication: Option<AwsAuthentication>,
+    realtime_log_manager: Option<RealtimeLogManager>,
 }
 
 /// Represents an entry in the ingestion job table.

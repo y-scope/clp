@@ -239,10 +239,27 @@ clpConfig:
   #   # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
   #   split_filter: {}
 
-  # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+  # log-ingestor config.
   log_ingestor:
     port: 30302
     logging_level: "INFO"
+    realtime_logs:
+      enabled: false
+      hot_storage:
+        type: "fs"
+        directory: "/var/data/realtime-logs"
+      otlp:
+        enabled: true
+        max_request_bytes: 10485760
+      segment:
+        seal_threshold_bytes: 134217728
+        seal_timeout_sec: 900
+        file_flush_interval_ms: 1000
+        watermark_publish_interval_ms: 1000
+        watermark_publish_threshold_bytes: 4194304
+        channel_capacity: 1024
+      compaction:
+        raw_retention_after_compaction_sec: 0
 
   # Where archives should be output to
   archive_output:

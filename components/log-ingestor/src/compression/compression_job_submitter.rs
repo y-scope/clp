@@ -37,6 +37,11 @@ impl BufferSubmitter for CompressionJobSubmitter {
             InputConfig::S3ObjectMetadataInputConfig { config } => {
                 config.s3_object_metadata_ids = buffer.to_vec();
             }
+            InputConfig::FsInputConfig { .. } => {
+                unreachable!(
+                    "log-ingestor S3 compression only supports `S3ObjectMetadataInputConfig`"
+                )
+            }
             InputConfig::S3InputConfig { .. } => {
                 unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
             }
@@ -166,7 +171,7 @@ async fn submit_clp_compression_job_and_wait_for_completion(
     let ingestion_job_id = state.get_ingestion_job_id();
     let num_objects_submitted = match &io_config.input {
         InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_object_metadata_ids.len(),
-        InputConfig::S3InputConfig { .. } => {
+        InputConfig::FsInputConfig { .. } | InputConfig::S3InputConfig { .. } => {
             unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
         }
     };

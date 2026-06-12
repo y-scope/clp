@@ -3,15 +3,22 @@
 use axum::{
     Json,
     Router,
+    body::Bytes,
     extract::{Path, State},
-    response::IntoResponse,
-    routing::get,
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::{get, post},
 };
 use clp_rust_utils::job_config::ingestion::s3::{
     S3IngestionJobConfig,
     S3ScannerConfig,
     SqsListenerConfig,
 };
+use opentelemetry_proto::tonic::collector::logs::v1::{
+    ExportLogsServiceRequest,
+    ExportLogsServiceResponse,
+};
+use prost::Message;
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::{OpenApi, ToSchema};
@@ -24,6 +31,7 @@ use crate::{
         IngestionJobManagerState,
         TerminalStatus,
     },
+    realtime_logs::Error as RealtimeLogsError,
 };
 
 #[derive(utoipa::OpenApi)]
@@ -35,7 +43,8 @@ use crate::{
     ),
     tags(
         (name = "Health", description = "Health check endpoint"),
-        (name = "IngestionJob", description = "Ingestion job orchestration endpoints")
+        (name = "IngestionJob", description = "Ingestion job orchestration endpoints"),
+        (name = "RealtimeLogs", description = "Realtime log ingestion endpoints")
     ),
     paths(
         health,
@@ -68,6 +77,7 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
 
     let api_json = api.to_json()?;
     let router = router
+        .route("/v1/logs", post(ingest_otlp_logs))
         .route(
             "/openapi.json",
             get(|| async { (axum::http::StatusCode::OK, api_json) }),
@@ -80,6 +90,23 @@ pub fn create_router() -> Result<Router<IngestionJobManagerState>, serde_json::E
 enum Error {
     #[error("{0}")]
     IngestionJobManagerError(#[from] IngestionJobManagerError),
+
+    #[error("{0}")]
+    RealtimeLogsError(#[from] RealtimeLogsError),
+
+    #[error(
+        "Payload too large: {actual_bytes} bytes exceeds configured limit {limit_bytes} bytes."
+    )]
+    PayloadTooLarge {
+        actual_bytes: usize,
+        limit_bytes: u64,
+    },
+
+    #[error("Unsupported content type for OTLP logs ingestion: {0}")]
+    UnsupportedContentType(String),
+
+    #[error("Failed to decode OTLP logs payload: {0}")]
+    DecodeOtlp(String),
 }
 
 impl IntoResponse for Error {
@@ -102,6 +129,27 @@ impl IntoResponse for Error {
                     (axum::http::StatusCode::BAD_REQUEST, self.to_string())
                 }
             },
+            Self::RealtimeLogsError(e) => match e {
+                RealtimeLogsError::Disabled | RealtimeLogsError::OtlpDisabled => {
+                    (StatusCode::SERVICE_UNAVAILABLE, self.to_string())
+                }
+                RealtimeLogsError::InvalidConfig(_)
+                | RealtimeLogsError::InvalidDataset(_)
+                | RealtimeLogsError::EmptyRequest => (StatusCode::BAD_REQUEST, self.to_string()),
+                RealtimeLogsError::Io(_)
+                | RealtimeLogsError::Sqlx(_)
+                | RealtimeLogsError::SerdeJson(_)
+                | RealtimeLogsError::Anyhow(_)
+                | RealtimeLogsError::ClpRustUtils(_) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                ),
+            },
+            Self::PayloadTooLarge { .. } => (StatusCode::PAYLOAD_TOO_LARGE, self.to_string()),
+            Self::UnsupportedContentType(_) => {
+                (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string())
+            }
+            Self::DecodeOtlp(_) => (StatusCode::BAD_REQUEST, self.to_string()),
         };
         let body = ErrorResponse {
             error: error_message,
@@ -139,6 +187,73 @@ struct ErrorResponse {
 )]
 async fn health() -> &'static str {
     "log-ingestor is running"
+}
+
+async fn ingest_otlp_logs(
+    State(ingestion_job_manager_state): State<IngestionJobManagerState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Response, Error> {
+    let max_request_bytes = ingestion_job_manager_state
+        .realtime_logs_max_request_bytes()
+        .ok_or(RealtimeLogsError::Disabled)?;
+    if body.len() > usize::try_from(max_request_bytes).unwrap_or(usize::MAX) {
+        return Err(Error::PayloadTooLarge {
+            actual_bytes: body.len(),
+            limit_bytes: max_request_bytes,
+        });
+    }
+
+    let content_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("application/x-protobuf");
+
+    let payload_format = OtlpPayloadFormat::from_content_type(content_type)?;
+    let request = match payload_format {
+        OtlpPayloadFormat::Protobuf => ExportLogsServiceRequest::decode(body)
+            .map_err(|err| Error::DecodeOtlp(err.to_string()))?,
+        OtlpPayloadFormat::Json => serde_json::from_slice::<ExportLogsServiceRequest>(&body)
+            .map_err(|err| Error::DecodeOtlp(err.to_string()))?,
+    };
+
+    let summary = ingestion_job_manager_state
+        .ingest_realtime_otlp_logs(request)
+        .await?;
+    tracing::info!(records = summary.records, "Ingested realtime OTLP logs.");
+
+    let response = ExportLogsServiceResponse::default();
+    Ok(match payload_format {
+        OtlpPayloadFormat::Protobuf => (
+            [(header::CONTENT_TYPE, "application/x-protobuf")],
+            response.encode_to_vec(),
+        )
+            .into_response(),
+        OtlpPayloadFormat::Json => {
+            ([(header::CONTENT_TYPE, "application/json")], Json(response)).into_response()
+        }
+    })
+}
+
+#[derive(Clone, Copy)]
+enum OtlpPayloadFormat {
+    Protobuf,
+    Json,
+}
+
+impl OtlpPayloadFormat {
+    fn from_content_type(content_type: &str) -> Result<Self, Error> {
+        let media_type = content_type
+            .split_once(';')
+            .map_or(content_type, |(media_type, _)| media_type)
+            .trim()
+            .to_ascii_lowercase();
+        match media_type.as_str() {
+            "application/x-protobuf" | "application/octet-stream" => Ok(Self::Protobuf),
+            "application/json" => Ok(Self::Json),
+            _ => Err(Error::UnsupportedContentType(content_type.to_string())),
+        }
+    }
 }
 
 #[utoipa::path(

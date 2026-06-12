@@ -79,6 +79,13 @@ spec:
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
             - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- end }}
+            {{- if .Values.clpConfig.log_ingestor.realtime_logs.enabled }}
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "shared-data"
+                "name" "realtime-logs"
+              ) | quote }}
+              mountPath: "/var/data/realtime-logs"
+            {{- end }}
           command: [
             "python3", "-u",
             "/opt/clp/lib/python3/site-packages/bin/celery",
@@ -121,4 +128,11 @@ spec:
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}
+        {{- if .Values.clpConfig.log_ingestor.realtime_logs.enabled }}
+        - {{- include "clp.pvcVolume" (dict
+            "root" .
+            "component_category" "shared-data"
+            "name" "realtime-logs"
+          ) | nindent 10 }}
         {{- end }}

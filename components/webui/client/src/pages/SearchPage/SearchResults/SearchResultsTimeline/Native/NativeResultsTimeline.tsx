@@ -64,6 +64,7 @@ const NativeResultsTimeline = () => {
         handleQuerySubmit({
             datasets: selectedDatasets,
             ignoreCase: false === queryIsCaseSensitive,
+            includeHotSegments: false,
             maxNumResults: maxNumResults,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
