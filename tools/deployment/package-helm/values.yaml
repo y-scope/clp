@@ -130,15 +130,7 @@ scheduling:
 #         ephemeral-storage: "4Gi"
 resources:
   # Worker
-  compressionWorker:
-    requests:
-      cpu: "1"
-      memory: "1Gi"
-      ephemeral-storage: "2Gi"
-    limits:
-      cpu: "2"
-      memory: "2Gi"
-      ephemeral-storage: "4Gi"
+  compressionWorker: {}
   queryWorker: {}
   reducer: {}
   prestoWorker: {}
