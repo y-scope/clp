@@ -15,6 +15,8 @@ auto SfaErrorCategory::name() const noexcept -> char const* {
 template <>
 auto SfaErrorCategory::message(SfaErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
+        case SfaErrorCodeEnum::Failure:
+            return "the operation failed";
         case SfaErrorCodeEnum::IoFailure:
             return "an I/O operation failed";
         case SfaErrorCodeEnum::NoMemory:
