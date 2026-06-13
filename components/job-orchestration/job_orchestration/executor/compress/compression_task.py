@@ -56,6 +56,17 @@ bytes_output_counter = meter.create_counter(
     description="Total compressed bytes output by compression",
 )
 
+input_rate_histogram = meter.create_histogram(
+    "clp.compression.input_rate",
+    unit="By/s",
+    description="Distribution of uncompressed bytes processing rate per task",
+)
+output_rate_histogram = meter.create_histogram(
+    "clp.compression.output_rate",
+    unit="By/s",
+    description="Distribution of compressed bytes output rate per task",
+)
+
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
     if not len(kv):
@@ -675,5 +686,11 @@ def compression_entry_point(
     attributes = {"status": status_str}
     bytes_input_counter.add(worker_output["total_uncompressed_size"], attributes)
     bytes_output_counter.add(worker_output["total_compressed_size"], attributes)
+
+    # Record the actual throughput of this task in the rate histograms.
+    # Guard against zero duration to avoid division by zero.
+    if duration > 0:
+        input_rate_histogram.record(worker_output["total_uncompressed_size"] / duration, attributes)
+        output_rate_histogram.record(worker_output["total_compressed_size"] / duration, attributes)
 
     return compression_task_result.model_dump()
