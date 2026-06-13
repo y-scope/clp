@@ -217,7 +217,13 @@ image:
     digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
 
 # Adjust worker concurrency
-workerConcurrency: 16
+scheduling:
+  compressionWorker:
+    slotsPerPod: 16
+  queryWorker:
+    slotsPerPod: 16
+  reducer:
+    slotsPerPod: 16
 
 # Configure CLP settings
 clpConfig:
