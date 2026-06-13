@@ -108,7 +108,9 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 
 ## Configuration Settings
 
-You can configure the interval at which metrics are exported for each instrumented component. The `telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds) and defaults to `60000` (60 seconds).
+You can configure the interval at which metrics are exported for each instrumented component. The
+`telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds)
+and defaults to `60000` (60 seconds).
 
 ::::{tab-set}
 :::{tab-item} Docker Compose
