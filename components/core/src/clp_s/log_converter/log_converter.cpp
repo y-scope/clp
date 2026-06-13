@@ -48,12 +48,84 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
 
         switch (file_type) {
             case clp_s::FileType::LogText:
-            case clp_s::FileType::EmptyFile:
+            case clp_s::FileType::EmptyFile: {
+                auto const convert_result{log_converter.convert_file(
+                        path,
+                        nested_readers.back().get(),
+                        command_line_arguments.get_output_dir(),
+                        command_line_arguments.get_compress_converted_files()
+                )};
+                if (convert_result.has_error()) {
+                    auto const& error{convert_result.error()};
+                    SPDLOG_ERROR(
+                            "Failed to convert input {} to structured representation: {} - {}",
+                            path.path,
+                            error.category().name(),
+                            error.message()
+                    );
+                    return false;
+                }
                 break;
+            }
+            case clp_s::FileType::Unknown: {
+                if (false == nested_readers.empty()
+                    && clp_s::NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    ))
+                {
+                    return false;
+                }
+
+                auto logtext_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                           std::string const& file_path) -> bool {
+                    // Use member path for output filename
+                    auto const convert_result{log_converter.convert_file(
+                            path,
+                            reader.get(),
+                            command_line_arguments.get_output_dir(),
+                            command_line_arguments.get_compress_converted_files()
+                    )};
+                    if (convert_result.has_error()) {
+                        auto const& error{convert_result.error()};
+                        SPDLOG_ERROR(
+                                "Failed to convert archive member {} to structured representation: "
+                                "{} - {}",
+                                file_path,
+                                error.category().name(),
+                                error.message()
+                        );
+                        return false;
+                    }
+                    return true;
+                };
+
+                auto other_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                         std::string const& file_path) -> bool {
+                    SPDLOG_ERROR(
+                            "Received input that was not unstructured logtext: {}.",
+                            file_path
+                    );
+                    return false;
+                };
+
+                if (false == nested_readers.empty()
+                    && clp_s::try_process_archive_with_libarchive(
+                            nested_readers.back(),
+                            path,
+                            path.path,
+                            other_handler,
+                            other_handler,
+                            logtext_handler,
+                            logtext_handler
+                    ))
+                {
+                    break;
+                }
+            }
             case clp_s::FileType::Json:
             case clp_s::FileType::KeyValueIr:
             case clp_s::FileType::Zstd:
-            case clp_s::FileType::Unknown:
             default: {
                 if (false == nested_readers.empty()) {
                     clp_s::NetworkUtils::check_and_log_curl_error(
@@ -64,23 +136,6 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                 SPDLOG_ERROR("Received input that was not unstructured logtext: {}.", path.path);
                 return false;
             }
-        }
-
-        auto const convert_result{log_converter.convert_file(
-                path,
-                nested_readers.back().get(),
-                command_line_arguments.get_output_dir(),
-                command_line_arguments.get_compress_converted_files()
-        )};
-        if (convert_result.has_error()) {
-            auto const& error{convert_result.error()};
-            SPDLOG_ERROR(
-                    "Failed to convert input {} to structured representation: {} - {}",
-                    path.path,
-                    error.category().name(),
-                    error.message()
-            );
-            return false;
         }
     }
 

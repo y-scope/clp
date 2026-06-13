@@ -8,11 +8,17 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <thread>
 #include <vector>
+
+#if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
+    #include <archive.h>
+    #include <archive_entry.h>
+#endif
 
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
@@ -21,6 +27,8 @@
 #include "../clp/ErrorCode.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
+#include "../clp/LibarchiveFileReader.hpp"
+#include "../clp/LibarchiveReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
@@ -395,6 +403,106 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
 }
 }  // namespace
 
+#if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
+auto try_process_archive_with_libarchive(
+        std::shared_ptr<clp::ReaderInterface> reader,
+        Path const& path,
+        std::string const& default_file_path,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> json_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> kvir_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                logtext_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                empty_file_handler
+) -> bool {
+    clp::LibarchiveReader libarchive_reader;
+    auto libarchive_file_reader{std::make_shared<clp::LibarchiveFileReader>()};
+
+    if (auto const err{libarchive_reader.try_open(*reader, default_file_path)};
+        clp::ErrorCode_Success != err)
+    {
+        SPDLOG_ERROR("Failed to open {} as archive with libarchive", path.path);
+        return false;
+    }
+
+    while (true) {
+        auto const err{libarchive_reader.try_read_next_header()};
+        if (clp::ErrorCode_EndOfFile == err) {
+            break;
+        }
+        if (clp::ErrorCode_Success != err) {
+            SPDLOG_ERROR("Failed to read next entry in archive {}", path.path);
+            libarchive_reader.close();
+            return false;
+        }
+
+        if (auto const file_type{libarchive_reader.get_entry_file_type()}; AE_IFREG != file_type) {
+            continue;
+        }
+
+        auto file_path{libarchive_reader.get_path()};
+        libarchive_reader.open_file_reader(*libarchive_file_reader);
+        auto [nested_readers, member_type] = try_deduce_reader_type(libarchive_file_reader);
+        bool success{};
+        switch (member_type) {
+            case FileType::Json:
+                success = json_handler(nested_readers.back(), file_path);
+                break;
+            case FileType::KeyValueIr:
+                success = kvir_handler(nested_readers.back(), file_path);
+                break;
+            case FileType::LogText:
+                success = logtext_handler(nested_readers.back(), file_path);
+                break;
+            case FileType::EmptyFile:
+                success = empty_file_handler(nested_readers.back(), file_path);
+                break;
+            case FileType::Zstd:
+            case FileType::Unknown:
+            default:
+                SPDLOG_ERROR(
+                        "Cannot process member {} in archive {} - unsupported type",
+                        file_path,
+                        path.path
+                );
+                success = false;
+                break;
+        }
+
+        close_nested_readers(nested_readers);
+        libarchive_file_reader->close();
+
+        if (false == success) {
+            libarchive_reader.close();
+            return false;
+        }
+    }
+
+    libarchive_reader.close();
+    return true;
+}
+#else
+auto try_process_archive_with_libarchive(
+        [[maybe_unused]] std::shared_ptr<clp::ReaderInterface> reader,
+        [[maybe_unused]] Path const& path,
+        [[maybe_unused]] std::string const& default_file_path,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > json_handler,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > kvir_handler,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > logtext_handler,
+        [[maybe_unused]] std::function<
+                bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
+        > empty_file_handler
+) -> bool {
+    return false;
+}
+#endif
+
 auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface> {
     if (InputSource::Filesystem == path.source) {
@@ -438,6 +546,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
             case FileType::KeyValueIr:
             case FileType::LogText:
             case FileType::EmptyFile:
+            case FileType::Unknown:
                 return {std::move(readers), type};
             case FileType::Zstd: {
                 readers.emplace_back(
@@ -452,7 +561,6 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
                     return {{}, FileType::Unknown};
                 }
             } break;
-            case FileType::Unknown:
             default:
                 return {{}, FileType::Unknown};
         }

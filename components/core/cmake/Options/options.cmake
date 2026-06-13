@@ -48,6 +48,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
+    "Include libarchive support for clp-s."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_FFI_SFA
     "Build clp_s::ffi::sfa."
     ON
@@ -279,6 +285,7 @@ function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
         CLP_NEED_FMT
+        CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
@@ -292,6 +299,12 @@ function(set_clp_s_enable_curl_dependencies)
     set_clp_need_flags(
         CLP_NEED_CURL
         CLP_NEED_OPENSSL
+    )
+endfunction()
+
+function(set_clp_s_enable_libarchive_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_LIBARCHIVE
     )
 endfunction()
 
@@ -332,6 +345,7 @@ function(set_clp_s_io_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
         CLP_NEED_FMT
+        CLP_NEED_LIBARCHIVE
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_ZSTD
@@ -482,6 +496,10 @@ function(validate_and_setup_all_clp_dependency_flags)
 
     if (CLP_BUILD_CLP_S_ENABLE_CURL)
         set_clp_s_enable_curl_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+        set_clp_s_enable_libarchive_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_FFI_SFA)

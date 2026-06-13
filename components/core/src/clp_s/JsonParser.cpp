@@ -675,11 +675,59 @@ bool JsonParser::ingest() {
                 );
                 std::ignore = m_archive_writer->close();
                 return false;
+            case FileType::Unknown: {
+                if (false == nested_readers.empty()
+                    && NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    ))
+                {
+                    close_nested_readers(nested_readers);
+                    SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
+                    std::ignore = m_archive_writer->close();
+                    return false;
+                }
+
+                auto json_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                        std::string const& file_name) -> bool {
+                    return ingest_json(reader, path, file_name, archive_creator_id);
+                };
+
+                auto kvir_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                        std::string const& file_name) -> bool {
+                    return ingest_kvir(reader, path, file_name, archive_creator_id);
+                };
+
+                auto logtext_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                           std::string const& file_name) -> bool {
+                    SPDLOG_ERROR(
+                            "Direct ingestion of unstructured logtext is not supported from "
+                            "archive member {}",
+                            file_name
+                    );
+                    return false;
+                };
+
+                if (false == nested_readers.empty()
+                    && try_process_archive_with_libarchive(
+                            nested_readers.back(),
+                            path,
+                            file_name_in_metadata,
+                            json_handler,
+                            kvir_handler,
+                            logtext_handler,
+                            json_handler
+                    ))
+                {
+                    ingestion_successful = true;
+                    break;
+                }
+            }
             case FileType::Zstd:
-            case FileType::Unknown:
             default: {
                 if (false == nested_readers.empty()) {
                     NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get());
+                    close_nested_readers(nested_readers);
                 }
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
                 std::ignore = m_archive_writer->close();
