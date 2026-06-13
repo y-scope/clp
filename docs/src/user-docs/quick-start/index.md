@@ -7,6 +7,10 @@ For deployments that scale across multiple machines (e.g., for higher throughput
 
 * [Docker Compose deployment][docker-compose-deployment] for advanced Docker Compose configurations
 * [Kubernetes deployment][k8s-deployment] for production Kubernetes clusters
+
+For local evaluation without Docker Compose or Kubernetes, use the single-container tabs in this
+quick start. For custom single-container settings, see the
+[single-container image guide][single-container-image].
 :::
 
 The rest of the guide is organized as follows:
@@ -16,9 +20,9 @@ The rest of the guide is organized as follows:
 * [How to use CLP](#using-clp)
 
 :::{note}
-CLP supports deployment using Docker Compose or Kubernetes. Throughout the guide, some steps will
-differ depending on the chosen orchestration framework. These steps will have a tabbed interface to
-choose your framework.
+CLP supports deployment using Docker Compose, the single-container image, or Kubernetes. Throughout
+the guide, some steps will differ depending on the chosen deployment method. These steps will have a
+tabbed interface to choose your method.
 :::
 
 ---
@@ -41,6 +45,29 @@ To check whether the required tools are installed on your system, run:
 containerd --version
 docker version --format '{{.Server.Version}}'
 docker compose version --short
+```
+
+```{note}
+* If you're not running as root, ensure Docker can be run
+  [without superuser privileges][docker-non-root].
+* If you're using Docker Desktop, ensure version 4.34 or higher is installed.
+```
+
+:::
+
+:::{tab-item} Single container
+:sync: single-container
+
+* [Docker][Docker]
+  * `containerd.io` >= 1.7.18
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
+
+To check whether the required tools are installed on your system, run:
+
+```bash
+containerd --version
+docker version --format '{{.Server.Version}}'
 ```
 
 ```{note}
@@ -117,7 +144,8 @@ The log file above contains two log events represented by two JSON objects print
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
 If you're using JSON logs, download and extract the `clp-json` release from the
-[Releases][clp-releases] page, then proceed to the [`clp-json` quick-start][clp-json] guide.
+[Releases][clp-releases] page, then proceed to the [`clp-json` quick-start][clp-json] guide. If
+you're using the single-container image, use the `clp-json` config from the extracted package.
 
 ### clp-text
 
@@ -145,7 +173,8 @@ The log file above contains two log events, both beginning with a timestamp. The
 line, while the second contains multiple lines.
 
 If you're using unstructured text logs, download and extract the `clp-text` release from the
-[Releases][clp-releases] page, then proceed to the [`clp-text` quick-start][clp-text] guide.
+[Releases][clp-releases] page, then proceed to the [`clp-text` quick-start][clp-text] guide. If
+you're using the single-container image, use the `clp-text` config from the extracted package.
 
 ---
 
@@ -182,3 +211,4 @@ How to compress and search unstructured text logs.
 [k8s-deployment]: ../guides-k8s-deployment.md
 [kind]: https://kind.sigs.k8s.io/docs/user/quick-start/#installation
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
+[single-container-image]: ../guides-single-container-image.md
