@@ -20,11 +20,24 @@ The following OpenTelemetry metrics are emitted:
 
 Emitted by long-running CLP services to track throughput:
 
-| Component    | Metric                         | Type    | Description                              |
-| ------------ | ------------------------------ | ------- | ---------------------------------------- |
-| log-ingestor | `clp.ingest.total_num_bytes`   | Counter | Total bytes ingested                     |
-| log-ingestor | `clp.ingest.total_num_objects` | Counter | Total objects (log events) ingested      |
-| api-server   | `clp.service.event`            | Counter | Service lifecycle events (e.g., startup) |
+| Component          | Metric                               | Type    | Description                                       |
+| ------------------ |------------------------------------- |-------- | ------------------------------------------------- |
+| api-server         | `clp.service.event`                  | Counter | Service lifecycle events (e.g., startup)          |
+| compression-worker | `clp.compression.bytes_input_total`  | Counter | Total uncompressed bytes processed by compression |
+| compression-worker | `clp.compression.bytes_output_total` | Counter | Total compressed bytes output by compression      |
+| log-ingestor       | `clp.ingest.total_num_bytes`         | Counter | Total bytes ingested                              |
+| log-ingestor       | `clp.ingest.total_num_objects`       | Counter | Total objects (log events) ingested               |
+
+#### Operational gauges
+
+Emitted by long-running CLP services to track current workload state:
+
+| Component             | Metric                              | Type  | Description                                                    |
+| --------------------- | ----------------------------------- | ----- | -------------------------------------------------------------- |
+| compression-scheduler | `clp.compression.active_jobs`       | Gauge | Number of active compression jobs                              |
+| compression-scheduler | `clp.compression.outstanding_tasks` | Gauge | Total number of outstanding compression tasks                  |
+| query-scheduler       | `clp.query.active_jobs`             | Gauge | Number of active query jobs                                    |
+| query-scheduler       | `clp.query.outstanding_tasks`       | Gauge | Total number of outstanding tasks across all active query jobs |
 
 #### Deployment topology gauges
 
@@ -92,6 +105,36 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 `otel-collector-config.yaml` embedded in `tools/deployment/package-helm/templates/configmap.yaml`
 (Helm).
 :::
+
+## Configuration Settings
+
+You can configure the interval at which metrics are exported for each instrumented component. The
+`telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds)
+and defaults to `60000` (60 seconds).
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+Edit `clp-config.yaml` to set the interval per component:
+
+```yaml
+compression_scheduler:
+  telemetry_update_interval_ms: 60000
+```
+
+:::
+:::{tab-item} Kubernetes
+:sync: k8s
+Edit `values.yaml` to set the interval per component:
+
+```yaml
+clpConfig:
+  compression_scheduler:
+    telemetry_update_interval_ms: 60000
+```
+
+:::
+::::
 
 ## How to disable telemetry
 

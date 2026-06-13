@@ -1,4 +1,5 @@
 import argparse
+import atexit
 import datetime
 import signal
 import sys
@@ -32,6 +33,9 @@ from clp_py_utils.core import (
 )
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SqlAdapter
+from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
+from opentelemetry import metrics
+from opentelemetry.metrics import CallbackOptions, Observation
 from pydantic import ValidationError
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -69,6 +73,31 @@ class DbContext:
 logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
+
+meter = metrics.get_meter("compression-scheduler")
+
+
+def _observe_active_jobs(options: CallbackOptions):
+    yield Observation(len(scheduled_jobs))
+
+
+def _observe_outstanding_tasks(options: CallbackOptions):
+    num_outstanding_tasks = sum(
+        job.num_tasks_total - job.num_tasks_completed for job in scheduled_jobs.values()
+    )
+    yield Observation(num_outstanding_tasks)
+
+
+meter.create_observable_gauge(
+    "clp.compression.active_jobs",
+    callbacks=[_observe_active_jobs],
+    description="Number of active compression jobs",
+)
+meter.create_observable_gauge(
+    "clp.compression.outstanding_tasks",
+    callbacks=[_observe_outstanding_tasks],
+    description="Total number of outstanding compression tasks",
+)
 
 received_sigterm = False
 
@@ -556,6 +585,8 @@ def main(argv) -> int | None:
         return -1
 
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
+    init_telemetry()
+    atexit.register(shutdown_telemetry)
     sql_adapter = SqlAdapter(clp_config.database)
 
     task_manager: CeleryTaskManager | SpiderTaskManager

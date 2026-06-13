@@ -31,6 +31,7 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry import metrics
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
@@ -42,6 +43,18 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
+
+meter = metrics.get_meter("compression-worker")
+bytes_input_counter = meter.create_counter(
+    "clp.compression.bytes_input_total",
+    unit="By",
+    description="Total uncompressed bytes processed by compression",
+)
+bytes_output_counter = meter.create_counter(
+    "clp.compression.bytes_output_total",
+    unit="By",
+    description="Total compressed bytes output by compression",
+)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -655,5 +668,12 @@ def compression_entry_point(
 
     if CompressionTaskStatus.FAILED == compression_task_status:
         compression_task_result.error_message = worker_output["error_message"]
+
+    status_str = (
+        "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
+    )
+    attributes = {"status": status_str}
+    bytes_input_counter.add(worker_output["total_uncompressed_size"], attributes)
+    bytes_output_counter.add(worker_output["total_compressed_size"], attributes)
 
     return compression_task_result.model_dump()
