@@ -559,6 +559,12 @@ def run_clp(
     finally:
         cleanup_temporary_files()
         stderr_log_file.close()
+        # Dump the stderr log so it's visible in container logs
+        if stderr_log_path.stat().st_size > 0:
+            logger.error(
+                f"Contents of {stderr_log_path.name}:\n"
+                f"{stderr_log_path.read_text()}"
+            )
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,
