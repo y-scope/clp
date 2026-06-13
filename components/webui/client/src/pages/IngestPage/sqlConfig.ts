@@ -6,6 +6,8 @@ enum CLP_ARCHIVES_TABLE_COLUMN_NAMES {
     END_TIMESTAMP = "end_timestamp",
     UNCOMPRESSED_SIZE = "uncompressed_size",
     SIZE = "size",
+    NUM_MESSAGES = "num_messages",
+    NUM_FILES = "num_files",
 }
 
 /**

@@ -106,6 +106,8 @@ def update_archive_metadata(
         "begin_timestamp",
         "end_timestamp",
         "id",
+        "num_messages",
+        "num_files",
         "size",
         "uncompressed_size",
     ]

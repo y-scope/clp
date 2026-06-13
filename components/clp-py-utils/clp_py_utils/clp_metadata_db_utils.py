@@ -32,6 +32,8 @@ def _create_archives_table(db_cursor, archives_table_name: str) -> None:
             `size` BIGINT NOT NULL,
             `creator_id` VARCHAR(64) NOT NULL,
             `creation_ix` INT NOT NULL,
+            `num_messages` BIGINT NULL DEFAULT NULL,
+            `num_files` BIGINT NULL DEFAULT NULL,
             KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
             UNIQUE KEY `archive_id` (`id`) USING BTREE,
             PRIMARY KEY (`pagination_id`)
