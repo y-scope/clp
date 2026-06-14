@@ -46,7 +46,7 @@ struct JsonParserOption {
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
     bool experimental{false};
-    std::optional<Path> ruleset_path;
+    std::optional<Path> parsing_spec_path;
 };
 
 class JsonParser {
@@ -290,7 +290,7 @@ private:
     std::vector<ArchiveStats> m_archive_stats;
 
     std::unique_ptr<log_surgeon::ParserHandle> m_log_surgeon_parser;
-    std::string m_ruleset_text;
+    std::string m_parsing_spec_text;
     std::chrono::microseconds m_parse_duration{0};
 };
 }  // namespace clp_s

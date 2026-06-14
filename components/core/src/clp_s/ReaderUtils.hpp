@@ -74,12 +74,12 @@ public:
     );
 
     /**
-     * Reads the ruleset from an archive.
+     * Reads the parsing specification from an archive.
      * @param adaptor
-     * @return The schema text.
+     * @return The parsing specification contents.
      * @throw OperationFailed if the schema is missing or corrupt.
      */
-    static auto read_ruleset(ArchiveReaderAdaptor& adaptor) -> std::string;
+    static auto read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string;
 
     /**
      * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.

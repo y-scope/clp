@@ -119,7 +119,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
     option.experimental = command_line_arguments.experimental();
-    option.ruleset_path = command_line_arguments.get_ruleset();
+    option.parsing_spec_path = command_line_arguments.get_parsing_spec();
 
     clp_s::JsonParser parser(option);
     if (false == parser.ingest()) {

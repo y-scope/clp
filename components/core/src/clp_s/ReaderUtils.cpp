@@ -150,8 +150,8 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
     return schemas_pointer;
 }
 
-auto ReaderUtils::read_ruleset(ArchiveReaderAdaptor& adaptor) -> std::string {
-    auto reader = adaptor.checkout_reader_for_section(constants::cArchiveLogSurgeonRulesetFile);
+auto ReaderUtils::read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string {
+    auto reader = adaptor.checkout_reader_for_section(constants::cArchiveParsingSpecFile);
 
     ZstdDecompressor decompressor;
     decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
@@ -169,7 +169,7 @@ auto ReaderUtils::read_ruleset(ArchiveReaderAdaptor& adaptor) -> std::string {
     }
 
     decompressor.close();
-    adaptor.checkin_reader_for_section(constants::cArchiveLogSurgeonRulesetFile);
+    adaptor.checkin_reader_for_section(constants::cArchiveParsingSpecFile);
 
     return schema_text;
 }

@@ -137,9 +137,9 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         );
     }
 
-    if (false == m_ruleset_text.empty()) {
-        auto compressed_size{store_ruleset()};
-        files.emplace_back(std::string(constants::cArchiveLogSurgeonRulesetFile), compressed_size);
+    if (false == m_parsing_spec_text.empty()) {
+        auto compressed_size{store_parsing_spec()};
+        files.emplace_back(std::string(constants::cArchiveParsingSpecFile), compressed_size);
     }
 
     uint64_t offset = 0;
@@ -608,21 +608,21 @@ auto ArchiveWriter::close_log_shape_stats() -> ystdlib::error_handling::Result<s
     return compressed_size;
 }
 
-auto ArchiveWriter::store_ruleset() -> size_t {
-    if (m_ruleset_text.empty()) {
+auto ArchiveWriter::store_parsing_spec() -> size_t {
+    if (m_parsing_spec_text.empty()) {
         return 0;
     }
 
     FileWriter writer{};
     writer.open(
-            m_archive_path + std::string{constants::cArchiveLogSurgeonRulesetFile},
+            m_archive_path + std::string{constants::cArchiveParsingSpecFile},
             FileWriter::OpenMode::CreateForWriting
     );
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    compressor.write_numeric_value(static_cast<uint64_t>(m_ruleset_text.size()));
-    compressor.write(m_ruleset_text.data(), m_ruleset_text.size());
+    compressor.write_numeric_value(static_cast<uint64_t>(m_parsing_spec_text.size()));
+    compressor.write(m_parsing_spec_text.data(), m_parsing_spec_text.size());
 
     compressor.close();
     auto compressed_size{writer.get_pos()};

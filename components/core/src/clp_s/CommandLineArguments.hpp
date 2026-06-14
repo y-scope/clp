@@ -151,7 +151,9 @@ public:
 
     [[nodiscard]] auto experimental() const -> bool { return m_experimental; }
 
-    [[nodiscard]] auto get_ruleset() const -> std::optional<Path> { return m_ruleset_path; }
+    [[nodiscard]] auto get_parsing_spec() const -> std::optional<Path> {
+        return m_parsing_spec_path;
+    }
 
     /**
      * Create the appropriate OutputHandler based on the cli arguments supplied.
@@ -267,7 +269,7 @@ private:
 
     // clpp variables
     bool m_experimental{false};
-    std::optional<Path> m_ruleset_path;
+    std::optional<Path> m_parsing_spec_path;
 };
 }  // namespace clp_s
 

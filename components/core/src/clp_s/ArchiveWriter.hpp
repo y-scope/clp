@@ -306,10 +306,9 @@ public:
     }
 
     /**
-     * Stores the ruleset text for persistence in the archive.
-     * @param schema_text The raw ruleset text.
+     * Stores the parsing specification text for persistence in the archive.
      */
-    void set_ruleset(std::string schema_text) { m_ruleset_text = std::move(schema_text); }
+    void set_parsing_spec(std::string spec) { m_parsing_spec_text = std::move(spec); }
 
     /**
      * Update the log shape dictionary for the given log shape, adding it to the dictionary if
@@ -350,10 +349,10 @@ private:
     [[nodiscard]] auto close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t>;
 
     /**
-     * Writes the ruleset to the archive.
+     * Writes the parsing specification to the archive.
      * @return The compressed size in bytes, or 0 if no schema was set.
      */
-    [[nodiscard]] auto store_ruleset() -> size_t;
+    [[nodiscard]] auto store_parsing_spec() -> size_t;
 
     /**
      * Writes the archive to a single file
@@ -430,7 +429,7 @@ private:
     std::optional<clpp::LogShapeStatArray> m_log_shape_stats;
     std::optional<clpp::ParentRuleShapesArray> m_parent_rule_shapes;
     std::shared_ptr<VariableDictionaryWriter> m_log_shape_dict;
-    std::string m_ruleset_text;
+    std::string m_parsing_spec_text;
 };
 }  // namespace clp_s
 

@@ -81,7 +81,7 @@ TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]"
 TEST_CASE("Test creating log parser from package template schema", "[LALR1Parser][LogParser]") {
     REQUIRE_NOTHROW(load_parser_from_file((get_tests_dir().parent_path().parent_path()
                                            / "package-template" / "src" / "etc"
-                                           / "clp-schema.template.txt")
+                                           / "parsing-spec.template.txt")
                                                   .string()));
 }
 

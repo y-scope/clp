@@ -575,11 +575,11 @@ auto ArchiveReader::read_log_shape_stats()
     return stats;
 }
 
-auto ArchiveReader::read_ruleset() -> ystdlib::error_handling::Result<std::string> {
+auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::string> {
     if (false == m_options.m_experimental) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
-    return ReaderUtils::read_ruleset(*m_archive_reader_adaptor);
+    return ReaderUtils::read_parsing_spec(*m_archive_reader_adaptor);
 }
 
 auto ArchiveReader::read_parent_rule_shapes()
