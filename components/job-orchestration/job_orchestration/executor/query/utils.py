@@ -1,11 +1,10 @@
 import datetime
+import logging
 import os
 import signal
 import subprocess
 import sys
-import logging
 from contextlib import closing
-from logging import Logger
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +42,7 @@ def report_task_failure(
 
 def run_query_task(
     sql_adapter: SqlAdapter,
-    logger: Logger,
+    logger: logging.Logger,
     clp_logs_dir: Path,
     task_command: list[str],
     env_vars: dict[str, str] | None,
