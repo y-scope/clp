@@ -614,6 +614,13 @@ class BaseController(ABC):
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
 
+        # Telemetry config
+        env_vars |= {
+            "CLP_QUERY_WORKER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.query_worker.telemetry_update_interval_ms
+            ),
+        }
+
         return env_vars
 
     def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:

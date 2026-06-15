@@ -458,7 +458,7 @@ class CompressionWorker(WorkerConfigBase):
 
 
 class QueryWorker(WorkerConfigBase):
-    pass
+    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class Redis(BaseModel):
