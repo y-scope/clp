@@ -341,7 +341,7 @@ public:
     }
 
 private:
-    // Variables
+    // Data members
     opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> m_span;
     std::unique_ptr<opentelemetry::trace::Scope> m_scope;
 };

@@ -132,7 +132,7 @@ private:
     // Types
     class Impl;
 
-    // Variables
+    // Data members
     std::unique_ptr<Impl> m_impl;
 };
 

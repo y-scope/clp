@@ -18,7 +18,7 @@
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
 #include "SchemaMatch.hpp"
-#include "SearchTelemetry.hpp"
+#include <clp_s/search/SearchTelemetry.hpp>
 
 namespace clp_s::search {
 /**

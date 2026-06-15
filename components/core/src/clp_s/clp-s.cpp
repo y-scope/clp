@@ -42,7 +42,7 @@
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
-#include "search/SearchTelemetry.hpp"
+#include <clp_s/search/SearchTelemetry.hpp>
 #include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
