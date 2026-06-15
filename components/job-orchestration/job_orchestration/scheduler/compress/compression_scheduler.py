@@ -98,6 +98,27 @@ meter.create_observable_gauge(
     callbacks=[_observe_outstanding_tasks],
     description="Total number of outstanding compression tasks",
 )
+tasks_completed_counter = meter.create_counter(
+    "clp.compression.tasks.completed",
+    unit="{task}",
+    description="Number of completed compression tasks",
+)
+tasks_failed_counter = meter.create_counter(
+    "clp.compression.tasks.failed",
+    unit="{task}",
+    description="Number of failed compression tasks",
+)
+job_duration_histogram = meter.create_histogram(
+    "clp.compression.job.duration",
+    unit="s",
+    description="Duration of compression jobs",
+)
+task_duration_histogram = meter.create_histogram(
+    "clp.compression.task.duration",
+    unit="s",
+    description="Duration of compression tasks",
+)
+
 
 received_sigterm = False
 
@@ -519,12 +540,15 @@ def poll_running_jobs(
             # Check for finished jobs
             num_tasks_in_batch = len(returned_results)
             for task_result in returned_results:
+                task_duration_histogram.record(task_result.duration)
                 if task_result.status == CompressionTaskStatus.SUCCEEDED:
+                    tasks_completed_counter.add(1)
                     logger.info(
                         f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
                         f" {task_result.duration} second(s)."
                     )
                 else:
+                    tasks_failed_counter.add(1)
                     job_success = False
                     error_messages.append(
                         f"task {task_result.task_id}: {task_result.error_message}"
@@ -540,6 +564,7 @@ def poll_running_jobs(
 
         if not job_success:
             _handle_failed_compression_job(logs_directory, db_context, job_id, error_messages)
+            job_duration_histogram.record(duration)
             jobs_to_delete.append(job_id)
             continue
 
@@ -550,6 +575,7 @@ def poll_running_jobs(
         else:
             # All tasks completed successfully
             _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
+            job_duration_histogram.record(duration)
             jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:

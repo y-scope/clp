@@ -126,7 +126,26 @@ meter.create_observable_gauge(
     callbacks=[_observe_outstanding_tasks],
     description="Total number of outstanding tasks across all active query jobs",
 )
-
+tasks_completed_counter = meter.create_counter(
+    "clp.query.tasks.completed",
+    unit="{task}",
+    description="Number of completed query tasks",
+)
+tasks_failed_counter = meter.create_counter(
+    "clp.query.tasks.failed",
+    unit="{task}",
+    description="Number of failed query tasks",
+)
+job_duration_histogram = meter.create_histogram(
+    "clp.query.job.duration",
+    unit="s",
+    description="Duration of query jobs",
+)
+task_duration_histogram = meter.create_histogram(
+    "clp.query.task.duration",
+    unit="s",
+    description="Duration of query tasks",
+)
 
 class DispatchExecutor:
     # Globals for dispatch executor pool
@@ -919,13 +938,17 @@ async def handle_finished_search_job(
         task_result = QueryTaskResult.model_validate(task_result_obj)
         task_id = task_result.task_id
         task_status = task_result.status
+        
+        task_duration_histogram.record(task_result.duration)
         if not task_status == QueryTaskStatus.SUCCEEDED:
+            tasks_failed_counter.add(1)
             new_job_status = QueryJobStatus.FAILED
             logger.error(
                 f"Search task job-{job_id}-task-{task_id} failed. "
                 f"Check {task_result.error_log_path} for details."
             )
         else:
+            tasks_completed_counter.add(1)
             job.num_archives_searched += 1
             logger.info(
                 f"Search task job-{job_id}-task-{task_id} succeeded in "
@@ -976,19 +999,23 @@ async def handle_finished_search_job(
 
     # We set the status regardless of the job's previous status to handle the case where the
     # job is cancelled (status = CANCELLING) while we're in this method.
+    duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
         job_id,
         new_job_status,
         num_tasks_completed=job.num_archives_searched,
-        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        duration=duration,
     ):
         if new_job_status == QueryJobStatus.SUCCEEDED:
+            job_duration_histogram.record(duration)
             logger.info(f"Completed job {job_id}.")
         elif reducer_failed:
+            job_duration_histogram.record(duration)
             logger.error(f"Completed job {job_id} with failing reducer.")
         else:
+            job_duration_histogram.record(duration)
             logger.info(f"Completed job {job_id} with failing tasks.")
     del active_jobs[job_id]
 
@@ -1012,18 +1039,23 @@ async def handle_finished_stream_extraction_job(
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
+        
+        task_duration_histogram.record(task_result.duration)
         if not QueryTaskStatus.SUCCEEDED == task_result.status:
+            tasks_failed_counter.add(1)
             logger.error(
                 f"Extraction task job-{job_id}-task-{task_id} failed. "
                 f"Check {task_result.error_log_path} for details."
             )
             new_job_status = QueryJobStatus.FAILED
         else:
+            tasks_completed_counter.add(1)
             logger.info(
                 f"Extraction task job-{job_id}-task-{task_id} succeeded in "
                 f"{task_result.duration} second(s)."
             )
 
+    duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
@@ -1031,8 +1063,9 @@ async def handle_finished_stream_extraction_job(
         new_job_status,
         QueryJobStatus.RUNNING,
         num_tasks_completed=num_tasks,
-        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        duration=duration,
     ):
+        job_duration_histogram.record(duration)
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info(f"Completed stream extraction job {job_id}.")
         else:
