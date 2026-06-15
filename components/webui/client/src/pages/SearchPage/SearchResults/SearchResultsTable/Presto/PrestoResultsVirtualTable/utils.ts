@@ -42,6 +42,7 @@ const formatPrestoResultAsJsonl = (result: PrestoSearchResult): string => {
     if ("undefined" === typeof result.row) {
         return JSON.stringify({_id: result._id});
     }
+
     return JSON.stringify({...result.row, _id: result._id});
 };
 

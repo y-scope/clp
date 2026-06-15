@@ -1,7 +1,8 @@
-import {create} from "zustand";
-import {message} from "antd";
+/* eslint-disable @stylistic/max-len */
 import type {PrestoSearchResult} from "@webui/common/presto";
 import {Nullable} from "@webui/common/utility-types";
+import {message} from "antd";
+import {create} from "zustand";
 
 import {downloadTextFile} from "../../../../utils/download";
 import {formatExportFilenameTimestamp} from "../../SearchResults/SearchResultsTable/Native/utils";
