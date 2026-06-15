@@ -32,6 +32,7 @@ from clp_py_utils.s3_utils import (
 )
 from clp_py_utils.sql_adapter import SqlAdapter
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -559,11 +560,7 @@ def run_clp(
     finally:
         cleanup_temporary_files()
         stderr_log_file.close()
-        if stderr_log_path.stat().st_size > 0:
-            logger.error(
-                f"Contents of {stderr_log_path.name}:\n"
-                f"{stderr_log_path.read_text()}"
-            )
+        log_file_contents(logger, stderr_log_path)
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,

@@ -11,6 +11,7 @@ from typing import Any
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SqlAdapter
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 
@@ -98,11 +99,8 @@ def run_query_task(
         logger.info(f"{task_name} task {task_id} completed for job {job_id}")
 
     clo_log_file.close()
-    if clo_log_path.stat().st_size > 0:
-        logger.error(
-            f"Contents of {clo_log_path.name}:\n"
-            f"{clo_log_path.read_text()}"
-        )
+    if 0 != return_code:
+        log_file_contents(logger, clo_log_path)
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(

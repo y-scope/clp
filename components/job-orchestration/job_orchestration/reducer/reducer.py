@@ -6,11 +6,13 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import TextIO
+import logging
 
 from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
+from job_orchestration.executor.utils import log_file_contents
 
 logger = get_logger("reducer")
 
@@ -95,13 +97,8 @@ def main(argv: list[str]) -> int:
         logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
     for i, reducer_log_file in enumerate(reducer_log_files):
         reducer_log_file.close()
-        # Dump the reducer log so it's visible in container logs
         log_file_path = logs_dir / f"reducer-{i}.log"
-        if log_file_path.stat().st_size > 0:
-            logger.info(
-                f"Contents of {log_file_path.name}:\n"
-                f"{log_file_path.read_text()}"
-            )
+        log_file_contents(logger, log_file_path, logging.INFO)
 
     logger.error("All reducers terminated")
 
