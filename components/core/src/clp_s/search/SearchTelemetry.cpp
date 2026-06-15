@@ -24,6 +24,7 @@
 #include <clp_s/search/ast/FilterExpr.hpp>
 #include <clp_s/search/ast/FilterOperation.hpp>
 #include <clp_s/search/ast/OrExpr.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 
 using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::Expression;
@@ -34,8 +35,8 @@ using opentelemetry::trace::StatusCode;
 
 namespace clp_s::search {
 namespace {
-constexpr std::string_view cTracerName{"clp_s.query"};
-constexpr std::string_view cSearchArchiveSpanName{"clp_s.query.archive"};
+constexpr std::string_view cTracerName{"clp.query"};
+constexpr std::string_view cSearchArchiveSpanName{"clp.query.archive"};
 
 constexpr std::string_view cAttrSuccess{"clp.query.success"};
 constexpr std::string_view cAttrError{"clp.query.error"};
@@ -145,7 +146,7 @@ auto add_predicate_type(FilterExpr const& filter, QueryShapeMetrics& metrics) ->
     int64_t int_value{};
     double float_value{};
     if (operand->as_clp_string(string_value, op) || operand->as_var_string(string_value, op)) {
-        if (std::string::npos == string_value.find('*')) {
+        if (false == clp_s::search::ast::has_unescaped_wildcards(string_value)) {
             ++metrics.predicate_type_metrics.num_string;
         } else {
             ++metrics.predicate_type_metrics.num_string_with_wildcard;
