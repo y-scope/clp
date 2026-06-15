@@ -47,7 +47,6 @@ from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import ConnectionPoolWrapper, SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
 from opentelemetry import metrics
-from opentelemetry.metrics import CallbackOptions, Observation
 from pydantic import ValidationError
 
 from job_orchestration.executor.query.celery import app
@@ -102,18 +101,18 @@ reducer_connection_queue: asyncio.Queue | None = None
 meter = metrics.get_meter("query-scheduler")
 
 
-def _observe_active_jobs(options: CallbackOptions):
-    yield Observation(len(active_jobs))
+def _observe_active_jobs(options: metrics.CallbackOptions):
+    yield metrics.Observation(len(active_jobs))
 
 
-def _observe_outstanding_tasks(options: CallbackOptions):
+def _observe_outstanding_tasks(options: metrics.CallbackOptions):
     num_outstanding_tasks = 0
     for job in active_jobs.values():
         if isinstance(job, SearchJob):
             num_outstanding_tasks += job.num_archives_to_search - job.num_archives_searched
         else:
             num_outstanding_tasks += 1
-    yield Observation(num_outstanding_tasks)
+    yield metrics.Observation(num_outstanding_tasks)
 
 
 meter.create_observable_gauge(
