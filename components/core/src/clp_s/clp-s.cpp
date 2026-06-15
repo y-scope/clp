@@ -204,7 +204,7 @@ bool search_archive(
         return false;
     }
     if (nullptr != telemetry_span) {
-        telemetry_span->set_query_shape_metrics(create_query_shape_metrics(
+        telemetry_span->set_query_shape_metrics(QueryShapeMetrics::create(
                 expr,
                 command_line_arguments.get_search_begin_ts(),
                 command_line_arguments.get_search_end_ts()
