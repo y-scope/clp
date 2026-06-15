@@ -117,9 +117,6 @@ def run_query_task(
         duration=duration,
     )
 
-    if QueryTaskStatus.FAILED == task_status:
-        task_result.error_log_path = str(clo_log_path)
-
     return task_result, stdout_data.decode("utf-8")
 
 

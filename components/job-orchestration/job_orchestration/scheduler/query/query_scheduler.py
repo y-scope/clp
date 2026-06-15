@@ -890,7 +890,7 @@ async def handle_finished_search_job(
             new_job_status = QueryJobStatus.FAILED
             logger.error(
                 f"Search task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
+                "Check container logs for details."
             )
         else:
             job.num_archives_searched += 1
@@ -982,7 +982,7 @@ async def handle_finished_stream_extraction_job(
         if not QueryTaskStatus.SUCCEEDED == task_result.status:
             logger.error(
                 f"Extraction task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
+                "Check container logs for details."
             )
             new_job_status = QueryJobStatus.FAILED
         else:
