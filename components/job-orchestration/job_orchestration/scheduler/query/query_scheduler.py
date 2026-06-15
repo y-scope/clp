@@ -147,6 +147,7 @@ task_duration_histogram = meter.create_histogram(
     description="Duration of query tasks",
 )
 
+
 class DispatchExecutor:
     # Globals for dispatch executor pool
     _db_conn_pool: ConnectionPoolWrapper | None = None
@@ -938,7 +939,7 @@ async def handle_finished_search_job(
         task_result = QueryTaskResult.model_validate(task_result_obj)
         task_id = task_result.task_id
         task_status = task_result.status
-        
+
         task_duration_histogram.record(task_result.duration)
         if not task_status == QueryTaskStatus.SUCCEEDED:
             tasks_failed_counter.add(1)
@@ -1039,7 +1040,7 @@ async def handle_finished_stream_extraction_job(
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
-        
+
         task_duration_histogram.record(task_result.duration)
         if not QueryTaskStatus.SUCCEEDED == task_result.status:
             tasks_failed_counter.add(1)
