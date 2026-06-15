@@ -107,11 +107,11 @@ constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
  */
 auto add_column_shape(ColumnDescriptor const& column, QueryShapeMetrics& metrics) -> void {
     if (column.is_pure_wildcard()) {
-        ++metrics.column_shape_metrics.pure_wildcard;
+        ++metrics.column_shape_metrics.num_pure_wildcard;
     } else if (column.is_unresolved_descriptor()) {
-        ++metrics.column_shape_metrics.some_wildcard;
+        ++metrics.column_shape_metrics.num_some_wildcard;
     } else {
-        ++metrics.column_shape_metrics.no_wildcard;
+        ++metrics.column_shape_metrics.num_no_wildcard;
     }
 }
 
@@ -126,17 +126,17 @@ auto add_predicate_type(FilterExpr const& filter, QueryShapeMetrics& metrics) ->
     switch (op) {
         case FilterOperation::EXISTS:
         case FilterOperation::NEXISTS:
-            ++metrics.predicate_type_metrics.exists;
+            ++metrics.predicate_type_metrics.num_exists;
             return;
         case FilterOperation::EQ:
         case FilterOperation::NEQ:
-            ++metrics.predicate_type_metrics.exact_match;
+            ++metrics.predicate_type_metrics.num_exact_match;
             break;
         case FilterOperation::LT:
         case FilterOperation::GT:
         case FilterOperation::LTE:
         case FilterOperation::GTE:
-            ++metrics.predicate_type_metrics.range;
+            ++metrics.predicate_type_metrics.num_range;
             break;
     }
 
@@ -150,19 +150,19 @@ auto add_predicate_type(FilterExpr const& filter, QueryShapeMetrics& metrics) ->
     double float_value{};
     if (operand->as_clp_string(string_value, op) || operand->as_var_string(string_value, op)) {
         if (std::string::npos == string_value.find('*')) {
-            ++metrics.predicate_type_metrics.string;
+            ++metrics.predicate_type_metrics.num_string;
         } else {
-            ++metrics.predicate_type_metrics.string_with_wildcard;
+            ++metrics.predicate_type_metrics.num_string_with_wildcard;
         }
     }
     if (operand->as_int(int_value, op) || operand->as_timestamp()) {
-        ++metrics.predicate_type_metrics.integer;
+        ++metrics.predicate_type_metrics.num_integer;
     }
     if (operand->as_float(float_value, op)) {
-        ++metrics.predicate_type_metrics.floating_point;
+        ++metrics.predicate_type_metrics.num_floating_point;
     }
     if (operand->as_null(op)) {
-        ++metrics.predicate_type_metrics.null;
+        ++metrics.predicate_type_metrics.num_null;
     }
 }
 
@@ -252,47 +252,47 @@ public:
     auto set_query_shape_metrics(QueryShapeMetrics const& metrics) -> void {
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrColumnTypesPureWildcard),
-                to_int64_attribute(metrics.column_shape_metrics.pure_wildcard)
+                to_int64_attribute(metrics.column_shape_metrics.num_pure_wildcard)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrColumnTypesSomeWildcard),
-                to_int64_attribute(metrics.column_shape_metrics.some_wildcard)
+                to_int64_attribute(metrics.column_shape_metrics.num_some_wildcard)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrColumnTypesNoWildcard),
-                to_int64_attribute(metrics.column_shape_metrics.no_wildcard)
+                to_int64_attribute(metrics.column_shape_metrics.num_no_wildcard)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesString),
-                to_int64_attribute(metrics.predicate_type_metrics.string)
+                to_int64_attribute(metrics.predicate_type_metrics.num_string)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesStringWithWildcard),
-                to_int64_attribute(metrics.predicate_type_metrics.string_with_wildcard)
+                to_int64_attribute(metrics.predicate_type_metrics.num_string_with_wildcard)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesInt),
-                to_int64_attribute(metrics.predicate_type_metrics.integer)
+                to_int64_attribute(metrics.predicate_type_metrics.num_integer)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesFloat),
-                to_int64_attribute(metrics.predicate_type_metrics.floating_point)
+                to_int64_attribute(metrics.predicate_type_metrics.num_floating_point)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesNull),
-                to_int64_attribute(metrics.predicate_type_metrics.null)
+                to_int64_attribute(metrics.predicate_type_metrics.num_null)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesExactMatch),
-                to_int64_attribute(metrics.predicate_type_metrics.exact_match)
+                to_int64_attribute(metrics.predicate_type_metrics.num_exact_match)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesRange),
-                to_int64_attribute(metrics.predicate_type_metrics.range)
+                to_int64_attribute(metrics.predicate_type_metrics.num_range)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrPredicateTypesExists),
-                to_int64_attribute(metrics.predicate_type_metrics.exists)
+                to_int64_attribute(metrics.predicate_type_metrics.num_exists)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumPredicates),
@@ -374,7 +374,7 @@ auto SearchTelemetrySpan::set_termination_stage(std::string_view termination_sta
     m_impl->set_termination_stage(termination_stage);
 }
 
-auto create_query_shape_metrics(
+auto QueryShapeMetrics::create(
         std::shared_ptr<ast::Expression> const& expr,
         std::optional<epochtime_t> search_begin_ts,
         std::optional<epochtime_t> search_end_ts

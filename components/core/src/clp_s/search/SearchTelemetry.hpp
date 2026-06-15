@@ -23,29 +23,45 @@ constexpr std::string_view cTerminationStageDictionarySearch{"dictionary_search"
  * Counts of how the columns referenced by a query's predicates use wildcards.
  */
 struct ColumnShapeMetrics {
-    uint64_t pure_wildcard{};
-    uint64_t some_wildcard{};
-    uint64_t no_wildcard{};
+    uint64_t num_pure_wildcard{};
+    uint64_t num_some_wildcard{};
+    uint64_t num_no_wildcard{};
 };
 
 /**
  * Counts of the predicate operations and operand types referenced by a query.
  */
 struct PredicateTypeMetrics {
-    uint64_t string{};
-    uint64_t string_with_wildcard{};
-    uint64_t integer{};
-    uint64_t floating_point{};
-    uint64_t null{};
-    uint64_t exact_match{};
-    uint64_t range{};
-    uint64_t exists{};
+    uint64_t num_string{};
+    uint64_t num_string_with_wildcard{};
+    uint64_t num_integer{};
+    uint64_t num_floating_point{};
+    uint64_t num_null{};
+    uint64_t num_exact_match{};
+    uint64_t num_range{};
+    uint64_t num_exists{};
 };
 
 /**
  * Query-shape metrics derivable from the parsed query before any archive is searched.
  */
 struct QueryShapeMetrics {
+    // Methods
+    /**
+     * Walks the parsed query and accumulates its shape metrics.
+     *
+     * @param expr The parsed query AST.
+     * @param search_begin_ts The lower bound of the search time range, if any.
+     * @param search_end_ts The upper bound of the search time range, if any.
+     * @return The query-shape metrics.
+     */
+    [[nodiscard]] static auto create(
+            std::shared_ptr<ast::Expression> const& expr,
+            std::optional<epochtime_t> search_begin_ts,
+            std::optional<epochtime_t> search_end_ts
+    ) -> QueryShapeMetrics;
+
+    // Data members
     ColumnShapeMetrics column_shape_metrics;
     PredicateTypeMetrics predicate_type_metrics;
     uint64_t num_predicates{};
@@ -135,20 +151,6 @@ private:
     // Data members
     std::unique_ptr<Impl> m_impl;
 };
-
-/**
- * Walks the parsed query and accumulates its shape metrics.
- *
- * @param expr The parsed query AST.
- * @param search_begin_ts The lower bound of the search time range, if any.
- * @param search_end_ts The upper bound of the search time range, if any.
- * @return The query-shape metrics.
- */
-[[nodiscard]] auto create_query_shape_metrics(
-        std::shared_ptr<ast::Expression> const& expr,
-        std::optional<epochtime_t> search_begin_ts,
-        std::optional<epochtime_t> search_end_ts
-) -> QueryShapeMetrics;
 }  // namespace clp_s::search
 
 #endif  // CLP_S_SEARCH_SEARCHTELEMETRY_HPP
