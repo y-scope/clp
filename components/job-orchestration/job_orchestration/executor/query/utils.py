@@ -88,7 +88,6 @@ def run_query_task(
     # stdout/stderr.
     stdout_data, _ = task_proc.communicate()
     return_code = task_proc.returncode
-
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
         logger.error(
@@ -99,7 +98,6 @@ def run_query_task(
         logger.info(f"{task_name} task {task_id} completed for job {job_id}")
 
     clo_log_file.close()
-    # Dump the stderr log so it's visible in container logs
     if clo_log_path.stat().st_size > 0:
         logger.error(
             f"Contents of {clo_log_path.name}:\n"
