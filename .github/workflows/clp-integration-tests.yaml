@@ -1,0 +1,43 @@
+name: "clp-integration-tests"
+
+on:
+  pull_request:
+    paths-ignore: &ignored_paths
+      - ".github/*"
+      - ".github/ISSUE_TEMPLATE/**"
+      - "docs/**"
+  push:
+    paths-ignore: *ignored_paths
+  schedule:
+
+    # Run daily at 00:30 UTC (the 30 is to avoid periods of high load)
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+
+  # Cancel in-progress jobs for efficiency; Exclude the `main` branch.
+  cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
+
+jobs:
+  integration-tests:
+
+    # Runs only on Ubuntu Noble (24.04) because the integration test suite can't run on macOS.
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
+
+      - name: "Run integration tests"
+        shell: "bash"
+        run: "task tests:integration"
