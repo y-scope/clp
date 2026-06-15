@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include <clp_s/search/SearchTelemetry.hpp>
+
 #include "../ArchiveReader.hpp"
 #include "../SchemaReader.hpp"
 #include "../Utils.hpp"
@@ -18,7 +20,6 @@
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
 #include "SchemaMatch.hpp"
-#include <clp_s/search/SearchTelemetry.hpp>
 
 namespace clp_s::search {
 /**

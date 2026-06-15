@@ -19,6 +19,7 @@
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
 #include <clp/type_utils.hpp>
+#include <clp_s/search/SearchTelemetry.hpp>
 
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
@@ -42,7 +43,6 @@
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
-#include <clp_s/search/SearchTelemetry.hpp>
 #include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
@@ -167,7 +167,8 @@ bool search_archive(
         }
         SearchResultMetrics metrics;
         for (auto const schema_id : archive_reader->get_schema_ids()) {
-            metrics.total_archive_records += archive_reader->get_num_messages_for_schema(schema_id);
+            metrics.num_total_archive_records
+                    += archive_reader->get_num_messages_for_schema(schema_id);
         }
         telemetry_span->set_termination_stage(termination_stage);
         telemetry_span->set_search_result_metrics(metrics);
@@ -204,11 +205,13 @@ bool search_archive(
         return false;
     }
     if (nullptr != telemetry_span) {
-        telemetry_span->set_query_shape_metrics(QueryShapeMetrics::create(
-                expr,
-                command_line_arguments.get_search_begin_ts(),
-                command_line_arguments.get_search_end_ts()
-        ));
+        telemetry_span->set_query_shape_metrics(
+                QueryShapeMetrics::create(
+                        expr,
+                        command_line_arguments.get_search_begin_ts(),
+                        command_line_arguments.get_search_end_ts()
+                )
+        );
     }
 
     EvaluateRangeIndexFilters metadata_filter_pass{

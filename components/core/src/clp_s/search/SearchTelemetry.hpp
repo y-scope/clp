@@ -46,7 +46,7 @@ struct PredicateTypeMetrics {
  * Query-shape metrics derivable from the parsed query before any archive is searched.
  */
 struct QueryShapeMetrics {
-    // Methods
+    // Factory methods
     /**
      * Walks the parsed query and accumulates its shape metrics.
      *
@@ -73,9 +73,9 @@ struct QueryShapeMetrics {
  * Record counts produced while searching a single archive.
  */
 struct SearchResultMetrics {
-    uint64_t total_archive_records{};
-    uint64_t candidate_records_after_schema_matching{};
-    uint64_t records_matching_query{};
+    uint64_t num_total_archive_records{};
+    uint64_t num_candidate_records_after_schema_matching{};
+    uint64_t num_records_matching_query{};
     uint64_t num_matched_schemas{};
     uint64_t num_schemas_with_matches{};
 };

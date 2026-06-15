@@ -34,8 +34,8 @@ using opentelemetry::trace::StatusCode;
 
 namespace clp_s::search {
 namespace {
-constexpr std::string_view cTracerName{"clp_s.search"};
-constexpr std::string_view cSearchArchiveSpanName{"clp_s.search.archive"};
+constexpr std::string_view cTracerName{"clp_s.query"};
+constexpr std::string_view cSearchArchiveSpanName{"clp_s.query.archive"};
 
 constexpr std::string_view cAttrSuccess{"clp.query.success"};
 constexpr std::string_view cAttrError{"clp.query.error"};
@@ -43,33 +43,29 @@ constexpr std::string_view cAttrQueryHash{"clp.query.query_hash"};
 constexpr std::string_view cAttrQueryId{"clp.query.query_id"};
 constexpr std::string_view cAttrTaskId{"clp.query.task_id"};
 constexpr std::string_view cAttrArchiveIdHash{"clp.query.archive_id_hash"};
-constexpr std::string_view cAttrColumnTypesPureWildcard{
-        "clp.query_shape.column_types.pure_wildcard"
-};
-constexpr std::string_view cAttrColumnTypesSomeWildcard{
-        "clp.query_shape.column_types.some_wildcard"
-};
-constexpr std::string_view cAttrColumnTypesNoWildcard{"clp.query_shape.column_types.no_wildcard"};
-constexpr std::string_view cAttrPredicateTypesString{"clp.query_shape.predicate_types.string"};
+constexpr std::string_view cAttrColumnTypesPureWildcard{"clp.query.column_types.num_pure_wildcard"};
+constexpr std::string_view cAttrColumnTypesSomeWildcard{"clp.query.column_types.num_some_wildcard"};
+constexpr std::string_view cAttrColumnTypesNoWildcard{"clp.query.column_types.num_no_wildcard"};
+constexpr std::string_view cAttrPredicateTypesString{"clp.query.predicate_types.num_string"};
 constexpr std::string_view cAttrPredicateTypesStringWithWildcard{
-        "clp.query_shape.predicate_types.string_with_wildcard"
+        "clp.query.predicate_types.num_string_with_wildcard"
 };
-constexpr std::string_view cAttrPredicateTypesInt{"clp.query_shape.predicate_types.int"};
-constexpr std::string_view cAttrPredicateTypesFloat{"clp.query_shape.predicate_types.float"};
-constexpr std::string_view cAttrPredicateTypesNull{"clp.query_shape.predicate_types.null"};
+constexpr std::string_view cAttrPredicateTypesInt{"clp.query.predicate_types.num_int"};
+constexpr std::string_view cAttrPredicateTypesFloat{"clp.query.predicate_types.num_float"};
+constexpr std::string_view cAttrPredicateTypesNull{"clp.query.predicate_types.num_null"};
 constexpr std::string_view cAttrPredicateTypesExactMatch{
-        "clp.query_shape.predicate_types.exact_match"
+        "clp.query.predicate_types.num_exact_match"
 };
-constexpr std::string_view cAttrPredicateTypesRange{"clp.query_shape.predicate_types.range"};
-constexpr std::string_view cAttrPredicateTypesExists{"clp.query_shape.predicate_types.exists"};
-constexpr std::string_view cAttrNumPredicates{"clp.query_shape.num_predicates"};
-constexpr std::string_view cAttrContainsOrClause{"clp.query_shape.contains_or_clause"};
-constexpr std::string_view cAttrTimeRangeMillis{"clp.query_shape.time_range_millis"};
-constexpr std::string_view cAttrTotalArchiveRecords{"clp.query.total_archive_records"};
+constexpr std::string_view cAttrPredicateTypesRange{"clp.query.predicate_types.num_range"};
+constexpr std::string_view cAttrPredicateTypesExists{"clp.query.predicate_types.num_exists"};
+constexpr std::string_view cAttrNumPredicates{"clp.query.num_predicates"};
+constexpr std::string_view cAttrContainsOrClause{"clp.query.contains_or_clause"};
+constexpr std::string_view cAttrTimeRangeMillis{"clp.query.time_range_millis"};
+constexpr std::string_view cAttrTotalArchiveRecords{"clp.query.num_total_archive_records"};
 constexpr std::string_view cAttrCandidateRecordsAfterSchemaMatching{
-        "clp.query.candidate_records_after_schema_matching"
+        "clp.query.num_candidate_records_after_schema_matching"
 };
-constexpr std::string_view cAttrRecordsMatchingQuery{"clp.query.records_matching_query"};
+constexpr std::string_view cAttrRecordsMatchingQuery{"clp.query.num_records_matching_query"};
 constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
 constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
 constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
@@ -313,15 +309,15 @@ public:
     auto set_search_result_metrics(SearchResultMetrics const& metrics) -> void {
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrTotalArchiveRecords),
-                to_int64_attribute(metrics.total_archive_records)
+                to_int64_attribute(metrics.num_total_archive_records)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrCandidateRecordsAfterSchemaMatching),
-                to_int64_attribute(metrics.candidate_records_after_schema_matching)
+                to_int64_attribute(metrics.num_candidate_records_after_schema_matching)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrRecordsMatchingQuery),
-                to_int64_attribute(metrics.records_matching_query)
+                to_int64_attribute(metrics.num_records_matching_query)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumMatchedSchemas),

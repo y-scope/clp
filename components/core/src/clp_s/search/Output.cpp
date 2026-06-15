@@ -48,11 +48,11 @@ bool Output::filter() {
     }
 
     for (auto schema_id : m_archive_reader->get_schema_ids()) {
-        m_result_metrics.total_archive_records
+        m_result_metrics.num_total_archive_records
                 += m_archive_reader->get_num_messages_for_schema(schema_id);
         if (m_match->schema_matched(schema_id)) {
             matched_schemas.push_back(schema_id);
-            m_result_metrics.candidate_records_after_schema_matching
+            m_result_metrics.num_candidate_records_after_schema_matching
                     += m_archive_reader->get_num_messages_for_schema(schema_id);
             if (m_match->has_array(schema_id)) {
                 has_array = true;
@@ -118,13 +118,13 @@ bool Output::filter() {
             while (reader.get_next_message_with_metadata(message, timestamp, log_event_idx, filter))
             {
                 schema_has_match = true;
-                ++m_result_metrics.records_matching_query;
+                ++m_result_metrics.num_records_matching_query;
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, filter)) {
                 schema_has_match = true;
-                ++m_result_metrics.records_matching_query;
+                ++m_result_metrics.num_records_matching_query;
                 m_output_handler->write(message);
             }
         }
