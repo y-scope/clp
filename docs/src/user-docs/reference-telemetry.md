@@ -20,13 +20,17 @@ The following OpenTelemetry metrics are emitted:
 
 Emitted by long-running CLP services to track throughput:
 
-| Component          | Metric                               | Type    | Description                                       |
-| ------------------ |------------------------------------- |-------- | ------------------------------------------------- |
-| api-server         | `clp.service.event`                  | Counter | Service lifecycle events (e.g., startup)          |
-| compression-worker | `clp.compression.bytes_input_total`  | Counter | Total uncompressed bytes processed by compression |
-| compression-worker | `clp.compression.bytes_output_total` | Counter | Total compressed bytes output by compression      |
-| log-ingestor       | `clp.ingest.total_num_bytes`         | Counter | Total bytes ingested                              |
-| log-ingestor       | `clp.ingest.total_num_objects`       | Counter | Total objects (log events) ingested               |
+| Component             | Metric                               | Type    | Description                                       |
+| --------------------- | ------------------------------------ | ------- | ------------------------------------------------- |
+| api-server            | `clp.service.event`                  | Counter | Service lifecycle events (e.g., startup)          |
+| compression-scheduler | `clp.compression.tasks.completed`    | Counter | Number of completed compression tasks             |
+| compression-scheduler | `clp.compression.tasks.failed`       | Counter | Number of failed compression tasks                |
+| compression-worker    | `clp.compression.bytes_input_total`  | Counter | Total uncompressed bytes processed by compression |
+| compression-worker    | `clp.compression.bytes_output_total` | Counter | Total compressed bytes output by compression      |
+| log-ingestor          | `clp.ingest.total_num_bytes`         | Counter | Total bytes ingested                              |
+| log-ingestor          | `clp.ingest.total_num_objects`       | Counter | Total objects (log events) ingested               |
+| query-scheduler       | `clp.query.tasks.completed`          | Counter | Number of completed query tasks                   |
+| query-scheduler       | `clp.query.tasks.failed`             | Counter | Number of failed query tasks                      |
 
 #### Operational gauges
 
@@ -38,6 +42,19 @@ Emitted by long-running CLP services to track current workload state:
 | compression-scheduler | `clp.compression.outstanding_tasks` | Gauge | Total number of outstanding compression tasks                  |
 | query-scheduler       | `clp.query.active_jobs`             | Gauge | Number of active query jobs                                    |
 | query-scheduler       | `clp.query.outstanding_tasks`       | Gauge | Total number of outstanding tasks across all active query jobs |
+
+#### Operational histograms
+
+Emitted by long-running CLP services to track duration and rate distributions:
+
+| Component             | Metric                          | Type      | Description                                                |
+| --------------------- | ------------------------------- | --------- | ---------------------------------------------------------- |
+| compression-scheduler | `clp.compression.job.duration`  | Histogram | Duration of compression jobs                               |
+| compression-scheduler | `clp.compression.task.duration` | Histogram | Duration of compression tasks                              |
+| compression-worker    | `clp.compression.input_rate`    | Histogram | Rate of uncompressed bytes processed per task              |
+| compression-worker    | `clp.compression.output_rate`   | Histogram | Rate of compressed bytes output per task                   |
+| query-scheduler       | `clp.query.job.duration`        | Histogram | Duration of query jobs                                     |
+| query-scheduler       | `clp.query.task.duration`       | Histogram | Duration of query tasks                                    |
 
 #### Deployment topology gauges
 

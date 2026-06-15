@@ -59,12 +59,12 @@ bytes_output_counter = meter.create_counter(
 input_rate_histogram = meter.create_histogram(
     "clp.compression.input_rate",
     unit="By/s",
-    description="Distribution of uncompressed bytes processing rate per task",
+    description="Rate of uncompressed bytes processed per task",
 )
 output_rate_histogram = meter.create_histogram(
     "clp.compression.output_rate",
     unit="By/s",
-    description="Distribution of compressed bytes output rate per task",
+    description="Rate of compressed bytes output per task",
 )
 
 
