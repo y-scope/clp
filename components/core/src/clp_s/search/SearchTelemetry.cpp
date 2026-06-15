@@ -37,12 +37,12 @@ namespace {
 constexpr std::string_view cTracerName{"clp_s.search"};
 constexpr std::string_view cSearchArchiveSpanName{"clp_s.search.archive"};
 
-constexpr std::string_view cAttrSuccess{"clp.search.success"};
-constexpr std::string_view cAttrError{"clp.search.error"};
-constexpr std::string_view cAttrQueryHash{"clp.search.query_hash"};
-constexpr std::string_view cAttrQueryId{"clp.search.query_id"};
-constexpr std::string_view cAttrTaskId{"clp.search.task_id"};
-constexpr std::string_view cAttrArchiveIdHash{"clp.search.archive_id_hash"};
+constexpr std::string_view cAttrSuccess{"clp.query.success"};
+constexpr std::string_view cAttrError{"clp.query.error"};
+constexpr std::string_view cAttrQueryHash{"clp.query.query_hash"};
+constexpr std::string_view cAttrQueryId{"clp.query.query_id"};
+constexpr std::string_view cAttrTaskId{"clp.query.task_id"};
+constexpr std::string_view cAttrArchiveIdHash{"clp.query.archive_id_hash"};
 constexpr std::string_view cAttrColumnTypesPureWildcard{
         "clp.query_shape.column_types.pure_wildcard"
 };
@@ -65,14 +65,14 @@ constexpr std::string_view cAttrPredicateTypesExists{"clp.query_shape.predicate_
 constexpr std::string_view cAttrNumPredicates{"clp.query_shape.num_predicates"};
 constexpr std::string_view cAttrContainsOrClause{"clp.query_shape.contains_or_clause"};
 constexpr std::string_view cAttrTimeRangeMillis{"clp.query_shape.time_range_millis"};
-constexpr std::string_view cAttrTotalArchiveRecords{"clp.search.total_archive_records"};
+constexpr std::string_view cAttrTotalArchiveRecords{"clp.query.total_archive_records"};
 constexpr std::string_view cAttrCandidateRecordsAfterSchemaMatching{
-        "clp.search.candidate_records_after_schema_matching"
+        "clp.query.candidate_records_after_schema_matching"
 };
-constexpr std::string_view cAttrRecordsMatchingQuery{"clp.search.records_matching_query"};
-constexpr std::string_view cAttrNumMatchedSchemas{"clp.search.num_matched_schemas"};
-constexpr std::string_view cAttrNumSchemasWithMatches{"clp.search.num_schemas_with_matches"};
-constexpr std::string_view cAttrTerminationStage{"clp.search.termination_stage"};
+constexpr std::string_view cAttrRecordsMatchingQuery{"clp.query.records_matching_query"};
+constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
+constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
+constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
 
 /**
  * @param sv
