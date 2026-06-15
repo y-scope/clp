@@ -3,6 +3,7 @@ import os
 import signal
 import subprocess
 import sys
+import logging
 from contextlib import closing
 from logging import Logger
 from pathlib import Path
@@ -101,6 +102,8 @@ def run_query_task(
     clo_log_file.close()
     if 0 != return_code:
         log_file_contents(logger, clo_log_path)
+    else:
+        log_file_contents(logger, clo_log_path, logging.INFO)
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(

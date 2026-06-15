@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TextIO
 import logging
@@ -92,13 +93,18 @@ def main(argv: list[str]) -> int:
         f" Concurrency={concurrency}"
         f" Upsert Interval={parsed_args.upsert_interval}"
     )
-    for i, reducer in enumerate(reducers):
-        reducer.communicate()
-        logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
-    for i, reducer_log_file in enumerate(reducer_log_files):
-        reducer_log_file.close()
-        log_file_path = logs_dir / f"reducer-{i}.log"
-        log_file_contents(logger, log_file_path, logging.INFO)
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        futures = {
+            executor.submit(reducers[i].communicate): i for i in range(concurrency)
+        }
+        for future in as_completed(futures):
+            i = futures[future]
+            future.result()
+            logger.info(f"reducer-{i} exited with returncode={reducers[i].returncode}")
+            if logs_dir is not None:
+                reducer_log_files[i].close()
+                log_file_path = logs_dir / f"reducer-{i}.log"
+                log_file_contents(logger, log_file_path, logging.INFO)
 
     logger.error("All reducers terminated")
 
