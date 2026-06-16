@@ -446,7 +446,7 @@ def run_clp(
         )
         conversion_return_code = conversion_proc.wait()
     conversion_log_file.close()
-        
+
     try:
         if conversion_return_code != 0:
             logger.error(
@@ -458,14 +458,17 @@ def run_clp(
                 "error_message": f"Check logs in {conversion_log_path}",
             }
             log_file_contents(logger, conversion_log_path)
-            
+
             return CompressionTaskStatus.FAILED, worker_output
 
         # Start compression
         logger.debug("Compressing...")
         compression_successful = False
         proc = subprocess.Popen(
-            compression_cmd, stdout=subprocess.PIPE, stderr=compression_log_file, env=compression_env
+            compression_cmd,
+            stdout=subprocess.PIPE,
+            stderr=compression_log_file,
+            env=compression_env,
         )
 
         # Compute the total amount of data compressed

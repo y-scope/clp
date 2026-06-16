@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
 import argparse
+import logging
 import os
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed, ThreadPoolExecutor
 from pathlib import Path
 from typing import TextIO
-import logging
 
 from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
+
 from job_orchestration.executor.utils import log_file_contents
 
 logger = get_logger("reducer")
@@ -94,9 +95,7 @@ def main(argv: list[str]) -> int:
         f" Upsert Interval={parsed_args.upsert_interval}"
     )
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        futures = {
-            executor.submit(reducers[i].communicate): i for i in range(concurrency)
-        }
+        futures = {executor.submit(reducers[i].communicate): i for i in range(concurrency)}
         for future in as_completed(futures):
             i = futures[future]
             future.result()
