@@ -570,16 +570,14 @@ int main(int argc, char const* argv[]) {
             continue;
         }
 
-        // Open archive
         if (!open_archive(archive_path.string(), archive_reader)) {
             return -1;
         }
 
-        // Generate lexer if schema file exists
-        auto rule_set_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-        if (std::filesystem::exists(rule_set_file_path)) {
+        auto parsing_spec_path{archive_path / clp::streaming_archive::cSchemaFileName};
+        if (std::filesystem::exists(parsing_spec_path)) {
             char buf[max_map_schema_length];
-            FileReader file_reader{rule_set_file_path};
+            FileReader file_reader{parsing_spec_path};
 
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
@@ -588,7 +586,7 @@ int main(int argc, char const* argv[]) {
                 // If there's a chance there might be a difference, make a new parser as it's fast.
                 if (parser_map_it == parser_map.end()) {
                     auto insert_result{
-                            parser_map.emplace(buf, clp::load_parser_from_file(rule_set_file_path))
+                            parser_map.emplace(buf, clp::load_parser_from_file(parsing_spec_path))
                     };
                     parser = &insert_result.first->second;
                 } else {
@@ -596,7 +594,7 @@ int main(int argc, char const* argv[]) {
                 }
             } else {
                 one_time_use_parser = std::make_unique<log_surgeon::ParserHandle>(
-                        clp::load_parser_from_file(rule_set_file_path)
+                        clp::load_parser_from_file(parsing_spec_path)
                 );
                 parser = one_time_use_parser.get();
             }

@@ -344,9 +344,9 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "cec96c3cae5eb856e823a7e1062486035f83c7f0b43530f1ef6ef8e14dc5edbf"
+          FILE_SHA256: "79dcd99740a070e7839a0d14eaf8c98cdb8afe86c5f40391e12a0460b4147b18"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/log-surgeon/archive/6db46f3.tar.gz"
+          URL: "https://github.com/y-scope/log-surgeon/archive/e3d5359.tar.gz"
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         cd "{{.SRC_DIR}}"

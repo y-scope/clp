@@ -4,11 +4,13 @@
 #include <sys/stat.h>
 
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string>
 
 #include <log_surgeon/log_surgeon.hpp>
+#include <log_surgeon/rust_compat.hpp>
 
 #include "FileReader.hpp"
 
@@ -111,24 +113,27 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     return ErrorCode_Success;
 }
 
-auto load_parser_from_rule_text(std::string const& rule_set_string) -> log_surgeon::ParserHandle {
-    log_surgeon::CCharArray schema_arr{rule_set_string.data(), rule_set_string.size()};
-    auto* rule_set{log_surgeon::log_surgeon_schema_from_definition(schema_arr)};
-    if (nullptr == rule_set) {
-        throw std::invalid_argument("Failed to parse rule set:\n" + rule_set_string);
+auto load_parser_from_str(std::string const& parsing_spec) -> log_surgeon::ParserHandle {
+    auto* spec{log_surgeon::log_surgeon_parsing_spec_from_definition(
+            log_surgeon::CCharArray::from_string_view(parsing_spec)
+    )};
+    if (nullptr == spec) {
+        throw std::invalid_argument("Failed to create parsing specification:\n" + parsing_spec);
     }
-    return log_surgeon::ParserHandle{rule_set};
+    return log_surgeon::ParserHandle{spec};
 }
 
-auto load_parser_from_file(std::string const& rule_set_file_path) -> log_surgeon::ParserHandle {
-    std::ifstream rule_set_file{rule_set_file_path};
-    if (false == rule_set_file.good()) {
-        throw std::invalid_argument("Rule set file at " + rule_set_file_path + " failed to open.");
+auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::ParserHandle {
+    std::ifstream spec_file{parsing_spec_path};
+    if (false == spec_file.good()) {
+        throw std::invalid_argument(
+                "Parsing specification at " + parsing_spec_path + " failed to open."
+        );
     }
     std::string const rule_text{
-            (std::istreambuf_iterator<char>(rule_set_file)),
+            (std::istreambuf_iterator<char>(spec_file)),
             std::istreambuf_iterator<char>()
     };
-    return load_parser_from_rule_text(rule_text);
+    return load_parser_from_str(rule_text);
 }
 }  // namespace clp
