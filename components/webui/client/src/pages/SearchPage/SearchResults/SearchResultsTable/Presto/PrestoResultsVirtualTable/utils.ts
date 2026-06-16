@@ -36,13 +36,11 @@ const getPrestoSearchResultsTableColumns = (
 };
 
 /**
- * Serializes a Presto search result as a JSONL line by exporting the row object directly. Since
- * Presto columns are user-defined based on the SQL query, this keeps the export payload aligned
- * with query columns instead of selecting fixed fields.
+ * Serializes a Presto search result as a JSONL line by exporting the row
+ * object directly. Since Presto columns are user-defined based on the SQL
+ * query, the entire row is serialized rather than specific fields.
  *
- * If the row is missing/invalid, an empty JSON object is returned.
- *
- * @param result Presto search result
+ * @param result Presto search result with _id and row properties
  * @return A single JSON line (without trailing newline)
  */
 const formatPrestoResultAsJsonl = (result: PrestoSearchResult): string => {
@@ -50,7 +48,7 @@ const formatPrestoResultAsJsonl = (result: PrestoSearchResult): string => {
         return JSON.stringify({});
     }
 
-    return JSON.stringify(row as Record<string, unknown>);
+    return JSON.stringify({...result.row});
 };
 
 export {
